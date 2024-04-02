@@ -10,6 +10,7 @@ pub struct Span {
 }
 
 impl Span {
+    /// Constructor method
     pub fn new(input: &str, start: usize, end: usize) -> Self {
         Span {
             input: Arc::new(input.to_string()),
@@ -18,7 +19,7 @@ impl Span {
         }
     }
 
-    // Method to get the substring corresponding to the span
+    /// Method to get the substring corresponding to the span
     pub fn substring(&self) -> &str {
         &self.input[self.start..self.end]
     }

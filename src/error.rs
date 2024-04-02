@@ -12,7 +12,7 @@ pub enum LexerErrorKind {
     MismatchedDelimiter(char),
     InvalidEscapeSequenceInStringLiteral
     
-    // Add more error types as needed
+    // TODO: add more error types as needed
 }
 
 #[derive(Debug, PartialEq)]
@@ -38,7 +38,7 @@ pub enum ParserErrorKind {
 
     #[default]
     UnknownError,
-    // Add more error types as needed
+    // TODO: add more error types as needed
 }
 
 impl fmt::Display for ParserErrorKind {
@@ -66,7 +66,7 @@ pub struct ParseErrorContext<'a> {
 }
 
 impl<'a> ParseErrorContext<'a> {
-    // Constructor method
+    /// Constructor method
     pub fn new(line: usize, col: usize, msg: String, source: &'a str) -> Self {
         ParseErrorContext {
             line,
@@ -77,7 +77,7 @@ impl<'a> ParseErrorContext<'a> {
     }
 
     // TODO: integrate with `fmt()` and `ParserErrorKind` above
-    // Method to format error message
+    /// Method to format error message
     fn format_error_message(&self) -> String {
         format!(
             "Error at line {}, column {}: {}\nSSource: {}",

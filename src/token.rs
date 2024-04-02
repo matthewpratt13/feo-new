@@ -24,7 +24,7 @@ pub enum Token {
     Ref { name: String, span: Span },
     Pub { name: String, span: Span },
     Func { name: String, span: Span },
-    Contact { name: String, span: Span },
+    Contract { name: String, span: Span },
     Abstract { name: String, span: Span },
     Library { name: String, span: Span },
     Payable { name: String, span: Span },
@@ -45,7 +45,7 @@ pub enum Token {
     Const { name: String, span: Span },
     Static { name: String, span: Span },
     Unsafe { name: String, span: Span },
-    Type { name: String, span: Span },
+    Alias { name: String, span: Span },
     As { name: String, span: Span },
     If { name: String, span: Span },
     Else { name: String, span: Span },
@@ -59,7 +59,6 @@ pub enum Token {
     IntType { name: String, span: Span },
     UIntType { name: String, span: Span },
     U256Type { name: String, span: Span },
-    FloatType { name: String, span: Span },
     StringType { name: String, span: Span },
     CharType { name: String, span: Span },
     BoolType { name: String, span: Span },
@@ -128,6 +127,7 @@ pub struct TokenStream {
 }
 
 impl<'a> TokenStream {
+    /// Constructor method
     pub fn new(tokens: &'a [Token], input: &'a str, start: usize, end: usize) -> Self {
         let span = Span::new(input, start, end);
 

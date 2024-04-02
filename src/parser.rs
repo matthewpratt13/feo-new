@@ -34,6 +34,19 @@ enum Expression {
     ErrorPropagate(Box<Expression>, Box<Expression>),
     Struct(Vec<StructField>),
     Parenthesized(Box<Expression>),
+
+    // TODO: parse:
+    InfiniteLoop,
+    WhileLoop,
+    Ternary,
+    TupleStruct,
+    MethodCall,
+    Closure, // with and without block
+    Range, // from-to, from, to, inclusive, to inclusive
+    Path,
+    TupleIndex,
+    // Return,
+    // Underscore
 }
 
 #[derive(Debug, Clone)]
@@ -48,8 +61,12 @@ enum Literal {
 
 #[derive(Debug, Clone)]
 enum UnaryOp {
-    Negate,
-    Not,
+    Negate, // '-'
+    Not,    // '!'
+
+    // TODO: add to below:
+    Reference,   // '&'
+    Dereference, // '*'
 }
 
 #[derive(Debug, Clone)]
@@ -65,26 +82,67 @@ enum BinaryOp {
     LessEqual,
     Greater,
     GreaterEqual,
-    And,
-    Or,
+
+    // TODO: add to below:
+    LogicalAnd,
+    LogicalOr,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    ShiftLeft,
+    ShiftRight,
 }
 
 #[derive(Debug, Clone)]
 enum Statement {
     Let(String, Expression),
     Expr(Expression),
-    // TODO: add more statement types as needed
+
+    // TODO (see below):
+    Item, 
 }
 
+// TODO: parse:
+#[derive(Debug, Clone)]
+enum Item {
+    // definition blocks
+    Function, // without 
+    Struct,
+    Enum,
+    Trait,
+    ImplBlock,
+    Module,
+
+    // declarations
+    TypeAlias,
+    ConstantVar,
+    StaticVar,
+    Import,
+}
+
+// TODO: parse:
 #[derive(Debug, Clone)]
 enum Type {
+    // primitives
     Int,
     UInt,
     U256,
-    Float,
     String,
     Char,
     Bool,
+
+    // built-in collections
+    Array,
+    Tuple,
+
+    UserDefined, // struct, enum, trait, alias, constant (path types / items)
+
+    Function,
+    Closure,
+
+    Reference, // e.g., `&Type` / `&mut Type` 
+    Unit,
+    SelfType,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -116,7 +174,7 @@ struct Parser<'a> {
     precedences: HashMap<Token, Precedence>,
 }
 
-impl<'a> Parser<'a> {
+impl Parser<'_> {
     fn new(stream: TokenStream) -> Self {
         Parser {
             stream,
@@ -145,7 +203,7 @@ impl<'a> Parser<'a> {
     //     self.precedences.insert(Token::Or, (1, 0)); // Logical Or
     // }
 
-    // TODO: fill out precedences per above
+    // TODO: fill out precedences per above (including bitwise and shift operators)
     fn init_precedences(&mut self) {
         // Define precedence levels for operators
         self.precedences.insert(
@@ -408,7 +466,7 @@ impl<'a> Parser<'a> {
             Token::DblAmpersand { .. } => {
                 let right_expr = self.parse_expression(precedence)?;
                 Ok(Expression::BinaryOp(
-                    BinaryOp::And,
+                    BinaryOp::LogicalAnd,
                     Box::new(left_expr),
                     Box::new(right_expr),
                 ))
@@ -416,7 +474,7 @@ impl<'a> Parser<'a> {
             Token::DblPipe { .. } => {
                 let right_expr = self.parse_expression(precedence)?;
                 Ok(Expression::BinaryOp(
-                    BinaryOp::Or,
+                    BinaryOp::LogicalOr,
                     Box::new(left_expr),
                     Box::new(right_expr),
                 ))
@@ -500,12 +558,12 @@ impl<'a> Parser<'a> {
         array_expr: Expression,
     ) -> Result<Expression, ParserErrorKind> {
         self.expect_token(Token::LBracket {
-            delim: '{',
+            delim: '[',
             span: self.stream.span(),
         })?;
         let index_expr = self.parse_expression(Precedence::Infix(0))?;
         self.expect_token(Token::RBracket {
-            delim: '}',
+            delim: ']',
             span: self.stream.span(),
         })?;
         Ok(Expression::Index(
@@ -533,6 +591,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+    // TODO: what about `else-if` branches ?
     fn parse_if_expression(&mut self) -> Result<Statement, ParserErrorKind> {
         self.expect_token(Token::If {
             name: "if".to_string(),
@@ -615,7 +674,7 @@ impl<'a> Parser<'a> {
         }) {
             elements.push(self.parse_expression(Precedence::Infix(0))?);
             if !self.match_token(Token::Comma {
-                punc: '.',
+                punc: ',',
                 span: self.stream.span(),
             }) {
                 break;
@@ -640,7 +699,7 @@ impl<'a> Parser<'a> {
         }) {
             elements.push(self.parse_expression(Precedence::Infix(0))?);
             if !self.match_token(Token::Comma {
-                punc: '.',
+                punc: ',',
                 span: self.stream.span(),
             }) {
                 break;
@@ -693,7 +752,7 @@ impl<'a> Parser<'a> {
             let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
             if token
                 != (Token::Colon {
-                    punc: '.',
+                    punc: ':',
                     span: self.stream.span(),
                 })
             {

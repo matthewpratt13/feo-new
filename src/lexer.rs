@@ -15,6 +15,7 @@ struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
+    /// Constructor method
     fn new(input: &'a str) -> Self {
         Lexer {
             input,
@@ -278,9 +279,9 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // TODO: add keywords
+    
     fn is_keyword(&self, value: &str) -> bool {
-        let keywords = vec!["let", "fn", "if", "else", "while", "for"]; // Example keywords
+        let keywords = vec!["let", "func", "if", "else", "while", "for"]; // TODO: add keywords
         keywords.contains(&value)
     }
 
