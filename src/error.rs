@@ -62,10 +62,9 @@ pub struct ParseErrorContext<'a> {
     source: &'a str,
 }
 
-// Implement methods for ParseErrorContext
 impl<'a> ParseErrorContext<'a> {
     // Constructor method
-    fn new(line: usize, col: usize, msg: String, source: &'a str) -> Self {
+    pub fn new(line: usize, col: usize, msg: String, source: &'a str) -> Self {
         ParseErrorContext {
             line,
             col,
@@ -74,6 +73,7 @@ impl<'a> ParseErrorContext<'a> {
         }
     }
 
+    // TODO: integrate with `fmt()` and `ParserErrorKind` above
     // Method to format error message
     fn format_error_message(&self) -> String {
         format!(
