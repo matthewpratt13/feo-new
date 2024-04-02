@@ -66,38 +66,43 @@ impl<'a> Lexer<'a> {
         Token::DocComment { comment, span }
     }
 
-    // fn tokenize_identifier_or_keyword(&mut self) -> Token {
-    //     let start_pos = self.pos;
+    fn tokenize_identifier_or_keyword(&mut self) -> Token {
+        let start_pos = self.pos;
 
-    //     while self.pos < self.input.len() {
-    //         let current_char = self.input.chars().nth(self.pos).unwrap();
-    //         if current_char.is_alphanumeric() || current_char == '_' {
-    //             self.pos += 1;
-    //         } else {
-    //             break;
-    //         }
-    //     }
+        while self.pos < self.input.len() {
+            let current_char = self.input.chars().nth(self.pos).unwrap();
+            if current_char.is_alphanumeric() || current_char == '_' {
+                self.pos += 1;
+            } else {
+                break;
+            }
+        }
 
-    //     let value = &self.input[start_pos..self.pos];
+        let name = &self.input[start_pos..self.pos];
 
-    //     let span = Span::new(self.input, start_pos, self.pos);
+        let span = Span::new(self.input, start_pos, self.pos);
 
-    //     if self.is_keyword(value) {
-    //         // match value to keywords, return e.g. Token::Let{ value: value.to_string, span }
-    //         Token::Keyword {
-    //             value: value.to_string(),
-    //             span,
-    //         }
-    //     } else {
-    //         Token::Identifier {
-    //             name: value.to_string(),
-    //             span,
-    //         }
-    //     }
-    // }
+        if self.is_keyword(name) {
+            match name {
+                "let" => Token::Let {
+                    name: name.to_string(),
+                    span,
+                },
+
+                // TODO: fill out the other keyword tokens
+                _ => todo!(),
+            }
+        } else {
+            Token::Identifier {
+                name: name.to_string(),
+                span,
+            }
+        }
+    }
 
     fn tokenize_delimiter(&mut self) -> Result<Token, LexerError> {
         let start_pos = self.pos;
+
         let delim = self.input.chars().nth(self.pos).unwrap();
 
         match delim {
@@ -120,9 +125,15 @@ impl<'a> Lexer<'a> {
             }
 
             ')' => self.tokenize_closing_delimiter(')'),
+
             ']' => self.tokenize_closing_delimiter(']'),
+
             '}' => self.tokenize_closing_delimiter('}'),
-            _ => unreachable!(), // Placeholder for unmatched delimiters
+
+            _ => Err(LexerError {
+                error_kind: LexerErrorKind::MismatchedDelimiter(delim),
+                pos: self.pos,
+            }),
         }
     }
 
@@ -180,7 +191,7 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        // check for u64 and f64
+        // TODO: check for `u64` (default)
 
         let value = self.input[start_pos..self.pos].parse::<i64>().unwrap();
         let span = Span::new(self.input, start_pos, self.pos);
@@ -209,47 +220,40 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // fn tokenize_u256(&mut self) -> Token {
-    //     let start_pos = self.pos;
-    //     while self.pos < self.input.len() && self.input[self.pos..].chars().next().unwrap().is_numeric() {
-    //         self.pos += 1;
-    //     }
-    //     let number = self.input[start_pos..self.pos.parse::<u128>();
-    //     match number {
-    //         Ok(num) => Token::U256Literal(num),
-    //         Err(_) => Token::Error,
-    //     }
-    // }
+    fn tokenize_string(&mut self) -> Result<Token, LexerErrorKind> {
+        let mut value = String::new();
 
-    // fn tokenize_string(&mut self) -> Token {
-    //     // Tokenize string literals
-    //     let mut value = String::new();
-    //     self.position += 1; // Skip the opening quote
-    //     while self.position < self.input.len() {
-    //         let current_char = self.input.chars().nth(self.position).unwrap();
-    //         match current_char {
-    //             '\\' => {
-    //                 // Handle escape sequences
-    //                 if let Some(escaped_char) = self.parse_escape_sequence() {
-    //                     value.push(escaped_char);
-    //                 } else {
-    //                     // Invalid escape sequence
-    //                     return Token::Error(format!("Invalid escape sequence in string literal"));
-    //                 }
-    //             }
-    //             '"' => {
-    //                 self.position += 1; // Skip the closing quote
-    //                 return Token::StringLiteral(value);
-    //             }
-    //             _ => {
-    //                 value.push(current_char);
-    //                 self.position += 1;
-    //             }
-    //         }
-    //     }
-    //     // Unclosed string literal
-    //     Token::Error(format!("Unclosed string literal"))
-    // }
+        let start_pos = self.pos;
+
+        self.pos += 1; // Skip the opening quote
+
+        while self.pos < self.input.len() {
+            let current_char = self.input.chars().nth(self.pos).unwrap();
+            match current_char {
+                '\\' => {
+                    // Handle escape sequences
+                    if let Some(escaped_char) = self.parse_escape_sequence() {
+                        value.push(escaped_char);
+                    } else {
+                        return Err(LexerErrorKind::InvalidEscapeSequenceInStringLiteral);
+                    }
+                }
+                '"' => {
+                    self.pos += 1; // Skip the closing quote
+
+                    let span = Span::new(self.input, start_pos, self.pos);
+
+                    return Ok(Token::StringLiteral { value, span });
+                }
+                _ => {
+                    value.push(current_char);
+                    self.pos += 1;
+                }
+            }
+        }
+
+        Err(LexerErrorKind::UnclosedStringLiteral)
+    }
 
     fn tokenize_char(&mut self) -> Token {
         todo!()
@@ -257,13 +261,14 @@ impl<'a> Lexer<'a> {
 
     fn parse_escape_sequence(&mut self) -> Option<char> {
         self.pos += 1; // Skip the backslash
+
         if self.pos < self.input.len() {
             let escaped_char = match self.input.chars().nth(self.pos).unwrap() {
                 'n' => '\n',
                 't' => '\t',
                 '\\' => '\\',
                 '"' => '"',
-                // Handle other escape sequences...
+                // TODO: handle other escape sequences
                 _ => return None, // Invalid escape sequence
             };
             self.pos += 1;
@@ -273,6 +278,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // TODO: add keywords
     fn is_keyword(&self, value: &str) -> bool {
         let keywords = vec!["let", "fn", "if", "else", "while", "for"]; // Example keywords
         keywords.contains(&value)

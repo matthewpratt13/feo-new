@@ -73,7 +73,7 @@ enum BinaryOp {
 enum Statement {
     Let(String, Expression),
     Expr(Expression),
-    // Add more statement types as needed
+    // TODO: add more statement types as needed
 }
 
 #[derive(Debug, Clone)]
@@ -145,7 +145,7 @@ impl<'a> Parser<'a> {
     //     self.precedences.insert(Token::Or, (1, 0)); // Logical Or
     // }
 
-    // final final final
+    // TODO: fill out precedences per above
     fn init_precedences(&mut self) {
         // Define precedence levels for operators
         self.precedences.insert(
@@ -191,11 +191,10 @@ impl<'a> Parser<'a> {
             Precedence::Infix(5),
         ); // Subtraction
 
-        // Define precedences for other operators...
+        // TODO: define precedences for other operators
     }
 
     // TODO: integrate with `ParserErrorKind` and `ParserErrorContext::format_error_message()`
-    // Method to handle parsing errors
     fn report_error(&mut self, line: usize, column: usize, message: String) {
         let snippet = "..."; // Extract a snippet of the source code if needed
         let error_context = ParseErrorContext::new(line, column, message, snippet);

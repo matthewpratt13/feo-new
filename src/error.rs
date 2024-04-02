@@ -4,11 +4,14 @@ use std::fmt;
 
 use crate::token::Token;
 
+// TODO: implement `fmt::Display` (and `std::error::Error`?)
 #[derive(Debug, PartialEq)]
 pub enum LexerErrorKind {
     UnexpectedCharacter(char),
     UnclosedStringLiteral,
     MismatchedDelimiter(char),
+    InvalidEscapeSequenceInStringLiteral
+    
     // Add more error types as needed
 }
 
