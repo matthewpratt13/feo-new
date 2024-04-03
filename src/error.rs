@@ -5,20 +5,27 @@ use std::{error::Error, fmt, sync::Arc};
 use crate::token::Token;
 
 // TODO: implement `fmt::Display` (and `std::error::Error`?)
-#[derive(Debug, PartialEq)]
+/// Enum  representing the different types of lexing error variants.
+#[derive(Default, Debug, PartialEq)]
 pub enum LexerErrorKind {
     UnexpectedCharacter(char),
     UnclosedStringLiteral,
     MismatchedDelimiter(char),
-    InvalidEscapeSequenceInStringLiteral, // TODO: add more error types as needed
+    InvalidEscapeSequenceInStringLiteral,
+
+    #[default]
+    UnknownError,
+    // TODO: add more error types as needed
 }
 
+/// Lexer error struct that contains an error kind and the current position in the source code.
 #[derive(Debug, PartialEq)]
 pub struct LexerError {
     pub error_kind: LexerErrorKind,
     pub pos: usize,
 }
 
+/// Enum representing the different types of parsing error variants.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum ParserErrorKind {
     UnexpectedToken {
@@ -68,6 +75,7 @@ impl fmt::Display for ParserErrorKind {
 
 impl Error for ParserErrorKind {}
 
+/// Parser error struct contains the error kind, and its position in the source code.
 #[derive(Debug)]
 pub struct ParserError {
     error_kind: ParserErrorKind,
@@ -77,7 +85,8 @@ pub struct ParserError {
 }
 
 impl ParserError {
-    /// Constructor method
+    /// Constructor method.
+    /// Retrieve the line and column position within the source code and include the error kind.
     pub fn new(source: &str, pos: usize, error_kind: ParserErrorKind) -> Self {
         let slice = &source[..pos];
         let lines = slice.split('\n').collect::<Vec<_>>();

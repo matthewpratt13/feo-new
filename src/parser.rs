@@ -26,6 +26,8 @@ struct Parser {
 }
 
 impl Parser {
+    /// Constructor method.
+    /// Create an empty `Vec` for parser errors and an empty `HashMap` for precedences.
     fn new(stream: TokenStream) -> Self {
         Parser {
             stream,
@@ -1326,6 +1328,8 @@ impl Parser {
         self.current >= self.stream.tokens().len()
     }
 
+    /// Log a given parsing error and return it.
+    /// The `ParserErrorKind` describes the error succinctly.
     fn log_error(&mut self, error_kind: ParserErrorKind) -> ParserErrorKind {
         let error = ParserError::new(&self.stream.span().input(), self.current, error_kind.clone());
 

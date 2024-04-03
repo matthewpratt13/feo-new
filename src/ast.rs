@@ -44,6 +44,7 @@ pub enum BinaryOp {
     ShiftRight,
 }
 
+/// Enum representing the different literal types available in parsing.
 #[derive(Debug, Clone)]
 pub enum Literal {
     Int(IntKind),
