@@ -15,7 +15,6 @@ struct StructField {
     value: Expression,
 }
 
-// Define AST nodes
 #[derive(Debug, Clone)]
 enum Expression {
     Literal(Literal),
@@ -515,7 +514,7 @@ impl Parser<'_> {
         let mut left_expr = self.parse_prefix()?;
 
         while let Some(current_precedence) =
-            self.precedence(&self.peek().ok_or(ParserErrorKind::TokenNotFound)?)
+            self.precedence(&self.peek_current().ok_or(ParserErrorKind::TokenNotFound)?)
         {
             if precedence < current_precedence {
                 left_expr = self.parse_infix(left_expr)?;
@@ -534,11 +533,11 @@ impl Parser<'_> {
                 Token::UIntLiteral { .. } => self.parse_primary(),
                 Token::U256Literal { .. } => self.parse_primary(),
                 Token::Identifier { .. } => self.parse_primary(),
-                Token::SelfKeyword { .. } => match self.peek() {
+                Token::SelfKeyword { .. } => match self.peek_current() {
                     Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
                         let expr = self.parse_path_expression()?;
 
-                        self.expect(Token::Semicolon {
+                        self.expect_token(Token::Semicolon {
                             punc: ';',
                             span: self.stream.span(),
                         })?;
@@ -576,7 +575,7 @@ impl Parser<'_> {
                         self.parse_grouped_expression()?
                     };
 
-                    self.expect(Token::RParen {
+                    self.expect_token(Token::RParen {
                         delim: ')',
                         span: self.stream.span(),
                     })?;
@@ -585,7 +584,7 @@ impl Parser<'_> {
                 }
                 Token::LBracket { .. } => {
                     let expr = self.parse_array_expression()?;
-                    self.expect(Token::RBracket {
+                    self.expect_token(Token::RBracket {
                         delim: ']',
                         span: self.stream.span(),
                     })?;
@@ -600,7 +599,7 @@ impl Parser<'_> {
 
                     match expr {
                         Expression::ClosureWithBlock(a, b) => {
-                            self.expect(Token::RBrace {
+                            self.expect_token(Token::RBrace {
                                 delim: '}',
                                 span: self.stream.span(),
                             })?;
@@ -608,7 +607,7 @@ impl Parser<'_> {
                             return Ok(Expression::ClosureWithBlock(a, b));
                         }
                         Expression::ClosureWithoutBlock(a) => {
-                            self.expect(Token::Semicolon {
+                            self.expect_token(Token::Semicolon {
                                 punc: ';',
                                 span: self.stream.span(),
                             })?;
@@ -625,7 +624,7 @@ impl Parser<'_> {
                 Token::DblDot { .. } | Token::DotDotEquals { .. } => {
                     let expr = self.parse_range_expression()?;
 
-                    match self.peek() {
+                    match self.peek_current() {
                         Some(
                             Token::Identifier { .. }
                             | Token::UIntLiteral { .. }
@@ -643,7 +642,7 @@ impl Parser<'_> {
                 Token::Return { .. } => {
                     let expr = self.parse_return_expression()?;
 
-                    self.expect(Token::Semicolon {
+                    self.expect_token(Token::Semicolon {
                         punc: ';',
                         span: self.stream.span(),
                     })?;
@@ -654,7 +653,7 @@ impl Parser<'_> {
                 Token::Match { .. } => {
                     let expr = self.parse_match_expression()?;
 
-                    self.expect(Token::RBrace {
+                    self.expect_token(Token::RBrace {
                         delim: '}',
                         span: self.stream.span(),
                     })?;
@@ -665,7 +664,7 @@ impl Parser<'_> {
                 Token::Super { .. } | Token::Package { .. } => {
                     let expr = self.parse_path_expression()?;
 
-                    self.expect(Token::Semicolon {
+                    self.expect_token(Token::Semicolon {
                         punc: ';',
                         span: self.stream.span(),
                     })?;
@@ -675,7 +674,7 @@ impl Parser<'_> {
 
                 Token::Break { .. } | Token::Continue { .. } => {
                     let expr = self.parse_break_or_continue_expression()?;
-                    self.expect(Token::Semicolon {
+                    self.expect_token(Token::Semicolon {
                         punc: ';',
                         span: self.stream.span(),
                     })?;
@@ -750,7 +749,7 @@ impl Parser<'_> {
             Token::LParen { .. } => self.parse_call_expression(left_expr), // TODO: or tuple struct
             Token::LBrace { .. } => self.parse_struct(), // TODO: or match expression
             Token::LBracket { .. } => self.parse_index_expression(left_expr), // TODO: check
-            Token::FullStop { .. } => match self.peek() {
+            Token::FullStop { .. } => match self.peek_current() {
                 Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {
                     match self.peek_ahead_by(1) {
                         Some(Token::LParen { .. }) => self.parse_method_call_expression(),
@@ -1032,9 +1031,9 @@ impl Parser<'_> {
 
         // Parse arguments
         loop {
-            if let Some(Token::RParen { delim: ')', .. }) = self.peek() {
+            if let Some(Token::RParen { delim: ')', .. }) = self.peek_current() {
                 // End of arguments
-                self.advance();
+                self.consume();
                 break;
             }
 
@@ -1407,18 +1406,6 @@ impl Parser<'_> {
     }
 
     fn expect_token(&mut self, expected: Token) -> Result<(), ParserErrorKind> {
-        let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
-        if token == expected {
-            Ok(())
-        } else {
-            Err(ParserErrorKind::UnexpectedToken {
-                expected: format!("`{:#?}`", expected),
-                found: token,
-            })
-        }
-    }
-
-    fn expect(&mut self, expected: Token) -> Result<(), ParserErrorKind> {
         match self.consume() {
             Some(token) if token == expected => Ok(()),
             Some(token) => Err(ParserErrorKind::UnexpectedToken {
@@ -1426,13 +1413,6 @@ impl Parser<'_> {
                 found: token,
             }),
             None => Err(ParserErrorKind::UnexpectedEndOfInput),
-        }
-    }
-
-    fn get_precedence(&self, token: &Token) -> Option<Precedence> {
-        match self.precedences.get(token) {
-            Some(p) => Some(*p),
-            None => None,
         }
     }
 
@@ -1465,7 +1445,7 @@ impl Parser<'_> {
         self.precedences.get(token).cloned()
     }
 
-    fn peek(&self) -> Option<Token> {
+    fn peek_current(&self) -> Option<Token> {
         self.stream.tokens().get(self.current).cloned()
     }
 
@@ -1474,15 +1454,11 @@ impl Parser<'_> {
     }
 
     fn consume(&mut self) -> Option<Token> {
-        let token = self.peek();
+        let token = self.peek_current();
         if token.is_some() {
             self.current += 1;
         }
         token
-    }
-
-    fn advance(&mut self) {
-        self.current += 1;
     }
 
     fn unconsume(&mut self) {
