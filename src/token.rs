@@ -6,6 +6,7 @@ use crate::{
     U256,
 };
 
+/// Enum representing the different types of tokens.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Token {
     Identifier { name: String, span: Span },
@@ -56,6 +57,8 @@ pub enum Token {
     While { name: String, span: Span },
     Break { name: String, span: Span },
     Continue { name: String, span: Span },
+
+    // types
     I32Type { name: String, span: Span },
     I64Type { name: String, span: Span },
     U8Type { name: String, span: Span },
@@ -128,6 +131,7 @@ pub enum Token {
     EOF,
 }
 
+/// Collection of `Token` as a result of the lexing process.
 #[derive(Debug, Clone)]
 pub struct TokenStream {
     tokens: Vec<Token>,
@@ -135,7 +139,7 @@ pub struct TokenStream {
 }
 
 impl<'a> TokenStream {
-    /// Constructor method
+    /// Constructor method.
     pub fn new(tokens: &'a [Token], input: &'a str, start: usize, end: usize) -> Self {
         let span = Span::new(input, start, end);
 
@@ -145,10 +149,12 @@ impl<'a> TokenStream {
         }
     }
 
+    /// Get the tokens in the stream.
     pub fn tokens(&self) -> Vec<Token> {
         self.tokens.clone()
     }
 
+    /// Get the stream span.
     pub fn span(&self) -> Span {
         self.span.clone()
     }

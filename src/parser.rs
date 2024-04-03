@@ -3,192 +3,26 @@
 use std::collections::HashMap;
 
 use crate::{
+    ast::{BinaryOp, Expression, Literal, Precedence, Statement, Type, UnaryOp},
     error::{ParseErrorContext, ParserErrorKind},
-    number::{IntKind, UIntKind},
     token::{Token, TokenStream},
-    U256,
 };
 
+/// Struct representing the fields within a struct, with a name and value expression.
 #[derive(Debug, Clone)]
-struct StructField {
+pub struct StructField {
     name: String,
     value: Expression,
 }
 
-#[derive(Debug, Clone)]
-enum Expression {
-    Literal(Literal),
-    Identifier(String),
-    UnaryOp(UnaryOp, Box<Expression>),
-    BinaryOp(BinaryOp, Box<Expression>, Box<Expression>),
-    If(Box<Expression>, Box<Expression>, Option<Box<Expression>>),
-    ForIn(Box<Expression>, Box<Expression>, Box<Expression>),
-    Array(Vec<Expression>),
-    Tuple(Vec<Expression>),
-    Block(Vec<Expression>),
-    Index(Box<Expression>, Box<Expression>),
-    Call(Box<Expression>, Vec<Expression>),
-    FieldAccess(Box<Expression>, String),
-    Cast(Box<Expression>, Type),
-    ErrorPropagate(Box<Expression>, Box<Expression>),
-    Struct(Vec<StructField>),
-    Grouped(Box<Expression>),
-
-    // TODO: parse:
-    InfiniteLoop(Box<Expression>),
-    WhileLoop(Box<Expression>, Box<Expression>),
-    Ternary(Box<Expression>, Box<Expression>, Option<Box<Expression>>),
-    TupleStruct(Vec<Expression>),
-    MethodCall(Box<Expression>, Box<Expression>),
-    ClosureWithBlock(Box<Expression>, Box<Expression>),
-    ClosureWithoutBlock(Box<Expression>),
-    Range(Box<Expression>, Option<Box<Expression>>), // from-to, from, to, inclusive, to inclusive
-    Path(Box<Expression>, Vec<Expression>),
-    TupleIndex(Box<Expression>, Box<Expression>),
-    Match(Box<Expression>, Vec<Expression>),
-    Return(Box<Expression>),
-    BreakExpression(Box<Expression>),
-    ContinueExpression(Box<Expression>),
-    Underscore(Box<Expression>),
-}
-
-#[derive(Debug, Clone)]
-enum Literal {
-    Int(IntKind),
-    UInt(UIntKind),
-    U256(U256),
-    String(String),
-    Char(char),
-    Bool(bool),
-}
-
-#[derive(Debug, Clone)]
-enum UnaryOp {
-    Negate,      // '-'
-    Not,         // '!'
-    Reference,   // '&'
-    Dereference, // '*'
-}
-
-#[derive(Debug, Clone)]
-enum BinaryOp {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Modulus,
-    Equal,
-    NotEqual,
-    LessThan,
-    LessEqual,
-    GreaterThan,
-    GreaterEqual,
-    Assign,
-    AddAssign,
-    SubtractAssign,
-    MultiplyAssign,
-    DivideAssign,
-    ModulusAssign,
-    LogicalAnd,
-    LogicalOr,
-    BitwiseAnd,
-    BitwiseOr,
-    BitwiseXor,
-    ShiftLeft,
-    ShiftRight,
-}
-
-#[derive(Debug, Clone)]
-enum Statement {
-    Let(String, Expression),
-    Expr(Expression),
-    Item(Item),
-}
-
-// TODO: parse:
-#[derive(Debug, Clone)]
-enum Item {
-    // definition blocks
-    Function,
-    FunctionSig, // (without block)
-    Struct,
-    TupleStruct, // (without block)
-    Enum,
-    Trait,
-    ImplBlock,
-    Module,
-    ModuleSig, // (without block)
-
-    // declarations
-    TypeAlias,
-    ConstantVar,
-    StaticVar,
-    Import,
-}
-
-// TODO: parse:
-#[derive(Debug, Clone)]
-enum Type {
-    // primitives
-    Int,
-    UInt,
-    U256,
-    String,
-    Char,
-    Bool,
-
-    // built-in collections
-    Array,
-    Tuple,
-
-    UserDefined, // struct, enum, trait, alias, constant (path types / items)
-
-    Function,
-    Closure,
-
-    Reference, // e.g., `&Type` / `&mut Type`
-    SelfType,
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum Precedence {
-    Lowest,
-    Unwrap,             // `?`
-    Assignment,         // `=`
-    CompoundAssignment, // `+=`, `-=`, `*/`, `/=`, `%=`
-    LogicalOr,          // `||`
-    LogicalAnd,         // `&&`
-    Equal,              // `==`
-    NotEqual,           // `!=`
-    LessThan,           // `<`
-    LessThanOrEqual,    // `<=`
-    GreaterThan,        // `>`
-    GreaterThanOrEqual, // `>=`
-    Shift,              // `«`, `»`
-    BitwiseAnd,         // `&`
-    BitwiseXor,         // `^`
-    BitwiseOr,          // `|`
-    Sum,                // `+`
-    Difference,         // `-`
-    Product,            // `*`
-    Quotient,           // `/`
-    Remainder,          // `%`
-    Unary,              // `-`, `!`, `&`, `*`
-    Exponentiation,     // `**`
-    Cast,               // "as"
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-// Parser struct with error handling
+/// Parser struct, containing methods to parse expressions, statements and items,
+/// as well as helper methods and error handling capabilities.
 #[derive(Debug)]
 struct Parser<'a> {
     stream: TokenStream,
     current: usize,
     error_contexts: Vec<ParseErrorContext<'a>>,
-    precedences: HashMap<Token, Precedence>,
+    precedences: HashMap<Token, Precedence>, // precedence levels by operator
 }
 
 impl Parser<'_> {
@@ -201,6 +35,7 @@ impl Parser<'_> {
         }
     }
 
+    /// Define precedence levels for operators
     fn init_precedences(&mut self) {
         self.precedences.insert(
             Token::As {
@@ -421,13 +256,6 @@ impl Parser<'_> {
         );
     }
 
-    // TODO: integrate with `ParserErrorKind` and `ParserErrorContext::format_error_message()`
-    fn report_error(&mut self, line: usize, column: usize, message: String) {
-        let snippet = "..."; // Extract a snippet of the source code if needed
-        let error_context = ParseErrorContext::new(line, column, message, snippet);
-        self.error_contexts.push(error_context);
-    }
-
     ///////////////////////////////////////////////////////////////////////////
 
     fn parse(&mut self) -> Result<Vec<Statement>, ParserErrorKind> {
@@ -444,8 +272,6 @@ impl Parser<'_> {
         let token = self.consume();
         match token {
             Some(Token::Let { .. }) => self.parse_let_statement(),
-            Some(Token::If { .. }) => self.parse_if_expression(),
-            Some(Token::For { .. }) => self.parse_for_in_expression(),
             Some(Token::LBrace { .. }) => self.parse_block_expression(),
             _ => {
                 self.unconsume();
@@ -454,8 +280,7 @@ impl Parser<'_> {
         }
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-
+    /// Parse an identifier and the assignment operation that binds the variable to a value.
     fn parse_let_statement(&mut self) -> Result<Statement, ParserErrorKind> {
         let identifier = self.expect_identifier()?;
 
@@ -464,7 +289,7 @@ impl Parser<'_> {
             span: self.stream.span(),
         })?;
 
-        let value = self.parse_expression(Precedence::Lowest)?;
+        let value = self.parse_expression(Precedence::Assignment)?;
 
         self.expect_token(Token::Semicolon {
             punc: ';',
@@ -474,12 +299,15 @@ impl Parser<'_> {
         Ok(Statement::Let(identifier, value))
     }
 
+    /// Parse an expression into a statement, separated by a semicolon.
     fn parse_expression_statement(&mut self) -> Result<Statement, ParserErrorKind> {
         let expression = &self.parse_expression(Precedence::Lowest)?;
+
         self.expect_token(Token::Semicolon {
             punc: ';',
             span: self.stream.span(),
         })?;
+
         Ok(Statement::Expr(expression.clone()))
     }
 
@@ -510,6 +338,7 @@ impl Parser<'_> {
 
     // }
 
+    /// Recursively parse an expression based on operator precedence.
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserErrorKind> {
         let mut left_expr = self.parse_prefix()?;
 
@@ -526,6 +355,7 @@ impl Parser<'_> {
         Ok(left_expr)
     }
 
+    /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses).
     fn parse_prefix(&mut self) -> Result<Expression, ParserErrorKind> {
         match self.consume() {
             Some(token) => match token {
@@ -690,6 +520,7 @@ impl Parser<'_> {
         }
     }
 
+    /// Parse infix expressions (e.g., binary operators).
     fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ParserErrorKind> {
         let token = self
             .consume()
@@ -770,6 +601,7 @@ impl Parser<'_> {
         }
     }
 
+    /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
     fn parse_primary(&mut self) -> Result<Expression, ParserErrorKind> {
         let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
 
@@ -777,13 +609,13 @@ impl Parser<'_> {
             Token::Identifier { name, .. }
             | Token::SelfKeyword { name, .. }
             | Token::Underscore { name, .. } => Ok(Expression::Identifier(name)),
-
             Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
             Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
             Token::U256Literal { value, .. } => Ok(Expression::Literal(Literal::U256(value))),
             Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
             Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
             Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
+            Token::LParen { .. } => self.parse_grouped_expression(),
             _ => Err(ParserErrorKind::UnexpectedToken {
                 expected: "identifier or literal".to_string(),
                 found: token,
@@ -811,6 +643,9 @@ impl Parser<'_> {
         Ok(expr)
     }
 
+    /// Parse a binary expressions (e.g., arithmetic, logical and comparison expressions).
+    /// This method parses the operator and calls `parse_expression()` recursively to handle
+    /// the right-hand side of the expression.
     fn parse_binary_expression(
         &mut self,
         left_expr: Expression,
@@ -1012,39 +847,31 @@ impl Parser<'_> {
         }
     }
 
+    /// Parse a function call with arguments.
     fn parse_call_expression(&mut self, callee: Expression) -> Result<Expression, ParserErrorKind> {
-        let mut arguments = Vec::new();
+        let mut args: Vec<Expression> = Vec::new(); // store function arguments
 
-        // Expect opening parenthesis
-        let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
-        if token
-            != (Token::LParen {
-                delim: '(',
-                span: self.stream.span(),
-            })
-        {
-            return Err(ParserErrorKind::UnexpectedToken {
-                expected: "`(`".to_string(),
-                found: token,
-            });
-        }
+        self.expect_token(Token::LParen {
+            delim: '(',
+            span: self.stream.span(),
+        })?;
 
-        // Parse arguments
+        // parse arguments – separated by commas – until a closing parenthesis
         loop {
             if let Some(Token::RParen { delim: ')', .. }) = self.peek_current() {
-                // End of arguments
+                // end of arguments
                 self.consume();
                 break;
             }
 
             let arg_expr = self.parse_expression(Precedence::Lowest)?;
-            arguments.push(arg_expr);
+            args.push(arg_expr);
 
-            // Expect comma or closing parenthesis
+            // error handling
             let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
             match token {
-                Token::Comma { .. } => continue, // More arguments
-                Token::RParen { .. } => break,   // End of arguments
+                Token::Comma { .. } => continue, // more arguments
+                Token::RParen { .. } => break,   // end of arguments
                 _ => {
                     return Err(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `)`".to_string(),
@@ -1054,9 +881,10 @@ impl Parser<'_> {
             }
         }
 
-        Ok(Expression::Call(Box::new(callee), arguments))
+        Ok(Expression::Call(Box::new(callee), args))
     }
 
+    /// Parse an index expression (i.e., `array[index]`).
     fn parse_index_expression(
         &mut self,
         array_expr: Expression,
@@ -1076,6 +904,7 @@ impl Parser<'_> {
         ))
     }
 
+    /// Parse a field access expression (i.e., `object.field`).
     fn parse_field_access_expression(
         &mut self,
         object_expr: Expression,
@@ -1096,20 +925,25 @@ impl Parser<'_> {
     }
 
     // TODO: what about `else-if` branches ?
-    fn parse_if_expression(&mut self) -> Result<Statement, ParserErrorKind> {
+    /// Parse an `if` expression (i.e., `if (condition) { true block } else { false block }`).
+    fn parse_if_expression(&mut self) -> Result<Expression, ParserErrorKind> {
         self.expect_token(Token::If {
             name: "if".to_string(),
             span: self.stream.span(),
         })?;
+
         self.expect_token(Token::LParen {
             delim: '(',
             span: self.stream.span(),
         })?;
+
         let condition = Box::new(self.parse_expression(Precedence::Lowest)?);
+
         self.expect_token(Token::RParen {
             delim: ')',
             span: self.stream.span(),
         })?;
+
         let true_branch = Box::new(self.parse_expression(Precedence::Lowest)?);
 
         let false_branch = if self.match_token(Token::Else {
@@ -1121,62 +955,70 @@ impl Parser<'_> {
             None
         };
 
-        Ok(Statement::Expr(Expression::If(
-            condition,
-            true_branch,
-            false_branch,
-        )))
+        Ok(Expression::If(condition, true_branch, false_branch))
     }
 
+    /// Parse a `for-in` expression (i.e., `for var in iterable { execution logic }`).
     fn parse_for_in_expression(&mut self) -> Result<Statement, ParserErrorKind> {
         self.expect_token(Token::For {
             name: "for".to_string(),
             span: self.stream.span(),
         })?;
-        self.expect_token(Token::Let {
-            name: "let".to_string(),
-            span: self.stream.span(),
-        })?; // Assuming for-in loops are of the form "for let variable in iterable"
+
         let variable = Box::new(Expression::Identifier(self.consume_identifier()?));
+
         self.expect_token(Token::In {
             name: "in".to_string(),
             span: self.stream.span(),
         })?;
+
         let iterable = Box::new(self.parse_expression(Precedence::Lowest)?);
+
         let body = Box::new(self.parse_expression(Precedence::Lowest)?);
+
         Ok(Statement::Expr(Expression::ForIn(variable, iterable, body)))
     }
 
+    /// Parse a block expression (i.e., `{ expr1; expr2; ... }`).
     fn parse_block_expression(&mut self) -> Result<Statement, ParserErrorKind> {
         self.expect_token(Token::LBrace {
             delim: '{',
             span: self.stream.span(),
         })?;
-        let mut expressions = Vec::new();
+
+        let mut expressions: Vec<Expression> = Vec::new();
+
+        // parse expressions until a closing brace
         while !self.check_token(Token::RBrace {
             delim: '}',
             span: self.stream.span(),
         }) {
             expressions.push(self.parse_expression(Precedence::Lowest)?);
         }
+
         self.expect_token(Token::RBrace {
             delim: '}',
             span: self.stream.span(),
         })?;
+
         Ok(Statement::Expr(Expression::Block(expressions)))
     }
 
+    /// Parse an array expression (i.e., `[element1, element2, element3, etc.]`).
     fn parse_array_expression(&mut self) -> Result<Expression, ParserErrorKind> {
         self.expect_token(Token::LBracket {
             delim: '[',
             span: self.stream.span(),
         })?;
-        let mut elements = Vec::new();
+
+        let mut elements: Vec<Expression> = Vec::new();
+
         while !self.check_token(Token::RBracket {
             delim: ']',
             span: self.stream.span(),
         }) {
             elements.push(self.parse_expression(Precedence::Lowest)?);
+
             if !self.match_token(Token::Comma {
                 punc: ',',
                 span: self.stream.span(),
@@ -1184,24 +1026,30 @@ impl Parser<'_> {
                 break;
             }
         }
+
         self.expect_token(Token::RBracket {
             delim: ']',
             span: self.stream.span(),
         })?;
+
         Ok(Expression::Array(elements))
     }
 
+    /// Parse a tuple expression (i.e., `(element1, element2, element3)`).
     fn parse_tuple_expression(&mut self) -> Result<Expression, ParserErrorKind> {
         self.expect_token(Token::LParen {
             delim: '(',
             span: self.stream.span(),
         })?;
-        let mut elements = Vec::new();
+
+        let mut elements: Vec<Expression> = Vec::new();
+
         while !self.check_token(Token::RParen {
             delim: ')',
             span: self.stream.span(),
         }) {
             elements.push(self.parse_expression(Precedence::Lowest)?);
+
             if !self.match_token(Token::Comma {
                 punc: ',',
                 span: self.stream.span(),
@@ -1209,10 +1057,12 @@ impl Parser<'_> {
                 break;
             }
         }
+
         self.expect_token(Token::RParen {
             delim: ')',
             span: self.stream.span(),
         })?;
+
         Ok(Expression::Tuple(elements))
     }
 
@@ -1238,29 +1088,21 @@ impl Parser<'_> {
         Ok(Expression::Cast(Box::new(expr), ty))
     }
 
+    /// Parse a struct with fields.
     fn parse_struct(&mut self) -> Result<Expression, ParserErrorKind> {
-        let mut fields = Vec::new();
+        let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
 
-        // Expect opening brace
-        let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
-        if token
-            != (Token::LBrace {
-                delim: '{',
-                span: self.stream.span(),
-            })
-        {
-            return Err(ParserErrorKind::UnexpectedToken {
-                expected: "`{`".to_string(),
-                found: token,
-            });
-        }
+        self.expect_token(Token::LBrace {
+            delim: '{',
+            span: self.stream.span(),
+        })?;
 
-        // Parse struct fields
+        // parse struct fields – separated by commas – until a closing brace
         loop {
-            // Expect field name
+            // get the field name
             let field_name = match self.consume().ok_or(ParserErrorKind::TokenNotFound)? {
                 Token::Identifier { name, .. } => name,
-                Token::RBrace { .. } => break, // End of struct
+                Token::RBrace { .. } => break, // end of struct
                 _ => {
                     return Err(ParserErrorKind::UnexpectedToken {
                         expected: "identifier or `}`".to_string(),
@@ -1274,33 +1116,25 @@ impl Parser<'_> {
                 }
             };
 
-            // Expect colon
-            let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
-            if token
-                != (Token::Colon {
-                    punc: ':',
-                    span: self.stream.span(),
-                })
-            {
-                return Err(ParserErrorKind::UnexpectedToken {
-                    expected: "`:`".to_string(),
-                    found: token,
-                });
-            }
+            self.expect_token(Token::Colon {
+                punc: ':',
+                span: self.stream.span(),
+            })?;
 
-            // Parse field value
+            // parse field value
             let field_value = self.parse_expression(Precedence::Lowest)?;
 
+            // push field to list of fields
             fields.push(StructField {
                 name: field_name,
                 value: field_value,
             });
 
-            // Expect comma or closing brace
+            // error handling
             let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
             match token {
-                Token::Comma { .. } => continue, // More fields
-                Token::RBrace { .. } => break,   // End of struct
+                Token::Comma { .. } => continue, // more fields
+                Token::RBrace { .. } => break,   // end of struct
                 _ => {
                     return Err(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `}`".to_string(),
@@ -1405,6 +1239,8 @@ impl Parser<'_> {
         }
     }
 
+    /// Consume and check tokens, to ensure that the expected tokens are encountered 
+    /// during parsing. Return the relevant `ParserErrorKind` where applicable.
     fn expect_token(&mut self, expected: Token) -> Result<(), ParserErrorKind> {
         match self.consume() {
             Some(token) if token == expected => Ok(()),
@@ -1416,6 +1252,7 @@ impl Parser<'_> {
         }
     }
 
+    /// Match a `Token` to a `Type` and return the `Type` or a `ParserErrorKind`.
     fn get_type(&mut self) -> Result<Type, ParserErrorKind> {
         match self.consume() {
             Some(Token::I32Type { .. } | Token::I64Type { .. }) => Ok(Type::Int),
@@ -1441,6 +1278,7 @@ impl Parser<'_> {
         }
     }
 
+    /// Retrieve the respective precedence level for an operator.
     fn precedence(&self, token: &Token) -> Option<Precedence> {
         self.precedences.get(token).cloned()
     }
@@ -1470,4 +1308,11 @@ impl Parser<'_> {
     fn is_at_end(&self) -> bool {
         self.current >= self.stream.tokens().len()
     }
+
+    // // TODO: integrate with `ParserErrorKind` and `ParserErrorContext::format_error_message()`
+    // fn report_error(&mut self, line: usize, column: usize, message: String) {
+    //     let snippet = "..."; // Extract a snippet of the source code if needed
+    //     let error_context = ParseErrorContext::new(line, column, message, snippet);
+    //     self.error_contexts.push(error_context);
+    // }
 }

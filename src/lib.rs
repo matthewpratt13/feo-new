@@ -4,6 +4,7 @@ construct_uint! {
     pub struct U256(4);
 }
 
+mod ast;
 mod error;
 mod lexer;
 mod number;
