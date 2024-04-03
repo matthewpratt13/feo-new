@@ -33,7 +33,7 @@ enum Expression {
     Cast(Box<Expression>, Type),
     ErrorPropagate(Box<Expression>, Box<Expression>),
     Struct(Vec<StructField>),
-    Parenthesized(Box<Expression>),
+    Grouped(Box<Expression>),
 
     // TODO: parse:
     InfiniteLoop,
@@ -41,8 +41,9 @@ enum Expression {
     Ternary,
     TupleStruct,
     MethodCall,
-    Closure, // with and without block
-    Range,   // from-to, from, to, inclusive, to inclusive
+    ClosureWithBlock,
+    ClosureWithoutBlock,
+    Range, // from-to, from, to, inclusive, to inclusive
     Path,
     TupleIndex,
     // Return,
@@ -61,8 +62,8 @@ enum Literal {
 
 #[derive(Debug, Clone)]
 enum UnaryOp {
-    Negate, // '-'
-    Not,    // '!'
+    Negate,      // '-'
+    Not,         // '!'
     Reference,   // '&'
     Dereference, // '*'
 }
@@ -521,14 +522,10 @@ impl Parser<'_> {
     fn parse_prefix(&mut self) -> Result<Expression, ParserErrorKind> {
         match self.consume() {
             Some(token) => match token {
-                Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
-                Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
-                Token::U256Literal { value, .. } => Ok(Expression::Literal(Literal::U256(value))),
-                Token::StringLiteral { value, .. } => {
-                    Ok(Expression::Literal(Literal::String(value)))
-                }
-                Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
-                Token::Identifier { name, .. } => Ok(Expression::Identifier(name)),
+                Token::IntLiteral { .. } => self.parse_primary(),
+                Token::UIntLiteral { .. } => self.parse_primary(),
+                Token::U256Literal { .. } => self.parse_primary(),
+                Token::Identifier { .. } => self.parse_primary(),
                 Token::Minus { .. } => {
                     let expr = self.parse_expression(Precedence::Unary)?;
                     Ok(Expression::UnaryOp(UnaryOp::Negate, Box::new(expr)))
@@ -537,12 +534,65 @@ impl Parser<'_> {
                     let expr = self.parse_expression(Precedence::Unary)?;
                     Ok(Expression::UnaryOp(UnaryOp::Not, Box::new(expr)))
                 }
+                Token::Ampersand { .. } => {
+                    let expr = self.parse_expression(Precedence::Unary)?;
+                    Ok(Expression::UnaryOp(UnaryOp::Reference, Box::new(expr)))
+                }
+                Token::Asterisk { .. } => {
+                    let expr = self.parse_expression(Precedence::Unary)?;
+                    Ok(Expression::UnaryOp(UnaryOp::Dereference, Box::new(expr)))
+                }
                 Token::LParen { .. } => {
-                    let expr = self.parse_expression(Precedence::Lowest)?;
+                    let expr = if let Ok(Token::Comma { .. }) =
+                        self.peek_ahead_by(2)
+                            .ok_or(ParserErrorKind::TokenIndexOutOfBounds {
+                                len: self.stream.tokens().len(),
+                                i: self.current + 2,
+                            }) {
+                        self.parse_tuple_expression()?
+                    } else {
+                        self.parse_grouped_expression()?
+                    };
+
                     self.expect(Token::RParen {
                         delim: ')',
                         span: self.stream.span(),
                     })?;
+
+                    Ok(expr)
+                }
+                Token::LBracket { .. } => {
+                    let expr = self.parse_array_expression()?;
+                    self.expect(Token::RBracket {
+                        delim: ']',
+                        span: self.stream.span(),
+                    })?;
+                    Ok(expr)
+                }
+                Token::Pipe { .. } | Token::DblPipe { .. } => {
+                    let expr = if let Ok(c) = self.parse_closure_with_block() {
+                        c
+                    } else {
+                        self.parse_closure_without_block()?
+                    };
+
+                    match expr {
+                        Expression::ClosureWithBlock => {
+                            self.expect(Token::RBrace {
+                                delim: '}',
+                                span: self.stream.span(),
+                            })?;
+                        }
+                        Expression::ClosureWithoutBlock => {
+                            self.expect(Token::Semicolon {
+                                punc: ';',
+                                span: self.stream.span(),
+                            })?;
+                        }
+
+                        _ => (),
+                    }
+
                     Ok(expr)
                 }
                 _ => Err(ParserErrorKind::InvalidToken { token }),
@@ -664,14 +714,6 @@ impl Parser<'_> {
         let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
 
         match token {
-            Token::LParen { .. } => {
-                let expr = self.parse_expression(Precedence::Lowest)?;
-                self.expect_token(Token::RParen {
-                    delim: ')',
-                    span: self.stream.span(),
-                })?;
-                Ok(Expression::Parenthesized(Box::new(expr)))
-            }
             Token::Identifier { name, .. } => Ok(Expression::Identifier(name)),
             Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
             Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
@@ -679,11 +721,32 @@ impl Parser<'_> {
             Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
             Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
             Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
-            _ => Err(ParserErrorKind::InvalidToken { token }),
+            _ => Err(ParserErrorKind::UnexpectedToken {
+                expected: "identifier or literal".to_string(),
+                found: token,
+            }),
         }
     }
 
     ///////////////////////////////////////////////////////////////////////////
+
+    fn parse_grouped_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+        self.expect_token(Token::LParen {
+            delim: '(',
+            span: self.stream.span(),
+        })?;
+
+        self.consume(); // Consume '('
+
+        let expr = self.parse_expression(Precedence::Lowest)?;
+
+        self.expect_token(Token::RParen {
+            delim: ')',
+            span: self.stream.span(),
+        })?;
+
+        Ok(expr)
+    }
 
     fn parse_call_expression(&mut self, callee: Expression) -> Result<Expression, ParserErrorKind> {
         let mut arguments = Vec::new();
@@ -964,6 +1027,14 @@ impl Parser<'_> {
         Ok(Expression::Struct(fields))
     }
 
+    fn parse_closure_with_block(&mut self) -> Result<Expression, ParserErrorKind> {
+        todo!()
+    }
+
+    fn parse_closure_without_block(&mut self) -> Result<Expression, ParserErrorKind> {
+        todo!()
+    }
+
     ///////////////////////////////////////////////////////////////////////////
 
     fn expect_identifier(&mut self) -> Result<String, ParserErrorKind> {
@@ -1052,6 +1123,10 @@ impl Parser<'_> {
 
     fn peek(&self) -> Option<Token> {
         self.stream.tokens().get(self.current).cloned()
+    }
+
+    fn peek_ahead_by(&self, num_tokens: usize) -> Option<Token> {
+        self.stream.tokens().get(self.current + num_tokens).cloned()
     }
 
     fn consume(&mut self) -> Option<Token> {

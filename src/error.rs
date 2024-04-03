@@ -10,9 +10,7 @@ pub enum LexerErrorKind {
     UnexpectedCharacter(char),
     UnclosedStringLiteral,
     MismatchedDelimiter(char),
-    InvalidEscapeSequenceInStringLiteral
-    
-    // TODO: add more error types as needed
+    InvalidEscapeSequenceInStringLiteral, // TODO: add more error types as needed
 }
 
 #[derive(Debug, PartialEq)]
@@ -34,6 +32,11 @@ pub enum ParserErrorKind {
         token: Token,
     },
 
+    TokenIndexOutOfBounds {
+        len: usize,
+        i: usize,
+    },
+
     TokenNotFound,
 
     #[default]
@@ -52,6 +55,12 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::UnexpectedEndOfInput => writeln!(f, "unexpected end of input"),
             ParserErrorKind::InvalidToken { token } => writeln!(f, "invalid token: `{:#?}`", token),
             ParserErrorKind::TokenNotFound => writeln!(f, "token not found"),
+            ParserErrorKind::TokenIndexOutOfBounds { len, i } => {
+                writeln!(
+                    f,
+                    "token index out of bounds. \nlength is: {len}, index is: {i}"
+                )
+            }
             ParserErrorKind::UnknownError => writeln!(f, "unknown error"),
         }
     }
