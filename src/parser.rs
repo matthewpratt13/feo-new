@@ -36,18 +36,21 @@ enum Expression {
     Grouped(Box<Expression>),
 
     // TODO: parse:
-    InfiniteLoop,
-    WhileLoop,
-    Ternary,
-    TupleStruct,
-    MethodCall,
-    ClosureWithBlock,
-    ClosureWithoutBlock,
-    Range, // from-to, from, to, inclusive, to inclusive
-    Path,
-    TupleIndex,
-    // Return,
-    // Underscore
+    InfiniteLoop(Box<Expression>),
+    WhileLoop(Box<Expression>, Box<Expression>),
+    Ternary(Box<Expression>, Box<Expression>, Option<Box<Expression>>),
+    TupleStruct(Vec<Expression>),
+    MethodCall(Box<Expression>, Box<Expression>),
+    ClosureWithBlock(Box<Expression>, Box<Expression>),
+    ClosureWithoutBlock(Box<Expression>),
+    Range(Box<Expression>, Option<Box<Expression>>), // from-to, from, to, inclusive, to inclusive
+    Path(Box<Expression>, Vec<Expression>),
+    TupleIndex(Box<Expression>, Box<Expression>),
+    Match(Box<Expression>, Vec<Expression>),
+    Return(Box<Expression>),
+    BreakExpression(Box<Expression>),
+    ContinueExpression(Box<Expression>),
+    Underscore(Box<Expression>),
 }
 
 #[derive(Debug, Clone)]
@@ -74,13 +77,19 @@ enum BinaryOp {
     Subtract,
     Multiply,
     Divide,
-    Assign,
+    Modulus,
     Equal,
     NotEqual,
-    Less,
+    LessThan,
     LessEqual,
-    Greater,
+    GreaterThan,
     GreaterEqual,
+    Assign,
+    AddAssign,
+    SubtractAssign,
+    MultiplyAssign,
+    DivideAssign,
+    ModulusAssign,
     LogicalAnd,
     LogicalOr,
     BitwiseAnd,
@@ -139,7 +148,6 @@ enum Type {
     Closure,
 
     Reference, // e.g., `&Type` / `&mut Type`
-    Unit,
     SelfType,
 }
 
@@ -510,7 +518,7 @@ impl Parser<'_> {
             self.precedence(&self.peek().ok_or(ParserErrorKind::TokenNotFound)?)
         {
             if precedence < current_precedence {
-                left_expr = self.parse_infix(left_expr, current_precedence)?;
+                left_expr = self.parse_infix(left_expr)?;
             } else {
                 break;
             }
@@ -526,6 +534,20 @@ impl Parser<'_> {
                 Token::UIntLiteral { .. } => self.parse_primary(),
                 Token::U256Literal { .. } => self.parse_primary(),
                 Token::Identifier { .. } => self.parse_primary(),
+                Token::SelfKeyword { .. } => match self.peek() {
+                    Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
+                        let expr = self.parse_path_expression()?;
+
+                        self.expect(Token::Semicolon {
+                            punc: ';',
+                            span: self.stream.span(),
+                        })?;
+
+                        Ok(expr)
+                    }
+
+                    _ => self.parse_primary(),
+                },
                 Token::Minus { .. } => {
                     let expr = self.parse_expression(Precedence::Unary)?;
                     Ok(Expression::UnaryOp(UnaryOp::Negate, Box::new(expr)))
@@ -577,17 +599,21 @@ impl Parser<'_> {
                     };
 
                     match expr {
-                        Expression::ClosureWithBlock => {
+                        Expression::ClosureWithBlock(a, b) => {
                             self.expect(Token::RBrace {
                                 delim: '}',
                                 span: self.stream.span(),
                             })?;
+
+                            return Ok(Expression::ClosureWithBlock(a, b));
                         }
-                        Expression::ClosureWithoutBlock => {
+                        Expression::ClosureWithoutBlock(a) => {
                             self.expect(Token::Semicolon {
                                 punc: ';',
                                 span: self.stream.span(),
                             })?;
+
+                            return Ok(Expression::ClosureWithoutBlock(a));
                         }
 
                         _ => (),
@@ -595,117 +621,152 @@ impl Parser<'_> {
 
                     Ok(expr)
                 }
+
+                Token::DblDot { .. } | Token::DotDotEquals { .. } => {
+                    let expr = self.parse_range_expression()?;
+
+                    match self.peek() {
+                        Some(
+                            Token::Identifier { .. }
+                            | Token::UIntLiteral { .. }
+                            | Token::IntLiteral { .. }
+                            | Token::U256Literal { .. },
+                        ) => Ok(expr),
+                        Some(t) => Err(ParserErrorKind::UnexpectedToken {
+                            expected: "identifier or number".to_string(),
+                            found: t,
+                        }),
+                        None => Err(ParserErrorKind::UnexpectedEndOfInput),
+                    }
+                }
+
+                Token::Return { .. } => {
+                    let expr = self.parse_return_expression()?;
+
+                    self.expect(Token::Semicolon {
+                        punc: ';',
+                        span: self.stream.span(),
+                    })?;
+
+                    Ok(expr)
+                }
+
+                Token::Match { .. } => {
+                    let expr = self.parse_match_expression()?;
+
+                    self.expect(Token::RBrace {
+                        delim: '}',
+                        span: self.stream.span(),
+                    })?;
+
+                    Ok(expr)
+                }
+
+                Token::Super { .. } | Token::Package { .. } => {
+                    let expr = self.parse_path_expression()?;
+
+                    self.expect(Token::Semicolon {
+                        punc: ';',
+                        span: self.stream.span(),
+                    })?;
+
+                    Ok(expr)
+                }
+
+                Token::Break { .. } | Token::Continue { .. } => {
+                    let expr = self.parse_break_or_continue_expression()?;
+                    self.expect(Token::Semicolon {
+                        punc: ';',
+                        span: self.stream.span(),
+                    })?;
+
+                    Ok(expr)
+                }
+
+                Token::Underscore { .. } => self.parse_primary(),
+
                 _ => Err(ParserErrorKind::InvalidToken { token }),
             },
             None => Err(ParserErrorKind::UnexpectedEndOfInput),
         }
     }
 
-    fn parse_infix(
-        &mut self,
-        left_expr: Expression,
-        precedence: Precedence,
-    ) -> Result<Expression, ParserErrorKind> {
+    fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ParserErrorKind> {
         let token = self
             .consume()
             .ok_or(ParserErrorKind::UnexpectedEndOfInput)?;
         match token {
-            Token::Asterisk { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::Multiply,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            Token::Slash { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::Divide,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            Token::Plus { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::Add,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            Token::Minus { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::Subtract,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            Token::DblEquals { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::Equal,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            Token::BangEquals { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::NotEqual,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            Token::LessThan { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::Less,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
+            Token::Plus { .. } => self.parse_binary_expression(left_expr, BinaryOp::Add),
+            Token::Minus { .. } => self.parse_binary_expression(left_expr, BinaryOp::Subtract),
+            Token::Asterisk { .. } => self.parse_binary_expression(left_expr, BinaryOp::Multiply),
+            Token::Slash { .. } => self.parse_binary_expression(left_expr, BinaryOp::Divide),
+            Token::Percent { .. } => self.parse_binary_expression(left_expr, BinaryOp::Modulus),
+            Token::DblEquals { .. } => self.parse_binary_expression(left_expr, BinaryOp::Equal),
+            Token::BangEquals { .. } => self.parse_binary_expression(left_expr, BinaryOp::NotEqual),
+            Token::LessThan { .. } => self.parse_binary_expression(left_expr, BinaryOp::LessThan),
             Token::LessThanEquals { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::LessEqual,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
+                self.parse_binary_expression(left_expr, BinaryOp::LessEqual)
             }
             Token::GreaterThan { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::Greater,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
+                self.parse_binary_expression(left_expr, BinaryOp::GreaterThan)
             }
             Token::GreaterThanEquals { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::GreaterEqual,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
+                self.parse_binary_expression(left_expr, BinaryOp::GreaterEqual)
+            }
+            Token::Equals { .. } => self.parse_binary_expression(left_expr, BinaryOp::Assign),
+            Token::PlusEquals { .. } => {
+                self.parse_binary_expression(left_expr, BinaryOp::AddAssign)
+            }
+            Token::MinusEquals { .. } => {
+                self.parse_binary_expression(left_expr, BinaryOp::SubtractAssign)
+            }
+            Token::AsteriskEquals { .. } => {
+                self.parse_binary_expression(left_expr, BinaryOp::MultiplyAssign)
+            }
+            Token::SlashEquals { .. } => {
+                self.parse_binary_expression(left_expr, BinaryOp::DivideAssign)
+            }
+            Token::PercentEquals { .. } => {
+                self.parse_binary_expression(left_expr, BinaryOp::ModulusAssign)
             }
             Token::DblAmpersand { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::LogicalAnd,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
+                self.parse_binary_expression(left_expr, BinaryOp::LogicalAnd)
             }
-            Token::DblPipe { .. } => {
-                let right_expr = self.parse_expression(precedence)?;
-                Ok(Expression::BinaryOp(
-                    BinaryOp::LogicalOr,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
+            Token::DblPipe { .. } => self.parse_binary_expression(left_expr, BinaryOp::LogicalOr),
+            Token::Ampersand { .. } => {
+                self.parse_binary_expression(left_expr, BinaryOp::BitwiseAnd)
             }
+            Token::Pipe { .. } => self.parse_binary_expression(left_expr, BinaryOp::BitwiseOr),
+            Token::Caret { .. } => self.parse_binary_expression(left_expr, BinaryOp::BitwiseXor),
+            Token::DblLessThan { .. } => {
+                self.parse_binary_expression(left_expr, BinaryOp::ShiftLeft)
+            }
+            Token::DblGreaterThan { .. } => {
+                self.parse_binary_expression(left_expr, BinaryOp::ShiftRight)
+            }
+            Token::QuestionMark { .. } => self.parse_unwrap_expression(),
+            Token::DblDot { .. } | Token::DotDotEquals { .. } => self.parse_range_expression(),
+            Token::As { .. } => self.parse_cast_expression(),
+            Token::LParen { .. } => self.parse_call_expression(left_expr), // TODO: or tuple struct
+            Token::LBrace { .. } => self.parse_struct(), // TODO: or match expression
+            Token::LBracket { .. } => self.parse_index_expression(left_expr), // TODO: check
+            Token::FullStop { .. } => match self.peek() {
+                Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {
+                    match self.peek_ahead_by(1) {
+                        Some(Token::LParen { .. }) => self.parse_method_call_expression(),
+                        _ => self.parse_field_access_expression(left_expr),
+                    }
+                }
+                Some(Token::UIntLiteral { .. }) => self.parse_tuple_index_expression(),
+                _ => Err(ParserErrorKind::UnexpectedToken {
+                    expected: "identifier or tuple index".to_string(),
+                    found: token,
+                }),
+            },
+            Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => {
+                self.parse_path_expression()
+            }
+
             _ => Err(ParserErrorKind::InvalidToken { token }),
         }
     }
@@ -714,7 +775,10 @@ impl Parser<'_> {
         let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
 
         match token {
-            Token::Identifier { name, .. } => Ok(Expression::Identifier(name)),
+            Token::Identifier { name, .. }
+            | Token::SelfKeyword { name, .. }
+            | Token::Underscore { name, .. } => Ok(Expression::Identifier(name)),
+
             Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
             Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
             Token::U256Literal { value, .. } => Ok(Expression::Literal(Literal::U256(value))),
@@ -746,6 +810,207 @@ impl Parser<'_> {
         })?;
 
         Ok(expr)
+    }
+
+    fn parse_binary_expression(
+        &mut self,
+        left_expr: Expression,
+        op: BinaryOp,
+    ) -> Result<Expression, ParserErrorKind> {
+        match op {
+            BinaryOp::Add => {
+                let right_expr = self.parse_expression(Precedence::Sum)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::Subtract => {
+                let right_expr = self.parse_expression(Precedence::Difference)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::Multiply => {
+                let right_expr = self.parse_expression(Precedence::Product)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::Divide => {
+                let right_expr = self.parse_expression(Precedence::Quotient)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::Modulus => {
+                let right_expr = self.parse_expression(Precedence::Remainder)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::Equal => {
+                let right_expr = self.parse_expression(Precedence::Equal)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::NotEqual => {
+                let right_expr = self.parse_expression(Precedence::NotEqual)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::LessThan => {
+                let right_expr = self.parse_expression(Precedence::LessThan)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::LessEqual => {
+                let right_expr = self.parse_expression(Precedence::LessThanOrEqual)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::GreaterThan => {
+                let right_expr = self.parse_expression(Precedence::GreaterThan)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::GreaterEqual => {
+                let right_expr = self.parse_expression(Precedence::GreaterThanOrEqual)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::Assign => {
+                let right_expr = self.parse_expression(Precedence::Assignment)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::AddAssign => {
+                let right_expr = self.parse_expression(Precedence::CompoundAssignment)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::SubtractAssign => {
+                let right_expr = self.parse_expression(Precedence::CompoundAssignment)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::MultiplyAssign => {
+                let right_expr = self.parse_expression(Precedence::CompoundAssignment)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::DivideAssign => {
+                let right_expr = self.parse_expression(Precedence::CompoundAssignment)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::ModulusAssign => {
+                let right_expr = self.parse_expression(Precedence::CompoundAssignment)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::LogicalAnd => {
+                let right_expr = self.parse_expression(Precedence::LogicalAnd)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::LogicalOr => {
+                let right_expr = self.parse_expression(Precedence::LogicalOr)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::BitwiseAnd => {
+                let right_expr = self.parse_expression(Precedence::BitwiseAnd)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::BitwiseOr => {
+                let right_expr = self.parse_expression(Precedence::BitwiseOr)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::BitwiseXor => {
+                let right_expr = self.parse_expression(Precedence::BitwiseXor)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::ShiftLeft => {
+                let right_expr = self.parse_expression(Precedence::Shift)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+            BinaryOp::ShiftRight => {
+                let right_expr = self.parse_expression(Precedence::Shift)?;
+                Ok(Expression::BinaryOp(
+                    op,
+                    Box::new(left_expr),
+                    Box::new(right_expr),
+                ))
+            }
+        }
     }
 
     fn parse_call_expression(&mut self, callee: Expression) -> Result<Expression, ParserErrorKind> {
@@ -816,7 +1081,7 @@ impl Parser<'_> {
         &mut self,
         object_expr: Expression,
     ) -> Result<Expression, ParserErrorKind> {
-        self.expect_token(Token::Dot {
+        self.expect_token(Token::FullStop {
             punc: '.',
             span: self.stream.span(),
         })?;
@@ -952,6 +1217,28 @@ impl Parser<'_> {
         Ok(Expression::Tuple(elements))
     }
 
+    fn parse_cast_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+        let expr = self.parse_expression(Precedence::Cast)?;
+
+        let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
+
+        if token
+            != (Token::As {
+                name: "as".to_string(),
+                span: self.stream.span(),
+            })
+        {
+            return Err(ParserErrorKind::UnexpectedToken {
+                expected: "as".to_string(),
+                found: token,
+            });
+        }
+
+        let ty = self.get_type()?;
+
+        Ok(Expression::Cast(Box::new(expr), ty))
+    }
+
     fn parse_struct(&mut self) -> Result<Expression, ParserErrorKind> {
         let mut fields = Vec::new();
 
@@ -1035,6 +1322,38 @@ impl Parser<'_> {
         todo!()
     }
 
+    fn parse_tuple_index_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+        todo!()
+    }
+
+    fn parse_method_call_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+        todo!()
+    }
+
+    fn parse_path_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+        todo!()
+    }
+
+    fn parse_unwrap_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+        todo!()
+    }
+
+    fn parse_range_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+        todo!()
+    }
+
+    fn parse_return_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+        todo!()
+    }
+
+    fn parse_match_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+        todo!()
+    }
+
+    fn parse_break_or_continue_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+        todo!()
+    }
+
     ///////////////////////////////////////////////////////////////////////////
 
     fn expect_identifier(&mut self) -> Result<String, ParserErrorKind> {
@@ -1114,6 +1433,31 @@ impl Parser<'_> {
         match self.precedences.get(token) {
             Some(p) => Some(*p),
             None => None,
+        }
+    }
+
+    fn get_type(&mut self) -> Result<Type, ParserErrorKind> {
+        match self.consume() {
+            Some(Token::I32Type { .. } | Token::I64Type { .. }) => Ok(Type::Int),
+
+            Some(
+                Token::U8Type { .. }
+                | Token::U16Type { .. }
+                | Token::U32Type { .. }
+                | Token::U64Type { .. },
+            ) => Ok(Type::UInt),
+            Some(Token::U256Type { .. }) => Ok(Type::U256),
+            Some(Token::StringType { .. }) => Ok(Type::String),
+            Some(Token::CharType { .. }) => Ok(Type::Char),
+            Some(Token::BoolType { .. }) => Ok(Type::Bool),
+            Some(Token::CustomType { .. }) => Ok(Type::UserDefined),
+            Some(Token::SelfType { .. }) => Ok(Type::SelfType),
+            Some(Token::LParen { .. }) => Ok(Type::Tuple),
+            Some(Token::LBracket { .. }) => Ok(Type::Array),
+            Some(Token::Func { .. }) => Ok(Type::Function),
+            Some(Token::Pipe { .. } | Token::DblPipe { .. }) => Ok(Type::Closure),
+            Some(Token::Ampersand { .. }) => Ok(Type::Reference),
+            _ => Err(ParserErrorKind::UnexpectedEndOfInput),
         }
     }
 

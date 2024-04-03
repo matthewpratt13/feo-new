@@ -6,7 +6,7 @@ use crate::{
     U256,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Token {
     Identifier { name: String, span: Span },
 
@@ -56,12 +56,18 @@ pub enum Token {
     While { name: String, span: Span },
     Break { name: String, span: Span },
     Continue { name: String, span: Span },
-    IntType { name: String, span: Span },
-    UIntType { name: String, span: Span },
+    I32Type { name: String, span: Span },
+    I64Type { name: String, span: Span },
+    U8Type { name: String, span: Span },
+    U16Type { name: String, span: Span },
+    U32Type { name: String, span: Span },
+    U64Type { name: String, span: Span },
     U256Type { name: String, span: Span },
     StringType { name: String, span: Span },
     CharType { name: String, span: Span },
     BoolType { name: String, span: Span },
+    SelfType { name: String, span: Span },
+    CustomType { name: String, span: Span },
 
     // delimiters
     LParen { delim: char, span: Span },
@@ -75,11 +81,17 @@ pub enum Token {
     Colon { punc: char, span: Span },
     Semicolon { punc: char, span: Span },
     Comma { punc: char, span: Span },
-    Dot { punc: char, span: Span },
+    FullStop { punc: char, span: Span },
+    DblColon { punc: String, span: Span },
+    ColonColonAsterisk { punc: String, span: Span },
+    HashSign { punc: char, span: Span },
+    HashBang { punc: String, span: Span },
+    ThinArrow { punc: String, span: Span },
+    FatArrow { punc: String, span: Span },
+    Underscore { name: String, span: Span },
 
     // operators
     Bang { punc: char, span: Span },
-    HashSign { punc: char, span: Span },
     Percent { punc: char, span: Span },
     Ampersand { punc: char, span: Span },
     Asterisk { punc: char, span: Span },
@@ -94,9 +106,6 @@ pub enum Token {
     Pipe { punc: char, span: Span },
     DblDot { punc: String, span: Span },
     DotDotEquals { punc: String, span: Span },
-    DblColon { punc: String, span: Span },
-    ColonColonAsterisk { punc: String, span: Span },
-    HashBang { punc: String, span: Span },
     BangEquals { punc: String, span: Span },
     PercentEquals { punc: String, span: Span },
     DblAsterisk { punc: String, span: Span },
@@ -110,8 +119,6 @@ pub enum Token {
     DblEquals { punc: String, span: Span },
     DblGreaterThan { punc: String, span: Span },
     GreaterThanEquals { punc: String, span: Span },
-    ThinArrow { punc: String, span: Span },
-    FatArrow { punc: String, span: Span },
     DblPipe { punc: String, span: Span },
 
     // comments
