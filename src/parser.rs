@@ -42,7 +42,7 @@ enum Expression {
     TupleStruct,
     MethodCall,
     Closure, // with and without block
-    Range, // from-to, from, to, inclusive, to inclusive
+    Range,   // from-to, from, to, inclusive, to inclusive
     Path,
     TupleIndex,
     // Return,
@@ -99,14 +99,14 @@ enum Statement {
     Expr(Expression),
 
     // TODO (see below):
-    Item, 
+    Item,
 }
 
 // TODO: parse:
 #[derive(Debug, Clone)]
 enum Item {
     // definition blocks
-    Function, // without 
+    Function, // without
     Struct,
     Enum,
     Trait,
@@ -140,20 +140,50 @@ enum Type {
     Function,
     Closure,
 
-    Reference, // e.g., `&Type` / `&mut Type` 
+    Reference, // e.g., `&Type` / `&mut Type`
     Unit,
     SelfType,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Precedence levels enum
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
-    Prefix(u8),
-    Infix(u8),
+    Lowest,
+    // Logical OR
+    LogicalOr,
+    // Logical AND
+    LogicalAnd,
+    // Equality operators
+    Equals,
+    NotEquals,
+    // Comparison operators
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
+    // Bitwise shift operators
+    Shift,
+    // Bitwise AND
+    BitwiseAnd,
+    // Bitwise XOR
+    BitwiseXor,
+    // Bitwise OR
+    BitwiseOr,
+    // Addition and subtraction
+    Sum,
+    Difference,
+    // Multiplication, division, and remainder
+    Product,
+    Quotient,
+    Remainder,
+    // Unary operators (e.g., negation, bitwise NOT)
+    Unary,
+    // Exponentiation (not a native operator in Rust)
+    Exponentiation,
+    // Highest precedence
+    Highest,
 }
-
 impl Precedence {
     fn inner(self) -> u8 {
         match self {
@@ -184,25 +214,6 @@ impl Parser<'_> {
         }
     }
 
-    // final final
-    // fn init_precedences(&mut self) {
-    //     // Define precedence levels for operators
-    //     self.precedences.insert(Token::Minus, (9, 8)); // Negation
-    //     self.precedences.insert(Token::Not, (9, 8)); // Logical Not
-    //     self.precedences.insert(Token::Asterisk, (7, 6)); // Multiplication
-    //     self.precedences.insert(Token::Slash, (7, 6)); // Division
-    //     self.precedences.insert(Token::Plus, (5, 4)); // Addition
-    //     self.precedences.insert(Token::Minus, (5, 4)); // Subtraction
-    //     self.precedences.insert(Token::Equal, (3, 2)); // Equality
-    //     self.precedences.insert(Token::NotEqual, (3, 2)); // Inequality
-    //     self.precedences.insert(Token::Less, (3, 2)); // Less than
-    //     self.precedences.insert(Token::LessEqual, (3, 2)); // Less than or equal to
-    //     self.precedences.insert(Token::Greater, (3, 2)); // Greater than
-    //     self.precedences.insert(Token::GreaterEqual, (3, 2)); // Greater than or equal to
-    //     self.precedences.insert(Token::And, (1, 0)); // Logical And
-    //     self.precedences.insert(Token::Or, (1, 0)); // Logical Or
-    // }
-
     // TODO: fill out precedences per above (including bitwise and shift operators)
     fn init_precedences(&mut self) {
         // Define precedence levels for operators
@@ -211,44 +222,155 @@ impl Parser<'_> {
                 punc: '-',
                 span: self.stream.span(),
             },
-            Precedence::Prefix(9),
-        ); // Negation
+            Precedence::Unary,
+        );
         self.precedences.insert(
             Token::Bang {
                 punc: '!',
                 span: self.stream.span(),
             },
-            Precedence::Prefix(9),
-        ); // Logical Not
+            Precedence::Unary,
+        );
+        self.precedences.insert(
+            Token::Ampersand {
+                punc: '&',
+                span: self.stream.span(),
+            },
+            Precedence::Unary,
+        );
         self.precedences.insert(
             Token::Asterisk {
                 punc: '*',
                 span: self.stream.span(),
             },
-            Precedence::Infix(7),
-        ); // Multiplication
+            Precedence::Unary,
+        );
+        self.precedences.insert(
+            Token::Asterisk {
+                punc: '%',
+                span: self.stream.span(),
+            },
+            Precedence::Remainder,
+        );
         self.precedences.insert(
             Token::Slash {
                 punc: '/',
                 span: self.stream.span(),
             },
-            Precedence::Infix(7),
-        ); // Division
+            Precedence::Quotient,
+        );
         self.precedences.insert(
-            Token::Plus {
-                punc: '+',
+            Token::Asterisk {
+                punc: '*',
                 span: self.stream.span(),
             },
-            Precedence::Infix(5),
-        ); // Addition
+            Precedence::Product,
+        );
         self.precedences.insert(
             Token::Minus {
                 punc: '-',
                 span: self.stream.span(),
             },
-            Precedence::Infix(5),
-        ); // Subtraction
-
+            Precedence::Difference,
+        );
+        self.precedences.insert(
+            Token::Plus {
+                punc: '+',
+                span: self.stream.span(),
+            },
+            Precedence::Sum,
+        );
+        self.precedences.insert(
+            Token::Pipe {
+                punc: '|',
+                span: self.stream.span(),
+            },
+            Precedence::BitwiseOr,
+        );
+        self.precedences.insert(
+            Token::Pipe {
+                punc: '^',
+                span: self.stream.span(),
+            },
+            Precedence::BitwiseXor,
+        );
+        self.precedences.insert(
+            Token::Pipe {
+                punc: '&',
+                span: self.stream.span(),
+            },
+            Precedence::BitwiseAnd,
+        );
+        self.precedences.insert(
+            Token::DblLessThan {
+                punc: "<<".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Shift,
+        );
+        self.precedences.insert(
+            Token::DblGreaterThan {
+                punc: ">>".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Shift,
+        );
+        self.precedences.insert(
+            Token::GreaterThanEquals {
+                punc: ">=".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::GreaterThanOrEqual,
+        );
+        self.precedences.insert(
+            Token::GreaterThan {
+                punc: '>',
+                span: self.stream.span(),
+            },
+            Precedence::GreaterThan,
+        );
+        self.precedences.insert(
+            Token::LessThanEquals {
+                punc: "<=".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::LessThanOrEqual,
+        );
+        self.precedences.insert(
+            Token::LessThan {
+                punc: '<',
+                span: self.stream.span(),
+            },
+            Precedence::LessThan,
+        );
+        self.precedences.insert(
+            Token::BangEquals {
+                punc: "!=".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::NotEquals,
+        );
+        self.precedences.insert(
+            Token::DblEquals {
+                punc: "==".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Equals,
+        );
+        self.precedences.insert(
+            Token::DblAmpersand {
+                punc: "&&".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::LogicalAnd,
+        );
+        self.precedences.insert(
+            Token::DblPipe {
+                punc: "||".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::LogicalOr,
+        );
         // TODO: define precedences for other operators
     }
 
