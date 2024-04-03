@@ -19,6 +19,10 @@ impl Span {
         }
     }
 
+    pub fn input(&self) -> Arc<String> {
+        Arc::clone(&self.input)
+    }
+
     /// Method to get the substring corresponding to the span
     pub fn substring(&self) -> &str {
         &self.input[self.start..self.end]

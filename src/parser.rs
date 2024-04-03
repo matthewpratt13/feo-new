@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{BinaryOp, Expression, Literal, Precedence, Statement, Type, UnaryOp},
-    error::{ParseErrorContext, ParserErrorKind},
+    error::{ParserError, ParserErrorKind},
     token::{Token, TokenStream},
 };
 
@@ -18,19 +18,19 @@ pub struct StructField {
 /// Parser struct, containing methods to parse expressions, statements and items,
 /// as well as helper methods and error handling capabilities.
 #[derive(Debug)]
-struct Parser<'a> {
+struct Parser {
     stream: TokenStream,
     current: usize,
-    error_contexts: Vec<ParseErrorContext<'a>>,
+    errors: Vec<ParserError>,
     precedences: HashMap<Token, Precedence>, // precedence levels by operator
 }
 
-impl Parser<'_> {
+impl Parser {
     fn new(stream: TokenStream) -> Self {
         Parser {
             stream,
             current: 0,
-            error_contexts: Vec::new(),
+            errors: Vec::new(),
             precedences: HashMap::new(),
         }
     }
@@ -343,7 +343,7 @@ impl Parser<'_> {
         let mut left_expr = self.parse_prefix()?;
 
         while let Some(current_precedence) =
-            self.precedence(&self.peek_current().ok_or(ParserErrorKind::TokenNotFound)?)
+            self.precedence(&self.peek_current().expect("token not found"))
         {
             if precedence < current_precedence {
                 left_expr = self.parse_infix(left_expr)?;
@@ -461,11 +461,11 @@ impl Parser<'_> {
                             | Token::IntLiteral { .. }
                             | Token::U256Literal { .. },
                         ) => Ok(expr),
-                        Some(t) => Err(ParserErrorKind::UnexpectedToken {
+                        Some(t) => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                             expected: "identifier or number".to_string(),
                             found: t,
-                        }),
-                        None => Err(ParserErrorKind::UnexpectedEndOfInput),
+                        })),
+                        None => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
                     }
                 }
 
@@ -514,9 +514,9 @@ impl Parser<'_> {
 
                 Token::Underscore { .. } => self.parse_primary(),
 
-                _ => Err(ParserErrorKind::InvalidToken { token }),
+                _ => Err(self.log_error(ParserErrorKind::InvalidToken { token })),
             },
-            None => Err(ParserErrorKind::UnexpectedEndOfInput),
+            None => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
         }
     }
 
@@ -524,7 +524,7 @@ impl Parser<'_> {
     fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ParserErrorKind> {
         let token = self
             .consume()
-            .ok_or(ParserErrorKind::UnexpectedEndOfInput)?;
+            .ok_or(self.log_error(ParserErrorKind::UnexpectedEndOfInput))?;
         match token {
             Token::Plus { .. } => self.parse_binary_expression(left_expr, BinaryOp::Add),
             Token::Minus { .. } => self.parse_binary_expression(left_expr, BinaryOp::Subtract),
@@ -588,22 +588,24 @@ impl Parser<'_> {
                     }
                 }
                 Some(Token::UIntLiteral { .. }) => self.parse_tuple_index_expression(),
-                _ => Err(ParserErrorKind::UnexpectedToken {
+                _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier or tuple index".to_string(),
                     found: token,
-                }),
+                })),
             },
             Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => {
                 self.parse_path_expression()
             }
 
-            _ => Err(ParserErrorKind::InvalidToken { token }),
+            _ => Err(self.log_error(ParserErrorKind::InvalidToken { token })),
         }
     }
 
     /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
     fn parse_primary(&mut self) -> Result<Expression, ParserErrorKind> {
-        let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
+        let token = self
+            .consume()
+            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
 
         match token {
             Token::Identifier { name, .. }
@@ -616,10 +618,10 @@ impl Parser<'_> {
             Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
             Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
             Token::LParen { .. } => self.parse_grouped_expression(),
-            _ => Err(ParserErrorKind::UnexpectedToken {
+            _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier or literal".to_string(),
                 found: token,
-            }),
+            })),
         }
     }
 
@@ -868,15 +870,17 @@ impl Parser<'_> {
             args.push(arg_expr);
 
             // error handling
-            let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
+            let token = self
+                .consume()
+                .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
             match token {
                 Token::Comma { .. } => continue, // more arguments
                 Token::RParen { .. } => break,   // end of arguments
                 _ => {
-                    return Err(ParserErrorKind::UnexpectedToken {
+                    return Err(self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `)`".to_string(),
                         found: token,
-                    })
+                    }))
                 }
             }
         }
@@ -885,10 +889,7 @@ impl Parser<'_> {
     }
 
     /// Parse an index expression (i.e., `array[index]`).
-    fn parse_index_expression(
-        &mut self,
-        array_expr: Expression,
-    ) -> Result<Expression, ParserErrorKind> {
+    fn parse_index_expression(&mut self, array_expr: Expression) -> Result<Expression, ParserErrorKind> {
         self.expect_token(Token::LBracket {
             delim: '[',
             span: self.stream.span(),
@@ -905,22 +906,21 @@ impl Parser<'_> {
     }
 
     /// Parse a field access expression (i.e., `object.field`).
-    fn parse_field_access_expression(
-        &mut self,
-        object_expr: Expression,
-    ) -> Result<Expression, ParserErrorKind> {
+    fn parse_field_access_expression(&mut self, object_expr: Expression) -> Result<Expression, ParserErrorKind> {
         self.expect_token(Token::FullStop {
             punc: '.',
             span: self.stream.span(),
         })?;
-        let field_token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
+        let field_token = self
+            .consume()
+            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
         if let Token::Identifier { name, .. } = field_token {
             Ok(Expression::FieldAccess(Box::new(object_expr), name))
         } else {
-            Err(ParserErrorKind::UnexpectedToken {
+            Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier after `.`".to_string(),
                 found: field_token,
-            })
+            }))
         }
     }
 
@@ -1069,7 +1069,9 @@ impl Parser<'_> {
     fn parse_cast_expression(&mut self) -> Result<Expression, ParserErrorKind> {
         let expr = self.parse_expression(Precedence::Cast)?;
 
-        let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
+        let token = self
+            .consume()
+            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
 
         if token
             != (Token::As {
@@ -1077,10 +1079,10 @@ impl Parser<'_> {
                 span: self.stream.span(),
             })
         {
-            return Err(ParserErrorKind::UnexpectedToken {
+            return Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "as".to_string(),
                 found: token,
-            });
+            }));
         }
 
         let ty = self.get_type()?;
@@ -1100,19 +1102,24 @@ impl Parser<'_> {
         // parse struct fields – separated by commas – until a closing brace
         loop {
             // get the field name
-            let field_name = match self.consume().ok_or(ParserErrorKind::TokenNotFound)? {
+            let field_name = match self
+                .consume()
+                .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?
+            {
                 Token::Identifier { name, .. } => name,
                 Token::RBrace { .. } => break, // end of struct
                 _ => {
-                    return Err(ParserErrorKind::UnexpectedToken {
+                    let tokens = self
+                        .stream
+                        .tokens()
+                        .get(self.current)
+                        .cloned()
+                        .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
+
+                    return Err(self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "identifier or `}`".to_string(),
-                        found: self
-                            .stream
-                            .tokens()
-                            .get(self.current)
-                            .cloned()
-                            .ok_or(ParserErrorKind::TokenNotFound)?,
-                    })
+                        found: tokens,
+                    }))?;
                 }
             };
 
@@ -1131,15 +1138,17 @@ impl Parser<'_> {
             });
 
             // error handling
-            let token = self.consume().ok_or(ParserErrorKind::TokenNotFound)?;
+            let token = self
+                .consume()
+                .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
             match token {
                 Token::Comma { .. } => continue, // more fields
                 Token::RBrace { .. } => break,   // end of struct
                 _ => {
-                    return Err(ParserErrorKind::UnexpectedToken {
+                    return Err(self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `}`".to_string(),
                         found: token,
-                    })
+                    }))
                 }
             }
         }
@@ -1190,35 +1199,43 @@ impl Parser<'_> {
     ///////////////////////////////////////////////////////////////////////////
 
     fn expect_identifier(&mut self) -> Result<String, ParserErrorKind> {
-        match self.consume().ok_or(ParserErrorKind::TokenNotFound)? {
+        let tokens = self
+            .stream
+            .tokens()
+            .get(self.current)
+            .cloned()
+            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
+
+        match self
+            .consume()
+            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?
+        {
             Token::Identifier { name, .. } => Ok(name),
-            _ => Err(ParserErrorKind::UnexpectedToken {
+            _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier".to_string(),
-                found: self
-                    .stream
-                    .tokens()
-                    .get(self.current)
-                    .cloned()
-                    .ok_or(ParserErrorKind::TokenNotFound)?,
-            }),
+                found: tokens,
+            })),
         }
     }
 
     fn consume_identifier(&mut self) -> Result<String, ParserErrorKind> {
-        if let Token::Identifier { name, .. } =
-            self.consume().ok_or(ParserErrorKind::TokenNotFound)?
+        let tokens = self
+            .stream
+            .tokens()
+            .get(self.current)
+            .cloned()
+            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
+
+        if let Token::Identifier { name, .. } = self
+            .consume()
+            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?
         {
             Ok(name)
         } else {
-            Err(ParserErrorKind::UnexpectedToken {
+            Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier".to_string(),
-                found: self
-                    .stream
-                    .tokens()
-                    .get(self.current)
-                    .cloned()
-                    .ok_or(ParserErrorKind::TokenNotFound)?,
-            })
+                found: tokens,
+            }))
         }
     }
 
@@ -1239,16 +1256,16 @@ impl Parser<'_> {
         }
     }
 
-    /// Consume and check tokens, to ensure that the expected tokens are encountered 
+    /// Consume and check tokens, to ensure that the expected tokens are encountered
     /// during parsing. Return the relevant `ParserErrorKind` where applicable.
     fn expect_token(&mut self, expected: Token) -> Result<(), ParserErrorKind> {
         match self.consume() {
             Some(token) if token == expected => Ok(()),
-            Some(token) => Err(ParserErrorKind::UnexpectedToken {
+            Some(token) => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: format!("`{:#?}`", expected),
                 found: token,
-            }),
-            None => Err(ParserErrorKind::UnexpectedEndOfInput),
+            })),
+            None => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
         }
     }
 
@@ -1274,7 +1291,7 @@ impl Parser<'_> {
             Some(Token::Func { .. }) => Ok(Type::Function),
             Some(Token::Pipe { .. } | Token::DblPipe { .. }) => Ok(Type::Closure),
             Some(Token::Ampersand { .. }) => Ok(Type::Reference),
-            _ => Err(ParserErrorKind::UnexpectedEndOfInput),
+            _ => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
         }
     }
 
@@ -1309,10 +1326,10 @@ impl Parser<'_> {
         self.current >= self.stream.tokens().len()
     }
 
-    // // TODO: integrate with `ParserErrorKind` and `ParserErrorContext::format_error_message()`
-    // fn report_error(&mut self, line: usize, column: usize, message: String) {
-    //     let snippet = "..."; // Extract a snippet of the source code if needed
-    //     let error_context = ParseErrorContext::new(line, column, message, snippet);
-    //     self.error_contexts.push(error_context);
-    // }
+    fn log_error(&mut self, error_kind: ParserErrorKind) -> ParserErrorKind {
+        let error = ParserError::new(&self.stream.span().input(), self.current, error_kind.clone());
+
+        self.errors.push(error);
+        error_kind
+    }
 }

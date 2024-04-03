@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::fmt;
+use std::{error::Error, fmt, sync::Arc};
 
 use crate::token::Token;
 
@@ -19,7 +19,7 @@ pub struct LexerError {
     pub pos: usize,
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub enum ParserErrorKind {
     UnexpectedToken {
         expected: String,
@@ -66,31 +66,37 @@ impl fmt::Display for ParserErrorKind {
     }
 }
 
+impl Error for ParserErrorKind {}
+
 #[derive(Debug)]
-pub struct ParseErrorContext<'a> {
+pub struct ParserError {
+    error_kind: ParserErrorKind,
     line: usize,
     col: usize,
-    msg: String,
-    source: &'a str,
+    source: Arc<String>,
 }
 
-impl<'a> ParseErrorContext<'a> {
+impl ParserError {
     /// Constructor method
-    pub fn new(line: usize, col: usize, msg: String, source: &'a str) -> Self {
-        ParseErrorContext {
-            line,
-            col,
-            msg,
-            source,
+    pub fn new(source: &str, pos: usize, error_kind: ParserErrorKind) -> Self {
+        let slice = &source[..pos];
+        let lines = slice.split('\n').collect::<Vec<_>>();
+        let line_count = lines.len();
+        let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
+
+        ParserError {
+            error_kind,
+            line: line_count,
+            col: last_line_len,
+            source: Arc::new(source.to_string()),
         }
     }
+}
 
-    // TODO: integrate with `fmt()` and `ParserErrorKind` above
-    /// Method to format error message
-    fn format_error_message(&self) -> String {
-        format!(
-            "Error at line {}, column {}: {}\nSSource: {}",
-            self.line, self.col, self.msg, self.source
-        )
+impl fmt::Display for ParserError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} [Ln {}, Col{}]", self.error_kind, self.line, self.col)
     }
 }
+
+impl Error for ParserError {}
