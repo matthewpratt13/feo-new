@@ -99,6 +99,7 @@ pub enum Token {
     HashBang { punc: String, span: Span },
     BangEquals { punc: String, span: Span },
     PercentEquals { punc: String, span: Span },
+    DblAsterisk { punc: String, span: Span },
     AsteriskEquals { punc: String, span: Span },
     DblAmpersand { punc: String, span: Span },
     PlusEquals { punc: String, span: Span },

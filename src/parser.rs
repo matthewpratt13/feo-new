@@ -63,8 +63,6 @@ enum Literal {
 enum UnaryOp {
     Negate, // '-'
     Not,    // '!'
-
-    // TODO: add to below:
     Reference,   // '&'
     Dereference, // '*'
 }
@@ -82,8 +80,6 @@ enum BinaryOp {
     LessEqual,
     Greater,
     GreaterEqual,
-
-    // TODO: add to below:
     LogicalAnd,
     LogicalOr,
     BitwiseAnd,
@@ -97,21 +93,22 @@ enum BinaryOp {
 enum Statement {
     Let(String, Expression),
     Expr(Expression),
-
-    // TODO (see below):
-    Item,
+    Item(Item),
 }
 
 // TODO: parse:
 #[derive(Debug, Clone)]
 enum Item {
     // definition blocks
-    Function, // without
+    Function,
+    FunctionSig, // (without block)
     Struct,
+    TupleStruct, // (without block)
     Enum,
     Trait,
     ImplBlock,
     Module,
+    ModuleSig, // (without block)
 
     // declarations
     TypeAlias,
@@ -150,47 +147,29 @@ enum Type {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
     Lowest,
-    // Logical OR
-    LogicalOr,
-    // Logical AND
-    LogicalAnd,
-    // Equality operators
-    Equals,
-    NotEquals,
-    // Comparison operators
-    LessThan,
-    LessThanOrEqual,
-    GreaterThan,
-    GreaterThanOrEqual,
-    // Bitwise shift operators
-    Shift,
-    // Bitwise AND
-    BitwiseAnd,
-    // Bitwise XOR
-    BitwiseXor,
-    // Bitwise OR
-    BitwiseOr,
-    // Addition and subtraction
-    Sum,
-    Difference,
-    // Multiplication, division, and remainder
-    Product,
-    Quotient,
-    Remainder,
-    // Unary operators (e.g., negation, bitwise NOT)
-    Unary,
-    // Exponentiation (not a native operator in Rust)
-    Exponentiation,
-    // Highest precedence
-    Highest,
-}
-impl Precedence {
-    fn inner(self) -> u8 {
-        match self {
-            Precedence::Prefix(i) => i,
-            Precedence::Infix(i) => i,
-        }
-    }
+    Unwrap,             // `?`
+    Assignment,         // `=`
+    CompoundAssignment, // `+=`, `-=`, `*/`, `/=`, `%=`
+    LogicalOr,          // `||`
+    LogicalAnd,         // `&&`
+    Equal,              // `==`
+    NotEqual,           // `!=`
+    LessThan,           // `<`
+    LessThanOrEqual,    // `<=`
+    GreaterThan,        // `>`
+    GreaterThanOrEqual, // `>=`
+    Shift,              // `«`, `»`
+    BitwiseAnd,         // `&`
+    BitwiseXor,         // `^`
+    BitwiseOr,          // `|`
+    Sum,                // `+`
+    Difference,         // `-`
+    Product,            // `*`
+    Quotient,           // `/`
+    Remainder,          // `%`
+    Unary,              // `-`, `!`, `&`, `*`
+    Exponentiation,     // `**`
+    Cast,               // "as"
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -214,9 +193,21 @@ impl Parser<'_> {
         }
     }
 
-    // TODO: fill out precedences per above (including bitwise and shift operators)
     fn init_precedences(&mut self) {
-        // Define precedence levels for operators
+        self.precedences.insert(
+            Token::As {
+                name: "as".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Cast,
+        );
+        self.precedences.insert(
+            Token::DblAsterisk {
+                punc: "**".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Exponentiation,
+        );
         self.precedences.insert(
             Token::Minus {
                 punc: '-',
@@ -232,13 +223,6 @@ impl Parser<'_> {
             Precedence::Unary,
         );
         self.precedences.insert(
-            Token::Ampersand {
-                punc: '&',
-                span: self.stream.span(),
-            },
-            Precedence::Unary,
-        );
-        self.precedences.insert(
             Token::Asterisk {
                 punc: '*',
                 span: self.stream.span(),
@@ -246,7 +230,14 @@ impl Parser<'_> {
             Precedence::Unary,
         );
         self.precedences.insert(
-            Token::Asterisk {
+            Token::Ampersand {
+                punc: '&',
+                span: self.stream.span(),
+            },
+            Precedence::Unary,
+        );
+        self.precedences.insert(
+            Token::Percent {
                 punc: '%',
                 span: self.stream.span(),
             },
@@ -288,14 +279,14 @@ impl Parser<'_> {
             Precedence::BitwiseOr,
         );
         self.precedences.insert(
-            Token::Pipe {
+            Token::Caret {
                 punc: '^',
                 span: self.stream.span(),
             },
             Precedence::BitwiseXor,
         );
         self.precedences.insert(
-            Token::Pipe {
+            Token::Ampersand {
                 punc: '&',
                 span: self.stream.span(),
             },
@@ -348,14 +339,14 @@ impl Parser<'_> {
                 punc: "!=".to_string(),
                 span: self.stream.span(),
             },
-            Precedence::NotEquals,
+            Precedence::NotEqual,
         );
         self.precedences.insert(
             Token::DblEquals {
                 punc: "==".to_string(),
                 span: self.stream.span(),
             },
-            Precedence::Equals,
+            Precedence::Equal,
         );
         self.precedences.insert(
             Token::DblAmpersand {
@@ -371,7 +362,55 @@ impl Parser<'_> {
             },
             Precedence::LogicalOr,
         );
-        // TODO: define precedences for other operators
+        self.precedences.insert(
+            Token::PercentEquals {
+                punc: "%=".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::CompoundAssignment,
+        );
+        self.precedences.insert(
+            Token::SlashEquals {
+                punc: "/=".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::CompoundAssignment,
+        );
+        self.precedences.insert(
+            Token::AsteriskEquals {
+                punc: "*=".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::CompoundAssignment,
+        );
+        self.precedences.insert(
+            Token::MinusEquals {
+                punc: "-=".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::CompoundAssignment,
+        );
+        self.precedences.insert(
+            Token::PlusEquals {
+                punc: "+=".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::CompoundAssignment,
+        );
+        self.precedences.insert(
+            Token::Equals {
+                punc: '=',
+                span: self.stream.span(),
+            },
+            Precedence::Assignment,
+        );
+        self.precedences.insert(
+            Token::QuestionMark {
+                punc: '?',
+                span: self.stream.span(),
+            },
+            Precedence::Unwrap,
+        );
     }
 
     // TODO: integrate with `ParserErrorKind` and `ParserErrorContext::format_error_message()`
@@ -417,7 +456,7 @@ impl Parser<'_> {
             span: self.stream.span(),
         })?;
 
-        let value = self.parse_expression(Precedence::Prefix(0))?;
+        let value = self.parse_expression(Precedence::Lowest)?;
 
         self.expect_token(Token::Semicolon {
             punc: ';',
@@ -428,7 +467,7 @@ impl Parser<'_> {
     }
 
     fn parse_expression_statement(&mut self) -> Result<Statement, ParserErrorKind> {
-        let expression = &self.parse_expression(Precedence::Prefix(0))?;
+        let expression = &self.parse_expression(Precedence::Lowest)?;
         self.expect_token(Token::Semicolon {
             punc: ';',
             span: self.stream.span(),
@@ -438,26 +477,42 @@ impl Parser<'_> {
 
     ///////////////////////////////////////////////////////////////////////////
 
+    // fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserErrorKind> {
+    //     let mut left_expr = self.parse_prefix()?;
+
+    //     while let Some(next_token_precedence) =
+    //         self.precedence(&self.peek().ok_or(ParserErrorKind::TokenNotFound)?)
+    //     {
+    //         match precedence {
+    //             Precedence::Prefix(prefix_precedence)
+    //                 if prefix_precedence >= next_token_precedence.inner() =>
+    //             {
+    //                 break
+    //             }
+    //             Precedence::Infix(infix_precedence)
+    //                 if infix_precedence > next_token_precedence.inner() =>
+    //             {
+    //                 break
+    //             }
+    //             _ => (),
+    //         }
+    //         left_expr = self.parse_infix(left_expr, next_token_precedence)?;
+    //     }
+    //     Ok(left_expr)
+
+    // }
+
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserErrorKind> {
         let mut left_expr = self.parse_prefix()?;
 
-        while let Some(next_token_precedence) =
+        while let Some(current_precedence) =
             self.precedence(&self.peek().ok_or(ParserErrorKind::TokenNotFound)?)
         {
-            match precedence {
-                Precedence::Prefix(prefix_precedence)
-                    if prefix_precedence >= next_token_precedence.inner() =>
-                {
-                    break
-                }
-                Precedence::Infix(infix_precedence)
-                    if infix_precedence > next_token_precedence.inner() =>
-                {
-                    break
-                }
-                _ => (),
+            if precedence < current_precedence {
+                left_expr = self.parse_infix(left_expr, current_precedence)?;
+            } else {
+                break;
             }
-            left_expr = self.parse_infix(left_expr, next_token_precedence)?;
         }
 
         Ok(left_expr)
@@ -475,15 +530,15 @@ impl Parser<'_> {
                 Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
                 Token::Identifier { name, .. } => Ok(Expression::Identifier(name)),
                 Token::Minus { .. } => {
-                    let expr = self.parse_expression(Precedence::Prefix(9))?;
+                    let expr = self.parse_expression(Precedence::Unary)?;
                     Ok(Expression::UnaryOp(UnaryOp::Negate, Box::new(expr)))
                 }
                 Token::Bang { .. } => {
-                    let expr = self.parse_expression(Precedence::Prefix(9))?;
+                    let expr = self.parse_expression(Precedence::Unary)?;
                     Ok(Expression::UnaryOp(UnaryOp::Not, Box::new(expr)))
                 }
                 Token::LParen { .. } => {
-                    let expr = self.parse_expression(Precedence::Prefix(0))?;
+                    let expr = self.parse_expression(Precedence::Lowest)?;
                     self.expect(Token::RParen {
                         delim: ')',
                         span: self.stream.span(),
@@ -610,7 +665,7 @@ impl Parser<'_> {
 
         match token {
             Token::LParen { .. } => {
-                let expr = self.parse_expression(Precedence::Prefix(0))?;
+                let expr = self.parse_expression(Precedence::Lowest)?;
                 self.expect_token(Token::RParen {
                     delim: ')',
                     span: self.stream.span(),
@@ -655,7 +710,7 @@ impl Parser<'_> {
                 break;
             }
 
-            let arg_expr = self.parse_expression(Precedence::Infix(0))?;
+            let arg_expr = self.parse_expression(Precedence::Lowest)?;
             arguments.push(arg_expr);
 
             // Expect comma or closing parenthesis
@@ -683,7 +738,7 @@ impl Parser<'_> {
             delim: '[',
             span: self.stream.span(),
         })?;
-        let index_expr = self.parse_expression(Precedence::Infix(0))?;
+        let index_expr = self.parse_expression(Precedence::Lowest)?;
         self.expect_token(Token::RBracket {
             delim: ']',
             span: self.stream.span(),
@@ -723,18 +778,18 @@ impl Parser<'_> {
             delim: '(',
             span: self.stream.span(),
         })?;
-        let condition = Box::new(self.parse_expression(Precedence::Infix(0))?);
+        let condition = Box::new(self.parse_expression(Precedence::Lowest)?);
         self.expect_token(Token::RParen {
             delim: ')',
             span: self.stream.span(),
         })?;
-        let true_branch = Box::new(self.parse_expression(Precedence::Infix(0))?);
+        let true_branch = Box::new(self.parse_expression(Precedence::Lowest)?);
 
         let false_branch = if self.match_token(Token::Else {
             name: "else".to_string(),
             span: self.stream.span(),
         }) {
-            Some(Box::new(self.parse_expression(Precedence::Infix(0))?))
+            Some(Box::new(self.parse_expression(Precedence::Lowest)?))
         } else {
             None
         };
@@ -760,8 +815,8 @@ impl Parser<'_> {
             name: "in".to_string(),
             span: self.stream.span(),
         })?;
-        let iterable = Box::new(self.parse_expression(Precedence::Infix(0))?);
-        let body = Box::new(self.parse_expression(Precedence::Infix(0))?);
+        let iterable = Box::new(self.parse_expression(Precedence::Lowest)?);
+        let body = Box::new(self.parse_expression(Precedence::Lowest)?);
         Ok(Statement::Expr(Expression::ForIn(variable, iterable, body)))
     }
 
@@ -775,7 +830,7 @@ impl Parser<'_> {
             delim: '}',
             span: self.stream.span(),
         }) {
-            expressions.push(self.parse_expression(Precedence::Infix(0))?);
+            expressions.push(self.parse_expression(Precedence::Lowest)?);
         }
         self.expect_token(Token::RBrace {
             delim: '}',
@@ -794,7 +849,7 @@ impl Parser<'_> {
             delim: ']',
             span: self.stream.span(),
         }) {
-            elements.push(self.parse_expression(Precedence::Infix(0))?);
+            elements.push(self.parse_expression(Precedence::Lowest)?);
             if !self.match_token(Token::Comma {
                 punc: ',',
                 span: self.stream.span(),
@@ -819,7 +874,7 @@ impl Parser<'_> {
             delim: ')',
             span: self.stream.span(),
         }) {
-            elements.push(self.parse_expression(Precedence::Infix(0))?);
+            elements.push(self.parse_expression(Precedence::Lowest)?);
             if !self.match_token(Token::Comma {
                 punc: ',',
                 span: self.stream.span(),
@@ -885,7 +940,7 @@ impl Parser<'_> {
             }
 
             // Parse field value
-            let field_value = self.parse_expression(Precedence::Infix(0))?;
+            let field_value = self.parse_expression(Precedence::Lowest)?;
 
             fields.push(StructField {
                 name: field_name,
