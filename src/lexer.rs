@@ -25,48 +25,65 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn tokenize_comment(&mut self) -> Result<Token, ErrorEmitted> {
-        todo!()
-    }
-
-    fn tokenize_block_comment(&mut self) -> Result<Token, ErrorEmitted> {
-        todo!()
-    }
-
-    fn tokenize_doc_line_comment(&mut self) -> Result<Token, ErrorEmitted> {
+    /// Tokenize a doc comment, ignoring ordinary line and block comments.
+    fn tokenize_doc_comment(&mut self) -> Result<Token, ()> {
         let start_pos = self.pos;
 
-        self.advance_by(3); // skip doc comment prefix (`///`)
+        self.advance(); // skip first `/`
 
-        while self.pos < self.input.len() {
-            if self.input.chars().nth(self.pos).unwrap() == '\n' {
-                break;
+        if let Some('/') = self.peek_current() {
+            self.advance(); // skip second `/`
+
+            if self.peek_current() == Some('/') || self.peek_current() == Some('!') {
+                self.advance(); // skip third `/` or `!`
+
+                self.skip_whitespace();
+
+                // advance until the end of the line
+                while let Some(c) = self.peek_current() {
+                    if c == '\n' {
+                        break;
+                    } else {
+                        self.advance();
+                    }
+                }
+
+                // trim any trailing whitespace
+                let comment = self.input[start_pos..self.pos].trim().to_string();
+
+                let span = Span::new(self.input, start_pos, self.pos);
+
+                self.advance();
+
+                Ok(Token::DocComment { comment, span })
+            } else {
+                // consume ordinary line comment
+                loop {
+                    self.advance();
+
+                    if self.peek_current() == Some('\n') || self.pos == self.input.len() - 1 {
+                        break Err(());
+                    }
+                }
             }
+        } else if let Some('*') = self.peek_current() {
+            // consume block comment
+            loop {
+                self.advance();
 
-            self.advance();
+                if self.peek_current() == Some('*') && self.peek_next() == Some('/') {
+                    break Err(self.advance_by(2));
+                }
+
+                if self.pos == self.input.len() - 1 {
+                    break Err(());
+                }
+            }
+        } else {
+            let span = Span::new(self.input, start_pos, self.pos);
+
+            Ok(Token::Slash { punc: '/', span })
         }
-
-        let comment = self.input[start_pos..self.pos].trim().to_string();
-        let span = Span::new(self.input, start_pos, self.pos);
-
-        Ok(Token::DocComment { comment, span })
-    }
-
-    fn tokenize_doc_block_comment(&mut self) -> Result<Token, ErrorEmitted> {
-        let start_pos = self.pos;
-
-        self.advance_by(3); // skip doc block comment prefix (`/**`)
-
-        while self.pos + 1 < self.input.len() && &self.input[self.pos..self.pos + 2] != "*/" {
-            self.advance();
-        }
-
-        let comment = self.input[start_pos..self.pos].trim().to_string();
-        let span = Span::new(self.input, start_pos, self.pos);
-
-        self.advance_by(2); // skip comment terminator (`*/`)
-
-        Ok(Token::DocComment { comment, span })
     }
 
     fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, ErrorEmitted> {
@@ -109,7 +126,11 @@ impl<'a> Lexer<'a> {
     fn tokenize_delimiter(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
-        let delim = self.input.chars().nth(self.pos).unwrap();
+        let delim = self.input.chars().nth(self.pos).ok_or(self.log_error(
+            LexerErrorKind::CharacterNotFound {
+                expected: "delimiter".to_string(),
+            },
+        ))?;
 
         match delim {
             '(' => {
@@ -320,25 +341,30 @@ impl<'a> Lexer<'a> {
     /// Tokenize a numeric value (i.e., `i64` or `u64`).
     /// Parse to `u64` unless a `-` is encountered, in which case parse to `i64`.
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorEmitted> {
-        let mut is_int = false;
+        let mut _is_int = false;
 
         let start_pos = self.pos;
 
         // check for `-` before the number to decide which type of integer to parse to
-        if self.input.chars().nth(self.pos) == Some('-') {
+        if self.peek_current() == Some('-') {
             self.advance(); // skip `-`
-            is_int = true;
         }
 
-        while let Some(c) = self.input.chars().nth(self.pos) {
+        if self.peek_current().is_some_and(|c| c.is_digit(10)) {
+            _is_int = true
+        } else {
+            let span = Span::new(self.input, start_pos, self.pos);
+
+            return Ok(Token::Minus { punc: '-', span });
+        }
+
+        while let Some(c) = self.peek_current() {
             if c.is_digit(10) || c == '_' {
                 self.advance();
-            } else {
-                break;
             }
         }
 
-        if is_int {
+        if _is_int {
             // remove the `_` separators before parsing
             let value = self.input[start_pos..self.pos]
                 .split('_')
@@ -377,19 +403,24 @@ impl<'a> Lexer<'a> {
         self.advance(); // skip backslash
 
         if self.pos < self.input.len() {
-            let escaped_char = match self.input.chars().nth(self.pos).unwrap() {
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                '\\' => '\\',
-                '0' => '\0',
-                '\'' => '\'',
-                '"' => '"',
-                _ => {
-                    return Err(self.log_error(LexerErrorKind::InvalidEscapeSequence {
-                        sequence: self.input.chars().nth(self.pos).unwrap(),
-                    }));
-                } // invalid escape sequence
+            let escaped_char = match self.input.chars().nth(self.pos) {
+                Some('n') => '\n',
+                Some('r') => '\r',
+                Some('t') => '\t',
+                Some('\\') => '\\',
+                Some('0') => '\0',
+                Some('\'') => '\'',
+                Some('"') => '"',
+                Some(c) => {
+                    return Err(
+                        self.log_error(LexerErrorKind::InvalidEscapeSequence { sequence: c })
+                    );
+                }
+                None => {
+                    return Err(self.log_error(LexerErrorKind::CharacterNotFound {
+                        expected: "character".to_string(),
+                    }))
+                }
             };
 
             self.advance(); // skip escape sequence
