@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::{
-    error::{LexerError, LexerErrorKind},
+    error::{CompilerError, ErrorEmitted, LexerErrorKind},
     number::IntKind,
     span::Span,
     token::Token,
@@ -12,7 +12,7 @@ use crate::{
 struct Lexer<'a> {
     input: &'a str,
     pos: usize,
-    errors: Vec<LexerError>,
+    errors: Vec<CompilerError<LexerErrorKind>>,
 }
 
 impl<'a> Lexer<'a> {
@@ -25,15 +25,15 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn tokenize_comment(&mut self) -> Result<Token, LexerError> {
+    fn tokenize_comment(&mut self) -> Result<Token, ErrorEmitted> {
         todo!()
     }
 
-    fn tokenize_block_comment(&mut self) -> Result<Token, LexerError> {
+    fn tokenize_block_comment(&mut self) -> Result<Token, ErrorEmitted> {
         todo!()
     }
 
-    fn tokenize_doc_line_comment(&mut self) -> Result<Token, LexerError> {
+    fn tokenize_doc_line_comment(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
         self.advance_by(3); // skip doc comment prefix (`///`)
@@ -51,7 +51,7 @@ impl<'a> Lexer<'a> {
         Ok(Token::DocComment { comment, span })
     }
 
-    fn tokenize_doc_block_comment(&mut self) -> Result<Token, LexerError> {
+    fn tokenize_doc_block_comment(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
         self.advance_by(3); // skip doc block comment prefix (`/**`)
@@ -68,7 +68,7 @@ impl<'a> Lexer<'a> {
         Ok(Token::DocComment { comment, span })
     }
 
-    fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, LexerError> {
+    fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
         while self.pos < self.input.len() {
@@ -101,7 +101,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn tokenize_delimiter(&mut self) -> Result<Token, LexerError> {
+    fn tokenize_delimiter(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
         let delim = self.input.chars().nth(self.pos).unwrap();
@@ -131,14 +131,11 @@ impl<'a> Lexer<'a> {
 
             '}' => self.tokenize_closing_delimiter('}'),
 
-            _ => Err(LexerError {
-                error_kind: LexerErrorKind::MismatchedDelimiter(delim),
-                pos: self.pos,
-            }),
+            _ => Err(self.log_error(LexerErrorKind::MismatchedDelimiter(delim))),
         }
     }
 
-    fn tokenize_closing_delimiter(&mut self, expected: char) -> Result<Token, LexerError> {
+    fn tokenize_closing_delimiter(&mut self, expected: char) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
         let delim = self.input.chars().nth(self.pos).unwrap();
@@ -162,22 +159,14 @@ impl<'a> Lexer<'a> {
                     Ok(Token::RBracket { delim, span })
                 }
 
-                _ => {
-                    return Err(LexerError {
-                        error_kind: LexerErrorKind::UnexpectedCharacter(delim),
-                        pos: self.pos,
-                    })
-                }
+                _ => return Err(self.log_error(LexerErrorKind::UnexpectedCharacter(delim))),
             }
         } else {
-            return Err(LexerError {
-                error_kind: LexerErrorKind::MismatchedDelimiter(delim),
-                pos: self.pos,
-            });
+            return Err(self.log_error(LexerErrorKind::MismatchedDelimiter(delim)));
         }
     }
 
-    fn tokenize_string(&mut self) -> Result<Token, LexerErrorKind> {
+    fn tokenize_string(&mut self) -> Result<Token, ErrorEmitted> {
         let mut value = String::new();
 
         let start_pos = self.pos;
@@ -192,7 +181,9 @@ impl<'a> Lexer<'a> {
                     if let Some(escaped_char) = self.parse_escape_sequence() {
                         value.push(escaped_char);
                     } else {
-                        return Err(LexerErrorKind::InvalidEscapeSequenceInStringLiteral);
+                        return Err(
+                            self.log_error(LexerErrorKind::InvalidEscapeSequenceInStringLiteral)
+                        );
                     }
                 }
                 '"' => {
@@ -209,14 +200,14 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Err(LexerErrorKind::UnclosedStringLiteral)
+        Err(self.log_error(LexerErrorKind::UnclosedStringLiteral))
     }
 
     fn tokenize_char(&mut self) -> Token {
         todo!()
     }
 
-    fn tokenize_u256(&mut self) -> Result<Token, LexerError> {
+    fn tokenize_u256(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
         while self.pos < self.input.len()
@@ -234,7 +225,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn tokenize_numeric(&mut self) -> Result<Token, LexerError> {
+    fn tokenize_numeric(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
         while self.pos < self.input.len() {
@@ -299,5 +290,14 @@ impl<'a> Lexer<'a> {
         {
             self.advance();
         }
+    }
+
+    /// Log a given parsing error and return it.
+    /// The `CompilerErrorKind` describes the error succinctly.
+    fn log_error(&mut self, error_kind: LexerErrorKind) -> ErrorEmitted {
+        let error = CompilerError::new(&self.input, self.pos, error_kind);
+
+        self.errors.push(error);
+        ErrorEmitted(())
     }
 }

@@ -4,6 +4,30 @@ use std::{error::Error, fmt, sync::Arc};
 
 use crate::token::Token;
 
+#[derive(Debug, Clone)]
+pub struct CompilerError<T> {
+    error_kind: T,
+    line: usize,
+    col: usize,
+    source: Arc<String>,
+}
+
+impl<T> CompilerError<T> {
+    pub fn new(source: &str, pos: usize, error_kind: T) -> Self {
+        let slice = &source[..pos];
+        let lines = slice.split('\n').collect::<Vec<_>>();
+        let line_count = lines.len();
+        let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
+
+        Self {
+            error_kind,
+            line: line_count,
+            col: last_line_len,
+            source: Arc::new(source.to_string()),
+        }
+    }
+}
+
 // TODO: implement `fmt::Display` (and `std::error::Error`?)
 /// Enum  representing the different types of lexing error variants.
 #[derive(Default, Debug, PartialEq)]
@@ -18,12 +42,15 @@ pub enum LexerErrorKind {
     // TODO: add more error types as needed
 }
 
-/// Lexer error struct that contains an error kind and the current position in the source code.
-#[derive(Debug, PartialEq)]
-pub struct LexerError {
-    pub error_kind: LexerErrorKind,
-    pub pos: usize,
+impl fmt::Display for LexerErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            _ => todo!(),
+        }
+    }
 }
+
+impl Error for LexerErrorKind {}
 
 /// Enum representing the different types of parsing error variants.
 #[derive(Default, Debug, Clone, PartialEq)]
@@ -75,37 +102,15 @@ impl fmt::Display for ParserErrorKind {
 
 impl Error for ParserErrorKind {}
 
-/// Parser error struct contains the error kind, and its position in the source code.
-#[derive(Debug)]
-pub struct ParserError {
-    error_kind: ParserErrorKind,
-    line: usize,
-    col: usize,
-    source: Arc<String>,
-}
-
-impl ParserError {
-    /// Constructor method.
-    /// Retrieve the line and column position within the source code and include the error kind.
-    pub fn new(source: &str, pos: usize, error_kind: ParserErrorKind) -> Self {
-        let slice = &source[..pos];
-        let lines = slice.split('\n').collect::<Vec<_>>();
-        let line_count = lines.len();
-        let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
-
-        ParserError {
-            error_kind,
-            line: line_count,
-            col: last_line_len,
-            source: Arc::new(source.to_string()),
-        }
-    }
-}
-
-impl fmt::Display for ParserError {
+impl<T> fmt::Display for CompilerError<T>
+where
+    T: fmt::Display,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} [Ln {}, Col{}]", self.error_kind, self.line, self.col)
     }
 }
 
-impl Error for ParserError {}
+impl<T> Error for CompilerError<T> where T: fmt::Display + fmt::Debug {}
+
+pub struct ErrorEmitted(pub ());

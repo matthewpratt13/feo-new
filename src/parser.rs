@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{BinaryOp, Expression, Literal, Precedence, Statement, Type, UnaryOp},
-    error::{ParserError, ParserErrorKind},
+    error::{CompilerError, ErrorEmitted, ParserErrorKind},
     token::{Token, TokenStream},
 };
 
@@ -21,7 +21,7 @@ pub struct StructField {
 struct Parser {
     stream: TokenStream,
     current: usize,
-    errors: Vec<ParserError>,
+    errors: Vec<CompilerError<ParserErrorKind>>,
     precedences: HashMap<Token, Precedence>, // precedence levels by operator
 }
 
@@ -260,7 +260,7 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    fn parse(&mut self) -> Result<Vec<Statement>, ParserErrorKind> {
+    fn parse(&mut self) -> Result<Vec<Statement>, ErrorEmitted> {
         let mut statements = Vec::new();
         while !self.is_at_end() {
             statements.push(self.parse_statement()?);
@@ -270,7 +270,7 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    fn parse_statement(&mut self) -> Result<Statement, ParserErrorKind> {
+    fn parse_statement(&mut self) -> Result<Statement, ErrorEmitted> {
         let token = self.consume();
         match token {
             Some(Token::Let { .. }) => self.parse_let_statement(),
@@ -283,7 +283,7 @@ impl Parser {
     }
 
     /// Parse an identifier and the assignment operation that binds the variable to a value.
-    fn parse_let_statement(&mut self) -> Result<Statement, ParserErrorKind> {
+    fn parse_let_statement(&mut self) -> Result<Statement, ErrorEmitted> {
         let identifier = self.expect_identifier()?;
 
         self.expect_token(Token::Equals {
@@ -302,7 +302,7 @@ impl Parser {
     }
 
     /// Parse an expression into a statement, separated by a semicolon.
-    fn parse_expression_statement(&mut self) -> Result<Statement, ParserErrorKind> {
+    fn parse_expression_statement(&mut self) -> Result<Statement, ErrorEmitted> {
         let expression = &self.parse_expression(Precedence::Lowest)?;
 
         self.expect_token(Token::Semicolon {
@@ -315,7 +315,7 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    // fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserErrorKind> {
+    // fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorEmitted> {
     //     let mut left_expr = self.parse_prefix()?;
 
     //     while let Some(next_token_precedence) =
@@ -341,7 +341,7 @@ impl Parser {
     // }
 
     /// Recursively parse an expression based on operator precedence.
-    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserErrorKind> {
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorEmitted> {
         let mut left_expr = self.parse_prefix()?;
 
         while let Some(current_precedence) =
@@ -358,7 +358,7 @@ impl Parser {
     }
 
     /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses).
-    fn parse_prefix(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_prefix(&mut self) -> Result<Expression, ErrorEmitted> {
         match self.consume() {
             Some(token) => match token {
                 Token::IntLiteral { .. } => self.parse_primary(),
@@ -523,7 +523,7 @@ impl Parser {
     }
 
     /// Parse infix expressions (e.g., binary operators).
-    fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ParserErrorKind> {
+    fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ErrorEmitted> {
         let token = self
             .consume()
             .ok_or(self.log_error(ParserErrorKind::UnexpectedEndOfInput))?;
@@ -604,7 +604,7 @@ impl Parser {
     }
 
     /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
-    fn parse_primary(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_primary(&mut self) -> Result<Expression, ErrorEmitted> {
         let token = self
             .consume()
             .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
@@ -629,7 +629,7 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    fn parse_grouped_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_grouped_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         self.expect_token(Token::LParen {
             delim: '(',
             span: self.stream.span(),
@@ -654,7 +654,7 @@ impl Parser {
         &mut self,
         left_expr: Expression,
         op: BinaryOp,
-    ) -> Result<Expression, ParserErrorKind> {
+    ) -> Result<Expression, ErrorEmitted> {
         match op {
             BinaryOp::Add => {
                 let right_expr = self.parse_expression(Precedence::Sum)?;
@@ -852,7 +852,7 @@ impl Parser {
     }
 
     /// Parse a function call with arguments.
-    fn parse_call_expression(&mut self, callee: Expression) -> Result<Expression, ParserErrorKind> {
+    fn parse_call_expression(&mut self, callee: Expression) -> Result<Expression, ErrorEmitted> {
         let mut args: Vec<Expression> = Vec::new(); // store function arguments
 
         self.expect_token(Token::LParen {
@@ -891,7 +891,10 @@ impl Parser {
     }
 
     /// Parse an index expression (i.e., `array[index]`).
-    fn parse_index_expression(&mut self, array_expr: Expression) -> Result<Expression, ParserErrorKind> {
+    fn parse_index_expression(
+        &mut self,
+        array_expr: Expression,
+    ) -> Result<Expression, ErrorEmitted> {
         self.expect_token(Token::LBracket {
             delim: '[',
             span: self.stream.span(),
@@ -908,7 +911,10 @@ impl Parser {
     }
 
     /// Parse a field access expression (i.e., `object.field`).
-    fn parse_field_access_expression(&mut self, object_expr: Expression) -> Result<Expression, ParserErrorKind> {
+    fn parse_field_access_expression(
+        &mut self,
+        object_expr: Expression,
+    ) -> Result<Expression, ErrorEmitted> {
         self.expect_token(Token::FullStop {
             punc: '.',
             span: self.stream.span(),
@@ -928,7 +934,7 @@ impl Parser {
 
     // TODO: what about `else-if` branches ?
     /// Parse an `if` expression (i.e., `if (condition) { true block } else { false block }`).
-    fn parse_if_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_if_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         self.expect_token(Token::If {
             name: "if".to_string(),
             span: self.stream.span(),
@@ -961,7 +967,7 @@ impl Parser {
     }
 
     /// Parse a `for-in` expression (i.e., `for var in iterable { execution logic }`).
-    fn parse_for_in_expression(&mut self) -> Result<Statement, ParserErrorKind> {
+    fn parse_for_in_expression(&mut self) -> Result<Statement, ErrorEmitted> {
         self.expect_token(Token::For {
             name: "for".to_string(),
             span: self.stream.span(),
@@ -982,7 +988,7 @@ impl Parser {
     }
 
     /// Parse a block expression (i.e., `{ expr1; expr2; ... }`).
-    fn parse_block_expression(&mut self) -> Result<Statement, ParserErrorKind> {
+    fn parse_block_expression(&mut self) -> Result<Statement, ErrorEmitted> {
         self.expect_token(Token::LBrace {
             delim: '{',
             span: self.stream.span(),
@@ -1007,7 +1013,7 @@ impl Parser {
     }
 
     /// Parse an array expression (i.e., `[element1, element2, element3, etc.]`).
-    fn parse_array_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_array_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         self.expect_token(Token::LBracket {
             delim: '[',
             span: self.stream.span(),
@@ -1038,7 +1044,7 @@ impl Parser {
     }
 
     /// Parse a tuple expression (i.e., `(element1, element2, element3)`).
-    fn parse_tuple_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_tuple_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         self.expect_token(Token::LParen {
             delim: '(',
             span: self.stream.span(),
@@ -1068,7 +1074,7 @@ impl Parser {
         Ok(Expression::Tuple(elements))
     }
 
-    fn parse_cast_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_cast_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         let expr = self.parse_expression(Precedence::Cast)?;
 
         let token = self
@@ -1093,7 +1099,7 @@ impl Parser {
     }
 
     /// Parse a struct with fields.
-    fn parse_struct(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_struct(&mut self) -> Result<Expression, ErrorEmitted> {
         let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
 
         self.expect_token(Token::LBrace {
@@ -1158,49 +1164,49 @@ impl Parser {
         Ok(Expression::Struct(fields))
     }
 
-    fn parse_closure_with_block(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_closure_with_block(&mut self) -> Result<Expression, ErrorEmitted> {
         todo!()
     }
 
-    fn parse_closure_without_block(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_closure_without_block(&mut self) -> Result<Expression, ErrorEmitted> {
         todo!()
     }
 
-    fn parse_tuple_index_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_tuple_index_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         todo!()
     }
 
-    fn parse_method_call_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_method_call_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         todo!()
     }
 
-    fn parse_path_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_path_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         todo!()
     }
 
-    fn parse_unwrap_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_unwrap_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         todo!()
     }
 
-    fn parse_range_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_range_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         todo!()
     }
 
-    fn parse_return_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_return_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         todo!()
     }
 
-    fn parse_match_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_match_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         todo!()
     }
 
-    fn parse_break_or_continue_expression(&mut self) -> Result<Expression, ParserErrorKind> {
+    fn parse_break_or_continue_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         todo!()
     }
 
     ///////////////////////////////////////////////////////////////////////////
 
-    fn expect_identifier(&mut self) -> Result<String, ParserErrorKind> {
+    fn expect_identifier(&mut self) -> Result<String, ErrorEmitted> {
         let tokens = self
             .stream
             .tokens()
@@ -1220,7 +1226,7 @@ impl Parser {
         }
     }
 
-    fn consume_identifier(&mut self) -> Result<String, ParserErrorKind> {
+    fn consume_identifier(&mut self) -> Result<String, ErrorEmitted> {
         let tokens = self
             .stream
             .tokens()
@@ -1260,7 +1266,7 @@ impl Parser {
 
     /// Consume and check tokens, to ensure that the expected tokens are encountered
     /// during parsing. Return the relevant `ParserErrorKind` where applicable.
-    fn expect_token(&mut self, expected: Token) -> Result<(), ParserErrorKind> {
+    fn expect_token(&mut self, expected: Token) -> Result<(), ErrorEmitted> {
         match self.consume() {
             Some(token) if token == expected => Ok(()),
             Some(token) => Err(self.log_error(ParserErrorKind::UnexpectedToken {
@@ -1272,7 +1278,7 @@ impl Parser {
     }
 
     /// Match a `Token` to a `Type` and return the `Type` or a `ParserErrorKind`.
-    fn get_type(&mut self) -> Result<Type, ParserErrorKind> {
+    fn get_type(&mut self) -> Result<Type, ErrorEmitted> {
         match self.consume() {
             Some(Token::I32Type { .. } | Token::I64Type { .. }) => Ok(Type::Int),
 
@@ -1330,10 +1336,10 @@ impl Parser {
 
     /// Log a given parsing error and return it.
     /// The `ParserErrorKind` describes the error succinctly.
-    fn log_error(&mut self, error_kind: ParserErrorKind) -> ParserErrorKind {
-        let error = ParserError::new(&self.stream.span().input(), self.current, error_kind.clone());
+    fn log_error(&mut self, error_kind: ParserErrorKind) -> ErrorEmitted {
+        let error = CompilerError::new(&self.stream.span().input(), self.current, error_kind);
 
         self.errors.push(error);
-        error_kind
+        ErrorEmitted(())
     }
 }
