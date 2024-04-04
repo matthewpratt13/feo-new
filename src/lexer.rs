@@ -25,80 +25,79 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn tokenize_comment(&mut self) -> Token {
+    fn tokenize_comment(&mut self) -> Result<Token, LexerError> {
         todo!()
     }
 
-    fn tokenize_block_comment(&mut self) -> Token {
+    fn tokenize_block_comment(&mut self) -> Result<Token, LexerError> {
         todo!()
     }
 
-    fn tokenize_doc_line_comment(&mut self) -> Token {
+    fn tokenize_doc_line_comment(&mut self) -> Result<Token, LexerError> {
         let start_pos = self.pos;
 
-        self.pos += 3; // skip doc comment prefix (`///`)
+        self.advance_by(3); // skip doc comment prefix (`///`)
 
         while self.pos < self.input.len() {
             if self.input.chars().nth(self.pos).unwrap() == '\n' {
                 break;
             }
-            self.pos += 1;
+            self.advance();
         }
 
         let comment = self.input[start_pos..self.pos].trim().to_string();
         let span = Span::new(self.input, start_pos, self.pos);
 
-        Token::DocComment { comment, span }
+        Ok(Token::DocComment { comment, span })
     }
 
-    fn tokenize_doc_block_comment(&mut self) -> Token {
+    fn tokenize_doc_block_comment(&mut self) -> Result<Token, LexerError> {
         let start_pos = self.pos;
 
-        self.pos += 3; // skip doc block comment prefix (`/**`)
+        self.advance_by(3); // skip doc block comment prefix (`/**`)
 
         while self.pos + 1 < self.input.len() && &self.input[self.pos..self.pos + 2] != "*/" {
-            self.pos += 1;
+            self.advance();
         }
 
         let comment = self.input[start_pos..self.pos].trim().to_string();
         let span = Span::new(self.input, start_pos, self.pos);
 
-        self.pos += 2; // skip comment terminator (`*/`)
+        self.advance_by(2); // skip comment terminator (`*/`)
 
-        Token::DocComment { comment, span }
+        Ok(Token::DocComment { comment, span })
     }
 
-    fn tokenize_identifier_or_keyword(&mut self) -> Token {
+    fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, LexerError> {
         let start_pos = self.pos;
 
         while self.pos < self.input.len() {
             let current_char = self.input.chars().nth(self.pos).unwrap();
             if current_char.is_alphanumeric() || current_char == '_' {
-                self.pos += 1;
+                self.advance();
             } else {
                 break;
             }
         }
 
         let name = &self.input[start_pos..self.pos];
-
         let span = Span::new(self.input, start_pos, self.pos);
 
         if self.is_keyword(name) {
             match name {
-                "let" => Token::Let {
+                "let" => Ok(Token::Let {
                     name: name.to_string(),
                     span,
-                },
+                }),
 
                 // TODO: fill out the other keyword tokens
                 _ => todo!(),
             }
         } else {
-            Token::Identifier {
+            Ok(Token::Identifier {
                 name: name.to_string(),
                 span,
-            }
+            })
         }
     }
 
@@ -109,19 +108,19 @@ impl<'a> Lexer<'a> {
 
         match delim {
             '(' => {
-                self.pos += 1; // skip opening delimiter
+                self.advance(); // skip opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
                 Ok(Token::LParen { delim, span })
             }
 
             '{' => {
-                self.pos += 1; //  skip opening delimiter
+                self.advance(); //  skip opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
                 Ok(Token::LBrace { delim, span })
             }
 
             '[' => {
-                self.pos += 1; // skip opening delimiter
+                self.advance(); // skip opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
                 Ok(Token::LBracket { delim, span })
             }
@@ -145,23 +144,20 @@ impl<'a> Lexer<'a> {
         let delim = self.input.chars().nth(self.pos).unwrap();
 
         if delim == expected {
-            self.pos += 1; // skip closing delimiter
+            self.advance(); // skip closing delimiter
 
             match delim {
                 ')' => {
-                    self.pos += 1; // skip opening delimiter
                     let span = Span::new(self.input, start_pos, self.pos);
                     Ok(Token::RParen { delim, span })
                 }
 
                 '}' => {
-                    self.pos += 1; // skip opening delimiter
                     let span = Span::new(self.input, start_pos, self.pos);
                     Ok(Token::RBrace { delim, span })
                 }
 
                 ']' => {
-                    self.pos += 1; // skip opening delimiter
                     let span = Span::new(self.input, start_pos, self.pos);
                     Ok(Token::RBracket { delim, span })
                 }
@@ -186,7 +182,7 @@ impl<'a> Lexer<'a> {
 
         let start_pos = self.pos;
 
-        self.pos += 1; // skip opening quote
+        self.advance(); // skip opening quote
 
         while self.pos < self.input.len() {
             let current_char = self.input.chars().nth(self.pos).unwrap();
@@ -200,7 +196,7 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 '"' => {
-                    self.pos += 1; // skip closing quote
+                    self.advance(); // skip closing quote
 
                     let span = Span::new(self.input, start_pos, self.pos);
 
@@ -208,7 +204,7 @@ impl<'a> Lexer<'a> {
                 }
                 _ => {
                     value.push(current_char);
-                    self.pos += 1;
+                    self.advance();
                 }
             }
         }
@@ -220,31 +216,31 @@ impl<'a> Lexer<'a> {
         todo!()
     }
 
-    fn tokenize_u256(&mut self) -> Token {
+    fn tokenize_u256(&mut self) -> Result<Token, LexerError> {
         let start_pos = self.pos;
 
         while self.pos < self.input.len()
             && self.input[self.pos..].chars().next().unwrap().is_numeric()
         {
-            self.pos += 1;
+            self.advance();
         }
 
         let number = self.input[start_pos..self.pos].parse::<U256>();
         let span = Span::new(self.input, start_pos, self.pos);
 
         match number {
-            Ok(value) => Token::U256Literal { value, span },
+            Ok(value) => Ok(Token::U256Literal { value, span }),
             Err(_) => todo!(),
         }
     }
 
-    fn tokenize_numeric(&mut self) -> Token {
+    fn tokenize_numeric(&mut self) -> Result<Token, LexerError> {
         let start_pos = self.pos;
 
         while self.pos < self.input.len() {
             let current_char = self.input.chars().nth(self.pos).unwrap();
             if current_char.is_numeric() {
-                self.pos += 1;
+                self.advance();
             } else {
                 break;
             }
@@ -255,15 +251,15 @@ impl<'a> Lexer<'a> {
         let value = self.input[start_pos..self.pos].parse::<i64>().unwrap();
         let span = Span::new(self.input, start_pos, self.pos);
 
-        Token::IntLiteral {
+        Ok(Token::IntLiteral {
             value: IntKind::I64(value),
             span,
-        }
+        })
     }
 
     /// Parse an escape sequence found in a string or character literal.
     fn parse_escape_sequence(&mut self) -> Option<char> {
-        self.pos += 1; // skip backslash
+        self.advance(); // skip backslash
 
         if self.pos < self.input.len() {
             let escaped_char = match self.input.chars().nth(self.pos).unwrap() {
@@ -274,11 +270,20 @@ impl<'a> Lexer<'a> {
                 // TODO: handle other escape sequences
                 _ => return None, // invalid escape sequence
             };
-            self.pos += 1;
+
+            self.advance();
             Some(escaped_char)
         } else {
             None // incomplete escape sequence
         }
+    }
+
+    fn advance(&mut self) {
+        self.pos += 1;
+    }
+
+    fn advance_by(&mut self, num_chars: usize) {
+        self.pos += num_chars;
     }
 
     /// Check if some string is a reserved keyword (as opposed to an ordinary identifier).
@@ -292,7 +297,7 @@ impl<'a> Lexer<'a> {
         while self.pos < self.input.len()
             && self.input.chars().nth(self.pos).unwrap().is_whitespace()
         {
-            self.pos += 1;
+            self.advance();
         }
     }
 }
