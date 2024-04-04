@@ -153,7 +153,8 @@ impl fmt::Display for ParserErrorKind {
 
 impl Error for ParserErrorKind {}
 
-/// Generic error struct that allows for custom error kinds, and provides precise locations.
+/// Generic error struct that allows for custom error kinds, and provides the precise location
+/// of an error in the source code.
 #[derive(Debug, Clone)]
 pub struct CompilerError<T> {
     error_kind: T,

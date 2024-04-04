@@ -15,19 +15,20 @@ pub struct StructField {
     value: Expression,
 }
 
-/// Parser struct, containing methods to parse expressions, statements and items,
-/// as well as helper methods and error handling capabilities.
+/// Parser struct that holds a stream of tokens and contains methods to parse expressions,
+/// statements and items, as well as helper methods and error handling capabilities.
 #[derive(Debug)]
 struct Parser {
     stream: TokenStream,
     current: usize,
-    errors: Vec<CompilerError<ParserErrorKind>>,
-    precedences: HashMap<Token, Precedence>, // precedence levels by operator
+    errors: Vec<CompilerError<ParserErrorKind>>, // store compiler errors
+    precedences: HashMap<Token, Precedence>,     // record of precedence levels by operator
 }
 
 impl Parser {
-    /// Constructor method.
-    /// Create an empty `Vec` for parser errors and an empty `HashMap` for precedences.
+    /// Create a new `Parser` instance.
+    /// Initialize an empty `Vec` to store parser errors and an empty `HashMap`
+    /// to store precedences.
     fn new(stream: TokenStream) -> Self {
         Parser {
             stream,
@@ -260,6 +261,7 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
+    /// Main parsing function that returns a `VecStatement`.
     fn parse(&mut self) -> Result<Vec<Statement>, ErrorEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
         while !self.is_at_end() {
@@ -270,6 +272,7 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
+    /// Parse a `Statement`.
     fn parse_statement(&mut self) -> Result<Statement, ErrorEmitted> {
         let token = self.consume();
         match token {
@@ -329,6 +332,30 @@ impl Parser {
         }
 
         Ok(left_expr)
+    }
+
+    /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
+    fn parse_primary(&mut self) -> Result<Expression, ErrorEmitted> {
+        let token = self
+            .consume()
+            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
+
+        match token {
+            Token::Identifier { name, .. }
+            | Token::SelfKeyword { name, .. }
+            | Token::Underscore { name, .. } => Ok(Expression::Identifier(name)),
+            Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
+            Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
+            Token::U256Literal { value, .. } => Ok(Expression::Literal(Literal::U256(value))),
+            Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
+            Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
+            Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
+            Token::LParen { .. } => self.parse_grouped_expression(),
+            _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "identifier or literal".to_string(),
+                found: token,
+            })),
+        }
     }
 
     /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses).
@@ -574,30 +601,6 @@ impl Parser {
             }
 
             _ => Err(self.log_error(ParserErrorKind::InvalidToken { token })),
-        }
-    }
-
-    /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
-    fn parse_primary(&mut self) -> Result<Expression, ErrorEmitted> {
-        let token = self
-            .consume()
-            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
-
-        match token {
-            Token::Identifier { name, .. }
-            | Token::SelfKeyword { name, .. }
-            | Token::Underscore { name, .. } => Ok(Expression::Identifier(name)),
-            Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
-            Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
-            Token::U256Literal { value, .. } => Ok(Expression::Literal(Literal::U256(value))),
-            Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
-            Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
-            Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
-            Token::LParen { .. } => self.parse_grouped_expression(),
-            _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier or literal".to_string(),
-                found: token,
-            })),
         }
     }
 
@@ -1309,8 +1312,8 @@ impl Parser {
         self.current >= self.stream.tokens().len()
     }
 
-    /// Log a given parsing error and return an `ErrorEmitted` to show an error has occurred.
-    /// The `error_kind` describes the error succinctly.
+    /// Log and store information about an error that occurred during lexing.
+    /// Return `ErrorEmitted` just to confirm that the action happened.
     fn log_error(&mut self, error_kind: ParserErrorKind) -> ErrorEmitted {
         let error = CompilerError::new(&self.stream.span().input(), self.current, error_kind);
 

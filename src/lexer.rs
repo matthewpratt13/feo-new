@@ -1,18 +1,24 @@
 #![allow(dead_code)]
 
 use crate::{
-    ast::{IntKind, UIntKind}, error::{CompilerError, ErrorEmitted, LexerErrorKind}, span::Span, token::{Token, TokenStream}, U256
+    ast::{IntKind, UIntKind},
+    error::{CompilerError, ErrorEmitted, LexerErrorKind},
+    span::Span,
+    token::{Token, TokenStream},
+    U256,
 };
 
-/// Lexer struct, containing methods to render tokens (tokenize) from characters in a source string.
+/// Lexer struct that holds an input string and a `Vec<CompilerError>`, and contains methods 
+/// to render tokens (tokenize) from characters from that string.
 struct Lexer<'a> {
     input: &'a str,
     pos: usize,
-    errors: Vec<CompilerError<LexerErrorKind>>,
+    errors: Vec<CompilerError<LexerErrorKind>>, // store lexer errors from tokenization
 }
 
 impl<'a> Lexer<'a> {
-    /// Constructor method
+    /// Create a new `Lexer` instance.
+    /// Initialize an empty `Vec` to store potential errors.
     fn new(input: &'a str) -> Self {
         Lexer {
             input,
@@ -22,7 +28,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Main lexing function.
-    /// Return a stream of tokens generated from an input string.
+    /// Returns a stream of tokens generated from some input string (source code).
     fn lex(&mut self) -> Result<TokenStream, ErrorEmitted> {
         let mut tokens: Vec<Token> = Vec::new();
 
@@ -42,30 +48,9 @@ impl<'a> Lexer<'a> {
                     tokens.push(self.tokenize_identifier_or_keyword()?)
                 }
 
-                '(' => {
+                '(' | '[' | '{' | ')' | ']' | '}' => {
                     tokens.push(self.tokenize_delimiter()?);
                 }
-
-                '[' => {
-                    tokens.push(self.tokenize_delimiter()?);
-                }
-
-                '{' => {
-                    tokens.push(self.tokenize_delimiter()?);
-                }
-
-                ')' => {
-                    tokens.push(self.tokenize_closing_delimiter(')')?);
-                }
-
-                ']' => {
-                    tokens.push(self.tokenize_closing_delimiter(']')?);
-                }
-
-                '}' => {
-                    tokens.push(self.tokenize_closing_delimiter('}')?);
-                }
-
                 '"' => tokens.push(self.tokenize_string()?),
 
                 '\'' => tokens.push(self.tokenize_char()?),
@@ -642,6 +627,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Tokenize punctuation.
     fn tokenize_punctuation(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
@@ -818,7 +804,7 @@ impl<'a> Lexer<'a> {
         self.pos += num_chars;
     }
 
-    /// Get the current token.
+    /// Get the character at the lexer's current position.
     fn peek_current(&self) -> Option<char> {
         if self.pos < self.input.len() - 1 && !self.input.is_empty() {
             self.input[self.pos..self.pos + 1].parse::<char>().ok()
@@ -845,8 +831,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Log a given lexer error and return an `ErrorEmitted` to show an error has occurred.
-    /// The `error_kind` describes the error succinctly.
+    /// Log and store information about an error that occurred during lexing.
+    /// Return `ErrorEmitted` just to confirm that the action happened.
     fn log_error(&mut self, error_kind: LexerErrorKind) -> ErrorEmitted {
         let error = CompilerError::new(&self.input, self.pos, error_kind);
 
