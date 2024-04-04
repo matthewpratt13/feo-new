@@ -3,8 +3,8 @@ use std::{error::Error, fmt, sync::Arc};
 use crate::token::Token;
 
 /// Enum representing the different types of lexer errors.
-#[derive(Default, Debug, PartialEq)]
-pub enum LexerErrorKind {
+#[derive(Default, Debug, Clone, PartialEq)]
+pub enum LexErrorKind {
     ParseHexError,
     ParseIntError,
     ParseUIntError,
@@ -15,15 +15,15 @@ pub enum LexerErrorKind {
         punc: String,
     },
 
-    UnrecognizedCharacter {
-        punc: char,
+    UnrecognizedChar {
+        value: char,
     },
 
     InvalidKeyword {
         name: String,
     },
 
-    UnexpectedCharacter {
+    UnexpectedChar {
         expected: String,
         found: char,
     },
@@ -45,7 +45,7 @@ pub enum LexerErrorKind {
         sequence: char,
     },
 
-    CharacterNotFound {
+    CharNotFound {
         expected: String,
     },
 
@@ -54,51 +54,51 @@ pub enum LexerErrorKind {
     // TODO: add more error types as needed
 }
 
-impl fmt::Display for LexerErrorKind {
+impl fmt::Display for LexErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexerErrorKind::ParseHexError => write!(f, "error parsing hexadecimal digit"),
-            LexerErrorKind::ParseIntError => write!(f, "error parsing signed integer"),
-            LexerErrorKind::ParseUIntError => write!(f, "error parsing unsigned integer"),
-            LexerErrorKind::ParseBoolError => write!(f, "error parsing boolean"),
-            LexerErrorKind::ParsePuncError => write!(f, "error parsing punctuation"),
-            LexerErrorKind::InvalidPunc { punc } => {
-                write!(f, "syntax error \ninvalid punctuation: `{punc}`")
+            LexErrorKind::ParseHexError => write!(f, "error parsing hexadecimal digit"),
+            LexErrorKind::ParseIntError => write!(f, "error parsing signed integer"),
+            LexErrorKind::ParseUIntError => write!(f, "error parsing unsigned integer"),
+            LexErrorKind::ParseBoolError => write!(f, "error parsing boolean"),
+            LexErrorKind::ParsePuncError => write!(f, "error parsing punctuation"),
+            LexErrorKind::InvalidPunc { punc } => {
+                write!(f, "syntax error\ninvalid punctuation: `{punc}`")
             }
-            LexerErrorKind::UnrecognizedCharacter { punc } => {
-                write!(f, "syntax error \nunrecognized character: `{punc}`")
+            LexErrorKind::UnrecognizedChar { value } => {
+                write!(f, "syntax error\nunrecognized character: `{value}`")
             }
-            LexerErrorKind::InvalidKeyword { name } => {
+            LexErrorKind::InvalidKeyword { name } => {
                 writeln!(f, "syntax error\ninvalid keyword: `{name}`")
             }
-            LexerErrorKind::UnexpectedCharacter { expected, found } => writeln!(
+            LexErrorKind::UnexpectedChar { expected, found } => writeln!(
                 f,
                 "unexpected character\nexpected {expected}, found `{found}`",
             ),
-            LexerErrorKind::MissingQuote { quote } => writeln!(f, "expected `{quote}`, found none"),
+            LexErrorKind::MissingQuote { quote } => writeln!(f, "expected `{quote}`, found none"),
 
-            LexerErrorKind::MissingDelimiter { delim } => {
+            LexErrorKind::MissingDelimiter { delim } => {
                 writeln!(f, "expected `{delim}`, found none")
             }
-            LexerErrorKind::MismatchedDelimiter { expected, found } => writeln!(
+            LexErrorKind::MismatchedDelimiter { expected, found } => writeln!(
                 f,
                 "mismatched delimiter\nexpected `{expected}`, found `{found}`"
             ),
-            LexerErrorKind::InvalidEscapeSequence { sequence } => {
+            LexErrorKind::InvalidEscapeSequence { sequence } => {
                 writeln!(f, "detected invalid escape sequence: `{sequence}`")
             }
-            LexerErrorKind::CharacterNotFound { expected } => {
+            LexErrorKind::CharNotFound { expected } => {
                 writeln!(f, "expected {expected}, found none")
             }
-            LexerErrorKind::UnknownError => writeln!(f, "unknown error"),
+            LexErrorKind::UnknownError => writeln!(f, "unknown error"),
         }
     }
 }
 
-impl Error for LexerErrorKind {}
+impl Error for LexErrorKind {}
 
 /// Enum representing the different types of parsing errors.
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub enum ParserErrorKind {
     UnexpectedToken {
         expected: String,
@@ -156,14 +156,17 @@ impl Error for ParserErrorKind {}
 /// Generic error struct that allows for custom error kinds, and provides the precise location
 /// of an error in the source code.
 #[derive(Debug, Clone)]
-pub struct CompilerError<T> {
+pub struct CompilerError<T: Clone> {
     error_kind: T,
     line: usize,
     col: usize,
     _source: Arc<String>,
 }
 
-impl<T> CompilerError<T> {
+impl<T> CompilerError<T>
+where
+    T: Clone,
+{
     /// Constructor method
     pub fn new(source: &str, pos: usize, error_kind: T) -> Self {
         let slice = &source[..pos];
@@ -182,17 +185,22 @@ impl<T> CompilerError<T> {
 
 impl<T> fmt::Display for CompilerError<T>
 where
-    T: fmt::Display,
+    T: Clone + fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} [Ln {}, Col{}]", self.error_kind, self.line, self.col)
+        write!(
+            f,
+            "{} [Ln {}, Col {}]",
+            self.error_kind, self.line, self.col
+        )
     }
 }
 
-impl<T> Error for CompilerError<T> where T: fmt::Display + fmt::Debug {}
+impl<T> Error for CompilerError<T> where T: Clone + fmt::Display + fmt::Debug {}
 
 /// Dummy struct that has no real functionality of its own.
 /// Used as a placeholder for some `Err` in functions that return a `Result`, to prove
 /// that an error has occurred without returning the actual error, instead allowing the error
 /// to be logged in the respective struct for later use.
+#[derive(Debug)]
 pub struct ErrorEmitted(pub ());

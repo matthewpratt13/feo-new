@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::fmt;
+
 use crate::{
     ast::{IntKind, UIntKind},
     span::Span,
@@ -126,6 +128,7 @@ pub enum Token {
     GreaterThanEquals { punc: String, span: Span },
     DblPipe { punc: String, span: Span },
 
+    Comment { span: Span },
     DocComment { comment: String, span: Span },
 
     EOF { span: Span },
@@ -157,5 +160,11 @@ impl<'a> TokenStream {
     /// Get the stream span.
     pub fn span(&self) -> Span {
         self.span.clone()
+    }
+}
+
+impl fmt::Display for TokenStream {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:#?}", self.tokens)
     }
 }
