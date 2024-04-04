@@ -9,10 +9,10 @@ use crate::{
 /// Enum representing the different unary operators.
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
-    Negate,      // '-'
-    Not,         // '!'
-    Reference,   // '&'
-    Dereference, // '*'
+    Negate,      // `-`
+    Not,         // `!`
+    Reference,   // `&`
+    Dereference, // `*`
 }
 
 /// Enum representing the different binary operators.
@@ -157,7 +157,7 @@ pub enum Item {
 }
 
 // TODO: parse:
-/// Enum representing the language's different types, which help to define a value's 
+/// Enum representing the language's different types, which help to define a value's
 /// memory interpretation and the appropriate operations that may be performed.
 #[derive(Debug, Clone)]
 pub enum Type {

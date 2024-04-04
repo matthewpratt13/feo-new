@@ -42,7 +42,7 @@ impl<'a> Lexer<'a> {
             if self.input.chars().nth(self.pos).unwrap() == '\n' {
                 break;
             }
-            
+
             self.advance();
         }
 
@@ -72,9 +72,8 @@ impl<'a> Lexer<'a> {
     fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
-        while self.pos < self.input.len() {
-            let current_char = self.input.chars().nth(self.pos).unwrap();
-            if current_char.is_alphanumeric() || current_char == '_' {
+        while let Some(c) = self.input.chars().nth(self.pos) {
+            if c.is_alphanumeric() || c == '_' {
                 self.advance();
             } else {
                 break;
@@ -85,6 +84,8 @@ impl<'a> Lexer<'a> {
         let span = Span::new(self.input, start_pos, self.pos);
 
         if self.is_keyword(name) {
+            self.advance(); // advance to next character
+
             match name {
                 "let" => Ok(Token::Let {
                     name: name.to_string(),
@@ -95,6 +96,8 @@ impl<'a> Lexer<'a> {
                 _ => todo!(),
             }
         } else {
+            self.advance(); // advance to next character
+
             Ok(Token::Identifier {
                 name: name.to_string(),
                 span,
@@ -102,6 +105,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Tokenize an opening delimiter.
     fn tokenize_delimiter(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
@@ -139,13 +143,19 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Tokenize a closing delimiter, throw errors where the inputted delimiter is missing,
+    /// or does not match the expected delimiter.
     fn tokenize_closing_delimiter(&mut self, expected: char) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
-        let delim = self.input.chars().nth(self.pos).unwrap();
+        let delim = self
+            .input
+            .chars()
+            .nth(self.pos)
+            .ok_or(self.log_error(LexerErrorKind::MissingDelimiter { delim: expected }))?;
 
         if delim == expected {
-            self.advance(); // skip closing delimiter
+            self.advance(); // move past closing delimiter
 
             match delim {
                 ')' => {
@@ -178,6 +188,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Tokenize a string literal, handling escape sequences where applicable.
     fn tokenize_string(&mut self) -> Result<Token, ErrorEmitted> {
         let mut value = String::new();
 
@@ -185,14 +196,13 @@ impl<'a> Lexer<'a> {
 
         self.advance(); // skip opening quote (`"`)
 
-        while self.pos < self.input.len() {
-            let current_char = self.input.chars().nth(self.pos).unwrap();
-
-            match current_char {
+        while let Some(c) = self.input.chars().nth(self.pos) {
+            match c {
                 '\\' => {
                     // handle escape sequences
                     if let Some(escaped_char) = self.parse_escape_sequence()? {
                         value.push(escaped_char);
+                        self.advance();
                     } else {
                         return Err(self.log_error(LexerErrorKind::CharacterNotFound {
                             expected: "escape sequence".to_string(),
@@ -207,7 +217,7 @@ impl<'a> Lexer<'a> {
                     return Ok(Token::StringLiteral { value, span });
                 }
                 _ => {
-                    value.push(current_char);
+                    value.push(c);
                     self.advance();
                 }
             }
@@ -216,6 +226,7 @@ impl<'a> Lexer<'a> {
         Err(self.log_error(LexerErrorKind::MissingQuote { quote: '\"' }))
     }
 
+    /// Tokenize a `char` literal, handling escape sequences where applicable.
     fn tokenize_char(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
@@ -226,9 +237,9 @@ impl<'a> Lexer<'a> {
                 '\\' => {
                     // handle escape sequences
                     if let Some(escaped_char) = self.parse_escape_sequence()? {
-                        let span = Span::new(self.input, start_pos, self.pos);
-
                         self.advance();
+
+                        let span = Span::new(self.input, start_pos, self.pos);
 
                         Ok(Token::CharLiteral {
                             value: escaped_char,
@@ -251,9 +262,9 @@ impl<'a> Lexer<'a> {
                     self.advance();
 
                     if let Some('\'') = self.input.chars().nth(self.pos) {
-                        let span = Span::new(self.input, start_pos, self.pos);
-
                         self.advance(); // skip closing quote (`'`)
+
+                        let span = Span::new(self.input, start_pos, self.pos);
 
                         Ok(Token::CharLiteral { value, span })
                     } else {
@@ -269,6 +280,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Tokenize a `U256` hexadecimal digit.
     fn tokenize_u256(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
@@ -300,17 +312,21 @@ impl<'a> Lexer<'a> {
 
         let span = Span::new(self.input, start_pos, self.pos);
 
+        self.advance();
+
         Ok(Token::U256Literal { value, span })
     }
 
+    /// Tokenize a numeric value (i.e., `i64` or `u64`).
+    /// Parse to `u64` unless a `-` is encountered, in which case parse to `i64`.
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorEmitted> {
-        let start_pos = self.pos;
-
         let mut is_int = false;
+
+        let start_pos = self.pos;
 
         // check for `-` before the number to decide which type of integer to parse to
         if self.input.chars().nth(self.pos) == Some('-') {
-            self.advance();
+            self.advance(); // skip `-`
             is_int = true;
         }
 
@@ -330,7 +346,10 @@ impl<'a> Lexer<'a> {
                 .concat()
                 .parse::<i64>()
                 .map_err(|_| self.log_error(LexerErrorKind::ParseIntError))?;
+
             let span = Span::new(self.input, start_pos, self.pos);
+
+            self.advance();
 
             Ok(Token::IntLiteral {
                 value: IntKind::I64(value),
@@ -351,8 +370,6 @@ impl<'a> Lexer<'a> {
                 span,
             })
         }
-
-        // TODO: check for `u64` (default)
     }
 
     /// Parse an escape sequence found in a string or character literal.
@@ -375,7 +392,7 @@ impl<'a> Lexer<'a> {
                 } // invalid escape sequence
             };
 
-            self.advance();
+            self.advance(); // skip escape sequence
 
             Ok(Some(escaped_char))
         } else {
@@ -383,14 +400,17 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Advance the lexer by one character.
     fn advance(&mut self) {
         self.pos += 1;
     }
 
+    /// Advance the lexer by `num_chars` characters.
     fn advance_by(&mut self, num_chars: usize) {
         self.pos += num_chars;
     }
 
+    /// Get the current token.
     fn peek_current(&self) -> Option<char> {
         if self.pos < self.input.len() - 1 && !self.input.is_empty() {
             self.input[self.pos..self.pos + 1].parse::<char>().ok()
@@ -399,6 +419,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Get the next character without advancing the lexer.
     fn peek_next(&self) -> Option<char> {
         if self.pos < self.input.len() - 2 && self.input.len() > 1 {
             self.input[self.pos + 1..self.pos + 2].parse::<char>().ok()
