@@ -1277,7 +1277,7 @@ impl Parser {
         }
     }
 
-    /// Match a `Token` to a `Type` and return the `Type` or a `ParserErrorKind`.
+    /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     fn get_type(&mut self) -> Result<Type, ErrorEmitted> {
         match self.consume() {
             Some(Token::I32Type { .. } | Token::I64Type { .. }) => Ok(Type::Int),
@@ -1334,8 +1334,8 @@ impl Parser {
         self.current >= self.stream.tokens().len()
     }
 
-    /// Log a given parsing error and return it.
-    /// The `ParserErrorKind` describes the error succinctly.
+    /// Log a given parsing error and return an `ErrorEmitted` to show an error has occurred.
+    /// The `error_kind` describes the error succinctly.
     fn log_error(&mut self, error_kind: ParserErrorKind) -> ErrorEmitted {
         let error = CompilerError::new(&self.stream.span().input(), self.current, error_kind);
 

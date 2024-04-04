@@ -131,7 +131,10 @@ impl<'a> Lexer<'a> {
 
             '}' => self.tokenize_closing_delimiter('}'),
 
-            _ => Err(self.log_error(LexerErrorKind::MismatchedDelimiter(delim))),
+            _ => Err(self.log_error(LexerErrorKind::UnexpectedCharacter {
+                expected: "delimiter".to_string(),
+                found: delim,
+            })),
         }
     }
 
@@ -159,10 +162,18 @@ impl<'a> Lexer<'a> {
                     Ok(Token::RBracket { delim, span })
                 }
 
-                _ => return Err(self.log_error(LexerErrorKind::UnexpectedCharacter(delim))),
+                _ => {
+                    return Err(self.log_error(LexerErrorKind::UnexpectedCharacter {
+                        expected: "delimiter".to_string(),
+                        found: delim,
+                    }))
+                }
             }
         } else {
-            return Err(self.log_error(LexerErrorKind::MismatchedDelimiter(delim)));
+            return Err(self.log_error(LexerErrorKind::MismatchedDelimiter {
+                expected,
+                found: delim,
+            }));
         }
     }
 
@@ -181,9 +192,9 @@ impl<'a> Lexer<'a> {
                     if let Some(escaped_char) = self.parse_escape_sequence() {
                         value.push(escaped_char);
                     } else {
-                        return Err(
-                            self.log_error(LexerErrorKind::InvalidEscapeSequenceInStringLiteral)
-                        );
+                        return Err(self.log_error(LexerErrorKind::InvalidEscapeSequence {
+                            sequence: current_char,
+                        }));
                     }
                 }
                 '"' => {
@@ -203,7 +214,7 @@ impl<'a> Lexer<'a> {
         Err(self.log_error(LexerErrorKind::UnclosedStringLiteral))
     }
 
-    fn tokenize_char(&mut self) -> Token {
+    fn tokenize_char(&mut self) -> Result<Token, ErrorEmitted> {
         todo!()
     }
 
@@ -255,10 +266,12 @@ impl<'a> Lexer<'a> {
         if self.pos < self.input.len() {
             let escaped_char = match self.input.chars().nth(self.pos).unwrap() {
                 'n' => '\n',
+                'r' => '\r',
                 't' => '\t',
                 '\\' => '\\',
+                '0' => '\0',
+                '\'' => '\'',
                 '"' => '"',
-                // TODO: handle other escape sequences
                 _ => return None, // invalid escape sequence
             };
 
@@ -277,13 +290,13 @@ impl<'a> Lexer<'a> {
         self.pos += num_chars;
     }
 
-    /// Check if some string is a reserved keyword (as opposed to an ordinary identifier).
+    /// Check if some substring is a reserved keyword (as opposed to an ordinary identifier).
     fn is_keyword(&self, value: &str) -> bool {
         let keywords = vec!["let", "func", "if", "else", "while", "for"]; // TODO: add keywords
         keywords.contains(&value)
     }
 
-    /// Skip the source string's whitespace, which is considered unnecessary in tokenization.
+    /// Skip the source string's whitespace, which is considered unnecessary during tokenization.
     fn skip_whitespace(&mut self) {
         while self.pos < self.input.len()
             && self.input.chars().nth(self.pos).unwrap().is_whitespace()
@@ -292,8 +305,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Log a given parsing error and return it.
-    /// The `CompilerErrorKind` describes the error succinctly.
+    /// Log a given lexer error and return an `ErrorEmitted` to show an error has occurred.
+    /// The `error_kind` describes the error succinctly.
     fn log_error(&mut self, error_kind: LexerErrorKind) -> ErrorEmitted {
         let error = CompilerError::new(&self.input, self.pos, error_kind);
 
