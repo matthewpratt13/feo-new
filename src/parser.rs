@@ -38,7 +38,7 @@ impl Parser {
         }
     }
 
-    /// Define precedence levels for operators
+    /// Define precedence levels for operators.
     fn init_precedences(&mut self) {
         self.precedences.insert(
             Token::As {
