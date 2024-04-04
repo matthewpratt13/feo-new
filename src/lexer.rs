@@ -86,11 +86,12 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Tokenize an identifier and match it against reserved keywords.
     fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
         while let Some(c) = self.input.chars().nth(self.pos) {
-            if c.is_alphanumeric() || c == '_' {
+            if c.is_ascii_alphanumeric() || c == '_' {
                 self.advance();
             } else {
                 break;
@@ -100,17 +101,173 @@ impl<'a> Lexer<'a> {
         let name = &self.input[start_pos..self.pos];
         let span = Span::new(self.input, start_pos, self.pos);
 
-        if self.is_keyword(name) {
+        if is_keyword(name) {
             self.advance(); // advance to next character
 
             match name {
+                "abstract" => Ok(Token::Abstract {
+                    name: name.to_string(),
+                    span,
+                }),
+                "alias" => Ok(Token::Alias {
+                    name: name.to_string(),
+                    span,
+                }),
+                "as" => Ok(Token::As {
+                    name: name.to_string(),
+                    span,
+                }),
+                "break" => Ok(Token::Break {
+                    name: name.to_string(),
+                    span,
+                }),
+                "const" => Ok(Token::Const {
+                    name: name.to_string(),
+                    span,
+                }),
+                "continue" => Ok(Token::Continue {
+                    name: name.to_string(),
+                    span,
+                }),
+                "contract" => Ok(Token::Contract {
+                    name: name.to_string(),
+                    span,
+                }),
+                "else" => Ok(Token::Else {
+                    name: name.to_string(),
+                    span,
+                }),
+                "enum" => Ok(Token::Enum {
+                    name: name.to_string(),
+                    span,
+                }),
+                "extern" => Ok(Token::Extern {
+                    name: name.to_string(),
+                    span,
+                }),
+                "false" => Ok(Token::BoolLiteral {
+                    value: name
+                        .parse::<bool>()
+                        .map_err(|_| self.log_error(LexerErrorKind::ParseBoolError))?,
+                    span,
+                }),
+                "for" => Ok(Token::For {
+                    name: name.to_string(),
+                    span,
+                }),
+                "func" => Ok(Token::Func {
+                    name: name.to_string(),
+                    span,
+                }),
+                "if" => Ok(Token::If {
+                    name: name.to_string(),
+                    span,
+                }),
+                "impl" => Ok(Token::Impl {
+                    name: name.to_string(),
+                    span,
+                }),
+                "import" => Ok(Token::Import {
+                    name: name.to_string(),
+                    span,
+                }),
+                "in" => Ok(Token::In {
+                    name: name.to_string(),
+                    span,
+                }),
                 "let" => Ok(Token::Let {
                     name: name.to_string(),
                     span,
                 }),
-
-                // TODO: fill out the other keyword tokens
-                _ => todo!(),
+                "library" => Ok(Token::Library {
+                    name: name.to_string(),
+                    span,
+                }),
+                "loop" => Ok(Token::Loop {
+                    name: name.to_string(),
+                    span,
+                }),
+                "match" => Ok(Token::Match {
+                    name: name.to_string(),
+                    span,
+                }),
+                "module" => Ok(Token::Module {
+                    name: name.to_string(),
+                    span,
+                }),
+                "mut" => Ok(Token::Mut {
+                    name: name.to_string(),
+                    span,
+                }),
+                "package" => Ok(Token::Package {
+                    name: name.to_string(),
+                    span,
+                }),
+                "payable" => Ok(Token::Payable {
+                    name: name.to_string(),
+                    span,
+                }),
+                "pub" => Ok(Token::Pub {
+                    name: name.to_string(),
+                    span,
+                }),
+                "ref" => Ok(Token::Ref {
+                    name: name.to_string(),
+                    span,
+                }),
+                "return" => Ok(Token::Return {
+                    name: name.to_string(),
+                    span,
+                }),
+                "self" => Ok(Token::SelfKeyword {
+                    name: name.to_string(),
+                    span,
+                }),
+                "static" => Ok(Token::Static {
+                    name: name.to_string(),
+                    span,
+                }),
+                "storage" => Ok(Token::Storage {
+                    name: name.to_string(),
+                    span,
+                }),
+                "struct" => Ok(Token::Struct {
+                    name: name.to_string(),
+                    span,
+                }),
+                "super" => Ok(Token::Super {
+                    name: name.to_string(),
+                    span,
+                }),
+                "test" => Ok(Token::Test {
+                    name: name.to_string(),
+                    span,
+                }),
+                "topic" => Ok(Token::Topic {
+                    name: name.to_string(),
+                    span,
+                }),
+                "trait" => Ok(Token::Trait {
+                    name: name.to_string(),
+                    span,
+                }),
+                "true" => Ok(Token::BoolLiteral {
+                    value: name
+                        .parse::<bool>()
+                        .map_err(|_| self.log_error(LexerErrorKind::ParseBoolError))?,
+                    span,
+                }),
+                "unsafe" => Ok(Token::Unsafe {
+                    name: name.to_string(),
+                    span,
+                }),
+                "while" => Ok(Token::While {
+                    name: name.to_string(),
+                    span,
+                }),
+                _ => Err(self.log_error(LexerErrorKind::InvalidKeyword {
+                    name: name.to_string(),
+                })),
             }
         } else {
             self.advance(); // advance to next character
@@ -358,7 +515,7 @@ impl<'a> Lexer<'a> {
             return Ok(Token::Minus { punc: '-', span });
         }
 
-        while let Some(c) = self.peek_current() {
+        while let Some(c) = self.input.chars().nth(self.pos) {
             if c.is_digit(10) || c == '_' {
                 self.advance();
             }
@@ -459,12 +616,6 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Check if some substring is a reserved keyword (as opposed to an ordinary identifier).
-    fn is_keyword(&self, value: &str) -> bool {
-        let keywords = vec!["let", "func", "if", "else", "while", "for"]; // TODO: add keywords
-        keywords.contains(&value)
-    }
-
     /// Skip the source string's whitespace, which is considered unnecessary during tokenization.
     fn skip_whitespace(&mut self) {
         while self.pos < self.input.len()
@@ -482,4 +633,16 @@ impl<'a> Lexer<'a> {
         self.errors.push(error);
         ErrorEmitted(())
     }
+}
+
+/// Check if some substring is a reserved keyword (as opposed to an ordinary identifier).
+fn is_keyword(value: &str) -> bool {
+    let keywords = vec![
+        "abstract", "alias", "as", "break", "const", "continue", "contract", "else", "enum",
+        "extern", "false", "for", "func", "if", "impl", "import", "in", "let", "library", "loop",
+        "match", "module", "mut", "package", "payable", "pub", "ref", "return", "self", "static",
+        "storage", "struct", "super", "test", "topic", "trait", "true", "unsafe", "while",
+    ];
+
+    keywords.contains(&value)
 }

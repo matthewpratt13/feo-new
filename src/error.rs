@@ -10,6 +10,11 @@ pub enum LexerErrorKind {
     ParseHexError,
     ParseIntError,
     ParseUIntError,
+    ParseBoolError,
+
+    InvalidKeyword {
+        name: String,
+    },
 
     UnexpectedCharacter {
         expected: String,
@@ -48,6 +53,10 @@ impl fmt::Display for LexerErrorKind {
             LexerErrorKind::ParseHexError => write!(f, "error parsing hexadecimal digit"),
             LexerErrorKind::ParseIntError => write!(f, "error parsing signed integer"),
             LexerErrorKind::ParseUIntError => write!(f, "error parsing unsigned integer"),
+            LexerErrorKind::ParseBoolError => write!(f, "error parsing boolean"),
+            LexerErrorKind::InvalidKeyword { name } => {
+                writeln!(f, "syntax error\ninvalid keyword: `{name}`")
+            }
             LexerErrorKind::UnexpectedCharacter { expected, found } => writeln!(
                 f,
                 "unexpected character\nexpected {expected}, found `{found}`",
