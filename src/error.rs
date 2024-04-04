@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::{error::Error, fmt, sync::Arc};
 
 use crate::token::Token;
@@ -145,14 +143,14 @@ pub struct CompilerError<T> {
     error_kind: T,
     line: usize,
     col: usize,
-    source: Arc<String>,
+    _source: Arc<String>,
 }
 
 impl<T> CompilerError<T> {
     /// Constructor method
     pub fn new(source: &str, pos: usize, error_kind: T) -> Self {
         let slice = &source[..pos];
-        let lines = slice.split('\n').collect::<Vec<_>>();
+        let lines = slice.split('\n').collect::<Vec<&str>>();
         let line_count = lines.len();
         let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
 
@@ -160,7 +158,7 @@ impl<T> CompilerError<T> {
             error_kind,
             line: line_count,
             col: last_line_len,
-            source: Arc::new(source.to_string()),
+            _source: Arc::new(source.to_string()),
         }
     }
 }

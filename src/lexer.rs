@@ -542,7 +542,7 @@ impl<'a> Lexer<'a> {
             // remove the `_` separators before parsing (if they exist)
             let value = self.input[start_pos..self.pos]
                 .parse::<u64>()
-                .map_err(|_| self.log_error(LexerErrorKind::ParseIntError))?;
+                .map_err(|_| self.log_error(LexerErrorKind::ParseUIntError))?;
 
             let span = Span::new(self.input, start_pos, self.pos);
 
@@ -637,12 +637,23 @@ impl<'a> Lexer<'a> {
 
 /// Check if some substring is a reserved keyword (as opposed to an ordinary identifier).
 fn is_keyword(value: &str) -> bool {
-    let keywords = vec![
+    vec![
         "abstract", "alias", "as", "break", "const", "continue", "contract", "else", "enum",
         "extern", "false", "for", "func", "if", "impl", "import", "in", "let", "library", "loop",
         "match", "module", "mut", "package", "payable", "pub", "ref", "return", "self", "static",
         "storage", "struct", "super", "test", "topic", "trait", "true", "unsafe", "while",
-    ];
+    ]
+    .contains(&value)
+}
 
-    keywords.contains(&value)
+fn is_delimiter(value: char) -> bool {
+    vec!['(', ')', '{', '}', '[', ']'].contains(&value)
+}
+
+fn is_separator(value: char) -> bool {
+    vec![';', ','].contains(&value)
+}
+
+fn is_quote(value: char) -> bool {
+    vec!['\'', '\"'].contains(&value)
 }

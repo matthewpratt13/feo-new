@@ -261,7 +261,7 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     fn parse(&mut self) -> Result<Vec<Statement>, ErrorEmitted> {
-        let mut statements = Vec::new();
+        let mut statements: Vec<Statement> = Vec::new();
         while !self.is_at_end() {
             statements.push(self.parse_statement()?);
         }
