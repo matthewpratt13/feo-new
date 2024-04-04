@@ -9,6 +9,15 @@ pub enum LexerErrorKind {
     ParseIntError,
     ParseUIntError,
     ParseBoolError,
+    ParsePuncError,
+
+    InvalidPunc {
+        punc: String,
+    },
+
+    UnrecognizedCharacter {
+        punc: char,
+    },
 
     InvalidKeyword {
         name: String,
@@ -52,6 +61,13 @@ impl fmt::Display for LexerErrorKind {
             LexerErrorKind::ParseIntError => write!(f, "error parsing signed integer"),
             LexerErrorKind::ParseUIntError => write!(f, "error parsing unsigned integer"),
             LexerErrorKind::ParseBoolError => write!(f, "error parsing boolean"),
+            LexerErrorKind::ParsePuncError => write!(f, "error parsing punctuation"),
+            LexerErrorKind::InvalidPunc { punc } => {
+                write!(f, "syntax error \ninvalid punctuation: `{punc}`")
+            }
+            LexerErrorKind::UnrecognizedCharacter { punc } => {
+                write!(f, "syntax error \nunrecognized character: `{punc}`")
+            }
             LexerErrorKind::InvalidKeyword { name } => {
                 writeln!(f, "syntax error\ninvalid keyword: `{name}`")
             }
