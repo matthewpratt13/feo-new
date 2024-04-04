@@ -7,6 +7,8 @@ use crate::token::Token;
 /// Enum representing the different types of lexer errors.
 #[derive(Default, Debug, PartialEq)]
 pub enum LexerErrorKind {
+    ParseHexError,
+
     UnexpectedCharacter {
         expected: String,
         found: char,
@@ -41,6 +43,7 @@ pub enum LexerErrorKind {
 impl fmt::Display for LexerErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            LexerErrorKind::ParseHexError => write!(f, "error parsing hexadecimal digit"),
             LexerErrorKind::UnexpectedCharacter { expected, found } => writeln!(
                 f,
                 "unexpected character\nexpected {expected}, found `{found}`",

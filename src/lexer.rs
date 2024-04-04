@@ -271,19 +271,35 @@ impl<'a> Lexer<'a> {
     fn tokenize_u256(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
-        while self.pos < self.input.len()
-            && self.input[self.pos..].chars().next().unwrap().is_numeric()
+        // check for hexadecimal prefix (`0x`)
+        if self.peek_current() == Some('0')
+            && self
+                .peek_next()
+                .is_some_and(|x| &x.to_lowercase().to_string() == "x")
         {
-            self.advance();
+            self.advance_by(2); // consume prefix
         }
 
-        let number = self.input[start_pos..self.pos].parse::<U256>();
+        // collect hexadecimal digits (may have `_` separators)
+        while let Some(c) = self.input[self.pos..].chars().next() {
+            if c.is_digit(16) || c == '_' {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        // remove the `_` separators before parsing
+        let value = self.input[start_pos..self.pos]
+            .split('_')
+            .collect::<Vec<&str>>()
+            .concat()
+            .parse::<U256>()
+            .map_err(|_| self.log_error(LexerErrorKind::ParseHexError))?;
+
         let span = Span::new(self.input, start_pos, self.pos);
 
-        match number {
-            Ok(value) => Ok(Token::U256Literal { value, span }),
-            Err(_) => todo!(),
-        }
+        Ok(Token::U256Literal { value, span })
     }
 
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorEmitted> {
@@ -342,6 +358,22 @@ impl<'a> Lexer<'a> {
 
     fn advance_by(&mut self, num_chars: usize) {
         self.pos += num_chars;
+    }
+
+    fn peek_current(&self) -> Option<char> {
+        if self.pos < self.input.len() - 1 && !self.input.is_empty() {
+            self.input[self.pos..self.pos + 1].parse::<char>().ok()
+        } else {
+            None
+        }
+    }
+
+    fn peek_next(&self) -> Option<char> {
+        if self.pos < self.input.len() - 2 && self.input.len() > 1 {
+            self.input[self.pos + 1..self.pos + 2].parse::<char>().ok()
+        } else {
+            None
+        }
     }
 
     /// Check if some substring is a reserved keyword (as opposed to an ordinary identifier).
