@@ -7,7 +7,6 @@ construct_uint! {
 mod ast;
 mod error;
 mod lexer;
-mod number;
 mod parser;
 mod span;
 mod token;

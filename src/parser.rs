@@ -315,31 +315,6 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    // fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorEmitted> {
-    //     let mut left_expr = self.parse_prefix()?;
-
-    //     while let Some(next_token_precedence) =
-    //         self.precedence(&self.peek().ok_or(ParserErrorKind::TokenNotFound)?)
-    //     {
-    //         match precedence {
-    //             Precedence::Prefix(prefix_precedence)
-    //                 if prefix_precedence >= next_token_precedence.inner() =>
-    //             {
-    //                 break
-    //             }
-    //             Precedence::Infix(infix_precedence)
-    //                 if infix_precedence > next_token_precedence.inner() =>
-    //             {
-    //                 break
-    //             }
-    //             _ => (),
-    //         }
-    //         left_expr = self.parse_infix(left_expr, next_token_precedence)?;
-    //     }
-    //     Ok(left_expr)
-
-    // }
-
     /// Recursively parse an expression based on operator precedence.
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorEmitted> {
         let mut left_expr = self.parse_prefix()?;

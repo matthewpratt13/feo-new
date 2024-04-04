@@ -1,11 +1,7 @@
 #![allow(dead_code)]
 
 use crate::{
-    error::{CompilerError, ErrorEmitted, LexerErrorKind},
-    number::{IntKind, UIntKind},
-    span::Span,
-    token::{Token, TokenStream},
-    U256,
+    ast::{IntKind, UIntKind}, error::{CompilerError, ErrorEmitted, LexerErrorKind}, span::Span, token::{Token, TokenStream}, U256
 };
 
 /// Lexer struct, containing methods to render tokens (tokenize) from characters in a source string.

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::{
-    number::{IntKind, UIntKind},
+    ast::{IntKind, UIntKind},
     span::Span,
     U256,
 };
