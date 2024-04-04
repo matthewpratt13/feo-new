@@ -2,7 +2,7 @@
 
 use crate::{
     error::{CompilerError, ErrorEmitted, LexerErrorKind},
-    number::IntKind,
+    number::{IntKind, UIntKind},
     span::Span,
     token::Token,
     U256,
@@ -42,6 +42,7 @@ impl<'a> Lexer<'a> {
             if self.input.chars().nth(self.pos).unwrap() == '\n' {
                 break;
             }
+            
             self.advance();
         }
 
@@ -281,7 +282,7 @@ impl<'a> Lexer<'a> {
         }
 
         // collect hexadecimal digits (may have `_` separators)
-        while let Some(c) = self.input[self.pos..].chars().next() {
+        while let Some(c) = self.input.chars().nth(self.pos) {
             if c.is_digit(16) || c == '_' {
                 self.advance();
             } else {
@@ -289,7 +290,7 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        // remove the `_` separators before parsing
+        // remove the `_` separators before parsing (if they exist)
         let value = self.input[start_pos..self.pos]
             .split('_')
             .collect::<Vec<&str>>()
@@ -305,24 +306,53 @@ impl<'a> Lexer<'a> {
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
-        while self.pos < self.input.len() {
-            let current_char = self.input.chars().nth(self.pos).unwrap();
-            if current_char.is_numeric() {
+        let mut is_int = false;
+
+        // check for `-` before the number to decide which type of integer to parse to
+        if self.input.chars().nth(self.pos) == Some('-') {
+            self.advance();
+            is_int = true;
+        }
+
+        while let Some(c) = self.input.chars().nth(self.pos) {
+            if c.is_digit(10) || c == '_' {
                 self.advance();
             } else {
                 break;
             }
         }
 
+        if is_int {
+            // remove the `_` separators before parsing
+            let value = self.input[start_pos..self.pos]
+                .split('_')
+                .collect::<Vec<&str>>()
+                .concat()
+                .parse::<i64>()
+                .map_err(|_| self.log_error(LexerErrorKind::ParseIntError))?;
+            let span = Span::new(self.input, start_pos, self.pos);
+
+            Ok(Token::IntLiteral {
+                value: IntKind::I64(value),
+                span,
+            })
+        } else {
+            // remove the `_` separators before parsing (if they exist)
+            let value = self.input[start_pos..self.pos]
+                .parse::<u64>()
+                .map_err(|_| self.log_error(LexerErrorKind::ParseIntError))?;
+
+            let span = Span::new(self.input, start_pos, self.pos);
+
+            self.advance();
+
+            Ok(Token::UIntLiteral {
+                value: UIntKind::U64(value),
+                span,
+            })
+        }
+
         // TODO: check for `u64` (default)
-
-        let value = self.input[start_pos..self.pos].parse::<i64>().unwrap();
-        let span = Span::new(self.input, start_pos, self.pos);
-
-        Ok(Token::IntLiteral {
-            value: IntKind::I64(value),
-            span,
-        })
     }
 
     /// Parse an escape sequence found in a string or character literal.
@@ -346,6 +376,7 @@ impl<'a> Lexer<'a> {
             };
 
             self.advance();
+
             Ok(Some(escaped_char))
         } else {
             Ok(None) // incomplete escape sequence

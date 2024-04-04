@@ -8,6 +8,8 @@ use crate::token::Token;
 #[derive(Default, Debug, PartialEq)]
 pub enum LexerErrorKind {
     ParseHexError,
+    ParseIntError,
+    ParseUIntError,
 
     UnexpectedCharacter {
         expected: String,
@@ -44,6 +46,8 @@ impl fmt::Display for LexerErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LexerErrorKind::ParseHexError => write!(f, "error parsing hexadecimal digit"),
+            LexerErrorKind::ParseIntError => write!(f, "error parsing signed integer"),
+            LexerErrorKind::ParseUIntError => write!(f, "error parsing unsigned integer"),
             LexerErrorKind::UnexpectedCharacter { expected, found } => writeln!(
                 f,
                 "unexpected character\nexpected {expected}, found `{found}`",
