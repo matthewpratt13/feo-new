@@ -274,7 +274,6 @@ impl Parser {
         let token = self.consume();
         match token {
             Some(Token::Let { .. }) => self.parse_let_statement(),
-            Some(Token::LBrace { .. }) => self.parse_block_expression(),
             _ => {
                 self.unconsume();
                 self.parse_expression_statement()
@@ -604,6 +603,7 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
+    /// Parse a grouped (parenthesized) expression.
     fn parse_grouped_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         self.expect_token(Token::LParen {
             delim: '(',
@@ -942,7 +942,7 @@ impl Parser {
     }
 
     /// Parse a `for-in` expression (i.e., `for var in iterable { execution logic }`).
-    fn parse_for_in_expression(&mut self) -> Result<Statement, ErrorEmitted> {
+    fn parse_for_in_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         self.expect_token(Token::For {
             name: "for".to_string(),
             span: self.stream.span(),
@@ -959,11 +959,11 @@ impl Parser {
 
         let body = Box::new(self.parse_expression(Precedence::Lowest)?);
 
-        Ok(Statement::Expr(Expression::ForIn(variable, iterable, body)))
+        Ok(Expression::ForIn(variable, iterable, body))
     }
 
     /// Parse a block expression (i.e., `{ expr1; expr2; ... }`).
-    fn parse_block_expression(&mut self) -> Result<Statement, ErrorEmitted> {
+    fn parse_block_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         self.expect_token(Token::LBrace {
             delim: '{',
             span: self.stream.span(),
@@ -984,7 +984,7 @@ impl Parser {
             span: self.stream.span(),
         })?;
 
-        Ok(Statement::Expr(Expression::Block(expressions)))
+        Ok(Expression::Block(expressions))
     }
 
     /// Parse an array expression (i.e., `[element1, element2, element3, etc.]`).
