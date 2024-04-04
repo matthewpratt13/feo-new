@@ -128,7 +128,7 @@ pub enum Token {
     Comment { comment: String, span: Span },
     DocComment { comment: String, span: Span },
 
-    EOF,
+    EOF { span: Span },
 }
 
 /// Collection of `Token` as a result of the lexing process.

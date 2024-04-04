@@ -12,7 +12,9 @@ pub enum LexerErrorKind {
         found: char,
     },
 
-    UnclosedStringLiteral,
+    MissingQuote {
+        quote: char,
+    },
 
     MissingDelimiter {
         delim: char,
@@ -27,6 +29,10 @@ pub enum LexerErrorKind {
         sequence: char,
     },
 
+    CharacterNotFound {
+        expected: String,
+    },
+
     #[default]
     UnknownError,
     // TODO: add more error types as needed
@@ -39,9 +45,8 @@ impl fmt::Display for LexerErrorKind {
                 f,
                 "unexpected character\nexpected {expected}, found `{found}`",
             ),
-            LexerErrorKind::UnclosedStringLiteral => {
-                writeln!(f, "unclosed string literal/nexpected `\"`, found none")
-            }
+            LexerErrorKind::MissingQuote { quote } => writeln!(f, "expected `{quote}`, found none"),
+
             LexerErrorKind::MissingDelimiter { delim } => {
                 writeln!(f, "expected `{delim}`, found none")
             }
@@ -51,6 +56,9 @@ impl fmt::Display for LexerErrorKind {
             ),
             LexerErrorKind::InvalidEscapeSequence { sequence } => {
                 writeln!(f, "detected invalid escape sequence: `{sequence}`")
+            }
+            LexerErrorKind::CharacterNotFound { expected } => {
+                writeln!(f, "expected {expected}, found none")
             }
             LexerErrorKind::UnknownError => writeln!(f, "unknown error"),
         }
@@ -99,7 +107,9 @@ impl fmt::Display for ParserErrorKind {
                 "syntax error: invalid token in current context (`{:#?}`)",
                 token
             ),
-            ParserErrorKind::TokenNotFound => writeln!(f, "expected token, found none"),
+            ParserErrorKind::TokenNotFound => {
+                writeln!(f, "expected token, found none")
+            }
             ParserErrorKind::TokenIndexOutOfBounds { len, i } => {
                 writeln!(
                     f,

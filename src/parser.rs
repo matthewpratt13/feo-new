@@ -1117,7 +1117,7 @@ impl Parser {
                 Token::Identifier { name, .. } => name,
                 Token::RBrace { .. } => break, // end of struct
                 _ => {
-                    let tokens = self
+                    let token = self
                         .stream
                         .tokens()
                         .get(self.current)
@@ -1126,7 +1126,7 @@ impl Parser {
 
                     return Err(self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "identifier or `}`".to_string(),
-                        found: tokens,
+                        found: token,
                     }))?;
                 }
             };
@@ -1207,7 +1207,7 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     fn expect_identifier(&mut self) -> Result<String, ErrorEmitted> {
-        let tokens = self
+        let token = self
             .stream
             .tokens()
             .get(self.current)
@@ -1221,13 +1221,13 @@ impl Parser {
             Token::Identifier { name, .. } => Ok(name),
             _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier".to_string(),
-                found: tokens,
+                found: token,
             })),
         }
     }
 
     fn consume_identifier(&mut self) -> Result<String, ErrorEmitted> {
-        let tokens = self
+        let token = self
             .stream
             .tokens()
             .get(self.current)
@@ -1242,7 +1242,7 @@ impl Parser {
         } else {
             Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier".to_string(),
-                found: tokens,
+                found: token,
             }))
         }
     }

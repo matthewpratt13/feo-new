@@ -182,23 +182,24 @@ impl<'a> Lexer<'a> {
 
         let start_pos = self.pos;
 
-        self.advance(); // skip opening quote
+        self.advance(); // skip opening quote (`"`)
 
         while self.pos < self.input.len() {
             let current_char = self.input.chars().nth(self.pos).unwrap();
+
             match current_char {
                 '\\' => {
                     // handle escape sequences
-                    if let Some(escaped_char) = self.parse_escape_sequence() {
+                    if let Some(escaped_char) = self.parse_escape_sequence()? {
                         value.push(escaped_char);
                     } else {
-                        return Err(self.log_error(LexerErrorKind::InvalidEscapeSequence {
-                            sequence: current_char,
+                        return Err(self.log_error(LexerErrorKind::CharacterNotFound {
+                            expected: "escape sequence".to_string(),
                         }));
                     }
                 }
                 '"' => {
-                    self.advance(); // skip closing quote
+                    self.advance(); // skip closing quote (`"`)
 
                     let span = Span::new(self.input, start_pos, self.pos);
 
@@ -211,11 +212,60 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Err(self.log_error(LexerErrorKind::UnclosedStringLiteral))
+        Err(self.log_error(LexerErrorKind::MissingQuote { quote: '\"' }))
     }
 
     fn tokenize_char(&mut self) -> Result<Token, ErrorEmitted> {
-        todo!()
+        let start_pos = self.pos;
+
+        self.advance(); // skip opening quote (`'`)
+
+        match self.input.chars().nth(self.pos) {
+            Some(value) => match value {
+                '\\' => {
+                    // handle escape sequences
+                    if let Some(escaped_char) = self.parse_escape_sequence()? {
+                        let span = Span::new(self.input, start_pos, self.pos);
+
+                        self.advance();
+
+                        Ok(Token::CharLiteral {
+                            value: escaped_char,
+                            span,
+                        })
+                    } else {
+                        return Err(self.log_error(LexerErrorKind::CharacterNotFound {
+                            expected: "escape sequence".to_string(),
+                        }));
+                    }
+                }
+
+                _ if value == ' ' => {
+                    return Err(self.log_error(LexerErrorKind::CharacterNotFound {
+                        expected: "character literal".to_string(),
+                    }));
+                }
+
+                _ => {
+                    self.advance();
+
+                    if let Some('\'') = self.input.chars().nth(self.pos) {
+                        let span = Span::new(self.input, start_pos, self.pos);
+
+                        self.advance(); // skip closing quote (`'`)
+
+                        Ok(Token::CharLiteral { value, span })
+                    } else {
+                        return Err(self.log_error(LexerErrorKind::MissingQuote { quote: '\'' }));
+                    }
+                }
+            },
+
+            None => {
+                let span = Span::new(self.input, start_pos, self.pos);
+                return Ok(Token::EOF { span });
+            }
+        }
     }
 
     fn tokenize_u256(&mut self) -> Result<Token, ErrorEmitted> {
@@ -260,7 +310,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Parse an escape sequence found in a string or character literal.
-    fn parse_escape_sequence(&mut self) -> Option<char> {
+    fn parse_escape_sequence(&mut self) -> Result<Option<char>, ErrorEmitted> {
         self.advance(); // skip backslash
 
         if self.pos < self.input.len() {
@@ -272,13 +322,17 @@ impl<'a> Lexer<'a> {
                 '0' => '\0',
                 '\'' => '\'',
                 '"' => '"',
-                _ => return None, // invalid escape sequence
+                _ => {
+                    return Err(self.log_error(LexerErrorKind::InvalidEscapeSequence {
+                        sequence: self.input.chars().nth(self.pos).unwrap(),
+                    }));
+                } // invalid escape sequence
             };
 
             self.advance();
-            Some(escaped_char)
+            Ok(Some(escaped_char))
         } else {
-            None // incomplete escape sequence
+            Ok(None) // incomplete escape sequence
         }
     }
 
