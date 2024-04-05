@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 uint = "0.9"
+fixed-hash = "0.8"
