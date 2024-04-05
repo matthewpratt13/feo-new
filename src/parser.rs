@@ -1286,6 +1286,7 @@ impl Parser {
         self.precedences.get(token).cloned()
     }
 
+    /// Get the tokens at the current position.
     fn peek_current(&self) -> Option<Token> {
         self.stream.tokens().get(self.current).cloned()
     }
@@ -1315,7 +1316,7 @@ impl Parser {
     /// Log and store information about an error that occurred during lexing.
     /// Return `ErrorEmitted` just to confirm that the action happened.
     fn log_error(&mut self, error_kind: ParserErrorKind) -> ErrorEmitted {
-        let error = CompilerError::new(&self.stream.span().input(), self.current, error_kind);
+        let error = CompilerError::new(error_kind, self.stream.span().substring(), self.current);
 
         self.errors.push(error);
         ErrorEmitted(())

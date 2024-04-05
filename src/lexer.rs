@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::{iter::Peekable, str::Chars};
+
 use crate::{
     ast::{IntKind, UIntKind},
     error::{CompilerError, ErrorEmitted, LexErrorKind},
@@ -8,46 +10,47 @@ use crate::{
     U256,
 };
 
-/// Lexer struct that holds an input string and a `Vec<CompilerError>`, and contains methods
-/// to render tokens (tokenize) from characters from that string.
+/// Lexer struct that holds an input string and contains methods to render tokens (tokenize)
+/// from characters in that string.
 struct Lexer<'a> {
     input: &'a str,
     pos: usize,
-    errors: Vec<CompilerError<LexErrorKind>>, // store lexer errors from tokenization
+    peekable_chars: Peekable<Chars<'a>>,
+    errors: Vec<CompilerError<LexErrorKind>>,
 }
 
 impl<'a> Lexer<'a> {
     /// Create a new `Lexer` instance.
-    /// Initialize an empty `Vec` to store potential errors.
+    /// Initialize an empty `Vec` to store potential errors ,and create an `Iterator`
+    /// from the characters in the source string to traverse the input string
+    /// and look ahead in the source code without moving forward.
     fn new(input: &'a str) -> Self {
         Lexer {
             input,
             pos: 0,
+            peekable_chars: input.chars().peekable(),
             errors: Vec::new(),
         }
     }
 
+    /// Get a list of the lexer's `CompilerError`.
     fn errors(&self) -> Vec<CompilerError<LexErrorKind>> {
         self.errors.clone()
     }
 
     /// Main lexer function.
     /// Returns a stream of tokens generated from some input string (source code).
-    fn tokenize(&mut self) -> Result<TokenStream, ErrorEmitted> {
+    fn lex(&mut self) -> Result<TokenStream, ErrorEmitted> {
         let mut tokens: Vec<Token> = Vec::new();
 
-        while let Some(c) = self.input.chars().nth(self.pos) {
+        while let Some(c) = self.peek_current() {
             let start_pos = self.pos;
 
             match c {
                 _ if c.is_whitespace() => self.skip_whitespace(),
 
-                _ if c == '/'
-                    && (self.peek_next() == Some('/') || self.peek_next() == Some('*')) =>
-                {
-                    tokens.push(self.tokenize_doc_comment().unwrap_or(Token::EOF {
-                        span: Span::new(self.input, start_pos, self.pos),
-                    }));
+                _ if c == '/' && self.peek_next() == Some('/') || self.peek_next() == Some('*') => {
+                    tokens.push(self.tokenize_doc_comment().unwrap_or(Token::EOF));
                 }
 
                 _ if c.is_ascii_alphabetic() || c == '_' => {
@@ -57,6 +60,7 @@ impl<'a> Lexer<'a> {
                 '(' | '[' | '{' | ')' | ']' | '}' => {
                     tokens.push(self.tokenize_delimiter()?);
                 }
+
                 '"' => tokens.push(self.tokenize_string()?),
 
                 '\'' => tokens.push(self.tokenize_char()?),
@@ -74,7 +78,6 @@ impl<'a> Lexer<'a> {
                 {
                     tokens.push(self.tokenize_numeric()?)
                 }
-
                 ',' => {
                     self.advance();
                     let span = Span::new(self.input, start_pos, self.pos);
@@ -87,15 +90,16 @@ impl<'a> Lexer<'a> {
                     tokens.push(Token::Semicolon { punc: ';', span })
                 }
 
-                '!' | '#' | '%' | '&' | '*' | '+' | '/' | '-' | '.' | ':' | '<' | '=' | '?'
-                | '\\' | '^' | '`' => tokens.push(self.tokenize_punctuation()?),
+                '!' | '#' | '%' | '&' | '*' | '+' | '/' | '-' | '.' | ':' | '<' | '=' | '>'
+                | '?' | '\\' | '^' | '`' | '|' => tokens.push(self.tokenize_punctuation()?),
 
-                _ if !self.peek_next().is_some() => {
-                    let span = Span::new(self.input, start_pos, self.pos);
-                    tokens.push(Token::EOF { span })
+                _ if !self.peek_next().is_some() => tokens.push(Token::EOF),
+
+                _ => {
+                    return Err(self.log_error(LexErrorKind::UnrecognizedChar {
+                        value: c.to_string(),
+                    }))
                 }
-
-                _ => return Err(self.log_error(LexErrorKind::UnrecognizedChar { value: c })),
             }
         }
 
@@ -104,7 +108,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a doc comment, ignoring ordinary line and block comments.
-    fn tokenize_doc_comment(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_doc_comment(&mut self) -> Option<Token> {
         let start_pos = self.pos;
 
         self.advance(); // skip first `/`
@@ -115,65 +119,62 @@ impl<'a> Lexer<'a> {
             if self.peek_current() == Some('/') || self.peek_current() == Some('!') {
                 self.advance(); // skip third `/` or `!`
 
-                let start_pos = self.pos;
-
                 self.skip_whitespace();
 
+                let comment_start_pos = self.pos;
+
                 // advance until the end of the line
-                while let Some(c) = self.input.chars().nth(self.pos) {
+                while let Some(c) = self.peek_current() {
                     if c == '\n' {
                         break;
-                    } else {
-                        self.advance();
                     }
+                    self.advance();
                 }
 
                 // trim any trailing whitespace
-                let comment = self.input[start_pos..self.pos].trim().to_string();
-
-                let span = Span::new(self.input, start_pos, self.pos);
+                let comment = self.input[comment_start_pos..self.pos].trim().to_string();
 
                 self.advance();
 
-                Ok(Token::DocComment { comment, span })
+                let span = Span::new(self.input, start_pos, self.pos);
+
+                Some(Token::DocComment { comment, span })
             } else {
                 // consume ordinary line comment
                 loop {
-                    self.advance();
+                    if self.peek_next().is_some() {
+                        self.advance()
+                    } else {
+                        break None;
+                    }
 
-                    if self.peek_current() == Some('\n') || self.pos == self.input.len() - 1 {
+                    if self.peek_current() == Some('\n') {
                         self.advance();
-                        break Ok(Token::Comment {
-                            span: Span::new(self.input, start_pos, self.pos),
-                        });
+                        break None;
                     }
                 }
             }
         } else if let Some('*') = self.peek_current() {
+            self.advance(); // skip `*`
+
             // consume block comment
             loop {
-                self.advance();
-
-                if self.peek_current() == Some('*') && self.peek_next() == Some('/') {
-                    self.advance_by(2);
-
-                    return Ok(Token::Comment {
-                        span: Span::new(self.input, start_pos, self.pos),
-                    });
+                if self.peek_next().is_some() {
+                    self.advance();
+                } else {
+                    break None;
                 }
 
-                if self.pos == self.input.len() - 1 {
+                if self.peek_current() == Some('*') && self.peek_next() == Some('/') {
+                    self.advance();
                     self.advance();
 
-                    return Ok(Token::Comment {
-                        span: Span::new(self.input, start_pos, self.pos),
-                    });
+                    break None;
                 }
             }
         } else {
             let span = Span::new(self.input, start_pos, self.pos);
-
-            Ok(Token::Slash { punc: '/', span })
+            Some(Token::Slash { punc: '/', span })
         }
     }
 
@@ -181,7 +182,7 @@ impl<'a> Lexer<'a> {
     fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
-        while let Some(c) = self.input.chars().nth(self.pos) {
+        while let Some(c) = self.peek_current() {
             if c.is_ascii_alphanumeric() || c == '_' {
                 self.advance();
             } else {
@@ -189,222 +190,74 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        let name = &self.input[start_pos..self.pos];
+        let name = self.input[start_pos..self.pos].trim().to_string();
         let span = Span::new(self.input, start_pos, self.pos);
 
-        if is_keyword(name) {
-            self.advance(); // advance to next character
-
-            match name {
-                "abstract" => Ok(Token::Abstract {
-                    name: name.to_string(),
-                    span,
-                }),
-                "alias" => Ok(Token::Alias {
-                    name: name.to_string(),
-                    span,
-                }),
-                "as" => Ok(Token::As {
-                    name: name.to_string(),
-                    span,
-                }),
-                "break" => Ok(Token::Break {
-                    name: name.to_string(),
-                    span,
-                }),
-                "const" => Ok(Token::Const {
-                    name: name.to_string(),
-                    span,
-                }),
-                "continue" => Ok(Token::Continue {
-                    name: name.to_string(),
-                    span,
-                }),
-                "contract" => Ok(Token::Contract {
-                    name: name.to_string(),
-                    span,
-                }),
-                "else" => Ok(Token::Else {
-                    name: name.to_string(),
-                    span,
-                }),
-                "enum" => Ok(Token::Enum {
-                    name: name.to_string(),
-                    span,
-                }),
-                "extern" => Ok(Token::Extern {
-                    name: name.to_string(),
-                    span,
-                }),
+        if is_keyword(&name) {
+            match name.as_str() {
+                "abstract" => Ok(Token::Abstract { name, span }),
+                "alias" => Ok(Token::Alias { name, span }),
+                "as" => Ok(Token::As { name, span }),
+                "break" => Ok(Token::Break { name, span }),
+                "const" => Ok(Token::Const { name, span }),
+                "continue" => Ok(Token::Continue { name, span }),
+                "contract" => Ok(Token::Contract { name, span }),
+                "else" => Ok(Token::Else { name, span }),
+                "enum" => Ok(Token::Enum { name, span }),
+                "extern" => Ok(Token::Extern { name, span }),
                 "false" => Ok(Token::BoolLiteral {
                     value: name
                         .parse::<bool>()
                         .map_err(|_| self.log_error(LexErrorKind::ParseBoolError))?,
                     span,
                 }),
-                "for" => Ok(Token::For {
-                    name: name.to_string(),
-                    span,
-                }),
-                "func" => Ok(Token::Func {
-                    name: name.to_string(),
-                    span,
-                }),
-                "if" => Ok(Token::If {
-                    name: name.to_string(),
-                    span,
-                }),
-                "impl" => Ok(Token::Impl {
-                    name: name.to_string(),
-                    span,
-                }),
-                "import" => Ok(Token::Import {
-                    name: name.to_string(),
-                    span,
-                }),
-                "in" => Ok(Token::In {
-                    name: name.to_string(),
-                    span,
-                }),
-                "let" => Ok(Token::Let {
-                    name: name.to_string(),
-                    span,
-                }),
-                "library" => Ok(Token::Library {
-                    name: name.to_string(),
-                    span,
-                }),
-                "loop" => Ok(Token::Loop {
-                    name: name.to_string(),
-                    span,
-                }),
-                "match" => Ok(Token::Match {
-                    name: name.to_string(),
-                    span,
-                }),
-                "module" => Ok(Token::Module {
-                    name: name.to_string(),
-                    span,
-                }),
-                "mut" => Ok(Token::Mut {
-                    name: name.to_string(),
-                    span,
-                }),
-                "package" => Ok(Token::Package {
-                    name: name.to_string(),
-                    span,
-                }),
-                "payable" => Ok(Token::Payable {
-                    name: name.to_string(),
-                    span,
-                }),
-                "pub" => Ok(Token::Pub {
-                    name: name.to_string(),
-                    span,
-                }),
-                "ref" => Ok(Token::Ref {
-                    name: name.to_string(),
-                    span,
-                }),
-                "return" => Ok(Token::Return {
-                    name: name.to_string(),
-                    span,
-                }),
-                "self" => Ok(Token::SelfKeyword {
-                    name: name.to_string(),
-                    span,
-                }),
-                "static" => Ok(Token::Static {
-                    name: name.to_string(),
-                    span,
-                }),
-                "storage" => Ok(Token::Storage {
-                    name: name.to_string(),
-                    span,
-                }),
-                "struct" => Ok(Token::Struct {
-                    name: name.to_string(),
-                    span,
-                }),
-                "super" => Ok(Token::Super {
-                    name: name.to_string(),
-                    span,
-                }),
-                "test" => Ok(Token::Test {
-                    name: name.to_string(),
-                    span,
-                }),
-                "topic" => Ok(Token::Topic {
-                    name: name.to_string(),
-                    span,
-                }),
-                "trait" => Ok(Token::Trait {
-                    name: name.to_string(),
-                    span,
-                }),
+                "for" => Ok(Token::For { name, span }),
+                "func" => Ok(Token::Func { name, span }),
+                "if" => Ok(Token::If { name, span }),
+                "impl" => Ok(Token::Impl { name, span }),
+                "import" => Ok(Token::Import { name, span }),
+                "in" => Ok(Token::In { name, span }),
+                "let" => Ok(Token::Let { name, span }),
+                "library" => Ok(Token::Library { name, span }),
+                "loop" => Ok(Token::Loop { name, span }),
+                "match" => Ok(Token::Match { name, span }),
+                "module" => Ok(Token::Module { name, span }),
+                "mut" => Ok(Token::Mut { name, span }),
+                "package" => Ok(Token::Package { name, span }),
+                "payable" => Ok(Token::Payable { name, span }),
+                "pub" => Ok(Token::Pub { name, span }),
+                "ref" => Ok(Token::Ref { name, span }),
+                "return" => Ok(Token::Return { name, span }),
+                "self" => Ok(Token::SelfKeyword { name, span }),
+                "static" => Ok(Token::Static { name, span }),
+                "storage" => Ok(Token::Storage { name, span }),
+                "struct" => Ok(Token::Struct { name, span }),
+                "super" => Ok(Token::Super { name, span }),
+                "test" => Ok(Token::Test { name, span }),
+                "topic" => Ok(Token::Topic { name, span }),
+                "trait" => Ok(Token::Trait { name, span }),
                 "true" => Ok(Token::BoolLiteral {
                     value: name
                         .parse::<bool>()
                         .map_err(|_| self.log_error(LexErrorKind::ParseBoolError))?,
                     span,
                 }),
-                "unsafe" => Ok(Token::Unsafe {
-                    name: name.to_string(),
-                    span,
-                }),
-                "while" => Ok(Token::While {
-                    name: name.to_string(),
-                    span,
-                }),
-                "i32" => Ok(Token::I32Type {
-                    name: name.to_string(),
-                    span,
-                }),
-                "i64" => Ok(Token::I64Type {
-                    name: name.to_string(),
-                    span,
-                }),
-                "u8" => Ok(Token::U8Type {
-                    name: name.to_string(),
-                    span,
-                }),
-                "u16" => Ok(Token::U16Type {
-                    name: name.to_string(),
-                    span,
-                }),
-                "u32" => Ok(Token::U32Type {
-                    name: name.to_string(),
-                    span,
-                }),
-                "u64" => Ok(Token::U64Type {
-                    name: name.to_string(),
-                    span,
-                }),
-                "u256" => Ok(Token::U256Type {
-                    name: name.to_string(),
-                    span,
-                }),
-                "String" => Ok(Token::StringType {
-                    name: name.to_string(),
-                    span,
-                }),
-                "char" => Ok(Token::CharType {
-                    name: name.to_string(),
-                    span,
-                }),
-                "bool" => Ok(Token::BoolType {
-                    name: name.to_string(),
-                    span,
-                }),
-                _ => Err(self.log_error(LexErrorKind::InvalidKeyword {
-                    name: name.to_string(),
-                })),
+                "unsafe" => Ok(Token::Unsafe { name, span }),
+                "while" => Ok(Token::While { name, span }),
+                "i32" => Ok(Token::I32Type { name, span }),
+                "i64" => Ok(Token::I64Type { name, span }),
+                "u8" => Ok(Token::U8Type { name, span }),
+                "u16" => Ok(Token::U16Type { name, span }),
+                "u32" => Ok(Token::U32Type { name, span }),
+                "u64" => Ok(Token::U64Type { name, span }),
+                "u256" => Ok(Token::U256Type { name, span }),
+                "String" => Ok(Token::StringType { name, span }),
+                "char" => Ok(Token::CharType { name, span }),
+                "bool" => Ok(Token::BoolType { name, span }),
+                _ => Err(self.log_error(LexErrorKind::UnrecognizedKeyword { name })),
             }
         } else {
-            Ok(Token::Identifier {
-                name: name.to_string(),
-                span,
-            })
+            Ok(Token::Identifier { name, span })
         }
     }
 
@@ -412,13 +265,11 @@ impl<'a> Lexer<'a> {
     fn tokenize_delimiter(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
-        let delim =
-            self.input
-                .chars()
-                .nth(self.pos)
-                .ok_or(self.log_error(LexErrorKind::CharNotFound {
-                    expected: "delimiter".to_string(),
-                }))?;
+        let delim = self
+            .peek_current()
+            .ok_or(self.log_error(LexErrorKind::CharNotFound {
+                expected: "delimiter".to_string(),
+            }))?;
 
         match delim {
             '(' => {
@@ -427,16 +278,16 @@ impl<'a> Lexer<'a> {
                 Ok(Token::LParen { delim, span })
             }
 
-            '{' => {
+            '[' => {
                 self.advance(); //  skip opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
-                Ok(Token::LBrace { delim, span })
+                Ok(Token::LBracket { delim, span })
             }
 
-            '[' => {
+            '{' => {
                 self.advance(); // skip opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
-                Ok(Token::LBracket { delim, span })
+                Ok(Token::LBrace { delim, span })
             }
 
             ')' => self.tokenize_closing_delimiter(')'),
@@ -458,10 +309,15 @@ impl<'a> Lexer<'a> {
         let start_pos = self.pos;
 
         let delim = self
-            .input
-            .chars()
-            .nth(self.pos)
+            .peek_current()
             .ok_or(self.log_error(LexErrorKind::MissingDelimiter { delim: expected }))?;
+
+        if !is_delimiter(delim) {
+            return Err(self.log_error(LexErrorKind::UnexpectedChar {
+                expected: "delimiter".to_string(),
+                found: delim,
+            }));
+        }
 
         if delim == expected {
             self.advance(); // move past closing delimiter
@@ -484,7 +340,7 @@ impl<'a> Lexer<'a> {
 
                 _ => {
                     return Err(self.log_error(LexErrorKind::UnexpectedChar {
-                        expected: "delimiter".to_string(),
+                        expected: "closing delimiter".to_string(),
                         found: delim,
                     }))
                 }
@@ -505,7 +361,7 @@ impl<'a> Lexer<'a> {
 
         self.advance(); // skip opening quote (`"`)
 
-        while let Some(c) = self.input.chars().nth(self.pos) {
+        while let Some(c) = self.peek_current() {
             match c {
                 '\\' => {
                     // handle escape sequences
@@ -541,7 +397,7 @@ impl<'a> Lexer<'a> {
 
         self.advance(); // skip opening quote (`'`)
 
-        match self.input.chars().nth(self.pos) {
+        match self.peek_current() {
             Some(value) => match value {
                 '\\' => {
                     // handle escape sequences
@@ -562,15 +418,13 @@ impl<'a> Lexer<'a> {
                 }
 
                 _ if value == ' ' => {
-                    return Err(self.log_error(LexErrorKind::CharNotFound {
-                        expected: "character literal".to_string(),
-                    }));
+                    return Err(self.log_error(LexErrorKind::EmptyCharLiteral));
                 }
 
                 _ => {
                     self.advance();
 
-                    if let Some('\'') = self.input.chars().nth(self.pos) {
+                    if let Some('\'') = self.peek_current() {
                         self.advance(); // skip closing quote (`'`)
 
                         let span = Span::new(self.input, start_pos, self.pos);
@@ -582,10 +436,9 @@ impl<'a> Lexer<'a> {
                 }
             },
 
-            None => {
-                let span = Span::new(self.input, start_pos, self.pos);
-                return Ok(Token::EOF { span });
-            }
+            None => Err(self.log_error(LexErrorKind::CharNotFound {
+                expected: "character literal".to_string(),
+            })),
         }
     }
 
@@ -599,11 +452,13 @@ impl<'a> Lexer<'a> {
                 .peek_next()
                 .is_some_and(|x| &x.to_lowercase().to_string() == "x")
         {
-            self.advance_by(2); // consume prefix
+            // consume prefix
+            self.advance();
+            self.advance();
         }
 
         // collect hexadecimal digits (may have `_` separators)
-        while let Some(c) = self.input.chars().nth(self.pos) {
+        while let Some(c) = self.peek_current() {
             if c.is_digit(16) || c == '_' {
                 self.advance();
             } else {
@@ -629,24 +484,16 @@ impl<'a> Lexer<'a> {
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorEmitted> {
         let mut is_negative = false;
 
-        let start_pos = self.pos;
-
         // check for `-` before the number to decide which type of integer to parse to
-        if self.peek_current() == Some('-') {
-            if self.peek_next().is_some_and(|c| c.is_digit(10)) {
-                is_negative = true;
-                self.advance(); // skip '-'
-            } else {
-                let span = Span::new(self.input, start_pos, self.pos);
-                self.advance();
-                return Ok(Token::Minus { punc: '-', span });
-            }
+        if self.peek_current() == Some('-') && self.peek_next().is_some_and(|c| c.is_digit(10)) {
+            is_negative = true;
+            self.advance(); // skip '-'
         }
 
         // go back and read from previous char ('-') if negative, else read from current position
         let start_pos = if is_negative { self.pos - 1 } else { self.pos };
 
-        while let Some(c) = self.input.chars().nth(self.pos) {
+        while let Some(c) = self.peek_current() {
             if c.is_digit(10) || c == '_' {
                 self.advance();
             } else {
@@ -672,6 +519,9 @@ impl<'a> Lexer<'a> {
         } else {
             // remove the `_` separators before parsing (if they exist)
             let value = self.input[start_pos..self.pos]
+                .split('_')
+                .collect::<Vec<&str>>()
+                .concat()
                 .parse::<u64>()
                 .map_err(|_| self.log_error(LexErrorKind::ParseUIntError))?;
 
@@ -698,11 +548,15 @@ impl<'a> Lexer<'a> {
 
         let punc_string = self.input[start_pos..self.pos].trim().to_string();
 
-        let punc = self.input[start_pos..self.pos]
-            .parse::<char>()
-            .map_err(|_| self.log_error(LexErrorKind::ParsePuncError))?;
+        let punc = punc_string.parse::<char>().map_err(|_| {
+            self.log_error(LexErrorKind::UnrecognizedChar {
+                value: punc_string.clone(),
+            })
+        })?;
 
         let span = Span::new(self.input, start_pos, self.pos);
+
+        self.advance();
 
         match punc_string.as_str() {
             "_" => Ok(Token::Underscore {
@@ -761,7 +615,6 @@ impl<'a> Lexer<'a> {
                 punc: punc_string,
                 span,
             }),
-
             "/" => Ok(Token::Slash { punc, span }),
             "/=" => Ok(Token::SlashEquals {
                 punc: punc_string,
@@ -812,7 +665,7 @@ impl<'a> Lexer<'a> {
                 punc: punc_string,
                 span,
             }),
-            _ => Err(self.log_error(LexErrorKind::InvalidPunc { punc: punc_string })),
+            _ => Err(self.log_error(LexErrorKind::UnrecognizedChar { value: punc_string })),
         }
     }
 
@@ -821,7 +674,7 @@ impl<'a> Lexer<'a> {
         self.advance(); // skip backslash
 
         if self.pos < self.input.len() {
-            let escaped_char = match self.input.chars().nth(self.pos) {
+            let escaped_char = match self.peek_current() {
                 Some('n') => '\n',
                 Some('r') => '\r',
                 Some('t') => '\t',
@@ -847,47 +700,52 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Advance the lexer by one character.
+    /// Advance the lexer (and iterator) by one character.
     fn advance(&mut self) {
-        self.pos += 1;
+        self.pos += 1; // update lexer's position
+        self.peekable_chars.next(); // move to next character in the iterator (discard output)
     }
 
-    /// Advance the lexer by `num_chars` characters.
-    fn advance_by(&mut self, num_chars: usize) {
-        self.pos += num_chars;
+    /// Get the character at the current position.
+    fn peek_current(&mut self) -> Option<char> {
+        self.peekable_chars.peek().cloned()
     }
 
-    /// Get the character at the lexer's current position.
-    fn peek_current(&self) -> Option<char> {
-        if self.pos < self.input.len() - 1 && !self.input.is_empty() {
-            self.input[self.pos..self.pos + 1].parse::<char>().ok()
-        } else {
-            None
-        }
-    }
-
-    /// Get the next character without advancing the lexer.
+    /// Get the next character without advancing the iterator.
     fn peek_next(&self) -> Option<char> {
-        if self.pos < self.input.len() - 2 && self.input.len() > 1 {
-            self.input[self.pos + 1..self.pos + 2].parse::<char>().ok()
-        } else {
-            None
-        }
+        let mut cloned_iter = self.peekable_chars.clone();
+        cloned_iter.next();
+        cloned_iter.peek().cloned()
+    }
+
+    /// Get the character at position `n` without advancing the iterator
+    fn peek_nth(&self, n: usize) -> Option<char> {
+        self.peekable_chars.clone().nth(n)
     }
 
     /// Skip the source string's whitespace, which is considered unnecessary during tokenization.
     fn skip_whitespace(&mut self) {
-        while self.pos < self.input.len()
-            && self.input.chars().nth(self.pos).unwrap().is_whitespace()
-        {
-            self.advance();
+        // while self.pos < self.input.len()
+        //     && self.peek_nth(self.pos).unwrap().is_whitespace()
+        // {
+        //     self.advance();
+        // }
+
+        while let Some(c) = self.peek_current() {
+            if c.is_whitespace() {
+                // if the current char is whitespace, advance to the next char
+                self.advance();
+            } else {
+                // if the current char is not whitespace, break out of the loop
+                break;
+            }
         }
     }
 
     /// Log and store information about an error that occurred during lexing.
     /// Return `ErrorEmitted` just to confirm that the action happened.
     fn log_error(&mut self, error_kind: LexErrorKind) -> ErrorEmitted {
-        let error = CompilerError::new(&self.input, self.pos, error_kind);
+        let error = CompilerError::new(error_kind, self.input, self.pos);
 
         self.errors.push(error);
         ErrorEmitted(())
@@ -928,15 +786,16 @@ mod tests {
 
     #[test]
     fn tokenize_assignment_stmt() {
-        let source_code = r#"let x: u256 = 0x1234_ABCD;"#;
+        let input = r#"let x: u256 = 0x1234_ABCD;"#;
 
-        let mut lexer = Lexer::new(source_code);
+        let mut lexer = Lexer::new(input);
 
-        let tokens = lexer.tokenize();
+        let stream = lexer.lex().expect(&format!(
+            "unable to tokenize input. token at current position: `{:?}`\n{:#?}",
+            lexer.peek_current(),
+            lexer.errors()
+        ));
 
-        match tokens {
-            Ok(t) => println!("tokens: {}", t),
-            Err(_) => panic!("errors: {:#?}", lexer.errors()),
-        }
+        println!("{:#?}", stream);
     }
 }

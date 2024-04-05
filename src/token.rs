@@ -128,10 +128,9 @@ pub enum Token {
     GreaterThanEquals { punc: String, span: Span },
     DblPipe { punc: String, span: Span },
 
-    Comment { span: Span },
     DocComment { comment: String, span: Span },
 
-    EOF { span: Span },
+    EOF,
 }
 
 /// Collection of `Token` as a result of the lexing process.
@@ -165,6 +164,6 @@ impl<'a> TokenStream {
 
 impl fmt::Display for TokenStream {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:#?}", self.tokens)
+        writeln!(f, "{:?}", self.tokens)
     }
 }
