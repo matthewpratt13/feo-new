@@ -15,7 +15,7 @@ pub struct StructField {
     value: Expression,
 }
 
-/// Parser struct that holds a stream of tokens and contains methods to parse expressions,
+/// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
 #[derive(Debug)]
 struct Parser {

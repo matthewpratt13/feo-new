@@ -42,9 +42,11 @@ pub enum LexErrorKind {
         quote: char,
     },
 
-    InvalidEscapeSequence {
+    UnrecognizedEscapeSequence {
         sequence: char,
     },
+
+    UnexpectedEndOfInput,
 
     #[default]
     UnknownError,
@@ -82,7 +84,7 @@ impl fmt::Display for LexErrorKind {
                 f,
                 "mismatched delimiter: expected `{expected}`, found `{found}`"
             ),
-            LexErrorKind::InvalidEscapeSequence { sequence } => {
+            LexErrorKind::UnrecognizedEscapeSequence { sequence } => {
                 writeln!(
                     f,
                     "syntax error: unrecognized escape sequence – `{sequence}`"
@@ -90,6 +92,9 @@ impl fmt::Display for LexErrorKind {
             }
             LexErrorKind::CharNotFound { expected } => {
                 writeln!(f, "character not found: expected {expected}, found none")
+            }
+            LexErrorKind::UnexpectedEndOfInput => {
+                writeln!(f, "scanning error: unexpected end of input")
             }
             LexErrorKind::UnknownError => writeln!(f, "unknown lexer error"),
         }
@@ -131,7 +136,9 @@ impl fmt::Display for ParserErrorKind {
                 "unexpected token: expected {}, found `{:#?}`",
                 expected, found
             ),
-            ParserErrorKind::UnexpectedEndOfInput => writeln!(f, "unexpected end of input"),
+            ParserErrorKind::UnexpectedEndOfInput => {
+                writeln!(f, "scanning: unexpected end of input")
+            }
             ParserErrorKind::InvalidToken { token } => writeln!(
                 f,
                 "parsing error: invalid token in current context – `{:#?}`)",

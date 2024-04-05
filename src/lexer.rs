@@ -10,7 +10,7 @@ use crate::{
     U256,
 };
 
-/// Lexer struct that holds an input string and contains methods to render tokens (tokenize)
+/// Struct that stores an input string and contains methods to render tokens (tokenize)
 /// from characters in that string.
 struct Lexer<'a> {
     input: &'a str,
@@ -21,7 +21,7 @@ struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     /// Create a new `Lexer` instance.
-    /// Initialize an empty `Vec` to store potential errors ,and create an `Iterator`
+    /// Initialize an empty `Vec` to store potential errors, and create an `Iterator`
     /// from the characters in the source string to traverse the input string
     /// and look ahead in the source code without moving forward.
     fn new(input: &'a str) -> Self {
@@ -38,7 +38,7 @@ impl<'a> Lexer<'a> {
         self.errors.clone()
     }
 
-    /// Main lexer function.
+    /// Main tokenizing function.
     /// Returns a stream of tokens generated from some input string (source code).
     fn lex(&mut self) -> Result<TokenStream, ErrorEmitted> {
         let mut tokens: Vec<Token> = Vec::new();
@@ -53,6 +53,8 @@ impl<'a> Lexer<'a> {
                     tokens.push(self.tokenize_doc_comment()?);
                 }
 
+                // not alphanumeric because identifiers / keywords cannot start with numbers;
+                // however, numbers are allowed after the first character
                 _ if c.is_ascii_alphabetic() || c == '_' => {
                     tokens.push(self.tokenize_identifier_or_keyword()?)
                 }
@@ -65,6 +67,7 @@ impl<'a> Lexer<'a> {
 
                 '\'' => tokens.push(self.tokenize_char()?),
 
+                // hexadecimal number prefix (`0x` or `0X`)
                 _ if c == '0'
                     && self
                         .peek_next()
@@ -78,6 +81,7 @@ impl<'a> Lexer<'a> {
                 {
                     tokens.push(self.tokenize_numeric()?)
                 }
+
                 ',' => {
                     self.advance();
                     let span = Span::new(self.input, start_pos, self.pos);
@@ -118,10 +122,9 @@ impl<'a> Lexer<'a> {
 
             if self.peek_current() == Some('/') || self.peek_current() == Some('!') {
                 self.advance(); // skip third `/` or `!`
-
                 self.skip_whitespace();
 
-                let comment_start_pos = self.pos;
+                let comment_start_pos = self.pos; // only store data after `///` and any whitespace
 
                 // advance until the end of the line
                 while let Some(c) = self.peek_current() {
@@ -131,7 +134,6 @@ impl<'a> Lexer<'a> {
                     self.advance();
                 }
 
-                // trim any trailing whitespace
                 let comment = self.input[comment_start_pos..self.pos].trim().to_string();
 
                 self.advance();
@@ -140,37 +142,39 @@ impl<'a> Lexer<'a> {
 
                 Ok(Token::DocComment { comment, span })
             } else {
-                // consume ordinary line comment
+                // consume ordinary newline or trailing comment (`//`)
                 while let Some(c) = self.peek_current() {
                     if c == '\n' {
                         break;
                     }
-
                     self.advance();
                 }
 
+                // replace actual source code with `""` as ordinary comments are discarded
                 Ok(Token::LineComment {
                     span: Span::new("", start_pos, self.pos),
                 })
             }
         } else if let Some('*') = self.peek_current() {
+            // consume inline or block comment (`/• •/`)
             self.advance(); // skip `*`
 
-            // consume block comment
             while let Some(c) = self.peek_current() {
                 if c == '*' {
-                    self.advance(); // skip closing '*'
-                    self.advance(); // skip closing '/'
+                    self.advance(); // skip closing `*`
+                    self.advance(); // skip closing `/`
                     break;
                 }
 
                 self.advance();
             }
 
+            // replace actual source code with `""` as ordinary comments are discarded
             Ok(Token::BlockComment {
                 span: Span::new("", start_pos, self.pos),
             })
         } else {
+            // return the first `/` as a `Token::Slash` instead of aborting
             let span = Span::new(self.input, start_pos, self.pos);
             Ok(Token::Slash { punc: '/', span })
         }
@@ -191,6 +195,8 @@ impl<'a> Lexer<'a> {
         let name = self.input[start_pos..self.pos].trim().to_string();
         let span = Span::new(self.input, start_pos, self.pos);
 
+        // check if the input is a reserved keyword (including booleans and type annotations)
+        // or return a `Token::Identifier`
         if is_keyword(&name) {
             match name.as_str() {
                 "abstract" => Ok(Token::Abstract { name, span }),
@@ -259,7 +265,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize an opening delimiter.
+    /// Tokenize a delimiter.
     fn tokenize_delimiter(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
@@ -271,19 +277,19 @@ impl<'a> Lexer<'a> {
 
         match delim {
             '(' => {
-                self.advance(); // skip opening delimiter
+                self.advance(); // move past opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
                 Ok(Token::LParen { delim, span })
             }
 
             '[' => {
-                self.advance(); //  skip opening delimiter
+                self.advance(); // move past opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
                 Ok(Token::LBracket { delim, span })
             }
 
             '{' => {
-                self.advance(); // skip opening delimiter
+                self.advance(); // move past opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
                 Ok(Token::LBrace { delim, span })
             }
@@ -301,7 +307,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize a closing delimiter, throw errors where the inputted delimiter is missing,
+    /// Tokenize a closing delimiter, throw an error where the inputted delimiter is missing,
     /// or does not match the expected delimiter.
     fn tokenize_closing_delimiter(&mut self, expected: char) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
@@ -310,6 +316,7 @@ impl<'a> Lexer<'a> {
             .peek_current()
             .ok_or(self.log_error(LexErrorKind::MissingDelimiter { delim: expected }))?;
 
+        // check if the current character is a delimiter
         if !is_delimiter(delim) {
             return Err(self.log_error(LexErrorKind::UnexpectedChar {
                 expected: "delimiter".to_string(),
@@ -326,14 +333,14 @@ impl<'a> Lexer<'a> {
                     Ok(Token::RParen { delim, span })
                 }
 
-                '}' => {
-                    let span = Span::new(self.input, start_pos, self.pos);
-                    Ok(Token::RBrace { delim, span })
-                }
-
                 ']' => {
                     let span = Span::new(self.input, start_pos, self.pos);
                     Ok(Token::RBracket { delim, span })
+                }
+
+                '}' => {
+                    let span = Span::new(self.input, start_pos, self.pos);
+                    Ok(Token::RBrace { delim, span })
                 }
 
                 _ => {
@@ -395,8 +402,8 @@ impl<'a> Lexer<'a> {
 
         self.advance(); // skip opening quote (`'`)
 
-        match self.peek_current() {
-            Some(value) => match value {
+        if let Some(value) = self.peek_current() {
+            match value {
                 '\\' => {
                     // handle escape sequences
                     if let Some(escaped_char) = self.parse_escape_sequence()? {
@@ -415,12 +422,12 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
-                _ if value == ' ' => {
+                _ if value == '\'' || value == ' ' => {
                     return Err(self.log_error(LexErrorKind::EmptyCharLiteral));
                 }
 
                 _ => {
-                    self.advance();
+                    self.advance(); // advance to the next (regular) character
 
                     if let Some('\'') = self.peek_current() {
                         self.advance(); // skip closing quote (`'`)
@@ -432,11 +439,11 @@ impl<'a> Lexer<'a> {
                         return Err(self.log_error(LexErrorKind::MissingQuote { quote: '\'' }));
                     }
                 }
-            },
-
-            None => Err(self.log_error(LexErrorKind::CharNotFound {
+            }
+        } else {
+            Err(self.log_error(LexErrorKind::CharNotFound {
                 expected: "character literal".to_string(),
-            })),
+            }))
         }
     }
 
@@ -485,12 +492,14 @@ impl<'a> Lexer<'a> {
         // check for `-` before the number to decide which type of integer to parse to
         if self.peek_current() == Some('-') && self.peek_next().is_some_and(|c| c.is_digit(10)) {
             is_negative = true;
-            self.advance(); // skip '-'
+            self.advance(); // skip `-`
         }
 
-        // go back and read from previous char ('-') if negative, else read from current position
+        // go back and read from previous character (`-``) if negative,
+        // else read from current position
         let start_pos = if is_negative { self.pos - 1 } else { self.pos };
 
+        // collect integers (may have `_` separators)
         while let Some(c) = self.peek_current() {
             if c.is_digit(10) || c == '_' {
                 self.advance();
@@ -500,7 +509,7 @@ impl<'a> Lexer<'a> {
         }
 
         if is_negative {
-            // remove the `_` separators before parsing
+            // remove the `_` separators before parsing (if they exist)
             let value = self.input[start_pos..self.pos]
                 .split('_')
                 .collect::<Vec<&str>>()
@@ -545,12 +554,6 @@ impl<'a> Lexer<'a> {
         }
 
         let punc = self.input[start_pos..self.pos].trim().to_string();
-
-        // let punc = punc_string.parse::<char>().map_err(|_| {
-        //     self.log_error(LexErrorKind::UnrecognizedChar {
-        //         value: punc_string.clone(),
-        //     })
-        // })?;
 
         let span = Span::new(self.input, start_pos, self.pos);
 
@@ -603,22 +606,19 @@ impl<'a> Lexer<'a> {
     fn parse_escape_sequence(&mut self) -> Result<Option<char>, ErrorEmitted> {
         self.advance(); // skip backslash
 
-        if self.pos < self.input.len() {
-            let escaped_char = match self.peek_current() {
-                Some('n') => '\n',
-                Some('r') => '\r',
-                Some('t') => '\t',
-                Some('\\') => '\\',
-                Some('0') => '\0',
-                Some('\'') => '\'',
-                Some('"') => '"',
-                Some(c) => {
-                    return Err(self.log_error(LexErrorKind::InvalidEscapeSequence { sequence: c }));
-                }
-                None => {
-                    return Err(self.log_error(LexErrorKind::CharNotFound {
-                        expected: "character".to_string(),
-                    }))
+        if let Some(c) = self.peek_current() {
+            let escaped_char = match c {
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                '\\' => '\\',
+                '0' => '\0',
+                '\'' => '\'',
+                '\"' => '\"',
+                _ => {
+                    return Err(
+                        self.log_error(LexErrorKind::UnrecognizedEscapeSequence { sequence: c })
+                    );
                 }
             };
 
@@ -626,11 +626,12 @@ impl<'a> Lexer<'a> {
 
             Ok(Some(escaped_char))
         } else {
-            Ok(None) // incomplete escape sequence
+            // incomplete escape sequence
+            Err(self.log_error(LexErrorKind::UnexpectedEndOfInput))
         }
     }
 
-    /// Advance the lexer (and iterator) by one character.
+    /// Advance the scanner (and iterator) by one character.
     fn advance(&mut self) {
         self.pos += 1; // update lexer's position
         self.peekable_chars.next(); // move to next character in the iterator (discard output)
@@ -648,32 +649,21 @@ impl<'a> Lexer<'a> {
         cloned_iter.peek().cloned()
     }
 
-    /// Get the character at position `n` without advancing the iterator
-    fn peek_nth(&self, n: usize) -> Option<char> {
-        self.peekable_chars.clone().nth(n)
-    }
-
-    /// Skip the source string's whitespace, which is considered unnecessary during tokenization.
+    /// Skip the source string's whitespace, which is considered unnecessary.
     fn skip_whitespace(&mut self) {
-        // while self.pos < self.input.len()
-        //     && self.peek_nth(self.pos).unwrap().is_whitespace()
-        // {
-        //     self.advance();
-        // }
-
         while let Some(c) = self.peek_current() {
             if c.is_whitespace() {
-                // if the current char is whitespace, advance to the next char
+                // if the current character is whitespace, advance to the next
                 self.advance();
             } else {
-                // if the current char is not whitespace, break out of the loop
+                // if the current character is not whitespace, break out of the loop
                 break;
             }
         }
     }
 
-    /// Log and store information about an error that occurred during lexing.
-    /// Return `ErrorEmitted` just to confirm that the action happened.
+    /// Log and store information about an error that occurred during tokenization.
+    /// Returns `ErrorEmitted` just to confirm that the action happened.
     fn log_error(&mut self, error_kind: LexErrorKind) -> ErrorEmitted {
         let error = CompilerError::new(error_kind, self.input, self.pos);
 
@@ -682,7 +672,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-/// Check if some substring is a reserved keyword (as opposed to an ordinary identifier).
+/// List of reserved keywords to match against some input string.
 fn is_keyword(value: &str) -> bool {
     [
         "abstract", "alias", "as", "break", "const", "continue", "contract", "else", "enum",
@@ -694,17 +684,18 @@ fn is_keyword(value: &str) -> bool {
     .contains(&value)
 }
 
-/// Check if a character is a delimiter.
+/// List of delimiters to match against some input `char`.
 fn is_delimiter(value: char) -> bool {
     ['(', ')', '{', '}', '[', ']'].contains(&value)
 }
 
-/// Check if a character is a `;` or `,`.
+/// List of separators to match against some input `char`.
 fn is_separator(value: char) -> bool {
     [';', ','].contains(&value)
 }
 
-/// Check if a character is a `'` or `"`.
+/// List of recognized quote characters (for `char` and string literals) to match against
+/// some input `char`.
 fn is_quote(value: char) -> bool {
     ['\'', '\"'].contains(&value)
 }
@@ -727,7 +718,24 @@ mod tests {
         let mut lexer = Lexer::new(input);
 
         let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. token at current position: `{:?}`\n{:#?}",
+            "unable to tokenize input. current char: `{:?}`\n{:#?}",
+            lexer.peek_current(),
+            lexer.errors()
+        ));
+
+        println!("{:#?}", stream);
+    }
+
+    #[test]
+    fn tokenize_char_lit() {
+        let input = r#"let lit = 'a';
+        let esc = '\\';
+        let another_esc = '\'';"#;
+
+        let mut lexer = Lexer::new(input);
+
+        let stream = lexer.lex().expect(&format!(
+            "unable to tokenize input. current char: {:?}\n{:#?}",
             lexer.peek_current(),
             lexer.errors()
         ));
@@ -758,7 +766,7 @@ mod tests {
         let mut lexer = Lexer::new(input);
 
         let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current token: `{:?}`\n{:#?}",
+            "unable to tokenize input. current char: `{:?}`\n{:#?}",
             lexer.peek_current(),
             lexer.errors(),
         ));
@@ -773,7 +781,7 @@ mod tests {
         let mut lexer = Lexer::new(input);
 
         let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current token: `{:?}`\n{:#?}",
+            "unable to tokenize input. current char: `{:?}`\n{:#?}",
             lexer.peek_current(),
             lexer.errors()
         ));
@@ -795,7 +803,7 @@ mod tests {
         let mut lexer = Lexer::new(input);
 
         let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current token: `{:?}`\n{:#?}",
+            "unable to tokenize input. current char: `{:?}`\n{:#?}",
             lexer.peek_current(),
             lexer.errors(),
         ));
