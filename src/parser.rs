@@ -1267,6 +1267,8 @@ impl Parser {
                 | Token::U64Type { .. },
             ) => Ok(Type::UInt),
             Some(Token::U256Type { .. }) => Ok(Type::U256),
+            Some(Token::H256Type { .. }) => Ok(Type::H256),
+            Some(Token::AddressType { .. }) => Ok(Type::Address),
             Some(Token::StringType { .. }) => Ok(Type::String),
             Some(Token::CharType { .. }) => Ok(Type::Char),
             Some(Token::BoolType { .. }) => Ok(Type::Bool),

@@ -68,6 +68,8 @@ pub enum Token {
     U32Type { name: String, span: Span },
     U64Type { name: String, span: Span },
     U256Type { name: String, span: Span },
+    H256Type { name: String, span: Span },
+    AddressType { name: String, span: Span },
     StringType { name: String, span: Span },
     CharType { name: String, span: Span },
     BoolType { name: String, span: Span },

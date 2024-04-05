@@ -255,6 +255,8 @@ impl<'a> Lexer<'a> {
                 "u32" => Ok(Token::U32Type { name, span }),
                 "u64" => Ok(Token::U64Type { name, span }),
                 "u256" => Ok(Token::U256Type { name, span }),
+                "h256" => Ok(Token::H256Type { name, span }),
+                "Address" => Ok(Token::AddressType { name, span }),
                 "String" => Ok(Token::StringType { name, span }),
                 "char" => Ok(Token::CharType { name, span }),
                 "bool" => Ok(Token::BoolType { name, span }),
@@ -679,7 +681,7 @@ fn is_keyword(value: &str) -> bool {
         "extern", "false", "for", "func", "if", "impl", "import", "in", "let", "library", "loop",
         "match", "module", "mut", "package", "payable", "pub", "ref", "return", "self", "static",
         "storage", "struct", "super", "test", "topic", "trait", "true", "unsafe", "while", "i32",
-        "i64", "u8", "u16", "u32", "u64", "u256", "String", "char", "bool",
+        "i64", "u8", "u16", "u32", "u64", "u256", "h256", "address", "String", "char", "bool",
     ]
     .contains(&value)
 }
