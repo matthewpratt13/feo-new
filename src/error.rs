@@ -8,6 +8,8 @@ pub enum LexErrorKind {
     ParseHexError,
     ParseIntError,
     ParseUIntError,
+    ParseHashError,
+    ParseAddressError,
     ParseBoolError,
 
     EmptyCharLiteral,
@@ -24,6 +26,10 @@ pub enum LexErrorKind {
     CharNotFound {
         expected: String,
     },
+
+    AtSignReserved,
+
+    DollarSignReserved,
 
     UnrecognizedKeyword {
         name: String,
@@ -58,6 +64,8 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::ParseHexError => writeln!(f, "error parsing hexadecimal digit"),
             LexErrorKind::ParseIntError => writeln!(f, "error parsing signed integer"),
             LexErrorKind::ParseUIntError => writeln!(f, "error parsing unsigned integer"),
+            LexErrorKind::ParseHashError => writeln!(f, "error parsing hash"),
+            LexErrorKind::ParseAddressError => writeln!(f, "error parsing address"),
             LexErrorKind::ParseBoolError => writeln!(f, "error parsing boolean"),
 
             LexErrorKind::UnrecognizedChar { value } => {
@@ -69,6 +77,13 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::UnrecognizedKeyword { name } => {
                 writeln!(f, "syntax error: unrecognized keyword – `{name}`")
             }
+            LexErrorKind::AtSignReserved => {
+                writeln!(f, "syntax error\n`@` is reserved for address literals")
+            }
+            LexErrorKind::DollarSignReserved => {
+                writeln!(f, "syntax error\n`$` is reserved for hash literals")
+            }
+
             LexErrorKind::UnexpectedChar { expected, found } => writeln!(
                 f,
                 "unexpected character: expected {expected}, found `{found}`",

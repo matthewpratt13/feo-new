@@ -7,7 +7,7 @@ use crate::{
     error::{CompilerError, ErrorEmitted, LexErrorKind},
     span::Span,
     token::{Token, TokenStream},
-    U256,
+    H160, H256, U256,
 };
 
 /// Struct that stores an input string and contains methods to render tokens (tokenize)
@@ -66,6 +66,10 @@ impl<'a> Lexer<'a> {
                 '"' => tokens.push(self.tokenize_string()?),
 
                 '\'' => tokens.push(self.tokenize_char()?),
+
+                '@' => tokens.push(self.tokenize_address()?), // `Address` literal
+
+                '$' => tokens.push(self.tokenize_h256()?), // `h256` literal
 
                 // hexadecimal number prefix (`0x` or `0X`)
                 _ if c == '0'
@@ -486,6 +490,76 @@ impl<'a> Lexer<'a> {
         Ok(Token::U256Literal { value, span })
     }
 
+    fn tokenize_address(&mut self) -> Result<Token, ErrorEmitted> {
+        let start_pos = self.pos;
+
+        self.advance(); // skip `@`
+
+        if self.peek_current() == Some('0') && self.peek_next() == Some('x') {
+            self.advance(); // skip `0`
+            self.advance(); // skip `x`
+        } else {
+            return Err(self.log_error(LexErrorKind::ParseAddressError));
+        }
+
+        let address_start_pos = self.pos;
+
+        while let Some(c) = self.peek_current() {
+            if c.is_digit(16) || c == '_' {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        let value = H160::from_slice(
+            self.input[address_start_pos..self.pos]
+                .split('_')
+                .collect::<Vec<&str>>()
+                .concat()
+                .as_bytes(),
+        );
+
+        let span = Span::new(self.input, start_pos, self.pos);
+
+        Ok(Token::AddressLiteral { value, span })
+    }
+
+    fn tokenize_h256(&mut self) -> Result<Token, ErrorEmitted> {
+        let start_pos = self.pos;
+
+        self.advance(); // skip `$`
+
+        if self.peek_current() == Some('0') && self.peek_next() == Some('x') {
+            self.advance(); // skip `0`
+            self.advance(); // skip `x`
+        } else {
+            return Err(self.log_error(LexErrorKind::ParseHashError));
+        }
+
+        let hash_start_pos = self.pos;
+
+        while let Some(c) = self.peek_current() {
+            if c.is_digit(16) || c == '_' {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        let value = H256::from_slice(
+            &self.input[hash_start_pos..self.pos]
+                .split('_')
+                .collect::<Vec<&str>>()
+                .concat()
+                .as_bytes(),
+        );
+
+        let span = Span::new(self.input, start_pos, self.pos);
+
+        Ok(Token::H256Literal { value, span })
+    }
+
     /// Tokenize a numeric value (i.e., `i64` or `u64`).
     /// Parse to `u64` unless a `-` is encountered, in which case parse to `i64`.
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorEmitted> {
@@ -568,6 +642,7 @@ impl<'a> Lexer<'a> {
             "!=" => Ok(Token::BangEquals { punc, span }),
             "#" => Ok(Token::HashSign { punc: '#', span }),
             "#!" => Ok(Token::HashBang { punc, span }),
+            "$" => Err(self.log_error(LexErrorKind::DollarSignReserved)),
             "%" => Ok(Token::Percent { punc: '%', span }),
             "%=" => Ok(Token::PercentEquals { punc, span }),
             "&" => Ok(Token::Ampersand { punc: '&', span }),
@@ -594,6 +669,7 @@ impl<'a> Lexer<'a> {
             ">" => Ok(Token::GreaterThan { punc: '>', span }),
             ">>" => Ok(Token::DblGreaterThan { punc, span }),
             ">=" => Ok(Token::GreaterThanEquals { punc, span }),
+            "@" => Err(self.log_error(LexErrorKind::AtSignReserved)),
             "?" => Ok(Token::QuestionMark { punc: '?', span }),
             "\\" => Ok(Token::Backslash { punc: '\\', span }),
             "^" => Ok(Token::Caret { punc: '^', span }),
@@ -716,6 +792,22 @@ mod tests {
         */
         foo /* don't print */ bar
         "#;
+
+        let mut lexer = Lexer::new(input);
+
+        let stream = lexer.lex().expect(&format!(
+            "unable to tokenize input. current char: `{:?}`\n{:#?}",
+            lexer.peek_current(),
+            lexer.errors()
+        ));
+
+        println!("{:#?}", stream);
+    }
+
+    #[test]
+    fn tokenize_hash_literals() {
+        let input = r#"let addr = @0xC0FFEE00000000000000;
+        let hash = $0xBEEF_CAFE_1234_5678_90AB_CDEF_CAFE_BEEF;"#;
 
         let mut lexer = Lexer::new(input);
 

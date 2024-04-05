@@ -347,6 +347,8 @@ impl Parser {
             Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
             Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
             Token::U256Literal { value, .. } => Ok(Expression::Literal(Literal::U256(value))),
+            Token::H256Literal { value, .. } => Ok(Expression::Literal(Literal::H256(value))),
+            Token::AddressLiteral { value, .. } => Ok(Expression::Literal(Literal::Address(value))),
             Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
             Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
             Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
