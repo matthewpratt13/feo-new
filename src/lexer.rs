@@ -50,7 +50,7 @@ impl<'a> Lexer<'a> {
                 _ if c.is_whitespace() => self.skip_whitespace(),
 
                 _ if c == '/' && self.peek_next() == Some('/') || self.peek_next() == Some('*') => {
-                    tokens.push(self.tokenize_doc_comment().unwrap_or(Token::EOF));
+                    tokens.push(self.tokenize_doc_comment()?);
                 }
 
                 _ if c.is_ascii_alphabetic() || c == '_' => {
@@ -108,7 +108,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a doc comment, ignoring ordinary line and block comments.
-    fn tokenize_doc_comment(&mut self) -> Option<Token> {
+    fn tokenize_doc_comment(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
         self.advance(); // skip first `/`
@@ -138,43 +138,41 @@ impl<'a> Lexer<'a> {
 
                 let span = Span::new(self.input, start_pos, self.pos);
 
-                Some(Token::DocComment { comment, span })
+                Ok(Token::DocComment { comment, span })
             } else {
                 // consume ordinary line comment
-                loop {
-                    if self.peek_next().is_some() {
-                        self.advance()
-                    } else {
-                        break None;
+                while let Some(c) = self.peek_current() {
+                    if c == '\n' {
+                        break;
                     }
 
-                    if self.peek_current() == Some('\n') {
-                        self.advance();
-                        break None;
-                    }
+                    self.advance();
                 }
+
+                Ok(Token::LineComment {
+                    span: Span::new("", start_pos, self.pos),
+                })
             }
         } else if let Some('*') = self.peek_current() {
             self.advance(); // skip `*`
 
             // consume block comment
-            loop {
-                if self.peek_next().is_some() {
-                    self.advance();
-                } else {
-                    break None;
+            while let Some(c) = self.peek_current() {
+                if c == '*' {
+                    self.advance(); // skip closing '*'
+                    self.advance(); // skip closing '/'
+                    break;
                 }
 
-                if self.peek_current() == Some('*') && self.peek_next() == Some('/') {
-                    self.advance();
-                    self.advance();
-
-                    break None;
-                }
+                self.advance();
             }
+
+            Ok(Token::BlockComment {
+                span: Span::new("", start_pos, self.pos),
+            })
         } else {
             let span = Span::new(self.input, start_pos, self.pos);
-            Some(Token::Slash { punc: '/', span })
+            Ok(Token::Slash { punc: '/', span })
         }
     }
 
@@ -546,126 +544,58 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        let punc_string = self.input[start_pos..self.pos].trim().to_string();
+        let punc = self.input[start_pos..self.pos].trim().to_string();
 
-        let punc = punc_string.parse::<char>().map_err(|_| {
-            self.log_error(LexErrorKind::UnrecognizedChar {
-                value: punc_string.clone(),
-            })
-        })?;
+        // let punc = punc_string.parse::<char>().map_err(|_| {
+        //     self.log_error(LexErrorKind::UnrecognizedChar {
+        //         value: punc_string.clone(),
+        //     })
+        // })?;
 
         let span = Span::new(self.input, start_pos, self.pos);
 
-        self.advance();
-
-        match punc_string.as_str() {
-            "_" => Ok(Token::Underscore {
-                name: punc_string,
-                span,
-            }),
-            "." => Ok(Token::FullStop { punc, span }),
-            ".." => Ok(Token::DblDot {
-                punc: punc_string,
-                span,
-            }),
-            "..=" => Ok(Token::DotDotEquals {
-                punc: punc_string,
-                span,
-            }),
-            "!" => Ok(Token::Bang { punc, span }),
-            "!=" => Ok(Token::BangEquals {
-                punc: punc_string,
-                span,
-            }),
-            "#" => Ok(Token::HashSign { punc, span }),
-            "#!" => Ok(Token::HashBang {
-                punc: punc_string,
-                span,
-            }),
-            "%" => Ok(Token::Percent { punc, span }),
-            "%=" => Ok(Token::PercentEquals {
-                punc: punc_string,
-                span,
-            }),
-            "&" => Ok(Token::Ampersand { punc, span }),
-            "&&" => Ok(Token::DblAmpersand {
-                punc: punc_string,
-                span,
-            }),
-            "+" => Ok(Token::Plus { punc, span }),
-            "+=" => Ok(Token::PlusEquals {
-                punc: punc_string,
-                span,
-            }),
-            "-" => Ok(Token::Minus { punc, span }),
-            "-=" => Ok(Token::MinusEquals {
-                punc: punc_string,
-                span,
-            }),
-            "->" => Ok(Token::ThinArrow {
-                punc: punc_string,
-                span,
-            }),
-            "*" => Ok(Token::Asterisk { punc, span }),
-            "**" => Ok(Token::DblAsterisk {
-                punc: punc_string,
-                span,
-            }),
-            "*=" => Ok(Token::AsteriskEquals {
-                punc: punc_string,
-                span,
-            }),
-            "/" => Ok(Token::Slash { punc, span }),
-            "/=" => Ok(Token::SlashEquals {
-                punc: punc_string,
-                span,
-            }),
-            ":" => Ok(Token::Colon { punc, span }),
-            "::" => Ok(Token::DblColon {
-                punc: punc_string,
-                span,
-            }),
-            "::*" => Ok(Token::ColonColonAsterisk {
-                punc: punc_string,
-                span,
-            }),
-            "=" => Ok(Token::Equals { punc, span }),
-            "==" => Ok(Token::DblEquals {
-                punc: punc_string,
-                span,
-            }),
-            "=>" => Ok(Token::FatArrow {
-                punc: punc_string,
-                span,
-            }),
-            "<" => Ok(Token::LessThan { punc, span }),
-            "<<" => Ok(Token::DblLessThan {
-                punc: punc_string,
-                span,
-            }),
-            "<=" => Ok(Token::LessThanEquals {
-                punc: punc_string,
-                span,
-            }),
-            ">" => Ok(Token::GreaterThan { punc, span }),
-            ">>" => Ok(Token::DblGreaterThan {
-                punc: punc_string,
-                span,
-            }),
-            ">=" => Ok(Token::GreaterThanEquals {
-                punc: punc_string,
-                span,
-            }),
-            "?" => Ok(Token::QuestionMark { punc, span }),
-            "\\" => Ok(Token::Backslash { punc, span }),
-            "^" => Ok(Token::Caret { punc, span }),
-            "`" => Ok(Token::Backtick { punc, span }),
-            "|" => Ok(Token::Pipe { punc, span }),
-            "||" => Ok(Token::DblPipe {
-                punc: punc_string,
-                span,
-            }),
-            _ => Err(self.log_error(LexErrorKind::UnrecognizedChar { value: punc_string })),
+        match punc.as_str() {
+            "_" => Ok(Token::Underscore { name: punc, span }),
+            "." => Ok(Token::FullStop { punc: '.', span }),
+            ".." => Ok(Token::DblDot { punc, span }),
+            "..=" => Ok(Token::DotDotEquals { punc, span }),
+            "!" => Ok(Token::Bang { punc: '!', span }),
+            "!=" => Ok(Token::BangEquals { punc, span }),
+            "#" => Ok(Token::HashSign { punc: '#', span }),
+            "#!" => Ok(Token::HashBang { punc, span }),
+            "%" => Ok(Token::Percent { punc: '%', span }),
+            "%=" => Ok(Token::PercentEquals { punc, span }),
+            "&" => Ok(Token::Ampersand { punc: '&', span }),
+            "&&" => Ok(Token::DblAmpersand { punc, span }),
+            "+" => Ok(Token::Plus { punc: '+', span }),
+            "+=" => Ok(Token::PlusEquals { punc, span }),
+            "-" => Ok(Token::Minus { punc: '-', span }),
+            "-=" => Ok(Token::MinusEquals { punc, span }),
+            "->" => Ok(Token::ThinArrow { punc, span }),
+            "*" => Ok(Token::Asterisk { punc: '*', span }),
+            "**" => Ok(Token::DblAsterisk { punc, span }),
+            "*=" => Ok(Token::AsteriskEquals { punc, span }),
+            "/" => Ok(Token::Slash { punc: '/', span }),
+            "/=" => Ok(Token::SlashEquals { punc, span }),
+            ":" => Ok(Token::Colon { punc: ':', span }),
+            "::" => Ok(Token::DblColon { punc, span }),
+            "::*" => Ok(Token::ColonColonAsterisk { punc, span }),
+            "=" => Ok(Token::Equals { punc: '=', span }),
+            "==" => Ok(Token::DblEquals { punc, span }),
+            "=>" => Ok(Token::FatArrow { punc, span }),
+            "<" => Ok(Token::LessThan { punc: '<', span }),
+            "<<" => Ok(Token::DblLessThan { punc, span }),
+            "<=" => Ok(Token::LessThanEquals { punc, span }),
+            ">" => Ok(Token::GreaterThan { punc: '>', span }),
+            ">>" => Ok(Token::DblGreaterThan { punc, span }),
+            ">=" => Ok(Token::GreaterThanEquals { punc, span }),
+            "?" => Ok(Token::QuestionMark { punc: '?', span }),
+            "\\" => Ok(Token::Backslash { punc: '\\', span }),
+            "^" => Ok(Token::Caret { punc: '^', span }),
+            "`" => Ok(Token::Backtick { punc: '`', span }),
+            "|" => Ok(Token::Pipe { punc: '|', span }),
+            "||" => Ok(Token::DblPipe { punc, span }),
+            _ => Err(self.log_error(LexErrorKind::UnrecognizedChar { value: punc })),
         }
     }
 
@@ -786,7 +716,13 @@ mod tests {
 
     #[test]
     fn tokenize_assignment_stmt() {
-        let input = r#"let x: u256 = 0x1234_ABCD;"#;
+        let input = r#"let x: u256 = 0x1234_ABCD; // inline comment
+        // line comment
+        /*
+        block comment
+        */
+        foo /* don't print */ bar
+        "#;
 
         let mut lexer = Lexer::new(input);
 
@@ -794,6 +730,74 @@ mod tests {
             "unable to tokenize input. token at current position: `{:?}`\n{:#?}",
             lexer.peek_current(),
             lexer.errors()
+        ));
+
+        println!("{:#?}", stream);
+    }
+
+    #[test]
+    fn tokenize_function() {
+        let input = r#"
+        func foo(param1: u64, param2: char, param3: bool) -> ReturnType {
+            if (param3) {
+                print("{}", param2);
+            } else {
+                print("bar");
+            }
+
+            for x in y {
+                param1 += 2;
+            }
+
+            return ReturnType {
+                baz: "hello world"
+            }
+        }
+        "#;
+
+        let mut lexer = Lexer::new(input);
+
+        let stream = lexer.lex().expect(&format!(
+            "unable to tokenize input. current token: `{:?}`\n{:#?}",
+            lexer.peek_current(),
+            lexer.errors(),
+        ));
+
+        println!("{:#?}", stream);
+    }
+
+    #[test]
+    fn tokenize_import_decl() {
+        let input = r#"import package::module::Object;"#;
+
+        let mut lexer = Lexer::new(input);
+
+        let stream = lexer.lex().expect(&format!(
+            "unable to tokenize input. current token: `{:?}`\n{:#?}",
+            lexer.peek_current(),
+            lexer.errors()
+        ));
+
+        println!("{:#?}", stream);
+    }
+
+    #[test]
+    fn tokenize_struct_def() {
+        let input = r#"
+        /// These is a doc comment
+        /// for the struct called `Foo`.
+        #[export]
+        pub struct Foo {
+            bar: String,
+            baz: u64,
+        }"#;
+
+        let mut lexer = Lexer::new(input);
+
+        let stream = lexer.lex().expect(&format!(
+            "unable to tokenize input. current token: `{:?}`\n{:#?}",
+            lexer.peek_current(),
+            lexer.errors(),
         ));
 
         println!("{:#?}", stream);

@@ -128,6 +128,9 @@ pub enum Token {
     GreaterThanEquals { punc: String, span: Span },
     DblPipe { punc: String, span: Span },
 
+    LineComment { span: Span },
+    BlockComment { span: Span },
+
     DocComment { comment: String, span: Span },
 
     EOF,
