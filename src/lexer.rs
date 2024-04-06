@@ -1008,7 +1008,7 @@ fn is_keyword(value: &str) -> bool {
         "u128",
         "u256",
         "h256",
-        "address",
+        "Address",
         "String",
         "char",
         "bool",
