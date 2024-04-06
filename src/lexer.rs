@@ -41,43 +41,39 @@ impl<'a> Lexer<'a> {
     /// Main tokenizing function.
     /// Returns a stream of tokens generated from some input string (source code).
     fn lex(&mut self) -> Result<TokenStream, ErrorEmitted> {
-        let mut tokens: Vec<&Token> = Vec::new();
+        let mut tokens: Vec<Token> = Vec::new();
 
-        while let Some(c) = &self.peek_current() {
+        while let Some(c) = self.peek_current() {
             let start_pos = self.pos;
 
             match c {
                 _ if c.is_whitespace() => self.skip_whitespace(),
 
-                _ if *c == '/' && self.peek_next() == Some('/')
-                    || self.peek_next() == Some('*') =>
-                {
-                    tokens.push(&self.tokenize_doc_comment()?);
+                _ if c == '/' && self.peek_next() == Some('/') || self.peek_next() == Some('*') => {
+                    tokens.push(self.tokenize_doc_comment()?);
                 }
 
-                _ if *c == 'b' && self.peek_next() == Some('\"') => {
+                _ if c == 'b' && self.peek_next() == Some('\"') => {
                     self.advance();
-                    tokens.push(&self.tokenize_string(true)?)
+                    tokens.push(self.tokenize_string(true)?)
                 }
 
                 // not alphanumeric because identifiers / keywords cannot start with numbers;
                 // however, numbers are allowed after the first character
-                _ if c.is_ascii_alphabetic() || *c == '_' => {
-                    tokens.push(&self.tokenize_identifier_or_keyword()?)
+                _ if c.is_ascii_alphabetic() || c == '_' => {
+                    tokens.push(self.tokenize_identifier_or_keyword()?)
                 }
 
-                _ if *c == '#' && self.peek_next() == Some('!')
-                    || self.peek_next() == Some('[') =>
-                {
+                _ if c == '#' && self.peek_next() == Some('!') || self.peek_next() == Some('[') => {
                     self.advance();
 
                     if self.peek_current() == Some('[') {
                         self.advance();
-                        tokens.push(&self.tokenize_identifier_or_keyword()?);
+                        tokens.push(self.tokenize_identifier_or_keyword()?);
                     } else if self.peek_current() == Some('!') && self.peek_next() == Some('[') {
                         self.advance();
                         self.advance();
-                        tokens.push(&self.tokenize_identifier_or_keyword()?);
+                        tokens.push(self.tokenize_identifier_or_keyword()?);
                     } else {
                         let current_char = self
                             .peek_current()
@@ -91,48 +87,48 @@ impl<'a> Lexer<'a> {
                 }
 
                 '(' | '[' | '{' | ')' | ']' | '}' => {
-                    tokens.push(&self.tokenize_delimiter()?);
+                    tokens.push(self.tokenize_delimiter()?);
                 }
 
-                '"' => tokens.push(&self.tokenize_string(false)?),
+                '"' => tokens.push(self.tokenize_string(false)?),
 
-                '\'' => tokens.push(&self.tokenize_char()?),
+                '\'' => tokens.push(self.tokenize_char()?),
 
-                '@' => tokens.push(&self.tokenize_address()?), // `Address` literal
+                '@' => tokens.push(self.tokenize_address()?), // `Address` literal
 
-                '$' => tokens.push(&self.tokenize_h256()?), // `h256` literal
+                '$' => tokens.push(self.tokenize_h256()?), // `h256` literal
 
                 // hexadecimal digit prefix (`0x` or `0X`)
-                _ if *c == '0'
+                _ if c == '0'
                     && self
                         .peek_next()
                         .is_some_and(|x| &x.to_lowercase().to_string() == "x") =>
                 {
-                    tokens.push(&self.tokenize_u256()?)
+                    tokens.push(self.tokenize_u256()?)
                 }
 
                 _ if c.is_digit(10)
-                    || (*c == '-' && self.peek_next().is_some_and(|c| c.is_digit(10))) =>
+                    || (c == '-' && self.peek_next().is_some_and(|c| c.is_digit(10))) =>
                 {
-                    tokens.push(&self.tokenize_numeric()?)
+                    tokens.push(self.tokenize_numeric()?)
                 }
 
                 ',' => {
                     self.advance();
-                    let span = Span::new(&self.input, start_pos, self.pos);
-                    tokens.push(&Token::Comma { punc: ',', span })
+                    let span = Span::new(self.input, start_pos, self.pos);
+                    tokens.push(Token::Comma { punc: ',', span })
                 }
 
                 ';' => {
                     self.advance();
                     let span = Span::new(self.input, start_pos, self.pos);
-                    tokens.push(&Token::Semicolon { punc: ';', span })
+                    tokens.push(Token::Semicolon { punc: ';', span })
                 }
 
                 '!' | '#' | '%' | '&' | '*' | '+' | '/' | '-' | '.' | ':' | '<' | '=' | '>'
-                | '?' | '\\' | '^' | '`' | '|' => tokens.push(&self.tokenize_punctuation()?),
+                | '?' | '\\' | '^' | '`' | '|' => tokens.push(self.tokenize_punctuation()?),
 
-                _ if !self.peek_next().is_some() => tokens.push(&Token::EOF),
+                _ if !self.peek_next().is_some() => tokens.push(Token::EOF),
 
                 _ => {
                     return Err(self.log_error(LexErrorKind::UnrecognizedChar {
@@ -142,12 +138,7 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        let stream = TokenStream::new(
-            &tokens.into_iter().cloned().collect::<Vec<Token>>(),
-            self.input,
-            0,
-            self.pos,
-        );
+        let stream = TokenStream::new(&tokens, self.input, 0, self.pos);
         Ok(stream)
     }
 
