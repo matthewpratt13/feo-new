@@ -35,6 +35,10 @@ pub enum LexErrorKind {
         name: String,
     },
 
+    AttributeReserved {
+        name: String,
+    },
+
     MissingDelimiter {
         delim: char,
     },
@@ -76,6 +80,12 @@ impl fmt::Display for LexErrorKind {
             }
             LexErrorKind::UnrecognizedKeyword { name } => {
                 writeln!(f, "syntax error: unrecognized keyword – `{name}`")
+            }
+            LexErrorKind::AttributeReserved { name } => {
+                writeln!(
+                    f,
+                    "syntax error\n`{name}` is a reserved attribute descriptor"
+                )
             }
             LexErrorKind::AtSignReserved => {
                 writeln!(f, "syntax error\n`@` is reserved for address literals")
