@@ -212,6 +212,7 @@ impl<'a> Lexer<'a> {
                 "contract" => Ok(Token::Contract { name, span }),
                 "else" => Ok(Token::Else { name, span }),
                 "enum" => Ok(Token::Enum { name, span }),
+                "event" => Ok(Token::Event { name, span }),
                 "extern" => Ok(Token::Extern { name, span }),
                 "false" => Ok(Token::BoolLiteral {
                     value: name
@@ -224,11 +225,13 @@ impl<'a> Lexer<'a> {
                 "if" => Ok(Token::If { name, span }),
                 "impl" => Ok(Token::Impl { name, span }),
                 "import" => Ok(Token::Import { name, span }),
+                "interface" => Ok(Token::Interface { name, span }),
                 "in" => Ok(Token::In { name, span }),
                 "let" => Ok(Token::Let { name, span }),
                 "library" => Ok(Token::Library { name, span }),
                 "loop" => Ok(Token::Loop { name, span }),
                 "match" => Ok(Token::Match { name, span }),
+                "modifier" => Ok(Token::Modifier { name, span }),
                 "module" => Ok(Token::Module { name, span }),
                 "mut" => Ok(Token::Mut { name, span }),
                 "package" => Ok(Token::Package { name, span }),

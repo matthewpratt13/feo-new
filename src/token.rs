@@ -3,7 +3,9 @@
 use std::fmt;
 
 use crate::{
-    ast::{IntKind, UIntKind}, span::Span, H160, H256, U256
+    ast::{IntKind, UIntKind},
+    span::Span,
+    H160, H256, U256,
 };
 
 /// Enum representing the different types of tokens.
@@ -27,27 +29,30 @@ pub enum Token {
     Ref { name: String, span: Span },
     Pub { name: String, span: Span },
     Func { name: String, span: Span },
-    Contract { name: String, span: Span },
-    Abstract { name: String, span: Span },
-    Library { name: String, span: Span },
-    Payable { name: String, span: Span },
-    Storage { name: String, span: Span },
-    Topic { name: String, span: Span },
-    Test { name: String, span: Span },
+    Contract { name: String, span: Span }, // type of module, notated `#![contract]`
+    Library { name: String, span: Span },  // type of module, notated `#![library]`
+    Interface { name: String, span: Span }, // type of trait, notated `#![interface]`
+    Modifier { name: String, span: Span }, // type of function, notated `#![modifier]`
+    Abstract { name: String, span: Span }, // attribute, notated `#[abstract]`
+    Payable { name: String, span: Span }, // attribute, notated `#[payable]`
+    Storage { name: String, span: Span }, // attribute, notated `#[storage]`
+    Event { name: String, span: Span },   // attribute, notated `#[event]`
+    Topic { name: String, span: Span },   // attribute, notated `#[topic]`
+    Test { name: String, span: Span },    // attribute, notated `#[test]`
     Return { name: String, span: Span },
     Struct { name: String, span: Span },
     Enum { name: String, span: Span },
     Trait { name: String, span: Span },
     Impl { name: String, span: Span },
     Module { name: String, span: Span },
-    Extern { name: String, span: Span },
+    Extern { name: String, span: Span }, // attribute, notated `#[extern]`
     Import { name: String, span: Span },
     Package { name: String, span: Span },
     Super { name: String, span: Span },
     SelfKeyword { name: String, span: Span },
     Const { name: String, span: Span },
     Static { name: String, span: Span },
-    Unsafe { name: String, span: Span },
+    Unsafe { name: String, span: Span }, // attribute, notated `#[unsafe]`
     Alias { name: String, span: Span },
     As { name: String, span: Span },
     If { name: String, span: Span },
