@@ -1124,7 +1124,7 @@ mod tests {
 
     #[test]
     fn tokenize_import_decl() {
-        let input = r#"import package::module::Object;"#;
+        let input = r#"import package::module::Object as Foo;"#;
 
         let mut lexer = Lexer::new(input);
 
