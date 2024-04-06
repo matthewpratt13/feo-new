@@ -32,6 +32,8 @@ pub enum Token {
     Contract { name: String, span: Span }, // type of module, notated `#![contract]`
     Library { name: String, span: Span },  // type of module, notated `#![library]`
     Interface { name: String, span: Span }, // type of trait, notated `#![interface]`
+    Script { name: String, span: Span }, // type of module, notated `#![script]`
+    Constructor { name: String, span: Span }, // type of function, notated `#![constructor]`
     Modifier { name: String, span: Span }, // type of function, notated `#![modifier]`
     Test { name: String, span: Span },     // type of function, notated `#![test]`
     Event { name: String, span: Span },    // type of struct, notated `#![event]`

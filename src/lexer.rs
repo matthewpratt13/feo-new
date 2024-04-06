@@ -246,6 +246,15 @@ impl<'a> Lexer<'a> {
                         Err(self.log_error(LexErrorKind::MissingDelimiter { delim: ']' }))
                     }
                 }
+                "constructor" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        Err(self.log_error(LexErrorKind::MissingDelimiter { delim: ']' }))
+                    }
+                }
                 "const" => Ok(Token::Const { name, span }),
                 "continue" => Ok(Token::Continue { name, span }),
                 "contract" => {
@@ -334,6 +343,15 @@ impl<'a> Lexer<'a> {
                 "pub" => Ok(Token::Pub { name, span }),
                 "ref" => Ok(Token::Ref { name, span }),
                 "return" => Ok(Token::Return { name, span }),
+                "script" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        Err(self.log_error(LexErrorKind::MissingDelimiter { delim: ']' }))
+                    }
+                }
                 "self" => Ok(Token::SelfKeyword { name, span }),
                 "static" => Ok(Token::Static { name, span }),
                 "storage" => {
@@ -424,11 +442,13 @@ impl<'a> Lexer<'a> {
         span: Span,
     ) -> Result<Token, ErrorEmitted> {
         match name.as_str() {
+            "constructor" => Ok(Token::Constructor { name, span }),
             "contract" => Ok(Token::Contract { name, span }),
             "event" => Ok(Token::Event { name, span }),
             "interface" => Ok(Token::Interface { name, span }),
             "library" => Ok(Token::Library { name, span }),
             "modifier" => Ok(Token::Modifier { name, span }),
+            "script" => Ok(Token::Script { name, span }),
             "test" => Ok(Token::Test { name, span }),
             _ => Err(self.log_error(LexErrorKind::UnrecognizedAttribute { name })),
         }
@@ -934,6 +954,7 @@ fn is_keyword(value: &str) -> bool {
         "as",
         "break",
         "calldata",
+        "constructor",
         "const",
         "continue",
         "contract",
@@ -961,6 +982,7 @@ fn is_keyword(value: &str) -> bool {
         "pub",
         "ref",
         "return",
+        "script",
         "self",
         "static",
         "storage",
@@ -1041,6 +1063,9 @@ mod tests {
             
             #![interface]
             trait Bar
+
+            #![constructor]
+            pub func new() -> Contract
             
             #[extern]
             #[modifier]
