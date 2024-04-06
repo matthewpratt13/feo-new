@@ -924,7 +924,7 @@ impl<'a> Lexer<'a> {
 
     /// Get the character at the current position.
     fn peek_current(&self) -> Option<char> {
-        self.peekable_chars.peek().cloned()
+        self.peekable_chars.clone().peek().cloned()
     }
 
     /// Get the next character without advancing the iterator.
@@ -954,7 +954,7 @@ impl<'a> Lexer<'a> {
 
     /// Log and store information about an error that occurred during tokenization.
     /// Returns `ErrorEmitted` just to confirm that the action happened.
-    fn log_error(&mut self, error_kind: LexErrorKind) -> ErrorEmitted {
+    fn log_error(&mut self, error_kind: LexErrorKind<'a>) -> ErrorEmitted {
         let error = CompilerError::new(error_kind, self.input, self.pos);
 
         self.errors.push(error);
