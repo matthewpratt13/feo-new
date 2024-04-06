@@ -73,7 +73,7 @@ pub enum Literal {
     U256(U256),
     H256(H256),
     Address(H160),
-    String(String),
+    String(Vec<u8>),
     Char(char),
     Bool(bool),
 }

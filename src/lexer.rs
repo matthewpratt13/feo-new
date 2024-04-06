@@ -576,7 +576,10 @@ impl<'a> Lexer<'a> {
 
                     let span = Span::new(self.input, start_pos, self.pos);
 
-                    return Ok(Token::StringLiteral { value, span });
+                    return Ok(Token::StringLiteral {
+                        value: value.as_bytes().to_vec(),
+                        span,
+                    });
                 }
                 _ => {
                     value.push(c);

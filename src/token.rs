@@ -19,7 +19,7 @@ pub enum Token {
     U256Literal { value: U256, span: Span },
     H256Literal { value: H256, span: Span },
     AddressLiteral { value: H160, span: Span },
-    StringLiteral { value: String, span: Span },
+    StringLiteral { value: Vec<u8>, span: Span },
     CharLiteral { value: char, span: Span },
     BoolLiteral { value: bool, span: Span },
 
