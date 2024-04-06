@@ -37,6 +37,7 @@ pub enum Token {
     Modifier { name: String, span: Span }, // type of function, notated `#![modifier]`
     Test { name: String, span: Span },     // type of function, notated `#![test]`
     Event { name: String, span: Span },    // type of struct, notated `#![event]`
+    Error { name: String, span: Span },    // type of struct, notated `#![error]`
     Abstract { name: String, span: Span }, // attribute, notated `#[abstract]`
     Payable { name: String, span: Span },  // attribute, notated `#[payable]`
     Storage { name: String, span: Span },  // attribute, notated `#[storage]`

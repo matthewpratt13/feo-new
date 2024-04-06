@@ -444,6 +444,7 @@ impl<'a> Lexer<'a> {
         match name.as_str() {
             "constructor" => Ok(Token::Constructor { name, span }),
             "contract" => Ok(Token::Contract { name, span }),
+            "error" => Ok(Token::Error { name, span }),
             "event" => Ok(Token::Event { name, span }),
             "interface" => Ok(Token::Interface { name, span }),
             "library" => Ok(Token::Library { name, span }),
@@ -451,7 +452,7 @@ impl<'a> Lexer<'a> {
             "script" => Ok(Token::Script { name, span }),
             "test" => Ok(Token::Test { name, span }),
             _ => Err(self.log_error(LexErrorKind::UnrecognizedAttribute { name })),
-        }
+        
     }
 
     /// Tokenize a delimiter (i.e., `(`, `)`, `[`, `]`, `{` and `}`).
@@ -960,6 +961,7 @@ fn is_keyword(value: &str) -> bool {
         "contract",
         "else",
         "enum",
+        "error",
         "event",
         "extern",
         "false",
