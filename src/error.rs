@@ -131,7 +131,7 @@ impl<'a> Error for LexErrorKind<'a> {}
 pub enum ParserErrorKind<'a> {
     UnexpectedToken {
         expected: &'a str,
-        found: Token<'a>,
+        found: &'a Token<'a>,
     },
 
     InvalidToken {

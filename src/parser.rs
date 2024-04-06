@@ -355,7 +355,7 @@ impl<'a> Parser<'a> {
             Token::LParen { .. } => self.parse_grouped_expression(),
             _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier or literal",
-                found: token,
+                found: &token,
             })),
         }
     }
@@ -468,7 +468,7 @@ impl<'a> Parser<'a> {
                         ) => Ok(expr),
                         Some(t) => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                             expected: "identifier or number",
-                            found: t,
+                            found: &t,
                         })),
                         None => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
                     }
@@ -595,7 +595,7 @@ impl<'a> Parser<'a> {
                 Some(Token::UIntLiteral { .. }) => self.parse_tuple_index_expression(),
                 _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier or tuple index",
-                    found: token,
+                    found: &token,
                 })),
             },
             Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => {
@@ -861,7 +861,7 @@ impl<'a> Parser<'a> {
                 _ => {
                     return Err(self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `)`",
-                        found: token,
+                        found: &token,
                     }))
                 }
             }
@@ -910,7 +910,7 @@ impl<'a> Parser<'a> {
         } else {
             Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier after `.`",
-                found: field_token,
+                found: &field_token,
             }))
         }
     }
@@ -1072,7 +1072,7 @@ impl<'a> Parser<'a> {
         {
             return Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "as",
-                found: token,
+                found: &token,
             }));
         }
 
@@ -1109,7 +1109,7 @@ impl<'a> Parser<'a> {
 
                     return Err(self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "identifier or `}`",
-                        found: token,
+                        found: &token,
                     }))?;
                 }
             };
@@ -1138,7 +1138,7 @@ impl<'a> Parser<'a> {
                 _ => {
                     return Err(self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `}`",
-                        found: token,
+                        found: &token,
                     }))
                 }
             }
@@ -1204,7 +1204,7 @@ impl<'a> Parser<'a> {
             Token::Identifier { name, .. } => Ok(name),
             _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier",
-                found: token,
+                found: &token,
             })),
         }
     }
@@ -1225,7 +1225,7 @@ impl<'a> Parser<'a> {
         } else {
             Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier",
-                found: token,
+                found: &token,
             }))
         }
     }
@@ -1254,7 +1254,7 @@ impl<'a> Parser<'a> {
             Some(token) if token == expected => Ok(()),
             Some(token) => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "`{:#?}`",
-                found: token,
+                found: &token,
             })),
             None => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
         }
