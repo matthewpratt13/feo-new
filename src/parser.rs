@@ -15,7 +15,7 @@ pub struct StructField {
     value: Expression,
 }
 
-/// Parser struct that holds a stream of tokens and contains methods to parse expressions,
+/// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
 #[derive(Debug)]
 struct Parser {
@@ -347,6 +347,8 @@ impl Parser {
             Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
             Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
             Token::U256Literal { value, .. } => Ok(Expression::Literal(Literal::U256(value))),
+            Token::H256Literal { value, .. } => Ok(Expression::Literal(Literal::H256(value))),
+            Token::AddressLiteral { value, .. } => Ok(Expression::Literal(Literal::Address(value))),
             Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
             Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
             Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
@@ -1267,6 +1269,8 @@ impl Parser {
                 | Token::U64Type { .. },
             ) => Ok(Type::UInt),
             Some(Token::U256Type { .. }) => Ok(Type::U256),
+            Some(Token::H256Type { .. }) => Ok(Type::H256),
+            Some(Token::AddressType { .. }) => Ok(Type::Address),
             Some(Token::StringType { .. }) => Ok(Type::String),
             Some(Token::CharType { .. }) => Ok(Type::Char),
             Some(Token::BoolType { .. }) => Ok(Type::Bool),
@@ -1286,6 +1290,7 @@ impl Parser {
         self.precedences.get(token).cloned()
     }
 
+    /// Get the tokens at the current position.
     fn peek_current(&self) -> Option<Token> {
         self.stream.tokens().get(self.current).cloned()
     }
@@ -1315,7 +1320,7 @@ impl Parser {
     /// Log and store information about an error that occurred during lexing.
     /// Return `ErrorEmitted` just to confirm that the action happened.
     fn log_error(&mut self, error_kind: ParserErrorKind) -> ErrorEmitted {
-        let error = CompilerError::new(&self.stream.span().input(), self.current, error_kind);
+        let error = CompilerError::new(error_kind, self.stream.span().substring(), self.current);
 
         self.errors.push(error);
         ErrorEmitted(())

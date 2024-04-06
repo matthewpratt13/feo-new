@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::{parser::StructField, U256};
+use crate::{parser::StructField, H160, H256, U256};
 
 /// Enum representing the different signed integer types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -16,6 +16,13 @@ pub enum UIntKind {
     U16(u16),
     U32(u32),
     U64(u64),
+}
+
+/// Enum representing the different hash types.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum HashKind {
+    H256(H256),
+    Address(H160),
 }
 
 /// Enum representing the different unary operators.
@@ -62,6 +69,8 @@ pub enum Literal {
     Int(IntKind),
     UInt(UIntKind),
     U256(U256),
+    H256(H256),
+    Address(H160),
     String(String),
     Char(char),
     Bool(bool),
@@ -177,6 +186,8 @@ pub enum Type {
     Int,
     UInt,
     U256,
+    H256,
+    Address,
     String,
     Char,
     Bool,

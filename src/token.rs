@@ -3,9 +3,7 @@
 use std::fmt;
 
 use crate::{
-    ast::{IntKind, UIntKind},
-    span::Span,
-    U256,
+    ast::{IntKind, UIntKind}, span::Span, H160, H256, U256
 };
 
 /// Enum representing the different types of tokens.
@@ -17,6 +15,8 @@ pub enum Token {
     IntLiteral { value: IntKind, span: Span },
     UIntLiteral { value: UIntKind, span: Span },
     U256Literal { value: U256, span: Span },
+    H256Literal { value: H256, span: Span },
+    AddressLiteral { value: H160, span: Span },
     StringLiteral { value: String, span: Span },
     CharLiteral { value: char, span: Span },
     BoolLiteral { value: bool, span: Span },
@@ -68,6 +68,8 @@ pub enum Token {
     U32Type { name: String, span: Span },
     U64Type { name: String, span: Span },
     U256Type { name: String, span: Span },
+    H256Type { name: String, span: Span },
+    AddressType { name: String, span: Span },
     StringType { name: String, span: Span },
     CharType { name: String, span: Span },
     BoolType { name: String, span: Span },
@@ -97,6 +99,7 @@ pub enum Token {
 
     // operators
     Bang { punc: char, span: Span },
+    DollarSign { punc: char, span: Span },
     Percent { punc: char, span: Span },
     Ampersand { punc: char, span: Span },
     Asterisk { punc: char, span: Span },
@@ -107,6 +110,7 @@ pub enum Token {
     Equals { punc: char, span: Span },
     GreaterThan { punc: char, span: Span },
     QuestionMark { punc: char, span: Span },
+    AtSign { punc: char, span: Span },
     Backslash { punc: char, span: Span },
     Caret { punc: char, span: Span },
     Backtick { punc: char, span: Span },
@@ -128,10 +132,12 @@ pub enum Token {
     GreaterThanEquals { punc: String, span: Span },
     DblPipe { punc: String, span: Span },
 
-    Comment { span: Span },
+    LineComment { span: Span },
+    BlockComment { span: Span },
+
     DocComment { comment: String, span: Span },
 
-    EOF { span: Span },
+    EOF,
 }
 
 /// Collection of `Token` as a result of the lexing process.
@@ -165,6 +171,6 @@ impl<'a> TokenStream {
 
 impl fmt::Display for TokenStream {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:#?}", self.tokens)
+        writeln!(f, "{:?}", self.tokens)
     }
 }
