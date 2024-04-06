@@ -67,6 +67,30 @@ impl<'a> Lexer<'a> {
 
                 '\'' => tokens.push(self.tokenize_char()?),
 
+                _ if c == '#' && self.peek_next() == Some('!') || self.peek_next() == Some('[') => {
+                    self.advance();
+
+                    let current_char = self
+                        .peek_current()
+                        .ok_or(self.log_error(LexErrorKind::UnexpectedEndOfInput))?;
+
+                    if current_char == '[' {
+                        self.advance();
+
+                        tokens.push(self.tokenize_identifier_or_keyword()?);
+                    } else if current_char == '!' && self.peek_next() == Some('[') {
+                        self.advance();
+                        self.advance();
+
+                        tokens.push(self.tokenize_identifier_or_keyword()?);
+                    } else {
+                        return Err(self.log_error(LexErrorKind::UnexpectedChar {
+                            expected: "`[` or `!`".to_string(),
+                            found: current_char,
+                        }));
+                    }
+                }
+
                 '@' => tokens.push(self.tokenize_address()?), // `Address` literal
 
                 '$' => tokens.push(self.tokenize_h256()?), // `h256` literal
@@ -203,18 +227,53 @@ impl<'a> Lexer<'a> {
         // or return a `Token::Identifier`
         if is_keyword(&name) {
             match name.as_str() {
-                "abstract" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
+                "abstract" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Abstract { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
                 "alias" => Ok(Token::Alias { name, span }),
                 "as" => Ok(Token::As { name, span }),
                 "break" => Ok(Token::Break { name, span }),
-                "calldata" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
+                "calldata" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Calldata { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
                 "const" => Ok(Token::Const { name, span }),
                 "continue" => Ok(Token::Continue { name, span }),
-                "contract" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
+                "contract" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Contract { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
                 "else" => Ok(Token::Else { name, span }),
                 "enum" => Ok(Token::Enum { name, span }),
-                "event" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
-                "extern" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
+                "event" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Event { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
+                "extern" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Extern { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
                 "false" => Ok(Token::BoolLiteral {
                     value: name
                         .parse::<bool>()
@@ -226,27 +285,86 @@ impl<'a> Lexer<'a> {
                 "if" => Ok(Token::If { name, span }),
                 "impl" => Ok(Token::Impl { name, span }),
                 "import" => Ok(Token::Import { name, span }),
-                "interface" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
+                "interface" => {
+                    let current_char = self.peek_current().ok_or(self.log_error(
+                        LexErrorKind::MismatchedDelimiter {
+                            expected: ']',
+                            found: (),
+                        },
+                    ))?;
+
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Interface { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::MismatchedDelimiter {
+                            expected: ']',
+                            found: current_char,
+                        }))
+                    }
+                }
                 "in" => Ok(Token::In { name, span }),
                 "let" => Ok(Token::Let { name, span }),
-                "library" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
+                "library" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Library { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
                 "loop" => Ok(Token::Loop { name, span }),
                 "match" => Ok(Token::Match { name, span }),
-                "modifier" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
+                "modifier" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Modifier { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
                 "module" => Ok(Token::Module { name, span }),
                 "mut" => Ok(Token::Mut { name, span }),
                 "package" => Ok(Token::Package { name, span }),
-                "payable" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
+                "payable" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Payable { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
                 "pub" => Ok(Token::Pub { name, span }),
                 "ref" => Ok(Token::Ref { name, span }),
                 "return" => Ok(Token::Return { name, span }),
                 "self" => Ok(Token::SelfKeyword { name, span }),
                 "static" => Ok(Token::Static { name, span }),
-                "storage" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
+                "storage" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Storage { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
                 "struct" => Ok(Token::Struct { name, span }),
                 "super" => Ok(Token::Super { name, span }),
-                "test" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
-                "topic" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
+                "test" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Test { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
+                "topic" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Topic { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
                 "trait" => Ok(Token::Trait { name, span }),
                 "true" => Ok(Token::BoolLiteral {
                     value: name
@@ -254,7 +372,14 @@ impl<'a> Lexer<'a> {
                         .map_err(|_| self.log_error(LexErrorKind::ParseBoolError))?,
                     span,
                 }),
-                "unsafe" => Err(self.log_error(LexErrorKind::AttributeReserved { name })),
+                "unsafe" => {
+                    if let Some(']') = self.peek_current() {
+                        self.advance();
+                        Ok(Token::Unsafe { name, span })
+                    } else {
+                        Err(self.log_error(LexErrorKind::AttributeReserved { name }))
+                    }
+                }
                 "while" => Ok(Token::While { name, span }),
                 "i32" => Ok(Token::I32Type { name, span }),
                 "i64" => Ok(Token::I64Type { name, span }),
@@ -739,6 +864,11 @@ impl<'a> Lexer<'a> {
         cloned_iter.peek().cloned()
     }
 
+    fn peek_previous(&self) -> Option<char> {
+        let mut cloned_iter = self.peekable_chars.clone();
+        cloned_iter.nth(self.pos - 1)
+    }
+
     /// Skip the source string's whitespace, which is considered unnecessary.
     fn skip_whitespace(&mut self) {
         while let Some(c) = self.peek_current() {
@@ -859,6 +989,34 @@ mod tests {
 
         let stream = lexer.lex().expect(&format!(
             "unable to tokenize input. current char: `{:?}`\n{:#?}",
+            lexer.peek_current(),
+            lexer.errors()
+        ));
+
+        println!("{:#?}", stream);
+    }
+
+    #[test]
+    fn tokenize_attributes() {
+        let input = r#"
+        #[abstract]
+        #![contract]
+        pub module foo {
+            #[storage]
+            const balances: [U256] = [0x1234, 0x5678, 0x90AB, 0xCDEF];
+            
+            #![interface]
+            trait Bar
+            
+            #[extern]
+            #[modifier]
+            pub func baz();
+        }"#;
+
+        let mut lexer = Lexer::new(input);
+
+        let stream = lexer.lex().expect(&format!(
+            "unable to tokenize input. current char: {:?}\n{:#?}",
             lexer.peek_current(),
             lexer.errors()
         ));

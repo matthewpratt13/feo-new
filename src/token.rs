@@ -33,12 +33,12 @@ pub enum Token {
     Library { name: String, span: Span },  // type of module, notated `#![library]`
     Interface { name: String, span: Span }, // type of trait, notated `#![interface]`
     Modifier { name: String, span: Span }, // type of function, notated `#![modifier]`
+    Test { name: String, span: Span },     // type of function, notated `#![test]`
+    Event { name: String, span: Span },    // type of struct, notated `#![event]`
     Abstract { name: String, span: Span }, // attribute, notated `#[abstract]`
     Payable { name: String, span: Span },  // attribute, notated `#[payable]`
     Storage { name: String, span: Span },  // attribute, notated `#[storage]`
-    Event { name: String, span: Span },    // attribute, notated `#[event]`
     Topic { name: String, span: Span },    // attribute, notated `#[topic]`
-    Test { name: String, span: Span },     // attribute, notated `#[test]`
     Calldata { name: String, span: Span }, // attribute, notated `#[calldata]`
     Return { name: String, span: Span },
     Struct { name: String, span: Span },
