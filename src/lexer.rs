@@ -43,28 +43,32 @@ impl<'a> Lexer<'a> {
     fn lex(&mut self) -> Result<TokenStream, ErrorEmitted> {
         let mut tokens: Vec<&Token> = Vec::new();
 
-        while let Some(c) = self.peek_current() {
+        while let Some(c) = &self.peek_current() {
             let start_pos = self.pos;
 
             match c {
                 _ if c.is_whitespace() => self.skip_whitespace(),
 
-                _ if c == '/' && self.peek_next() == Some('/') || self.peek_next() == Some('*') => {
+                _ if *c == '/' && self.peek_next() == Some('/')
+                    || self.peek_next() == Some('*') =>
+                {
                     tokens.push(&self.tokenize_doc_comment()?);
                 }
 
-                _ if c == 'b' && self.peek_next() == Some('\"') => {
+                _ if *c == 'b' && self.peek_next() == Some('\"') => {
                     self.advance();
                     tokens.push(&self.tokenize_string(true)?)
                 }
 
                 // not alphanumeric because identifiers / keywords cannot start with numbers;
                 // however, numbers are allowed after the first character
-                _ if c.is_ascii_alphabetic() || c == '_' => {
+                _ if c.is_ascii_alphabetic() || *c == '_' => {
                     tokens.push(&self.tokenize_identifier_or_keyword()?)
                 }
 
-                _ if c == '#' && self.peek_next() == Some('!') || self.peek_next() == Some('[') => {
+                _ if *c == '#' && self.peek_next() == Some('!')
+                    || self.peek_next() == Some('[') =>
+                {
                     self.advance();
 
                     if self.peek_current() == Some('[') {
@@ -99,7 +103,7 @@ impl<'a> Lexer<'a> {
                 '$' => tokens.push(&self.tokenize_h256()?), // `h256` literal
 
                 // hexadecimal digit prefix (`0x` or `0X`)
-                _ if c == '0'
+                _ if *c == '0'
                     && self
                         .peek_next()
                         .is_some_and(|x| &x.to_lowercase().to_string() == "x") =>
@@ -108,7 +112,7 @@ impl<'a> Lexer<'a> {
                 }
 
                 _ if c.is_digit(10)
-                    || (c == '-' && self.peek_next().is_some_and(|c| c.is_digit(10))) =>
+                    || (*c == '-' && self.peek_next().is_some_and(|c| c.is_digit(10))) =>
                 {
                     tokens.push(&self.tokenize_numeric()?)
                 }
