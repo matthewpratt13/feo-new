@@ -1142,7 +1142,6 @@ mod tests {
         let input = r#"
         /// These is a doc comment
         /// for the struct called `Foo`.
-        #[export]
         pub struct Foo {
             bar: String,
             baz: u64,
