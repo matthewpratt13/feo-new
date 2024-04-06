@@ -193,6 +193,7 @@ pub enum Type {
     String,
     Char,
     Bool,
+    Bytes,
 
     // built-in collections
     Array,
@@ -201,8 +202,6 @@ pub enum Type {
     UserDefined, // struct, enum, trait, alias, constant (path types / items)
 
     Function,
-    Closure,
-
     Reference, // e.g., `&Type` / `&mut Type`
     SelfType,
 }
