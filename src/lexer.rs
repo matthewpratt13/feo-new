@@ -402,10 +402,12 @@ impl<'a> Lexer<'a> {
                 "while" => Ok(Token::While { name, span }),
                 "i32" => Ok(Token::I32Type { name, span }),
                 "i64" => Ok(Token::I64Type { name, span }),
+                "i128" => Ok(Token::I128Type { name, span }),
                 "u8" => Ok(Token::U8Type { name, span }),
                 "u16" => Ok(Token::U16Type { name, span }),
                 "u32" => Ok(Token::U32Type { name, span }),
                 "u64" => Ok(Token::U64Type { name, span }),
+                "u128" => Ok(Token::U128Type { name, span }),
                 "u256" => Ok(Token::U256Type { name, span }),
                 "h256" => Ok(Token::H256Type { name, span }),
                 "Address" => Ok(Token::AddressType { name, span }),
@@ -452,7 +454,7 @@ impl<'a> Lexer<'a> {
             "script" => Ok(Token::Script { name, span }),
             "test" => Ok(Token::Test { name, span }),
             _ => Err(self.log_error(LexErrorKind::UnrecognizedAttribute { name })),
-        
+        }
     }
 
     /// Tokenize a delimiter (i.e., `(`, `)`, `[`, `]`, `{` and `}`).
@@ -998,10 +1000,12 @@ fn is_keyword(value: &str) -> bool {
         "while",
         "i32",
         "i64",
+        "i128",
         "u8",
         "u16",
         "u32",
         "u64",
+        "u128",
         "u256",
         "h256",
         "address",

@@ -7,6 +7,7 @@ use crate::{parser::StructField, H160, H256, U256};
 pub enum IntKind {
     I32(i32),
     I64(i64),
+    I128(i128),
 }
 
 /// Enum representing the different unsigned integer types.
@@ -16,6 +17,7 @@ pub enum UIntKind {
     U16(u16),
     U32(u32),
     U64(u64),
+    U128(u128),
 }
 
 /// Enum representing the different hash types.
