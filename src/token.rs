@@ -34,11 +34,12 @@ pub enum Token {
     Interface { name: String, span: Span }, // type of trait, notated `#![interface]`
     Modifier { name: String, span: Span }, // type of function, notated `#![modifier]`
     Abstract { name: String, span: Span }, // attribute, notated `#[abstract]`
-    Payable { name: String, span: Span }, // attribute, notated `#[payable]`
-    Storage { name: String, span: Span }, // attribute, notated `#[storage]`
-    Event { name: String, span: Span },   // attribute, notated `#[event]`
-    Topic { name: String, span: Span },   // attribute, notated `#[topic]`
-    Test { name: String, span: Span },    // attribute, notated `#[test]`
+    Payable { name: String, span: Span },  // attribute, notated `#[payable]`
+    Storage { name: String, span: Span },  // attribute, notated `#[storage]`
+    Event { name: String, span: Span },    // attribute, notated `#[event]`
+    Topic { name: String, span: Span },    // attribute, notated `#[topic]`
+    Test { name: String, span: Span },     // attribute, notated `#[test]`
+    Calldata { name: String, span: Span }, // attribute, notated `#[calldata]`
     Return { name: String, span: Span },
     Struct { name: String, span: Span },
     Enum { name: String, span: Span },
