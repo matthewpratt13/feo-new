@@ -104,6 +104,7 @@ pub enum Literal {
     U256(U256),
     H160(H160),
     H256(H256),
+    Byte(u8),
     Bytes(Bytes),
     String(Vec<u8>),
     Char(char),
@@ -222,10 +223,11 @@ pub enum Type {
     U256,
     H160,
     H256,
+    Byte,
+    Bytes,
     String,
     Char,
     Bool,
-    Bytes,
 
     // built-in collections
     Array,

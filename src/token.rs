@@ -17,12 +17,13 @@ pub enum Token {
     IntLiteral { value: IntKind, span: Span },
     UIntLiteral { value: UIntKind, span: Span },
     U256Literal { value: U256, span: Span },
-    H256Literal { value: H256, span: Span },
     H160Literal { value: H160, span: Span },
+    H256Literal { value: H256, span: Span },
+    ByteLiteral { value: u8, span: Span },
+    BytesLiteral { value: Bytes, span: Span },
     StringLiteral { value: Vec<u8>, span: Span },
     CharLiteral { value: char, span: Span },
     BoolLiteral { value: bool, span: Span },
-    BytesLiteral { value: Bytes, span: Span },
 
     // keywords
     Let { name: String, span: Span },
@@ -81,6 +82,7 @@ pub enum Token {
     U128Type { name: String, span: Span },
     U256Type { name: String, span: Span },
     H256Type { name: String, span: Span },
+    ByteType { name: String, span: Span },
     B2Type { name: String, span: Span },
     B3Type { name: String, span: Span },
     B4Type { name: String, span: Span },

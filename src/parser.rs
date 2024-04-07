@@ -348,6 +348,7 @@ impl Parser {
             Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
             Token::U256Literal { value, .. } => Ok(Expression::Literal(Literal::U256(value))),
             Token::H256Literal { value, .. } => Ok(Expression::Literal(Literal::H256(value))),
+            Token::ByteLiteral { value, .. } => Ok(Expression::Literal(Literal::Byte(value))),
             Token::BytesLiteral { value, .. } => Ok(Expression::Literal(Literal::Bytes(value))),
             Token::H160Literal { value, .. } => Ok(Expression::Literal(Literal::H160(value))),
             Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
@@ -368,6 +369,13 @@ impl Parser {
                 Token::IntLiteral { .. } => self.parse_primary(),
                 Token::UIntLiteral { .. } => self.parse_primary(),
                 Token::U256Literal { .. } => self.parse_primary(),
+                Token::H160Literal { .. } => self.parse_primary(),
+                Token::H256Literal { .. } => self.parse_primary(),
+                Token::ByteLiteral { .. } => self.parse_primary(),
+                Token::BytesLiteral { .. } => self.parse_primary(),
+                Token::StringLiteral { .. } => self.parse_primary(),
+                Token::CharLiteral { .. } => self.parse_primary(),
+                Token::BoolLiteral { .. } => self.parse_primary(),
                 Token::Identifier { .. } => self.parse_primary(),
                 Token::SelfKeyword { .. } => match self.peek_current() {
                     Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
@@ -1264,17 +1272,54 @@ impl Parser {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     fn get_type(&mut self) -> Result<Type, ErrorEmitted> {
         match self.consume() {
-            Some(Token::I32Type { .. } | Token::I64Type { .. }) => Ok(Type::Int),
+            Some(Token::I32Type { .. } | Token::I64Type { .. } | Token::I128Type { .. }) => {
+                Ok(Type::Int)
+            }
 
             Some(
                 Token::U8Type { .. }
                 | Token::U16Type { .. }
                 | Token::U32Type { .. }
-                | Token::U64Type { .. },
+                | Token::U64Type { .. }
+                | Token::U128Type { .. },
             ) => Ok(Type::UInt),
             Some(Token::U256Type { .. }) => Ok(Type::U256),
-            Some(Token::H256Type { .. }) => Ok(Type::H256),
             Some(Token::H160Type { .. }) => Ok(Type::H160),
+            Some(Token::H256Type { .. }) => Ok(Type::H256),
+            Some(Token::ByteType { .. }) => Ok(Type::Byte),
+            Some(
+                Token::B2Type { .. }
+                | Token::B3Type { .. }
+                | Token::B4Type { .. }
+                | Token::B5Type { .. }
+                | Token::B6Type { .. }
+                | Token::B7Type { .. }
+                | Token::B8Type { .. }
+                | Token::B9Type { .. }
+                | Token::B10Type { .. }
+                | Token::B11Type { .. }
+                | Token::B12Type { .. }
+                | Token::B13Type { .. }
+                | Token::B14Type { .. }
+                | Token::B15Type { .. }
+                | Token::B16Type { .. }
+                | Token::B17Type { .. }
+                | Token::B18Type { .. }
+                | Token::B19Type { .. }
+                | Token::B20Type { .. }
+                | Token::B21Type { .. }
+                | Token::B22Type { .. }
+                | Token::B23Type { .. }
+                | Token::B24Type { .. }
+                | Token::B25Type { .. }
+                | Token::B26Type { .. }
+                | Token::B27Type { .. }
+                | Token::B28Type { .. }
+                | Token::B29Type { .. }
+                | Token::B30Type { .. }
+                | Token::B31Type { .. }
+                | Token::B32Type { .. },
+            ) => Ok(Type::Bytes),
             Some(Token::StringType { .. }) => Ok(Type::String),
             Some(Token::CharType { .. }) => Ok(Type::Char),
             Some(Token::BoolType { .. }) => Ok(Type::Bool),

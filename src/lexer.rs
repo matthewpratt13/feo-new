@@ -416,6 +416,7 @@ impl<'a> Lexer<'a> {
                 "u256" => Ok(Token::U256Type { name, span }),
                 "h160" => Ok(Token::H160Type { name, span }),
                 "h256" => Ok(Token::H256Type { name, span }),
+                "byte" => Ok(Token::ByteType { name, span }),
                 "b2" => Ok(Token::B2Type { name, span }),
                 "b3" => Ok(Token::B3Type { name, span }),
                 "b4" => Ok(Token::B4Type { name, span }),
@@ -457,6 +458,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // Match an input string against an outer attribute keyword.
     fn tokenize_outer_attribute(
         &mut self,
         name: String,
@@ -474,6 +476,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // Match an input string against an inner attribute keyword.
     fn tokenize_inner_attribute(
         &mut self,
         name: String,
@@ -627,9 +630,9 @@ impl<'a> Lexer<'a> {
         Err(self.log_error(LexErrorKind::MissingQuote { quote: '\"' }))
     }
 
-    /// Tokenize a string literal, handling escape sequences where applicable.
+    /// Tokenize a static byte array literal, handling escape sequences where applicable.
     fn tokenize_bytes(&mut self) -> Result<Token, ErrorEmitted> {
-        let mut value = [0; 32];
+        let mut value = String::new();
 
         let start_pos = self.pos;
 
@@ -640,7 +643,7 @@ impl<'a> Lexer<'a> {
                 '\\' => {
                     // handle escape sequences
                     if let Some(escaped_char) = self.parse_escape_sequence()? {
-                        escaped_char.encode_utf8(&mut value);
+                        value.push(escaped_char);
                         self.advance();
                     } else {
                         return Err(self.log_error(LexErrorKind::CharNotFound {
@@ -653,12 +656,19 @@ impl<'a> Lexer<'a> {
 
                     let span = Span::new(self.input, start_pos, self.pos);
 
-                    let bytes = ast::get_bytes(value.as_slice());
+                    if value.len() == 1 {
+                        return Ok(Token::ByteLiteral {
+                            value: value.as_bytes()[0],
+                            span,
+                        });
+                    }
+
+                    let bytes = ast::get_bytes(value.as_bytes());
 
                     return Ok(Token::BytesLiteral { value: bytes, span });
                 }
                 _ => {
-                    c.encode_utf8(&mut value);
+                    value.push(c);
                     self.advance();
                 }
             }
@@ -755,6 +765,45 @@ impl<'a> Lexer<'a> {
         Ok(Token::U256Literal { value, span })
     }
 
+    /// Tokenize a 20-byte (`h160`) hash literal.
+    fn tokenize_h160(&mut self) -> Result<Token, ErrorEmitted> {
+        let start_pos = self.pos;
+
+        self.advance(); // skip `@`
+
+        if self.peek_current() == Some('0') && self.peek_next() == Some('x') {
+            self.advance(); // skip `0`
+            self.advance(); // skip `x`
+        } else if self.peek_current().is_some_and(|x| x.is_digit(16)) {
+            // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
+            ()
+        } else {
+            return Err(self.log_error(LexErrorKind::ParseAddressError));
+        }
+
+        let hash_start_pos = self.pos;
+
+        while let Some(c) = self.peek_current() {
+            if c.is_digit(16) || c == '_' {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        let value = H160::from_slice(
+            self.input[hash_start_pos..self.pos]
+                .split('_')
+                .collect::<Vec<&str>>()
+                .concat()
+                .as_bytes(),
+        );
+
+        let span = Span::new(self.input, start_pos, self.pos);
+
+        Ok(Token::H160Literal { value, span })
+    }
+
     /// Tokenize a 32-byte hash (`h256`) literal.
     fn tokenize_h256(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
@@ -792,45 +841,6 @@ impl<'a> Lexer<'a> {
         let span = Span::new(self.input, start_pos, self.pos);
 
         Ok(Token::H256Literal { value, span })
-    }
-
-    /// Tokenize an address (20-byte hash) literal.
-    fn tokenize_h160(&mut self) -> Result<Token, ErrorEmitted> {
-        let start_pos = self.pos;
-
-        self.advance(); // skip `@`
-
-        if self.peek_current() == Some('0') && self.peek_next() == Some('x') {
-            self.advance(); // skip `0`
-            self.advance(); // skip `x`
-        } else if self.peek_current().is_some_and(|x| x.is_digit(16)) {
-            // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
-            ()
-        } else {
-            return Err(self.log_error(LexErrorKind::ParseAddressError));
-        }
-
-        let hash_start_pos = self.pos;
-
-        while let Some(c) = self.peek_current() {
-            if c.is_digit(16) || c == '_' {
-                self.advance();
-            } else {
-                break;
-            }
-        }
-
-        let value = H160::from_slice(
-            self.input[hash_start_pos..self.pos]
-                .split('_')
-                .collect::<Vec<&str>>()
-                .concat()
-                .as_bytes(),
-        );
-
-        let span = Span::new(self.input, start_pos, self.pos);
-
-        Ok(Token::H160Literal { value, span })
     }
 
     /// Tokenize a numeric value (i.e., `i64` or `u64`).
@@ -1000,11 +1010,6 @@ impl<'a> Lexer<'a> {
         cloned_iter.peek().cloned()
     }
 
-    fn peek_previous(&self) -> Option<char> {
-        let mut cloned_iter = self.peekable_chars.clone();
-        cloned_iter.nth(self.pos - 1)
-    }
-
     /// Skip the source string's whitespace, which is considered unnecessary.
     fn skip_whitespace(&mut self) {
         while let Some(c) = self.peek_current() {
@@ -1089,6 +1094,7 @@ fn is_keyword(value: &str) -> bool {
         "u256",
         "h160",
         "h256",
+        "byte",
         "b2",
         "b3",
         "b4",
@@ -1156,6 +1162,7 @@ mod tests {
         block comment
         */
         foo /* don't print */ bar
+        let baz: byte = b"x";
         "#;
 
         let mut lexer = Lexer::new(input);
