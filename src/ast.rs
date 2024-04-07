@@ -112,35 +112,6 @@ pub enum Literal {
     Bool(bool),
 }
 
-/// Enum representing the different precedence levels of operators, respectively.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Precedence {
-    Lowest,
-    Unwrap,             // `?`
-    Assignment,         // `=`
-    CompoundAssignment, // `+=`, `-=`, `*/`, `/=`, `%=`
-    LogicalOr,          // `||`
-    LogicalAnd,         // `&&`
-    Equal,              // `==`
-    NotEqual,           // `!=`
-    LessThan,           // `<`
-    LessThanOrEqual,    // `<=`
-    GreaterThan,        // `>`
-    GreaterThanOrEqual, // `>=`
-    Shift,              // `«`, `»`
-    BitwiseAnd,         // `&`
-    BitwiseXor,         // `^`
-    BitwiseOr,          // `|`
-    Sum,                // `+`
-    Difference,         // `-`
-    Product,            // `*`
-    Quotient,           // `/`
-    Remainder,          // `%`
-    Unary,              // `-`, `!`, `&`, `*`
-    Exponentiation,     // `**`
-    Cast,               // "as"
-}
-
 /// Enum representing the different types of expressions in the AST.
 /// `Expression` nodes always produce or evaluate to a value and may have (side) effects.
 #[derive(Debug, Clone)]

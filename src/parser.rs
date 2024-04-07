@@ -3,10 +3,39 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{BinaryOp, Expression, Literal, Precedence, Statement, Type, UnaryOp},
+    ast::{BinaryOp, Expression, Literal, Statement, Type, UnaryOp},
     error::{CompilerError, ErrorEmitted, ParserErrorKind},
     token::{Token, TokenStream},
 };
+
+/// Enum representing the different precedence levels of operators, respectively.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Precedence {
+    Lowest,
+    Unwrap,             // `?`
+    Assignment,         // `=`
+    CompoundAssignment, // `+=`, `-=`, `*/`, `/=`, `%=`
+    LogicalOr,          // `||`
+    LogicalAnd,         // `&&`
+    Equal,              // `==`
+    NotEqual,           // `!=`
+    LessThan,           // `<`
+    LessThanOrEqual,    // `<=`
+    GreaterThan,        // `>`
+    GreaterThanOrEqual, // `>=`
+    Shift,              // `«`, `»`
+    BitwiseAnd,         // `&`
+    BitwiseXor,         // `^`
+    BitwiseOr,          // `|`
+    Sum,                // `+`
+    Difference,         // `-`
+    Product,            // `*`
+    Quotient,           // `/`
+    Remainder,          // `%`
+    Unary,              // `-`, `!`, `&`, `*`
+    Exponentiation,     // `**`
+    Cast,               // "as"
+}
 
 /// Struct representing the fields within a struct, with a name and value expression.
 #[derive(Debug, Clone)]
