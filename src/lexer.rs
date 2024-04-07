@@ -458,7 +458,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // Match an input string against an outer attribute keyword.
+    /// Match an input string against an outer attribute keyword.
     fn tokenize_outer_attribute(
         &mut self,
         name: String,
@@ -476,7 +476,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // Match an input string against an inner attribute keyword.
+    /// Match an input string against an inner attribute keyword.
     fn tokenize_inner_attribute(
         &mut self,
         name: String,
