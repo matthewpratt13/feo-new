@@ -74,6 +74,7 @@ pub enum Literal {
     Char(char),
     Bool(bool),
 }
+
 /// Wrapper type, turning a `String` into an `Identifier`.
 #[derive(Debug, Clone)]
 pub struct Identifier(pub String);
@@ -127,7 +128,7 @@ pub enum Declaration {
     StaticVar,
     Module,
     Function,
-    TupleStruct
+    TupleStruct,
 }
 
 // TODO: parse:
