@@ -117,15 +117,17 @@ pub enum Expression {
     Underscore(Box<Expression>),
 }
 
-/// Enum representing the different types of statements, which are built up of expressions.
-/// A `Statement` is a component of a block, which is a component of an outer expression
-/// or function.
+// TODO: parse:
+/// Enum representing the different declaration types in the AST.
 #[derive(Debug, Clone)]
-pub enum Statement {
-    Let(String, Expression),
-    Expr(Expression),
-    Item(Item),
-    // TODO: add control flow statements
+pub enum Declaration {
+    Import,
+    Alias,
+    ConstantVar,
+    StaticVar,
+    Module,
+    Function,
+    TupleStruct
 }
 
 // TODO: parse:
@@ -133,22 +135,22 @@ pub enum Statement {
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
 pub enum Item {
-    // definition blocks
+    Module,
     Function,
-    FunctionSig, // (without block)
     Struct,
-    TupleStruct, // (without block)
     Enum,
     Trait,
-    ImplBlock,
-    Module,
-    ModuleSig, // (without block)
+    Impl,
+}
 
-    // declarations
-    TypeAlias,
-    ConstantVar,
-    StaticVar,
-    Import,
+/// Enum representing the different types of statements, which are built up of expressions.
+/// A `Statement` is a component of a block, which is a component of an outer expression
+/// or function.
+#[derive(Debug, Clone)]
+pub enum Statement {
+    Let(Identifier, Expression),
+    Expression(Expression),
+    Declaration(Declaration),
 }
 
 // TODO: parse:

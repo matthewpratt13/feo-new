@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{Expression, Identifier, Literal, Statement, Type},
+    ast::{Declaration, Expression, Identifier, Item, Literal, Statement, Type},
     error::{CompilerError, ErrorEmitted, ParserErrorKind},
     token::{Token, TokenStream},
 };
@@ -78,7 +78,7 @@ pub enum Precedence {
 /// Struct representing the fields within a struct, with a name and value expression.
 #[derive(Debug, Clone)]
 pub struct StructField {
-    name: String,
+    name: Identifier,
     value: Expression,
 }
 
@@ -344,6 +344,29 @@ impl Parser {
         let token = self.consume();
         match token {
             Some(Token::Let { .. }) => self.parse_let_statement(),
+            Some(Token::Import { .. }) => {
+                Ok(Statement::Declaration(self.parse_import_declaration()?))
+            }
+            Some(Token::Alias { .. }) => {
+                Ok(Statement::Declaration(self.parse_alias_declaration()?))
+            }
+            Some(Token::Const { .. }) => {
+                Ok(Statement::Declaration(self.parse_const_declaration()?))
+            }
+            Some(Token::Static { .. }) => {
+                Ok(Statement::Declaration(self.parse_static_var_declaration()?))
+            }
+            Some(Token::Module { .. }) => {
+                Ok(Statement::Declaration(self.parse_module_declaration()?))
+            }
+
+            Some(Token::Struct { .. }) => Ok(Statement::Declaration(
+                self.parse_tuple_struct_declaration()?,
+            )),
+            Some(Token::Func { .. }) => {
+                Ok(Statement::Declaration(self.parse_function_declaration()?))
+            }
+
             _ => {
                 self.unconsume();
                 self.parse_expression_statement()
@@ -367,19 +390,19 @@ impl Parser {
             span: self.stream.span(),
         })?;
 
-        Ok(Statement::Let(identifier.to_string(), value))
+        Ok(Statement::Let(identifier, value))
     }
 
     /// Parse an expression into a statement, separated by a semicolon.
     fn parse_expression_statement(&mut self) -> Result<Statement, ErrorEmitted> {
-        let expression = &self.parse_expression(Precedence::Lowest)?;
+        let expression = self.parse_expression(Precedence::Lowest)?;
 
         self.expect_token(Token::Semicolon {
             punc: ';',
             span: self.stream.span(),
         })?;
 
-        Ok(Statement::Expr(expression.clone()))
+        Ok(Statement::Expression(expression))
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -661,7 +684,7 @@ impl Parser {
             Token::DblDot { .. } | Token::DotDotEquals { .. } => self.parse_range_expression(),
             Token::As { .. } => self.parse_cast_expression(),
             Token::LParen { .. } => self.parse_call_expression(left_expr), // TODO: or tuple struct
-            Token::LBrace { .. } => self.parse_struct(), // TODO: or match expression
+            Token::LBrace { .. } => self.parse_struct_expression(), // TODO: or match expression
             Token::LBracket { .. } => self.parse_index_expression(left_expr), // TODO: check
             Token::FullStop { .. } => match self.peek_current() {
                 Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {
@@ -1135,6 +1158,7 @@ impl Parser {
         Ok(Expression::Tuple(elements))
     }
 
+    /// Parse a type cast expression.
     fn parse_cast_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         let expr = self.parse_expression(Precedence::Cast)?;
 
@@ -1160,7 +1184,7 @@ impl Parser {
     }
 
     /// Parse a struct with fields.
-    fn parse_struct(&mut self) -> Result<Expression, ErrorEmitted> {
+    fn parse_struct_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
 
         self.expect_token(Token::LBrace {
@@ -1202,7 +1226,7 @@ impl Parser {
 
             // push field to list of fields
             fields.push(StructField {
-                name: field_name,
+                name: Identifier(field_name),
                 value: field_value,
             });
 
@@ -1265,9 +1289,61 @@ impl Parser {
         todo!()
     }
 
+    fn parse_import_declaration(&mut self) -> Result<Declaration, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_alias_declaration(&mut self) -> Result<Declaration, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_const_declaration(&mut self) -> Result<Declaration, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_static_var_declaration(&mut self) -> Result<Declaration, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_module_declaration(&mut self) -> Result<Declaration, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_function_declaration(&mut self) -> Result<Declaration, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_tuple_struct_declaration(&mut self) -> Result<Declaration, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_function(&mut self) -> Result<Item, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_module(&mut self) -> Result<Item, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_struct(&mut self) -> Result<Item, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_enum(&mut self) -> Result<Item, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_trait(&mut self) -> Result<Item, ErrorEmitted> {
+        todo!()
+    }
+
+    fn parse_impl(&mut self) -> Result<Item, ErrorEmitted> {
+        todo!()
+    }
+
     ///////////////////////////////////////////////////////////////////////////
 
-    fn expect_identifier(&mut self) -> Result<String, ErrorEmitted> {
+    fn expect_identifier(&mut self) -> Result<Identifier, ErrorEmitted> {
         let token = self
             .stream
             .tokens()
@@ -1279,7 +1355,7 @@ impl Parser {
             .consume()
             .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?
         {
-            Token::Identifier { name, .. } => Ok(name),
+            Token::Identifier { name, .. } => Ok(Identifier(name)),
             _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier".to_string(),
                 found: token,
