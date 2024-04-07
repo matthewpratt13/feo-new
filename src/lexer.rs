@@ -3,7 +3,7 @@
 use std::{iter::Peekable, str::Chars};
 
 use crate::{
-    ast::{IntKind, UIntKind},
+    ast::{self, IntKind, UIntKind},
     error::{CompilerError, ErrorEmitted, LexErrorKind},
     span::Span,
     token::{Token, TokenStream},
@@ -55,7 +55,7 @@ impl<'a> Lexer<'a> {
 
                 _ if c == 'b' && self.peek_next() == Some('\"') => {
                     self.advance();
-                    tokens.push(self.tokenize_string(true)?)
+                    tokens.push(self.tokenize_bytes()?)
                 }
 
                 // not alphanumeric because identifiers / keywords cannot start with numbers;
@@ -90,11 +90,11 @@ impl<'a> Lexer<'a> {
                     tokens.push(self.tokenize_delimiter()?);
                 }
 
-                '"' => tokens.push(self.tokenize_string(false)?),
+                '"' => tokens.push(self.tokenize_string()?),
 
                 '\'' => tokens.push(self.tokenize_char()?),
 
-                '@' => tokens.push(self.tokenize_address()?), // `Address` literal
+                '@' => tokens.push(self.tokenize_h160()?), // `Address` literal
 
                 '$' => tokens.push(self.tokenize_h256()?), // `h256` literal
 
@@ -414,12 +414,42 @@ impl<'a> Lexer<'a> {
                 "u64" => Ok(Token::U64Type { name, span }),
                 "u128" => Ok(Token::U128Type { name, span }),
                 "u256" => Ok(Token::U256Type { name, span }),
+                "h160" => Ok(Token::H160Type { name, span }),
                 "h256" => Ok(Token::H256Type { name, span }),
-                "Address" => Ok(Token::AddressType { name, span }),
+                "b2" => Ok(Token::B2Type { name, span }),
+                "b3" => Ok(Token::B3Type { name, span }),
+                "b4" => Ok(Token::B4Type { name, span }),
+                "b5" => Ok(Token::B5Type { name, span }),
+                "b6" => Ok(Token::B6Type { name, span }),
+                "b7" => Ok(Token::B7Type { name, span }),
+                "b8" => Ok(Token::B8Type { name, span }),
+                "b9" => Ok(Token::B9Type { name, span }),
+                "b10" => Ok(Token::B10Type { name, span }),
+                "b11" => Ok(Token::B11Type { name, span }),
+                "b12" => Ok(Token::B12Type { name, span }),
+                "b13" => Ok(Token::B13Type { name, span }),
+                "b14" => Ok(Token::B14Type { name, span }),
+                "b15" => Ok(Token::B15Type { name, span }),
+                "b16" => Ok(Token::B16Type { name, span }),
+                "b17" => Ok(Token::B17Type { name, span }),
+                "b18" => Ok(Token::B18Type { name, span }),
+                "b19" => Ok(Token::B19Type { name, span }),
+                "b20" => Ok(Token::B20Type { name, span }),
+                "b21" => Ok(Token::B21Type { name, span }),
+                "b22" => Ok(Token::B22Type { name, span }),
+                "b23" => Ok(Token::B23Type { name, span }),
+                "b24" => Ok(Token::B24Type { name, span }),
+                "b25" => Ok(Token::B25Type { name, span }),
+                "b26" => Ok(Token::B26Type { name, span }),
+                "b27" => Ok(Token::B27Type { name, span }),
+                "b28" => Ok(Token::B28Type { name, span }),
+                "b29" => Ok(Token::B29Type { name, span }),
+                "b30" => Ok(Token::B30Type { name, span }),
+                "b31" => Ok(Token::B31Type { name, span }),
+                "b32" => Ok(Token::B32Type { name, span }),
                 "String" => Ok(Token::StringType { name, span }),
                 "char" => Ok(Token::CharType { name, span }),
                 "bool" => Ok(Token::BoolType { name, span }),
-                "bytes" => Ok(Token::BytesType { name, span }),
                 _ => Err(self.log_error(LexErrorKind::UnrecognizedKeyword { name })),
             }
         } else {
@@ -557,8 +587,49 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a string literal, handling escape sequences where applicable.
-    fn tokenize_string(&mut self, bytes: bool) -> Result<Token, ErrorEmitted> {
-        let mut value: Vec<u8> = Vec::new();
+    fn tokenize_string(&mut self) -> Result<Token, ErrorEmitted> {
+        let mut value = String::new();
+
+        let start_pos = self.pos;
+
+        self.advance(); // skip opening quote (`"`)
+
+        while let Some(c) = self.peek_current() {
+            match c {
+                '\\' => {
+                    // handle escape sequences
+                    if let Some(escaped_char) = self.parse_escape_sequence()? {
+                        value.push(escaped_char);
+                        self.advance();
+                    } else {
+                        return Err(self.log_error(LexErrorKind::CharNotFound {
+                            expected: "escape sequence".to_string(),
+                        }));
+                    }
+                }
+                '"' => {
+                    self.advance(); // skip closing quote (`"`)
+
+                    let span = Span::new(self.input, start_pos, self.pos);
+
+                    return Ok(Token::StringLiteral {
+                        value: value.as_bytes().to_vec(),
+                        span,
+                    });
+                }
+                _ => {
+                    value.push(c);
+                    self.advance();
+                }
+            }
+        }
+
+        Err(self.log_error(LexErrorKind::MissingQuote { quote: '\"' }))
+    }
+
+    /// Tokenize a string literal, handling escape sequences where applicable.
+    fn tokenize_bytes(&mut self) -> Result<Token, ErrorEmitted> {
+        let mut value = [0; 32];
 
         let start_pos = self.pos;
 
@@ -582,14 +653,9 @@ impl<'a> Lexer<'a> {
 
                     let span = Span::new(self.input, start_pos, self.pos);
 
-                    if bytes {
-                        return Ok(Token::Bytes32Literal {
-                            value: &value,
-                            span,
-                        });
-                    }
+                    let bytes = ast::get_bytes(value.as_slice());
 
-                    return Ok(Token::StringLiteral { value, span });
+                    return Ok(Token::BytesLiteral { value: bytes, span });
                 }
                 _ => {
                     c.encode_utf8(&mut value);
@@ -729,7 +795,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize an address (20-byte hash) literal.
-    fn tokenize_address(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_h160(&mut self) -> Result<Token, ErrorEmitted> {
         let start_pos = self.pos;
 
         self.advance(); // skip `@`
@@ -744,7 +810,7 @@ impl<'a> Lexer<'a> {
             return Err(self.log_error(LexErrorKind::ParseAddressError));
         }
 
-        let address_start_pos = self.pos;
+        let hash_start_pos = self.pos;
 
         while let Some(c) = self.peek_current() {
             if c.is_digit(16) || c == '_' {
@@ -755,7 +821,7 @@ impl<'a> Lexer<'a> {
         }
 
         let value = H160::from_slice(
-            self.input[address_start_pos..self.pos]
+            self.input[hash_start_pos..self.pos]
                 .split('_')
                 .collect::<Vec<&str>>()
                 .concat()
@@ -764,7 +830,7 @@ impl<'a> Lexer<'a> {
 
         let span = Span::new(self.input, start_pos, self.pos);
 
-        Ok(Token::AddressLiteral { value, span })
+        Ok(Token::H160Literal { value, span })
     }
 
     /// Tokenize a numeric value (i.e., `i64` or `u64`).
@@ -1021,8 +1087,39 @@ fn is_keyword(value: &str) -> bool {
         "u64",
         "u128",
         "u256",
+        "h160",
         "h256",
-        "Address",
+        "b2",
+        "b3",
+        "b4",
+        "b5",
+        "b6",
+        "b7",
+        "b8",
+        "b9",
+        "b10",
+        "b11",
+        "b12",
+        "b13",
+        "b14",
+        "b15",
+        "b16",
+        "b17",
+        "b18",
+        "b19",
+        "b20",
+        "b21",
+        "b22",
+        "b23",
+        "b24",
+        "b25",
+        "b26",
+        "b27",
+        "b28",
+        "b29",
+        "b30",
+        "b31",
+        "b32",
         "String",
         "char",
         "bool",
@@ -1124,10 +1221,12 @@ mod tests {
     fn tokenize_function() {
         let input = r#"
         func foo(param1: u64, param2: char, param3: bool) -> ReturnType {
+            let bar: b3 = b"bar";
+            
             if (param3) {
                 print("{}", param2);
             } else {
-                print("bar");
+                print(bar);
             }
 
             for x in y {

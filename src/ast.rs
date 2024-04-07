@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use crate::{parser::StructField, H160, H256, U256};
+use crate::{
+    parser::StructField, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B2, B20, B21, B22, B23,
+    B24, B25, B26, B27, B28, B29, B3, B30, B31, B32, B4, B5, B6, B7, B8, B9, H160, H256, U256,
+};
 
 /// Enum representing the different signed integer types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -19,12 +22,40 @@ pub enum UIntKind {
     U64(u64),
     U128(u128),
 }
-
 /// Enum representing the different hash types.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum HashKind {
-    H256(H256),
-    Address(H160),
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Bytes {
+    B2(B2),
+    B3(B3),
+    B4(B4),
+    B5(B5),
+    B6(B6),
+    B7(B7),
+    B8(B8),
+    B9(B9),
+    B10(B10),
+    B11(B11),
+    B12(B12),
+    B13(B13),
+    B14(B14),
+    B15(B15),
+    B16(B16),
+    B17(B17),
+    B18(B18),
+    B19(B19),
+    B20(B20),
+    B21(B21),
+    B22(B22),
+    B23(B23),
+    B24(B24),
+    B25(B25),
+    B26(B26),
+    B27(B27),
+    B28(B28),
+    B29(B29),
+    B30(B30),
+    B31(B31),
+    B32(B32),
 }
 
 /// Enum representing the different unary operators.
@@ -71,8 +102,9 @@ pub enum Literal {
     Int(IntKind),
     UInt(UIntKind),
     U256(U256),
+    H160(H160),
     H256(H256),
-    Address(H160),
+    Bytes(Bytes),
     String(Vec<u8>),
     Char(char),
     Bool(bool),
@@ -188,8 +220,8 @@ pub enum Type {
     Int,
     UInt,
     U256,
+    H160,
     H256,
-    Address,
     String,
     Char,
     Bool,
@@ -204,4 +236,45 @@ pub enum Type {
     Function,
     Reference, // e.g., `&Type` / `&mut Type`
     SelfType,
+}
+
+pub fn get_bytes(value: &[u8]) -> Bytes {
+    let bytes = match value.len() {
+        0 => panic!("empty slice"),
+        1 => panic!("byte arrays must have more than one element"),
+        2 => Bytes::B2(B2::from_slice(value)),
+        3 => Bytes::B3(B3::from_slice(value)),
+        4 => Bytes::B4(B4::from_slice(value)),
+        5 => Bytes::B5(B5::from_slice(value)),
+        6 => Bytes::B6(B6::from_slice(value)),
+        7 => Bytes::B7(B7::from_slice(value)),
+        8 => Bytes::B8(B8::from_slice(value)),
+        9 => Bytes::B9(B9::from_slice(value)),
+        10 => Bytes::B10(B10::from_slice(value)),
+        11 => Bytes::B11(B11::from_slice(value)),
+        12 => Bytes::B12(B12::from_slice(value)),
+        13 => Bytes::B13(B13::from_slice(value)),
+        14 => Bytes::B14(B14::from_slice(value)),
+        15 => Bytes::B15(B15::from_slice(value)),
+        16 => Bytes::B16(B16::from_slice(value)),
+        17 => Bytes::B17(B17::from_slice(value)),
+        18 => Bytes::B18(B18::from_slice(value)),
+        19 => Bytes::B19(B19::from_slice(value)),
+        20 => Bytes::B20(B20::from_slice(value)),
+        21 => Bytes::B21(B21::from_slice(value)),
+        22 => Bytes::B22(B22::from_slice(value)),
+        23 => Bytes::B23(B23::from_slice(value)),
+        24 => Bytes::B24(B24::from_slice(value)),
+        25 => Bytes::B25(B25::from_slice(value)),
+        26 => Bytes::B26(B26::from_slice(value)),
+        27 => Bytes::B27(B27::from_slice(value)),
+        28 => Bytes::B28(B28::from_slice(value)),
+        29 => Bytes::B29(B29::from_slice(value)),
+        30 => Bytes::B30(B30::from_slice(value)),
+        31 => Bytes::B31(B31::from_slice(value)),
+        32 => Bytes::B32(B32::from_slice(value)),
+        _ => panic!("slice too big"),
+    };
+
+    bytes
 }
