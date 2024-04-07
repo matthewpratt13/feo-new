@@ -22,7 +22,8 @@ pub enum UIntKind {
     U64(u64),
     U128(u128),
 }
-/// Enum representing the different hash types.
+
+/// Enum representing the different byte array types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Bytes {
     B2(B2),
