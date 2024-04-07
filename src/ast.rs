@@ -74,6 +74,36 @@ pub enum Literal {
     Bool(bool),
 }
 
+/// Enum representing the different keyword AST nodes.
+#[derive(Debug, Clone)]
+pub enum Keyword {
+    Import,
+    Module,
+    Package,
+    KwSelf,
+    KwSelfType,
+    Super,
+    Pub,
+    As,
+    Const,
+    Static,
+    Func,
+    Struct,
+    Enum,
+    Trait,
+    Impl,
+    If,
+    Else,
+    Match,
+    Loop,
+    For,
+    In,
+    While,
+    Break,
+    Continue,
+    Return,
+}
+
 /// Enum representing the different delimiter AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Delimiter {
@@ -126,10 +156,14 @@ pub enum BinaryOp {
 /// Enum representing the different separator (punctuation) AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Separator {
-    FullStop,
-    Semicolon,
     Colon,
+    Semicolon,
     Comma,
+    FullStop,
+    DblColon,
+    ColonColonAsterisk,
+    ThinArrow,
+    FatArrow,
     Underscore,
 }
 
@@ -184,16 +218,14 @@ pub enum Expression {
 }
 
 // TODO: parse:
-/// Enum representing the different declaration types in the AST.
+/// Enum representing the different declaration nodes in the AST.
+/// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
 pub enum Declaration {
     Import,
     Alias,
-    ConstantVar,
+    Constant,
     StaticVar,
-    Module,
-    Function,
-    TupleStruct,
 }
 
 // TODO: parse:
@@ -202,11 +234,11 @@ pub enum Declaration {
 #[derive(Debug, Clone)]
 pub enum Item {
     Module,
-    Function,
     Struct,
     Enum,
     Trait,
     Impl,
+    Function,
 }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
@@ -216,6 +248,7 @@ pub enum Item {
 pub enum Statement {
     Let(Identifier, Expression),
     Expression(Expression),
+    Item(Item),
     Declaration(Declaration),
 }
 

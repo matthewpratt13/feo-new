@@ -285,7 +285,7 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Main parsing function that returns a `VecStatement`.
+    /// Main parsing function that returns a `Vec<Statement>`.
     fn parse(&mut self) -> Result<Vec<Statement>, ErrorEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
         while !self.is_at_end() {
@@ -313,16 +313,12 @@ impl Parser {
             Some(Token::Static { .. }) => {
                 Ok(Statement::Declaration(self.parse_static_var_declaration()?))
             }
-            Some(Token::Module { .. }) => {
-                Ok(Statement::Declaration(self.parse_module_declaration()?))
-            }
-
-            Some(Token::Struct { .. }) => Ok(Statement::Declaration(
-                self.parse_tuple_struct_declaration()?,
-            )),
-            Some(Token::Func { .. }) => {
-                Ok(Statement::Declaration(self.parse_function_declaration()?))
-            }
+            Some(Token::Module { .. }) => Ok(Statement::Item(self.parse_module()?)),
+            Some(Token::Struct { .. }) => Ok(Statement::Item(self.parse_struct()?)),
+            Some(Token::Enum { .. }) => Ok(Statement::Item(self.parse_enum()?)),
+            Some(Token::Trait { .. }) => Ok(Statement::Item(self.parse_trait()?)),
+            Some(Token::Impl { .. }) => Ok(Statement::Item(self.parse_impl()?)),
+            Some(Token::Func { .. }) => Ok(Statement::Item(self.parse_function()?)),
 
             _ => {
                 self.unconsume();
@@ -1262,22 +1258,6 @@ impl Parser {
         todo!()
     }
 
-    fn parse_module_declaration(&mut self) -> Result<Declaration, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_function_declaration(&mut self) -> Result<Declaration, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_tuple_struct_declaration(&mut self) -> Result<Declaration, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_function(&mut self) -> Result<Item, ErrorEmitted> {
-        todo!()
-    }
-
     fn parse_module(&mut self) -> Result<Item, ErrorEmitted> {
         todo!()
     }
@@ -1295,6 +1275,9 @@ impl Parser {
     }
 
     fn parse_impl(&mut self) -> Result<Item, ErrorEmitted> {
+        todo!()
+    }
+    fn parse_function(&mut self) -> Result<Item, ErrorEmitted> {
         todo!()
     }
 
