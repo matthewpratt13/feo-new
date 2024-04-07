@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use crate::{
-    parser::{BinaryOp, StructField, UnaryOp},
     B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B2, B20, B21, B22, B23, B24, B25, B26, B27,
     B28, B29, B3, B30, B31, B32, B4, B5, B6, B7, B8, B9, H160, H256, U256,
 };
@@ -60,7 +59,7 @@ pub enum Bytes {
     B32(B32),
 }
 
-/// Enum representing the different literal types available in parsing.
+/// Enum representing the different literal AST nodes.
 #[derive(Debug, Clone)]
 pub enum Literal {
     Int(IntKind),
@@ -75,11 +74,77 @@ pub enum Literal {
     Bool(bool),
 }
 
-/// Wrapper type, turning a `String` into an `Identifier`.
+/// Enum representing the different delimiter AST nodes.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Delimiter {
+    LParen,
+    RParen,
+    LBracket,
+    RBracket,
+    LBrace,
+    RBrace,
+}
+
+/// Enum representing the different unary operator AST nodes.
+#[derive(Debug, Clone, PartialEq)]
+pub enum UnaryOp {
+    Negate,      // `-`
+    Not,         // `!`
+    Reference,   // `&`
+    Dereference, // `*`
+}
+
+/// Enum representing the different binary operator AST nodes.
+#[derive(Debug, Clone, PartialEq)]
+pub enum BinaryOp {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulus,
+    Equal,
+    NotEqual,
+    LessThan,
+    LessEqual,
+    GreaterThan,
+    GreaterEqual,
+    Assign,
+    AddAssign,
+    SubtractAssign,
+    MultiplyAssign,
+    DivideAssign,
+    ModulusAssign,
+    LogicalAnd,
+    LogicalOr,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    ShiftLeft,
+    ShiftRight,
+}
+
+/// Enum representing the different separator (punctuation) AST nodes.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Separator {
+    FullStop,
+    Semicolon,
+    Colon,
+    Comma,
+    Underscore,
+}
+
+/// Wrapper type, turning a `String` into an `Identifier` AST node.
 #[derive(Debug, Clone)]
 pub struct Identifier(pub String);
 
-/// Enum representing the different types of expressions in the AST.
+/// Struct representing the fields within a struct, with a name and value expression.
+#[derive(Debug, Clone)]
+pub struct StructField {
+    pub name: Identifier,
+    pub value: Expression,
+}
+
+/// Enum representing the different expression AST nodes.
 /// `Expression` nodes always produce or evaluate to a value and may have (side) effects.
 #[derive(Debug, Clone)]
 pub enum Expression {
@@ -132,7 +197,7 @@ pub enum Declaration {
 }
 
 // TODO: parse:
-/// Enum representing the different items in the AST.
+/// Enum representing the different item nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
 pub enum Item {
@@ -144,7 +209,7 @@ pub enum Item {
     Impl,
 }
 
-/// Enum representing the different types of statements, which are built up of expressions.
+/// Enum representing the different statement AST nodes, which are built up of expressions.
 /// A `Statement` is a component of a block, which is a component of an outer expression
 /// or function.
 #[derive(Debug, Clone)]

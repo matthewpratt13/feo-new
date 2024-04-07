@@ -3,48 +3,13 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{Declaration, Expression, Identifier, Item, Literal, Statement, Type},
+    ast::{
+        BinaryOp, Declaration, Expression, Identifier, Item, Literal, Statement, StructField, Type,
+        UnaryOp,
+    },
     error::{CompilerError, ErrorEmitted, ParserErrorKind},
     token::{Token, TokenStream},
 };
-
-/// Enum representing the different unary operators.
-#[derive(Debug, Clone, PartialEq)]
-pub enum UnaryOp {
-    Negate,      // `-`
-    Not,         // `!`
-    Reference,   // `&`
-    Dereference, // `*`
-}
-
-/// Enum representing the different binary operators.
-#[derive(Debug, Clone, PartialEq)]
-pub enum BinaryOp {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Modulus,
-    Equal,
-    NotEqual,
-    LessThan,
-    LessEqual,
-    GreaterThan,
-    GreaterEqual,
-    Assign,
-    AddAssign,
-    SubtractAssign,
-    MultiplyAssign,
-    DivideAssign,
-    ModulusAssign,
-    LogicalAnd,
-    LogicalOr,
-    BitwiseAnd,
-    BitwiseOr,
-    BitwiseXor,
-    ShiftLeft,
-    ShiftRight,
-}
 
 /// Enum representing the different precedence levels of operators, respectively.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -74,14 +39,6 @@ pub enum Precedence {
     Exponentiation,     // `**`
     Cast,               // "as"
 }
-
-/// Struct representing the fields within a struct, with a name and value expression.
-#[derive(Debug, Clone)]
-pub struct StructField {
-    name: Identifier,
-    value: Expression,
-}
-
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
 #[derive(Debug)]
