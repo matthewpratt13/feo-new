@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 
 use crate::{
-    parser::StructField, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B2, B20, B21, B22, B23,
-    B24, B25, B26, B27, B28, B29, B3, B30, B31, B32, B4, B5, B6, B7, B8, B9, H160, H256, U256,
+    parser::{BinaryOp, StructField, UnaryOp},
+    B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B2, B20, B21, B22, B23, B24, B25, B26, B27,
+    B28, B29, B3, B30, B31, B32, B4, B5, B6, B7, B8, B9, H160, H256, U256,
 };
 
 /// Enum representing the different signed integer types.
@@ -59,44 +60,6 @@ pub enum Bytes {
     B32(B32),
 }
 
-/// Enum representing the different unary operators.
-#[derive(Debug, Clone, PartialEq)]
-pub enum UnaryOp {
-    Negate,      // `-`
-    Not,         // `!`
-    Reference,   // `&`
-    Dereference, // `*`
-}
-
-/// Enum representing the different binary operators.
-#[derive(Debug, Clone, PartialEq)]
-pub enum BinaryOp {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Modulus,
-    Equal,
-    NotEqual,
-    LessThan,
-    LessEqual,
-    GreaterThan,
-    GreaterEqual,
-    Assign,
-    AddAssign,
-    SubtractAssign,
-    MultiplyAssign,
-    DivideAssign,
-    ModulusAssign,
-    LogicalAnd,
-    LogicalOr,
-    BitwiseAnd,
-    BitwiseOr,
-    BitwiseXor,
-    ShiftLeft,
-    ShiftRight,
-}
-
 /// Enum representing the different literal types available in parsing.
 #[derive(Debug, Clone)]
 pub enum Literal {
@@ -111,13 +74,16 @@ pub enum Literal {
     Char(char),
     Bool(bool),
 }
+/// Wrapper type, turning a `String` into an `Identifier`.
+#[derive(Debug, Clone)]
+pub struct Identifier(pub String);
 
 /// Enum representing the different types of expressions in the AST.
 /// `Expression` nodes always produce or evaluate to a value and may have (side) effects.
 #[derive(Debug, Clone)]
 pub enum Expression {
     Literal(Literal),
-    Identifier(String),
+    Identifier(Identifier),
     UnaryOp(UnaryOp, Box<Expression>),
     BinaryOp(BinaryOp, Box<Expression>, Box<Expression>),
     If(Box<Expression>, Box<Expression>, Option<Box<Expression>>), // condition, true, false
@@ -127,7 +93,7 @@ pub enum Expression {
     Block(Vec<Expression>),
     Index(Box<Expression>, Box<Expression>),
     Call(Box<Expression>, Vec<Expression>),
-    FieldAccess(Box<Expression>, String),
+    FieldAccess(Box<Expression>, Identifier),
     Cast(Box<Expression>, Type),
     Unwrap(Box<Expression>, Box<Expression>),
     Struct(Vec<StructField>),
@@ -159,6 +125,7 @@ pub enum Statement {
     Let(String, Expression),
     Expr(Expression),
     Item(Item),
+    // TODO: add control flow statements
 }
 
 // TODO: parse:
@@ -212,6 +179,7 @@ pub enum Type {
     SelfType,
 }
 
+/// Helper function to turn a slice into a `Bytes`.
 pub fn get_bytes(value: &[u8]) -> Bytes {
     let bytes = match value.len() {
         0 => panic!("empty slice"),

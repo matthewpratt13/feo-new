@@ -3,10 +3,48 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{BinaryOp, Expression, Literal, Statement, Type, UnaryOp},
+    ast::{Expression, Identifier, Literal, Statement, Type},
     error::{CompilerError, ErrorEmitted, ParserErrorKind},
     token::{Token, TokenStream},
 };
+
+/// Enum representing the different unary operators.
+#[derive(Debug, Clone, PartialEq)]
+pub enum UnaryOp {
+    Negate,      // `-`
+    Not,         // `!`
+    Reference,   // `&`
+    Dereference, // `*`
+}
+
+/// Enum representing the different binary operators.
+#[derive(Debug, Clone, PartialEq)]
+pub enum BinaryOp {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulus,
+    Equal,
+    NotEqual,
+    LessThan,
+    LessEqual,
+    GreaterThan,
+    GreaterEqual,
+    Assign,
+    AddAssign,
+    SubtractAssign,
+    MultiplyAssign,
+    DivideAssign,
+    ModulusAssign,
+    LogicalAnd,
+    LogicalOr,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    ShiftLeft,
+    ShiftRight,
+}
 
 /// Enum representing the different precedence levels of operators, respectively.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -372,7 +410,9 @@ impl Parser {
         match token {
             Token::Identifier { name, .. }
             | Token::SelfKeyword { name, .. }
-            | Token::Underscore { name, .. } => Ok(Expression::Identifier(name.to_string())),
+            | Token::Underscore { name, .. } => {
+                Ok(Expression::Identifier(Identifier(name.to_string())))
+            }
             Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
             Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
             Token::U256Literal { value, .. } => Ok(Expression::Literal(Literal::U256(value))),
@@ -943,7 +983,7 @@ impl Parser {
         if let Token::Identifier { name, .. } = field_token {
             Ok(Expression::FieldAccess(
                 Box::new(object_expr),
-                name.to_string(),
+                Identifier(name.to_string()),
             ))
         } else {
             Err(self.log_error(ParserErrorKind::UnexpectedToken {
@@ -1247,7 +1287,7 @@ impl Parser {
         }
     }
 
-    fn consume_identifier(&mut self) -> Result<String, ErrorEmitted> {
+    fn consume_identifier(&mut self) -> Result<Identifier, ErrorEmitted> {
         let token = self
             .stream
             .tokens()
@@ -1259,7 +1299,7 @@ impl Parser {
             .consume()
             .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?
         {
-            Ok(name.to_string())
+            Ok(Identifier(name.to_string()))
         } else {
             Err(self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier".to_string(),
