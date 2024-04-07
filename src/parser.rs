@@ -11,25 +11,25 @@ use crate::{
 /// Struct representing the fields within a struct, with a name and value expression.
 #[derive(Debug, Clone)]
 pub struct StructField {
-    name: &'static str,
+    name: String,
     value: Expression,
 }
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
 #[derive(Debug)]
-struct Parser<'a> {
-    stream: TokenStream<'a>,
+struct Parser {
+    stream: TokenStream,
     current: usize,
-    errors: Vec<CompilerError<ParserErrorKind<'a>>>, // store compiler errors
-    precedences: HashMap<Token<'a>, Precedence>,     // record of precedence levels by operator
+    errors: Vec<CompilerError<ParserErrorKind>>, // store compiler errors
+    precedences: HashMap<Token, Precedence>,     // record of precedence levels by operator
 }
 
-impl<'a> Parser<'a> {
+impl Parser {
     /// Create a new `Parser` instance.
     /// Initialize an empty `Vec` to store parser errors and an empty `HashMap`
     /// to store precedences.
-    fn new(stream: TokenStream<'a>) -> Self {
+    fn new(stream: TokenStream) -> Self {
         Parser {
             stream,
             current: 0,
@@ -42,14 +42,14 @@ impl<'a> Parser<'a> {
     fn init_precedences(&mut self) {
         self.precedences.insert(
             Token::As {
-                name: "as",
+                name: "as".to_string(),
                 span: self.stream.span(),
             },
             Precedence::Cast,
         );
         self.precedences.insert(
             Token::DblAsterisk {
-                punc: "**",
+                punc: "**".to_string(),
                 span: self.stream.span(),
             },
             Precedence::Exponentiation,
@@ -140,21 +140,21 @@ impl<'a> Parser<'a> {
         );
         self.precedences.insert(
             Token::DblLessThan {
-                punc: "<<",
+                punc: "<<".to_string(),
                 span: self.stream.span(),
             },
             Precedence::Shift,
         );
         self.precedences.insert(
             Token::DblGreaterThan {
-                punc: ">>",
+                punc: ">>".to_string(),
                 span: self.stream.span(),
             },
             Precedence::Shift,
         );
         self.precedences.insert(
             Token::GreaterThanEquals {
-                punc: ">=",
+                punc: ">=".to_string(),
                 span: self.stream.span(),
             },
             Precedence::GreaterThanOrEqual,
@@ -168,7 +168,7 @@ impl<'a> Parser<'a> {
         );
         self.precedences.insert(
             Token::LessThanEquals {
-                punc: "<=",
+                punc: "<=".to_string(),
                 span: self.stream.span(),
             },
             Precedence::LessThanOrEqual,
@@ -182,63 +182,63 @@ impl<'a> Parser<'a> {
         );
         self.precedences.insert(
             Token::BangEquals {
-                punc: "!=",
+                punc: "!=".to_string(),
                 span: self.stream.span(),
             },
             Precedence::NotEqual,
         );
         self.precedences.insert(
             Token::DblEquals {
-                punc: "==",
+                punc: "==".to_string(),
                 span: self.stream.span(),
             },
             Precedence::Equal,
         );
         self.precedences.insert(
             Token::DblAmpersand {
-                punc: "&&",
+                punc: "&&".to_string(),
                 span: self.stream.span(),
             },
             Precedence::LogicalAnd,
         );
         self.precedences.insert(
             Token::DblPipe {
-                punc: "||",
+                punc: "||".to_string(),
                 span: self.stream.span(),
             },
             Precedence::LogicalOr,
         );
         self.precedences.insert(
             Token::PercentEquals {
-                punc: "%=",
+                punc: "%=".to_string(),
                 span: self.stream.span(),
             },
             Precedence::CompoundAssignment,
         );
         self.precedences.insert(
             Token::SlashEquals {
-                punc: "/=",
+                punc: "/=".to_string(),
                 span: self.stream.span(),
             },
             Precedence::CompoundAssignment,
         );
         self.precedences.insert(
             Token::AsteriskEquals {
-                punc: "*=",
+                punc: "*=".to_string(),
                 span: self.stream.span(),
             },
             Precedence::CompoundAssignment,
         );
         self.precedences.insert(
             Token::MinusEquals {
-                punc: "-=",
+                punc: "-=".to_string(),
                 span: self.stream.span(),
             },
             Precedence::CompoundAssignment,
         );
         self.precedences.insert(
             Token::PlusEquals {
-                punc: "+=",
+                punc: "+=".to_string(),
                 span: self.stream.span(),
             },
             Precedence::CompoundAssignment,
@@ -354,8 +354,8 @@ impl<'a> Parser<'a> {
             Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
             Token::LParen { .. } => self.parse_grouped_expression(),
             _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier or literal",
-                found: &token,
+                expected: "identifier or literal".to_string(),
+                found: token,
             })),
         }
     }
@@ -467,8 +467,8 @@ impl<'a> Parser<'a> {
                             | Token::U256Literal { .. },
                         ) => Ok(expr),
                         Some(t) => Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "identifier or number",
-                            found: &t,
+                            expected: "identifier or number".to_string(),
+                            found: t,
                         })),
                         None => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
                     }
@@ -594,8 +594,8 @@ impl<'a> Parser<'a> {
                 }
                 Some(Token::UIntLiteral { .. }) => self.parse_tuple_index_expression(),
                 _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "identifier or tuple index",
-                    found: &token,
+                    expected: "identifier or tuple index".to_string(),
+                    found: token,
                 })),
             },
             Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => {
@@ -860,8 +860,8 @@ impl<'a> Parser<'a> {
                 Token::RParen { .. } => break,   // end of arguments
                 _ => {
                     return Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `)`",
-                        found: &token,
+                        expected: "`,` or `)`".to_string(),
+                        found: token,
                     }))
                 }
             }
@@ -909,8 +909,8 @@ impl<'a> Parser<'a> {
             ))
         } else {
             Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier after `.`",
-                found: &field_token,
+                expected: "identifier after `.`".to_string(),
+                found: field_token,
             }))
         }
     }
@@ -919,7 +919,7 @@ impl<'a> Parser<'a> {
     /// Parse an `if` expression (i.e., `if (condition) { true block } else { false block }`).
     fn parse_if_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         self.expect_token(Token::If {
-            name: "if",
+            name: "if".to_string(),
             span: self.stream.span(),
         })?;
 
@@ -938,7 +938,7 @@ impl<'a> Parser<'a> {
         let true_branch = Box::new(self.parse_expression(Precedence::Lowest)?);
 
         let false_branch = if self.match_token(Token::Else {
-            name: "else",
+            name: "else".to_string(),
             span: self.stream.span(),
         }) {
             Some(Box::new(self.parse_expression(Precedence::Lowest)?))
@@ -952,14 +952,14 @@ impl<'a> Parser<'a> {
     /// Parse a `for-in` expression (i.e., `for var in iterable { execution logic }`).
     fn parse_for_in_expression(&mut self) -> Result<Expression, ErrorEmitted> {
         self.expect_token(Token::For {
-            name: "for",
+            name: "for".to_string(),
             span: self.stream.span(),
         })?;
 
         let variable = Box::new(Expression::Identifier(self.consume_identifier()?));
 
         self.expect_token(Token::In {
-            name: "in",
+            name: "in".to_string(),
             span: self.stream.span(),
         })?;
 
@@ -1066,13 +1066,13 @@ impl<'a> Parser<'a> {
 
         if token
             != (Token::As {
-                name: "as",
+                name: "as".to_string(),
                 span: self.stream.span(),
             })
         {
             return Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "as",
-                found: &token,
+                expected: "as".to_string(),
+                found: token,
             }));
         }
 
@@ -1108,8 +1108,8 @@ impl<'a> Parser<'a> {
                         .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
 
                     return Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "identifier or `}`",
-                        found: &token,
+                        expected: "identifier or `}`".to_string(),
+                        found: token,
                     }))?;
                 }
             };
@@ -1137,8 +1137,8 @@ impl<'a> Parser<'a> {
                 Token::RBrace { .. } => break,   // end of struct
                 _ => {
                     return Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `}`",
-                        found: &token,
+                        expected: "`,` or `}`".to_string(),
+                        found: token,
                     }))
                 }
             }
@@ -1189,7 +1189,7 @@ impl<'a> Parser<'a> {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    fn expect_identifier(&mut self) -> Result<&'static str, ErrorEmitted> {
+    fn expect_identifier(&mut self) -> Result<String, ErrorEmitted> {
         let token = self
             .stream
             .tokens()
@@ -1203,8 +1203,8 @@ impl<'a> Parser<'a> {
         {
             Token::Identifier { name, .. } => Ok(name),
             _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier",
-                found: &token,
+                expected: "identifier".to_string(),
+                found: token,
             })),
         }
     }
@@ -1224,8 +1224,8 @@ impl<'a> Parser<'a> {
             Ok(name.to_string())
         } else {
             Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier",
-                found: &token,
+                expected: "identifier".to_string(),
+                found: token,
             }))
         }
     }
@@ -1253,8 +1253,8 @@ impl<'a> Parser<'a> {
         match self.consume() {
             Some(token) if token == expected => Ok(()),
             Some(token) => Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`{:#?}`",
-                found: &token,
+                expected: "`{:#?}`".to_string(),
+                found: token,
             })),
             None => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
         }

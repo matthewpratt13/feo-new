@@ -16,7 +16,7 @@ struct Lexer<'a> {
     input: &'a str,
     pos: usize,
     peekable_chars: Peekable<Chars<'a>>,
-    errors: Vec<CompilerError<LexErrorKind<'a>>>,
+    errors: Vec<CompilerError<LexErrorKind>>,
 }
 
 impl<'a> Lexer<'a> {
@@ -80,7 +80,7 @@ impl<'a> Lexer<'a> {
                             .ok_or(self.log_error(LexErrorKind::UnexpectedEndOfInput))?;
 
                         return Err(self.log_error(LexErrorKind::UnexpectedChar {
-                            expected: "`[` or `!`",
+                            expected: "`[` or `!`".to_string(),
                             found: current_char,
                         }));
                     }
@@ -132,7 +132,7 @@ impl<'a> Lexer<'a> {
 
                 _ => {
                     return Err(self.log_error(LexErrorKind::UnrecognizedChar {
-                        value: &format!("{}", c),
+                        value: format!("{}", c),
                     }))
                 }
             }
@@ -165,7 +165,7 @@ impl<'a> Lexer<'a> {
                     self.advance();
                 }
 
-                let comment = self.input[comment_start_pos..self.pos].trim();
+                let comment = self.input[comment_start_pos..self.pos].trim().to_string();
 
                 self.advance();
 
@@ -223,13 +223,13 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        let name = self.input[start_pos..self.pos].trim();
+        let name = self.input[start_pos..self.pos].trim().to_string();
         let span = Span::new(self.input, start_pos, self.pos);
 
         // check if the input is a reserved keyword (including booleans and type annotations)
         // or return a `Token::Identifier`
-        if is_keyword(name) {
-            match name {
+        if is_keyword(&name) {
+            match name.as_str() {
                 "abstract" => {
                     if let Some(']') = self.peek_current() {
                         let token = self.tokenize_outer_attribute(name, span);
@@ -423,16 +423,16 @@ impl<'a> Lexer<'a> {
                 _ => Err(self.log_error(LexErrorKind::UnrecognizedKeyword { name })),
             }
         } else {
-            Ok(Token::Identifier { name: &name, span })
+            Ok(Token::Identifier { name, span })
         }
     }
 
     fn tokenize_outer_attribute(
         &mut self,
-        name: &'a str,
+        name: String,
         span: Span,
     ) -> Result<Token, ErrorEmitted> {
-        match name {
+        match name.as_str() {
             "abstract" => Ok(Token::Abstract { name, span }),
             "calldata" => Ok(Token::Calldata { name, span }),
             "extern" => Ok(Token::Extern { name, span }),
@@ -440,16 +440,16 @@ impl<'a> Lexer<'a> {
             "storage" => Ok(Token::Payable { name, span }),
             "topic" => Ok(Token::Payable { name, span }),
             "unsafe" => Ok(Token::Payable { name, span }),
-            _ => Err(self.log_error(LexErrorKind::UnrecognizedAttribute { name: name })),
+            _ => Err(self.log_error(LexErrorKind::UnrecognizedAttribute { name })),
         }
     }
 
     fn tokenize_inner_attribute(
         &mut self,
-        name: &'a str,
+        name: String,
         span: Span,
     ) -> Result<Token, ErrorEmitted> {
-        match name {
+        match name.as_str() {
             "constructor" => Ok(Token::Constructor { name, span }),
             "contract" => Ok(Token::Contract { name, span }),
             "error" => Ok(Token::Error { name, span }),
@@ -470,7 +470,7 @@ impl<'a> Lexer<'a> {
         let delim = self
             .peek_current()
             .ok_or(self.log_error(LexErrorKind::CharNotFound {
-                expected: "delimiter",
+                expected: "delimiter".to_string(),
             }))?;
 
         match delim {
@@ -499,7 +499,7 @@ impl<'a> Lexer<'a> {
             '}' => self.tokenize_closing_delimiter('}'),
 
             _ => Err(self.log_error(LexErrorKind::UnexpectedChar {
-                expected: "delimiter",
+                expected: "delimiter".to_string(),
                 found: delim,
             })),
         }
@@ -517,7 +517,7 @@ impl<'a> Lexer<'a> {
         // check if the current character is a delimiter
         if !is_delimiter(delim) {
             return Err(self.log_error(LexErrorKind::UnexpectedChar {
-                expected: "delimiter",
+                expected: "delimiter".to_string(),
                 found: delim,
             }));
         }
@@ -543,7 +543,7 @@ impl<'a> Lexer<'a> {
 
                 _ => {
                     return Err(self.log_error(LexErrorKind::UnexpectedChar {
-                        expected: "closing delimiter",
+                        expected: "closing delimiter".to_string(),
                         found: delim,
                     }))
                 }
@@ -573,7 +573,7 @@ impl<'a> Lexer<'a> {
                         self.advance();
                     } else {
                         return Err(self.log_error(LexErrorKind::CharNotFound {
-                            expected: "escape sequence",
+                            expected: "escape sequence".to_string(),
                         }));
                     }
                 }
@@ -583,7 +583,7 @@ impl<'a> Lexer<'a> {
                     let span = Span::new(self.input, start_pos, self.pos);
 
                     if bytes {
-                        return Ok(Token::BytesLiteral {
+                        return Ok(Token::Bytes32Literal {
                             value: &value,
                             span,
                         });
@@ -622,7 +622,7 @@ impl<'a> Lexer<'a> {
                         })
                     } else {
                         return Err(self.log_error(LexErrorKind::CharNotFound {
-                            expected: "escape sequence",
+                            expected: "escape sequence".to_string(),
                         }));
                     }
                 }
@@ -647,7 +647,7 @@ impl<'a> Lexer<'a> {
             }
         } else {
             Err(self.log_error(LexErrorKind::CharNotFound {
-                expected: "character literal",
+                expected: "character literal".to_string(),
             }))
         }
     }
@@ -836,12 +836,12 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        let punc = self.input[start_pos..self.pos].trim();
+        let punc = self.input[start_pos..self.pos].trim().to_string();
 
         let span = Span::new(self.input, start_pos, self.pos);
 
-        match punc {
-            "_" => Ok(Token::Underscore { name: &punc, span }),
+        match punc.as_str() {
+            "_" => Ok(Token::Underscore { name: punc, span }),
             "." => Ok(Token::FullStop { punc: '.', span }),
             ".." => Ok(Token::DblDot { punc, span }),
             "..=" => Ok(Token::DotDotEquals { punc, span }),
@@ -954,7 +954,7 @@ impl<'a> Lexer<'a> {
 
     /// Log and store information about an error that occurred during tokenization.
     /// Returns `ErrorEmitted` just to confirm that the action happened.
-    fn log_error(&mut self, error_kind: LexErrorKind<'a>) -> ErrorEmitted {
+    fn log_error(&mut self, error_kind: LexErrorKind) -> ErrorEmitted {
         let error = CompilerError::new(error_kind, self.input, self.pos);
 
         self.errors.push(error);

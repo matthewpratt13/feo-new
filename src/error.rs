@@ -4,7 +4,7 @@ use crate::token::Token;
 
 /// Enum representing the different types of lexer errors.
 #[derive(Default, Debug, Clone, PartialEq)]
-pub enum LexErrorKind<'a> {
+pub enum LexErrorKind {
     ParseHexError,
     ParseIntError,
     ParseUIntError,
@@ -15,16 +15,16 @@ pub enum LexErrorKind<'a> {
     EmptyCharLiteral,
 
     UnrecognizedChar {
-        value: &'a str,
+        value: String,
     },
 
     UnexpectedChar {
-        expected: &'a str,
+        expected: String,
         found: char,
     },
 
     CharNotFound {
-        expected: &'a str,
+        expected: String,
     },
 
     AtSignReserved,
@@ -32,11 +32,11 @@ pub enum LexErrorKind<'a> {
     DollarSignReserved,
 
     UnrecognizedKeyword {
-        name: &'a str,
+        name: String,
     },
 
     UnrecognizedAttribute {
-        name: &'a str,
+        name: String,
     },
 
     MissingDelimiter {
@@ -62,7 +62,7 @@ pub enum LexErrorKind<'a> {
     UnknownError,
 }
 
-impl<'a> fmt::Display for LexErrorKind<'a> {
+impl fmt::Display for LexErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LexErrorKind::ParseHexError => writeln!(f, "error parsing hexadecimal digit"),
@@ -124,18 +124,18 @@ impl<'a> fmt::Display for LexErrorKind<'a> {
     }
 }
 
-impl<'a> Error for LexErrorKind<'a> {}
+impl Error for LexErrorKind {}
 
 /// Enum representing the different types of parsing errors.
 #[derive(Default, Debug, Clone, PartialEq)]
-pub enum ParserErrorKind<'a> {
+pub enum ParserErrorKind {
     UnexpectedToken {
-        expected: &'a str,
-        found: &'a Token<'a>,
+        expected: String,
+        found: Token,
     },
 
     InvalidToken {
-        token: Token<'a>,
+        token: Token,
     },
 
     UnexpectedEndOfInput,
@@ -151,7 +151,7 @@ pub enum ParserErrorKind<'a> {
     UnknownError,
 }
 
-impl<'a> fmt::Display for ParserErrorKind<'a> {
+impl fmt::Display for ParserErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ParserErrorKind::UnexpectedToken { expected, found } => writeln!(
@@ -181,7 +181,7 @@ impl<'a> fmt::Display for ParserErrorKind<'a> {
     }
 }
 
-impl<'a> Error for ParserErrorKind<'a> {}
+impl Error for ParserErrorKind {}
 
 /// Generic error struct that allows for custom error kinds, and provides the precise location
 /// of an error in the source code.
