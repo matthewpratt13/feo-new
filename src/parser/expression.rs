@@ -1,7 +1,8 @@
 use crate::{
     ast::{
         expression::{
-            BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr, IndexExpr, PathExpr, TypeCastExpr,
+            BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, PathExpr,
+            TypeCastExpr,
         },
         BinaryOp, Delimiter, Expression, Identifier, Keyword, Separator,
     },
@@ -18,6 +19,59 @@ pub trait ParseExpression {
 impl ParseExpression for PathExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         todo!()
+    }
+}
+
+impl ParseExpression for TypeCastExpr {
+    /// Parse a type cast expression.
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let operand = parser.parse_expression(Precedence::Cast)?;
+
+        let token = parser.consume_token();
+
+        if token.clone()?
+            != (Token::As {
+                name: "as".to_string(),
+                span: parser.stream.span(),
+            })
+        {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "`as`".to_string(),
+                found: token?,
+            });
+            return Err(ErrorsEmitted(()));
+        }
+
+        Ok(Expression::TypeCast(TypeCastExpr {
+            operand: Box::new(operand),
+            kw_as: Keyword::As,
+            new_type: parser.get_type()?,
+        }))
+    }
+}
+
+impl ParseExpression for GroupedExpr {
+    /// Parse a grouped (parenthesized) expression.
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        parser.expect_token(Token::LParen {
+            delim: '(',
+            span: parser.stream.span(),
+        })?;
+
+        // self.consume_token(); // consume `(``
+
+        let expr = parser.parse_expression(Precedence::Lowest)?;
+
+        parser.expect_token(Token::RParen {
+            delim: ')',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(Expression::Grouped(GroupedExpr {
+            open_paren: Delimiter::LParen,
+            expr: Box::new(expr),
+            close_paren: Delimiter::RParen,
+        }))
     }
 }
 
@@ -150,33 +204,6 @@ pub(crate) fn parse_index_expression(
     }))
 }
 
-impl ParseExpression for TypeCastExpr {
-    /// Parse a type cast expression.
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let operand = parser.parse_expression(Precedence::Cast)?;
-
-        let token = parser.consume_token();
-
-        if token.clone()?
-            != (Token::As {
-                name: "as".to_string(),
-                span: parser.stream.span(),
-            })
-        {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`as`".to_string(),
-                found: token?,
-            });
-            return Err(ErrorsEmitted(()));
-        }
-
-        Ok(Expression::TypeCast(TypeCastExpr {
-            operand: Box::new(operand),
-            kw_as: Keyword::As,
-            new_type: parser.get_type()?,
-        }))
-    }
-}
 /// Parse a binary operations (e.g., arithmetic, logical and comparison expressions).
 /// This method parses the operator and calls `parse_expression()` recursively to handle
 /// the right-hand side of the expression.

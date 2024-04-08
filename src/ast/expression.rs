@@ -38,6 +38,13 @@ pub struct FieldAccessExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct GroupedExpr {
+    pub open_paren: Delimiter,
+    pub expr: Box<Expression>,
+    pub close_paren: Delimiter,
+}
+
+#[derive(Debug, Clone)]
 pub struct IndexExpr {
     pub array: Box<Expression>,
     pub open_bracket: Delimiter,

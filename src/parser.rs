@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        expression::{PathExpr, TypeCastExpr},
+        expression::{GroupedExpr, PathExpr, TypeCastExpr},
         BinaryOp, Declaration, Definition, Expression, Identifier, Literal, Statement, StructField,
         Type, UnaryOp,
     },
@@ -357,7 +357,7 @@ impl Parser {
             }
             Ok(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
             Ok(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
-            Ok(Token::LParen { .. }) => self.parse_grouped_expression(),
+            Ok(Token::LParen { .. }) => GroupedExpr::parse(self),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier, `Self`, `_`, literal or `(`".to_string(),
@@ -417,7 +417,7 @@ impl Parser {
                         }) {
                     self.parse_tuple_expression()?
                 } else {
-                    self.parse_grouped_expression()?
+                    GroupedExpr::parse(self)?
                 };
 
                 Ok(expr)
@@ -639,50 +639,6 @@ impl Parser {
 
     fn parse_closure_without_block(&mut self) -> Result<Expression, ErrorsEmitted> {
         todo!()
-    }
-
-    /// Parse a grouped (parenthesized) expression.
-    fn parse_grouped_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        self.expect_token(Token::LParen {
-            delim: '(',
-            span: self.stream.span(),
-        })?;
-
-        // self.consume_token(); // consume `(``
-
-        let expr = self.parse_expression(Precedence::Lowest)?;
-
-        self.expect_token(Token::RParen {
-            delim: ')',
-            span: self.stream.span(),
-        })?;
-
-        Ok(expr)
-    }
-
-    /// Parse a block expression (i.e., `{ expr1; expr2; ... }`).
-    fn parse_block_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        self.expect_token(Token::LBrace {
-            delim: '{',
-            span: self.stream.span(),
-        })?;
-
-        let mut expressions: Vec<Expression> = Vec::new();
-
-        // parse expressions until a closing brace
-        while !self.is_expected_token(Token::RBrace {
-            delim: '}',
-            span: self.stream.span(),
-        }) {
-            expressions.push(self.parse_expression(Precedence::Lowest)?);
-        }
-
-        self.expect_token(Token::RBrace {
-            delim: '}',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Expression::Block(expressions))
     }
 
     /// Parse an array expression (i.e., `[element1, element2, element3, etc.]`).
