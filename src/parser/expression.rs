@@ -1,6 +1,9 @@
 use crate::{
-    ast::{expression::BlockExpr, Expression},
-    error::ErrorsEmitted,
+    ast::{
+        expression::{BlockExpr, FieldAccessExpr},
+        Expression, Identifier, Separator,
+    },
+    error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
@@ -34,5 +37,34 @@ impl ParseExpression for BlockExpr {
         })?;
 
         Ok(Expression::Block(expressions))
+    }
+}
+
+/// Parse a field access expression (i.e., `object.field`).
+pub(crate) fn parse_field_access_expression(
+    parser: &mut Parser,
+    object: Expression,
+) -> Result<Expression, ErrorsEmitted> {
+    parser.expect_token(Token::FullStop {
+        punc: '.',
+        span: parser.stream.span(),
+    })?;
+
+    let token = parser.consume_token();
+
+    if let Ok(Token::Identifier { name, .. }) = token {
+        let expr = FieldAccessExpr {
+            object: Box::new(object),
+            dot: Separator::FullStop,
+            field: Identifier(name),
+        };
+
+        Ok(Expression::FieldAccess(expr))
+    } else {
+        parser.log_error(ParserErrorKind::UnexpectedToken {
+            expected: "identifier after `.`".to_string(),
+            found: token?,
+        });
+        Err(ErrorsEmitted(()))
     }
 }

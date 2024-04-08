@@ -563,7 +563,7 @@ impl Parser {
 
                     match token {
                         Ok(Token::LParen { .. }) => return self.parse_method_call_expression(),
-                        _ => self.parse_field_access_expression(left_expr),
+                        _ => expression::parse_field_access_expression(self, left_expr),
                     }
                 }
                 Some(Token::UIntLiteral { .. }) => self.parse_tuple_index_expression(),
@@ -599,32 +599,6 @@ impl Parser {
 
     fn parse_method_call_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         todo!()
-    }
-
-    /// Parse a field access expression (i.e., `object.field`).
-    fn parse_field_access_expression(
-        &mut self,
-        object_expr: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
-        self.expect_token(Token::FullStop {
-            punc: '.',
-            span: self.stream.span(),
-        })?;
-
-        let token = self.consume_token();
-
-        if let Ok(Token::Identifier { name, .. }) = token {
-            Ok(Expression::FieldAccess(
-                Box::new(object_expr),
-                Identifier(name),
-            ))
-        } else {
-            self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier after `.`".to_string(),
-                found: token?,
-            });
-            Err(ErrorsEmitted(()))
-        }
     }
 
     /// Parse a function call with arguments.
@@ -1328,11 +1302,11 @@ impl Parser {
 
     /// Consume and check tokens, to ensure that the expected tokens are encountered
     /// during parsing. Return the relevant `ParserErrorKind` where applicable.
-    fn expect_token(&mut self, expected: Token) -> Result<(), ErrorsEmitted> {
+    fn expect_token(&mut self, expected: Token) -> Result<Token, ErrorsEmitted> {
         let token = self.consume_token();
 
         match token {
-            _ if token == Ok(expected) => Ok(()),
+            _ if token == Ok(expected) => token,
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`{:#?}`".to_string(),

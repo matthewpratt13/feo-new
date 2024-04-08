@@ -5,6 +5,8 @@ use crate::{
     B28, B29, B3, B30, B31, B32, B4, B5, B6, B7, B8, B9, H160, H256, H512, U256, U512,
 };
 
+use self::expression::FieldAccessExpr;
+
 pub mod expression;
 
 /// Enum representing the different signed integer types.
@@ -202,7 +204,7 @@ pub enum Expression {
     Identifier(Identifier),
     Path,
     MethodCall,
-    FieldAccess(Box<Expression>, Identifier),
+    FieldAccess(FieldAccessExpr),
     Call(Box<Expression>, Vec<Expression>),
     Index(Box<Expression>, Box<Expression>),
     TupleIndex,
@@ -232,10 +234,10 @@ pub enum Expression {
 pub enum Statement {
     Let(Identifier, Expression),
     If(Box<Expression>, Box<Expression>, Option<Box<Expression>>), // condition, true, false
-    Match, // condition, body
-    Ternary, // condition ? true : false
-    ForIn(Box<Expression>, Box<Expression>, Box<Expression>), // variable, iterable, body
-    While, // while, condition, body
+    Match,                                                         // condition, body
+    Ternary,                                                       // condition ? true : false
+    ForIn(Box<Expression>, Box<Expression>, Box<Expression>),      // variable, iterable, body
+    While,                                                         // while, condition, body
     Definition(Definition),
     Declaration(Declaration),
     Expression(Expression),
