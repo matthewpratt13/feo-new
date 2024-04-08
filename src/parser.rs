@@ -565,7 +565,7 @@ impl Parser {
             Ok(Token::As { .. }) => self.parse_cast_expression(),
             Ok(Token::LParen { .. }) => expression::parse_call_expression(self, left_expr), // TODO: or tuple struct
             Ok(Token::LBrace { .. }) => self.parse_struct_expression(),
-            Ok(Token::LBracket { .. }) => self.parse_index_expression(left_expr), // TODO: check
+            Ok(Token::LBracket { .. }) => expression::parse_index_expression(self, left_expr), // TODO: check
             Ok(Token::FullStop { .. }) => match self.peek_current() {
                 Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {
                     let token = self.peek_ahead_by(1).ok_or({
@@ -615,28 +615,28 @@ impl Parser {
         todo!()
     }
 
-    /// Parse an index expression (i.e., `array[index]`).
-    fn parse_index_expression(
-        &mut self,
-        array_expr: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
-        self.expect_token(Token::LBracket {
-            delim: '[',
-            span: self.stream.span(),
-        })?;
+    // /// Parse an index expression (i.e., `array[index]`).
+    // fn parse_index_expression(
+    //     &mut self,
+    //     array_expr: Expression,
+    // ) -> Result<Expression, ErrorsEmitted> {
+    //     self.expect_token(Token::LBracket {
+    //         delim: '[',
+    //         span: self.stream.span(),
+    //     })?;
 
-        let index_expr = self.parse_expression(Precedence::Index)?;
+    //     let index_expr = self.parse_expression(Precedence::Index)?;
 
-        self.expect_token(Token::RBracket {
-            delim: ']',
-            span: self.stream.span(),
-        })?;
+    //     self.expect_token(Token::RBracket {
+    //         delim: ']',
+    //         span: self.stream.span(),
+    //     })?;
 
-        Ok(Expression::Index(
-            Box::new(array_expr),
-            Box::new(index_expr),
-        ))
-    }
+    //     Ok(Expression::Index(
+    //         Box::new(array_expr),
+    //         Box::new(index_expr),
+    //     ))
+    // }
 
     fn parse_tuple_index_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         todo!()

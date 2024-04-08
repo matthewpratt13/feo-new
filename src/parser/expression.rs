@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        expression::{BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr},
+        expression::{BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr, IndexExpr},
         BinaryOp, Delimiter, Expression, Identifier, Separator,
     },
     error::{ErrorsEmitted, ParserErrorKind},
@@ -114,6 +114,31 @@ pub(crate) fn parse_call_expression(
         callee: Box::new(callee),
         args,
         close_paren: Delimiter::RParen,
+    }))
+}
+
+/// Parse an index expression (i.e., `array[index]`).
+pub(crate) fn parse_index_expression(
+    parser: &mut Parser,
+    array: Expression,
+) -> Result<Expression, ErrorsEmitted> {
+    parser.expect_token(Token::LBracket {
+        delim: '[',
+        span: parser.stream.span(),
+    })?;
+
+    let index = parser.parse_expression(Precedence::Index)?;
+
+    parser.expect_token(Token::RBracket {
+        delim: ']',
+        span: parser.stream.span(),
+    })?;
+
+    Ok(Expression::Index(IndexExpr {
+        array: Box::new(array),
+        open_bracket: Delimiter::LBracket,
+        index: Box::new(index),
+        close_bracket: Delimiter::RBracket,
     }))
 }
 

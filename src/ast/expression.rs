@@ -28,3 +28,11 @@ pub struct FieldAccessExpr {
     pub dot: Separator,
     pub field: Identifier,
 }
+
+#[derive(Debug, Clone)]
+pub struct IndexExpr {
+    pub array: Box<Expression>,
+    pub open_bracket: Delimiter,
+    pub index: Box<Expression>,
+    pub close_bracket: Delimiter,
+}
