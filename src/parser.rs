@@ -384,11 +384,12 @@ impl Parser {
             ) => Ok(Expression::Identifier(Identifier(name))),
             Ok(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
             Ok(Token::UIntLiteral { value, .. }) => Ok(Expression::Literal(Literal::UInt(value))),
-            Ok(Token::U256Literal { value, .. }) => Ok(Expression::Literal(Literal::U256(value))),
-            Ok(Token::H256Literal { value, .. }) => Ok(Expression::Literal(Literal::H256(value))),
+            Ok(Token::BigUIntLiteral { value, .. }) => {
+                Ok(Expression::Literal(Literal::BigUInt(value)))
+            }
             Ok(Token::ByteLiteral { value, .. }) => Ok(Expression::Literal(Literal::Byte(value))),
             Ok(Token::BytesLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bytes(value))),
-            Ok(Token::H160Literal { value, .. }) => Ok(Expression::Literal(Literal::H160(value))),
+            Ok(Token::HashLiteral { value, .. }) => Ok(Expression::Literal(Literal::Hash(value))),
             Ok(Token::StringLiteral { value, .. }) => {
                 Ok(Expression::Literal(Literal::String(value)))
             }
@@ -414,9 +415,8 @@ impl Parser {
         match token {
             Ok(Token::IntLiteral { .. }) => self.parse_primary(),
             Ok(Token::UIntLiteral { .. }) => self.parse_primary(),
-            Ok(Token::U256Literal { .. }) => self.parse_primary(),
-            Ok(Token::H160Literal { .. }) => self.parse_primary(),
-            Ok(Token::H256Literal { .. }) => self.parse_primary(),
+            Ok(Token::BigUIntLiteral { .. }) => self.parse_primary(),
+            Ok(Token::HashLiteral { .. }) => self.parse_primary(),
             Ok(Token::ByteLiteral { .. }) => self.parse_primary(),
             Ok(Token::BytesLiteral { .. }) => self.parse_primary(),
             Ok(Token::StringLiteral { .. }) => self.parse_primary(),
@@ -488,9 +488,9 @@ impl Parser {
                 match self.peek_current() {
                     Some(
                         Token::Identifier { .. }
-                        | Token::UIntLiteral { .. }
                         | Token::IntLiteral { .. }
-                        | Token::U256Literal { .. },
+                        | Token::UIntLiteral { .. }
+                        | Token::BigUIntLiteral { .. },
                     ) => Ok(expr),
                     Some(t) => {
                         self.log_error(ParserErrorKind::UnexpectedToken {
@@ -1329,9 +1329,9 @@ impl Parser {
                 | Token::U64Type { .. }
                 | Token::U128Type { .. },
             ) => Ok(Type::UInt),
-            Ok(Token::U256Type { .. }) => Ok(Type::U256),
-            Ok(Token::H160Type { .. }) => Ok(Type::H160),
-            Ok(Token::H256Type { .. }) => Ok(Type::H256),
+            Ok(Token::U256Type { .. }) => Ok(Type::BigUInt),
+            Ok(Token::U512Type { .. }) => Ok(Type::BigUInt),
+
             Ok(Token::ByteType { .. }) => Ok(Type::Byte),
 
             Ok(
@@ -1367,6 +1367,9 @@ impl Parser {
                 | Token::B31Type { .. }
                 | Token::B32Type { .. },
             ) => Ok(Type::Bytes),
+            Ok(Token::H160Type { .. }) => Ok(Type::Hash),
+            Ok(Token::H256Type { .. }) => Ok(Type::Hash),
+            Ok(Token::H512Type { .. }) => Ok(Type::Hash),
             Ok(Token::StringType { .. }) => Ok(Type::String),
             Ok(Token::CharType { .. }) => Ok(Type::Char),
             Ok(Token::BoolType { .. }) => Ok(Type::Bool),

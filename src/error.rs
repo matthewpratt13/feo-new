@@ -7,9 +7,8 @@ use crate::token::Token;
 pub enum LexErrorKind {
     ParseIntError,
     ParseUIntError,
-    ParseU256Error,
-    ParseH256Error,
-    ParseH160Error,
+    ParseBigUIntError,
+    ParseHashError,
     ParseBoolError,
 
     EmptyCharLiteral,
@@ -27,9 +26,7 @@ pub enum LexErrorKind {
         expected: String,
     },
 
-    AtSignReserved,
-
-    DollarSignReserved,
+    ReservedChar,
 
     UnrecognizedKeyword {
         name: String,
@@ -67,9 +64,8 @@ impl fmt::Display for LexErrorKind {
         match self {
             LexErrorKind::ParseIntError => writeln!(f, "error parsing signed integer"),
             LexErrorKind::ParseUIntError => writeln!(f, "error parsing unsigned integer"),
-            LexErrorKind::ParseU256Error => writeln!(f, "error parsing u256 digit"),
-            LexErrorKind::ParseH256Error => writeln!(f, "error parsing h256 hash"),
-            LexErrorKind::ParseH160Error => writeln!(f, "error parsing h160 hash"),
+            LexErrorKind::ParseBigUIntError => writeln!(f, "error parsing big unsigned integer"),
+            LexErrorKind::ParseHashError => writeln!(f, "error parsing hash"),
             LexErrorKind::ParseBoolError => writeln!(f, "error parsing boolean"),
 
             LexErrorKind::UnrecognizedChar { value } => {
@@ -85,10 +81,7 @@ impl fmt::Display for LexErrorKind {
                 writeln!(f, "syntax error: unrecognized attribute – `{name}`")
             }
 
-            LexErrorKind::AtSignReserved => {
-                writeln!(f, "syntax error\n`@` is reserved for address literals")
-            }
-            LexErrorKind::DollarSignReserved => {
+            LexErrorKind::ReservedChar => {
                 writeln!(f, "syntax error\n`$` is reserved for hash literals")
             }
 

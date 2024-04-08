@@ -1,19 +1,29 @@
 use fixed_hash::{construct_fixed_hash, impl_fixed_hash_conversions};
 use uint::construct_uint;
 
-// hexadecimal 256-bit `uint`
+// hexadecimal 256-bit unsigned integer
 construct_uint! {
     pub struct U256(4);
 }
 
-// 20-byte EVM address
+// hexadecimal 512-bit unsigned integer
+construct_uint! {
+    pub struct U512(8);
+}
+
+// 20-byte hash (e.g., EVM address)
 construct_fixed_hash! {
     pub struct H160(20);
 }
 
-// 256-bit hash
+// 256-bit (32-byte) hash
 construct_fixed_hash! {
     pub struct H256(32);
+}
+
+// 512-bit (64-byte) hash
+construct_fixed_hash! {
+    pub struct H512(64);
 }
 
 // fixed size byte array literals (2–32 elements)

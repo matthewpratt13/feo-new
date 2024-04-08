@@ -2,7 +2,7 @@
 
 use crate::{
     B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B2, B20, B21, B22, B23, B24, B25, B26, B27,
-    B28, B29, B3, B30, B31, B32, B4, B5, B6, B7, B8, B9, H160, H256, U256,
+    B28, B29, B3, B30, B31, B32, B4, B5, B6, B7, B8, B9, H160, H256, H512, U256, U512,
 };
 
 /// Enum representing the different signed integer types.
@@ -21,6 +21,13 @@ pub enum UIntKind {
     U32(u32),
     U64(u64),
     U128(u128),
+}
+
+/// Enum representing the different big unsigned integer types.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum BigUIntKind {
+    U256(U256),
+    U512(U512),
 }
 
 /// Enum representing the different byte array types.
@@ -59,16 +66,23 @@ pub enum Bytes {
     B32(B32),
 }
 
+/// Enum representing the different hash types.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum HashKind {
+    H160(H160),
+    H256(H256),
+    H512(H512),
+}
+
 /// Enum representing the different literal AST nodes.
 #[derive(Debug, Clone)]
 pub enum Literal {
     Int(IntKind),
     UInt(UIntKind),
-    U256(U256),
-    H160(H160),
-    H256(H256),
+    BigUInt(BigUIntKind),
     Byte(u8),
     Bytes(Bytes),
+    Hash(HashKind),
     String(Vec<u8>),
     Char(char),
     Bool(bool),
@@ -260,11 +274,10 @@ pub enum Type {
     // primitives
     Int,
     UInt,
-    U256,
-    H160,
-    H256,
+    BigUInt,
     Byte,
     Bytes,
+    Hash,
     String,
     Char,
     Bool,

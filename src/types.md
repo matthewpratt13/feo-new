@@ -7,9 +7,11 @@
 - `u32`: 32-bit unsigned integer
 - `u64`: 64-bit unsigned integer (default numeric type). E.g., `let x = 1234;`
 - `u128`: 128-bit unsigned integer
-- `u256`: 256-bit unsigned integer (notated in hexadecimal format). E.g., `let x: u256 = 0x123456ABCDEF;`
-- `h160`: 160-bit (20-byte) hash (EVM address). E.g., `let addr: h160 = @0x12345123451234512345;`
+- `u256`: 256-bit unsigned integer. E.g., `let x: u256 = 0x123456ABCDEF;`
+- `u512`: 512-bit unsigned integer
+- `h160`: 160-bit (20-byte) hash. E.g., `let owner: h160 = $0x12345123451234512345` (EVM address)
 - `h256`: 256-bit (32-byte) hash. E.g., `let pub_key: h256 = $0x12345678123456781234567812345678;`
+- `h512`: 512-bit (64-byte) hash
 - `byte`: Single byte literal. E.g., `let x = b"x";`
 - `b2`–`b32`: static byte array (string literal) of 2–32 bytes. E.g., `let x: b3 = b"foo";`
 - `i32`: 32-bit signed integer. E.g., `let x: i32 = -2_147_483_648;`

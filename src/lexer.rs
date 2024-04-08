@@ -3,11 +3,11 @@
 use std::{iter::Peekable, str::Chars};
 
 use crate::{
-    ast::{self, IntKind, UIntKind},
+    ast::{self, BigUIntKind, HashKind, IntKind, UIntKind},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{Token, TokenStream},
-    H160, H256, U256,
+    H256, U256,
 };
 
 /// Struct that stores an input string and contains methods to render tokens (tokenize)
@@ -96,9 +96,7 @@ impl<'a> Lexer<'a> {
 
                 '\'' => tokens.push(self.tokenize_char()?),
 
-                '@' => tokens.push(self.tokenize_h160()?), // `Address` literal
-
-                '$' => tokens.push(self.tokenize_h256()?), // `h256` literal
+                '$' => tokens.push(self.tokenize_hash()?), // `h256` literal
 
                 // hexadecimal digit prefix (`0x` or `0X`)
                 _ if c == '0'
@@ -106,7 +104,7 @@ impl<'a> Lexer<'a> {
                         .peek_next()
                         .is_some_and(|x| &x.to_lowercase().to_string() == "x") =>
                 {
-                    tokens.push(self.tokenize_u256()?)
+                    tokens.push(self.tokenize_big_uint()?)
                 }
 
                 _ if c.is_digit(10)
@@ -128,7 +126,7 @@ impl<'a> Lexer<'a> {
                 }
 
                 '!' | '#' | '%' | '&' | '*' | '+' | '/' | '-' | '.' | ':' | '<' | '=' | '>'
-                | '?' | '\\' | '^' | '`' | '|' => tokens.push(self.tokenize_punctuation()?),
+                | '?' | '@' | '\\' | '^' | '`' | '|' => tokens.push(self.tokenize_punctuation()?),
 
                 _ if !self.peek_next().is_some() => tokens.push(Token::EOF),
 
@@ -443,8 +441,7 @@ impl<'a> Lexer<'a> {
                 "u64" => Ok(Token::U64Type { name, span }),
                 "u128" => Ok(Token::U128Type { name, span }),
                 "u256" => Ok(Token::U256Type { name, span }),
-                "h160" => Ok(Token::H160Type { name, span }),
-                "h256" => Ok(Token::H256Type { name, span }),
+                "u512" => Ok(Token::U512Type { name, span }),
                 "byte" => Ok(Token::ByteType { name, span }),
                 "b2" => Ok(Token::B2Type { name, span }),
                 "b3" => Ok(Token::B3Type { name, span }),
@@ -477,6 +474,9 @@ impl<'a> Lexer<'a> {
                 "b30" => Ok(Token::B30Type { name, span }),
                 "b31" => Ok(Token::B31Type { name, span }),
                 "b32" => Ok(Token::B32Type { name, span }),
+                "h160" => Ok(Token::H160Type { name, span }),
+                "h256" => Ok(Token::H256Type { name, span }),
+                "h512" => Ok(Token::H512Type { name, span }),
                 "String" => Ok(Token::StringType { name, span }),
                 "char" => Ok(Token::CharType { name, span }),
                 "bool" => Ok(Token::BoolType { name, span }),
@@ -784,8 +784,9 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize a `u256` hexadecimal digit.
-    fn tokenize_u256(&mut self) -> Result<Token, ErrorsEmitted> {
+    /// Tokenize a big unsigned integer literal (i.e., `U256` and `U512`).
+    /// The default big uint type is `U256`.
+    fn tokenize_big_uint(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         // check for hexadecimal prefix (`0x`)
@@ -818,55 +819,19 @@ impl<'a> Lexer<'a> {
         let span = Span::new(self.input, start_pos, self.pos);
 
         if let Ok(v) = value {
-            Ok(Token::U256Literal { value: v, span })
+            Ok(Token::BigUIntLiteral {
+                value: BigUIntKind::U256(v),
+                span,
+            })
         } else {
-            self.log_error(LexErrorKind::ParseU256Error);
+            self.log_error(LexErrorKind::ParseBigUIntError);
             Err(ErrorsEmitted(()))
         }
     }
 
-    /// Tokenize a 20-byte (`h160`) hash literal.
-    fn tokenize_h160(&mut self) -> Result<Token, ErrorsEmitted> {
-        let start_pos = self.pos;
-
-        self.advance(); // skip `@`
-
-        if self.peek_current() == Some('0') && self.peek_next() == Some('x') {
-            self.advance(); // skip `0`
-            self.advance(); // skip `x`
-        } else if self.peek_current().is_some_and(|x| x.is_digit(16)) {
-            // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
-            ()
-        } else {
-            self.log_error(LexErrorKind::ParseH160Error);
-            return Err(ErrorsEmitted(()));
-        }
-
-        let hash_start_pos = self.pos;
-
-        while let Some(c) = self.peek_current() {
-            if c.is_digit(16) || c == '_' {
-                self.advance();
-            } else {
-                break;
-            }
-        }
-
-        let value = H160::from_slice(
-            self.input[hash_start_pos..self.pos]
-                .split('_')
-                .collect::<Vec<&str>>()
-                .concat()
-                .as_bytes(),
-        );
-
-        let span = Span::new(self.input, start_pos, self.pos);
-
-        Ok(Token::H160Literal { value, span })
-    }
-
-    /// Tokenize a 32-byte hash (`h256`) literal.
-    fn tokenize_h256(&mut self) -> Result<Token, ErrorsEmitted> {
+    /// Tokenize a hash literal (i.e., `H160`, `H256` and `H512`).
+    /// The default hash type is `H256`.
+    fn tokenize_hash(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         self.advance(); // skip `$`
@@ -878,7 +843,7 @@ impl<'a> Lexer<'a> {
             // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
             ()
         } else {
-            self.log_error(LexErrorKind::ParseH256Error);
+            self.log_error(LexErrorKind::ParseHashError);
             return Err(ErrorsEmitted(()));
         }
 
@@ -902,7 +867,10 @@ impl<'a> Lexer<'a> {
 
         let span = Span::new(self.input, start_pos, self.pos);
 
-        Ok(Token::H256Literal { value, span })
+        Ok(Token::HashLiteral {
+            value: HashKind::H256(value),
+            span,
+        })
     }
 
     /// Tokenize a numeric value (i.e., `i64` or `u64`).
@@ -996,7 +964,7 @@ impl<'a> Lexer<'a> {
             "#" => Ok(Token::HashSign { punc: '#', span }),
             "#!" => Ok(Token::HashBang { punc, span }),
             "$" => {
-                self.log_error(LexErrorKind::DollarSignReserved);
+                self.log_error(LexErrorKind::ReservedChar);
                 Err(ErrorsEmitted(()))
             }
             "%" => Ok(Token::Percent { punc: '%', span }),
@@ -1025,11 +993,7 @@ impl<'a> Lexer<'a> {
             ">" => Ok(Token::GreaterThan { punc: '>', span }),
             ">>" => Ok(Token::DblGreaterThan { punc, span }),
             ">=" => Ok(Token::GreaterThanEquals { punc, span }),
-            "@" => {
-                self.log_error(LexErrorKind::AtSignReserved);
-                Err(ErrorsEmitted(()))
-            }
-
+            "@" => Ok(Token::AtSign { punc: '@', span }),
             "?" => Ok(Token::QuestionMark { punc: '?', span }),
             "\\" => Ok(Token::Backslash { punc: '\\', span }),
             "^" => Ok(Token::Caret { punc: '^', span }),
@@ -1170,8 +1134,7 @@ fn is_keyword(value: &str) -> bool {
         "u64",
         "u128",
         "u256",
-        "h160",
-        "h256",
+        "u512",
         "byte",
         "b2",
         "b3",
@@ -1204,6 +1167,9 @@ fn is_keyword(value: &str) -> bool {
         "b30",
         "b31",
         "b32",
+        "h160",
+        "h256",
+        "h512",
         "String",
         "char",
         "bool",
@@ -1337,8 +1303,7 @@ mod tests {
 
     #[test]
     fn tokenize_hash_lits() {
-        let input = r#"let addr = @0xC0FFEE00000000000000;
-        let hash = $0xBEEF_CAFE_1234_5678_90AB_CDEF_CAFE_BEEF;"#;
+        let input = r#"let hash = $0xBEEF_CAFE_1234_5678_90AB_CDEF_CAFE_BEEF;"#;
 
         let mut lexer = Lexer::new(input);
 

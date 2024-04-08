@@ -3,9 +3,8 @@
 use std::fmt;
 
 use crate::{
-    ast::{Bytes, IntKind, UIntKind},
+    ast::{BigUIntKind, Bytes, HashKind, IntKind, UIntKind},
     span::Span,
-    H160, H256, U256,
 };
 
 /// Enum representing the different types of tokens.
@@ -16,11 +15,10 @@ pub enum Token {
     // literals
     IntLiteral { value: IntKind, span: Span },
     UIntLiteral { value: UIntKind, span: Span },
-    U256Literal { value: U256, span: Span },
-    H160Literal { value: H160, span: Span },
-    H256Literal { value: H256, span: Span },
+    BigUIntLiteral { value: BigUIntKind, span: Span },
     ByteLiteral { value: u8, span: Span },
     BytesLiteral { value: Bytes, span: Span },
+    HashLiteral { value: HashKind, span: Span },
     StringLiteral { value: Vec<u8>, span: Span },
     CharLiteral { value: char, span: Span },
     BoolLiteral { value: bool, span: Span },
@@ -81,7 +79,7 @@ pub enum Token {
     U64Type { name: String, span: Span },
     U128Type { name: String, span: Span },
     U256Type { name: String, span: Span },
-    H256Type { name: String, span: Span },
+    U512Type { name: String, span: Span },
     ByteType { name: String, span: Span },
     B2Type { name: String, span: Span },
     B3Type { name: String, span: Span },
@@ -115,6 +113,8 @@ pub enum Token {
     B31Type { name: String, span: Span },
     B32Type { name: String, span: Span },
     H160Type { name: String, span: Span },
+    H256Type { name: String, span: Span },
+    H512Type { name: String, span: Span },
     StringType { name: String, span: Span },
     CharType { name: String, span: Span },
     BoolType { name: String, span: Span },
