@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        expression::{BinaryOpExpr, BlockExpr, FieldAccessExpr},
-        BinaryOp, Expression, Identifier, Separator,
+        expression::{BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr},
+        BinaryOp, Delimiter, Expression, Identifier, Separator,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -67,6 +67,54 @@ pub(crate) fn parse_field_access_expression(
         });
         Err(ErrorsEmitted(()))
     }
+}
+
+/// Parse a function call with arguments.
+pub(crate) fn parse_call_expression(
+    parser: &mut Parser,
+    callee: Expression,
+) -> Result<Expression, ErrorsEmitted> {
+    let mut args: Vec<Expression> = Vec::new(); // store function arguments
+
+    parser.expect_token(Token::LParen {
+        delim: '(',
+        span: parser.stream.span(),
+    })?;
+
+    // parse arguments – separated by commas – until a closing parenthesis
+    loop {
+        if let Some(Token::RParen { delim: ')', .. }) = parser.peek_current() {
+            // end of arguments
+            parser.consume_token()?;
+            break;
+        }
+
+        let arg_expr = parser.parse_expression(Precedence::Call);
+        args.push(arg_expr?);
+
+        // error handling
+        let token = parser.consume_token();
+
+        match token {
+            Ok(Token::Comma { .. }) => continue, // more arguments
+            Ok(Token::RParen { .. }) => break,   // end of arguments
+            _ => {
+                parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "`,` or `)`".to_string(),
+                    found: token?,
+                });
+
+                return Err(ErrorsEmitted(()));
+            }
+        }
+    }
+
+    Ok(Expression::Call(CallExpr {
+        open_paren: Delimiter::LParen,
+        callee: Box::new(callee),
+        args,
+        close_paren: Delimiter::RParen,
+    }))
 }
 
 /// Parse a binary operations (e.g., arithmetic, logical and comparison expressions).

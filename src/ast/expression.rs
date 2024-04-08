@@ -15,6 +15,14 @@ pub struct BlockExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct CallExpr {
+    pub callee: Box<Expression>,
+    pub open_paren: Delimiter,
+    pub args: Vec<Expression>,
+    pub close_paren: Delimiter,
+}
+
+#[derive(Debug, Clone)]
 pub struct FieldAccessExpr {
     pub object: Box<Expression>,
     pub dot: Separator,

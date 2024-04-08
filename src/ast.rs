@@ -5,7 +5,7 @@ use crate::{
     B28, B29, B3, B30, B31, B32, B4, B5, B6, B7, B8, B9, H160, H256, H512, U256, U512,
 };
 
-use self::expression::{BinaryOpExpr, FieldAccessExpr};
+use self::expression::{BinaryOpExpr, CallExpr, FieldAccessExpr};
 
 pub mod expression;
 
@@ -205,7 +205,7 @@ pub enum Expression {
     Path,
     MethodCall,
     FieldAccess(FieldAccessExpr),
-    Call(Box<Expression>, Vec<Expression>),
+    Call(CallExpr),
     Index(Box<Expression>, Box<Expression>),
     TupleIndex,
     Unwrap,

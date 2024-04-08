@@ -563,7 +563,7 @@ impl Parser {
             Ok(Token::QuestionMark { .. }) => self.parse_unwrap_expression(),
             Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => self.parse_range_expression(),
             Ok(Token::As { .. }) => self.parse_cast_expression(),
-            Ok(Token::LParen { .. }) => self.parse_call_expression(left_expr), // TODO: or tuple struct
+            Ok(Token::LParen { .. }) => expression::parse_call_expression(self, left_expr), // TODO: or tuple struct
             Ok(Token::LBrace { .. }) => self.parse_struct_expression(),
             Ok(Token::LBracket { .. }) => self.parse_index_expression(left_expr), // TODO: check
             Ok(Token::FullStop { .. }) => match self.peek_current() {
@@ -613,46 +613,6 @@ impl Parser {
 
     fn parse_method_call_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         todo!()
-    }
-
-    /// Parse a function call with arguments.
-    fn parse_call_expression(&mut self, callee: Expression) -> Result<Expression, ErrorsEmitted> {
-        let mut args: Vec<Expression> = Vec::new(); // store function arguments
-
-        self.expect_token(Token::LParen {
-            delim: '(',
-            span: self.stream.span(),
-        })?;
-
-        // parse arguments – separated by commas – until a closing parenthesis
-        loop {
-            if let Some(Token::RParen { delim: ')', .. }) = self.peek_current() {
-                // end of arguments
-                self.consume_token()?;
-                break;
-            }
-
-            let arg_expr = self.parse_expression(Precedence::Call);
-            args.push(arg_expr?);
-
-            // error handling
-            let token = self.consume_token();
-
-            match token {
-                Ok(Token::Comma { .. }) => continue, // more arguments
-                Ok(Token::RParen { .. }) => break,   // end of arguments
-                _ => {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `)`".to_string(),
-                        found: token?,
-                    });
-
-                    return Err(ErrorsEmitted(()));
-                }
-            }
-        }
-
-        Ok(Expression::Call(Box::new(callee), args))
     }
 
     /// Parse an index expression (i.e., `array[index]`).
