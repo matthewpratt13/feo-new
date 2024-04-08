@@ -89,7 +89,7 @@ pub enum Literal {
 }
 
 /// Enum representing the different keyword AST nodes.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
     Import,
     Module,
@@ -198,37 +198,45 @@ pub struct StructField {
 pub enum Expression {
     Literal(Literal),
     Identifier(Identifier),
-    UnaryOp(UnaryOp, Box<Expression>),
-    BinaryOp(BinaryOp, Box<Expression>, Box<Expression>),
-    If(Box<Expression>, Box<Expression>, Option<Box<Expression>>), // condition, true, false
-    ForIn(Box<Expression>, Box<Expression>, Box<Expression>),      // variable, iterable, body
-    Array(Vec<Expression>),
-    Tuple(Vec<Expression>),
-    Block(Vec<Expression>),
-    Index(Box<Expression>, Box<Expression>),
-    Call(Box<Expression>, Vec<Expression>),
+    Path,
+    MethodCall,
     FieldAccess(Box<Expression>, Identifier),
+    Call(Box<Expression>, Vec<Expression>),
+    Index(Box<Expression>, Box<Expression>),
+    TupleIndex,
+    Unwrap,
+    UnaryOp(UnaryOp, Box<Expression>),
     Cast(Box<Expression>, Type),
-    Unwrap(Box<Expression>, Box<Expression>),
-    Struct(Vec<StructField>),
+    BinaryOp(BinaryOp, Box<Expression>, Box<Expression>),
     Grouped(Box<Expression>),
-
-    // TODO: parse:
-    InfiniteLoop(Box<Expression>),
-    WhileLoop(Box<Expression>, Box<Expression>),
-    Ternary(Box<Expression>, Box<Expression>, Option<Box<Expression>>),
-    TupleStruct(Vec<Expression>),
-    MethodCall(Box<Expression>, Box<Expression>),
+    Return,
+    Range, // from-to, from, to, inclusive, to inclusive
+    BreakExpression,
+    ContinueExpression,
+    Underscore,
     ClosureWithBlock(Box<Expression>, Box<Expression>),
     ClosureWithoutBlock(Box<Expression>),
-    Range(Box<Expression>, Option<Box<Expression>>), // from-to, from, to, inclusive, to inclusive
-    Path(Box<Expression>, Vec<Expression>),
-    TupleIndex(Box<Expression>, Box<Expression>),
-    Match(Box<Expression>, Vec<Expression>),
-    Return(Box<Expression>),
-    BreakExpression(Box<Expression>),
-    ContinueExpression(Box<Expression>),
-    Underscore(Box<Expression>),
+    Array(Vec<Expression>),
+    Tuple(Vec<Expression>),
+    Struct(Vec<StructField>),
+    TupleStruct,
+    Block(Vec<Expression>),
+}
+
+/// Enum representing the different statement AST nodes, which are built up of expressions.
+/// A `Statement` is a component of a block, which is a component of an outer expression
+/// or function.
+#[derive(Debug, Clone)]
+pub enum Statement {
+    Let(Identifier, Expression),
+    If(Box<Expression>, Box<Expression>, Option<Box<Expression>>), // condition, true, false
+    Match, // condition, body
+    Ternary, // condition ? true : false
+    ForIn(Box<Expression>, Box<Expression>, Box<Expression>), // variable, iterable, body
+    While, // while, condition, body
+    Definition(Definition),
+    Declaration(Declaration),
+    Expression(Expression),
 }
 
 // TODO: parse:
@@ -246,24 +254,13 @@ pub enum Declaration {
 /// Enum representing the different item nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
-pub enum Item {
+pub enum Definition {
     Module,
-    Struct,
-    Enum,
     Trait,
+    Enum,
+    Struct,
     Impl,
     Function,
-}
-
-/// Enum representing the different statement AST nodes, which are built up of expressions.
-/// A `Statement` is a component of a block, which is a component of an outer expression
-/// or function.
-#[derive(Debug, Clone)]
-pub enum Statement {
-    Let(Identifier, Expression),
-    Expression(Expression),
-    Item(Item),
-    Declaration(Declaration),
 }
 
 // TODO: parse:
@@ -286,7 +283,7 @@ pub enum Type {
     Array,
     Tuple,
 
-    UserDefined, // struct, enum, trait, alias, constant (path types / items)
+    UserDefined, // struct, enum, trait, alias, constant (paths / items)
 
     Function,
     Reference, // e.g., `&Type` / `&mut Type`

@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BinaryOp, Declaration, Expression, Identifier, Item, Literal, Statement, StructField, Type,
-        UnaryOp,
+        BinaryOp, Declaration, Definition, Expression, Identifier, Literal, Statement, StructField,
+        Type, UnaryOp,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -14,30 +14,36 @@ use crate::{
 /// Enum representing the different precedence levels of operators, respectively.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {
-    Lowest,
-    Unwrap,             // `?`
+    Lowest,             // `break`, `return`, closure
     Assignment,         // `=`
     CompoundAssignment, // `+=`, `-=`, `*/`, `/=`, `%=`
+    Range,              // `..`, `..=` (requires parentheses)
     LogicalOr,          // `||`
     LogicalAnd,         // `&&`
     Equal,              // `==`
     NotEqual,           // `!=`
     LessThan,           // `<`
-    LessThanOrEqual,    // `<=`
     GreaterThan,        // `>`
+    LessThanOrEqual,    // `<=`
     GreaterThanOrEqual, // `>=`
-    Shift,              // `«`, `»`
-    BitwiseAnd,         // `&`
-    BitwiseXor,         // `^`
     BitwiseOr,          // `|`
+    BitwiseXor,         // `^`
+    BitwiseAnd,         // `&`
+    Shift,              // `«`, `»`
     Sum,                // `+`
     Difference,         // `-`
     Product,            // `*`
     Quotient,           // `/`
     Remainder,          // `%`
-    Unary,              // `-`, `!`, `&`, `*`
     Exponentiation,     // `**`
     Cast,               // "as"
+    Unary,              // `-`, `*` `!`, `&`,`&mut`
+    Unwrap,             // `?`
+    Index,              // `x[0]`
+    Call,               // `foo(bar)`
+    FieldAccess,        // foo.bar
+    MethodCall,         // foo.bar()
+    Path,               // `package::module::Item`
 }
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
@@ -295,64 +301,7 @@ impl Parser {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-
-    /// Parse a `Statement`.
-    fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        match self.consume_token() {
-            Ok(Token::Let { .. }) => self.parse_let_statement(),
-            Ok(Token::Import { .. }) => {
-                Ok(Statement::Declaration(self.parse_import_declaration()?))
-            }
-            Ok(Token::Alias { .. }) => Ok(Statement::Declaration(self.parse_alias_declaration()?)),
-            Ok(Token::Const { .. }) => Ok(Statement::Declaration(self.parse_const_declaration()?)),
-            Ok(Token::Static { .. }) => {
-                Ok(Statement::Declaration(self.parse_static_var_declaration()?))
-            }
-            Ok(Token::Module { .. }) => Ok(Statement::Item(self.parse_module()?)),
-            Ok(Token::Struct { .. }) => Ok(Statement::Item(self.parse_struct()?)),
-            Ok(Token::Enum { .. }) => Ok(Statement::Item(self.parse_enum()?)),
-            Ok(Token::Trait { .. }) => Ok(Statement::Item(self.parse_trait()?)),
-            Ok(Token::Impl { .. }) => Ok(Statement::Item(self.parse_impl()?)),
-            Ok(Token::Func { .. }) => Ok(Statement::Item(self.parse_function()?)),
-
-            _ => {
-                self.unconsume();
-                self.parse_expression_statement()
-            }
-        }
-    }
-
-    /// Parse an identifier and the assignment operation that binds the variable to a value.
-    fn parse_let_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        let identifier = self.consume_identifier();
-
-        self.expect_token(Token::Equals {
-            punc: '=',
-            span: self.stream.span(),
-        })?;
-
-        let value = self.parse_expression(Precedence::Assignment);
-
-        self.expect_token(Token::Semicolon {
-            punc: ';',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Statement::Let(identifier?, value?))
-    }
-
-    /// Parse an expression into a statement, separated by a semicolon.
-    fn parse_expression_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        let expression = self.parse_expression(Precedence::Lowest);
-
-        self.expect_token(Token::Semicolon {
-            punc: ';',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Statement::Expression(expression?))
-    }
-
+    /// EXPRESSIONS
     ///////////////////////////////////////////////////////////////////////////
 
     /// Recursively parse an expression based on operator precedence.
@@ -512,11 +461,9 @@ impl Parser {
                 }
             }
 
-            Ok(Token::Return { .. }) => self.parse_return_expression(),
-
-            Ok(Token::Match { .. }) => self.parse_match_expression(),
-
             Ok(Token::Super { .. } | Token::Package { .. }) => self.parse_path_expression(),
+
+            Ok(Token::Return { .. }) => self.parse_return_expression(),
 
             Ok(Token::Break { .. } | Token::Continue { .. }) => {
                 self.parse_break_or_continue_expression()
@@ -642,23 +589,131 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Parse a grouped (parenthesized) expression.
-    fn parse_grouped_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+    fn parse_path_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_method_call_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    /// Parse a field access expression (i.e., `object.field`).
+    fn parse_field_access_expression(
+        &mut self,
+        object_expr: Expression,
+    ) -> Result<Expression, ErrorsEmitted> {
+        self.expect_token(Token::FullStop {
+            punc: '.',
+            span: self.stream.span(),
+        })?;
+
+        let token = self.consume_token();
+
+        if let Ok(Token::Identifier { name, .. }) = token {
+            Ok(Expression::FieldAccess(
+                Box::new(object_expr),
+                Identifier(name),
+            ))
+        } else {
+            self.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "identifier after `.`".to_string(),
+                found: token?,
+            });
+            Err(ErrorsEmitted(()))
+        }
+    }
+
+    /// Parse a function call with arguments.
+    fn parse_call_expression(&mut self, callee: Expression) -> Result<Expression, ErrorsEmitted> {
+        let mut args: Vec<Expression> = Vec::new(); // store function arguments
+
         self.expect_token(Token::LParen {
             delim: '(',
             span: self.stream.span(),
         })?;
 
-        // self.consume_token(); // consume `(``
+        // parse arguments – separated by commas – until a closing parenthesis
+        loop {
+            if let Some(Token::RParen { delim: ')', .. }) = self.peek_current() {
+                // end of arguments
+                self.consume_token()?;
+                break;
+            }
 
-        let expr = self.parse_expression(Precedence::Lowest)?;
+            let arg_expr = self.parse_expression(Precedence::Call);
+            args.push(arg_expr?);
 
-        self.expect_token(Token::RParen {
-            delim: ')',
+            // error handling
+            let token = self.consume_token();
+
+            match token {
+                Ok(Token::Comma { .. }) => continue, // more arguments
+                Ok(Token::RParen { .. }) => break,   // end of arguments
+                _ => {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `)`".to_string(),
+                        found: token?,
+                    });
+
+                    return Err(ErrorsEmitted(()));
+                }
+            }
+        }
+
+        Ok(Expression::Call(Box::new(callee), args))
+    }
+
+    /// Parse an index expression (i.e., `array[index]`).
+    fn parse_index_expression(
+        &mut self,
+        array_expr: Expression,
+    ) -> Result<Expression, ErrorsEmitted> {
+        self.expect_token(Token::LBracket {
+            delim: '[',
             span: self.stream.span(),
         })?;
 
-        Ok(expr)
+        let index_expr = self.parse_expression(Precedence::Index)?;
+
+        self.expect_token(Token::RBracket {
+            delim: ']',
+            span: self.stream.span(),
+        })?;
+
+        Ok(Expression::Index(
+            Box::new(array_expr),
+            Box::new(index_expr),
+        ))
+    }
+
+    fn parse_tuple_index_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_unwrap_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    /// Parse a type cast expression.
+    fn parse_cast_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        let expr = self.parse_expression(Precedence::Cast)?;
+
+        let token = self.consume_token();
+
+        if token.clone()?
+            != (Token::As {
+                name: "as".to_string(),
+                span: self.stream.span(),
+            })
+        {
+            self.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "`as`".to_string(),
+                found: token?,
+            });
+            return Err(ErrorsEmitted(()));
+        }
+
+        Ok(Expression::Cast(Box::new(expr), self.get_type()?))
     }
 
     /// Parse a binary expressions (e.g., arithmetic, logical and comparison expressions).
@@ -865,148 +920,43 @@ impl Parser {
         }
     }
 
-    /// Parse a function call with arguments.
-    fn parse_call_expression(&mut self, callee: Expression) -> Result<Expression, ErrorsEmitted> {
-        let mut args: Vec<Expression> = Vec::new(); // store function arguments
+    fn parse_range_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
 
+    fn parse_return_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_break_or_continue_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_closure_with_block(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_closure_without_block(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    /// Parse a grouped (parenthesized) expression.
+    fn parse_grouped_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         self.expect_token(Token::LParen {
             delim: '(',
             span: self.stream.span(),
         })?;
 
-        // parse arguments – separated by commas – until a closing parenthesis
-        loop {
-            if let Some(Token::RParen { delim: ')', .. }) = self.peek_current() {
-                // end of arguments
-                self.consume_token()?;
-                break;
-            }
+        // self.consume_token(); // consume `(``
 
-            let arg_expr = self.parse_expression(Precedence::Lowest);
-            args.push(arg_expr?);
-
-            // error handling
-            let token = self.consume_token();
-
-            match token {
-                Ok(Token::Comma { .. }) => continue, // more arguments
-                Ok(Token::RParen { .. }) => break,   // end of arguments
-                _ => {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `)`".to_string(),
-                        found: token?,
-                    });
-
-                    return Err(ErrorsEmitted(()));
-                }
-            }
-        }
-
-        Ok(Expression::Call(Box::new(callee), args))
-    }
-
-    /// Parse an index expression (i.e., `array[index]`).
-    fn parse_index_expression(
-        &mut self,
-        array_expr: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
-        self.expect_token(Token::LBracket {
-            delim: '[',
-            span: self.stream.span(),
-        })?;
-
-        let index_expr = self.parse_expression(Precedence::Lowest)?;
-
-        self.expect_token(Token::RBracket {
-            delim: ']',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Expression::Index(
-            Box::new(array_expr),
-            Box::new(index_expr),
-        ))
-    }
-
-    /// Parse a field access expression (i.e., `object.field`).
-    fn parse_field_access_expression(
-        &mut self,
-        object_expr: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
-        self.expect_token(Token::FullStop {
-            punc: '.',
-            span: self.stream.span(),
-        })?;
-
-        let token = self.consume_token();
-
-        if let Ok(Token::Identifier { name, .. }) = token {
-            Ok(Expression::FieldAccess(
-                Box::new(object_expr),
-                Identifier(name),
-            ))
-        } else {
-            self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier after `.`".to_string(),
-                found: token?,
-            });
-            Err(ErrorsEmitted(()))
-        }
-    }
-
-    // TODO: what about `else-if` branches ?
-    /// Parse an `if` expression (i.e., `if (condition) { true block } else { false block }`).
-    fn parse_if_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        self.expect_token(Token::If {
-            name: "if".to_string(),
-            span: self.stream.span(),
-        })?;
-
-        self.expect_token(Token::LParen {
-            delim: '(',
-            span: self.stream.span(),
-        })?;
-
-        let condition = Box::new(self.parse_expression(Precedence::Lowest)?);
+        let expr = self.parse_expression(Precedence::Lowest)?;
 
         self.expect_token(Token::RParen {
             delim: ')',
             span: self.stream.span(),
         })?;
 
-        let true_branch = Box::new(self.parse_expression(Precedence::Lowest)?);
-
-        let false_branch = if self.tokens_match(Token::Else {
-            name: "else".to_string(),
-            span: self.stream.span(),
-        }) {
-            Some(Box::new(self.parse_expression(Precedence::Lowest)?))
-        } else {
-            None
-        };
-
-        Ok(Expression::If(condition, true_branch, false_branch))
-    }
-
-    /// Parse a `for-in` expression (i.e., `for var in iterable { execution logic }`).
-    fn parse_for_in_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        self.expect_token(Token::For {
-            name: "for".to_string(),
-            span: self.stream.span(),
-        })?;
-
-        let variable = Box::new(Expression::Identifier(self.consume_identifier()?));
-
-        self.expect_token(Token::In {
-            name: "in".to_string(),
-            span: self.stream.span(),
-        })?;
-
-        let iterable = Box::new(self.parse_expression(Precedence::Lowest)?);
-
-        let body = Box::new(self.parse_expression(Precedence::Lowest)?);
-
-        Ok(Expression::ForIn(variable, iterable, body))
+        Ok(expr)
     }
 
     /// Parse a block expression (i.e., `{ expr1; expr2; ... }`).
@@ -1096,28 +1046,6 @@ impl Parser {
         Ok(Expression::Tuple(elements))
     }
 
-    /// Parse a type cast expression.
-    fn parse_cast_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let expr = self.parse_expression(Precedence::Cast)?;
-
-        let token = self.consume_token();
-
-        if token.clone()?
-            != (Token::As {
-                name: "as".to_string(),
-                span: self.stream.span(),
-            })
-        {
-            self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`as`".to_string(),
-                found: token?,
-            });
-            return Err(ErrorsEmitted(()));
-        }
-
-        Ok(Expression::Cast(Box::new(expr), self.get_type()?))
-    }
-
     /// Parse a struct with fields.
     fn parse_struct_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
@@ -1177,45 +1105,137 @@ impl Parser {
         Ok(Expression::Struct(fields))
     }
 
-    fn parse_closure_with_block(&mut self) -> Result<Expression, ErrorsEmitted> {
+    ///////////////////////////////////////////////////////////////////////////
+    /// STATEMENTS
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// Parse a `Statement`.
+    fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+        match self.consume_token() {
+            Ok(Token::Let { .. }) => self.parse_let_statement(),
+            Ok(Token::If { .. }) => self.parse_if_statement(),
+            Ok(Token::Match { .. }) => self.parse_match_statement(),
+            Ok(Token::For { .. }) => self.parse_for_in_statement(),
+            Ok(Token::While { .. }) => self.parse_while_statement(),
+            Ok(Token::Import { .. }) => {
+                Ok(Statement::Declaration(self.parse_import_declaration()?))
+            }
+            Ok(Token::Alias { .. }) => Ok(Statement::Declaration(self.parse_alias_declaration()?)),
+            Ok(Token::Const { .. }) => Ok(Statement::Declaration(self.parse_const_declaration()?)),
+            Ok(Token::Static { .. }) => {
+                Ok(Statement::Declaration(self.parse_static_var_declaration()?))
+            }
+            Ok(Token::Module { .. }) => Ok(Statement::Definition(self.parse_module()?)),
+            Ok(Token::Trait { .. }) => Ok(Statement::Definition(self.parse_trait()?)),
+            Ok(Token::Enum { .. }) => Ok(Statement::Definition(self.parse_enum()?)),
+            Ok(Token::Struct { .. }) => Ok(Statement::Definition(self.parse_struct()?)),
+            Ok(Token::Impl { .. }) => Ok(Statement::Definition(self.parse_impl()?)),
+            Ok(Token::Func { .. }) => Ok(Statement::Definition(self.parse_function()?)),
+
+            _ => {
+                self.unconsume();
+                self.parse_expression_statement()
+            }
+        }
+    }
+
+    /// Parse an identifier and the assignment operation that binds the variable to a value.
+    fn parse_let_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+        let identifier = self.consume_identifier();
+
+        self.expect_token(Token::Equals {
+            punc: '=',
+            span: self.stream.span(),
+        })?;
+
+        let value = self.parse_expression(Precedence::Assignment);
+
+        self.expect_token(Token::Semicolon {
+            punc: ';',
+            span: self.stream.span(),
+        })?;
+
+        Ok(Statement::Let(identifier?, value?))
+    }
+
+    /// Parse an expression into a statement, separated by a semicolon.
+    fn parse_expression_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+        let expression = self.parse_expression(Precedence::Lowest);
+
+        self.expect_token(Token::Semicolon {
+            punc: ';',
+            span: self.stream.span(),
+        })?;
+
+        Ok(Statement::Expression(expression?))
+    }
+
+    // TODO: what about `else-if` branches ?
+    /// Parse an `if` expression (i.e., `if (condition) { true block } else { false block }`).
+    fn parse_if_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+        self.expect_token(Token::If {
+            name: "if".to_string(),
+            span: self.stream.span(),
+        })?;
+
+        self.expect_token(Token::LParen {
+            delim: '(',
+            span: self.stream.span(),
+        })?;
+
+        let condition = Box::new(self.parse_expression(Precedence::Lowest)?);
+
+        self.expect_token(Token::RParen {
+            delim: ')',
+            span: self.stream.span(),
+        })?;
+
+        let true_branch = Box::new(self.parse_expression(Precedence::Lowest)?);
+
+        let false_branch = if self.tokens_match(Token::Else {
+            name: "else".to_string(),
+            span: self.stream.span(),
+        }) {
+            Some(Box::new(self.parse_expression(Precedence::Lowest)?))
+        } else {
+            None
+        };
+
+        Ok(Statement::If(condition, true_branch, false_branch))
+    }
+
+    fn parse_match_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         todo!()
     }
 
-    fn parse_closure_without_block(&mut self) -> Result<Expression, ErrorsEmitted> {
+    /// Parse a `for-in` expression (i.e., `for var in iterable { execution logic }`).
+    fn parse_for_in_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+        self.expect_token(Token::For {
+            name: "for".to_string(),
+            span: self.stream.span(),
+        })?;
+
+        let variable = Box::new(Expression::Identifier(self.consume_identifier()?));
+
+        self.expect_token(Token::In {
+            name: "in".to_string(),
+            span: self.stream.span(),
+        })?;
+
+        let iterable = Box::new(self.parse_expression(Precedence::Lowest)?);
+
+        let body = Box::new(self.parse_expression(Precedence::Lowest)?);
+
+        Ok(Statement::ForIn(variable, iterable, body))
+    }
+
+    fn parse_while_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         todo!()
     }
 
-    fn parse_tuple_index_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_method_call_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_path_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_unwrap_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_range_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_return_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_match_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_break_or_continue_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
+    ///////////////////////////////////////////////////////////////////////////
+    /// MODULE ITEMS
+    ///////////////////////////////////////////////////////////////////////////
 
     fn parse_import_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
         todo!()
@@ -1233,30 +1253,32 @@ impl Parser {
         todo!()
     }
 
-    fn parse_module(&mut self) -> Result<Item, ErrorsEmitted> {
+    fn parse_module(&mut self) -> Result<Definition, ErrorsEmitted> {
         todo!()
     }
 
-    fn parse_struct(&mut self) -> Result<Item, ErrorsEmitted> {
+    fn parse_trait(&mut self) -> Result<Definition, ErrorsEmitted> {
         todo!()
     }
 
-    fn parse_enum(&mut self) -> Result<Item, ErrorsEmitted> {
+    fn parse_enum(&mut self) -> Result<Definition, ErrorsEmitted> {
         todo!()
     }
 
-    fn parse_trait(&mut self) -> Result<Item, ErrorsEmitted> {
+    fn parse_struct(&mut self) -> Result<Definition, ErrorsEmitted> {
         todo!()
     }
 
-    fn parse_impl(&mut self) -> Result<Item, ErrorsEmitted> {
+    fn parse_impl(&mut self) -> Result<Definition, ErrorsEmitted> {
         todo!()
     }
 
-    fn parse_function(&mut self) -> Result<Item, ErrorsEmitted> {
+    fn parse_function(&mut self) -> Result<Definition, ErrorsEmitted> {
         todo!()
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    /// HELPERS
     ///////////////////////////////////////////////////////////////////////////
 
     /// Return an identifier with the appropriate error handling.
