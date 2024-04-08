@@ -431,6 +431,16 @@ impl<'a> Lexer<'a> {
                         Err(ErrorsEmitted(()))
                     }
                 }
+                "view" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "while" => Ok(Token::While { name, span }),
                 "i32" => Ok(Token::I32Type { name, span }),
                 "i64" => Ok(Token::I64Type { name, span }),
@@ -501,9 +511,10 @@ impl<'a> Lexer<'a> {
             "calldata" => Ok(Token::Calldata { name, span }),
             "extern" => Ok(Token::Extern { name, span }),
             "payable" => Ok(Token::Payable { name, span }),
-            "storage" => Ok(Token::Payable { name, span }),
-            "topic" => Ok(Token::Payable { name, span }),
-            "unsafe" => Ok(Token::Payable { name, span }),
+            "storage" => Ok(Token::Storage { name, span }),
+            "topic" => Ok(Token::Topic { name, span }),
+            "unsafe" => Ok(Token::Unsafe { name, span }),
+            "view" => Ok(Token::View { name, span }),
             _ => {
                 self.log_error(LexErrorKind::UnrecognizedAttribute { name });
                 Err(ErrorsEmitted(()))
@@ -1124,6 +1135,7 @@ fn is_keyword(value: &str) -> bool {
         "trait",
         "true",
         "unsafe",
+        "view",
         "while",
         "i32",
         "i64",

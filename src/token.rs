@@ -41,6 +41,7 @@ pub enum Token {
     Abstract { name: String, span: Span }, // attribute, notated `#[abstract]`
     Payable { name: String, span: Span },  // attribute, notated `#[payable]`
     Storage { name: String, span: Span },  // attribute, notated `#[storage]`
+    View { name: String, span: Span },     // attribute, notated `#[view]`
     Topic { name: String, span: Span },    // attribute, notated `#[topic]`
     Calldata { name: String, span: Span }, // attribute, notated `#[calldata]`
     Return { name: String, span: Span },
