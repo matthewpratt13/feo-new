@@ -1,9 +1,10 @@
 use super::{BinaryOp, Delimiter, Expression, Identifier, Separator};
 
-pub struct BinaryExpr {
-    lhs: Box<Expression>,
-    op: BinaryOp,
-    rhs: Box<Expression>,
+#[derive(Debug, Clone)]
+pub struct BinaryOpExpr {
+    pub lhs: Box<Expression>,
+    pub op: BinaryOp,
+    pub rhs: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]

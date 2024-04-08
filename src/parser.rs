@@ -488,63 +488,77 @@ impl Parser {
         let token = self.consume_token();
 
         match token {
-            Ok(Token::Plus { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Add),
-            Ok(Token::Minus { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Subtract),
-            Ok(Token::Asterisk { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::Multiply)
+            Ok(Token::Plus { .. }) => {
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Add)
             }
-            Ok(Token::Slash { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Divide),
-            Ok(Token::Percent { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Modulus),
-            Ok(Token::DblEquals { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Equal),
+            Ok(Token::Minus { .. }) => {
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Subtract)
+            }
+            Ok(Token::Asterisk { .. }) => {
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Multiply)
+            }
+            Ok(Token::Slash { .. }) => {
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Divide)
+            }
+            Ok(Token::Percent { .. }) => {
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Modulus)
+            }
+            Ok(Token::DblEquals { .. }) => {
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Equal)
+            }
             Ok(Token::BangEquals { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::NotEqual)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::NotEqual)
             }
             Ok(Token::LessThan { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::LessThan)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::LessThan)
             }
             Ok(Token::LessThanEquals { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::LessEqual)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::LessEqual)
             }
             Ok(Token::GreaterThan { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::GreaterThan)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::GreaterThan)
             }
             Ok(Token::GreaterThanEquals { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::GreaterEqual)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::GreaterEqual)
             }
-            Ok(Token::Equals { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Assign),
+            Ok(Token::Equals { .. }) => {
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Assign)
+            }
             Ok(Token::PlusEquals { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::AddAssign)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::AddAssign)
             }
             Ok(Token::MinusEquals { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::SubtractAssign)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::SubtractAssign)
             }
             Ok(Token::AsteriskEquals { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::MultiplyAssign)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::MultiplyAssign)
             }
             Ok(Token::SlashEquals { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::DivideAssign)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::DivideAssign)
             }
             Ok(Token::PercentEquals { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::ModulusAssign)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::ModulusAssign)
             }
             Ok(Token::DblAmpersand { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::LogicalAnd)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::LogicalAnd)
             }
             Ok(Token::DblPipe { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::LogicalOr)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::LogicalOr)
             }
             Ok(Token::Ampersand { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::BitwiseAnd)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::BitwiseAnd)
             }
-            Ok(Token::Pipe { .. }) => self.parse_binary_expression(left_expr, BinaryOp::BitwiseOr),
+            Ok(Token::Pipe { .. }) => {
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::BitwiseOr)
+            }
             Ok(Token::Caret { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::BitwiseXor)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::BitwiseXor)
             }
             Ok(Token::DblLessThan { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::ShiftLeft)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::ShiftLeft)
             }
             Ok(Token::DblGreaterThan { .. }) => {
-                self.parse_binary_expression(left_expr, BinaryOp::ShiftRight)
+                expression::parse_binary_op_expression(self, left_expr, BinaryOp::ShiftRight)
             }
             Ok(Token::QuestionMark { .. }) => self.parse_unwrap_expression(),
             Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => self.parse_range_expression(),
@@ -692,210 +706,6 @@ impl Parser {
         }
 
         Ok(Expression::Cast(Box::new(expr), self.get_type()?))
-    }
-
-    /// Parse a binary expressions (e.g., arithmetic, logical and comparison expressions).
-    /// This method parses the operator and calls `parse_expression()` recursively to handle
-    /// the right-hand side of the expression.
-    fn parse_binary_expression(
-        &mut self,
-        left_expr: Expression,
-        op: BinaryOp,
-    ) -> Result<Expression, ErrorsEmitted> {
-        match op {
-            BinaryOp::Add => {
-                let right_expr = self.parse_expression(Precedence::Sum)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::Subtract => {
-                let right_expr = self.parse_expression(Precedence::Difference)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::Multiply => {
-                let right_expr = self.parse_expression(Precedence::Product)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::Divide => {
-                let right_expr = self.parse_expression(Precedence::Quotient)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::Modulus => {
-                let right_expr = self.parse_expression(Precedence::Remainder)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::Equal => {
-                let right_expr = self.parse_expression(Precedence::Equal)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::NotEqual => {
-                let right_expr = self.parse_expression(Precedence::NotEqual)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::LessThan => {
-                let right_expr = self.parse_expression(Precedence::LessThan)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::LessEqual => {
-                let right_expr = self.parse_expression(Precedence::LessThanOrEqual)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::GreaterThan => {
-                let right_expr = self.parse_expression(Precedence::GreaterThan)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::GreaterEqual => {
-                let right_expr = self.parse_expression(Precedence::GreaterThanOrEqual)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::Assign => {
-                let right_expr = self.parse_expression(Precedence::Assignment)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::AddAssign => {
-                let right_expr = self.parse_expression(Precedence::CompoundAssignment)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::SubtractAssign => {
-                let right_expr = self.parse_expression(Precedence::CompoundAssignment)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::MultiplyAssign => {
-                let right_expr = self.parse_expression(Precedence::CompoundAssignment)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::DivideAssign => {
-                let right_expr = self.parse_expression(Precedence::CompoundAssignment)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::ModulusAssign => {
-                let right_expr = self.parse_expression(Precedence::CompoundAssignment)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::LogicalAnd => {
-                let right_expr = self.parse_expression(Precedence::LogicalAnd)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::LogicalOr => {
-                let right_expr = self.parse_expression(Precedence::LogicalOr)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::BitwiseAnd => {
-                let right_expr = self.parse_expression(Precedence::BitwiseAnd)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::BitwiseOr => {
-                let right_expr = self.parse_expression(Precedence::BitwiseOr)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::BitwiseXor => {
-                let right_expr = self.parse_expression(Precedence::BitwiseXor)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::ShiftLeft => {
-                let right_expr = self.parse_expression(Precedence::Shift)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-            BinaryOp::ShiftRight => {
-                let right_expr = self.parse_expression(Precedence::Shift)?;
-                Ok(Expression::BinaryOp(
-                    op,
-                    Box::new(left_expr),
-                    Box::new(right_expr),
-                ))
-            }
-        }
     }
 
     fn parse_range_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
