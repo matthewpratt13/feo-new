@@ -145,7 +145,9 @@ pub enum ParserErrorKind {
         i: usize,
     },
 
-    TokenNotFound,
+    TokenNotFound {
+        expected: String,
+    },
 
     #[default]
     UnknownError,
@@ -160,15 +162,15 @@ impl fmt::Display for ParserErrorKind {
                 expected, found
             ),
             ParserErrorKind::UnexpectedEndOfInput => {
-                writeln!(f, "scanning: unexpected end of input")
+                writeln!(f, "parsing error: unexpected end of input")
             }
             ParserErrorKind::InvalidToken { token } => writeln!(
                 f,
                 "parsing error: invalid token in current context – `{:#?}`)",
                 token
             ),
-            ParserErrorKind::TokenNotFound => {
-                writeln!(f, "expected token, found none")
+            ParserErrorKind::TokenNotFound { expected } => {
+                writeln!(f, "token not found: expected {expected}, found none")
             }
             ParserErrorKind::TokenIndexOutOfBounds { len, i } => {
                 writeln!(
