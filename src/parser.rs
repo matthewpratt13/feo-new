@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
 
 mod expression;
 mod item;
@@ -8,12 +9,15 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
+        expression::{PathExpr, TypeCastExpr},
         BinaryOp, Declaration, Definition, Expression, Identifier, Literal, Statement, StructField,
         Type, UnaryOp,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
 };
+
+use self::expression::ParseExpression;
 
 /// Enum representing the different precedence levels of operators, respectively.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -383,7 +387,7 @@ impl Parser {
             Ok(Token::Identifier { .. }) => self.parse_primary(),
             Ok(Token::SelfKeyword { .. }) => match self.peek_current() {
                 Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
-                    self.parse_path_expression()
+                    PathExpr::parse(self)
                 }
 
                 _ => self.parse_primary(),
@@ -465,7 +469,7 @@ impl Parser {
                 }
             }
 
-            Ok(Token::Super { .. } | Token::Package { .. }) => self.parse_path_expression(),
+            Ok(Token::Super { .. } | Token::Package { .. }) => PathExpr::parse(self),
 
             Ok(Token::Return { .. }) => self.parse_return_expression(),
 
@@ -562,7 +566,7 @@ impl Parser {
             }
             Ok(Token::QuestionMark { .. }) => self.parse_unwrap_expression(),
             Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => self.parse_range_expression(),
-            Ok(Token::As { .. }) => self.parse_cast_expression(),
+            Ok(Token::As { .. }) => TypeCastExpr::parse(self),
             Ok(Token::LParen { .. }) => expression::parse_call_expression(self, left_expr), // TODO: or tuple struct
             Ok(Token::LBrace { .. }) => self.parse_struct_expression(),
             Ok(Token::LBracket { .. }) => expression::parse_index_expression(self, left_expr), // TODO: check
@@ -594,9 +598,7 @@ impl Parser {
                 }
             },
 
-            Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
-                self.parse_path_expression()
-            }
+            Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => PathExpr::parse(self),
 
             _ => {
                 self.log_error(ParserErrorKind::InvalidToken { token: token? });
@@ -607,36 +609,9 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    fn parse_path_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
     fn parse_method_call_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         todo!()
     }
-
-    // /// Parse an index expression (i.e., `array[index]`).
-    // fn parse_index_expression(
-    //     &mut self,
-    //     array_expr: Expression,
-    // ) -> Result<Expression, ErrorsEmitted> {
-    //     self.expect_token(Token::LBracket {
-    //         delim: '[',
-    //         span: self.stream.span(),
-    //     })?;
-
-    //     let index_expr = self.parse_expression(Precedence::Index)?;
-
-    //     self.expect_token(Token::RBracket {
-    //         delim: ']',
-    //         span: self.stream.span(),
-    //     })?;
-
-    //     Ok(Expression::Index(
-    //         Box::new(array_expr),
-    //         Box::new(index_expr),
-    //     ))
-    // }
 
     fn parse_tuple_index_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         todo!()
@@ -644,28 +619,6 @@ impl Parser {
 
     fn parse_unwrap_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         todo!()
-    }
-
-    /// Parse a type cast expression.
-    fn parse_cast_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let expr = self.parse_expression(Precedence::Cast)?;
-
-        let token = self.consume_token();
-
-        if token.clone()?
-            != (Token::As {
-                name: "as".to_string(),
-                span: self.stream.span(),
-            })
-        {
-            self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`as`".to_string(),
-                found: token?,
-            });
-            return Err(ErrorsEmitted(()));
-        }
-
-        Ok(Expression::Cast(Box::new(expr), self.get_type()?))
     }
 
     fn parse_range_expression(&mut self) -> Result<Expression, ErrorsEmitted> {

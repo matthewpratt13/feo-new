@@ -1,7 +1,9 @@
 use crate::{
     ast::{
-        expression::{BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr, IndexExpr},
-        BinaryOp, Delimiter, Expression, Identifier, Separator,
+        expression::{
+            BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr, IndexExpr, PathExpr, TypeCastExpr,
+        },
+        BinaryOp, Delimiter, Expression, Identifier, Keyword, Separator,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -11,6 +13,12 @@ use super::{Parser, Precedence};
 
 pub trait ParseExpression {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted>;
+}
+
+impl ParseExpression for PathExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
 }
 
 /// Parse a block expression (i.e., `{ expr1; expr2; ... }`).
@@ -142,6 +150,33 @@ pub(crate) fn parse_index_expression(
     }))
 }
 
+impl ParseExpression for TypeCastExpr {
+    /// Parse a type cast expression.
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let operand = parser.parse_expression(Precedence::Cast)?;
+
+        let token = parser.consume_token();
+
+        if token.clone()?
+            != (Token::As {
+                name: "as".to_string(),
+                span: parser.stream.span(),
+            })
+        {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "`as`".to_string(),
+                found: token?,
+            });
+            return Err(ErrorsEmitted(()));
+        }
+
+        Ok(Expression::TypeCast(TypeCastExpr {
+            operand: Box::new(operand),
+            kw_as: Keyword::As,
+            new_type: parser.get_type()?,
+        }))
+    }
+}
 /// Parse a binary operations (e.g., arithmetic, logical and comparison expressions).
 /// This method parses the operator and calls `parse_expression()` recursively to handle
 /// the right-hand side of the expression.

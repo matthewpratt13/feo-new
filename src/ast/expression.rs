@@ -1,4 +1,12 @@
-use super::{BinaryOp, Delimiter, Expression, Identifier, Separator};
+use super::{BinaryOp, Delimiter, Expression, Identifier, Keyword, Separator, Type};
+
+#[derive(Debug, Clone)]
+pub enum PathPrefixType {
+    Package,
+    Super,
+    SelfKw,
+    SelfType,
+}
 
 #[derive(Debug, Clone)]
 pub struct BinaryOpExpr {
@@ -35,4 +43,18 @@ pub struct IndexExpr {
     pub open_bracket: Delimiter,
     pub index: Box<Expression>,
     pub close_bracket: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct PathExpr {
+    pub prefix: PathPrefixType,
+    pub dbl_colon: Option<Separator>,
+    pub suffixes: Option<Vec<Expression>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TypeCastExpr {
+    pub operand: Box<Expression>,
+    pub kw_as: Keyword,
+    pub new_type: Type,
 }
