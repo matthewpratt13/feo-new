@@ -1,5 +1,9 @@
 #![allow(dead_code)]
 
+mod expression;
+mod item;
+mod statement;
+
 use std::collections::HashMap;
 
 use crate::{
