@@ -5,6 +5,8 @@ use crate::{
     B28, B29, B3, B30, B31, B32, B4, B5, B6, B7, B8, B9, H160, H256, H512, U256, U512,
 };
 
+pub mod expression;
+
 /// Enum representing the different signed integer types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum IntKind {
