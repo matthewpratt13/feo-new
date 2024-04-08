@@ -362,7 +362,12 @@ impl Parser {
         let current_precedence = &self.precedence(&self.peek_current().expect("token not found"));
 
         while let Some(cp) = current_precedence {
-            if precedence < *cp {
+            if precedence < *cp
+                && !self.is_expected_token(Token::Semicolon {
+                    punc: ';',
+                    span: self.stream.span(),
+                })
+            {
                 left_expr = self.parse_infix(left_expr)?;
             } else {
                 break;
