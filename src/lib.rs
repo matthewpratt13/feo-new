@@ -11,17 +11,17 @@ construct_uint! {
     pub struct U512(8);
 }
 
-// 20-byte hash (e.g., EVM address)
+// 20-byte fixed-size hash (e.g., EVM address)
 construct_fixed_hash! {
     pub struct H160(20);
 }
 
-// 256-bit (32-byte) hash
+// 256-bit (32-byte) fixed-size hash
 construct_fixed_hash! {
     pub struct H256(32);
 }
 
-// 512-bit (64-byte) hash
+// 512-bit (64-byte) fixed-size hash
 construct_fixed_hash! {
     pub struct H512(64);
 }
@@ -152,6 +152,7 @@ construct_fixed_hash! {
 }
 
 impl_fixed_hash_conversions!(H256, H160);
+impl_fixed_hash_conversions!(H512, H256);
 
 mod ast;
 mod error;
@@ -159,3 +160,4 @@ mod lexer;
 mod parser;
 mod span;
 mod token;
+mod keccak;
