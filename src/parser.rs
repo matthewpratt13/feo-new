@@ -1277,12 +1277,14 @@ impl Parser {
     fn parse_impl(&mut self) -> Result<Item, ErrorEmitted> {
         todo!()
     }
+    
     fn parse_function(&mut self) -> Result<Item, ErrorEmitted> {
         todo!()
     }
 
     ///////////////////////////////////////////////////////////////////////////
 
+    /// Return an identifier with the appropriate error handling.
     fn expect_identifier(&mut self) -> Result<Identifier, ErrorEmitted> {
         let token = self
             .stream
@@ -1303,6 +1305,7 @@ impl Parser {
         }
     }
 
+    /// Consume an identifier with appropriate error handling.
     fn consume_identifier(&mut self) -> Result<Identifier, ErrorEmitted> {
         let token = self
             .stream
@@ -1324,6 +1327,8 @@ impl Parser {
         }
     }
 
+    /// Advance the parser by one if the expected token matches the current one
+    /// and return whether or not this is the case.
     fn match_token(&mut self, expected: Token) -> bool {
         if self.check_token(expected.clone()) {
             self.current += 1;
@@ -1333,6 +1338,7 @@ impl Parser {
         }
     }
 
+    /// Verify that the current token is the expected one.
     fn check_token(&self, expected: Token) -> bool {
         if self.current < self.stream.tokens().len() {
             self.stream.tokens()[self.current] == expected
@@ -1423,15 +1429,17 @@ impl Parser {
         self.precedences.get(token).cloned()
     }
 
-    /// Get the tokens at the current position.
+    /// Peek at the token at the current position.
     fn peek_current(&self) -> Option<Token> {
         self.stream.tokens().get(self.current).cloned()
     }
 
+    /// Peek at the token `num_tokens` ahead of the token at the current position.
     fn peek_ahead_by(&self, num_tokens: usize) -> Option<Token> {
         self.stream.tokens().get(self.current + num_tokens).cloned()
     }
 
+    /// Advance the parser and return the current token.
     fn consume(&mut self) -> Option<Token> {
         let token = self.peek_current();
         if token.is_some() {
@@ -1440,12 +1448,14 @@ impl Parser {
         token
     }
 
+    /// Step the parser back by one.
     fn unconsume(&mut self) {
         if self.current > 0 {
             self.current -= 1;
         }
     }
 
+    /// Returns whether or not the position is the last index in the token stream.
     fn is_at_end(&self) -> bool {
         self.current >= self.stream.tokens().len()
     }
