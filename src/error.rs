@@ -5,11 +5,11 @@ use crate::token::Token;
 /// Enum representing the different types of lexer errors.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexErrorKind {
-    ParseHexError,
     ParseIntError,
     ParseUIntError,
-    ParseHashError,
-    ParseAddressError,
+    ParseU256Error,
+    ParseH256Error,
+    ParseH160Error,
     ParseBoolError,
 
     EmptyCharLiteral,
@@ -65,11 +65,11 @@ pub enum LexErrorKind {
 impl fmt::Display for LexErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexErrorKind::ParseHexError => writeln!(f, "error parsing hexadecimal digit"),
             LexErrorKind::ParseIntError => writeln!(f, "error parsing signed integer"),
             LexErrorKind::ParseUIntError => writeln!(f, "error parsing unsigned integer"),
-            LexErrorKind::ParseHashError => writeln!(f, "error parsing hash"),
-            LexErrorKind::ParseAddressError => writeln!(f, "error parsing address"),
+            LexErrorKind::ParseU256Error => writeln!(f, "error parsing u256 digit"),
+            LexErrorKind::ParseH256Error => writeln!(f, "error parsing h256 hash"),
+            LexErrorKind::ParseH160Error => writeln!(f, "error parsing h160 hash"),
             LexErrorKind::ParseBoolError => writeln!(f, "error parsing boolean"),
 
             LexErrorKind::UnrecognizedChar { value } => {
