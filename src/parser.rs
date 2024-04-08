@@ -407,7 +407,8 @@ impl Parser {
         }
     }
 
-    /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses).
+    /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses),
+    /// where the respective token type appears at the beginning of an expression.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorEmitted> {
         match self.consume() {
             Some(token) => match token {
@@ -579,7 +580,8 @@ impl Parser {
         }
     }
 
-    /// Parse infix expressions (e.g., binary operators).
+    /// Parse infix expressions (e.g., binary operators), where the respective token type
+    /// appears in the middle of an expression.
     fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ErrorEmitted> {
         let token = self
             .consume()
@@ -1277,7 +1279,7 @@ impl Parser {
     fn parse_impl(&mut self) -> Result<Item, ErrorEmitted> {
         todo!()
     }
-    
+
     fn parse_function(&mut self) -> Result<Item, ErrorEmitted> {
         todo!()
     }
