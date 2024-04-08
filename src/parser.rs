@@ -1,20 +1,54 @@
 #![allow(dead_code)]
 
+mod expression;
+mod item;
+mod statement;
+
 use std::collections::HashMap;
 
 use crate::{
-    ast::{BinaryOp, Expression, Literal, Precedence, Statement, Type, UnaryOp},
-    error::{CompilerError, ErrorEmitted, ParserErrorKind},
+    ast::{
+        BinaryOp, Declaration, Definition, Expression, Identifier, Literal, Statement, StructField,
+        Type, UnaryOp,
+    },
+    error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
 };
 
-/// Struct representing the fields within a struct, with a name and value expression.
-#[derive(Debug, Clone)]
-pub struct StructField {
-    name: String,
-    value: Expression,
+/// Enum representing the different precedence levels of operators, respectively.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Precedence {
+    Lowest,             // `break`, `return`, closure
+    Assignment,         // `=`
+    CompoundAssignment, // `+=`, `-=`, `*/`, `/=`, `%=`
+    Range,              // `..`, `..=` (requires parentheses)
+    LogicalOr,          // `||`
+    LogicalAnd,         // `&&`
+    Equal,              // `==`
+    NotEqual,           // `!=`
+    LessThan,           // `<`
+    GreaterThan,        // `>`
+    LessThanOrEqual,    // `<=`
+    GreaterThanOrEqual, // `>=`
+    BitwiseOr,          // `|`
+    BitwiseXor,         // `^`
+    BitwiseAnd,         // `&`
+    Shift,              // `«`, `»`
+    Sum,                // `+`
+    Difference,         // `-`
+    Product,            // `*`
+    Quotient,           // `/`
+    Remainder,          // `%`
+    Exponentiation,     // `**`
+    Cast,               // "as"
+    Unary,              // `-`, `*` `!`, `&`,`&mut`
+    Unwrap,             // `?`
+    Index,              // `x[0]`
+    Call,               // `foo(bar)`
+    FieldAccess,        // foo.bar
+    MethodCall,         // foo.bar()
+    Path,               // `package::module::Item`
 }
-
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
 #[derive(Debug)]
@@ -261,8 +295,8 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Main parsing function that returns a `VecStatement`.
-    fn parse(&mut self) -> Result<Vec<Statement>, ErrorEmitted> {
+    /// Main parsing function that returns a `Vec<Statement>`.
+    fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
         while !self.is_at_end() {
             statements.push(self.parse_statement()?);
@@ -271,60 +305,22 @@ impl Parser {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-
-    /// Parse a `Statement`.
-    fn parse_statement(&mut self) -> Result<Statement, ErrorEmitted> {
-        let token = self.consume();
-        match token {
-            Some(Token::Let { .. }) => self.parse_let_statement(),
-            _ => {
-                self.unconsume();
-                self.parse_expression_statement()
-            }
-        }
-    }
-
-    /// Parse an identifier and the assignment operation that binds the variable to a value.
-    fn parse_let_statement(&mut self) -> Result<Statement, ErrorEmitted> {
-        let identifier = self.expect_identifier()?;
-
-        self.expect_token(Token::Equals {
-            punc: '=',
-            span: self.stream.span(),
-        })?;
-
-        let value = self.parse_expression(Precedence::Assignment)?;
-
-        self.expect_token(Token::Semicolon {
-            punc: ';',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Statement::Let(identifier, value))
-    }
-
-    /// Parse an expression into a statement, separated by a semicolon.
-    fn parse_expression_statement(&mut self) -> Result<Statement, ErrorEmitted> {
-        let expression = &self.parse_expression(Precedence::Lowest)?;
-
-        self.expect_token(Token::Semicolon {
-            punc: ';',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Statement::Expr(expression.clone()))
-    }
-
+    /// EXPRESSIONS
     ///////////////////////////////////////////////////////////////////////////
 
     /// Recursively parse an expression based on operator precedence.
-    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorEmitted> {
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
         let mut left_expr = self.parse_prefix()?;
 
-        while let Some(current_precedence) =
-            self.precedence(&self.peek_current().expect("token not found"))
-        {
-            if precedence < current_precedence {
+        let current_precedence = &self.precedence(&self.peek_current().expect("token not found"));
+
+        while let Some(cp) = current_precedence {
+            if precedence < *cp
+                && !self.is_expected_token(Token::Semicolon {
+                    punc: ';',
+                    span: self.stream.span(),
+                })
+            {
                 left_expr = self.parse_infix(left_expr)?;
             } else {
                 break;
@@ -335,296 +331,393 @@ impl Parser {
     }
 
     /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
-    fn parse_primary(&mut self) -> Result<Expression, ErrorEmitted> {
-        let token = self
-            .consume()
-            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
+    fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
+        let token = self.consume_token();
 
         match token {
-            Token::Identifier { name, .. }
-            | Token::SelfKeyword { name, .. }
-            | Token::Underscore { name, .. } => Ok(Expression::Identifier(name)),
-            Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
-            Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
-            Token::U256Literal { value, .. } => Ok(Expression::Literal(Literal::U256(value))),
-            Token::H256Literal { value, .. } => Ok(Expression::Literal(Literal::H256(value))),
-            Token::AddressLiteral { value, .. } => Ok(Expression::Literal(Literal::Address(value))),
-            Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
-            Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
-            Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
-            Token::LParen { .. } => self.parse_grouped_expression(),
-            _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier or literal".to_string(),
-                found: token,
-            })),
+            Ok(
+                Token::Identifier { name, .. }
+                | Token::SelfKeyword { name, .. }
+                | Token::Underscore { name, .. },
+            ) => Ok(Expression::Identifier(Identifier(name))),
+            Ok(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
+            Ok(Token::UIntLiteral { value, .. }) => Ok(Expression::Literal(Literal::UInt(value))),
+            Ok(Token::BigUIntLiteral { value, .. }) => {
+                Ok(Expression::Literal(Literal::BigUInt(value)))
+            }
+            Ok(Token::ByteLiteral { value, .. }) => Ok(Expression::Literal(Literal::Byte(value))),
+            Ok(Token::BytesLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bytes(value))),
+            Ok(Token::HashLiteral { value, .. }) => Ok(Expression::Literal(Literal::Hash(value))),
+            Ok(Token::StringLiteral { value, .. }) => {
+                Ok(Expression::Literal(Literal::String(value)))
+            }
+            Ok(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
+            Ok(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
+            Ok(Token::LParen { .. }) => self.parse_grouped_expression(),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "identifier, `Self`, `_`, literal or `(`".to_string(),
+                    found: token?,
+                });
+
+                Err(ErrorsEmitted(()))
+            }
         }
     }
 
-    /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses).
-    fn parse_prefix(&mut self) -> Result<Expression, ErrorEmitted> {
-        match self.consume() {
-            Some(token) => match token {
-                Token::IntLiteral { .. } => self.parse_primary(),
-                Token::UIntLiteral { .. } => self.parse_primary(),
-                Token::U256Literal { .. } => self.parse_primary(),
-                Token::Identifier { .. } => self.parse_primary(),
-                Token::SelfKeyword { .. } => match self.peek_current() {
-                    Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
-                        let expr = self.parse_path_expression()?;
+    /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses),
+    /// where the respective token type appears at the beginning of an expression.
+    fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
+        let token = self.consume_token();
 
-                        self.expect_token(Token::Semicolon {
-                            punc: ';',
-                            span: self.stream.span(),
-                        })?;
+        match token {
+            Ok(Token::IntLiteral { .. }) => self.parse_primary(),
+            Ok(Token::UIntLiteral { .. }) => self.parse_primary(),
+            Ok(Token::BigUIntLiteral { .. }) => self.parse_primary(),
+            Ok(Token::HashLiteral { .. }) => self.parse_primary(),
+            Ok(Token::ByteLiteral { .. }) => self.parse_primary(),
+            Ok(Token::BytesLiteral { .. }) => self.parse_primary(),
+            Ok(Token::StringLiteral { .. }) => self.parse_primary(),
+            Ok(Token::CharLiteral { .. }) => self.parse_primary(),
+            Ok(Token::BoolLiteral { .. }) => self.parse_primary(),
+            Ok(Token::Identifier { .. }) => self.parse_primary(),
+            Ok(Token::SelfKeyword { .. }) => match self.peek_current() {
+                Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
+                    self.parse_path_expression()
+                }
 
-                        Ok(expr)
+                _ => self.parse_primary(),
+            },
+            Ok(Token::Minus { .. }) => {
+                let expr = self.parse_expression(Precedence::Unary)?;
+                Ok(Expression::UnaryOp(UnaryOp::Negate, Box::new(expr)))
+            }
+            Ok(Token::Bang { .. }) => {
+                let expr = self.parse_expression(Precedence::Unary)?;
+                Ok(Expression::UnaryOp(UnaryOp::Not, Box::new(expr)))
+            }
+            Ok(Token::Ampersand { .. }) => {
+                let expr = self.parse_expression(Precedence::Unary)?;
+                Ok(Expression::UnaryOp(UnaryOp::Reference, Box::new(expr)))
+            }
+            Ok(Token::Asterisk { .. }) => {
+                let expr = self.parse_expression(Precedence::Unary)?;
+                Ok(Expression::UnaryOp(UnaryOp::Dereference, Box::new(expr)))
+            }
+            Ok(Token::LParen { .. }) => {
+                let expr = if let Ok(Token::Comma { .. }) =
+                    self.peek_ahead_by(2)
+                        .ok_or(ParserErrorKind::TokenIndexOutOfBounds {
+                            len: self.stream.tokens().len(),
+                            i: self.current + 2,
+                        }) {
+                    self.parse_tuple_expression()?
+                } else {
+                    self.parse_grouped_expression()?
+                };
+
+                Ok(expr)
+            }
+            Ok(Token::LBracket { .. }) => self.parse_array_expression(),
+            Ok(Token::Pipe { .. } | Token::DblPipe { .. }) => {
+                let expr = if let Ok(c) = self.parse_closure_with_block() {
+                    c
+                } else {
+                    self.parse_closure_without_block()?
+                };
+
+                match expr {
+                    Expression::ClosureWithBlock(a, b) => {
+                        return Ok(Expression::ClosureWithBlock(a, b));
+                    }
+                    Expression::ClosureWithoutBlock(a) => {
+                        return Ok(Expression::ClosureWithoutBlock(a));
                     }
 
-                    _ => self.parse_primary(),
-                },
-                Token::Minus { .. } => {
-                    let expr = self.parse_expression(Precedence::Unary)?;
-                    Ok(Expression::UnaryOp(UnaryOp::Negate, Box::new(expr)))
-                }
-                Token::Bang { .. } => {
-                    let expr = self.parse_expression(Precedence::Unary)?;
-                    Ok(Expression::UnaryOp(UnaryOp::Not, Box::new(expr)))
-                }
-                Token::Ampersand { .. } => {
-                    let expr = self.parse_expression(Precedence::Unary)?;
-                    Ok(Expression::UnaryOp(UnaryOp::Reference, Box::new(expr)))
-                }
-                Token::Asterisk { .. } => {
-                    let expr = self.parse_expression(Precedence::Unary)?;
-                    Ok(Expression::UnaryOp(UnaryOp::Dereference, Box::new(expr)))
-                }
-                Token::LParen { .. } => {
-                    let expr = if let Ok(Token::Comma { .. }) =
-                        self.peek_ahead_by(2)
-                            .ok_or(ParserErrorKind::TokenIndexOutOfBounds {
-                                len: self.stream.tokens().len(),
-                                i: self.current + 2,
-                            }) {
-                        self.parse_tuple_expression()?
-                    } else {
-                        self.parse_grouped_expression()?
-                    };
-
-                    self.expect_token(Token::RParen {
-                        delim: ')',
-                        span: self.stream.span(),
-                    })?;
-
-                    Ok(expr)
-                }
-                Token::LBracket { .. } => {
-                    let expr = self.parse_array_expression()?;
-                    self.expect_token(Token::RBracket {
-                        delim: ']',
-                        span: self.stream.span(),
-                    })?;
-                    Ok(expr)
-                }
-                Token::Pipe { .. } | Token::DblPipe { .. } => {
-                    let expr = if let Ok(c) = self.parse_closure_with_block() {
-                        c
-                    } else {
-                        self.parse_closure_without_block()?
-                    };
-
-                    match expr {
-                        Expression::ClosureWithBlock(a, b) => {
-                            self.expect_token(Token::RBrace {
-                                delim: '}',
-                                span: self.stream.span(),
-                            })?;
-
-                            return Ok(Expression::ClosureWithBlock(a, b));
-                        }
-                        Expression::ClosureWithoutBlock(a) => {
-                            self.expect_token(Token::Semicolon {
-                                punc: ';',
-                                span: self.stream.span(),
-                            })?;
-
-                            return Ok(Expression::ClosureWithoutBlock(a));
-                        }
-
-                        _ => (),
-                    }
-
-                    Ok(expr)
+                    _ => (),
                 }
 
-                Token::DblDot { .. } | Token::DotDotEquals { .. } => {
-                    let expr = self.parse_range_expression()?;
+                Ok(expr)
+            }
 
-                    match self.peek_current() {
-                        Some(
-                            Token::Identifier { .. }
-                            | Token::UIntLiteral { .. }
-                            | Token::IntLiteral { .. }
-                            | Token::U256Literal { .. },
-                        ) => Ok(expr),
-                        Some(t) => Err(self.log_error(ParserErrorKind::UnexpectedToken {
+            Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
+                let expr = self.parse_range_expression()?;
+
+                match self.peek_current() {
+                    Some(
+                        Token::Identifier { .. }
+                        | Token::IntLiteral { .. }
+                        | Token::UIntLiteral { .. }
+                        | Token::BigUIntLiteral { .. },
+                    ) => Ok(expr),
+                    Some(t) => {
+                        self.log_error(ParserErrorKind::UnexpectedToken {
                             expected: "identifier or number".to_string(),
                             found: t,
-                        })),
-                        None => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
+                        });
+
+                        Err(ErrorsEmitted(()))
+                    }
+                    None => {
+                        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                        Err(ErrorsEmitted(()))
                     }
                 }
+            }
 
-                Token::Return { .. } => {
-                    let expr = self.parse_return_expression()?;
+            Ok(Token::Super { .. } | Token::Package { .. }) => self.parse_path_expression(),
 
-                    self.expect_token(Token::Semicolon {
-                        punc: ';',
-                        span: self.stream.span(),
-                    })?;
+            Ok(Token::Return { .. }) => self.parse_return_expression(),
 
-                    Ok(expr)
-                }
+            Ok(Token::Break { .. } | Token::Continue { .. }) => {
+                self.parse_break_or_continue_expression()
+            }
 
-                Token::Match { .. } => {
-                    let expr = self.parse_match_expression()?;
+            Ok(Token::Underscore { .. }) => self.parse_primary(),
 
-                    self.expect_token(Token::RBrace {
-                        delim: '}',
-                        span: self.stream.span(),
-                    })?;
-
-                    Ok(expr)
-                }
-
-                Token::Super { .. } | Token::Package { .. } => {
-                    let expr = self.parse_path_expression()?;
-
-                    self.expect_token(Token::Semicolon {
-                        punc: ';',
-                        span: self.stream.span(),
-                    })?;
-
-                    Ok(expr)
-                }
-
-                Token::Break { .. } | Token::Continue { .. } => {
-                    let expr = self.parse_break_or_continue_expression()?;
-                    self.expect_token(Token::Semicolon {
-                        punc: ';',
-                        span: self.stream.span(),
-                    })?;
-
-                    Ok(expr)
-                }
-
-                Token::Underscore { .. } => self.parse_primary(),
-
-                _ => Err(self.log_error(ParserErrorKind::InvalidToken { token })),
-            },
-            None => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
+            _ => {
+                self.log_error(ParserErrorKind::InvalidToken { token: token? });
+                Err(ErrorsEmitted(()))
+            }
         }
     }
 
-    /// Parse infix expressions (e.g., binary operators).
-    fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ErrorEmitted> {
-        let token = self
-            .consume()
-            .ok_or(self.log_error(ParserErrorKind::UnexpectedEndOfInput))?;
+    /// Parse infix expressions (e.g., binary operators), where the respective token type
+    /// appears in the middle of an expression.
+    fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let token = self.consume_token();
+
         match token {
-            Token::Plus { .. } => self.parse_binary_expression(left_expr, BinaryOp::Add),
-            Token::Minus { .. } => self.parse_binary_expression(left_expr, BinaryOp::Subtract),
-            Token::Asterisk { .. } => self.parse_binary_expression(left_expr, BinaryOp::Multiply),
-            Token::Slash { .. } => self.parse_binary_expression(left_expr, BinaryOp::Divide),
-            Token::Percent { .. } => self.parse_binary_expression(left_expr, BinaryOp::Modulus),
-            Token::DblEquals { .. } => self.parse_binary_expression(left_expr, BinaryOp::Equal),
-            Token::BangEquals { .. } => self.parse_binary_expression(left_expr, BinaryOp::NotEqual),
-            Token::LessThan { .. } => self.parse_binary_expression(left_expr, BinaryOp::LessThan),
-            Token::LessThanEquals { .. } => {
+            Ok(Token::Plus { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Add),
+            Ok(Token::Minus { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Subtract),
+            Ok(Token::Asterisk { .. }) => {
+                self.parse_binary_expression(left_expr, BinaryOp::Multiply)
+            }
+            Ok(Token::Slash { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Divide),
+            Ok(Token::Percent { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Modulus),
+            Ok(Token::DblEquals { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Equal),
+            Ok(Token::BangEquals { .. }) => {
+                self.parse_binary_expression(left_expr, BinaryOp::NotEqual)
+            }
+            Ok(Token::LessThan { .. }) => {
+                self.parse_binary_expression(left_expr, BinaryOp::LessThan)
+            }
+            Ok(Token::LessThanEquals { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::LessEqual)
             }
-            Token::GreaterThan { .. } => {
+            Ok(Token::GreaterThan { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::GreaterThan)
             }
-            Token::GreaterThanEquals { .. } => {
+            Ok(Token::GreaterThanEquals { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::GreaterEqual)
             }
-            Token::Equals { .. } => self.parse_binary_expression(left_expr, BinaryOp::Assign),
-            Token::PlusEquals { .. } => {
+            Ok(Token::Equals { .. }) => self.parse_binary_expression(left_expr, BinaryOp::Assign),
+            Ok(Token::PlusEquals { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::AddAssign)
             }
-            Token::MinusEquals { .. } => {
+            Ok(Token::MinusEquals { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::SubtractAssign)
             }
-            Token::AsteriskEquals { .. } => {
+            Ok(Token::AsteriskEquals { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::MultiplyAssign)
             }
-            Token::SlashEquals { .. } => {
+            Ok(Token::SlashEquals { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::DivideAssign)
             }
-            Token::PercentEquals { .. } => {
+            Ok(Token::PercentEquals { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::ModulusAssign)
             }
-            Token::DblAmpersand { .. } => {
+            Ok(Token::DblAmpersand { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::LogicalAnd)
             }
-            Token::DblPipe { .. } => self.parse_binary_expression(left_expr, BinaryOp::LogicalOr),
-            Token::Ampersand { .. } => {
+            Ok(Token::DblPipe { .. }) => {
+                self.parse_binary_expression(left_expr, BinaryOp::LogicalOr)
+            }
+            Ok(Token::Ampersand { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::BitwiseAnd)
             }
-            Token::Pipe { .. } => self.parse_binary_expression(left_expr, BinaryOp::BitwiseOr),
-            Token::Caret { .. } => self.parse_binary_expression(left_expr, BinaryOp::BitwiseXor),
-            Token::DblLessThan { .. } => {
+            Ok(Token::Pipe { .. }) => self.parse_binary_expression(left_expr, BinaryOp::BitwiseOr),
+            Ok(Token::Caret { .. }) => {
+                self.parse_binary_expression(left_expr, BinaryOp::BitwiseXor)
+            }
+            Ok(Token::DblLessThan { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::ShiftLeft)
             }
-            Token::DblGreaterThan { .. } => {
+            Ok(Token::DblGreaterThan { .. }) => {
                 self.parse_binary_expression(left_expr, BinaryOp::ShiftRight)
             }
-            Token::QuestionMark { .. } => self.parse_unwrap_expression(),
-            Token::DblDot { .. } | Token::DotDotEquals { .. } => self.parse_range_expression(),
-            Token::As { .. } => self.parse_cast_expression(),
-            Token::LParen { .. } => self.parse_call_expression(left_expr), // TODO: or tuple struct
-            Token::LBrace { .. } => self.parse_struct(), // TODO: or match expression
-            Token::LBracket { .. } => self.parse_index_expression(left_expr), // TODO: check
-            Token::FullStop { .. } => match self.peek_current() {
+            Ok(Token::QuestionMark { .. }) => self.parse_unwrap_expression(),
+            Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => self.parse_range_expression(),
+            Ok(Token::As { .. }) => self.parse_cast_expression(),
+            Ok(Token::LParen { .. }) => self.parse_call_expression(left_expr), // TODO: or tuple struct
+            Ok(Token::LBrace { .. }) => self.parse_struct_expression(),
+            Ok(Token::LBracket { .. }) => self.parse_index_expression(left_expr), // TODO: check
+            Ok(Token::FullStop { .. }) => match self.peek_current() {
                 Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {
-                    match self.peek_ahead_by(1) {
-                        Some(Token::LParen { .. }) => self.parse_method_call_expression(),
+                    let token = self.peek_ahead_by(1).ok_or({
+                        self.log_error(ParserErrorKind::TokenIndexOutOfBounds {
+                            len: self.stream.tokens().len(),
+                            i: self.current + 1,
+                        })
+                    });
+
+                    match token {
+                        Ok(Token::LParen { .. }) => return self.parse_method_call_expression(),
                         _ => self.parse_field_access_expression(left_expr),
                     }
                 }
                 Some(Token::UIntLiteral { .. }) => self.parse_tuple_index_expression(),
-                _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "identifier or tuple index".to_string(),
-                    found: token,
-                })),
+                Some(_) => {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "identifier or tuple index".to_string(),
+                        found: token?,
+                    });
+                    Err(ErrorsEmitted(()))
+                }
+                None => {
+                    self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                    Err(ErrorsEmitted(()))
+                }
             },
-            Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => {
+
+            Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
                 self.parse_path_expression()
             }
 
-            _ => Err(self.log_error(ParserErrorKind::InvalidToken { token })),
+            _ => {
+                self.log_error(ParserErrorKind::InvalidToken { token: token? });
+                Err(ErrorsEmitted(()))
+            }
         }
     }
 
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Parse a grouped (parenthesized) expression.
-    fn parse_grouped_expression(&mut self) -> Result<Expression, ErrorEmitted> {
+    fn parse_path_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_method_call_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    /// Parse a field access expression (i.e., `object.field`).
+    fn parse_field_access_expression(
+        &mut self,
+        object_expr: Expression,
+    ) -> Result<Expression, ErrorsEmitted> {
+        self.expect_token(Token::FullStop {
+            punc: '.',
+            span: self.stream.span(),
+        })?;
+
+        let token = self.consume_token();
+
+        if let Ok(Token::Identifier { name, .. }) = token {
+            Ok(Expression::FieldAccess(
+                Box::new(object_expr),
+                Identifier(name),
+            ))
+        } else {
+            self.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "identifier after `.`".to_string(),
+                found: token?,
+            });
+            Err(ErrorsEmitted(()))
+        }
+    }
+
+    /// Parse a function call with arguments.
+    fn parse_call_expression(&mut self, callee: Expression) -> Result<Expression, ErrorsEmitted> {
+        let mut args: Vec<Expression> = Vec::new(); // store function arguments
+
         self.expect_token(Token::LParen {
             delim: '(',
             span: self.stream.span(),
         })?;
 
-        self.consume(); // Consume '('
+        // parse arguments – separated by commas – until a closing parenthesis
+        loop {
+            if let Some(Token::RParen { delim: ')', .. }) = self.peek_current() {
+                // end of arguments
+                self.consume_token()?;
+                break;
+            }
 
-        let expr = self.parse_expression(Precedence::Lowest)?;
+            let arg_expr = self.parse_expression(Precedence::Call);
+            args.push(arg_expr?);
 
-        self.expect_token(Token::RParen {
-            delim: ')',
+            // error handling
+            let token = self.consume_token();
+
+            match token {
+                Ok(Token::Comma { .. }) => continue, // more arguments
+                Ok(Token::RParen { .. }) => break,   // end of arguments
+                _ => {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `)`".to_string(),
+                        found: token?,
+                    });
+
+                    return Err(ErrorsEmitted(()));
+                }
+            }
+        }
+
+        Ok(Expression::Call(Box::new(callee), args))
+    }
+
+    /// Parse an index expression (i.e., `array[index]`).
+    fn parse_index_expression(
+        &mut self,
+        array_expr: Expression,
+    ) -> Result<Expression, ErrorsEmitted> {
+        self.expect_token(Token::LBracket {
+            delim: '[',
             span: self.stream.span(),
         })?;
 
-        Ok(expr)
+        let index_expr = self.parse_expression(Precedence::Index)?;
+
+        self.expect_token(Token::RBracket {
+            delim: ']',
+            span: self.stream.span(),
+        })?;
+
+        Ok(Expression::Index(
+            Box::new(array_expr),
+            Box::new(index_expr),
+        ))
+    }
+
+    fn parse_tuple_index_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_unwrap_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    /// Parse a type cast expression.
+    fn parse_cast_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        let expr = self.parse_expression(Precedence::Cast)?;
+
+        let token = self.consume_token();
+
+        if token.clone()?
+            != (Token::As {
+                name: "as".to_string(),
+                span: self.stream.span(),
+            })
+        {
+            self.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "`as`".to_string(),
+                found: token?,
+            });
+            return Err(ErrorsEmitted(()));
+        }
+
+        Ok(Expression::Cast(Box::new(expr), self.get_type()?))
     }
 
     /// Parse a binary expressions (e.g., arithmetic, logical and comparison expressions).
@@ -634,7 +727,7 @@ impl Parser {
         &mut self,
         left_expr: Expression,
         op: BinaryOp,
-    ) -> Result<Expression, ErrorEmitted> {
+    ) -> Result<Expression, ErrorsEmitted> {
         match op {
             BinaryOp::Add => {
                 let right_expr = self.parse_expression(Precedence::Sum)?;
@@ -831,90 +924,259 @@ impl Parser {
         }
     }
 
-    /// Parse a function call with arguments.
-    fn parse_call_expression(&mut self, callee: Expression) -> Result<Expression, ErrorEmitted> {
-        let mut args: Vec<Expression> = Vec::new(); // store function arguments
+    fn parse_range_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
 
+    fn parse_return_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_break_or_continue_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_closure_with_block(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_closure_without_block(&mut self) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+
+    /// Parse a grouped (parenthesized) expression.
+    fn parse_grouped_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         self.expect_token(Token::LParen {
             delim: '(',
             span: self.stream.span(),
         })?;
 
-        // parse arguments – separated by commas – until a closing parenthesis
-        loop {
-            if let Some(Token::RParen { delim: ')', .. }) = self.peek_current() {
-                // end of arguments
-                self.consume();
-                break;
-            }
+        // self.consume_token(); // consume `(``
 
-            let arg_expr = self.parse_expression(Precedence::Lowest)?;
-            args.push(arg_expr);
+        let expr = self.parse_expression(Precedence::Lowest)?;
 
-            // error handling
-            let token = self
-                .consume()
-                .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
-            match token {
-                Token::Comma { .. } => continue, // more arguments
-                Token::RParen { .. } => break,   // end of arguments
-                _ => {
-                    return Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `)`".to_string(),
-                        found: token,
-                    }))
-                }
-            }
-        }
+        self.expect_token(Token::RParen {
+            delim: ')',
+            span: self.stream.span(),
+        })?;
 
-        Ok(Expression::Call(Box::new(callee), args))
+        Ok(expr)
     }
 
-    /// Parse an index expression (i.e., `array[index]`).
-    fn parse_index_expression(
-        &mut self,
-        array_expr: Expression,
-    ) -> Result<Expression, ErrorEmitted> {
+    /// Parse a block expression (i.e., `{ expr1; expr2; ... }`).
+    fn parse_block_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        self.expect_token(Token::LBrace {
+            delim: '{',
+            span: self.stream.span(),
+        })?;
+
+        let mut expressions: Vec<Expression> = Vec::new();
+
+        // parse expressions until a closing brace
+        while !self.is_expected_token(Token::RBrace {
+            delim: '}',
+            span: self.stream.span(),
+        }) {
+            expressions.push(self.parse_expression(Precedence::Lowest)?);
+        }
+
+        self.expect_token(Token::RBrace {
+            delim: '}',
+            span: self.stream.span(),
+        })?;
+
+        Ok(Expression::Block(expressions))
+    }
+
+    /// Parse an array expression (i.e., `[element1, element2, element3, etc.]`).
+    fn parse_array_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         self.expect_token(Token::LBracket {
             delim: '[',
             span: self.stream.span(),
         })?;
-        let index_expr = self.parse_expression(Precedence::Lowest)?;
+
+        let mut elements: Vec<Expression> = Vec::new();
+
+        while !self.is_expected_token(Token::RBracket {
+            delim: ']',
+            span: self.stream.span(),
+        }) {
+            elements.push(self.parse_expression(Precedence::Lowest)?);
+
+            if !self.tokens_match(Token::Comma {
+                punc: ',',
+                span: self.stream.span(),
+            }) {
+                break;
+            }
+        }
+
         self.expect_token(Token::RBracket {
             delim: ']',
             span: self.stream.span(),
         })?;
-        Ok(Expression::Index(
-            Box::new(array_expr),
-            Box::new(index_expr),
-        ))
+
+        Ok(Expression::Array(elements))
     }
 
-    /// Parse a field access expression (i.e., `object.field`).
-    fn parse_field_access_expression(
-        &mut self,
-        object_expr: Expression,
-    ) -> Result<Expression, ErrorEmitted> {
-        self.expect_token(Token::FullStop {
-            punc: '.',
+    /// Parse a tuple expression (i.e., `(element1, element2, element3)`).
+    fn parse_tuple_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        self.expect_token(Token::LParen {
+            delim: '(',
             span: self.stream.span(),
         })?;
-        let field_token = self
-            .consume()
-            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
-        if let Token::Identifier { name, .. } = field_token {
-            Ok(Expression::FieldAccess(Box::new(object_expr), name))
-        } else {
-            Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier after `.`".to_string(),
-                found: field_token,
-            }))
+
+        let mut elements: Vec<Expression> = Vec::new();
+
+        while !self.is_expected_token(Token::RParen {
+            delim: ')',
+            span: self.stream.span(),
+        }) {
+            elements.push(self.parse_expression(Precedence::Lowest)?);
+
+            if !self.tokens_match(Token::Comma {
+                punc: ',',
+                span: self.stream.span(),
+            }) {
+                break;
+            }
         }
+
+        self.expect_token(Token::RParen {
+            delim: ')',
+            span: self.stream.span(),
+        })?;
+
+        Ok(Expression::Tuple(elements))
+    }
+
+    /// Parse a struct with fields.
+    fn parse_struct_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
+        let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
+
+        self.expect_token(Token::LBrace {
+            delim: '{',
+            span: self.stream.span(),
+        })?;
+
+        // parse struct fields – separated by commas – until a closing brace
+        loop {
+            // get the field name
+            let token = self.consume_token();
+
+            let field_name = match token {
+                Ok(Token::Identifier { name, .. }) => name,
+                Ok(Token::RBrace { .. }) => break, // end of struct
+                _ => {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "identifier or `)`".to_string(),
+                        found: token?,
+                    });
+                    return Err(ErrorsEmitted(()));
+                }
+            };
+
+            self.expect_token(Token::Colon {
+                punc: ':',
+                span: self.stream.span(),
+            })?;
+
+            // parse field value
+            let field_value = self.parse_expression(Precedence::Lowest)?;
+
+            // push field to list of fields
+            fields.push(StructField {
+                name: Identifier(field_name),
+                value: field_value,
+            });
+
+            // error handling
+            let token = self.consume_token();
+
+            match token {
+                Ok(Token::Comma { .. }) => continue, // more fields
+                Ok(Token::RBrace { .. }) => break,   // end of struct
+                _ => {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `}`".to_string(),
+                        found: token?,
+                    });
+                    return Err(ErrorsEmitted(()));
+                }
+            }
+        }
+
+        Ok(Expression::Struct(fields))
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// STATEMENTS
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// Parse a `Statement`.
+    fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+        match self.consume_token() {
+            Ok(Token::Let { .. }) => self.parse_let_statement(),
+            Ok(Token::If { .. }) => self.parse_if_statement(),
+            Ok(Token::Match { .. }) => self.parse_match_statement(),
+            Ok(Token::For { .. }) => self.parse_for_in_statement(),
+            Ok(Token::While { .. }) => self.parse_while_statement(),
+            Ok(Token::Import { .. }) => {
+                Ok(Statement::Declaration(self.parse_import_declaration()?))
+            }
+            Ok(Token::Alias { .. }) => Ok(Statement::Declaration(self.parse_alias_declaration()?)),
+            Ok(Token::Const { .. }) => Ok(Statement::Declaration(self.parse_const_declaration()?)),
+            Ok(Token::Static { .. }) => {
+                Ok(Statement::Declaration(self.parse_static_var_declaration()?))
+            }
+            Ok(Token::Module { .. }) => Ok(Statement::Definition(self.parse_module()?)),
+            Ok(Token::Trait { .. }) => Ok(Statement::Definition(self.parse_trait()?)),
+            Ok(Token::Enum { .. }) => Ok(Statement::Definition(self.parse_enum()?)),
+            Ok(Token::Struct { .. }) => Ok(Statement::Definition(self.parse_struct()?)),
+            Ok(Token::Impl { .. }) => Ok(Statement::Definition(self.parse_impl()?)),
+            Ok(Token::Func { .. }) => Ok(Statement::Definition(self.parse_function()?)),
+
+            _ => {
+                self.unconsume();
+                self.parse_expression_statement()
+            }
+        }
+    }
+
+    /// Parse an identifier and the assignment operation that binds the variable to a value.
+    fn parse_let_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+        let identifier = self.consume_identifier();
+
+        self.expect_token(Token::Equals {
+            punc: '=',
+            span: self.stream.span(),
+        })?;
+
+        let value = self.parse_expression(Precedence::Assignment);
+
+        self.expect_token(Token::Semicolon {
+            punc: ';',
+            span: self.stream.span(),
+        })?;
+
+        Ok(Statement::Let(identifier?, value?))
+    }
+
+    /// Parse an expression into a statement, separated by a semicolon.
+    fn parse_expression_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+        let expression = self.parse_expression(Precedence::Lowest);
+
+        self.expect_token(Token::Semicolon {
+            punc: ';',
+            span: self.stream.span(),
+        })?;
+
+        Ok(Statement::Expression(expression?))
     }
 
     // TODO: what about `else-if` branches ?
     /// Parse an `if` expression (i.e., `if (condition) { true block } else { false block }`).
-    fn parse_if_expression(&mut self) -> Result<Expression, ErrorEmitted> {
+    fn parse_if_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         self.expect_token(Token::If {
             name: "if".to_string(),
             span: self.stream.span(),
@@ -934,7 +1196,7 @@ impl Parser {
 
         let true_branch = Box::new(self.parse_expression(Precedence::Lowest)?);
 
-        let false_branch = if self.match_token(Token::Else {
+        let false_branch = if self.tokens_match(Token::Else {
             name: "else".to_string(),
             span: self.stream.span(),
         }) {
@@ -943,11 +1205,15 @@ impl Parser {
             None
         };
 
-        Ok(Expression::If(condition, true_branch, false_branch))
+        Ok(Statement::If(condition, true_branch, false_branch))
+    }
+
+    fn parse_match_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+        todo!()
     }
 
     /// Parse a `for-in` expression (i.e., `for var in iterable { execution logic }`).
-    fn parse_for_in_expression(&mut self) -> Result<Expression, ErrorEmitted> {
+    fn parse_for_in_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         self.expect_token(Token::For {
             name: "for".to_string(),
             span: self.stream.span(),
@@ -964,271 +1230,86 @@ impl Parser {
 
         let body = Box::new(self.parse_expression(Precedence::Lowest)?);
 
-        Ok(Expression::ForIn(variable, iterable, body))
+        Ok(Statement::ForIn(variable, iterable, body))
     }
 
-    /// Parse a block expression (i.e., `{ expr1; expr2; ... }`).
-    fn parse_block_expression(&mut self) -> Result<Expression, ErrorEmitted> {
-        self.expect_token(Token::LBrace {
-            delim: '{',
-            span: self.stream.span(),
-        })?;
-
-        let mut expressions: Vec<Expression> = Vec::new();
-
-        // parse expressions until a closing brace
-        while !self.check_token(Token::RBrace {
-            delim: '}',
-            span: self.stream.span(),
-        }) {
-            expressions.push(self.parse_expression(Precedence::Lowest)?);
-        }
-
-        self.expect_token(Token::RBrace {
-            delim: '}',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Expression::Block(expressions))
-    }
-
-    /// Parse an array expression (i.e., `[element1, element2, element3, etc.]`).
-    fn parse_array_expression(&mut self) -> Result<Expression, ErrorEmitted> {
-        self.expect_token(Token::LBracket {
-            delim: '[',
-            span: self.stream.span(),
-        })?;
-
-        let mut elements: Vec<Expression> = Vec::new();
-
-        while !self.check_token(Token::RBracket {
-            delim: ']',
-            span: self.stream.span(),
-        }) {
-            elements.push(self.parse_expression(Precedence::Lowest)?);
-
-            if !self.match_token(Token::Comma {
-                punc: ',',
-                span: self.stream.span(),
-            }) {
-                break;
-            }
-        }
-
-        self.expect_token(Token::RBracket {
-            delim: ']',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Expression::Array(elements))
-    }
-
-    /// Parse a tuple expression (i.e., `(element1, element2, element3)`).
-    fn parse_tuple_expression(&mut self) -> Result<Expression, ErrorEmitted> {
-        self.expect_token(Token::LParen {
-            delim: '(',
-            span: self.stream.span(),
-        })?;
-
-        let mut elements: Vec<Expression> = Vec::new();
-
-        while !self.check_token(Token::RParen {
-            delim: ')',
-            span: self.stream.span(),
-        }) {
-            elements.push(self.parse_expression(Precedence::Lowest)?);
-
-            if !self.match_token(Token::Comma {
-                punc: ',',
-                span: self.stream.span(),
-            }) {
-                break;
-            }
-        }
-
-        self.expect_token(Token::RParen {
-            delim: ')',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Expression::Tuple(elements))
-    }
-
-    fn parse_cast_expression(&mut self) -> Result<Expression, ErrorEmitted> {
-        let expr = self.parse_expression(Precedence::Cast)?;
-
-        let token = self
-            .consume()
-            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
-
-        if token
-            != (Token::As {
-                name: "as".to_string(),
-                span: self.stream.span(),
-            })
-        {
-            return Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "as".to_string(),
-                found: token,
-            }));
-        }
-
-        let ty = self.get_type()?;
-
-        Ok(Expression::Cast(Box::new(expr), ty))
-    }
-
-    /// Parse a struct with fields.
-    fn parse_struct(&mut self) -> Result<Expression, ErrorEmitted> {
-        let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
-
-        self.expect_token(Token::LBrace {
-            delim: '{',
-            span: self.stream.span(),
-        })?;
-
-        // parse struct fields – separated by commas – until a closing brace
-        loop {
-            // get the field name
-            let field_name = match self
-                .consume()
-                .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?
-            {
-                Token::Identifier { name, .. } => name,
-                Token::RBrace { .. } => break, // end of struct
-                _ => {
-                    let token = self
-                        .stream
-                        .tokens()
-                        .get(self.current)
-                        .cloned()
-                        .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
-
-                    return Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "identifier or `}`".to_string(),
-                        found: token,
-                    }))?;
-                }
-            };
-
-            self.expect_token(Token::Colon {
-                punc: ':',
-                span: self.stream.span(),
-            })?;
-
-            // parse field value
-            let field_value = self.parse_expression(Precedence::Lowest)?;
-
-            // push field to list of fields
-            fields.push(StructField {
-                name: field_name,
-                value: field_value,
-            });
-
-            // error handling
-            let token = self
-                .consume()
-                .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
-            match token {
-                Token::Comma { .. } => continue, // more fields
-                Token::RBrace { .. } => break,   // end of struct
-                _ => {
-                    return Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `}`".to_string(),
-                        found: token,
-                    }))
-                }
-            }
-        }
-
-        Ok(Expression::Struct(fields))
-    }
-
-    fn parse_closure_with_block(&mut self) -> Result<Expression, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_closure_without_block(&mut self) -> Result<Expression, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_tuple_index_expression(&mut self) -> Result<Expression, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_method_call_expression(&mut self) -> Result<Expression, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_path_expression(&mut self) -> Result<Expression, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_unwrap_expression(&mut self) -> Result<Expression, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_range_expression(&mut self) -> Result<Expression, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_return_expression(&mut self) -> Result<Expression, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_match_expression(&mut self) -> Result<Expression, ErrorEmitted> {
-        todo!()
-    }
-
-    fn parse_break_or_continue_expression(&mut self) -> Result<Expression, ErrorEmitted> {
+    fn parse_while_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         todo!()
     }
 
     ///////////////////////////////////////////////////////////////////////////
+    /// MODULE ITEMS
+    ///////////////////////////////////////////////////////////////////////////
 
-    fn expect_identifier(&mut self) -> Result<String, ErrorEmitted> {
-        let token = self
-            .stream
-            .tokens()
-            .get(self.current)
-            .cloned()
-            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
+    fn parse_import_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
+        todo!()
+    }
 
-        match self
-            .consume()
-            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?
-        {
-            Token::Identifier { name, .. } => Ok(name),
-            _ => Err(self.log_error(ParserErrorKind::UnexpectedToken {
+    fn parse_alias_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_const_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_static_var_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_module(&mut self) -> Result<Definition, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_trait(&mut self) -> Result<Definition, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_enum(&mut self) -> Result<Definition, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_struct(&mut self) -> Result<Definition, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_impl(&mut self) -> Result<Definition, ErrorsEmitted> {
+        todo!()
+    }
+
+    fn parse_function(&mut self) -> Result<Definition, ErrorsEmitted> {
+        todo!()
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// HELPERS
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// Return an identifier with the appropriate error handling.
+    fn consume_identifier(&mut self) -> Result<Identifier, ErrorsEmitted> {
+        let token = self.peek_current().ok_or({
+            self.log_error(ParserErrorKind::TokenNotFound {
                 expected: "identifier".to_string(),
-                found: token,
-            })),
+            })
+        });
+
+        match self.consume_token() {
+            Ok(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "identifier".to_string(),
+                    found: token.unwrap_or(Token::EOF),
+                });
+
+                Err(ErrorsEmitted(()))
+            }
         }
     }
 
-    fn consume_identifier(&mut self) -> Result<String, ErrorEmitted> {
-        let token = self
-            .stream
-            .tokens()
-            .get(self.current)
-            .cloned()
-            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?;
-
-        if let Token::Identifier { name, .. } = self
-            .consume()
-            .ok_or(self.log_error(ParserErrorKind::TokenNotFound))?
-        {
-            Ok(name)
-        } else {
-            Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier".to_string(),
-                found: token,
-            }))
-        }
-    }
-
-    fn match_token(&mut self, expected: Token) -> bool {
-        if self.check_token(expected.clone()) {
+    /// Advance the parser by one if the expected token matches the current one
+    /// and return whether or not this is the case.
+    fn tokens_match(&mut self, expected: Token) -> bool {
+        if self.is_expected_token(expected.clone()) {
             self.current += 1;
             true
         } else {
@@ -1236,7 +1317,8 @@ impl Parser {
         }
     }
 
-    fn check_token(&self, expected: Token) -> bool {
+    /// Verify that the current token is the expected one.
+    fn is_expected_token(&self, expected: Token) -> bool {
         if self.current < self.stream.tokens().len() {
             self.stream.tokens()[self.current] == expected
         } else {
@@ -1246,42 +1328,95 @@ impl Parser {
 
     /// Consume and check tokens, to ensure that the expected tokens are encountered
     /// during parsing. Return the relevant `ParserErrorKind` where applicable.
-    fn expect_token(&mut self, expected: Token) -> Result<(), ErrorEmitted> {
-        match self.consume() {
-            Some(token) if token == expected => Ok(()),
-            Some(token) => Err(self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: format!("`{:#?}`", expected),
-                found: token,
-            })),
-            None => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
+    fn expect_token(&mut self, expected: Token) -> Result<(), ErrorsEmitted> {
+        let token = self.consume_token();
+
+        match token {
+            _ if token == Ok(expected) => Ok(()),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "`{:#?}`".to_string(),
+                    found: token?,
+                });
+
+                Err(ErrorsEmitted(()))
+            }
         }
     }
 
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
-    fn get_type(&mut self) -> Result<Type, ErrorEmitted> {
-        match self.consume() {
-            Some(Token::I32Type { .. } | Token::I64Type { .. }) => Ok(Type::Int),
+    fn get_type(&mut self) -> Result<Type, ErrorsEmitted> {
+        let token = self.consume_token();
 
-            Some(
+        match token {
+            Ok(Token::I32Type { .. } | Token::I64Type { .. } | Token::I128Type { .. }) => {
+                Ok(Type::Int)
+            }
+
+            Ok(
                 Token::U8Type { .. }
                 | Token::U16Type { .. }
                 | Token::U32Type { .. }
-                | Token::U64Type { .. },
+                | Token::U64Type { .. }
+                | Token::U128Type { .. },
             ) => Ok(Type::UInt),
-            Some(Token::U256Type { .. }) => Ok(Type::U256),
-            Some(Token::H256Type { .. }) => Ok(Type::H256),
-            Some(Token::AddressType { .. }) => Ok(Type::Address),
-            Some(Token::StringType { .. }) => Ok(Type::String),
-            Some(Token::CharType { .. }) => Ok(Type::Char),
-            Some(Token::BoolType { .. }) => Ok(Type::Bool),
-            Some(Token::CustomType { .. }) => Ok(Type::UserDefined),
-            Some(Token::SelfType { .. }) => Ok(Type::SelfType),
-            Some(Token::LParen { .. }) => Ok(Type::Tuple),
-            Some(Token::LBracket { .. }) => Ok(Type::Array),
-            Some(Token::Func { .. }) => Ok(Type::Function),
-            Some(Token::Pipe { .. } | Token::DblPipe { .. }) => Ok(Type::Closure),
-            Some(Token::Ampersand { .. }) => Ok(Type::Reference),
-            _ => Err(self.log_error(ParserErrorKind::UnexpectedEndOfInput)),
+            Ok(Token::U256Type { .. }) => Ok(Type::BigUInt),
+            Ok(Token::U512Type { .. }) => Ok(Type::BigUInt),
+
+            Ok(Token::ByteType { .. }) => Ok(Type::Byte),
+
+            Ok(
+                Token::B2Type { .. }
+                | Token::B3Type { .. }
+                | Token::B4Type { .. }
+                | Token::B5Type { .. }
+                | Token::B6Type { .. }
+                | Token::B7Type { .. }
+                | Token::B8Type { .. }
+                | Token::B9Type { .. }
+                | Token::B10Type { .. }
+                | Token::B11Type { .. }
+                | Token::B12Type { .. }
+                | Token::B13Type { .. }
+                | Token::B14Type { .. }
+                | Token::B15Type { .. }
+                | Token::B16Type { .. }
+                | Token::B17Type { .. }
+                | Token::B18Type { .. }
+                | Token::B19Type { .. }
+                | Token::B20Type { .. }
+                | Token::B21Type { .. }
+                | Token::B22Type { .. }
+                | Token::B23Type { .. }
+                | Token::B24Type { .. }
+                | Token::B25Type { .. }
+                | Token::B26Type { .. }
+                | Token::B27Type { .. }
+                | Token::B28Type { .. }
+                | Token::B29Type { .. }
+                | Token::B30Type { .. }
+                | Token::B31Type { .. }
+                | Token::B32Type { .. },
+            ) => Ok(Type::Bytes),
+            Ok(Token::H160Type { .. }) => Ok(Type::Hash),
+            Ok(Token::H256Type { .. }) => Ok(Type::Hash),
+            Ok(Token::H512Type { .. }) => Ok(Type::Hash),
+            Ok(Token::StringType { .. }) => Ok(Type::String),
+            Ok(Token::CharType { .. }) => Ok(Type::Char),
+            Ok(Token::BoolType { .. }) => Ok(Type::Bool),
+            Ok(Token::CustomType { .. }) => Ok(Type::UserDefined),
+            Ok(Token::SelfType { .. }) => Ok(Type::SelfType),
+            Ok(Token::LParen { .. }) => Ok(Type::Tuple),
+            Ok(Token::LBracket { .. }) => Ok(Type::Array),
+            Ok(Token::Func { .. }) => Ok(Type::Function),
+            Ok(Token::Ampersand { .. }) => Ok(Type::Reference),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "type annotation".to_string(),
+                    found: token?,
+                });
+                Err(ErrorsEmitted(()))
+            }
         }
     }
 
@@ -1290,39 +1425,47 @@ impl Parser {
         self.precedences.get(token).cloned()
     }
 
-    /// Get the tokens at the current position.
+    /// Peek at the token at the current position.
     fn peek_current(&self) -> Option<Token> {
         self.stream.tokens().get(self.current).cloned()
     }
 
+    /// Peek at the token `num_tokens` ahead of the token at the current position.
     fn peek_ahead_by(&self, num_tokens: usize) -> Option<Token> {
         self.stream.tokens().get(self.current + num_tokens).cloned()
     }
 
-    fn consume(&mut self) -> Option<Token> {
-        let token = self.peek_current();
-        if token.is_some() {
+    /// Advance the parser and return the current token.
+    fn consume_token(&mut self) -> Result<Token, ErrorsEmitted> {
+        if let Some(t) = self.peek_current() {
             self.current += 1;
+            Ok(t)
+        } else {
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            Err(ErrorsEmitted(()))
         }
-        token
     }
 
+    /// Step the parser back by one.
     fn unconsume(&mut self) {
         if self.current > 0 {
             self.current -= 1;
         }
     }
 
+    /// Returns whether or not the position is the last index in the token stream.
     fn is_at_end(&self) -> bool {
         self.current >= self.stream.tokens().len()
     }
 
-    /// Log and store information about an error that occurred during lexing.
-    /// Return `ErrorEmitted` just to confirm that the action happened.
-    fn log_error(&mut self, error_kind: ParserErrorKind) -> ErrorEmitted {
+    /// Log information about an error that occurred during lexing.
+    fn log_error(&mut self, error_kind: ParserErrorKind) {
         let error = CompilerError::new(error_kind, self.stream.span().substring(), self.current);
 
         self.errors.push(error);
-        ErrorEmitted(())
+    }
+
+    pub fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
+        &self.errors
     }
 }

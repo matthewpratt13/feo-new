@@ -5,11 +5,10 @@ use crate::token::Token;
 /// Enum representing the different types of lexer errors.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexErrorKind {
-    ParseHexError,
     ParseIntError,
     ParseUIntError,
+    ParseBigUIntError,
     ParseHashError,
-    ParseAddressError,
     ParseBoolError,
 
     EmptyCharLiteral,
@@ -27,11 +26,13 @@ pub enum LexErrorKind {
         expected: String,
     },
 
-    AtSignReserved,
-
-    DollarSignReserved,
+    ReservedChar,
 
     UnrecognizedKeyword {
+        name: String,
+    },
+
+    UnrecognizedAttribute {
         name: String,
     },
 
@@ -61,11 +62,10 @@ pub enum LexErrorKind {
 impl fmt::Display for LexErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexErrorKind::ParseHexError => writeln!(f, "error parsing hexadecimal digit"),
             LexErrorKind::ParseIntError => writeln!(f, "error parsing signed integer"),
             LexErrorKind::ParseUIntError => writeln!(f, "error parsing unsigned integer"),
+            LexErrorKind::ParseBigUIntError => writeln!(f, "error parsing big unsigned integer"),
             LexErrorKind::ParseHashError => writeln!(f, "error parsing hash"),
-            LexErrorKind::ParseAddressError => writeln!(f, "error parsing address"),
             LexErrorKind::ParseBoolError => writeln!(f, "error parsing boolean"),
 
             LexErrorKind::UnrecognizedChar { value } => {
@@ -77,10 +77,11 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::UnrecognizedKeyword { name } => {
                 writeln!(f, "syntax error: unrecognized keyword – `{name}`")
             }
-            LexErrorKind::AtSignReserved => {
-                writeln!(f, "syntax error\n`@` is reserved for address literals")
+            LexErrorKind::UnrecognizedAttribute { name } => {
+                writeln!(f, "syntax error: unrecognized attribute – `{name}`")
             }
-            LexErrorKind::DollarSignReserved => {
+
+            LexErrorKind::ReservedChar => {
                 writeln!(f, "syntax error\n`$` is reserved for hash literals")
             }
 
@@ -137,7 +138,9 @@ pub enum ParserErrorKind {
         i: usize,
     },
 
-    TokenNotFound,
+    TokenNotFound {
+        expected: String,
+    },
 
     #[default]
     UnknownError,
@@ -152,15 +155,15 @@ impl fmt::Display for ParserErrorKind {
                 expected, found
             ),
             ParserErrorKind::UnexpectedEndOfInput => {
-                writeln!(f, "scanning: unexpected end of input")
+                writeln!(f, "parsing error: unexpected end of input")
             }
             ParserErrorKind::InvalidToken { token } => writeln!(
                 f,
                 "parsing error: invalid token in current context – `{:#?}`)",
                 token
             ),
-            ParserErrorKind::TokenNotFound => {
-                writeln!(f, "expected token, found none")
+            ParserErrorKind::TokenNotFound { expected } => {
+                writeln!(f, "token not found: expected {expected}, found none")
             }
             ParserErrorKind::TokenIndexOutOfBounds { len, i } => {
                 writeln!(
@@ -200,7 +203,7 @@ where
             error_kind,
             line: line_count,
             col: last_line_len,
-            _source: Arc::new(source.to_string()),
+            _source: Arc::new(slice.to_string()),
         }
     }
 }
@@ -224,5 +227,5 @@ impl<T> Error for CompilerError<T> where T: Clone + fmt::Display + fmt::Debug {}
 /// Used as a placeholder for some `Err` in functions that return a `Result`, to prove
 /// that an error has occurred without returning the actual error, instead allowing the error
 /// to be logged in the respective struct for later use.
-#[derive(Debug)]
-pub struct ErrorEmitted(pub ());
+#[derive(Debug, Clone, PartialEq)]
+pub struct ErrorsEmitted(pub ());

@@ -22,5 +22,3 @@ Cargo.lock
 # Locally generated IDE config files
 .idea
 .vscode
-
-feo-parser/examples

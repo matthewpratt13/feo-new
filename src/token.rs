@@ -3,7 +3,8 @@
 use std::fmt;
 
 use crate::{
-    ast::{IntKind, UIntKind}, span::Span, H160, H256, U256
+    ast::{BigUIntKind, Bytes, HashKind, IntKind, UIntKind},
+    span::Span,
 };
 
 /// Enum representing the different types of tokens.
@@ -14,10 +15,11 @@ pub enum Token {
     // literals
     IntLiteral { value: IntKind, span: Span },
     UIntLiteral { value: UIntKind, span: Span },
-    U256Literal { value: U256, span: Span },
-    H256Literal { value: H256, span: Span },
-    AddressLiteral { value: H160, span: Span },
-    StringLiteral { value: String, span: Span },
+    BigUIntLiteral { value: BigUIntKind, span: Span },
+    ByteLiteral { value: u8, span: Span },
+    BytesLiteral { value: Bytes, span: Span },
+    HashLiteral { value: HashKind, span: Span },
+    StringLiteral { value: Vec<u8>, span: Span },
     CharLiteral { value: char, span: Span },
     BoolLiteral { value: bool, span: Span },
 
@@ -27,27 +29,35 @@ pub enum Token {
     Ref { name: String, span: Span },
     Pub { name: String, span: Span },
     Func { name: String, span: Span },
-    Contract { name: String, span: Span },
-    Abstract { name: String, span: Span },
-    Library { name: String, span: Span },
-    Payable { name: String, span: Span },
-    Storage { name: String, span: Span },
-    Topic { name: String, span: Span },
-    Test { name: String, span: Span },
+    Contract { name: String, span: Span }, // type of module, notated `#![contract]`
+    Library { name: String, span: Span },  // type of module, notated `#![library]`
+    Interface { name: String, span: Span }, // type of trait, notated `#![interface]`
+    Script { name: String, span: Span },   // type of module, notated `#![script]`
+    Constructor { name: String, span: Span }, // type of function, notated `#![constructor]`
+    Modifier { name: String, span: Span }, // type of function, notated `#![modifier]`
+    Test { name: String, span: Span },     // type of function, notated `#![test]`
+    Event { name: String, span: Span },    // type of struct, notated `#![event]`
+    Error { name: String, span: Span },    // type of struct, notated `#![error]`
+    Abstract { name: String, span: Span }, // attribute, notated `#[abstract]`
+    Payable { name: String, span: Span },  // attribute, notated `#[payable]`
+    Storage { name: String, span: Span },  // attribute, notated `#[storage]`
+    View { name: String, span: Span },     // attribute, notated `#[view]`
+    Topic { name: String, span: Span },    // attribute, notated `#[topic]`
+    Calldata { name: String, span: Span }, // attribute, notated `#[calldata]`
     Return { name: String, span: Span },
     Struct { name: String, span: Span },
     Enum { name: String, span: Span },
     Trait { name: String, span: Span },
     Impl { name: String, span: Span },
     Module { name: String, span: Span },
-    Extern { name: String, span: Span },
+    Extern { name: String, span: Span }, // attribute, notated `#[extern]`
     Import { name: String, span: Span },
     Package { name: String, span: Span },
     Super { name: String, span: Span },
     SelfKeyword { name: String, span: Span },
     Const { name: String, span: Span },
     Static { name: String, span: Span },
-    Unsafe { name: String, span: Span },
+    Unsafe { name: String, span: Span }, // attribute, notated `#[unsafe]`
     Alias { name: String, span: Span },
     As { name: String, span: Span },
     If { name: String, span: Span },
@@ -63,13 +73,49 @@ pub enum Token {
     // types
     I32Type { name: String, span: Span },
     I64Type { name: String, span: Span },
+    I128Type { name: String, span: Span },
     U8Type { name: String, span: Span },
     U16Type { name: String, span: Span },
     U32Type { name: String, span: Span },
     U64Type { name: String, span: Span },
+    U128Type { name: String, span: Span },
     U256Type { name: String, span: Span },
+    U512Type { name: String, span: Span },
+    ByteType { name: String, span: Span },
+    B2Type { name: String, span: Span },
+    B3Type { name: String, span: Span },
+    B4Type { name: String, span: Span },
+    B5Type { name: String, span: Span },
+    B6Type { name: String, span: Span },
+    B7Type { name: String, span: Span },
+    B8Type { name: String, span: Span },
+    B9Type { name: String, span: Span },
+    B10Type { name: String, span: Span },
+    B11Type { name: String, span: Span },
+    B12Type { name: String, span: Span },
+    B13Type { name: String, span: Span },
+    B14Type { name: String, span: Span },
+    B15Type { name: String, span: Span },
+    B16Type { name: String, span: Span },
+    B17Type { name: String, span: Span },
+    B18Type { name: String, span: Span },
+    B19Type { name: String, span: Span },
+    B20Type { name: String, span: Span },
+    B21Type { name: String, span: Span },
+    B22Type { name: String, span: Span },
+    B23Type { name: String, span: Span },
+    B24Type { name: String, span: Span },
+    B25Type { name: String, span: Span },
+    B26Type { name: String, span: Span },
+    B27Type { name: String, span: Span },
+    B28Type { name: String, span: Span },
+    B29Type { name: String, span: Span },
+    B30Type { name: String, span: Span },
+    B31Type { name: String, span: Span },
+    B32Type { name: String, span: Span },
+    H160Type { name: String, span: Span },
     H256Type { name: String, span: Span },
-    AddressType { name: String, span: Span },
+    H512Type { name: String, span: Span },
     StringType { name: String, span: Span },
     CharType { name: String, span: Span },
     BoolType { name: String, span: Span },
@@ -147,9 +193,9 @@ pub struct TokenStream {
     span: Span,
 }
 
-impl<'a> TokenStream {
+impl TokenStream {
     /// Constructor method.
-    pub fn new(tokens: &'a [Token], input: &'a str, start: usize, end: usize) -> Self {
+    pub fn new(tokens: &[Token], input: &str, start: usize, end: usize) -> Self {
         let span = Span::new(input, start, end);
 
         TokenStream {

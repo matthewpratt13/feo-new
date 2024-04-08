@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 uint = "0.9"
 fixed-hash = "0.8"
+tiny-keccak = { version = "2.0", features = ["sha3"] }

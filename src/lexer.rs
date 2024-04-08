@@ -3,11 +3,11 @@
 use std::{iter::Peekable, str::Chars};
 
 use crate::{
-    ast::{IntKind, UIntKind},
-    error::{CompilerError, ErrorEmitted, LexErrorKind},
+    ast::{self, BigUIntKind, HashKind, IntKind, UIntKind},
+    error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{Token, TokenStream},
-    H160, H256, U256,
+    H256, U256,
 };
 
 /// Struct that stores an input string and contains methods to render tokens (tokenize)
@@ -34,13 +34,13 @@ impl<'a> Lexer<'a> {
     }
 
     /// Get a list of the lexer's `CompilerError`.
-    fn errors(&self) -> Vec<CompilerError<LexErrorKind>> {
-        self.errors.clone()
+    fn errors(&self) -> &[CompilerError<LexErrorKind>] {
+        &self.errors
     }
 
     /// Main tokenizing function.
     /// Returns a stream of tokens generated from some input string (source code).
-    fn lex(&mut self) -> Result<TokenStream, ErrorEmitted> {
+    fn lex(&mut self) -> Result<TokenStream, ErrorsEmitted> {
         let mut tokens: Vec<Token> = Vec::new();
 
         while let Some(c) = self.peek_current() {
@@ -53,10 +53,39 @@ impl<'a> Lexer<'a> {
                     tokens.push(self.tokenize_doc_comment()?);
                 }
 
+                _ if c == 'b' && self.peek_next() == Some('\"') => {
+                    self.advance();
+                    tokens.push(self.tokenize_bytes()?)
+                }
+
                 // not alphanumeric because identifiers / keywords cannot start with numbers;
                 // however, numbers are allowed after the first character
                 _ if c.is_ascii_alphabetic() || c == '_' => {
                     tokens.push(self.tokenize_identifier_or_keyword()?)
+                }
+
+                _ if c == '#' && self.peek_next() == Some('!') || self.peek_next() == Some('[') => {
+                    self.advance();
+
+                    if self.peek_current() == Some('[') {
+                        self.advance();
+                        tokens.push(self.tokenize_identifier_or_keyword()?);
+                    } else if self.peek_current() == Some('!') && self.peek_next() == Some('[') {
+                        self.advance();
+                        self.advance();
+                        tokens.push(self.tokenize_identifier_or_keyword()?);
+                    } else {
+                        let current_char = self
+                            .peek_current()
+                            .ok_or(self.log_error(LexErrorKind::UnexpectedEndOfInput));
+
+                        self.log_error(LexErrorKind::UnexpectedChar {
+                            expected: "`[` or `!`".to_string(),
+                            found: current_char.map_err(|_| ErrorsEmitted(()))?,
+                        });
+
+                        return Err(ErrorsEmitted(()));
+                    }
                 }
 
                 '(' | '[' | '{' | ')' | ']' | '}' => {
@@ -67,9 +96,7 @@ impl<'a> Lexer<'a> {
 
                 '\'' => tokens.push(self.tokenize_char()?),
 
-                '@' => tokens.push(self.tokenize_address()?), // `Address` literal
-
-                '$' => tokens.push(self.tokenize_h256()?), // `h256` literal
+                '$' => tokens.push(self.tokenize_hash()?), // `h256` literal
 
                 // hexadecimal digit prefix (`0x` or `0X`)
                 _ if c == '0'
@@ -77,7 +104,7 @@ impl<'a> Lexer<'a> {
                         .peek_next()
                         .is_some_and(|x| &x.to_lowercase().to_string() == "x") =>
                 {
-                    tokens.push(self.tokenize_u256()?)
+                    tokens.push(self.tokenize_big_uint()?)
                 }
 
                 _ if c.is_digit(10)
@@ -99,14 +126,15 @@ impl<'a> Lexer<'a> {
                 }
 
                 '!' | '#' | '%' | '&' | '*' | '+' | '/' | '-' | '.' | ':' | '<' | '=' | '>'
-                | '?' | '\\' | '^' | '`' | '|' => tokens.push(self.tokenize_punctuation()?),
+                | '?' | '@' | '\\' | '^' | '`' | '|' => tokens.push(self.tokenize_punctuation()?),
 
                 _ if !self.peek_next().is_some() => tokens.push(Token::EOF),
 
                 _ => {
-                    return Err(self.log_error(LexErrorKind::UnrecognizedChar {
-                        value: c.to_string(),
-                    }))
+                    self.log_error(LexErrorKind::UnrecognizedChar {
+                        value: format!("{}", c),
+                    });
+                    return Err(ErrorsEmitted(()));
                 }
             }
         }
@@ -116,7 +144,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a doc comment, ignoring ordinary line and block comments.
-    fn tokenize_doc_comment(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_doc_comment(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         self.advance(); // skip first `/`
@@ -185,7 +213,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize an identifier or reserved keyword.
-    fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         while let Some(c) = self.peek_current() {
@@ -203,20 +231,82 @@ impl<'a> Lexer<'a> {
         // or return a `Token::Identifier`
         if is_keyword(&name) {
             match name.as_str() {
-                "abstract" => Ok(Token::Abstract { name, span }),
+                "abstract" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "alias" => Ok(Token::Alias { name, span }),
                 "as" => Ok(Token::As { name, span }),
                 "break" => Ok(Token::Break { name, span }),
+                "calldata" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
+                "constructor" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "const" => Ok(Token::Const { name, span }),
                 "continue" => Ok(Token::Continue { name, span }),
-                "contract" => Ok(Token::Contract { name, span }),
+                "contract" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "else" => Ok(Token::Else { name, span }),
                 "enum" => Ok(Token::Enum { name, span }),
-                "extern" => Ok(Token::Extern { name, span }),
+                "event" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
+                "extern" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "false" => Ok(Token::BoolLiteral {
-                    value: name
-                        .parse::<bool>()
-                        .map_err(|_| self.log_error(LexErrorKind::ParseBoolError))?,
+                    value: {
+                        if let Ok(n) = name.parse::<bool>() {
+                            n
+                        } else {
+                            self.log_error(LexErrorKind::ParseBoolError);
+                            return Err(ErrorsEmitted(()));
+                        }
+                    },
                     span,
                 }),
                 "for" => Ok(Token::For { name, span }),
@@ -224,148 +314,342 @@ impl<'a> Lexer<'a> {
                 "if" => Ok(Token::If { name, span }),
                 "impl" => Ok(Token::Impl { name, span }),
                 "import" => Ok(Token::Import { name, span }),
+                "interface" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "in" => Ok(Token::In { name, span }),
                 "let" => Ok(Token::Let { name, span }),
-                "library" => Ok(Token::Library { name, span }),
+                "library" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "loop" => Ok(Token::Loop { name, span }),
                 "match" => Ok(Token::Match { name, span }),
+                "modifier" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "module" => Ok(Token::Module { name, span }),
                 "mut" => Ok(Token::Mut { name, span }),
                 "package" => Ok(Token::Package { name, span }),
-                "payable" => Ok(Token::Payable { name, span }),
+                "payable" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "pub" => Ok(Token::Pub { name, span }),
                 "ref" => Ok(Token::Ref { name, span }),
                 "return" => Ok(Token::Return { name, span }),
+                "script" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "self" => Ok(Token::SelfKeyword { name, span }),
                 "static" => Ok(Token::Static { name, span }),
-                "storage" => Ok(Token::Storage { name, span }),
+                "storage" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "struct" => Ok(Token::Struct { name, span }),
                 "super" => Ok(Token::Super { name, span }),
-                "test" => Ok(Token::Test { name, span }),
-                "topic" => Ok(Token::Topic { name, span }),
+                "test" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
+                "topic" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "trait" => Ok(Token::Trait { name, span }),
                 "true" => Ok(Token::BoolLiteral {
-                    value: name
-                        .parse::<bool>()
-                        .map_err(|_| self.log_error(LexErrorKind::ParseBoolError))?,
+                    value: {
+                        if let Ok(n) = name.parse::<bool>() {
+                            n
+                        } else {
+                            self.log_error(LexErrorKind::ParseBoolError);
+                            return Err(ErrorsEmitted(()));
+                        }
+                    },
+
                     span,
                 }),
-                "unsafe" => Ok(Token::Unsafe { name, span }),
+                "unsafe" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
+                "view" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "while" => Ok(Token::While { name, span }),
                 "i32" => Ok(Token::I32Type { name, span }),
                 "i64" => Ok(Token::I64Type { name, span }),
+                "i128" => Ok(Token::I128Type { name, span }),
                 "u8" => Ok(Token::U8Type { name, span }),
                 "u16" => Ok(Token::U16Type { name, span }),
                 "u32" => Ok(Token::U32Type { name, span }),
                 "u64" => Ok(Token::U64Type { name, span }),
+                "u128" => Ok(Token::U128Type { name, span }),
                 "u256" => Ok(Token::U256Type { name, span }),
+                "u512" => Ok(Token::U512Type { name, span }),
+                "byte" => Ok(Token::ByteType { name, span }),
+                "b2" => Ok(Token::B2Type { name, span }),
+                "b3" => Ok(Token::B3Type { name, span }),
+                "b4" => Ok(Token::B4Type { name, span }),
+                "b5" => Ok(Token::B5Type { name, span }),
+                "b6" => Ok(Token::B6Type { name, span }),
+                "b7" => Ok(Token::B7Type { name, span }),
+                "b8" => Ok(Token::B8Type { name, span }),
+                "b9" => Ok(Token::B9Type { name, span }),
+                "b10" => Ok(Token::B10Type { name, span }),
+                "b11" => Ok(Token::B11Type { name, span }),
+                "b12" => Ok(Token::B12Type { name, span }),
+                "b13" => Ok(Token::B13Type { name, span }),
+                "b14" => Ok(Token::B14Type { name, span }),
+                "b15" => Ok(Token::B15Type { name, span }),
+                "b16" => Ok(Token::B16Type { name, span }),
+                "b17" => Ok(Token::B17Type { name, span }),
+                "b18" => Ok(Token::B18Type { name, span }),
+                "b19" => Ok(Token::B19Type { name, span }),
+                "b20" => Ok(Token::B20Type { name, span }),
+                "b21" => Ok(Token::B21Type { name, span }),
+                "b22" => Ok(Token::B22Type { name, span }),
+                "b23" => Ok(Token::B23Type { name, span }),
+                "b24" => Ok(Token::B24Type { name, span }),
+                "b25" => Ok(Token::B25Type { name, span }),
+                "b26" => Ok(Token::B26Type { name, span }),
+                "b27" => Ok(Token::B27Type { name, span }),
+                "b28" => Ok(Token::B28Type { name, span }),
+                "b29" => Ok(Token::B29Type { name, span }),
+                "b30" => Ok(Token::B30Type { name, span }),
+                "b31" => Ok(Token::B31Type { name, span }),
+                "b32" => Ok(Token::B32Type { name, span }),
+                "h160" => Ok(Token::H160Type { name, span }),
                 "h256" => Ok(Token::H256Type { name, span }),
-                "Address" => Ok(Token::AddressType { name, span }),
+                "h512" => Ok(Token::H512Type { name, span }),
                 "String" => Ok(Token::StringType { name, span }),
                 "char" => Ok(Token::CharType { name, span }),
                 "bool" => Ok(Token::BoolType { name, span }),
-                _ => Err(self.log_error(LexErrorKind::UnrecognizedKeyword { name })),
+                _ => {
+                    self.log_error(LexErrorKind::UnrecognizedKeyword { name });
+                    Err(ErrorsEmitted(()))
+                }
             }
         } else {
             Ok(Token::Identifier { name, span })
         }
     }
 
+    /// Match an input string against an outer attribute keyword.
+    fn tokenize_outer_attribute(
+        &mut self,
+        name: String,
+        span: Span,
+    ) -> Result<Token, ErrorsEmitted> {
+        match name.as_str() {
+            "abstract" => Ok(Token::Abstract { name, span }),
+            "calldata" => Ok(Token::Calldata { name, span }),
+            "extern" => Ok(Token::Extern { name, span }),
+            "payable" => Ok(Token::Payable { name, span }),
+            "storage" => Ok(Token::Storage { name, span }),
+            "topic" => Ok(Token::Topic { name, span }),
+            "unsafe" => Ok(Token::Unsafe { name, span }),
+            "view" => Ok(Token::View { name, span }),
+            _ => {
+                self.log_error(LexErrorKind::UnrecognizedAttribute { name });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
+
+    /// Match an input string against an inner attribute keyword.
+    fn tokenize_inner_attribute(
+        &mut self,
+        name: String,
+        span: Span,
+    ) -> Result<Token, ErrorsEmitted> {
+        match name.as_str() {
+            "constructor" => Ok(Token::Constructor { name, span }),
+            "contract" => Ok(Token::Contract { name, span }),
+            "error" => Ok(Token::Error { name, span }),
+            "event" => Ok(Token::Event { name, span }),
+            "interface" => Ok(Token::Interface { name, span }),
+            "library" => Ok(Token::Library { name, span }),
+            "modifier" => Ok(Token::Modifier { name, span }),
+            "script" => Ok(Token::Script { name, span }),
+            "test" => Ok(Token::Test { name, span }),
+            _ => {
+                self.log_error(LexErrorKind::UnrecognizedAttribute { name });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
+
     /// Tokenize a delimiter (i.e., `(`, `)`, `[`, `]`, `{` and `}`).
-    fn tokenize_delimiter(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_delimiter(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         let delim = self
             .peek_current()
             .ok_or(self.log_error(LexErrorKind::CharNotFound {
                 expected: "delimiter".to_string(),
-            }))?;
+            }));
 
         match delim {
-            '(' => {
+            Ok('(') => {
                 self.advance(); // move past opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
-                Ok(Token::LParen { delim, span })
+                Ok(Token::LParen { delim: '(', span })
             }
 
-            '[' => {
+            Ok('[') => {
                 self.advance(); // move past opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
-                Ok(Token::LBracket { delim, span })
+                Ok(Token::LBracket { delim: '[', span })
             }
 
-            '{' => {
+            Ok('{') => {
                 self.advance(); // move past opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
-                Ok(Token::LBrace { delim, span })
+                Ok(Token::LBrace { delim: '{', span })
             }
 
-            ')' => self.tokenize_closing_delimiter(')'),
+            Ok(')') => self.tokenize_closing_delimiter(')'),
 
-            ']' => self.tokenize_closing_delimiter(']'),
+            Ok(']') => self.tokenize_closing_delimiter(']'),
 
-            '}' => self.tokenize_closing_delimiter('}'),
+            Ok('}') => self.tokenize_closing_delimiter('}'),
 
-            _ => Err(self.log_error(LexErrorKind::UnexpectedChar {
-                expected: "delimiter".to_string(),
-                found: delim,
-            })),
+            _ => {
+                self.log_error(LexErrorKind::UnexpectedChar {
+                    expected: "delimiter".to_string(),
+                    found: delim.map_err(|_| ErrorsEmitted(()))?,
+                });
+                Err(ErrorsEmitted(()))
+            }
         }
     }
 
     /// Tokenize a closing delimiter, throw an error where the inputted delimiter is missing,
     /// or does not match the expected delimiter.
-    fn tokenize_closing_delimiter(&mut self, expected: char) -> Result<Token, ErrorEmitted> {
+    fn tokenize_closing_delimiter(&mut self, expected: char) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
-        let delim = self
-            .peek_current()
-            .ok_or(self.log_error(LexErrorKind::MissingDelimiter { delim: expected }))?;
+        let curr = if let Some(c) = self.peek_current() {
+            c
+        } else {
+            self.log_error(LexErrorKind::MissingDelimiter { delim: expected });
+            return Err(ErrorsEmitted(()));
+        };
 
         // check if the current character is a delimiter
-        if !is_delimiter(delim) {
-            return Err(self.log_error(LexErrorKind::UnexpectedChar {
+        if !is_delimiter(curr) {
+            self.log_error(LexErrorKind::UnexpectedChar {
                 expected: "delimiter".to_string(),
-                found: delim,
-            }));
+                found: curr,
+            });
+            return Err(ErrorsEmitted(()));
         }
 
-        if delim == expected {
+        if curr == expected {
             self.advance(); // move past closing delimiter
 
-            match delim {
+            match curr {
                 ')' => {
                     let span = Span::new(self.input, start_pos, self.pos);
-                    Ok(Token::RParen { delim, span })
+                    Ok(Token::RParen { delim: curr, span })
                 }
 
                 ']' => {
                     let span = Span::new(self.input, start_pos, self.pos);
-                    Ok(Token::RBracket { delim, span })
+                    Ok(Token::RBracket { delim: curr, span })
                 }
 
                 '}' => {
                     let span = Span::new(self.input, start_pos, self.pos);
-                    Ok(Token::RBrace { delim, span })
+                    Ok(Token::RBrace { delim: curr, span })
                 }
 
                 _ => {
-                    return Err(self.log_error(LexErrorKind::UnexpectedChar {
+                    self.log_error(LexErrorKind::UnexpectedChar {
                         expected: "closing delimiter".to_string(),
-                        found: delim,
-                    }))
+                        found: curr,
+                    });
+
+                    return Err(ErrorsEmitted(()));
                 }
             }
         } else {
-            return Err(self.log_error(LexErrorKind::MismatchedDelimiter {
+            self.log_error(LexErrorKind::MismatchedDelimiter {
                 expected,
-                found: delim,
-            }));
+                found: curr,
+            });
+            Err(ErrorsEmitted(()))
         }
     }
 
     /// Tokenize a string literal, handling escape sequences where applicable.
-    fn tokenize_string(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_string(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut value = String::new();
 
         let start_pos = self.pos;
@@ -380,9 +664,9 @@ impl<'a> Lexer<'a> {
                         value.push(escaped_char);
                         self.advance();
                     } else {
-                        return Err(self.log_error(LexErrorKind::CharNotFound {
+                        self.log_error(LexErrorKind::CharNotFound {
                             expected: "escape sequence".to_string(),
-                        }));
+                        });
                     }
                 }
                 '"' => {
@@ -390,7 +674,10 @@ impl<'a> Lexer<'a> {
 
                     let span = Span::new(self.input, start_pos, self.pos);
 
-                    return Ok(Token::StringLiteral { value, span });
+                    return Ok(Token::StringLiteral {
+                        value: value.as_bytes().to_vec(),
+                        span,
+                    });
                 }
                 _ => {
                     value.push(c);
@@ -399,11 +686,62 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Err(self.log_error(LexErrorKind::MissingQuote { quote: '\"' }))
+        self.log_error(LexErrorKind::MissingQuote { quote: '\"' });
+        Err(ErrorsEmitted(()))
+    }
+
+    /// Tokenize a static byte array literal, handling escape sequences where applicable.
+    fn tokenize_bytes(&mut self) -> Result<Token, ErrorsEmitted> {
+        let mut value = String::new();
+
+        let start_pos = self.pos;
+
+        self.advance(); // skip opening quote (`"`)
+
+        while let Some(c) = self.peek_current() {
+            match c {
+                '\\' => {
+                    // handle escape sequences
+                    if let Some(escaped_char) = self.parse_escape_sequence()? {
+                        value.push(escaped_char);
+                        self.advance();
+                    } else {
+                        self.log_error(LexErrorKind::CharNotFound {
+                            expected: "escape sequence".to_string(),
+                        });
+
+                        return Err(ErrorsEmitted(()));
+                    }
+                }
+                '"' => {
+                    self.advance(); // skip closing quote (`"`)
+
+                    let span = Span::new(self.input, start_pos, self.pos);
+
+                    if value.len() == 1 {
+                        return Ok(Token::ByteLiteral {
+                            value: value.as_bytes()[0],
+                            span,
+                        });
+                    }
+
+                    let bytes = ast::get_bytes(value.as_bytes());
+
+                    return Ok(Token::BytesLiteral { value: bytes, span });
+                }
+                _ => {
+                    value.push(c);
+                    self.advance();
+                }
+            }
+        }
+
+        self.log_error(LexErrorKind::MissingQuote { quote: '\"' });
+        Err(ErrorsEmitted(()))
     }
 
     /// Tokenize a `char` literal, handling escape sequences where applicable.
-    fn tokenize_char(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_char(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         self.advance(); // skip opening quote (`'`)
@@ -422,14 +760,16 @@ impl<'a> Lexer<'a> {
                             span,
                         })
                     } else {
-                        return Err(self.log_error(LexErrorKind::CharNotFound {
+                        self.log_error(LexErrorKind::CharNotFound {
                             expected: "escape sequence".to_string(),
-                        }));
+                        });
+                        Err(ErrorsEmitted(()))
                     }
                 }
 
                 _ if value == '\'' || value == ' ' => {
-                    return Err(self.log_error(LexErrorKind::EmptyCharLiteral));
+                    self.log_error(LexErrorKind::EmptyCharLiteral);
+                    Err(ErrorsEmitted(()))
                 }
 
                 _ => {
@@ -442,19 +782,22 @@ impl<'a> Lexer<'a> {
 
                         Ok(Token::CharLiteral { value, span })
                     } else {
-                        return Err(self.log_error(LexErrorKind::MissingQuote { quote: '\'' }));
+                        self.log_error(LexErrorKind::MissingQuote { quote: '\'' });
+                        Err(ErrorsEmitted(()))
                     }
                 }
             }
         } else {
-            Err(self.log_error(LexErrorKind::CharNotFound {
+            self.log_error(LexErrorKind::CharNotFound {
                 expected: "character literal".to_string(),
-            }))
+            });
+            Err(ErrorsEmitted(()))
         }
     }
 
-    /// Tokenize a `u256` hexadecimal digit.
-    fn tokenize_u256(&mut self) -> Result<Token, ErrorEmitted> {
+    /// Tokenize a big unsigned integer literal (i.e., `U256` and `U512`).
+    /// The default big uint type is `U256`.
+    fn tokenize_big_uint(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         // check for hexadecimal prefix (`0x`)
@@ -482,16 +825,24 @@ impl<'a> Lexer<'a> {
             .split('_')
             .collect::<Vec<&str>>()
             .concat()
-            .parse::<U256>()
-            .map_err(|_| self.log_error(LexErrorKind::ParseHexError))?;
+            .parse::<U256>();
 
         let span = Span::new(self.input, start_pos, self.pos);
 
-        Ok(Token::U256Literal { value, span })
+        if let Ok(v) = value {
+            Ok(Token::BigUIntLiteral {
+                value: BigUIntKind::U256(v),
+                span,
+            })
+        } else {
+            self.log_error(LexErrorKind::ParseBigUIntError);
+            Err(ErrorsEmitted(()))
+        }
     }
 
-    /// Tokenize a 32-byte hash (`h256`) literal.
-    fn tokenize_h256(&mut self) -> Result<Token, ErrorEmitted> {
+    /// Tokenize a hash literal (i.e., `H160`, `H256` and `H512`).
+    /// The default hash type is `H256`.
+    fn tokenize_hash(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         self.advance(); // skip `$`
@@ -503,7 +854,8 @@ impl<'a> Lexer<'a> {
             // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
             ()
         } else {
-            return Err(self.log_error(LexErrorKind::ParseHashError));
+            self.log_error(LexErrorKind::ParseHashError);
+            return Err(ErrorsEmitted(()));
         }
 
         let hash_start_pos = self.pos;
@@ -526,51 +878,15 @@ impl<'a> Lexer<'a> {
 
         let span = Span::new(self.input, start_pos, self.pos);
 
-        Ok(Token::H256Literal { value, span })
-    }
-
-    /// Tokenize an address (20-byte hash) literal.
-    fn tokenize_address(&mut self) -> Result<Token, ErrorEmitted> {
-        let start_pos = self.pos;
-
-        self.advance(); // skip `@`
-
-        if self.peek_current() == Some('0') && self.peek_next() == Some('x') {
-            self.advance(); // skip `0`
-            self.advance(); // skip `x`
-        } else if self.peek_current().is_some_and(|x| x.is_digit(16)) {
-            // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
-            ()
-        } else {
-            return Err(self.log_error(LexErrorKind::ParseAddressError));
-        }
-
-        let address_start_pos = self.pos;
-
-        while let Some(c) = self.peek_current() {
-            if c.is_digit(16) || c == '_' {
-                self.advance();
-            } else {
-                break;
-            }
-        }
-
-        let value = H160::from_slice(
-            self.input[address_start_pos..self.pos]
-                .split('_')
-                .collect::<Vec<&str>>()
-                .concat()
-                .as_bytes(),
-        );
-
-        let span = Span::new(self.input, start_pos, self.pos);
-
-        Ok(Token::AddressLiteral { value, span })
+        Ok(Token::HashLiteral {
+            value: HashKind::H256(value),
+            span,
+        })
     }
 
     /// Tokenize a numeric value (i.e., `i64` or `u64`).
     /// Parse to `u64` unless a `-` is encountered, in which case parse to `i64`.
-    fn tokenize_numeric(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_numeric(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut is_negative = false;
 
         // check for `-` before the number to decide which type of integer to parse to
@@ -598,35 +914,43 @@ impl<'a> Lexer<'a> {
                 .split('_')
                 .collect::<Vec<&str>>()
                 .concat()
-                .parse::<i64>()
-                .map_err(|_| self.log_error(LexErrorKind::ParseIntError))?;
+                .parse::<i64>();
 
             let span = Span::new(self.input, start_pos, self.pos);
 
-            Ok(Token::IntLiteral {
-                value: IntKind::I64(value),
-                span,
-            })
+            if let Ok(v) = value {
+                Ok(Token::IntLiteral {
+                    value: IntKind::I64(v),
+                    span,
+                })
+            } else {
+                self.log_error(LexErrorKind::ParseIntError);
+                Err(ErrorsEmitted(()))
+            }
         } else {
             // remove the `_` separators before parsing (if they exist)
             let value = self.input[start_pos..self.pos]
                 .split('_')
                 .collect::<Vec<&str>>()
                 .concat()
-                .parse::<u64>()
-                .map_err(|_| self.log_error(LexErrorKind::ParseUIntError))?;
+                .parse::<u64>();
 
             let span = Span::new(self.input, start_pos, self.pos);
 
-            Ok(Token::UIntLiteral {
-                value: UIntKind::U64(value),
-                span,
-            })
+            if let Ok(v) = value {
+                Ok(Token::UIntLiteral {
+                    value: UIntKind::U64(v),
+                    span,
+                })
+            } else {
+                self.log_error(LexErrorKind::ParseUIntError);
+                Err(ErrorsEmitted(()))
+            }
         }
     }
 
     /// Tokenize punctuation.
-    fn tokenize_punctuation(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_punctuation(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         while let Some(c) = self.peek_current() {
@@ -650,7 +974,10 @@ impl<'a> Lexer<'a> {
             "!=" => Ok(Token::BangEquals { punc, span }),
             "#" => Ok(Token::HashSign { punc: '#', span }),
             "#!" => Ok(Token::HashBang { punc, span }),
-            "$" => Err(self.log_error(LexErrorKind::DollarSignReserved)),
+            "$" => {
+                self.log_error(LexErrorKind::ReservedChar);
+                Err(ErrorsEmitted(()))
+            }
             "%" => Ok(Token::Percent { punc: '%', span }),
             "%=" => Ok(Token::PercentEquals { punc, span }),
             "&" => Ok(Token::Ampersand { punc: '&', span }),
@@ -677,19 +1004,22 @@ impl<'a> Lexer<'a> {
             ">" => Ok(Token::GreaterThan { punc: '>', span }),
             ">>" => Ok(Token::DblGreaterThan { punc, span }),
             ">=" => Ok(Token::GreaterThanEquals { punc, span }),
-            "@" => Err(self.log_error(LexErrorKind::AtSignReserved)),
+            "@" => Ok(Token::AtSign { punc: '@', span }),
             "?" => Ok(Token::QuestionMark { punc: '?', span }),
             "\\" => Ok(Token::Backslash { punc: '\\', span }),
             "^" => Ok(Token::Caret { punc: '^', span }),
             "`" => Ok(Token::Backtick { punc: '`', span }),
             "|" => Ok(Token::Pipe { punc: '|', span }),
             "||" => Ok(Token::DblPipe { punc, span }),
-            _ => Err(self.log_error(LexErrorKind::UnrecognizedChar { value: punc })),
+            _ => {
+                self.log_error(LexErrorKind::UnrecognizedChar { value: punc });
+                Err(ErrorsEmitted(()))
+            }
         }
     }
 
     /// Parse an escape sequence found in a string or character literal.
-    fn parse_escape_sequence(&mut self) -> Result<Option<char>, ErrorEmitted> {
+    fn parse_escape_sequence(&mut self) -> Result<Option<char>, ErrorsEmitted> {
         self.advance(); // skip backslash
 
         if let Some(c) = self.peek_current() {
@@ -702,9 +1032,8 @@ impl<'a> Lexer<'a> {
                 '\'' => '\'',
                 '\"' => '\"',
                 _ => {
-                    return Err(
-                        self.log_error(LexErrorKind::UnrecognizedEscapeSequence { sequence: c })
-                    );
+                    self.log_error(LexErrorKind::UnrecognizedEscapeSequence { sequence: c });
+                    return Err(ErrorsEmitted(()));
                 }
             };
 
@@ -713,7 +1042,8 @@ impl<'a> Lexer<'a> {
             Ok(Some(escaped_char))
         } else {
             // incomplete escape sequence
-            Err(self.log_error(LexErrorKind::UnexpectedEndOfInput))
+            self.log_error(LexErrorKind::UnexpectedEndOfInput);
+            Err(ErrorsEmitted(()))
         }
     }
 
@@ -724,8 +1054,8 @@ impl<'a> Lexer<'a> {
     }
 
     /// Get the character at the current position.
-    fn peek_current(&mut self) -> Option<char> {
-        self.peekable_chars.peek().cloned()
+    fn peek_current(&self) -> Option<char> {
+        self.peekable_chars.clone().peek().cloned()
     }
 
     /// Get the next character without advancing the iterator.
@@ -748,24 +1078,113 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Log and store information about an error that occurred during tokenization.
-    /// Returns `ErrorEmitted` just to confirm that the action happened.
-    fn log_error(&mut self, error_kind: LexErrorKind) -> ErrorEmitted {
+    /// Log information about an error that occurred during tokenization.
+    fn log_error(&mut self, error_kind: LexErrorKind) {
         let error = CompilerError::new(error_kind, self.input, self.pos);
 
         self.errors.push(error);
-        ErrorEmitted(())
     }
 }
 
 /// List of reserved keywords to match against some input string.
 fn is_keyword(value: &str) -> bool {
     [
-        "abstract", "alias", "as", "break", "const", "continue", "contract", "else", "enum",
-        "extern", "false", "for", "func", "if", "impl", "import", "in", "let", "library", "loop",
-        "match", "module", "mut", "package", "payable", "pub", "ref", "return", "self", "static",
-        "storage", "struct", "super", "test", "topic", "trait", "true", "unsafe", "while", "i32",
-        "i64", "u8", "u16", "u32", "u64", "u256", "h256", "address", "String", "char", "bool",
+        "abstract",
+        "alias",
+        "as",
+        "break",
+        "bytes",
+        "calldata",
+        "constructor",
+        "const",
+        "continue",
+        "contract",
+        "else",
+        "enum",
+        "error",
+        "event",
+        "extern",
+        "false",
+        "for",
+        "func",
+        "if",
+        "impl",
+        "import",
+        "interface",
+        "in",
+        "let",
+        "library",
+        "loop",
+        "match",
+        "modifier",
+        "module",
+        "mut",
+        "package",
+        "payable",
+        "pub",
+        "ref",
+        "return",
+        "script",
+        "self",
+        "static",
+        "storage",
+        "struct",
+        "super",
+        "test",
+        "topic",
+        "trait",
+        "true",
+        "unsafe",
+        "view",
+        "while",
+        "i32",
+        "i64",
+        "i128",
+        "u8",
+        "u16",
+        "u32",
+        "u64",
+        "u128",
+        "u256",
+        "u512",
+        "byte",
+        "b2",
+        "b3",
+        "b4",
+        "b5",
+        "b6",
+        "b7",
+        "b8",
+        "b9",
+        "b10",
+        "b11",
+        "b12",
+        "b13",
+        "b14",
+        "b15",
+        "b16",
+        "b17",
+        "b18",
+        "b19",
+        "b20",
+        "b21",
+        "b22",
+        "b23",
+        "b24",
+        "b25",
+        "b26",
+        "b27",
+        "b28",
+        "b29",
+        "b30",
+        "b31",
+        "b32",
+        "h160",
+        "h256",
+        "h512",
+        "String",
+        "char",
+        "bool",
     ]
     .contains(&value)
 }
@@ -799,12 +1218,44 @@ mod tests {
         block comment
         */
         foo /* don't print */ bar
+        let baz: byte = b"x";
         "#;
 
         let mut lexer = Lexer::new(input);
 
         let stream = lexer.lex().expect(&format!(
             "unable to tokenize input. current char: `{:?}`\n{:#?}",
+            lexer.peek_current(),
+            lexer.errors()
+        ));
+
+        println!("{:#?}", stream);
+    }
+
+    #[test]
+    fn tokenize_attributes() {
+        let input = r#"
+        #[abstract]
+        #![contract]
+        pub module foo {
+            #[storage]
+            const balances: [U256] = [0x1234, 0x5678, 0x90AB, 0xCDEF];
+            
+            #![interface]
+            trait Bar
+
+            #![constructor]
+            pub func new() -> Contract
+            
+            #[extern]
+            #[modifier]
+            pub func baz();
+        }"#;
+
+        let mut lexer = Lexer::new(input);
+
+        let stream = lexer.lex().expect(&format!(
+            "unable to tokenize input. current char: {:?}\n{:#?}",
             lexer.peek_current(),
             lexer.errors()
         ));
@@ -833,10 +1284,12 @@ mod tests {
     fn tokenize_function() {
         let input = r#"
         func foo(param1: u64, param2: char, param3: bool) -> ReturnType {
+            let bar: b3 = b"bar";
+            
             if (param3) {
                 print("{}", param2);
             } else {
-                print("bar");
+                print(bar);
             }
 
             for x in y {
@@ -862,8 +1315,7 @@ mod tests {
 
     #[test]
     fn tokenize_hash_lits() {
-        let input = r#"let addr = @0xC0FFEE00000000000000;
-        let hash = $0xBEEF_CAFE_1234_5678_90AB_CDEF_CAFE_BEEF;"#;
+        let input = r#"let hash = $0xBEEF_CAFE_1234_5678_90AB_CDEF_CAFE_BEEF;"#;
 
         let mut lexer = Lexer::new(input);
 
@@ -878,7 +1330,7 @@ mod tests {
 
     #[test]
     fn tokenize_import_decl() {
-        let input = r#"import package::module::Object;"#;
+        let input = r#"import package::module::Object as Foo;"#;
 
         let mut lexer = Lexer::new(input);
 
@@ -896,7 +1348,6 @@ mod tests {
         let input = r#"
         /// These is a doc comment
         /// for the struct called `Foo`.
-        #[export]
         pub struct Foo {
             bar: String,
             baz: u64,
