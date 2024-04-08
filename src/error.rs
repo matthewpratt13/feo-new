@@ -234,5 +234,5 @@ impl<T> Error for CompilerError<T> where T: Clone + fmt::Display + fmt::Debug {}
 /// Used as a placeholder for some `Err` in functions that return a `Result`, to prove
 /// that an error has occurred without returning the actual error, instead allowing the error
 /// to be logged in the respective struct for later use.
-#[derive(Debug)]
-pub struct ErrorEmitted(pub ());
+#[derive(Debug, Clone, PartialEq)]
+pub struct ErrorsEmitted(pub ());

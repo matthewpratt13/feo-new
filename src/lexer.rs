@@ -4,7 +4,7 @@ use std::{iter::Peekable, str::Chars};
 
 use crate::{
     ast::{self, IntKind, UIntKind},
-    error::{CompilerError, ErrorEmitted, LexErrorKind},
+    error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{Token, TokenStream},
     H160, H256, U256,
@@ -40,7 +40,7 @@ impl<'a> Lexer<'a> {
 
     /// Main tokenizing function.
     /// Returns a stream of tokens generated from some input string (source code).
-    fn lex(&mut self) -> Result<TokenStream, ErrorEmitted> {
+    fn lex(&mut self) -> Result<TokenStream, ErrorsEmitted> {
         let mut tokens: Vec<Token> = Vec::new();
 
         while let Some(c) = self.peek_current() {
@@ -143,7 +143,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a doc comment, ignoring ordinary line and block comments.
-    fn tokenize_doc_comment(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_doc_comment(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         self.advance(); // skip first `/`
@@ -212,7 +212,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize an identifier or reserved keyword.
-    fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         while let Some(c) = self.peek_current() {
@@ -463,7 +463,7 @@ impl<'a> Lexer<'a> {
         &mut self,
         name: String,
         span: Span,
-    ) -> Result<Token, ErrorEmitted> {
+    ) -> Result<Token, ErrorsEmitted> {
         match name.as_str() {
             "abstract" => Ok(Token::Abstract { name, span }),
             "calldata" => Ok(Token::Calldata { name, span }),
@@ -481,7 +481,7 @@ impl<'a> Lexer<'a> {
         &mut self,
         name: String,
         span: Span,
-    ) -> Result<Token, ErrorEmitted> {
+    ) -> Result<Token, ErrorsEmitted> {
         match name.as_str() {
             "constructor" => Ok(Token::Constructor { name, span }),
             "contract" => Ok(Token::Contract { name, span }),
@@ -497,7 +497,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a delimiter (i.e., `(`, `)`, `[`, `]`, `{` and `}`).
-    fn tokenize_delimiter(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_delimiter(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         let delim = self
@@ -540,7 +540,7 @@ impl<'a> Lexer<'a> {
 
     /// Tokenize a closing delimiter, throw an error where the inputted delimiter is missing,
     /// or does not match the expected delimiter.
-    fn tokenize_closing_delimiter(&mut self, expected: char) -> Result<Token, ErrorEmitted> {
+    fn tokenize_closing_delimiter(&mut self, expected: char) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         let delim = self
@@ -590,7 +590,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a string literal, handling escape sequences where applicable.
-    fn tokenize_string(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_string(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut value = String::new();
 
         let start_pos = self.pos;
@@ -631,7 +631,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a static byte array literal, handling escape sequences where applicable.
-    fn tokenize_bytes(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_bytes(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut value = String::new();
 
         let start_pos = self.pos;
@@ -678,7 +678,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a `char` literal, handling escape sequences where applicable.
-    fn tokenize_char(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_char(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         self.advance(); // skip opening quote (`'`)
@@ -729,7 +729,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a `u256` hexadecimal digit.
-    fn tokenize_u256(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_u256(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         // check for hexadecimal prefix (`0x`)
@@ -766,7 +766,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a 20-byte (`h160`) hash literal.
-    fn tokenize_h160(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_h160(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         self.advance(); // skip `@`
@@ -805,7 +805,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a 32-byte hash (`h256`) literal.
-    fn tokenize_h256(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_h256(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         self.advance(); // skip `$`
@@ -845,7 +845,7 @@ impl<'a> Lexer<'a> {
 
     /// Tokenize a numeric value (i.e., `i64` or `u64`).
     /// Parse to `u64` unless a `-` is encountered, in which case parse to `i64`.
-    fn tokenize_numeric(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_numeric(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut is_negative = false;
 
         // check for `-` before the number to decide which type of integer to parse to
@@ -901,7 +901,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize punctuation.
-    fn tokenize_punctuation(&mut self) -> Result<Token, ErrorEmitted> {
+    fn tokenize_punctuation(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
         while let Some(c) = self.peek_current() {
@@ -964,7 +964,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Parse an escape sequence found in a string or character literal.
-    fn parse_escape_sequence(&mut self) -> Result<Option<char>, ErrorEmitted> {
+    fn parse_escape_sequence(&mut self) -> Result<Option<char>, ErrorsEmitted> {
         self.advance(); // skip backslash
 
         if let Some(c) = self.peek_current() {
@@ -1025,11 +1025,11 @@ impl<'a> Lexer<'a> {
 
     /// Log and store information about an error that occurred during tokenization.
     /// Returns `ErrorEmitted` just to confirm that the action happened.
-    fn log_error(&mut self, error_kind: LexErrorKind) -> ErrorEmitted {
+    fn log_error(&mut self, error_kind: LexErrorKind) -> ErrorsEmitted {
         let error = CompilerError::new(error_kind, self.input, self.pos);
 
         self.errors.push(error);
-        ErrorEmitted(())
+        ErrorsEmitted(())
     }
 }
 
