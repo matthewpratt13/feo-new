@@ -6,7 +6,7 @@ use crate::{
 };
 
 use self::expression::{
-    BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, TypeCastExpr
+    BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, TypeCastExpr,
 };
 
 pub mod expression;
@@ -185,6 +185,9 @@ pub enum Separator {
     ThinArrow,
     FatArrow,
     Underscore,
+    QuestionMark,
+    DotDot,
+    DotDotEquals,
 }
 
 /// Wrapper type, turning a `String` into an `Identifier` AST node.

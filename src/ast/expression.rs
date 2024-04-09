@@ -1,6 +1,12 @@
 use super::{BinaryOp, Delimiter, Expression, Identifier, Keyword, Separator, Type, UIntKind};
 
 #[derive(Debug, Clone)]
+pub enum ClosureArgs {
+    Some(BinaryOp, Vec<Expression>, BinaryOp),
+    None(BinaryOp),
+}
+
+#[derive(Debug, Clone)]
 pub enum PathPrefixType {
     Package,
     Super,
@@ -23,11 +29,29 @@ pub struct BlockExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct BreakExpr {
+    pub kw_break: Keyword,
+}
+
+#[derive(Debug, Clone)]
 pub struct CallExpr {
     pub callee: Box<Expression>,
     pub open_paren: Delimiter,
     pub args: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct ClosureExpr {
+    pub args: ClosureArgs,
+    pub arrow: Option<Separator>,
+    pub return_type: Option<Type>,
+    pub expression: Box<Expression>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ContinueExpr {
+    pub kw_continue: Keyword,
 }
 
 #[derive(Debug, Clone)]
@@ -70,6 +94,19 @@ pub struct PathExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct RangeExpr {
+    pub from: Option<Box<Expression>>,
+    pub op: Separator,
+    pub to: Box<Expression>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReturnExpr {
+    pub kw_return: Keyword,
+    pub expression: Box<Expression>,
+}
+
+#[derive(Debug, Clone)]
 pub struct TupleExpr {
     pub open_paren: Delimiter,
     pub elements: Vec<Expression>,
@@ -88,4 +125,9 @@ pub struct TypeCastExpr {
     pub operand: Box<Expression>,
     pub kw_as: Keyword,
     pub new_type: Type,
+}
+
+pub struct UnwrapExpr {
+    pub expression: Box<Expression>,
+    pub question_mark: Separator,
 }
