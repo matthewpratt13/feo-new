@@ -9,9 +9,11 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        expression::{GroupedExpr, PathExpr, TypeCastExpr},
-        BinaryOp, Declaration, Definition, Expression, Identifier, Literal, Statement, StructField,
-        Type, UnaryOp,
+        expression::{
+            CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, PathExpr, TupleExpr, TypeCastExpr,
+        },
+        BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Literal, Statement,
+        StructField, Type, UnaryOp,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -116,6 +118,13 @@ impl Parser {
         self.precedences.insert(
             Token::Ampersand {
                 punc: '&',
+                span: self.stream.span(),
+            },
+            Precedence::Unary,
+        );
+        self.precedences.insert(
+            Token::AmpersandMut {
+                punc: "&mut".to_string(),
                 span: self.stream.span(),
             },
             Precedence::Unary,
@@ -288,12 +297,92 @@ impl Parser {
             },
             Precedence::Assignment,
         );
+
+        self.precedences.insert(
+            Token::DblDot {
+                punc: "..".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Range,
+        );
+        self.precedences.insert(
+            Token::DotDotEquals {
+                punc: "..=".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Range,
+        );
         self.precedences.insert(
             Token::QuestionMark {
                 punc: '?',
                 span: self.stream.span(),
             },
             Precedence::Unwrap,
+        );
+        self.precedences.insert(
+            Token::FullStop {
+                punc: '.',
+                span: self.stream.span(),
+            },
+            Precedence::MethodCall,
+        );
+        self.precedences.insert(
+            Token::FullStop {
+                punc: '.',
+                span: self.stream.span(),
+            },
+            Precedence::FieldAccess,
+        );
+        self.precedences.insert(
+            Token::DblColon {
+                punc: "::".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Path,
+        );
+        self.precedences.insert(
+            Token::ColonColonAsterisk {
+                punc: "::*".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Path,
+        );
+        self.precedences.insert(
+            Token::LBracket {
+                delim: '(',
+                span: self.stream.span(),
+            },
+            Precedence::Call,
+        );
+        self.precedences.insert(
+            Token::LBracket {
+                delim: '[',
+                span: self.stream.span(),
+            },
+            Precedence::Index,
+        );
+        self.precedences.insert(
+            Token::Break {
+                name: "break".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Lowest,
+        );
+
+        self.precedences.insert(
+            Token::Continue {
+                name: "continue".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Lowest,
+        );
+
+        self.precedences.insert(
+            Token::Return {
+                name: "return".to_string(),
+                span: self.stream.span(),
+            },
+            Precedence::Lowest,
         );
     }
 
@@ -357,7 +446,25 @@ impl Parser {
             }
             Ok(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
             Ok(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
-            Ok(Token::LParen { .. }) => GroupedExpr::parse(self),
+            Ok(Token::LParen { .. }) => {
+                self.expect_token(Token::LParen {
+                    delim: '(',
+                    span: self.stream.span(),
+                })?;
+
+                let expr = self.parse_expression(Precedence::Lowest)?;
+
+                self.expect_token(Token::RParen {
+                    delim: ')',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Expression::Grouped(GroupedExpr {
+                    open_paren: Delimiter::LParen,
+                    expr: Box::new(expr),
+                    close_paren: Delimiter::RParen,
+                }))
+            }
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier, `Self`, `_`, literal or `(`".to_string(),
@@ -372,58 +479,58 @@ impl Parser {
     /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses),
     /// where the respective token type appears at the beginning of an expression.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let token = self.consume_token();
+        let token = self.peek_current().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
         match token {
-            Ok(Token::IntLiteral { .. }) => self.parse_primary(),
-            Ok(Token::UIntLiteral { .. }) => self.parse_primary(),
-            Ok(Token::BigUIntLiteral { .. }) => self.parse_primary(),
-            Ok(Token::HashLiteral { .. }) => self.parse_primary(),
-            Ok(Token::ByteLiteral { .. }) => self.parse_primary(),
-            Ok(Token::BytesLiteral { .. }) => self.parse_primary(),
-            Ok(Token::StringLiteral { .. }) => self.parse_primary(),
-            Ok(Token::CharLiteral { .. }) => self.parse_primary(),
-            Ok(Token::BoolLiteral { .. }) => self.parse_primary(),
-            Ok(Token::Identifier { .. }) => self.parse_primary(),
-            Ok(Token::SelfKeyword { .. }) => match self.peek_current() {
-                Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
-                    PathExpr::parse(self)
-                }
-
-                _ => self.parse_primary(),
-            },
-            Ok(Token::Minus { .. }) => {
+            Token::IntLiteral { .. }
+            | Token::UIntLiteral { .. }
+            | Token::BigUIntLiteral { .. }
+            | Token::HashLiteral { .. }
+            | Token::ByteLiteral { .. }
+            | Token::BytesLiteral { .. }
+            | Token::StringLiteral { .. }
+            | Token::CharLiteral { .. }
+            | Token::BoolLiteral { .. }
+            | Token::Identifier { .. }
+            | Token::SelfKeyword { .. } => self.parse_primary(),
+            Token::Minus { .. } => {
                 let expr = self.parse_expression(Precedence::Unary)?;
                 Ok(Expression::UnaryOp(UnaryOp::Negate, Box::new(expr)))
             }
-            Ok(Token::Bang { .. }) => {
+            Token::Bang { .. } => {
                 let expr = self.parse_expression(Precedence::Unary)?;
                 Ok(Expression::UnaryOp(UnaryOp::Not, Box::new(expr)))
             }
-            Ok(Token::Ampersand { .. }) => {
+            Token::Ampersand { .. } => {
                 let expr = self.parse_expression(Precedence::Unary)?;
                 Ok(Expression::UnaryOp(UnaryOp::Reference, Box::new(expr)))
             }
-            Ok(Token::Asterisk { .. }) => {
+            Token::Asterisk { .. } => {
                 let expr = self.parse_expression(Precedence::Unary)?;
                 Ok(Expression::UnaryOp(UnaryOp::Dereference, Box::new(expr)))
             }
-            Ok(Token::LParen { .. }) => {
-                let expr = if let Ok(Token::Comma { .. }) =
+            Token::LParen { .. } => {
+                if let Ok(Token::Comma { .. }) =
                     self.peek_ahead_by(2)
                         .ok_or(ParserErrorKind::TokenIndexOutOfBounds {
                             len: self.stream.tokens().len(),
                             i: self.current + 2,
-                        }) {
-                    self.parse_tuple_expression()?
+                        })
+                {
+                    self.consume_token()?;
+                    let expr = self.parse_expression(Precedence::Lowest)?;
+                    TupleExpr::parse(self, expr)
                 } else {
-                    GroupedExpr::parse(self)?
-                };
-
-                Ok(expr)
+                    self.consume_token()?;
+                    let expr = self.parse_expression(Precedence::Lowest)?;
+                    GroupedExpr::parse(self, expr)
+                }
             }
-            Ok(Token::LBracket { .. }) => self.parse_array_expression(),
-            Ok(Token::Pipe { .. } | Token::DblPipe { .. }) => {
+            Token::LBracket { .. } => self.parse_array_expression(),
+            Token::Pipe { .. } | Token::DblPipe { .. } => {
                 let expr = if let Ok(c) = self.parse_closure_with_block() {
                     c
                 } else {
@@ -443,8 +550,7 @@ impl Parser {
 
                 Ok(expr)
             }
-
-            Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
+            Token::DblDot { .. } | Token::DotDotEquals { .. } => {
                 let expr = self.parse_range_expression()?;
 
                 match self.peek_current() {
@@ -468,19 +574,19 @@ impl Parser {
                     }
                 }
             }
+            Token::Super { .. } | Token::Package { .. } => {
+                let expr = self.parse_expression(Precedence::Path)?;
+                PathExpr::parse(self, expr)
+            }
+            Token::Return { .. } => self.parse_return_expression(),
 
-            Ok(Token::Super { .. } | Token::Package { .. }) => PathExpr::parse(self),
-
-            Ok(Token::Return { .. }) => self.parse_return_expression(),
-
-            Ok(Token::Break { .. } | Token::Continue { .. }) => {
+            Token::Break { .. } | Token::Continue { .. } => {
                 self.parse_break_or_continue_expression()
             }
-
-            Ok(Token::Underscore { .. }) => self.parse_primary(),
+            Token::Underscore { .. } => self.parse_primary(),
 
             _ => {
-                self.log_error(ParserErrorKind::InvalidToken { token: token? });
+                self.log_error(ParserErrorKind::InvalidToken { token });
                 Err(ErrorsEmitted(()))
             }
         }
@@ -564,27 +670,39 @@ impl Parser {
             Ok(Token::DblGreaterThan { .. }) => {
                 expression::parse_binary_op_expression(self, left_expr, BinaryOp::ShiftRight)
             }
-            Ok(Token::QuestionMark { .. }) => self.parse_unwrap_expression(),
+            Ok(Token::QuestionMark { .. }) => self.parse_unwrap_expression(), // TODO: or ternary
             Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => self.parse_range_expression(),
-            Ok(Token::As { .. }) => TypeCastExpr::parse(self),
-            Ok(Token::LParen { .. }) => expression::parse_call_expression(self, left_expr), // TODO: or tuple struct
-            Ok(Token::LBrace { .. }) => self.parse_struct_expression(),
-            Ok(Token::LBracket { .. }) => expression::parse_index_expression(self, left_expr), // TODO: check
-            Ok(Token::FullStop { .. }) => match self.peek_current() {
+            Ok(Token::As { .. }) => TypeCastExpr::parse(self, left_expr),
+            Ok(Token::LParen { .. }) => CallExpr::parse(self, left_expr), // TODO: or tuple struct
+            Ok(Token::LBrace { .. }) => self.parse_struct_expression(), // TODO: or match statement
+            Ok(Token::LBracket { .. }) => IndexExpr::parse(self, left_expr),
+            Ok(Token::FullStop { .. }) => match self.unconsume() {
                 Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {
-                    let token = self.peek_ahead_by(1).ok_or({
+                    let token = self.peek_ahead_by(2).ok_or({
                         self.log_error(ParserErrorKind::TokenIndexOutOfBounds {
                             len: self.stream.tokens().len(),
-                            i: self.current + 1,
+                            i: self.current + 2,
                         })
                     });
 
+                    // consume the `Identifier` or `SelfKeyword` (i.e., move back to the `.`)
+                    self.consume_token()?;
+
                     match token {
-                        Ok(Token::LParen { .. }) => return self.parse_method_call_expression(),
-                        _ => expression::parse_field_access_expression(self, left_expr),
+                        Ok(Token::LParen { .. }) => {
+                            let expr = self.parse_expression(Precedence::MethodCall)?;
+                            self.parse_method_call_expression()
+                        }
+                        Ok(Token::UIntLiteral { .. }) => {
+                            let expr = self.parse_expression(Precedence::Index)?;
+                            self.parse_tuple_index_expression()
+                        }
+                        _ => {
+                            let expr = self.parse_expression(Precedence::FieldAccess)?;
+                            FieldAccessExpr::parse(self, expr)
+                        }
                     }
                 }
-                Some(Token::UIntLiteral { .. }) => self.parse_tuple_index_expression(),
                 Some(_) => {
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "identifier or tuple index".to_string(),
@@ -598,7 +716,9 @@ impl Parser {
                 }
             },
 
-            Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => PathExpr::parse(self),
+            Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
+                PathExpr::parse(self, left_expr)
+            }
 
             _ => {
                 self.log_error(ParserErrorKind::InvalidToken { token: token? });
@@ -998,75 +1118,67 @@ impl Parser {
     }
 
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
-    fn get_type(&mut self) -> Result<Type, ErrorsEmitted> {
-        let token = self.consume_token();
-
+    fn expect_type(&mut self, token: Token) -> Result<Type, ErrorsEmitted> {
         match token {
-            Ok(Token::I32Type { .. } | Token::I64Type { .. } | Token::I128Type { .. }) => {
-                Ok(Type::Int)
+            Token::I32Type { .. } | Token::I64Type { .. } | Token::I128Type { .. } => Ok(Type::Int),
+
+            Token::U8Type { .. }
+            | Token::U16Type { .. }
+            | Token::U32Type { .. }
+            | Token::U64Type { .. }
+            | Token::U128Type { .. } => Ok(Type::UInt),
+            Token::U256Type { .. } => Ok(Type::BigUInt),
+            Token::U512Type { .. } => Ok(Type::BigUInt),
+
+            Token::ByteType { .. } => Ok(Type::Byte),
+
+            Token::B2Type { .. }
+            | Token::B3Type { .. }
+            | Token::B4Type { .. }
+            | Token::B5Type { .. }
+            | Token::B6Type { .. }
+            | Token::B7Type { .. }
+            | Token::B8Type { .. }
+            | Token::B9Type { .. }
+            | Token::B10Type { .. }
+            | Token::B11Type { .. }
+            | Token::B12Type { .. }
+            | Token::B13Type { .. }
+            | Token::B14Type { .. }
+            | Token::B15Type { .. }
+            | Token::B16Type { .. }
+            | Token::B17Type { .. }
+            | Token::B18Type { .. }
+            | Token::B19Type { .. }
+            | Token::B20Type { .. }
+            | Token::B21Type { .. }
+            | Token::B22Type { .. }
+            | Token::B23Type { .. }
+            | Token::B24Type { .. }
+            | Token::B25Type { .. }
+            | Token::B26Type { .. }
+            | Token::B27Type { .. }
+            | Token::B28Type { .. }
+            | Token::B29Type { .. }
+            | Token::B30Type { .. }
+            | Token::B31Type { .. }
+            | Token::B32Type { .. } => Ok(Type::Bytes),
+            Token::H160Type { .. } | Token::H256Type { .. } | Token::H512Type { .. } => {
+                Ok(Type::Hash)
             }
-
-            Ok(
-                Token::U8Type { .. }
-                | Token::U16Type { .. }
-                | Token::U32Type { .. }
-                | Token::U64Type { .. }
-                | Token::U128Type { .. },
-            ) => Ok(Type::UInt),
-            Ok(Token::U256Type { .. }) => Ok(Type::BigUInt),
-            Ok(Token::U512Type { .. }) => Ok(Type::BigUInt),
-
-            Ok(Token::ByteType { .. }) => Ok(Type::Byte),
-
-            Ok(
-                Token::B2Type { .. }
-                | Token::B3Type { .. }
-                | Token::B4Type { .. }
-                | Token::B5Type { .. }
-                | Token::B6Type { .. }
-                | Token::B7Type { .. }
-                | Token::B8Type { .. }
-                | Token::B9Type { .. }
-                | Token::B10Type { .. }
-                | Token::B11Type { .. }
-                | Token::B12Type { .. }
-                | Token::B13Type { .. }
-                | Token::B14Type { .. }
-                | Token::B15Type { .. }
-                | Token::B16Type { .. }
-                | Token::B17Type { .. }
-                | Token::B18Type { .. }
-                | Token::B19Type { .. }
-                | Token::B20Type { .. }
-                | Token::B21Type { .. }
-                | Token::B22Type { .. }
-                | Token::B23Type { .. }
-                | Token::B24Type { .. }
-                | Token::B25Type { .. }
-                | Token::B26Type { .. }
-                | Token::B27Type { .. }
-                | Token::B28Type { .. }
-                | Token::B29Type { .. }
-                | Token::B30Type { .. }
-                | Token::B31Type { .. }
-                | Token::B32Type { .. },
-            ) => Ok(Type::Bytes),
-            Ok(Token::H160Type { .. }) => Ok(Type::Hash),
-            Ok(Token::H256Type { .. }) => Ok(Type::Hash),
-            Ok(Token::H512Type { .. }) => Ok(Type::Hash),
-            Ok(Token::StringType { .. }) => Ok(Type::String),
-            Ok(Token::CharType { .. }) => Ok(Type::Char),
-            Ok(Token::BoolType { .. }) => Ok(Type::Bool),
-            Ok(Token::CustomType { .. }) => Ok(Type::UserDefined),
-            Ok(Token::SelfType { .. }) => Ok(Type::SelfType),
-            Ok(Token::LParen { .. }) => Ok(Type::Tuple),
-            Ok(Token::LBracket { .. }) => Ok(Type::Array),
-            Ok(Token::Func { .. }) => Ok(Type::Function),
-            Ok(Token::Ampersand { .. }) => Ok(Type::Reference),
+            Token::StringType { .. } => Ok(Type::String),
+            Token::CharType { .. } => Ok(Type::Char),
+            Token::BoolType { .. } => Ok(Type::Bool),
+            Token::CustomType { .. } => Ok(Type::UserDefined),
+            Token::SelfType { .. } => Ok(Type::SelfType),
+            Token::LParen { .. } => Ok(Type::Tuple),
+            Token::LBracket { .. } => Ok(Type::Array),
+            Token::Func { .. } => Ok(Type::Function),
+            Token::Ampersand { .. } => Ok(Type::Reference),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "type annotation".to_string(),
-                    found: token?,
+                    found: token,
                 });
                 Err(ErrorsEmitted(()))
             }
@@ -1100,10 +1212,11 @@ impl Parser {
     }
 
     /// Step the parser back by one.
-    fn unconsume(&mut self) {
+    fn unconsume(&mut self) -> Option<Token> {
         if self.current > 0 {
             self.current -= 1;
         }
+        self.peek_current()
     }
 
     /// Returns whether or not the position is the last index in the token stream.

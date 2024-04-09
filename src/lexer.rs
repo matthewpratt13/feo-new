@@ -125,6 +125,19 @@ impl<'a> Lexer<'a> {
                     tokens.push(Token::Semicolon { punc: ';', span })
                 }
 
+                _ if c == '&' && self.peek_next() == Some('m') => {
+                    self.advance();
+                    if let Ok(Token::Mut { .. }) = self.tokenize_identifier_or_keyword() {
+                        let span = Span::new(self.input, start_pos, self.pos);
+                        tokens.push(Token::AmpersandMut {
+                            punc: "&mut".to_string(),
+                            span,
+                        });
+                    } else {
+                        tokens.push(self.tokenize_punctuation()?)
+                    }
+                }
+
                 '!' | '#' | '%' | '&' | '*' | '+' | '/' | '-' | '.' | ':' | '<' | '=' | '>'
                 | '?' | '@' | '\\' | '^' | '`' | '|' => tokens.push(self.tokenize_punctuation()?),
 

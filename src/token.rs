@@ -168,6 +168,7 @@ pub enum Token {
     DblAsterisk { punc: String, span: Span },
     AsteriskEquals { punc: String, span: Span },
     DblAmpersand { punc: String, span: Span },
+    AmpersandMut { punc: String, span: Span },
     PlusEquals { punc: String, span: Span },
     MinusEquals { punc: String, span: Span },
     SlashEquals { punc: String, span: Span },

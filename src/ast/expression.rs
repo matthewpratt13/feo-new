@@ -60,6 +60,13 @@ pub struct PathExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct TupleExpr {
+    pub open_paren: Delimiter,
+    pub elements: Vec<Expression>,
+    pub close_paren: Delimiter,
+}
+
+#[derive(Debug, Clone)]
 pub struct TypeCastExpr {
     pub operand: Box<Expression>,
     pub kw_as: Keyword,
