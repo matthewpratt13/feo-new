@@ -127,6 +127,7 @@ pub struct TypeCastExpr {
     pub new_type: Type,
 }
 
+#[derive(Debug, Clone)]
 pub struct UnwrapExpr {
     pub expression: Box<Expression>,
     pub question_mark: Separator,
