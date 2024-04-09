@@ -96,7 +96,7 @@ impl<'a> Lexer<'a> {
 
                 '\'' => tokens.push(self.tokenize_char()?),
 
-                '$' => tokens.push(self.tokenize_hash()?), // `h256` literal
+                '$' => tokens.push(self.tokenize_hash()?), // `h160`, `h256` or `h512` literal
 
                 // hexadecimal digit prefix (`0x` or `0X`)
                 _ if c == '0'
