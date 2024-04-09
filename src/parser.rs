@@ -10,7 +10,8 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         expression::{
-            CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, PathExpr, TupleExpr, TypeCastExpr,
+            CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, MethodCallExpr, PathExpr, TupleExpr,
+            TupleIndexExpr, TypeCastExpr,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
         Separator, Statement, StructField, Type, UnaryOp,
@@ -447,22 +448,22 @@ impl Parser {
             Ok(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
             Ok(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
             Ok(Token::LParen { .. }) => {
-                self.expect_token(Token::LParen {
+                let open_paren = self.expect_delimiter(Token::LParen {
                     delim: '(',
                     span: self.stream.span(),
                 })?;
 
                 let expr = self.parse_expression(Precedence::Lowest)?;
 
-                self.expect_token(Token::RParen {
+                let close_paren = self.expect_delimiter(Token::RParen {
                     delim: ')',
                     span: self.stream.span(),
                 })?;
 
                 Ok(Expression::Grouped(GroupedExpr {
-                    open_paren: Delimiter::LParen,
-                    expr: Box::new(expr),
-                    close_paren: Delimiter::RParen,
+                    open_paren,
+                    expression: Box::new(expr),
+                    close_paren,
                 }))
             }
             _ => {
@@ -691,11 +692,11 @@ impl Parser {
                     match token {
                         Ok(Token::LParen { .. }) => {
                             let expr = self.parse_expression(Precedence::MethodCall)?;
-                            self.parse_method_call_expression()
+                            MethodCallExpr::parse(self, expr)
                         }
                         Ok(Token::UIntLiteral { .. }) => {
                             let expr = self.parse_expression(Precedence::Index)?;
-                            self.parse_tuple_index_expression()
+                            TupleIndexExpr::parse(self, expr)
                         }
                         _ => {
                             let expr = self.parse_expression(Precedence::FieldAccess)?;
@@ -729,14 +730,6 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    fn parse_method_call_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_tuple_index_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
     fn parse_unwrap_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         todo!()
     }
@@ -763,7 +756,7 @@ impl Parser {
 
     /// Parse an array expression (i.e., `[element1, element2, element3, etc.]`).
     fn parse_array_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        self.expect_token(Token::LBracket {
+        let open_bracket = self.expect_delimiter(Token::LBracket {
             delim: '[',
             span: self.stream.span(),
         })?;
@@ -784,7 +777,7 @@ impl Parser {
             }
         }
 
-        self.expect_token(Token::RBracket {
+        let close_bracket = self.expect_delimiter(Token::RBracket {
             delim: ']',
             span: self.stream.span(),
         })?;
@@ -794,7 +787,7 @@ impl Parser {
 
     /// Parse a tuple expression (i.e., `(element1, element2, element3)`).
     fn parse_tuple_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        self.expect_token(Token::LParen {
+        let open_paren = self.expect_delimiter(Token::LParen {
             delim: '(',
             span: self.stream.span(),
         })?;
@@ -815,7 +808,7 @@ impl Parser {
             }
         }
 
-        self.expect_token(Token::RParen {
+        let close_paren = self.expect_delimiter(Token::RParen {
             delim: ')',
             span: self.stream.span(),
         })?;
@@ -827,7 +820,7 @@ impl Parser {
     fn parse_struct_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
         let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
 
-        self.expect_token(Token::LBrace {
+        let open_brace = self.expect_delimiter(Token::LBrace {
             delim: '{',
             span: self.stream.span(),
         })?;

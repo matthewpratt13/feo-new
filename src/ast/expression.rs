@@ -40,7 +40,7 @@ pub struct FieldAccessExpr {
 #[derive(Debug, Clone)]
 pub struct GroupedExpr {
     pub open_paren: Delimiter,
-    pub expr: Box<Expression>,
+    pub expression: Box<Expression>,
     pub close_paren: Delimiter,
 }
 

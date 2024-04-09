@@ -57,7 +57,7 @@ impl ParseExpression for GroupedExpr {
         if let Ok(Token::RParen { .. }) = token {
             Ok(Expression::Grouped(GroupedExpr {
                 open_paren: Delimiter::LParen,
-                expr: Box::new(expr),
+                expression: Box::new(expr),
                 close_paren: Delimiter::RParen,
             }))
         } else if let Ok(Token::Comma { .. }) = token {
@@ -152,7 +152,7 @@ impl ParseExpression for CallExpr {
                 break;
             }
 
-            let arg_expr = parser.parse_expression(Precedence::Call);
+            let arg_expr = parser.parse_expression(Precedence::Lowest);
             args.push(arg_expr?);
 
             // error handling
