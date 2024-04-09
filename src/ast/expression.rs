@@ -1,17 +1,24 @@
 use super::{BinaryOp, Delimiter, Expression, Identifier, Keyword, Separator, Type, UIntKind};
 
 #[derive(Debug, Clone)]
-pub enum ClosureArgs {
-    Some(BinaryOp, Vec<Expression>, BinaryOp),
+pub enum ClosureParams {
+    Some(BinaryOp, Vec<Param>, BinaryOp),
     None(BinaryOp),
 }
 
 #[derive(Debug, Clone)]
-pub enum PathPrefixType {
+pub struct Param {
+    pub id: Identifier,
+    pub ty: Option<Type>,
+}
+
+#[derive(Debug, Clone)]
+pub enum PathPrefix {
     Package,
     Super,
     SelfKw,
     SelfType,
+    Identifier(Identifier),
 }
 
 #[derive(Debug, Clone)]
@@ -43,10 +50,9 @@ pub struct CallExpr {
 
 #[derive(Debug, Clone)]
 pub struct ClosureExpr {
-    pub args: ClosureArgs,
-    pub arrow: Option<Separator>,
-    pub return_type: Option<Type>,
-    pub expression: Box<Expression>,
+    pub params: ClosureParams,
+    pub return_type: Option<(Separator, Type)>, // `-> Type`
+    pub expression: Box<Expression>, 
 }
 
 #[derive(Debug, Clone)]
@@ -72,7 +78,7 @@ pub struct GroupedExpr {
 pub struct IndexExpr {
     pub array: Box<Expression>,
     pub open_bracket: Delimiter,
-    pub index: Box<Expression>,
+    pub index: UIntKind,
     pub close_bracket: Delimiter,
 }
 
@@ -80,7 +86,7 @@ pub struct IndexExpr {
 pub struct MethodCallExpr {
     pub receiver: Box<Expression>,
     pub dot: Separator,
-    pub callee: Box<Expression>,
+    pub method_name: Identifier,
     pub open_paren: Delimiter,
     pub args: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
@@ -88,15 +94,15 @@ pub struct MethodCallExpr {
 
 #[derive(Debug, Clone)]
 pub struct PathExpr {
-    pub prefix: PathPrefixType,
-    pub dbl_colon: Option<Separator>,
-    pub suffixes: Option<Vec<Expression>>,
+    pub root: PathPrefix,
+    pub tree: Option<Vec<Identifier>>,
+    pub suffix: Option<Separator> // `::*`
 }
 
 #[derive(Debug, Clone)]
 pub struct RangeExpr {
     pub from: Option<Box<Expression>>,
-    pub op: Separator,
+    pub op: Separator, // `..` or `..=`
     pub to: Box<Expression>,
 }
 
@@ -115,7 +121,7 @@ pub struct TupleExpr {
 
 #[derive(Debug, Clone)]
 pub struct TupleIndexExpr {
-    pub object: Box<Expression>,
+    pub operand: Box<Expression>,
     pub dot: Separator,
     pub index: UIntKind,
 }
@@ -130,5 +136,5 @@ pub struct TypeCastExpr {
 #[derive(Debug, Clone)]
 pub struct UnwrapExpr {
     pub expression: Box<Expression>,
-    pub question_mark: Separator,
+    pub op: Separator, // `?`
 }

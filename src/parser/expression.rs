@@ -198,7 +198,21 @@ impl ParseExpression for IndexExpr {
             span: parser.stream.span(),
         })?;
 
-        let index = parser.parse_expression(Precedence::Index)?;
+        let token = parser.consume_token();
+
+        let index = if let Ok(Token::UIntLiteral { value, .. }) = token {
+            value
+        } else if let Ok(_) = token {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "array index".to_string(),
+                found: token?,
+            });
+
+            return Err(ErrorsEmitted(()));
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            return Err(ErrorsEmitted(()));
+        };
 
         let close_bracket = parser.expect_delimiter(Token::RBracket {
             delim: ']',
@@ -208,7 +222,7 @@ impl ParseExpression for IndexExpr {
         Ok(Expression::Index(IndexExpr {
             array: Box::new(array),
             open_bracket,
-            index: Box::new(index),
+            index,
             close_bracket,
         }))
     }
