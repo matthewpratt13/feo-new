@@ -6,7 +6,7 @@ use crate::{
 };
 
 use self::expression::{
-    BinaryOpExpr, CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, TypeCastExpr,
+    BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, TypeCastExpr
 };
 
 pub mod expression;
@@ -226,7 +226,7 @@ pub enum Expression {
     Tuple(Vec<Expression>),
     Struct(Vec<StructField>),
     TupleStruct,
-    Block(Vec<Expression>),
+    Block(BlockExpr),
 }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.

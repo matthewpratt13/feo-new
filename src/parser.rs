@@ -13,7 +13,7 @@ use crate::{
             CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, PathExpr, TupleExpr, TypeCastExpr,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
-        Statement, StructField, Type, UnaryOp,
+        Separator, Statement, StructField, Type, UnaryOp,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -1112,6 +1112,50 @@ impl Parser {
                     found: token,
                 });
 
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
+
+    fn expect_delimiter(&mut self, expected: Token) -> Result<Delimiter, ErrorsEmitted> {
+        let token = self.consume_token()?;
+
+        match token {
+            Token::LParen { .. } => Ok(Delimiter::LParen),
+            Token::RParen { .. } => Ok(Delimiter::RParen),
+            Token::LBracket { .. } => Ok(Delimiter::LBracket),
+            Token::RBracket { .. } => Ok(Delimiter::RBracket),
+            Token::LBrace { .. } => Ok(Delimiter::LBrace),
+            Token::RBrace { .. } => Ok(Delimiter::RBrace),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: format!("`{:#?}`", expected),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
+
+    fn expect_separator(&mut self, expected: Token) -> Result<Separator, ErrorsEmitted> {
+        let token = self.consume_token()?;
+
+        match token {
+            Token::Colon { .. } => Ok(Separator::Colon),
+            Token::Semicolon { .. } => Ok(Separator::Semicolon),
+            Token::Comma { .. } => Ok(Separator::Comma),
+            Token::FullStop { .. } => Ok(Separator::FullStop),
+            Token::DblColon { .. } => Ok(Separator::DblColon),
+            Token::ColonColonAsterisk { .. } => Ok(Separator::ColonColonAsterisk),
+            Token::ThinArrow { .. } => Ok(Separator::ThinArrow),
+            Token::FatArrow { .. } => Ok(Separator::FatArrow),
+            Token::Underscore { .. } => Ok(Separator::Underscore),
+
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: format!("`{:#?}`", expected),
+                    found: token,
+                });
                 Err(ErrorsEmitted(()))
             }
         }

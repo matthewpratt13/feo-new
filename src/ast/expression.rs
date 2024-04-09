@@ -1,4 +1,4 @@
-use super::{BinaryOp, Delimiter, Expression, Identifier, Keyword, Separator, Type};
+use super::{BinaryOp, Delimiter, Expression, Identifier, Keyword, Separator, Type, UIntKind};
 
 #[derive(Debug, Clone)]
 pub enum PathPrefixType {
@@ -17,16 +17,16 @@ pub struct BinaryOpExpr {
 
 #[derive(Debug, Clone)]
 pub struct BlockExpr {
-    open_brace: Delimiter,
-    body: Vec<Expression>,
-    close_brace: Delimiter,
+    pub open_brace: Delimiter,
+    pub expressions: Vec<Expression>,
+    pub close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone)]
 pub struct CallExpr {
     pub callee: Box<Expression>,
     pub open_paren: Delimiter,
-    pub args: Vec<Expression>,
+    pub args: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
 }
 
@@ -53,6 +53,16 @@ pub struct IndexExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct MethodCallExpr {
+    pub receiver: Box<Expression>,
+    pub dot: Separator,
+    pub callee: Box<Expression>,
+    pub open_paren: Delimiter,
+    pub args: Option<Vec<Expression>>,
+    pub close_paren: Delimiter,
+}
+
+#[derive(Debug, Clone)]
 pub struct PathExpr {
     pub prefix: PathPrefixType,
     pub dbl_colon: Option<Separator>,
@@ -64,6 +74,13 @@ pub struct TupleExpr {
     pub open_paren: Delimiter,
     pub elements: Vec<Expression>,
     pub close_paren: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct TupleIndexExpr {
+    pub object: Box<Expression>,
+    pub dot: Separator,
+    pub index: UIntKind,
 }
 
 #[derive(Debug, Clone)]
