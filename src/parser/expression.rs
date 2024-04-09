@@ -4,7 +4,7 @@ use crate::{
             BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, PathExpr,
             TupleExpr, TypeCastExpr,
         },
-        BinaryOp, Delimiter, Expression, Identifier, Keyword, Separator,
+        BinaryOp, Delimiter, Expression, Identifier, Separator,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -25,19 +25,17 @@ impl ParseExpression for PathExpr {
 impl ParseExpression for TypeCastExpr {
     /// Parse a type cast expression.
     fn parse(parser: &mut Parser, operand: Expression) -> Result<Expression, ErrorsEmitted> {
-        let token = parser.expect_token(Token::As {
+        let kw_as = parser.expect_keyword(Token::As {
             name: "as".to_string(),
             span: parser.stream.span(),
-        });
+        })?;
 
-        let token = parser.consume_token()?;
-
-        let ty = parser.expect_type(token)?;
+        let new_type = parser.get_type()?;
 
         Ok(Expression::TypeCast(TypeCastExpr {
             operand: Box::new(operand),
-            kw_as: Keyword::As,
-            new_type: ty,
+            kw_as,
+            new_type,
         }))
 
         // let token = parser.consume_token();

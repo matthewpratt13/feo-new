@@ -12,8 +12,8 @@ use crate::{
         expression::{
             CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, PathExpr, TupleExpr, TypeCastExpr,
         },
-        BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Literal, Statement,
-        StructField, Type, UnaryOp,
+        BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
+        Statement, StructField, Type, UnaryOp,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -1102,14 +1102,14 @@ impl Parser {
     /// Consume and check tokens, to ensure that the expected tokens are encountered
     /// during parsing. Return the relevant `ParserErrorKind` where applicable.
     fn expect_token(&mut self, expected: Token) -> Result<Token, ErrorsEmitted> {
-        let token = self.consume_token();
+        let token = self.consume_token()?;
 
         match token {
-            _ if token == Ok(expected) => token,
+            _ if token == expected => Ok(token),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`{:#?}`".to_string(),
-                    found: token?,
+                    expected: format!("`{:#?}`", expected),
+                    found: token,
                 });
 
                 Err(ErrorsEmitted(()))
@@ -1117,11 +1117,51 @@ impl Parser {
         }
     }
 
+    fn expect_keyword(&mut self, expected: Token) -> Result<Keyword, ErrorsEmitted> {
+        let token = self.consume_token()?;
+
+        match token {
+            Token::Import { .. } => Ok(Keyword::Import),
+            Token::Module { .. } => Ok(Keyword::Module),
+            Token::Package { .. } => Ok(Keyword::Package),
+            Token::SelfKeyword { .. } => Ok(Keyword::KwSelf),
+            Token::SelfType { .. } => Ok(Keyword::SelfType),
+            Token::Super { .. } => Ok(Keyword::Super),
+            Token::Pub { .. } => Ok(Keyword::Pub),
+            Token::As { .. } => Ok(Keyword::As),
+            Token::Const { .. } => Ok(Keyword::Const),
+            Token::Static { .. } => Ok(Keyword::Static),
+            Token::Func { .. } => Ok(Keyword::Func),
+            Token::Struct { .. } => Ok(Keyword::Struct),
+            Token::Enum { .. } => Ok(Keyword::Enum),
+            Token::Trait { .. } => Ok(Keyword::Trait),
+            Token::Impl { .. } => Ok(Keyword::Impl),
+            Token::If { .. } => Ok(Keyword::If),
+            Token::Else { .. } => Ok(Keyword::Else),
+            Token::Match { .. } => Ok(Keyword::Match),
+            Token::Loop { .. } => Ok(Keyword::Loop),
+            Token::For { .. } => Ok(Keyword::For),
+            Token::In { .. } => Ok(Keyword::In),
+            Token::While { .. } => Ok(Keyword::While),
+            Token::Break { .. } => Ok(Keyword::Break),
+            Token::Continue { .. } => Ok(Keyword::Continue),
+            Token::Return { .. } => Ok(Keyword::Return),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: format!("`{:#?}`", expected),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
+
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
-    fn expect_type(&mut self, token: Token) -> Result<Type, ErrorsEmitted> {
+    fn get_type(&mut self) -> Result<Type, ErrorsEmitted> {
+        let token = self.consume_token()?;
+
         match token {
             Token::I32Type { .. } | Token::I64Type { .. } | Token::I128Type { .. } => Ok(Type::Int),
-
             Token::U8Type { .. }
             | Token::U16Type { .. }
             | Token::U32Type { .. }
@@ -1129,9 +1169,7 @@ impl Parser {
             | Token::U128Type { .. } => Ok(Type::UInt),
             Token::U256Type { .. } => Ok(Type::BigUInt),
             Token::U512Type { .. } => Ok(Type::BigUInt),
-
             Token::ByteType { .. } => Ok(Type::Byte),
-
             Token::B2Type { .. }
             | Token::B3Type { .. }
             | Token::B4Type { .. }
