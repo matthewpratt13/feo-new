@@ -117,8 +117,8 @@ pub struct IfStmt {
     pub kw_if: Keyword,
     pub condition: Expression,
     pub if_block: Expression,
-    pub else_if_blocks_opt: Option<Vec<Box<IfStmt>>>,
-    pub trailing_else_block_opt: Option<Expression>,
+    pub else_if_blocks_opt: Option<Vec<(Keyword, Box<IfStmt>)>>, // `else`, `if { .. }`
+    pub trailing_else_block_opt: Option<(Keyword, Expression)>, // `else { .. }`
 }
 
 #[derive(Debug, Clone)]
@@ -127,6 +127,15 @@ pub struct IndexExpr {
     pub open_bracket: Delimiter,
     pub index: UIntKind,
     pub close_bracket: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct LetStmt {
+    pub kw_let: Keyword,
+    pub assignee: Expression,
+    pub type_ann_opt: Option<(Separator, Type)>, // `: Type`
+    pub value_opt: Option<(BinaryOp, Expression)>, // `= value`
+    pub semicolon: Separator,
 }
 
 #[derive(Debug, Clone)]
