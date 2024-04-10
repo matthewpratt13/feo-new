@@ -118,7 +118,7 @@ pub struct IfStmt {
     pub condition: Expression,
     pub if_block: Expression,
     pub else_if_blocks_opt: Option<Vec<(Keyword, Box<IfStmt>)>>, // `else`, `if { .. }`
-    pub trailing_else_block_opt: Option<(Keyword, Expression)>, // `else { .. }`
+    pub trailing_else_block_opt: Option<(Keyword, Expression)>,  // `else { .. }`
 }
 
 #[derive(Debug, Clone)]
@@ -173,6 +173,17 @@ pub struct StructExpr {
     pub open_brace: Delimiter,
     pub fields: Vec<StructField>,
     pub close_brace: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct TernaryStmt {
+    pub kw_if: Keyword,
+    pub condition: Expression,
+    pub question_mark: UnwrapOp,
+    pub true_case: Expression,
+    pub colon: Separator,
+    pub false_case: Expression,
+    pub semicolon: Separator,
 }
 
 #[derive(Debug, Clone)]

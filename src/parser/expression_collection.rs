@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        expression::{ArrayExpr, PathExpr, StructExpr, StructField, TupleExpr},
+        expression::{ArrayExpr, BlockExpr, PathExpr, StructExpr, StructField, TupleExpr},
         Expression, Identifier,
     },
     error::{ErrorsEmitted, ParserErrorKind},
@@ -167,3 +167,42 @@ impl ParseExpressionCollection for StructExpr {
         }))
     }
 }
+
+
+impl ParseExpressionCollection for BlockExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let open_brace = parser.expect_delimiter(Token::LBrace {
+            delim: '{',
+            span: parser.stream.span(),
+        })?;
+
+        let mut statements: Vec<Statement> = Vec::new();
+
+        // parse expressions until a closing brace
+        while !parser.is_expected_token(Token::RBrace {
+            delim: '}',
+            span: parser.stream.span(),
+        }) {
+            statements.push(parser.parse_statement()?);
+        }
+
+        let terminal_expression_opt = if let Ok(e) = parser.parse_expression(Precedence::Lowest) {
+            Some(Box::new(e))
+        } else {
+            None
+        };
+
+        let close_brace = parser.expect_delimiter(Token::RBrace {
+            delim: '}',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(Expression::Block(BlockExpr {
+            open_brace,
+            statements,
+            terminal_expression_opt,
+            close_brace,
+        }))
+    }
+}
+

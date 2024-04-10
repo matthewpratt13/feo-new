@@ -13,9 +13,7 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         expression::{
-            ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr,
-            GroupedExpr, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr,
-            TupleExpr, TupleIndexExpr, TypeCastExpr, UnderscoreExpr, UnwrapExpr,
+            ArrayExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr, GroupedExpr, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, TernaryStmt, TupleExpr, TupleIndexExpr, TypeCastExpr, UnderscoreExpr, UnwrapExpr
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
         Separator, Statement, Type, UnaryOp,
@@ -771,37 +769,7 @@ impl Parser {
 
     // TODO: what about `else-if` branches ?
     /// Parse an `if` expression (i.e., `if (condition) { true block } else { false block }`).
-    fn parse_if_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        self.expect_token(Token::If {
-            name: "if".to_string(),
-            span: self.stream.span(),
-        })?;
-
-        self.expect_token(Token::LParen {
-            delim: '(',
-            span: self.stream.span(),
-        })?;
-
-        let condition = Box::new(self.parse_expression(Precedence::Lowest)?);
-
-        self.expect_token(Token::RParen {
-            delim: ')',
-            span: self.stream.span(),
-        })?;
-
-        let true_branch = Box::new(self.parse_expression(Precedence::Lowest)?);
-
-        let false_branch = if self.tokens_match(Token::Else {
-            name: "else".to_string(),
-            span: self.stream.span(),
-        }) {
-            Some(Box::new(self.parse_expression(Precedence::Lowest)?))
-        } else {
-            None
-        };
-
-        Ok(Statement::If(condition, true_branch, false_branch))
-    }
+    
 
     fn parse_match_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         todo!()
