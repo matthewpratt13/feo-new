@@ -503,14 +503,14 @@ impl Parser {
                 {
                     // self.consume_token()?;
                     // let expr = self.parse_expression(Precedence::Lowest)?;
-                    TupleExpr::parse(self)
+                    Ok(Expression::Tuple(TupleExpr::parse(self)?))
                 } else {
                     self.consume_token()?;
                     let expr = self.parse_expression(Precedence::Lowest)?;
                     Ok(Expression::Grouped(GroupedExpr::parse(self, expr)?))
                 }
             }
-            Token::LBracket { .. } => ArrayExpr::parse(self),
+            Token::LBracket { .. } => Ok(Expression::Array(ArrayExpr::parse(self)?)),
             Token::Pipe { .. } | Token::DblPipe { .. } => {
                 if let Some(Token::Identifier { .. }) = self.peek_ahead_by(1) {
                     self.consume_token()?;
@@ -652,7 +652,7 @@ impl Parser {
             }
             Ok(Token::As { .. }) => Ok(Expression::TypeCast(TypeCastExpr::parse(self, left_expr)?)),
             Ok(Token::LParen { .. }) => Ok(Expression::Call(CallExpr::parse(self, left_expr)?)), // TODO: or tuple struct
-            Ok(Token::LBrace { .. }) => StructExpr::parse(self), // TODO: or match statement
+            Ok(Token::LBrace { .. }) => Ok(Expression::Struct(StructExpr::parse(self)?)), // TODO: or match statement
             Ok(Token::LBracket { .. }) => Ok(Expression::Index(IndexExpr::parse(self, left_expr)?)),
             Ok(Token::Dot { .. }) => match self.unconsume() {
                 Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {

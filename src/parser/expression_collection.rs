@@ -9,12 +9,15 @@ use crate::{
 
 use super::{expression::ParseExpression, Parser, Precedence};
 
-pub(crate) trait ParseExpressionCollection {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted>;
+pub(crate) trait ParseExpressionCollection
+where
+    Self: Sized,
+{
+    fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
 }
 
 impl ParseExpressionCollection for ArrayExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser) -> Result<ArrayExpr, ErrorsEmitted> {
         let open_bracket = parser.expect_delimiter(Token::LBracket {
             delim: '[',
             span: parser.stream.span(),
@@ -41,16 +44,16 @@ impl ParseExpressionCollection for ArrayExpr {
             span: parser.stream.span(),
         })?;
 
-        Ok(Expression::Array(ArrayExpr {
+        Ok(ArrayExpr {
             open_bracket,
             elements,
             close_bracket,
-        }))
+        })
     }
 }
 
 impl ParseExpressionCollection for TupleExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
         let open_paren = parser.expect_delimiter(Token::LParen {
             delim: '(',
             span: parser.stream.span(),
@@ -77,16 +80,16 @@ impl ParseExpressionCollection for TupleExpr {
             span: parser.stream.span(),
         })?;
 
-        Ok(Expression::Tuple(TupleExpr {
+        Ok(TupleExpr {
             open_paren,
             elements,
             close_paren,
-        }))
+        })
     }
 }
 
 impl ParseExpressionCollection for StructExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser) -> Result<StructExpr, ErrorsEmitted> {
         let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
 
         let token = parser.consume_token()?;
@@ -159,18 +162,17 @@ impl ParseExpressionCollection for StructExpr {
             span: parser.stream.span(),
         })?;
 
-        Ok(Expression::Struct(StructExpr {
+        Ok(StructExpr {
             path,
             open_brace,
             fields,
             close_brace,
-        }))
+        })
     }
 }
 
-
 impl ParseExpressionCollection for BlockExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),
@@ -197,12 +199,11 @@ impl ParseExpressionCollection for BlockExpr {
             span: parser.stream.span(),
         })?;
 
-        Ok(Expression::Block(BlockExpr {
+        Ok(BlockExpr {
             open_brace,
             statements,
             terminal_expression_opt,
             close_brace,
-        }))
+        })
     }
 }
-

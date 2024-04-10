@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         expression::{BlockExpr, IfStmt, TernaryStmt},
-        Delimiter, Expression, Keyword,
+        Delimiter, Keyword,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -46,7 +46,7 @@ impl ParseStatement for IfStmt {
 
         let mut else_if_blocks: Vec<(Keyword, Box<IfStmt>)> = Vec::new();
 
-        let mut trailing_else_block_opt = None::<(Keyword, Expression)>;
+        let mut trailing_else_block_opt = None::<(Keyword, BlockExpr)>;
 
         while let Some(Token::Else { .. }) = parser.peek_current() {
             parser.consume_token()?;

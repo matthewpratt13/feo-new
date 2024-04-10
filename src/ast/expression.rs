@@ -116,9 +116,9 @@ pub struct GroupedExpr {
 pub struct IfStmt {
     pub kw_if: Keyword,
     pub condition: Expression,
-    pub if_block: Expression,
+    pub if_block: BlockExpr,
     pub else_if_blocks_opt: Option<Vec<(Keyword, Box<IfStmt>)>>, // `else`, `if { .. }`
-    pub trailing_else_block_opt: Option<(Keyword, Expression)>,  // `else { .. }`
+    pub trailing_else_block_opt: Option<(Keyword, BlockExpr)>,   // `else { .. }`
 }
 
 #[derive(Debug, Clone)]
