@@ -1,4 +1,3 @@
-
 /// Enum representing the different precedence levels of operators, respectively.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {

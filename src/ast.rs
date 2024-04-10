@@ -1,14 +1,13 @@
 #![allow(dead_code)]
 
-use self::expression::{
-    BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, StructField,
-    TypeCastExpr,
-};
-
-pub use self::types::*;
-
 pub mod expression;
 pub mod types;
+
+use self::expression::{
+    BinaryExpr, BlockExpr, CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, StructField,
+    TypeCastExpr,
+};
+pub use self::types::*;
 
 ///////////////////////////////////////////////////////////////////////////
 /// LITERAL
@@ -172,7 +171,7 @@ pub enum Expression {
     Unwrap,
     UnaryOp(UnaryOp, Box<Expression>),
     TypeCast(TypeCastExpr),
-    BinaryOp(BinaryOpExpr),
+    BinaryOp(BinaryExpr),
     Grouped(GroupedExpr),
     Return,
     Range, // from-to, from, to, inclusive, to inclusive

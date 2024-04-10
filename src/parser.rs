@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+mod binary_expr;
 mod expression;
 mod item;
 mod precedence;
@@ -21,8 +22,8 @@ use crate::{
     token::{Token, TokenStream},
 };
 
-use self::expression::ParseExpression;
 pub use self::precedence::Precedence;
+use self::{binary_expr::parse_binary_expression, expression::ParseExpression};
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
@@ -564,77 +565,67 @@ impl Parser {
         let token = self.consume_token();
 
         match token {
-            Ok(Token::Plus { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Add)
-            }
-            Ok(Token::Minus { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Subtract)
-            }
+            Ok(Token::Plus { .. }) => parse_binary_expression(self, left_expr, BinaryOp::Add),
+            Ok(Token::Minus { .. }) => parse_binary_expression(self, left_expr, BinaryOp::Subtract),
             Ok(Token::Asterisk { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Multiply)
+                parse_binary_expression(self, left_expr, BinaryOp::Multiply)
             }
-            Ok(Token::Slash { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Divide)
-            }
+            Ok(Token::Slash { .. }) => parse_binary_expression(self, left_expr, BinaryOp::Divide),
             Ok(Token::Percent { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Modulus)
+                parse_binary_expression(self, left_expr, BinaryOp::Modulus)
             }
             Ok(Token::DblEquals { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Equal)
+                parse_binary_expression(self, left_expr, BinaryOp::Equal)
             }
             Ok(Token::BangEquals { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::NotEqual)
+                parse_binary_expression(self, left_expr, BinaryOp::NotEqual)
             }
             Ok(Token::LessThan { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::LessThan)
+                parse_binary_expression(self, left_expr, BinaryOp::LessThan)
             }
             Ok(Token::LessThanEquals { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::LessEqual)
+                parse_binary_expression(self, left_expr, BinaryOp::LessEqual)
             }
             Ok(Token::GreaterThan { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::GreaterThan)
+                parse_binary_expression(self, left_expr, BinaryOp::GreaterThan)
             }
             Ok(Token::GreaterThanEquals { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::GreaterEqual)
+                parse_binary_expression(self, left_expr, BinaryOp::GreaterEqual)
             }
-            Ok(Token::Equals { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::Assign)
-            }
+            Ok(Token::Equals { .. }) => parse_binary_expression(self, left_expr, BinaryOp::Assign),
             Ok(Token::PlusEquals { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::AddAssign)
+                parse_binary_expression(self, left_expr, BinaryOp::AddAssign)
             }
             Ok(Token::MinusEquals { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::SubtractAssign)
+                parse_binary_expression(self, left_expr, BinaryOp::SubtractAssign)
             }
             Ok(Token::AsteriskEquals { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::MultiplyAssign)
+                parse_binary_expression(self, left_expr, BinaryOp::MultiplyAssign)
             }
             Ok(Token::SlashEquals { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::DivideAssign)
+                parse_binary_expression(self, left_expr, BinaryOp::DivideAssign)
             }
             Ok(Token::PercentEquals { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::ModulusAssign)
+                parse_binary_expression(self, left_expr, BinaryOp::ModulusAssign)
             }
             Ok(Token::DblAmpersand { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::LogicalAnd)
+                parse_binary_expression(self, left_expr, BinaryOp::LogicalAnd)
             }
             Ok(Token::DblPipe { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::LogicalOr)
+                parse_binary_expression(self, left_expr, BinaryOp::LogicalOr)
             }
             Ok(Token::Ampersand { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::BitwiseAnd)
+                parse_binary_expression(self, left_expr, BinaryOp::BitwiseAnd)
             }
-            Ok(Token::Pipe { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::BitwiseOr)
-            }
+            Ok(Token::Pipe { .. }) => parse_binary_expression(self, left_expr, BinaryOp::BitwiseOr),
             Ok(Token::Caret { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::BitwiseXor)
+                parse_binary_expression(self, left_expr, BinaryOp::BitwiseXor)
             }
             Ok(Token::DblLessThan { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::ShiftLeft)
+                parse_binary_expression(self, left_expr, BinaryOp::ShiftLeft)
             }
             Ok(Token::DblGreaterThan { .. }) => {
-                expression::parse_binary_op_expression(self, left_expr, BinaryOp::ShiftRight)
+                parse_binary_expression(self, left_expr, BinaryOp::ShiftRight)
             }
             Ok(Token::QuestionMark { .. }) => self.parse_unwrap_expression(), // TODO: or ternary
             Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => self.parse_range_expression(),

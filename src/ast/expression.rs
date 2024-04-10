@@ -43,7 +43,7 @@ pub struct StructField {
 ///////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
-pub struct BinaryOpExpr {
+pub struct BinaryExpr {
     pub lhs: Box<Expression>,
     pub op: BinaryOp,
     pub rhs: Box<Expression>,
