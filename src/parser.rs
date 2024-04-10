@@ -492,9 +492,9 @@ impl Parser {
                             i: self.current + 2,
                         })
                 {
-                    self.consume_token()?;
-                    let expr = self.parse_expression(Precedence::Lowest)?;
-                    TupleExpr::parse(self, expr)
+                    // self.consume_token()?;
+                    // let expr = self.parse_expression(Precedence::Lowest)?;
+                    TupleExpr::parse(self)
                 } else {
                     self.consume_token()?;
                     let expr = self.parse_expression(Precedence::Lowest)?;
@@ -728,37 +728,6 @@ impl Parser {
         })?;
 
         Ok(Expression::Array(elements))
-    }
-
-    /// Parse a tuple expression (i.e., `(element1, element2, element3)`).
-    fn parse_tuple_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let open_paren = self.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: self.stream.span(),
-        })?;
-
-        let mut elements: Vec<Expression> = Vec::new();
-
-        while !self.is_expected_token(Token::RParen {
-            delim: ')',
-            span: self.stream.span(),
-        }) {
-            elements.push(self.parse_expression(Precedence::Lowest)?);
-
-            if !self.tokens_match(Token::Comma {
-                punc: ',',
-                span: self.stream.span(),
-            }) {
-                break;
-            }
-        }
-
-        let close_paren = self.expect_delimiter(Token::RParen {
-            delim: ')',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Expression::Tuple(elements))
     }
 
     ///////////////////////////////////////////////////////////////////////////

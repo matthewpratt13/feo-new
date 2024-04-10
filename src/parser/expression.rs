@@ -70,7 +70,7 @@ impl ParseExpression for GroupedExpr {
             }))
         } else if let Ok(Token::Comma { .. }) = token {
             parser.unconsume(); // go back to the input expression and try to parse a tuple
-            TupleExpr::parse(parser, expr)
+            TupleExpr::parse(parser)
         } else {
             Err(token.unwrap_err())
         }
@@ -352,8 +352,38 @@ impl ParseExpressionCollection for StructExpr {
     }
 }
 
-impl ParseExpression for TupleExpr {
-    fn parse(parser: &mut Parser, first_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        todo!()
+impl ParseExpressionCollection for TupleExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let open_paren = parser.expect_delimiter(Token::LParen {
+            delim: '(',
+            span: parser.stream.span(),
+        })?;
+
+        let mut elements: Vec<Expression> = Vec::new();
+
+        while !parser.is_expected_token(Token::RParen {
+            delim: ')',
+            span: parser.stream.span(),
+        }) {
+            elements.push(parser.parse_expression(Precedence::Lowest)?);
+
+            if !parser.tokens_match(Token::Comma {
+                punc: ',',
+                span: parser.stream.span(),
+            }) {
+                break;
+            }
+        }
+
+        let close_paren = parser.expect_delimiter(Token::RParen {
+            delim: ')',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(Expression::Tuple(TupleExpr {
+            open_paren,
+            elements,
+            close_paren,
+        }))
     }
 }
