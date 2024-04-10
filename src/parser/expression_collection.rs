@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         expression::{ArrayExpr, BlockExpr, PathExpr, StructExpr, StructField, TupleExpr},
-        Expression, Identifier,
+        Expression, Identifier, Statement,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,

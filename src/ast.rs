@@ -5,7 +5,8 @@ pub mod types;
 
 use self::expression::{
     ArrayExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr,
-    FieldAccessExpr, GroupedExpr, IndexExpr, StructExpr, TupleExpr, TypeCastExpr, UnderscoreExpr,
+    FieldAccessExpr, GroupedExpr, IfStmt, IndexExpr, StructExpr, TupleExpr, TypeCastExpr,
+    UnderscoreExpr,
 };
 pub use self::types::*;
 
@@ -192,11 +193,11 @@ pub enum Expression {
 #[derive(Debug, Clone)]
 pub enum Statement {
     Let(Identifier, Expression),
-    If(Box<Expression>, Box<Expression>, Option<Box<Expression>>), // condition, true, false
-    Match,                                                         // condition, body
-    Ternary,                                                       // condition ? true : false
-    ForIn(Box<Expression>, Box<Expression>, Box<Expression>),      // variable, iterable, body
-    While,                                                         // while, condition, body
+    If(IfStmt),                                               // condition, true, false
+    Match,                                                    // condition, body
+    Ternary,                                                  // condition ? true : false
+    ForIn(Box<Expression>, Box<Expression>, Box<Expression>), // variable, iterable, body
+    While,                                                    // while, condition, body
     Definition(Definition),
     Declaration(Declaration),
     Expression(Expression),

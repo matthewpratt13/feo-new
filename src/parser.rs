@@ -13,7 +13,9 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         expression::{
-            ArrayExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr, GroupedExpr, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, TernaryStmt, TupleExpr, TupleIndexExpr, TypeCastExpr, UnderscoreExpr, UnwrapExpr
+            ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr,
+            GroupedExpr, IfStmt, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr,
+            StructExpr, TupleExpr, TupleIndexExpr, TypeCastExpr, UnderscoreExpr, UnwrapExpr,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
         Separator, Statement, Type, UnaryOp,
@@ -25,7 +27,7 @@ use crate::{
 pub use self::precedence::Precedence;
 use self::{
     binary_expr::parse_binary_expression, expression::ParseExpression,
-    expression_collection::ParseExpressionCollection,
+    expression_collection::ParseExpressionCollection, statement::ParseStatement,
 };
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
@@ -710,7 +712,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         match self.consume_token() {
             Ok(Token::Let { .. }) => self.parse_let_statement(),
-            Ok(Token::If { .. }) => self.parse_if_statement(),
+            Ok(Token::If { .. }) => Ok(Statement::If(IfStmt::parse(self)?)),
             Ok(Token::Match { .. }) => self.parse_match_statement(),
             Ok(Token::For { .. }) => self.parse_for_in_statement(),
             Ok(Token::While { .. }) => self.parse_while_statement(),
@@ -769,7 +771,6 @@ impl Parser {
 
     // TODO: what about `else-if` branches ?
     /// Parse an `if` expression (i.e., `if (condition) { true block } else { false block }`).
-    
 
     fn parse_match_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         todo!()

@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         expression::{BlockExpr, IfStmt, TernaryStmt},
-        Delimiter, Keyword, Statement,
+        Delimiter, Expression, Keyword,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -29,14 +29,12 @@ impl ParseStatement for IfStmt {
             span: parser.stream.span(),
         })?;
 
-        let condition = Box::new(parser.parse_expression(Precedence::Lowest)?);
+        let condition = parser.parse_expression(Precedence::Lowest)?;
 
         let token = parser.consume_token()?;
 
-        let if_block = if let Delimiter::LBrace = parser.expect_delimiter(token)? {
+        let if_block = if let Delimiter::LBrace = parser.expect_delimiter(token.clone())? {
             BlockExpr::parse(parser)?
-        } else if let Token::QuestionMark { .. } = token {
-            return Err(ErrorsEmitted(()));
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "block expression".to_string(),
@@ -48,17 +46,41 @@ impl ParseStatement for IfStmt {
 
         let mut else_if_blocks: Vec<(Keyword, Box<IfStmt>)> = Vec::new();
 
-        while let Some(t) = parser.peek_current() {
-            let else_kw = parser.expect_keyword(t)?;
+        let mut trailing_else_block_opt = None::<(Keyword, Expression)>;
+
+        while let Some(Token::Else { .. }) = parser.peek_current() {
+            parser.consume_token()?;
+
+            if let Some(Token::LBrace { .. }) = parser.peek_current() {
+                let block = BlockExpr::parse(parser)?;
+                trailing_else_block_opt = Some((Keyword::Else, block));
+                break;
+            }
 
             if let Some(Token::If { .. }) = parser.peek_current() {
                 let if_stmt = IfStmt::parse(parser)?;
-                else_if_blocks.push((else_kw, Box::new(if_stmt)))
+                else_if_blocks.push((Keyword::Else, Box::new(if_stmt)));
             } else {
                 break;
             }
         }
 
-        Ok(Statement::If(condition, true_branch, false_branch))
+        if else_if_blocks.is_empty() {
+            Ok(IfStmt {
+                kw_if,
+                condition,
+                if_block,
+                else_if_blocks_opt: None,
+                trailing_else_block_opt,
+            })
+        } else {
+            Ok(IfStmt {
+                kw_if,
+                condition,
+                if_block,
+                else_if_blocks_opt: Some(else_if_blocks),
+                trailing_else_block_opt,
+            })
+        }
     }
 }

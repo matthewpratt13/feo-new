@@ -1,11 +1,10 @@
 use crate::{
     ast::{
         expression::{
-            BlockExpr, CallExpr, ClosureExpr, FieldAccessExpr, GroupedExpr, IndexExpr,
-            MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, TupleExpr, TupleIndexExpr,
-            TypeCastExpr, UnwrapExpr,
+            CallExpr, ClosureExpr, FieldAccessExpr, GroupedExpr, IndexExpr, MethodCallExpr,
+            PathExpr, RangeExpr, ReturnExpr, TupleExpr, TupleIndexExpr, TypeCastExpr, UnwrapExpr,
         },
-        Delimiter, Expression, Identifier, Statement,
+        Delimiter, Expression, Identifier,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
