@@ -43,6 +43,13 @@ pub struct StructField {
 ///////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
+pub struct ArrayExpr {
+    pub open_bracket: Delimiter,
+    pub elements: Vec<Expression>,
+    pub close_bracket: Delimiter,
+}
+
+#[derive(Debug, Clone)]
 pub struct BinaryExpr {
     pub lhs: Box<Expression>,
     pub op: BinaryOp,

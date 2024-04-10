@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         expression::{
-            BlockExpr, CallExpr, ClosureExpr, FieldAccessExpr, GroupedExpr, IndexExpr,
+            ArrayExpr, BlockExpr, CallExpr, ClosureExpr, FieldAccessExpr, GroupedExpr, IndexExpr,
             MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, StructField, TupleExpr,
             TupleIndexExpr, TypeCastExpr, UnwrapExpr,
         },
@@ -269,6 +269,78 @@ impl ParseExpression for ClosureExpr {
     }
 }
 
+impl ParseExpressionCollection for TupleExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let open_paren = parser.expect_delimiter(Token::LParen {
+            delim: '(',
+            span: parser.stream.span(),
+        })?;
+
+        let mut elements: Vec<Expression> = Vec::new();
+
+        while !parser.is_expected_token(Token::RParen {
+            delim: ')',
+            span: parser.stream.span(),
+        }) {
+            elements.push(parser.parse_expression(Precedence::Lowest)?);
+
+            if !parser.tokens_match(Token::Comma {
+                punc: ',',
+                span: parser.stream.span(),
+            }) {
+                break;
+            }
+        }
+
+        let close_paren = parser.expect_delimiter(Token::RParen {
+            delim: ')',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(Expression::Tuple(TupleExpr {
+            open_paren,
+            elements,
+            close_paren,
+        }))
+    }
+}
+
+impl ParseExpressionCollection for ArrayExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let open_bracket = parser.expect_delimiter(Token::LBracket {
+            delim: '[',
+            span: parser.stream.span(),
+        })?;
+
+        let mut elements: Vec<Expression> = Vec::new();
+
+        while !parser.is_expected_token(Token::RBracket {
+            delim: ']',
+            span: parser.stream.span(),
+        }) {
+            elements.push(parser.parse_expression(Precedence::Lowest)?);
+
+            if !parser.tokens_match(Token::Comma {
+                punc: ',',
+                span: parser.stream.span(),
+            }) {
+                break;
+            }
+        }
+
+        let close_bracket = parser.expect_delimiter(Token::RBracket {
+            delim: ']',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(Expression::Array(ArrayExpr {
+            open_bracket,
+            elements,
+            close_bracket,
+        }))
+    }
+}
+
 impl ParseExpressionCollection for StructExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
@@ -348,42 +420,6 @@ impl ParseExpressionCollection for StructExpr {
             open_brace,
             fields,
             close_brace,
-        }))
-    }
-}
-
-impl ParseExpressionCollection for TupleExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
-
-        let mut elements: Vec<Expression> = Vec::new();
-
-        while !parser.is_expected_token(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        }) {
-            elements.push(parser.parse_expression(Precedence::Lowest)?);
-
-            if !parser.tokens_match(Token::Comma {
-                punc: ',',
-                span: parser.stream.span(),
-            }) {
-                break;
-            }
-        }
-
-        let close_paren = parser.expect_delimiter(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        })?;
-
-        Ok(Expression::Tuple(TupleExpr {
-            open_paren,
-            elements,
-            close_paren,
         }))
     }
 }

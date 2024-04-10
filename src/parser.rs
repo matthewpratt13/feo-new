@@ -12,9 +12,9 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         expression::{
-            BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr, GroupedExpr,
-            IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr,
-            TupleIndexExpr, TypeCastExpr, UnwrapExpr,
+            ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr,
+            GroupedExpr, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr,
+            TupleExpr, TupleIndexExpr, TypeCastExpr, UnwrapExpr,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
         Separator, Statement, Type, UnaryOp,
@@ -501,7 +501,7 @@ impl Parser {
                     GroupedExpr::parse(self, expr)
                 }
             }
-            Token::LBracket { .. } => self.parse_array_expression(),
+            Token::LBracket { .. } => ArrayExpr::parse(self),
             Token::Pipe { .. } | Token::DblPipe { .. } => {
                 if let Some(Token::Identifier { .. }) = self.peek_ahead_by(1) {
                     self.consume_token()?;
@@ -695,39 +695,6 @@ impl Parser {
                 Err(ErrorsEmitted(()))
             }
         }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-
-    /// Parse an array expression (i.e., `[element1, element2, element3, etc.]`).
-    fn parse_array_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let open_bracket = self.expect_delimiter(Token::LBracket {
-            delim: '[',
-            span: self.stream.span(),
-        })?;
-
-        let mut elements: Vec<Expression> = Vec::new();
-
-        while !self.is_expected_token(Token::RBracket {
-            delim: ']',
-            span: self.stream.span(),
-        }) {
-            elements.push(self.parse_expression(Precedence::Lowest)?);
-
-            if !self.tokens_match(Token::Comma {
-                punc: ',',
-                span: self.stream.span(),
-            }) {
-                break;
-            }
-        }
-
-        let close_bracket = self.expect_delimiter(Token::RBracket {
-            delim: ']',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Expression::Array(elements))
     }
 
     ///////////////////////////////////////////////////////////////////////////
