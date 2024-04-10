@@ -4,7 +4,8 @@ pub mod expression;
 pub mod types;
 
 use self::expression::{
-    BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr, GroupedExpr, IndexExpr, StructField, TypeCastExpr
+    BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr,
+    GroupedExpr, IndexExpr, StructExpr, TypeCastExpr,
 };
 pub use self::types::*;
 
@@ -180,7 +181,7 @@ pub enum Expression {
     Closure(ClosureExpr),
     Array(Vec<Expression>),
     Tuple(Vec<Expression>),
-    Struct(Vec<StructField>),
+    Struct(StructExpr),
     TupleStruct,
     Block(BlockExpr),
 }

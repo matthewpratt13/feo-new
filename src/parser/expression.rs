@@ -1,8 +1,8 @@
 use crate::{
     ast::{
         expression::{
-            BlockExpr, CallExpr, ClosureExpr, FieldAccessExpr,
-            GroupedExpr, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, TupleExpr,
+            BlockExpr, CallExpr, ClosureExpr, FieldAccessExpr, GroupedExpr, IndexExpr,
+            MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, StructField, TupleExpr,
             TupleIndexExpr, TypeCastExpr, UnwrapExpr,
         },
         Delimiter, Expression, Identifier, Statement,
@@ -18,6 +18,10 @@ use super::{Parser, Precedence};
 /// Trait that provides a common interface for parsing different expressions.
 pub(crate) trait ParseExpression {
     fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted>;
+}
+
+pub(crate) trait ParseExpressionCollection {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted>;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -262,6 +266,89 @@ impl ParseExpression for ReturnExpr {
 impl ParseExpression for ClosureExpr {
     fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
         todo!()
+    }
+}
+
+impl ParseExpressionCollection for StructExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
+
+        let token = parser.consume_token()?;
+
+        let path = if let Token::Identifier { name, .. } | Token::SelfType { name, .. } = token {
+            let expr = parser.parse_primary()?;
+            Box::new(PathExpr::parse(parser, expr)?)
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "path".to_string(),
+                found: token,
+            });
+            return Err(ErrorsEmitted(()));
+        };
+
+        let open_brace = parser.expect_delimiter(Token::LBrace {
+            delim: '{',
+            span: parser.stream.span(),
+        })?;
+
+        // parse struct fields – separated by commas – until a closing brace
+        loop {
+            // get the field name
+            let token = parser.consume_token();
+
+            let field_name = match token {
+                Ok(Token::Identifier { name, .. }) => name,
+                Ok(Token::RBrace { .. }) => break, // end of struct
+                _ => {
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "identifier or `}`".to_string(),
+                        found: token?,
+                    });
+                    return Err(ErrorsEmitted(()));
+                }
+            };
+
+            let colon = parser.expect_separator(Token::Colon {
+                punc: ':',
+                span: parser.stream.span(),
+            })?;
+
+            // parse field value
+            let field_value = parser.parse_expression(Precedence::Lowest)?;
+
+            // push field to list of fields
+            fields.push(StructField {
+                name: Identifier(field_name),
+                value: field_value,
+            });
+
+            // error handling
+            let token = parser.consume_token();
+
+            match token {
+                Ok(Token::Comma { .. }) => continue, // more fields
+                Ok(Token::RBrace { .. }) => break,   // end of struct
+                _ => {
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `}`".to_string(),
+                        found: token?,
+                    });
+                    return Err(ErrorsEmitted(()));
+                }
+            }
+        }
+
+        let close_brace = parser.expect_delimiter(Token::RBrace {
+            delim: '}',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(Expression::Struct(StructExpr {
+            path,
+            open_brace,
+            fields,
+            close_brace,
+        }))
     }
 }
 

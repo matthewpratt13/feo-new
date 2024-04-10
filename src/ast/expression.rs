@@ -135,6 +135,14 @@ pub struct ReturnExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct StructExpr {
+    pub path: Box<Expression>,
+    pub open_brace: Delimiter,
+    pub fields: Vec<StructField>,
+    pub close_brace: Delimiter,
+}
+
+#[derive(Debug, Clone)]
 pub struct TupleExpr {
     pub open_paren: Delimiter,
     pub elements: Vec<Expression>,

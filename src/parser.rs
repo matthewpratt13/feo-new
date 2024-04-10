@@ -13,7 +13,7 @@ use crate::{
     ast::{
         expression::{
             BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr, GroupedExpr,
-            IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructField, TupleExpr,
+            IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr,
             TupleIndexExpr, TypeCastExpr, UnwrapExpr,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
@@ -24,7 +24,10 @@ use crate::{
 };
 
 pub use self::precedence::Precedence;
-use self::{binary_expr::parse_binary_expression, expression::ParseExpression};
+use self::{
+    binary_expr::parse_binary_expression,
+    expression::{ParseExpression, ParseExpressionCollection},
+};
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
@@ -464,6 +467,7 @@ impl Parser {
             | Token::BoolLiteral { .. }
             | Token::Identifier { .. }
             | Token::SelfKeyword { .. } => self.parse_primary(),
+
             Token::Minus { .. } => {
                 let expr = self.parse_expression(Precedence::Unary)?;
                 Ok(Expression::UnaryOp(UnaryOp::Negate, Box::new(expr)))
@@ -640,7 +644,7 @@ impl Parser {
             }
             Ok(Token::As { .. }) => TypeCastExpr::parse(self, left_expr),
             Ok(Token::LParen { .. }) => CallExpr::parse(self, left_expr), // TODO: or tuple struct
-            Ok(Token::LBrace { .. }) => self.parse_struct_expression(), // TODO: or match statement
+            Ok(Token::LBrace { .. }) => StructExpr::parse(self), // TODO: or match statement
             Ok(Token::LBracket { .. }) => IndexExpr::parse(self, left_expr),
             Ok(Token::Dot { .. }) => match self.unconsume() {
                 Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {
@@ -755,65 +759,6 @@ impl Parser {
         })?;
 
         Ok(Expression::Tuple(elements))
-    }
-
-    /// Parse a struct with fields.
-    fn parse_struct_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
-
-        let open_brace = self.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: self.stream.span(),
-        })?;
-
-        // parse struct fields – separated by commas – until a closing brace
-        loop {
-            // get the field name
-            let token = self.consume_token();
-
-            let field_name = match token {
-                Ok(Token::Identifier { name, .. }) => name,
-                Ok(Token::RBrace { .. }) => break, // end of struct
-                _ => {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "identifier or `)`".to_string(),
-                        found: token?,
-                    });
-                    return Err(ErrorsEmitted(()));
-                }
-            };
-
-            self.expect_token(Token::Colon {
-                punc: ':',
-                span: self.stream.span(),
-            })?;
-
-            // parse field value
-            let field_value = self.parse_expression(Precedence::Lowest)?;
-
-            // push field to list of fields
-            fields.push(StructField {
-                name: Identifier(field_name),
-                value: field_value,
-            });
-
-            // error handling
-            let token = self.consume_token();
-
-            match token {
-                Ok(Token::Comma { .. }) => continue, // more fields
-                Ok(Token::RBrace { .. }) => break,   // end of struct
-                _ => {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `}`".to_string(),
-                        found: token?,
-                    });
-                    return Err(ErrorsEmitted(()));
-                }
-            }
-        }
-
-        Ok(Expression::Struct(fields))
     }
 
     ///////////////////////////////////////////////////////////////////////////
