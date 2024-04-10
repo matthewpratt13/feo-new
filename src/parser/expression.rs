@@ -10,7 +10,7 @@ use crate::{
     token::Token,
 };
 
-use super::{Parser, Precedence};
+use super::{Precedence, Parser};
 
 ///////////////////////////////////////////////////////////////////////////
 

@@ -3,6 +3,7 @@
 
 mod expression;
 mod item;
+mod precedence;
 mod statement;
 
 use std::collections::HashMap;
@@ -21,41 +22,8 @@ use crate::{
 };
 
 use self::expression::ParseExpression;
+pub use self::precedence::Precedence;
 
-/// Enum representing the different precedence levels of operators, respectively.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Precedence {
-    Lowest,             // `break`, `return`, closure
-    Assignment,         // `=`
-    CompoundAssignment, // `+=`, `-=`, `*/`, `/=`, `%=`
-    Range,              // `..`, `..=` (requires parentheses)
-    LogicalOr,          // `||`
-    LogicalAnd,         // `&&`
-    Equal,              // `==`
-    NotEqual,           // `!=`
-    LessThan,           // `<`
-    GreaterThan,        // `>`
-    LessThanOrEqual,    // `<=`
-    GreaterThanOrEqual, // `>=`
-    BitwiseOr,          // `|`
-    BitwiseXor,         // `^`
-    BitwiseAnd,         // `&`
-    Shift,              // `«`, `»`
-    Sum,                // `+`
-    Difference,         // `-`
-    Product,            // `*`
-    Quotient,           // `/`
-    Remainder,          // `%`
-    Exponentiation,     // `**`
-    Cast,               // "as"
-    Unary,              // `-`, `*` `!`, `&`,`&mut`
-    Unwrap,             // `?`
-    Index,              // `x[0]`
-    Call,               // `foo(bar)`
-    FieldAccess,        // foo.bar
-    MethodCall,         // foo.bar()
-    Path,               // `package::module::Item`
-}
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
 #[derive(Debug)]
