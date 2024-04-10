@@ -4,7 +4,7 @@ use crate::{
             BinaryOpExpr, BlockExpr, CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr,
             MethodCallExpr, PathExpr, TupleExpr, TupleIndexExpr, TypeCastExpr,
         },
-        BinaryOp, Delimiter, Expression, Identifier,
+        BinaryOp, Delimiter, Expression, Identifier, Statement,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -77,14 +77,14 @@ impl ParseExpression for BlockExpr {
             span: parser.stream.span(),
         })?;
 
-        let mut expressions: Vec<Expression> = Vec::new();
+        let mut statements: Vec<Statement> = Vec::new();
 
         // parse expressions until a closing brace
         while !parser.is_expected_token(Token::RBrace {
             delim: '}',
             span: parser.stream.span(),
         }) {
-            expressions.push(parser.parse_expression(Precedence::Lowest)?);
+            statements.push(parser.parse_statement()?);
         }
 
         let close_brace = parser.expect_delimiter(Token::RBrace {
@@ -94,7 +94,7 @@ impl ParseExpression for BlockExpr {
 
         Ok(Expression::Block(BlockExpr {
             open_brace,
-            expressions,
+            statements,
             close_brace,
         }))
     }

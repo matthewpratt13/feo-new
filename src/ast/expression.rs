@@ -1,4 +1,4 @@
-use super::{BinaryOp, Delimiter, Expression, Identifier, Keyword, Separator, Type, UIntKind};
+use super::{BinaryOp, Delimiter, Expression, Identifier, Keyword, Separator, Statement, Type, UIntKind};
 
 #[derive(Debug, Clone)]
 pub enum ClosureParams {
@@ -31,7 +31,7 @@ pub struct BinaryOpExpr {
 #[derive(Debug, Clone)]
 pub struct BlockExpr {
     pub open_brace: Delimiter,
-    pub expressions: Vec<Expression>,
+    pub statements: Vec<Statement>,
     pub close_brace: Delimiter,
 }
 
