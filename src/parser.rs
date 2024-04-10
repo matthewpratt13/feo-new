@@ -15,7 +15,7 @@ use crate::{
         expression::{
             ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr,
             GroupedExpr, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr,
-            TupleExpr, TupleIndexExpr, TypeCastExpr, UnwrapExpr,
+            TupleExpr, TupleIndexExpr, TypeCastExpr, UnderscoreExpr, UnwrapExpr,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
         Separator, Statement, Type, UnaryOp,
@@ -400,11 +400,9 @@ impl Parser {
         let token = self.consume_token();
 
         match token {
-            Ok(
-                Token::Identifier { name, .. }
-                | Token::SelfKeyword { name, .. }
-                | Token::Underscore { name, .. },
-            ) => Ok(Expression::Identifier(Identifier(name))),
+            Ok(Token::Identifier { name, .. } | Token::SelfKeyword { name, .. }) => {
+                Ok(Expression::Identifier(Identifier(name)))
+            }
             Ok(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
             Ok(Token::UIntLiteral { value, .. }) => Ok(Expression::Literal(Literal::UInt(value))),
             Ok(Token::BigUIntLiteral { value, .. }) => {
@@ -465,9 +463,19 @@ impl Parser {
             | Token::BytesLiteral { .. }
             | Token::StringLiteral { .. }
             | Token::CharLiteral { .. }
-            | Token::BoolLiteral { .. }
-            | Token::Identifier { .. }
-            | Token::SelfKeyword { .. } => self.parse_primary(),
+            | Token::BoolLiteral { .. } => self.parse_primary(),
+
+            Token::Identifier { name, .. } => {
+                if &name == "_" {
+                    Ok(Expression::Underscore(UnderscoreExpr {
+                        underscore: Separator::Underscore,
+                    }))
+                } else {
+                    self.parse_primary()
+                }
+            }
+
+            Token::SelfKeyword { .. } => self.parse_primary(),
 
             Token::Minus { .. } => {
                 let expr = self.parse_expression(Precedence::Unary)?;
@@ -561,8 +569,6 @@ impl Parser {
                 let kw_continue = self.expect_keyword(Token::Continue { name, span })?;
                 Ok(Expression::Continue(ContinueExpr { kw_continue }))
             }
-
-            Token::Underscore { .. } => self.parse_primary(),
 
             _ => {
                 self.log_error(ParserErrorKind::InvalidToken { token });
@@ -965,7 +971,6 @@ impl Parser {
             Token::ColonColonAsterisk { .. } => Ok(Separator::ColonColonAsterisk),
             Token::ThinArrow { .. } => Ok(Separator::ThinArrow),
             Token::FatArrow { .. } => Ok(Separator::FatArrow),
-            Token::Underscore { .. } => Ok(Separator::Underscore),
 
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {

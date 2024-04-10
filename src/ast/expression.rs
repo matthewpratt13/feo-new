@@ -171,6 +171,11 @@ pub struct TypeCastExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct UnderscoreExpr {
+    pub underscore: Separator,
+}
+
+#[derive(Debug, Clone)]
 pub struct UnwrapExpr {
     pub expression: Box<Expression>,
     pub op: UnwrapOp,

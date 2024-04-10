@@ -219,7 +219,9 @@ impl ParseExpression for GroupedExpr {
                 close_paren: Delimiter::RParen,
             }))
         } else if let Ok(Token::Comma { .. }) = token {
-            parser.unconsume(); // go back to the input expression and try to parse a tuple
+            // go back to the `(` and try to parse a tuple
+            parser.unconsume();
+            parser.unconsume();
             TupleExpr::parse(parser)
         } else {
             Err(token.unwrap_err())

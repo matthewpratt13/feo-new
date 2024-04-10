@@ -141,7 +141,7 @@ pub enum Token {
     HashBang { punc: String, span: Span },
     ThinArrow { punc: String, span: Span },
     FatArrow { punc: String, span: Span },
-    Underscore { name: String, span: Span },
+    // Underscore { name: String, span: Span },
 
     // operators
     Bang { punc: char, span: Span },

@@ -979,7 +979,6 @@ impl<'a> Lexer<'a> {
         let span = Span::new(self.input, start_pos, self.pos);
 
         match punc.as_str() {
-            "_" => Ok(Token::Underscore { name: punc, span }),
             "." => Ok(Token::Dot { punc: '.', span }),
             ".." => Ok(Token::DblDot { punc, span }),
             "..=" => Ok(Token::DotDotEquals { punc, span }),
@@ -1209,7 +1208,7 @@ fn is_delimiter(value: char) -> bool {
 
 /// List of separators to match against some input `char`.
 fn is_separator(value: char) -> bool {
-    [';', ','].contains(&value)
+    [';', ',', '_'].contains(&value)
 }
 
 /// List of recognized quote characters (for `char` and string literals) to match against

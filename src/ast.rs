@@ -5,7 +5,7 @@ pub mod types;
 
 use self::expression::{
     ArrayExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr,
-    FieldAccessExpr, GroupedExpr, IndexExpr, StructExpr, TupleExpr, TypeCastExpr,
+    FieldAccessExpr, GroupedExpr, IndexExpr, StructExpr, TupleExpr, TypeCastExpr, UnderscoreExpr,
 };
 pub use self::types::*;
 
@@ -177,7 +177,7 @@ pub enum Expression {
     Range, // from-to, from, to, inclusive, to inclusive
     Break(BreakExpr),
     Continue(ContinueExpr),
-    Underscore(Identifier),
+    Underscore(UnderscoreExpr),
     Closure(ClosureExpr),
     Array(ArrayExpr),
     Tuple(TupleExpr),
