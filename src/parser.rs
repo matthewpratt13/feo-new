@@ -12,8 +12,9 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         expression::{
-            CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, MethodCallExpr, PathExpr,
-            StructField, TupleExpr, TupleIndexExpr, TypeCastExpr,
+            BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr, GroupedExpr,
+            IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructField, TupleExpr,
+            TupleIndexExpr, TypeCastExpr, UnwrapExpr,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
         Separator, Statement, Type, UnaryOp,
@@ -498,58 +499,64 @@ impl Parser {
             }
             Token::LBracket { .. } => self.parse_array_expression(),
             Token::Pipe { .. } | Token::DblPipe { .. } => {
-                let expr = if let Ok(c) = self.parse_closure_with_block() {
-                    c
+                if let Some(Token::Identifier { .. }) = self.peek_ahead_by(1) {
+                    self.consume_token()?;
+                    let expr = self.parse_expression(Precedence::Lowest)?;
+                    ClosureExpr::parse(self, expr)
+                } else if let Ok(e) = self.parse_expression(Precedence::Lowest) {
+                    ClosureExpr::parse(self, e)
                 } else {
-                    self.parse_closure_without_block()?
-                };
-
-                match expr {
-                    Expression::ClosureWithBlock(a, b) => {
-                        return Ok(Expression::ClosureWithBlock(a, b));
-                    }
-                    Expression::ClosureWithoutBlock(a) => {
-                        return Ok(Expression::ClosureWithoutBlock(a));
-                    }
-
-                    _ => (),
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "closure".to_string(),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted(()))
                 }
-
-                Ok(expr)
             }
             Token::DblDot { .. } | Token::DotDotEquals { .. } => {
-                let expr = self.parse_range_expression()?;
+                let expr = self.parse_expression(Precedence::Range)?;
+                RangeExpr::parse(self, expr)
 
-                match self.peek_current() {
-                    Some(
-                        Token::Identifier { .. }
-                        | Token::IntLiteral { .. }
-                        | Token::UIntLiteral { .. }
-                        | Token::BigUIntLiteral { .. },
-                    ) => Ok(expr),
-                    Some(t) => {
-                        self.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "identifier or number".to_string(),
-                            found: t,
-                        });
+                // match self.peek_current() {
+                //     Some(
+                //         Token::Identifier { .. }
+                //         | Token::IntLiteral { .. }
+                //         | Token::UIntLiteral { .. }
+                //         | Token::BigUIntLiteral { .. },
+                //     ) => Ok(expr),
+                //     Some(t) => {
+                //         self.log_error(ParserErrorKind::UnexpectedToken {
+                //             expected: "identifier or number".to_string(),
+                //             found: t,
+                //         });
 
-                        Err(ErrorsEmitted(()))
-                    }
-                    None => {
-                        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                        Err(ErrorsEmitted(()))
-                    }
-                }
+                //         Err(ErrorsEmitted(()))
+                //     }
+                //     None => {
+                //         self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                //         Err(ErrorsEmitted(()))
+                //     }
+                // }
             }
             Token::Super { .. } | Token::Package { .. } => {
                 let expr = self.parse_expression(Precedence::Path)?;
                 PathExpr::parse(self, expr)
             }
-            Token::Return { .. } => self.parse_return_expression(),
-
-            Token::Break { .. } | Token::Continue { .. } => {
-                self.parse_break_or_continue_expression()
+            Token::Return { .. } => {
+                let expr = self.parse_expression(Precedence::Lowest)?;
+                ReturnExpr::parse(self, expr)
             }
+
+            Token::Break { name, span } => {
+                let kw_break = self.expect_keyword(Token::Break { name, span })?;
+                Ok(Expression::Break(BreakExpr { kw_break }))
+            }
+
+            Token::Continue { name, span } => {
+                let kw_continue = self.expect_keyword(Token::Continue { name, span })?;
+                Ok(Expression::Continue(ContinueExpr { kw_continue }))
+            }
+
             Token::Underscore { .. } => self.parse_primary(),
 
             _ => {
@@ -627,8 +634,10 @@ impl Parser {
             Ok(Token::DblGreaterThan { .. }) => {
                 parse_binary_expression(self, left_expr, BinaryOp::ShiftRight)
             }
-            Ok(Token::QuestionMark { .. }) => self.parse_unwrap_expression(), // TODO: or ternary
-            Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => self.parse_range_expression(),
+            Ok(Token::QuestionMark { .. }) => UnwrapExpr::parse(self, left_expr), // TODO: or ternary
+            Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
+                RangeExpr::parse(self, left_expr)
+            }
             Ok(Token::As { .. }) => TypeCastExpr::parse(self, left_expr),
             Ok(Token::LParen { .. }) => CallExpr::parse(self, left_expr), // TODO: or tuple struct
             Ok(Token::LBrace { .. }) => self.parse_struct_expression(), // TODO: or match statement
@@ -685,30 +694,6 @@ impl Parser {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-
-    fn parse_unwrap_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_range_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_return_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_break_or_continue_expression(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_closure_with_block(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_closure_without_block(&mut self) -> Result<Expression, ErrorsEmitted> {
-        todo!()
-    }
 
     /// Parse an array expression (i.e., `[element1, element2, element3, etc.]`).
     fn parse_array_expression(&mut self) -> Result<Expression, ErrorsEmitted> {

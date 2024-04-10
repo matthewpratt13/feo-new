@@ -1,8 +1,9 @@
 use crate::{
     ast::{
         expression::{
-            BlockExpr, CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, MethodCallExpr, PathExpr,
-            TupleExpr, TupleIndexExpr, TypeCastExpr,
+            BlockExpr, CallExpr, ClosureExpr, FieldAccessExpr,
+            GroupedExpr, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, TupleExpr,
+            TupleIndexExpr, TypeCastExpr, UnwrapExpr,
         },
         Delimiter, Expression, Identifier, Statement,
     },
@@ -235,6 +236,30 @@ impl ParseExpression for IndexExpr {
 }
 
 impl ParseExpression for TupleIndexExpr {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+}
+
+impl ParseExpression for UnwrapExpr {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+}
+
+impl ParseExpression for RangeExpr {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+}
+
+impl ParseExpression for ReturnExpr {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        todo!()
+    }
+}
+
+impl ParseExpression for ClosureExpr {
     fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
         todo!()
     }

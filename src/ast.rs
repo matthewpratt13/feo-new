@@ -4,8 +4,7 @@ pub mod expression;
 pub mod types;
 
 use self::expression::{
-    BinaryExpr, BlockExpr, CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, StructField,
-    TypeCastExpr,
+    BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr, GroupedExpr, IndexExpr, StructField, TypeCastExpr
 };
 pub use self::types::*;
 
@@ -175,11 +174,10 @@ pub enum Expression {
     Grouped(GroupedExpr),
     Return,
     Range, // from-to, from, to, inclusive, to inclusive
-    BreakExpression,
-    ContinueExpression,
+    Break(BreakExpr),
+    Continue(ContinueExpr),
     Underscore,
-    ClosureWithBlock(Box<Expression>, Box<Expression>),
-    ClosureWithoutBlock(Box<Expression>),
+    Closure(ClosureExpr),
     Array(Vec<Expression>),
     Tuple(Vec<Expression>),
     Struct(Vec<StructField>),
