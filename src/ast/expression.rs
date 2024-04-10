@@ -102,7 +102,7 @@ pub struct ForInStmt {
     pub assignee: Expression,
     pub kw_in: Keyword,
     pub iterable: Expression,
-    pub block: Expression,
+    pub block: BlockExpr,
 }
 
 #[derive(Debug, Clone)]
@@ -115,7 +115,7 @@ pub struct GroupedExpr {
 #[derive(Debug, Clone)]
 pub struct IfStmt {
     pub kw_if: Keyword,
-    pub condition: Expression,
+    pub condition: GroupedExpr,
     pub if_block: BlockExpr,
     pub else_if_blocks_opt: Option<Vec<(Keyword, Box<IfStmt>)>>, // `else`, `if { .. }`
     pub trailing_else_block_opt: Option<(Keyword, BlockExpr)>,   // `else { .. }`

@@ -1,13 +1,16 @@
 use crate::{
     ast::{
-        expression::{BlockExpr, IfStmt, TernaryStmt},
-        Delimiter, Keyword,
+        expression::{BlockExpr, GroupedExpr, IfStmt, TernaryStmt},
+        Keyword,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
-use super::{expression_collection::ParseExpressionCollection, Parser, Precedence};
+use super::{
+    expression::ParseExpression, expression_collection::ParseExpressionCollection, Parser,
+    Precedence,
+};
 
 pub(crate) trait ParseStatement
 where
@@ -24,29 +27,38 @@ impl ParseStatement for TernaryStmt {
 
 impl ParseStatement for IfStmt {
     fn parse(parser: &mut Parser) -> Result<IfStmt, ErrorsEmitted> {
+        let mut else_if_blocks: Vec<(Keyword, Box<IfStmt>)> = Vec::new();
+
+        let mut trailing_else_block_opt = None::<(Keyword, BlockExpr)>;
+
         let kw_if = parser.expect_keyword(Token::If {
             name: "if".to_string(),
             span: parser.stream.span(),
         })?;
 
-        let condition = parser.parse_expression(Precedence::Lowest)?;
+        parser.expect_delimiter(Token::LParen {
+            delim: '(',
+            span: parser.stream.span(),
+        })?;
 
-        let token = parser.consume_token()?;
+        let expr = parser.parse_expression(Precedence::Lowest)?;
 
-        let if_block = if let Delimiter::LBrace = parser.expect_delimiter(token.clone())? {
+        let condition = GroupedExpr::parse(parser, expr)?;
+
+        let token = parser.peek_current().ok_or({
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
+
+        let if_block = if let Token::LBrace { .. } = token {
             BlockExpr::parse(parser)?
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "block expression".to_string(),
                 found: token,
             });
-
             return Err(ErrorsEmitted(()));
         };
-
-        let mut else_if_blocks: Vec<(Keyword, Box<IfStmt>)> = Vec::new();
-
-        let mut trailing_else_block_opt = None::<(Keyword, BlockExpr)>;
 
         while let Some(Token::Else { .. }) = parser.peek_current() {
             parser.consume_token()?;
