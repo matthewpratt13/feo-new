@@ -5,8 +5,8 @@ pub mod types;
 
 use self::expression::{
     ArrayExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr,
-    FieldAccessExpr, GroupedExpr, IfStmt, IndexExpr, StructExpr, TupleExpr, TypeCastExpr,
-    UnderscoreExpr,
+    FieldAccessExpr, GroupedExpr, IfStmt, IndexExpr, MethodCallExpr, PathExpr, RangeExpr,
+    ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr, TypeCastExpr, UnderscoreExpr, UnwrapExpr,
 };
 pub use self::types::*;
 
@@ -163,19 +163,19 @@ pub enum Separator {
 pub enum Expression {
     Literal(Literal),
     Identifier(Identifier),
-    Path,
-    MethodCall,
+    Path(PathExpr),
+    MethodCall(MethodCallExpr),
     FieldAccess(FieldAccessExpr),
     Call(CallExpr),
     Index(IndexExpr),
-    TupleIndex,
-    Unwrap,
+    TupleIndex(TupleIndexExpr),
+    Unwrap(UnwrapExpr),
     UnaryOp(UnaryOp, Box<Expression>),
     TypeCast(TypeCastExpr),
     BinaryOp(BinaryExpr),
     Grouped(GroupedExpr),
-    Return,
-    Range, // from-to, from, to, inclusive, to inclusive
+    Return(ReturnExpr),
+    Range(RangeExpr), // from-to, from, to, inclusive, to inclusive
     Break(BreakExpr),
     Continue(ContinueExpr),
     Underscore(UnderscoreExpr),

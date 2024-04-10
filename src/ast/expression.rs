@@ -169,7 +169,7 @@ pub struct ReturnExpr {
 
 #[derive(Debug, Clone)]
 pub struct StructExpr {
-    pub path: Box<Expression>,
+    pub path: Box<PathExpr>,
     pub open_brace: Delimiter,
     pub fields: Vec<StructField>,
     pub close_brace: Delimiter,

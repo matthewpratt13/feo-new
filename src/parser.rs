@@ -507,7 +507,7 @@ impl Parser {
                 } else {
                     self.consume_token()?;
                     let expr = self.parse_expression(Precedence::Lowest)?;
-                    GroupedExpr::parse(self, expr)
+                    Ok(Expression::Grouped(GroupedExpr::parse(self, expr)?))
                 }
             }
             Token::LBracket { .. } => ArrayExpr::parse(self),
@@ -515,9 +515,9 @@ impl Parser {
                 if let Some(Token::Identifier { .. }) = self.peek_ahead_by(1) {
                     self.consume_token()?;
                     let expr = self.parse_expression(Precedence::Lowest)?;
-                    ClosureExpr::parse(self, expr)
+                    Ok(Expression::Closure(ClosureExpr::parse(self, expr)?))
                 } else if let Ok(e) = self.parse_expression(Precedence::Lowest) {
-                    ClosureExpr::parse(self, e)
+                    Ok(Expression::Closure(ClosureExpr::parse(self, e)?))
                 } else {
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "closure".to_string(),
@@ -528,8 +528,7 @@ impl Parser {
             }
             Token::DblDot { .. } | Token::DotDotEquals { .. } => {
                 let expr = self.parse_expression(Precedence::Range)?;
-                RangeExpr::parse(self, expr)
-
+                Ok(Expression::Range(RangeExpr::parse(self, expr)?))
                 // match self.peek_current() {
                 //     Some(
                 //         Token::Identifier { .. }
@@ -553,11 +552,11 @@ impl Parser {
             }
             Token::Super { .. } | Token::Package { .. } => {
                 let expr = self.parse_expression(Precedence::Path)?;
-                PathExpr::parse(self, expr)
+                Ok(Expression::Path(PathExpr::parse(self, expr)?))
             }
             Token::Return { .. } => {
                 let expr = self.parse_expression(Precedence::Lowest)?;
-                ReturnExpr::parse(self, expr)
+                Ok(Expression::Return(ReturnExpr::parse(self, expr)?))
             }
 
             Token::Break { name, span } => {
@@ -645,14 +644,16 @@ impl Parser {
             Ok(Token::DblGreaterThan { .. }) => {
                 parse_binary_expression(self, left_expr, BinaryOp::ShiftRight)
             }
-            Ok(Token::QuestionMark { .. }) => UnwrapExpr::parse(self, left_expr), // TODO: or ternary
+            Ok(Token::QuestionMark { .. }) => {
+                Ok(Expression::Unwrap(UnwrapExpr::parse(self, left_expr)?))
+            } // TODO: or ternary
             Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
-                RangeExpr::parse(self, left_expr)
+                Ok(Expression::Range(RangeExpr::parse(self, left_expr)?))
             }
-            Ok(Token::As { .. }) => TypeCastExpr::parse(self, left_expr),
-            Ok(Token::LParen { .. }) => CallExpr::parse(self, left_expr), // TODO: or tuple struct
+            Ok(Token::As { .. }) => Ok(Expression::TypeCast(TypeCastExpr::parse(self, left_expr)?)),
+            Ok(Token::LParen { .. }) => Ok(Expression::Call(CallExpr::parse(self, left_expr)?)), // TODO: or tuple struct
             Ok(Token::LBrace { .. }) => StructExpr::parse(self), // TODO: or match statement
-            Ok(Token::LBracket { .. }) => IndexExpr::parse(self, left_expr),
+            Ok(Token::LBracket { .. }) => Ok(Expression::Index(IndexExpr::parse(self, left_expr)?)),
             Ok(Token::Dot { .. }) => match self.unconsume() {
                 Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {
                     let token = self.peek_ahead_by(2).ok_or({
@@ -668,15 +669,15 @@ impl Parser {
                     match token {
                         Ok(Token::LParen { .. }) => {
                             let expr = self.parse_expression(Precedence::MethodCall)?;
-                            MethodCallExpr::parse(self, expr)
+                            Ok(Expression::MethodCall(MethodCallExpr::parse(self, expr)?))
                         }
                         Ok(Token::UIntLiteral { .. }) => {
                             let expr = self.parse_expression(Precedence::Index)?;
-                            TupleIndexExpr::parse(self, expr)
+                            Ok(Expression::TupleIndex(TupleIndexExpr::parse(self, expr)?))
                         }
                         _ => {
                             let expr = self.parse_expression(Precedence::FieldAccess)?;
-                            FieldAccessExpr::parse(self, expr)
+                            Ok(Expression::FieldAccess(FieldAccessExpr::parse(self, expr)?))
                         }
                     }
                 }
@@ -694,7 +695,7 @@ impl Parser {
             },
 
             Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
-                PathExpr::parse(self, left_expr)
+                Ok(Expression::Path(PathExpr::parse(self, left_expr)?))
             }
 
             _ => {

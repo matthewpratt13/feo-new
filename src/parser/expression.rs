@@ -2,7 +2,7 @@ use crate::{
     ast::{
         expression::{
             CallExpr, ClosureExpr, FieldAccessExpr, GroupedExpr, IndexExpr, MethodCallExpr,
-            PathExpr, RangeExpr, ReturnExpr, TupleExpr, TupleIndexExpr, TypeCastExpr, UnwrapExpr,
+            PathExpr, RangeExpr, ReturnExpr, TupleIndexExpr, TypeCastExpr, UnwrapExpr,
         },
         Delimiter, Expression, Identifier,
     },
@@ -10,55 +10,50 @@ use crate::{
     token::Token,
 };
 
-use super::{expression_collection::ParseExpressionCollection, Parser, Precedence};
+use super::{Parser, Precedence};
 
 ///////////////////////////////////////////////////////////////////////////
 
-pub(crate) trait ParseExpression {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted>;
+pub(crate) trait ParseExpression
+where
+    Self: Sized,
+{
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<Self, ErrorsEmitted>;
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
 impl ParseExpression for PathExpr {
-    fn parse(parser: &mut Parser, prefix: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, prefix: Expression) -> Result<PathExpr, ErrorsEmitted> {
         todo!()
     }
 }
 
 impl ParseExpression for MethodCallExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<MethodCallExpr, ErrorsEmitted> {
         todo!()
     }
 }
 
 impl ParseExpression for FieldAccessExpr {
-    fn parse(parser: &mut Parser, object: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, object: Expression) -> Result<FieldAccessExpr, ErrorsEmitted> {
         let dot = parser.expect_separator(Token::Dot {
             punc: '.',
             span: parser.stream.span(),
         })?;
 
-        let token = parser.consume_token();
+        let token = parser.consume_token()?;
 
-        if let Ok(Token::Identifier { name, .. }) = token {
-            if let Some(Token::LParen { .. }) = parser.peek_ahead_by(1) {
-                parser.unconsume();
-                MethodCallExpr::parse(parser, object)
-            } else {
-                Ok(Expression::FieldAccess(FieldAccessExpr {
-                    object: Box::new(object),
-                    dot,
-                    field: Identifier(name),
-                }))
-            }
-        } else if let Ok(Token::UIntLiteral { .. }) = token {
-            parser.unconsume();
-            TupleIndexExpr::parse(parser, object)
+        if let Token::Identifier { name, .. } = token {
+            Ok(FieldAccessExpr {
+                object: Box::new(object),
+                dot,
+                field: Identifier(name),
+            })
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier after `.`".to_string(),
-                found: token?,
+                found: token,
             });
             Err(ErrorsEmitted(()))
         }
@@ -66,7 +61,7 @@ impl ParseExpression for FieldAccessExpr {
 }
 
 impl ParseExpression for CallExpr {
-    fn parse(parser: &mut Parser, callee: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, callee: Expression) -> Result<CallExpr, ErrorsEmitted> {
         let mut args: Vec<Expression> = Vec::new(); // store function arguments
 
         let open_paren = parser.expect_delimiter(Token::LParen {
@@ -103,25 +98,25 @@ impl ParseExpression for CallExpr {
         }
 
         if args.is_empty() {
-            Ok(Expression::Call(CallExpr {
+            Ok(CallExpr {
                 open_paren,
                 callee: Box::new(callee),
                 args_opt: None,
                 close_paren: Delimiter::RParen,
-            }))
+            })
         } else {
-            Ok(Expression::Call(CallExpr {
+            Ok(CallExpr {
                 open_paren,
                 callee: Box::new(callee),
                 args_opt: Some(args),
                 close_paren: Delimiter::RParen,
-            }))
+            })
         }
     }
 }
 
 impl ParseExpression for IndexExpr {
-    fn parse(parser: &mut Parser, array: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, array: Expression) -> Result<IndexExpr, ErrorsEmitted> {
         let open_bracket = parser.expect_delimiter(Token::LBracket {
             delim: '[',
             span: parser.stream.span(),
@@ -148,29 +143,29 @@ impl ParseExpression for IndexExpr {
             span: parser.stream.span(),
         })?;
 
-        Ok(Expression::Index(IndexExpr {
+        Ok(IndexExpr {
             array: Box::new(array),
             open_bracket,
             index,
             close_bracket,
-        }))
+        })
     }
 }
 
 impl ParseExpression for TupleIndexExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<TupleIndexExpr, ErrorsEmitted> {
         todo!()
     }
 }
 
 impl ParseExpression for UnwrapExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<UnwrapExpr, ErrorsEmitted> {
         todo!()
     }
 }
 
 impl ParseExpression for TypeCastExpr {
-    fn parse(parser: &mut Parser, operand: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, operand: Expression) -> Result<TypeCastExpr, ErrorsEmitted> {
         let kw_as = parser.expect_keyword(Token::As {
             name: "as".to_string(),
             span: parser.stream.span(),
@@ -178,50 +173,45 @@ impl ParseExpression for TypeCastExpr {
 
         let new_type = parser.get_type()?;
 
-        Ok(Expression::TypeCast(TypeCastExpr {
+        Ok(TypeCastExpr {
             operand: Box::new(operand),
             kw_as,
             new_type,
-        }))
+        })
     }
 }
 
 impl ParseExpression for RangeExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<RangeExpr, ErrorsEmitted> {
         todo!()
     }
 }
 
 impl ParseExpression for ReturnExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<ReturnExpr, ErrorsEmitted> {
         todo!()
     }
 }
 
 impl ParseExpression for ClosureExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<ClosureExpr, ErrorsEmitted> {
         todo!()
     }
 }
 
 impl ParseExpression for GroupedExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<GroupedExpr, ErrorsEmitted> {
         let token = parser.expect_token(Token::RParen {
             delim: ')',
             span: parser.stream.span(),
         });
 
         if let Ok(Token::RParen { .. }) = token {
-            Ok(Expression::Grouped(GroupedExpr {
+            Ok(GroupedExpr {
                 open_paren: Delimiter::LParen,
                 expression: Box::new(expr),
                 close_paren: Delimiter::RParen,
-            }))
-        } else if let Ok(Token::Comma { .. }) = token {
-            // go back to the `(` and try to parse a tuple
-            parser.unconsume();
-            parser.unconsume();
-            TupleExpr::parse(parser)
+            })
         } else {
             Err(token.unwrap_err())
         }
