@@ -87,6 +87,12 @@ impl ParseExpression for BlockExpr {
             statements.push(parser.parse_statement()?);
         }
 
+        let terminal_expression_opt = if let Ok(e) = parser.parse_expression(Precedence::Lowest) {
+            Some(Box::new(e))
+        } else {
+            None
+        };
+
         let close_brace = parser.expect_delimiter(Token::RBrace {
             delim: '}',
             span: parser.stream.span(),
@@ -95,6 +101,7 @@ impl ParseExpression for BlockExpr {
         Ok(Expression::Block(BlockExpr {
             open_brace,
             statements,
+            terminal_expression_opt,
             close_brace,
         }))
     }
