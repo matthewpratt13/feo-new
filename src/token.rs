@@ -134,7 +134,7 @@ pub enum Token {
     Colon { punc: char, span: Span },
     Semicolon { punc: char, span: Span },
     Comma { punc: char, span: Span },
-    FullStop { punc: char, span: Span },
+    Dot { punc: char, span: Span },
     DblColon { punc: String, span: Span },
     ColonColonAsterisk { punc: String, span: Span },
     HashSign { punc: char, span: Span },

@@ -980,7 +980,7 @@ impl<'a> Lexer<'a> {
 
         match punc.as_str() {
             "_" => Ok(Token::Underscore { name: punc, span }),
-            "." => Ok(Token::FullStop { punc: '.', span }),
+            "." => Ok(Token::Dot { punc: '.', span }),
             ".." => Ok(Token::DblDot { punc, span }),
             "..=" => Ok(Token::DotDotEquals { punc, span }),
             "!" => Ok(Token::Bang { punc: '!', span }),

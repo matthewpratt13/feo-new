@@ -1,17 +1,20 @@
-use super::{BinaryOp, Delimiter, Expression, Identifier, Keyword, Separator, Statement, Type, UIntKind};
+use super::{
+    BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator, Statement, Type,
+    UIntKind, UnwrapOp,
+};
 
+///////////////////////////////////////////////////////////////////////////
+/// HELPER TYPES
+///////////////////////////////////////////////////////////////////////////
+
+/// Enum representing whether or not a closure has parameters in its definition.
 #[derive(Debug, Clone)]
 pub enum ClosureParams {
     Some(BinaryOp, Vec<Param>, BinaryOp),
     None(BinaryOp),
 }
 
-#[derive(Debug, Clone)]
-pub struct Param {
-    pub id: Identifier,
-    pub ty: Option<Type>,
-}
-
+/// Enum representing the different path root options.
 #[derive(Debug, Clone)]
 pub enum PathPrefix {
     Package,
@@ -20,6 +23,24 @@ pub enum PathPrefix {
     SelfType,
     Identifier(Identifier),
 }
+
+/// Struct representing a function or closure parameter.
+#[derive(Debug, Clone)]
+pub struct Param {
+    pub id: Identifier,
+    pub ty: Option<Type>,
+}
+
+/// Struct representing a single field in a struct expression, with a name and value.
+#[derive(Debug, Clone)]
+pub struct StructField {
+    pub name: Identifier,
+    pub value: Expression,
+}
+
+///////////////////////////////////////////////////////////////////////////
+/// AST NODES
+///////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
 pub struct BinaryOpExpr {
@@ -45,15 +66,15 @@ pub struct BreakExpr {
 pub struct CallExpr {
     pub callee: Box<Expression>,
     pub open_paren: Delimiter,
-    pub args: Option<Vec<Expression>>,
+    pub args_opt: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone)]
 pub struct ClosureExpr {
     pub params: ClosureParams,
-    pub return_type: Option<(Separator, Type)>, // `-> Type`
-    pub expression: Box<Expression>, 
+    pub return_type_opt: Option<(Separator, Type)>, // `-> Type`
+    pub expression: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]
@@ -89,21 +110,21 @@ pub struct MethodCallExpr {
     pub dot: Separator,
     pub method_name: Identifier,
     pub open_paren: Delimiter,
-    pub args: Option<Vec<Expression>>,
+    pub args_opt: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone)]
 pub struct PathExpr {
     pub root: PathPrefix,
-    pub tree: Option<Vec<Identifier>>,
-    pub suffix: Option<Separator> // `::*`
+    pub tree_opt: Option<Vec<Identifier>>,
+    pub suffix_opt: Option<Separator>, // `::*`
 }
 
 #[derive(Debug, Clone)]
 pub struct RangeExpr {
-    pub from: Option<Box<Expression>>,
-    pub op: Separator, // `..` or `..=`
+    pub from_opt: Option<Box<Expression>>,
+    pub op: RangeOp, // `..` or `..=`
     pub to: Box<Expression>,
 }
 
@@ -137,5 +158,5 @@ pub struct TypeCastExpr {
 #[derive(Debug, Clone)]
 pub struct UnwrapExpr {
     pub expression: Box<Expression>,
-    pub op: Separator, // `?`
+    pub op: UnwrapOp,
 }

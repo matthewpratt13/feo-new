@@ -12,9 +12,14 @@ use crate::{
 
 use super::{Parser, Precedence};
 
+///////////////////////////////////////////////////////////////////////////
+
+/// Trait that provides a common interface for parsing different expressions.
 pub trait ParseExpression {
     fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted>;
 }
+
+///////////////////////////////////////////////////////////////////////////
 
 impl ParseExpression for PathExpr {
     fn parse(parser: &mut Parser, prefix: Expression) -> Result<Expression, ErrorsEmitted> {
@@ -29,7 +34,6 @@ impl ParseExpression for MethodCallExpr {
 }
 
 impl ParseExpression for TypeCastExpr {
-    /// Parse a type cast expression.
     fn parse(parser: &mut Parser, operand: Expression) -> Result<Expression, ErrorsEmitted> {
         let kw_as = parser.expect_keyword(Token::As {
             name: "as".to_string(),
@@ -47,7 +51,6 @@ impl ParseExpression for TypeCastExpr {
 }
 
 impl ParseExpression for GroupedExpr {
-    /// Parse a grouped (parenthesized) expression.
     fn parse(parser: &mut Parser, expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let token = parser.expect_token(Token::RParen {
             delim: ')',
@@ -69,7 +72,6 @@ impl ParseExpression for GroupedExpr {
     }
 }
 
-/// Parse a block expression (i.e., `{ expr1; expr2; ... }`).
 impl ParseExpression for BlockExpr {
     fn parse(parser: &mut Parser, first_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let open_brace = parser.expect_delimiter(Token::LBrace {
@@ -108,9 +110,8 @@ impl ParseExpression for BlockExpr {
 }
 
 impl ParseExpression for FieldAccessExpr {
-    /// Parse a field access expression (i.e., `object.field`).
     fn parse(parser: &mut Parser, object: Expression) -> Result<Expression, ErrorsEmitted> {
-        let dot = parser.expect_separator(Token::FullStop {
+        let dot = parser.expect_separator(Token::Dot {
             punc: '.',
             span: parser.stream.span(),
         })?;
@@ -142,7 +143,6 @@ impl ParseExpression for FieldAccessExpr {
 }
 
 impl ParseExpression for CallExpr {
-    /// Parse a function call with arguments.
     fn parse(parser: &mut Parser, callee: Expression) -> Result<Expression, ErrorsEmitted> {
         let mut args: Vec<Expression> = Vec::new(); // store function arguments
 
@@ -183,14 +183,14 @@ impl ParseExpression for CallExpr {
             Ok(Expression::Call(CallExpr {
                 open_paren,
                 callee: Box::new(callee),
-                args: None,
+                args_opt: None,
                 close_paren: Delimiter::RParen,
             }))
         } else {
             Ok(Expression::Call(CallExpr {
                 open_paren,
                 callee: Box::new(callee),
-                args: Some(args),
+                args_opt: Some(args),
                 close_paren: Delimiter::RParen,
             }))
         }
@@ -198,7 +198,6 @@ impl ParseExpression for CallExpr {
 }
 
 impl ParseExpression for IndexExpr {
-    /// Parse an index expression (i.e., `array[index]`).
     fn parse(parser: &mut Parser, array: Expression) -> Result<Expression, ErrorsEmitted> {
         let open_bracket = parser.expect_delimiter(Token::LBracket {
             delim: '[',
@@ -240,6 +239,8 @@ impl ParseExpression for TupleIndexExpr {
         todo!()
     }
 }
+
+///////////////////////////////////////////////////////////////////////////
 
 /// Parse a binary operations (e.g., arithmetic, logical and comparison expressions).
 /// This method parses the operator and calls `parse_expression()` recursively to handle

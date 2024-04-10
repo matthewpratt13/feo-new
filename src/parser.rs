@@ -10,11 +10,11 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         expression::{
-            CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, MethodCallExpr, PathExpr, TupleExpr,
-            TupleIndexExpr, TypeCastExpr,
+            CallExpr, FieldAccessExpr, GroupedExpr, IndexExpr, MethodCallExpr, PathExpr,
+            StructField, TupleExpr, TupleIndexExpr, TypeCastExpr,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
-        Separator, Statement, StructField, Type, UnaryOp,
+        Separator, Statement, Type, UnaryOp,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -298,7 +298,6 @@ impl Parser {
             },
             Precedence::Assignment,
         );
-
         self.precedences.insert(
             Token::DblDot {
                 punc: "..".to_string(),
@@ -321,14 +320,14 @@ impl Parser {
             Precedence::Unwrap,
         );
         self.precedences.insert(
-            Token::FullStop {
+            Token::Dot {
                 punc: '.',
                 span: self.stream.span(),
             },
             Precedence::MethodCall,
         );
         self.precedences.insert(
-            Token::FullStop {
+            Token::Dot {
                 punc: '.',
                 span: self.stream.span(),
             },
@@ -369,7 +368,6 @@ impl Parser {
             },
             Precedence::Lowest,
         );
-
         self.precedences.insert(
             Token::Continue {
                 name: "continue".to_string(),
@@ -377,7 +375,6 @@ impl Parser {
             },
             Precedence::Lowest,
         );
-
         self.precedences.insert(
             Token::Return {
                 name: "return".to_string(),
@@ -677,7 +674,7 @@ impl Parser {
             Ok(Token::LParen { .. }) => CallExpr::parse(self, left_expr), // TODO: or tuple struct
             Ok(Token::LBrace { .. }) => self.parse_struct_expression(), // TODO: or match statement
             Ok(Token::LBracket { .. }) => IndexExpr::parse(self, left_expr),
-            Ok(Token::FullStop { .. }) => match self.unconsume() {
+            Ok(Token::Dot { .. }) => match self.unconsume() {
                 Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {
                     let token = self.peek_ahead_by(2).ok_or({
                         self.log_error(ParserErrorKind::TokenIndexOutOfBounds {
@@ -1137,7 +1134,7 @@ impl Parser {
             Token::Colon { .. } => Ok(Separator::Colon),
             Token::Semicolon { .. } => Ok(Separator::Semicolon),
             Token::Comma { .. } => Ok(Separator::Comma),
-            Token::FullStop { .. } => Ok(Separator::FullStop),
+            Token::Dot { .. } => Ok(Separator::Dot),
             Token::DblColon { .. } => Ok(Separator::DblColon),
             Token::ColonColonAsterisk { .. } => Ok(Separator::ColonColonAsterisk),
             Token::ThinArrow { .. } => Ok(Separator::ThinArrow),
