@@ -3,6 +3,7 @@
 
 mod binary_expr;
 mod expression;
+mod expression_collection;
 mod item;
 mod precedence;
 mod statement;
@@ -25,8 +26,8 @@ use crate::{
 
 pub use self::precedence::Precedence;
 use self::{
-    binary_expr::parse_binary_expression,
-    expression::{ParseExpression, ParseExpressionCollection},
+    binary_expr::parse_binary_expression, expression::ParseExpression,
+    expression_collection::ParseExpressionCollection,
 };
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
