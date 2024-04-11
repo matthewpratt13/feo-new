@@ -1,6 +1,8 @@
 use crate::{
     ast::{
-        expression::{BlockExpr, ForInStmt, GroupedExpr, IfStmt, LetStmt, TernaryStmt},
+        expression::{
+            BlockExpr, ExpressionStmt, ForInStmt, GroupedExpr, IfStmt, LetStmt, TernaryStmt,
+        },
         Keyword,
     },
     error::{ErrorsEmitted, ParserErrorKind},
@@ -160,6 +162,22 @@ impl ParseStatement for ForInStmt {
             kw_in,
             iterable,
             block,
+        })
+    }
+}
+
+impl ParseStatement for ExpressionStmt {
+    fn parse(parser: &mut Parser) -> Result<ExpressionStmt, ErrorsEmitted> {
+        let expression = parser.parse_expression(Precedence::Lowest)?;
+
+        let semicolon = parser.expect_separator(Token::Semicolon {
+            punc: ';',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(ExpressionStmt {
+            expression,
+            semicolon,
         })
     }
 }

@@ -90,6 +90,12 @@ pub struct ContinueExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct ExpressionStmt {
+    pub expression: Expression,
+    pub semicolon: Separator,
+}
+
+#[derive(Debug, Clone)]
 pub struct FieldAccessExpr {
     pub object: Box<Expression>,
     pub dot: Separator,

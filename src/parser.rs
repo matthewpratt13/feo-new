@@ -13,10 +13,10 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         expression::{
-            ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr, ForInStmt,
-            GroupedExpr, IfStmt, IndexExpr, LetStmt, MethodCallExpr, PathExpr, RangeExpr,
-            ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr, TypeCastExpr, UnderscoreExpr,
-            UnwrapExpr,
+            ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, ExpressionStmt,
+            FieldAccessExpr, ForInStmt, GroupedExpr, IfStmt, IndexExpr, LetStmt, MethodCallExpr,
+            PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr, TypeCastExpr,
+            UnderscoreExpr, UnwrapExpr,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
         Separator, Statement, Type, UnaryOp,
@@ -733,22 +733,9 @@ impl Parser {
 
             _ => {
                 self.unconsume();
-                self.parse_expression_statement()
+                Ok(Statement::Expression(ExpressionStmt::parse(self)?))
             }
         }
-    }
-
-
-    /// Parse an expression into a statement, separated by a semicolon.
-    fn parse_expression_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        let expression = self.parse_expression(Precedence::Lowest);
-
-        self.expect_token(Token::Semicolon {
-            punc: ';',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Statement::Expression(expression?))
     }
 
     fn parse_match_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
