@@ -1,80 +1,15 @@
 #![allow(dead_code)]
 
-use crate::{
-    B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B2, B20, B21, B22, B23, B24, B25, B26, B27,
-    B28, B29, B3, B30, B31, B32, B4, B5, B6, B7, B8, B9, H160, H256, H512, U256, U512,
-};
+mod expression;
+mod item;
+mod statement;
+mod types;
 
-pub mod expression;
+pub use self::{expression::*, item::*, statement::*, types::*};
 
-/// Enum representing the different signed integer types.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum IntKind {
-    I32(i32),
-    I64(i64),
-    I128(i128),
-}
-
-/// Enum representing the different unsigned integer types.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum UIntKind {
-    U8(u8),
-    U16(u16),
-    U32(u32),
-    U64(u64),
-    U128(u128),
-}
-
-/// Enum representing the different big unsigned integer types.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum BigUIntKind {
-    U256(U256),
-    U512(U512),
-}
-
-/// Enum representing the different byte array types.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Bytes {
-    B2(B2),
-    B3(B3),
-    B4(B4),
-    B5(B5),
-    B6(B6),
-    B7(B7),
-    B8(B8),
-    B9(B9),
-    B10(B10),
-    B11(B11),
-    B12(B12),
-    B13(B13),
-    B14(B14),
-    B15(B15),
-    B16(B16),
-    B17(B17),
-    B18(B18),
-    B19(B19),
-    B20(B20),
-    B21(B21),
-    B22(B22),
-    B23(B23),
-    B24(B24),
-    B25(B25),
-    B26(B26),
-    B27(B27),
-    B28(B28),
-    B29(B29),
-    B30(B30),
-    B31(B31),
-    B32(B32),
-}
-
-/// Enum representing the different hash types.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum HashKind {
-    H160(H160),
-    H256(H256),
-    H512(H512),
-}
+///////////////////////////////////////////////////////////////////////////
+/// LITERAL
+///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different literal AST nodes.
 #[derive(Debug, Clone)]
@@ -90,6 +25,18 @@ pub enum Literal {
     Bool(bool),
 }
 
+///////////////////////////////////////////////////////////////////////////
+/// IDENTIFIER
+///////////////////////////////////////////////////////////////////////////
+
+/// Wrapper type, turning a `String` into an `Identifier` AST node.
+#[derive(Debug, Clone)]
+pub struct Identifier(pub String);
+
+///////////////////////////////////////////////////////////////////////////
+/// KEYWORDS
+///////////////////////////////////////////////////////////////////////////
+
 /// Enum representing the different keyword AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
@@ -97,7 +44,7 @@ pub enum Keyword {
     Module,
     Package,
     KwSelf,
-    KwSelfType,
+    SelfType,
     Super,
     Pub,
     As,
@@ -120,6 +67,10 @@ pub enum Keyword {
     Return,
 }
 
+///////////////////////////////////////////////////////////////////////////
+/// DELIMITERS
+///////////////////////////////////////////////////////////////////////////
+
 /// Enum representing the different delimiter AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Delimiter {
@@ -131,13 +82,18 @@ pub enum Delimiter {
     RBrace,
 }
 
+///////////////////////////////////////////////////////////////////////////
+/// PUNCTUATION
+///////////////////////////////////////////////////////////////////////////
+
 /// Enum representing the different unary operator AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
-    Negate,      // `-`
-    Not,         // `!`
-    Reference,   // `&`
-    Dereference, // `*`
+    Negate,       // `-`
+    Not,          // `!`
+    Reference,    // `&`
+    MutReference, // `&mut`
+    Dereference,  // `*`
 }
 
 /// Enum representing the different binary operator AST nodes.
@@ -169,13 +125,24 @@ pub enum BinaryOp {
     ShiftRight,
 }
 
+/// Struct representing the unwrap operator `?`.
+#[derive(Debug, Clone)]
+pub struct UnwrapOp(());
+
+/// Enum representing the different range operator AST nodes.
+#[derive(Debug, Clone, PartialEq)]
+pub enum RangeOp {
+    RangeExclusive, // `..`
+    RangeInclusive, // `..=`
+}
+
 /// Enum representing the different separator (punctuation) AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Separator {
     Colon,
     Semicolon,
     Comma,
-    FullStop,
+    Dot,
     DblColon,
     ColonColonAsterisk,
     ThinArrow,
@@ -183,46 +150,37 @@ pub enum Separator {
     Underscore,
 }
 
-/// Wrapper type, turning a `String` into an `Identifier` AST node.
-#[derive(Debug, Clone)]
-pub struct Identifier(pub String);
-
-/// Struct representing the fields within a struct, with a name and value expression.
-#[derive(Debug, Clone)]
-pub struct StructField {
-    pub name: Identifier,
-    pub value: Expression,
-}
+///////////////////////////////////////////////////////////////////////////
+/// NODE GROUPS
+///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different expression AST nodes.
 /// `Expression` nodes always produce or evaluate to a value and may have (side) effects.
 #[derive(Debug, Clone)]
 pub enum Expression {
     Literal(Literal),
-    Identifier(Identifier),
-    Path,
-    MethodCall,
-    FieldAccess(Box<Expression>, Identifier),
-    Call(Box<Expression>, Vec<Expression>),
-    Index(Box<Expression>, Box<Expression>),
-    TupleIndex,
-    Unwrap,
-    UnaryOp(UnaryOp, Box<Expression>),
-    Cast(Box<Expression>, Type),
-    BinaryOp(BinaryOp, Box<Expression>, Box<Expression>),
-    Grouped(Box<Expression>),
-    Return,
-    Range, // from-to, from, to, inclusive, to inclusive
-    BreakExpression,
-    ContinueExpression,
-    Underscore,
-    ClosureWithBlock(Box<Expression>, Box<Expression>),
-    ClosureWithoutBlock(Box<Expression>),
-    Array(Vec<Expression>),
-    Tuple(Vec<Expression>),
-    Struct(Vec<StructField>),
-    TupleStruct,
-    Block(Vec<Expression>),
+    Path(PathExpr),
+    MethodCall(MethodCallExpr),
+    FieldAccess(FieldAccessExpr),
+    Call(CallExpr),
+    Index(IndexExpr),
+    TupleIndex(TupleIndexExpr),
+    Unwrap(UnwrapExpr),
+    Unary(UnaryExpr),
+    TypeCast(TypeCastExpr),
+    Binary(BinaryExpr),
+    Grouped(GroupedExpr),
+    Return(ReturnExpr),
+    Range(RangeExpr), // from-to, from, to, inclusive, to inclusive
+    Break(BreakExpr),
+    Continue(ContinueExpr),
+    Underscore(UnderscoreExpr),
+    Closure(ClosureExpr),
+    Array(ArrayExpr),
+    Tuple(TupleExpr),
+    Struct(StructExpr),
+    TupleStruct(TupleStructExpr),
+    Block(BlockExpr),
 }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
@@ -230,54 +188,53 @@ pub enum Expression {
 /// or function.
 #[derive(Debug, Clone)]
 pub enum Statement {
-    Let(Identifier, Expression),
-    If(Box<Expression>, Box<Expression>, Option<Box<Expression>>), // condition, true, false
-    Match, // condition, body
-    Ternary, // condition ? true : false
-    ForIn(Box<Expression>, Box<Expression>, Box<Expression>), // variable, iterable, body
-    While, // while, condition, body
-    Definition(Definition),
+    Let(LetStmt),
+    If(IfStmt),       // condition, true, false
+    Match(MatchStmt), // scrutinee, body
+    ForIn(ForInStmt), // variable, iterable, body
+    While(WhileStmt), // while, condition, body
     Declaration(Declaration),
-    Expression(Expression),
+    Definition(Definition),
+    Expression(ExpressionStmt),
 }
 
 // TODO: parse:
-/// Enum representing the different declaration nodes in the AST.
-/// An item is a component of a package, organized by a set of modules.
+/// Enum representing the different declaration nodes (items) in the AST.
 #[derive(Debug, Clone)]
 pub enum Declaration {
-    Import,
-    Alias,
-    Constant,
-    StaticVar,
+    Import(ImportDecl),
+    Alias(AliasDecl),
+    Constant(ConstantDecl),
+    StaticItem(StaticItemDecl),
 }
 
 // TODO: parse:
-/// Enum representing the different item nodes in the AST.
+/// Enum representing the different item definitions nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
 pub enum Definition {
-    Module,
-    Trait,
-    Enum,
-    Struct,
-    Impl,
-    Function,
+    Module(ModuleDef),
+    Trait(TraitDef),
+    Enum(EnumDef),
+    Struct(StructDef),
+    InherentImpl(InherentImplDef),
+    TraitImpl(TraitImplDef),
+    Function(FunctionDef),
 }
 
 // TODO: parse:
 /// Enum representing the language's different types, which help to define a value's
 /// memory interpretation and the appropriate operations that may be performed.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     // primitives
-    Int,
-    UInt,
-    BigUInt,
-    Byte,
-    Bytes,
-    Hash,
-    String,
+    Int,     // `i32`–`i128`
+    UInt,    // `u8`–`u128`
+    BigUInt, // `u256` and `u512`
+    Byte,    // equivalent to `u8`
+    Bytes,   // `b2`–`b32`
+    Hash,    // `h160`, `h256` and `h512`
+    String,  // `Vec<u8>`
     Char,
     Bool,
 
@@ -288,9 +245,13 @@ pub enum Type {
     UserDefined, // struct, enum, trait, alias, constant (paths / items)
 
     Function,
-    Reference, // e.g., `&Type` / `&mut Type`
+    Reference, //  `&Type` / `&mut Type`
     SelfType,
 }
+
+///////////////////////////////////////////////////////////////////////////
+/// HELPER FUNCTIONS
+///////////////////////////////////////////////////////////////////////////
 
 /// Helper function to turn a slice into a `Bytes`.
 pub fn get_bytes(value: &[u8]) -> Bytes {

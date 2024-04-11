@@ -1,38 +1,197 @@
 use crate::{
-    ast::{expression::BlockExpr, Expression},
-    error::ErrorsEmitted,
+    ast::{
+        CallExpr, ClosureExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr,
+        MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, TupleIndexExpr, TypeCastExpr, UnwrapExpr,
+    },
+    error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
 use super::{Parser, Precedence};
 
-pub trait ParseExpression {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted>;
+///////////////////////////////////////////////////////////////////////////
+
+pub(crate) trait ParseExpression
+where
+    Self: Sized,
+{
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<Self, ErrorsEmitted>;
 }
 
-/// Parse a block expression (i.e., `{ expr1; expr2; ... }`).
-impl ParseExpression for BlockExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        parser.expect_token(Token::LBrace {
-            delim: '{',
+///////////////////////////////////////////////////////////////////////////
+
+impl ParseExpression for PathExpr {
+    fn parse(parser: &mut Parser, prefix: Expression) -> Result<PathExpr, ErrorsEmitted> {
+        todo!()
+    }
+}
+
+impl ParseExpression for MethodCallExpr {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<MethodCallExpr, ErrorsEmitted> {
+        todo!()
+    }
+}
+
+impl ParseExpression for FieldAccessExpr {
+    fn parse(parser: &mut Parser, object: Expression) -> Result<FieldAccessExpr, ErrorsEmitted> {
+        let dot = parser.expect_separator(Token::Dot {
+            punc: '.',
             span: parser.stream.span(),
         })?;
 
-        let mut expressions: Vec<Expression> = Vec::new();
+        let token = parser.consume_token()?;
 
-        // parse expressions until a closing brace
-        while !parser.is_expected_token(Token::RBrace {
-            delim: '}',
+        if let Token::Identifier { name, .. } = token {
+            Ok(FieldAccessExpr {
+                object: Box::new(object),
+                dot,
+                field: Identifier(name),
+            })
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "identifier after `.`".to_string(),
+                found: token,
+            });
+            Err(ErrorsEmitted(()))
+        }
+    }
+}
+
+impl ParseExpression for CallExpr {
+    fn parse(parser: &mut Parser, callee: Expression) -> Result<CallExpr, ErrorsEmitted> {
+        let mut args: Vec<Expression> = Vec::new(); // store function arguments
+
+        let open_paren = parser.expect_delimiter(Token::LParen {
+            delim: '(',
             span: parser.stream.span(),
-        }) {
-            expressions.push(parser.parse_expression(Precedence::Lowest)?);
+        })?;
+
+        // parse arguments – separated by commas – until a closing parenthesis
+        loop {
+            if let Some(Token::RParen { delim: ')', .. }) = parser.peek_current() {
+                // end of arguments
+                parser.consume_token()?;
+                break;
+            }
+
+            let arg_expr = parser.parse_expression(Precedence::Lowest);
+            args.push(arg_expr?);
+
+            // error handling
+            let token = parser.consume_token();
+
+            match token {
+                Ok(Token::Comma { .. }) => continue, // more arguments
+                Ok(Token::RParen { .. }) => break,   // end of arguments
+                _ => {
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `)`".to_string(),
+                        found: token?,
+                    });
+
+                    return Err(ErrorsEmitted(()));
+                }
+            }
         }
 
-        parser.expect_token(Token::RBrace {
-            delim: '}',
+        if args.is_empty() {
+            Ok(CallExpr {
+                open_paren,
+                callee: Box::new(callee),
+                args_opt: None,
+                close_paren: Delimiter::RParen,
+            })
+        } else {
+            Ok(CallExpr {
+                open_paren,
+                callee: Box::new(callee),
+                args_opt: Some(args),
+                close_paren: Delimiter::RParen,
+            })
+        }
+    }
+}
+
+impl ParseExpression for IndexExpr {
+    fn parse(parser: &mut Parser, array: Expression) -> Result<IndexExpr, ErrorsEmitted> {
+        let open_bracket = parser.expect_delimiter(Token::LBracket {
+            delim: '[',
             span: parser.stream.span(),
         })?;
 
-        Ok(Expression::Block(expressions))
+        let token = parser.consume_token();
+
+        let index = if let Ok(Token::UIntLiteral { value, .. }) = token {
+            value
+        } else if let Ok(_) = token {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "array index".to_string(),
+                found: token?,
+            });
+
+            return Err(ErrorsEmitted(()));
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            return Err(ErrorsEmitted(()));
+        };
+
+        let close_bracket = parser.expect_delimiter(Token::RBracket {
+            delim: ']',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(IndexExpr {
+            array: Box::new(array),
+            open_bracket,
+            index,
+            close_bracket,
+        })
+    }
+}
+
+impl ParseExpression for TupleIndexExpr {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<TupleIndexExpr, ErrorsEmitted> {
+        todo!()
+    }
+}
+
+impl ParseExpression for UnwrapExpr {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<UnwrapExpr, ErrorsEmitted> {
+        todo!()
+    }
+}
+
+impl ParseExpression for TypeCastExpr {
+    fn parse(parser: &mut Parser, operand: Expression) -> Result<TypeCastExpr, ErrorsEmitted> {
+        let kw_as = parser.expect_keyword(Token::As {
+            name: "as".to_string(),
+            span: parser.stream.span(),
+        })?;
+
+        let new_type = parser.get_type()?;
+
+        Ok(TypeCastExpr {
+            operand: Box::new(operand),
+            kw_as,
+            new_type,
+        })
+    }
+}
+
+impl ParseExpression for RangeExpr {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<RangeExpr, ErrorsEmitted> {
+        todo!()
+    }
+}
+
+impl ParseExpression for ReturnExpr {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<ReturnExpr, ErrorsEmitted> {
+        todo!()
+    }
+}
+
+impl ParseExpression for ClosureExpr {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<ClosureExpr, ErrorsEmitted> {
+        todo!()
     }
 }
