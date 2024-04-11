@@ -159,23 +159,23 @@ pub enum Separator {
 #[derive(Debug, Clone)]
 pub enum Expression {
     Literal(Literal),
-    Path(PathExpr),
-    MethodCall(MethodCallExpr),
+    Path(PathExpr),             // TODO
+    MethodCall(MethodCallExpr), // TODO
     FieldAccess(FieldAccessExpr),
     Call(CallExpr),
     Index(IndexExpr),
-    TupleIndex(TupleIndexExpr),
-    Unwrap(UnwrapExpr),
+    TupleIndex(TupleIndexExpr), // TODO
+    Unwrap(UnwrapExpr),         // TODO
     Unary(UnaryExpr),
     TypeCast(TypeCastExpr),
     Binary(BinaryExpr),
     Grouped(GroupedExpr),
-    Return(ReturnExpr),
-    Range(RangeExpr), // from-to, from, to, inclusive, to inclusive
+    Range(RangeExpr),   // TODO
+    Return(ReturnExpr), // TODO
     Break(BreakExpr),
     Continue(ContinueExpr),
     Underscore(UnderscoreExpr),
-    Closure(ClosureExpr),
+    Closure(ClosureExpr), // TODO
     Array(ArrayExpr),
     Tuple(TupleExpr),
     Struct(StructExpr),
@@ -198,28 +198,26 @@ pub enum Statement {
     Expression(ExpressionStmt),
 }
 
-// TODO: parse:
 /// Enum representing the different declaration nodes (items) in the AST.
 #[derive(Debug, Clone)]
 pub enum Declaration {
-    Import(ImportDecl),
-    Alias(AliasDecl),
-    Constant(ConstantDecl),
-    StaticItem(StaticItemDecl),
+    Import(ImportDecl),         // TODO
+    Alias(AliasDecl),           // TODO
+    Constant(ConstantDecl),     // TODO
+    StaticItem(StaticItemDecl), // TODO
 }
 
-// TODO: parse:
 /// Enum representing the different item definitions nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
 pub enum Definition {
-    Module(ModuleDef),
-    Trait(TraitDef),
-    Enum(EnumDef),
-    Struct(StructDef),
-    InherentImpl(InherentImplDef),
-    TraitImpl(TraitImplDef),
-    Function(FunctionDef),
+    Module(ModuleDef),             // TODO
+    Trait(TraitDef),               // TODO
+    Enum(EnumDef),                 // TODO
+    Struct(StructDef),             // TODO
+    InherentImpl(InherentImplDef), // TODO
+    TraitImpl(TraitImplDef),       // TODO
+    Function(FunctionDef),         // TODO
 }
 
 // TODO: parse:
