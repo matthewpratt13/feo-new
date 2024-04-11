@@ -1,10 +1,7 @@
 use crate::{
     ast::{
-        expression::{
-            CallExpr, ClosureExpr, FieldAccessExpr, IndexExpr, MethodCallExpr, PathExpr, RangeExpr,
-            ReturnExpr, TupleIndexExpr, TypeCastExpr, UnwrapExpr,
-        },
-        Delimiter, Expression, Identifier,
+        CallExpr, ClosureExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr,
+        MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, TupleIndexExpr, TypeCastExpr, UnwrapExpr,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,

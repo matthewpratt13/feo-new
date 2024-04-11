@@ -1,5 +1,6 @@
 use super::{
-    BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator, Statement, Type, UIntKind, UnaryOp, UnwrapOp
+    BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator, Statement, Type,
+    UIntKind, UnaryOp, UnwrapOp,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -11,14 +12,6 @@ use super::{
 pub enum ClosureParams {
     Some(BinaryOp, Vec<Param>, BinaryOp),
     None(BinaryOp),
-}
-
-#[derive(Debug, Clone)]
-pub struct MatchArm {
-    pub case: Expression,
-    pub guard_opt: Option<(Keyword, GroupedExpr)>, // `if (..)`
-    pub fat_arrow: Separator,
-    pub logic: Expression,
 }
 
 /// Enum representing the different path root options.
@@ -97,25 +90,10 @@ pub struct ContinueExpr {
 }
 
 #[derive(Debug, Clone)]
-pub struct ExpressionStmt {
-    pub expression: Expression,
-    pub semicolon: Separator,
-}
-
-#[derive(Debug, Clone)]
 pub struct FieldAccessExpr {
     pub object: Box<Expression>,
     pub dot: Separator,
     pub field: Identifier,
-}
-
-#[derive(Debug, Clone)]
-pub struct ForInStmt {
-    pub kw_for: Keyword,
-    pub assignee: Expression,
-    pub kw_in: Keyword,
-    pub iterable: Expression,
-    pub block: BlockExpr,
 }
 
 #[derive(Debug, Clone)]
@@ -126,39 +104,11 @@ pub struct GroupedExpr {
 }
 
 #[derive(Debug, Clone)]
-pub struct IfStmt {
-    pub kw_if: Keyword,
-    pub condition: GroupedExpr,
-    pub if_block: BlockExpr,
-    pub else_if_blocks_opt: Option<Vec<(Keyword, Box<IfStmt>)>>, // `else`, `if { .. }`
-    pub trailing_else_block_opt: Option<(Keyword, BlockExpr)>,   // `else { .. }`
-}
-
-#[derive(Debug, Clone)]
 pub struct IndexExpr {
     pub array: Box<Expression>,
     pub open_bracket: Delimiter,
     pub index: UIntKind,
     pub close_bracket: Delimiter,
-}
-
-#[derive(Debug, Clone)]
-pub struct LetStmt {
-    pub kw_let: Keyword,
-    pub assignee: Expression,
-    pub type_ann_opt: Option<(Separator, Type)>, // `: Type`
-    pub value_opt: Option<(BinaryOp, Expression)>, // `= value`
-    pub semicolon: Separator,
-}
-
-#[derive(Debug, Clone)]
-pub struct MatchStmt {
-    pub kw_match: Keyword,
-    pub scrutinee: Expression,
-    pub open_brace: Delimiter,
-    pub arms_opt: Option<Vec<MatchArm>>,
-    pub final_arm: MatchArm, // default case
-    pub close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone)]
@@ -196,17 +146,6 @@ pub struct StructExpr {
     pub open_brace: Delimiter,
     pub fields: Vec<StructField>,
     pub close_brace: Delimiter,
-}
-
-#[derive(Debug, Clone)]
-pub struct TernaryStmt {
-    pub kw_if: Keyword,
-    pub condition: Expression,
-    pub question_mark: UnwrapOp,
-    pub true_case: Expression,
-    pub colon: Separator,
-    pub false_case: Expression,
-    pub semicolon: Separator,
 }
 
 #[derive(Debug, Clone)]
@@ -253,11 +192,4 @@ pub struct UnderscoreExpr {
 pub struct UnwrapExpr {
     pub expression: Box<Expression>,
     pub op: UnwrapOp,
-}
-
-#[derive(Debug, Clone)]
-pub struct WhileStmt {
-    pub kw_while: Keyword,
-    pub condition: GroupedExpr,
-    pub block: BlockExpr,
 }

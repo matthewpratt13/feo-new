@@ -1,5 +1,5 @@
 use crate::{
-    ast::{expression::BinaryExpr, BinaryOp, Expression},
+    ast::{BinaryExpr, BinaryOp, Expression},
     error::ErrorsEmitted,
 };
 

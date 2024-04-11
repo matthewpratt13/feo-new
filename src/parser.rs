@@ -13,14 +13,12 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        expression::{
-            ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, ExpressionStmt,
-            FieldAccessExpr, ForInStmt, GroupedExpr, IfStmt, IndexExpr, LetStmt, MatchStmt,
-            MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr,
-            TypeCastExpr, UnderscoreExpr, UnwrapExpr, WhileStmt,
-        },
-        BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
-        Separator, Statement, Type, UnaryOp,
+        ArrayExpr, BinaryOp, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, Declaration,
+        Definition, Delimiter, Expression, ExpressionStmt, FieldAccessExpr, ForInStmt, GroupedExpr,
+        Identifier, IfStmt, ImportDecl, IndexExpr, Keyword, LetStmt, Literal, MatchStmt,
+        MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, Separator, Statement, StructExpr,
+        TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr,
+        WhileStmt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -29,8 +27,8 @@ use crate::{
 pub use self::precedence::Precedence;
 use self::{
     binary_expr::parse_binary_expr, expression::ParseExpression,
-    expression_collection::ParseExpressionCollection, statement::ParseStatement,
-    unary_expr::parse_unary_expr,
+    expression_collection::ParseExpressionCollection, item::ParseDeclaration,
+    statement::ParseStatement, unary_expr::parse_unary_expr,
 };
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
@@ -770,9 +768,9 @@ impl Parser {
             Ok(Token::Match { .. }) => Ok(Statement::Match(MatchStmt::parse(self)?)),
             Ok(Token::For { .. }) => Ok(Statement::ForIn(ForInStmt::parse(self)?)),
             Ok(Token::While { .. }) => Ok(Statement::While(WhileStmt::parse(self)?)),
-            Ok(Token::Import { .. }) => {
-                Ok(Statement::Declaration(self.parse_import_declaration()?))
-            }
+            Ok(Token::Import { .. }) => Ok(Statement::Declaration(Declaration::Import(
+                ImportDecl::parse(self)?,
+            ))),
             Ok(Token::Alias { .. }) => Ok(Statement::Declaration(self.parse_alias_declaration()?)),
             Ok(Token::Const { .. }) => Ok(Statement::Declaration(self.parse_const_declaration()?)),
             Ok(Token::Static { .. }) => {
@@ -795,10 +793,6 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
     /// MODULE ITEMS
     ///////////////////////////////////////////////////////////////////////////
-
-    fn parse_import_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
-        todo!()
-    }
 
     fn parse_alias_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
         todo!()

@@ -1,12 +1,11 @@
 #![allow(dead_code)]
 
-pub mod expression;
-pub mod types;
+mod expression;
+mod item;
+mod statement;
+mod types;
 
-use self::expression::{
-    ArrayExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, ExpressionStmt, FieldAccessExpr, ForInStmt, GroupedExpr, IfStmt, IndexExpr, LetStmt, MatchStmt, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr, TupleStructExpr, TypeCastExpr, UnaryExpr, UnderscoreExpr, UnwrapExpr, WhileStmt
-};
-pub use self::types::*;
+pub use self::{expression::*, item::*, statement::*, types::*};
 
 ///////////////////////////////////////////////////////////////////////////
 /// LITERAL
@@ -194,33 +193,33 @@ pub enum Statement {
     Match(MatchStmt), // scrutinee, body
     ForIn(ForInStmt), // variable, iterable, body
     While(WhileStmt), // while, condition, body
-    Definition(Definition),
     Declaration(Declaration),
+    Definition(Definition),
     Expression(ExpressionStmt),
 }
 
 // TODO: parse:
 /// Enum representing the different declaration nodes in the AST.
-/// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
 pub enum Declaration {
-    Import,
-    Alias,
-    Constant,
-    StaticVar,
+    Import(ImportDecl),
+    Alias(AliasDecl),
+    Constant(ConstantDecl),
+    StaticItem(StaticItemDecl),
 }
 
 // TODO: parse:
-/// Enum representing the different item nodes in the AST.
+/// Enum representing the different item definitions nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
 pub enum Definition {
-    Module,
-    Trait,
-    Enum,
-    Struct,
-    Impl,
-    Function,
+    Module(ModuleDef),
+    Trait(TraitDef),
+    Enum(EnumDef),
+    Struct(StructDef),
+    InherentImpl(InherentImplDef),
+    TraitImpl(TraitImplDef),
+    Function(FunctionDef),
 }
 
 // TODO: parse:

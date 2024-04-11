@@ -1,10 +1,7 @@
 use crate::{
     ast::{
-        expression::{
-            BlockExpr, ExpressionStmt, ForInStmt, GroupedExpr, IfStmt, LetStmt, MatchArm,
-            MatchStmt, WhileStmt,
-        },
-        Keyword,
+        BlockExpr, ExpressionStmt, ForInStmt, GroupedExpr, IfStmt, Keyword, LetStmt, MatchArm,
+        MatchStmt, WhileStmt,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
