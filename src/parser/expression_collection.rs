@@ -1,7 +1,8 @@
 use crate::{
     ast::{
-        expression::{ArrayExpr, BlockExpr, PathExpr, StructExpr, StructField, TupleExpr},
-        Expression, Identifier, Statement,
+        expression::{
+            ArrayExpr, BlockExpr, PathExpr, StructExpr, StructField, TupleExpr, TupleStructExpr,
+        }, Delimiter, Expression, Identifier, Statement
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -168,6 +169,74 @@ impl ParseExpressionCollection for StructExpr {
             fields,
             close_brace,
         })
+    }
+}
+
+impl ParseExpressionCollection for TupleStructExpr {
+    fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted> {
+        let token = parser.consume_token()?;
+
+        let path = if let Token::Identifier { name, .. } | Token::SelfType { name, .. } = token {
+            let expr = parser.parse_primary()?;
+            Box::new(PathExpr::parse(parser, expr)?)
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "path".to_string(),
+                found: token,
+            });
+            return Err(ErrorsEmitted(()));
+        };
+
+        let mut fields: Vec<Expression> = Vec::new();
+
+        let open_paren = parser.expect_delimiter(Token::LParen {
+            delim: '(',
+            span: parser.stream.span(),
+        })?;
+
+        // parse arguments – separated by commas – until a closing parenthesis
+        loop {
+            if let Some(Token::RParen { delim: ')', .. }) = parser.peek_current() {
+                // end of arguments
+                parser.consume_token()?;
+                break;
+            }
+
+            let arg_expr = parser.parse_expression(Precedence::Lowest);
+            fields.push(arg_expr?);
+
+            // error handling
+            let token = parser.consume_token();
+
+            match token {
+                Ok(Token::Comma { .. }) => continue, // more arguments
+                Ok(Token::RParen { .. }) => break,   // end of arguments
+                _ => {
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `)`".to_string(),
+                        found: token?,
+                    });
+
+                    return Err(ErrorsEmitted(()));
+                }
+            }
+        }
+
+        if fields.is_empty() {
+            Ok(TupleStructExpr {
+                open_paren,
+                path,
+                fields_opt: None,
+                close_paren: Delimiter::RParen,
+            })
+        } else {
+            Ok(TupleStructExpr {
+                open_paren,
+                path,
+                fields_opt: Some(fields),
+                close_paren: Delimiter::RParen,
+            })
+        }
     }
 }
 

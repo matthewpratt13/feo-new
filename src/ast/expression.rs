@@ -201,6 +201,14 @@ pub struct TupleIndexExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct TupleStructExpr {
+    pub path: Box<PathExpr>,
+    pub open_paren: Delimiter,
+    pub fields_opt: Option<Vec<Expression>>,
+    pub close_paren: Delimiter,
+}
+
+#[derive(Debug, Clone)]
 pub struct TypeCastExpr {
     pub operand: Box<Expression>,
     pub kw_as: Keyword,
