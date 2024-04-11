@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         expression::{
-            BlockExpr, ExpressionStmt, ForInStmt, GroupedExpr, IfStmt, LetStmt, TernaryStmt,
+            BlockExpr, ExpressionStmt, ForInStmt, GroupedExpr, IfStmt, LetStmt, WhileStmt,
         },
         Keyword,
     },
@@ -132,12 +132,6 @@ impl ParseStatement for IfStmt {
     }
 }
 
-impl ParseStatement for TernaryStmt {
-    fn parse(parser: &mut Parser) -> Result<TernaryStmt, ErrorsEmitted> {
-        todo!()
-    }
-}
-
 impl ParseStatement for ForInStmt {
     fn parse(parser: &mut Parser) -> Result<ForInStmt, ErrorsEmitted> {
         let kw_for = parser.expect_keyword(Token::For {
@@ -161,6 +155,25 @@ impl ParseStatement for ForInStmt {
             assignee,
             kw_in,
             iterable,
+            block,
+        })
+    }
+}
+
+impl ParseStatement for WhileStmt {
+    fn parse(parser: &mut Parser) -> Result<WhileStmt, ErrorsEmitted> {
+        let kw_while = parser.expect_keyword(Token::While {
+            name: "while".to_string(),
+            span: parser.stream.span(),
+        })?;
+
+        let condition = GroupedExpr::parse(parser)?;
+
+        let block = BlockExpr::parse(parser)?;
+
+        Ok(WhileStmt {
+            kw_while,
+            condition,
             block,
         })
     }

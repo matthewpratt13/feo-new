@@ -7,7 +7,7 @@ use self::expression::{
     ArrayExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr,
     ExpressionStmt, FieldAccessExpr, ForInStmt, GroupedExpr, IfStmt, IndexExpr, LetStmt,
     MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr,
-    TypeCastExpr, UnderscoreExpr, UnwrapExpr,
+    TypeCastExpr, UnderscoreExpr, UnwrapExpr, WhileStmt,
 };
 pub use self::types::*;
 
@@ -195,9 +195,8 @@ pub enum Statement {
     Let(LetStmt),
     If(IfStmt),       // condition, true, false
     Match,            // condition, body
-    Ternary,          // condition ? true : false
     ForIn(ForInStmt), // variable, iterable, body
-    While,            // while, condition, body
+    While(WhileStmt), // while, condition, body
     Definition(Definition),
     Declaration(Declaration),
     Expression(ExpressionStmt),

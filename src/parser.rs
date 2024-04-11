@@ -16,7 +16,7 @@ use crate::{
             ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, ExpressionStmt,
             FieldAccessExpr, ForInStmt, GroupedExpr, IfStmt, IndexExpr, LetStmt, MethodCallExpr,
             PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr, TypeCastExpr,
-            UnderscoreExpr, UnwrapExpr,
+            UnderscoreExpr, UnwrapExpr, WhileStmt,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
         Separator, Statement, Type, UnaryOp,
@@ -715,7 +715,7 @@ impl Parser {
             Ok(Token::If { .. }) => Ok(Statement::If(IfStmt::parse(self)?)),
             Ok(Token::Match { .. }) => self.parse_match_statement(),
             Ok(Token::For { .. }) => Ok(Statement::ForIn(ForInStmt::parse(self)?)),
-            Ok(Token::While { .. }) => self.parse_while_statement(),
+            Ok(Token::While { .. }) => Ok(Statement::While(WhileStmt::parse(self)?)),
             Ok(Token::Import { .. }) => {
                 Ok(Statement::Declaration(self.parse_import_declaration()?))
             }

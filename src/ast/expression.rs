@@ -231,3 +231,10 @@ pub struct UnwrapExpr {
     pub expression: Box<Expression>,
     pub op: UnwrapOp,
 }
+
+#[derive(Debug, Clone)]
+pub struct WhileStmt {
+    pub kw_while: Keyword,
+    pub condition: GroupedExpr,
+    pub block: BlockExpr,
+}
