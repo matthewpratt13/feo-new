@@ -13,12 +13,13 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        ArrayExpr, BinaryOp, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, Declaration,
-        Definition, Delimiter, Expression, ExpressionStmt, FieldAccessExpr, ForInStmt, GroupedExpr,
-        Identifier, IfStmt, ImportDecl, IndexExpr, Keyword, LetStmt, Literal, MatchStmt,
-        MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, Separator, Statement, StructExpr,
-        TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr,
-        WhileStmt,
+        AliasDecl, ArrayExpr, BinaryOp, BreakExpr, CallExpr, ClosureExpr, ConstantDecl,
+        ContinueExpr, Declaration, Definition, Delimiter, EnumDef, Expression, ExpressionStmt,
+        FieldAccessExpr, ForInStmt, FunctionDef, GroupedExpr, Identifier, IfStmt, ImportDecl,
+        IndexExpr, InherentImplDef, Keyword, LetStmt, Literal, MatchStmt, MethodCallExpr,
+        ModuleDef, PathExpr, RangeExpr, ReturnExpr, Separator, Statement, StaticItemDecl,
+        StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type,
+        TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, WhileStmt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -26,9 +27,12 @@ use crate::{
 
 pub use self::precedence::Precedence;
 use self::{
-    binary_expr::parse_binary_expr, expression::ParseExpression,
-    expression_collection::ParseExpressionCollection, item::ParseDeclaration,
-    statement::ParseStatement, unary_expr::parse_unary_expr,
+    binary_expr::parse_binary_expr,
+    expression::ParseExpression,
+    expression_collection::ParseExpressionCollection,
+    item::{ParseDeclaration, ParseDefinition},
+    statement::ParseStatement,
+    unary_expr::parse_unary_expr,
 };
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
@@ -398,23 +402,22 @@ impl Parser {
 
     /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let token = self.consume_token();
+        let token = self.peek_current().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
         match token {
-            Ok(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
-            Ok(Token::UIntLiteral { value, .. }) => Ok(Expression::Literal(Literal::UInt(value))),
-            Ok(Token::BigUIntLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::BigUInt(value)))
-            }
-            Ok(Token::ByteLiteral { value, .. }) => Ok(Expression::Literal(Literal::Byte(value))),
-            Ok(Token::BytesLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bytes(value))),
-            Ok(Token::HashLiteral { value, .. }) => Ok(Expression::Literal(Literal::Hash(value))),
-            Ok(Token::StringLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::String(value)))
-            }
-            Ok(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
-            Ok(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
-            Ok(Token::LParen { .. }) => {
+            Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
+            Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
+            Token::BigUIntLiteral { value, .. } => Ok(Expression::Literal(Literal::BigUInt(value))),
+            Token::ByteLiteral { value, .. } => Ok(Expression::Literal(Literal::Byte(value))),
+            Token::BytesLiteral { value, .. } => Ok(Expression::Literal(Literal::Bytes(value))),
+            Token::HashLiteral { value, .. } => Ok(Expression::Literal(Literal::Hash(value))),
+            Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
+            Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
+            Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
+            Token::LParen { .. } => {
                 let open_paren = self.expect_delimiter(Token::LParen {
                     delim: '(',
                     span: self.stream.span(),
@@ -436,7 +439,7 @@ impl Parser {
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier, `Self`, `_`, literal or `(`".to_string(),
-                    found: token?,
+                    found: token,
                 });
 
                 Err(ErrorsEmitted(()))
@@ -569,160 +572,161 @@ impl Parser {
     /// Parse infix expressions (e.g., binary operators), where the respective token type
     /// appears in the middle of an expression.
     fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let token = self.consume_token();
+        let token = self.peek_current().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
         match token {
-            Ok(Token::Plus { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::Plus { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::Add,
             )?)),
-            Ok(Token::Minus { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::Minus { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::Subtract,
             )?)),
-            Ok(Token::Asterisk { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::Asterisk { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::Multiply,
             )?)),
-            Ok(Token::Slash { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::Slash { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::Divide,
             )?)),
-            Ok(Token::Percent { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::Percent { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::Modulus,
             )?)),
-            Ok(Token::DblEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::DblEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::Equal,
             )?)),
-            Ok(Token::BangEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::BangEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::NotEqual,
             )?)),
-            Ok(Token::LessThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::LessThan { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::LessThan,
             )?)),
-            Ok(Token::LessThanEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::LessThanEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::LessEqual,
             )?)),
-            Ok(Token::GreaterThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::GreaterThan { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::GreaterThan,
             )?)),
-            Ok(Token::GreaterThanEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::GreaterThanEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::GreaterEqual,
             )?)),
-            Ok(Token::Equals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::Equals { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::Assign,
             )?)),
-            Ok(Token::PlusEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::PlusEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::AddAssign,
             )?)),
-            Ok(Token::MinusEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::MinusEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::SubtractAssign,
             )?)),
-            Ok(Token::AsteriskEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::AsteriskEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::MultiplyAssign,
             )?)),
-            Ok(Token::SlashEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::SlashEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::DivideAssign,
             )?)),
-            Ok(Token::PercentEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::PercentEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::ModulusAssign,
             )?)),
-            Ok(Token::DblAmpersand { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::DblAmpersand { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::LogicalAnd,
             )?)),
-            Ok(Token::DblPipe { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::DblPipe { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::LogicalOr,
             )?)),
-            Ok(Token::Ampersand { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::Ampersand { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::BitwiseAnd,
             )?)),
-            Ok(Token::Pipe { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::Pipe { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::BitwiseOr,
             )?)),
-            Ok(Token::Caret { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::Caret { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::BitwiseXor,
             )?)),
-            Ok(Token::DblLessThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::DblLessThan { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::ShiftLeft,
             )?)),
-            Ok(Token::DblGreaterThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Token::DblGreaterThan { .. } => Ok(Expression::Binary(parse_binary_expr(
                 self,
                 left_expr,
                 BinaryOp::ShiftRight,
             )?)),
-            Ok(Token::QuestionMark { .. }) => {
+            Token::QuestionMark { .. } => {
                 Ok(Expression::Unwrap(UnwrapExpr::parse(self, left_expr)?))
             }
-            Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
+            Token::DblDot { .. } | Token::DotDotEquals { .. } => {
                 Ok(Expression::Range(RangeExpr::parse(self, left_expr)?))
             }
-            Ok(Token::As { .. }) => Ok(Expression::TypeCast(TypeCastExpr::parse(self, left_expr)?)),
-            Ok(Token::LParen { .. }) => {
+            Token::As { .. } => Ok(Expression::TypeCast(TypeCastExpr::parse(self, left_expr)?)),
+            Token::LParen { .. } => {
                 // TODO: use symbol table to check whether this could be a `TupleStructExpr`
                 Ok(Expression::Call(CallExpr::parse(self, left_expr)?))
             }
-            Ok(Token::LBrace { .. }) => Ok(Expression::Struct(StructExpr::parse(self)?)),
-            Ok(Token::LBracket { .. }) => Ok(Expression::Index(IndexExpr::parse(self, left_expr)?)),
-            Ok(Token::Dot { .. }) => match self.unconsume() {
+            Token::LBrace { .. } => Ok(Expression::Struct(StructExpr::parse(self)?)),
+            Token::LBracket { .. } => Ok(Expression::Index(IndexExpr::parse(self, left_expr)?)),
+            Token::Dot { .. } => match self.unconsume() {
                 Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {
-                    let token = self.peek_ahead_by(2).ok_or({
+                    let two_tokens_ahead = self.peek_ahead_by(2).ok_or({
                         self.log_error(ParserErrorKind::TokenIndexOutOfBounds {
                             len: self.stream.tokens().len(),
                             i: self.current + 2,
-                        })
-                    });
+                        });
+                        ErrorsEmitted(())
+                    })?;
 
-                    // consume the `Identifier` or `SelfKeyword` (i.e., move back to the `.`)
-                    self.consume_token()?;
-
-                    match token {
-                        Ok(Token::LParen { .. }) => {
+                    match two_tokens_ahead {
+                        Token::LParen { .. } => {
                             let expr = self.parse_expression(Precedence::MethodCall)?;
                             Ok(Expression::MethodCall(MethodCallExpr::parse(self, expr)?))
                         }
-                        Ok(Token::UIntLiteral { .. }) => {
+                        Token::UIntLiteral { .. } => {
                             let expr = self.parse_expression(Precedence::Index)?;
                             Ok(Expression::TupleIndex(TupleIndexExpr::parse(self, expr)?))
                         }
@@ -732,102 +736,111 @@ impl Parser {
                         }
                     }
                 }
-                Some(_) => {
+                _ => {
+                    let token = self.consume_token()?;
+
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "identifier or tuple index".to_string(),
-                        found: token?,
+                        found: token,
                     });
-                    Err(ErrorsEmitted(()))
-                }
-                None => {
-                    self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                     Err(ErrorsEmitted(()))
                 }
             },
 
-            Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
+            Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => {
                 Ok(Expression::Path(PathExpr::parse(self, left_expr)?))
             }
 
             _ => {
-                self.log_error(ParserErrorKind::InvalidToken { token: token? });
+                self.log_error(ParserErrorKind::InvalidToken { token });
                 Err(ErrorsEmitted(()))
             }
         }
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    /// STATEMENTS
+    /// STATEMENT
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Parse a `Statement`.
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        match self.consume_token() {
-            Ok(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
-            Ok(Token::If { .. }) => Ok(Statement::If(IfStmt::parse(self)?)),
-            Ok(Token::Match { .. }) => Ok(Statement::Match(MatchStmt::parse(self)?)),
-            Ok(Token::For { .. }) => Ok(Statement::ForIn(ForInStmt::parse(self)?)),
-            Ok(Token::While { .. }) => Ok(Statement::While(WhileStmt::parse(self)?)),
-            Ok(Token::Import { .. }) => Ok(Statement::Declaration(Declaration::Import(
-                ImportDecl::parse(self)?,
-            ))),
-            Ok(Token::Alias { .. }) => Ok(Statement::Declaration(self.parse_alias_declaration()?)),
-            Ok(Token::Const { .. }) => Ok(Statement::Declaration(self.parse_const_declaration()?)),
-            Ok(Token::Static { .. }) => {
-                Ok(Statement::Declaration(self.parse_static_var_declaration()?))
-            }
-            Ok(Token::Module { .. }) => Ok(Statement::Definition(self.parse_module()?)),
-            Ok(Token::Trait { .. }) => Ok(Statement::Definition(self.parse_trait()?)),
-            Ok(Token::Enum { .. }) => Ok(Statement::Definition(self.parse_enum()?)),
-            Ok(Token::Struct { .. }) => Ok(Statement::Definition(self.parse_struct()?)),
-            Ok(Token::Impl { .. }) => Ok(Statement::Definition(self.parse_impl()?)),
-            Ok(Token::Func { .. }) => Ok(Statement::Definition(self.parse_function()?)),
+        let token = self.peek_current();
 
-            _ => {
-                self.unconsume();
-                Ok(Statement::Expression(ExpressionStmt::parse(self)?))
-            }
+        match token {
+            Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
+            Some(Token::If { .. }) => Ok(Statement::If(IfStmt::parse(self)?)),
+            Some(Token::Match { .. }) => Ok(Statement::Match(MatchStmt::parse(self)?)),
+            Some(Token::For { .. }) => Ok(Statement::ForIn(ForInStmt::parse(self)?)),
+            Some(Token::While { .. }) => Ok(Statement::While(WhileStmt::parse(self)?)),
+            Some(
+                Token::Import { .. }
+                | Token::Alias { .. }
+                | Token::Const { .. }
+                | Token::Static { .. },
+            ) => Ok(Statement::Declaration(self.parse_declaration()?)),
+            Some(
+                Token::Module { .. }
+                | Token::Trait { .. }
+                | Token::Enum { .. }
+                | Token::Struct { .. }
+                | Token::Impl { .. },
+            ) => Ok(Statement::Definition(self.parse_definition()?)),
+
+            _ => Ok(Statement::Expression(ExpressionStmt::parse(self)?)),
         }
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    /// MODULE ITEMS
+    /// ITEMS
     ///////////////////////////////////////////////////////////////////////////
 
-    fn parse_alias_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
-        todo!()
+    fn parse_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
+        let token = self.peek_current().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
+
+        match token {
+            Token::Import { .. } => Ok(Declaration::Import(ImportDecl::parse(self)?)),
+            Token::Alias { .. } => Ok(Declaration::Alias(AliasDecl::parse(self)?)),
+            Token::Const { .. } => Ok(Declaration::Constant(ConstantDecl::parse(self)?)),
+            Token::Static { .. } => Ok(Declaration::StaticItem(StaticItemDecl::parse(self)?)),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "declaration item".to_string(),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
     }
 
-    fn parse_const_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
-        todo!()
-    }
+    fn parse_definition(&mut self) -> Result<Definition, ErrorsEmitted> {
+        let token = self.peek_current().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
-    fn parse_static_var_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_module(&mut self) -> Result<Definition, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_trait(&mut self) -> Result<Definition, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_enum(&mut self) -> Result<Definition, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_struct(&mut self) -> Result<Definition, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_impl(&mut self) -> Result<Definition, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_function(&mut self) -> Result<Definition, ErrorsEmitted> {
-        todo!()
+        match token {
+            Token::Module { .. } => Ok(Definition::Module(ModuleDef::parse(self)?)),
+            Token::Trait { .. } => Ok(Definition::Trait(TraitDef::parse(self)?)),
+            Token::Enum { .. } => Ok(Definition::Enum(EnumDef::parse(self)?)),
+            Token::Struct { .. } => Ok(Definition::Struct(StructDef::parse(self)?)),
+            Token::Impl { .. } => {
+                if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
+                    Ok(Definition::TraitImpl(TraitImplDef::parse(self)?))
+                } else {
+                    Ok(Definition::InherentImpl(InherentImplDef::parse(self)?))
+                }
+            }
+            Token::Func { .. } => Ok(Definition::Function(FunctionDef::parse(self)?)),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "definition item".to_string(),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////
