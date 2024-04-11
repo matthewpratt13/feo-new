@@ -1,7 +1,8 @@
 use crate::{
     ast::{
-        CallExpr, ClosureExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr,
-        MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, TupleIndexExpr, TypeCastExpr, UnwrapExpr,
+        CallExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr, MethodCallExpr,
+        RangeExpr, StructExpr, StructField, TupleIndexExpr, TupleStructExpr, TypeCastExpr,
+        UnwrapExpr,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -20,11 +21,6 @@ where
 
 ///////////////////////////////////////////////////////////////////////////
 
-impl ParseExpression for PathExpr {
-    fn parse(parser: &mut Parser, prefix: Expression) -> Result<PathExpr, ErrorsEmitted> {
-        todo!()
-    }
-}
 
 impl ParseExpression for MethodCallExpr {
     fn parse(parser: &mut Parser, expr: Expression) -> Result<MethodCallExpr, ErrorsEmitted> {
@@ -184,14 +180,129 @@ impl ParseExpression for RangeExpr {
     }
 }
 
-impl ParseExpression for ReturnExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<ReturnExpr, ErrorsEmitted> {
-        todo!()
+impl ParseExpression for StructExpr {
+    fn parse(parser: &mut Parser, path: Expression) -> Result<StructExpr, ErrorsEmitted> {
+        let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
+
+        let open_brace = parser.expect_delimiter(Token::LBrace {
+            delim: '{',
+            span: parser.stream.span(),
+        })?;
+
+        // parse struct fields – separated by commas – until a closing brace
+        loop {
+            // get the field name
+            let token = parser.consume_token();
+
+            let field_name = match token {
+                Ok(Token::Identifier { name, .. }) => name,
+                Ok(Token::RBrace { .. }) => break, // end of struct
+                _ => {
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "identifier or `}`".to_string(),
+                        found: token?,
+                    });
+                    return Err(ErrorsEmitted(()));
+                }
+            };
+
+            let colon = parser.expect_separator(Token::Colon {
+                punc: ':',
+                span: parser.stream.span(),
+            })?;
+
+            // parse field value
+            let field_value = parser.parse_expression(Precedence::Lowest)?;
+
+            // push field to list of fields
+            fields.push(StructField {
+                name: Identifier(field_name),
+                value: field_value,
+            });
+
+            // error handling
+            let token = parser.consume_token();
+
+            match token {
+                Ok(Token::Comma { .. }) => continue, // more fields
+                Ok(Token::RBrace { .. }) => break,   // end of struct
+                _ => {
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `}`".to_string(),
+                        found: token?,
+                    });
+                    return Err(ErrorsEmitted(()));
+                }
+            }
+        }
+
+        let close_brace = parser.expect_delimiter(Token::RBrace {
+            delim: '}',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(StructExpr {
+            path: Box::new(path),
+            open_brace,
+            fields,
+            close_brace,
+        })
     }
 }
 
-impl ParseExpression for ClosureExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<ClosureExpr, ErrorsEmitted> {
-        todo!()
+impl ParseExpression for TupleStructExpr {
+    fn parse(parser: &mut Parser, path: Expression) -> Result<Self, ErrorsEmitted> {
+        let token = parser.consume_token()?;
+
+        let mut fields: Vec<Expression> = Vec::new();
+
+        let open_paren = parser.expect_delimiter(Token::LParen {
+            delim: '(',
+            span: parser.stream.span(),
+        })?;
+
+        // parse arguments – separated by commas – until a closing parenthesis
+        loop {
+            if let Some(Token::RParen { delim: ')', .. }) = parser.peek_current() {
+                // end of arguments
+                parser.consume_token()?;
+                break;
+            }
+
+            let arg_expr = parser.parse_expression(Precedence::Lowest);
+            fields.push(arg_expr?);
+
+            // error handling
+            let token = parser.consume_token();
+
+            match token {
+                Ok(Token::Comma { .. }) => continue, // more arguments
+                Ok(Token::RParen { .. }) => break,   // end of arguments
+                _ => {
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `)`".to_string(),
+                        found: token?,
+                    });
+
+                    return Err(ErrorsEmitted(()));
+                }
+            }
+        }
+
+        if fields.is_empty() {
+            Ok(TupleStructExpr {
+                open_paren,
+                path: Box::new(path),
+                fields_opt: None,
+                close_paren: Delimiter::RParen,
+            })
+        } else {
+            Ok(TupleStructExpr {
+                open_paren,
+                path: Box::new(path),
+                fields_opt: Some(fields),
+                close_paren: Delimiter::RParen,
+            })
+        }
     }
 }

@@ -142,7 +142,7 @@ pub struct ReturnExpr {
 
 #[derive(Debug, Clone)]
 pub struct StructExpr {
-    pub path: PathExpr,
+    pub path: Box<Expression>,
     pub open_brace: Delimiter,
     pub fields: Vec<StructField>,
     pub close_brace: Delimiter,
@@ -164,7 +164,7 @@ pub struct TupleIndexExpr {
 
 #[derive(Debug, Clone)]
 pub struct TupleStructExpr {
-    pub path: PathExpr,
+    pub path: Box<Expression>,
     pub open_paren: Delimiter,
     pub fields_opt: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
