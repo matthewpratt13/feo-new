@@ -1,8 +1,10 @@
 use crate::{
     ast::{
         expression::{
-            ArrayExpr, BlockExpr, PathExpr, StructExpr, StructField, TupleExpr, TupleStructExpr,
-        }, Delimiter, Expression, Identifier, Statement
+            ArrayExpr, BlockExpr, GroupedExpr, PathExpr, StructExpr, StructField, TupleExpr,
+            TupleStructExpr,
+        },
+        Delimiter, Expression, Identifier, Statement,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -97,7 +99,7 @@ impl ParseExpressionCollection for StructExpr {
 
         let path = if let Token::Identifier { name, .. } | Token::SelfType { name, .. } = token {
             let expr = parser.parse_primary()?;
-            Box::new(PathExpr::parse(parser, expr)?)
+            PathExpr::parse(parser, expr)?
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "path".to_string(),
@@ -178,7 +180,7 @@ impl ParseExpressionCollection for TupleStructExpr {
 
         let path = if let Token::Identifier { name, .. } | Token::SelfType { name, .. } = token {
             let expr = parser.parse_primary()?;
-            Box::new(PathExpr::parse(parser, expr)?)
+            PathExpr::parse(parser, expr)?
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "path".to_string(),
@@ -273,6 +275,28 @@ impl ParseExpressionCollection for BlockExpr {
             statements,
             terminal_expression_opt,
             close_brace,
+        })
+    }
+}
+
+impl ParseExpressionCollection for GroupedExpr {
+    fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {
+        let open_paren = parser.expect_delimiter(Token::RParen {
+            delim: '(',
+            span: parser.stream.span(),
+        })?;
+
+        let expression = parser.parse_expression(Precedence::Lowest)?;
+
+        let close_paren = parser.expect_delimiter(Token::RParen {
+            delim: ')',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(GroupedExpr {
+            open_paren,
+            expression: Box::new(expression),
+            close_paren,
         })
     }
 }

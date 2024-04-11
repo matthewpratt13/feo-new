@@ -1,16 +1,13 @@
 use crate::{
     ast::{
-        expression::{BlockExpr, GroupedExpr, IfStmt, TernaryStmt},
+        expression::{BlockExpr, ForInStmt, GroupedExpr, IfStmt, LetStmt, TernaryStmt},
         Keyword,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
-use super::{
-    expression::ParseExpression, expression_collection::ParseExpressionCollection, Parser,
-    Precedence,
-};
+use super::{expression_collection::ParseExpressionCollection, Parser, Precedence};
 
 pub(crate) trait ParseStatement
 where
@@ -19,9 +16,52 @@ where
     fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
 }
 
-impl ParseStatement for TernaryStmt {
-    fn parse(parser: &mut Parser) -> Result<TernaryStmt, ErrorsEmitted> {
-        todo!()
+impl ParseStatement for LetStmt {
+    fn parse(parser: &mut Parser) -> Result<LetStmt, ErrorsEmitted> {
+        let kw_let = parser.expect_keyword(Token::Let {
+            name: "let".to_string(),
+            span: parser.stream.span(),
+        })?;
+
+        let assignee = parser.parse_expression(Precedence::Path)?;
+
+        let equals = parser.expect_separator(Token::Equals {
+            punc: '=',
+            span: parser.stream.span(),
+        })?;
+
+        let type_ann_opt = if let Ok(colon) = parser.expect_separator(Token::Colon {
+            punc: ':',
+            span: parser.stream.span(),
+        }) {
+            let ty = parser.get_type()?;
+            Some((colon, ty))
+        } else {
+            None
+        };
+
+        let value_opt = if let Ok(equals) = parser.expect_binary_op(Token::Equals {
+            punc: '=',
+            span: parser.stream.span(),
+        }) {
+            let value = parser.parse_expression(Precedence::Lowest)?;
+            Some((equals, value))
+        } else {
+            None
+        };
+
+        let semicolon = parser.expect_separator(Token::Semicolon {
+            punc: ';',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(LetStmt {
+            kw_let,
+            assignee,
+            type_ann_opt,
+            value_opt,
+            semicolon,
+        })
     }
 }
 
@@ -36,14 +76,7 @@ impl ParseStatement for IfStmt {
             span: parser.stream.span(),
         })?;
 
-        parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
-
-        let expr = parser.parse_expression(Precedence::Lowest)?;
-
-        let condition = GroupedExpr::parse(parser, expr)?;
+        let condition = GroupedExpr::parse(parser)?;
 
         let token = parser.peek_current().ok_or({
             parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
@@ -94,5 +127,39 @@ impl ParseStatement for IfStmt {
                 trailing_else_block_opt,
             })
         }
+    }
+}
+
+impl ParseStatement for TernaryStmt {
+    fn parse(parser: &mut Parser) -> Result<TernaryStmt, ErrorsEmitted> {
+        todo!()
+    }
+}
+
+impl ParseStatement for ForInStmt {
+    fn parse(parser: &mut Parser) -> Result<ForInStmt, ErrorsEmitted> {
+        let kw_for = parser.expect_keyword(Token::For {
+            name: "for".to_string(),
+            span: parser.stream.span(),
+        })?;
+
+        let assignee = parser.parse_expression(Precedence::Path)?;
+
+        let kw_in = parser.expect_keyword(Token::In {
+            name: "in".to_string(),
+            span: parser.stream.span(),
+        })?;
+
+        let iterable = parser.parse_expression(Precedence::Lowest)?;
+
+        let block = BlockExpr::parse(parser)?;
+
+        Ok(ForInStmt {
+            kw_for,
+            assignee,
+            kw_in,
+            iterable,
+            block,
+        })
     }
 }

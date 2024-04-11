@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         expression::{
-            ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr,
+            ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr, ForInStmt,
             GroupedExpr, IfStmt, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr,
             StructExpr, TupleExpr, TupleIndexExpr, TypeCastExpr, UnderscoreExpr, UnwrapExpr,
         },
@@ -400,9 +400,6 @@ impl Parser {
         let token = self.consume_token();
 
         match token {
-            Ok(Token::Identifier { name, .. } | Token::SelfKeyword { name, .. }) => {
-                Ok(Expression::Identifier(Identifier(name)))
-            }
             Ok(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
             Ok(Token::UIntLiteral { value, .. }) => Ok(Expression::Literal(Literal::UInt(value))),
             Ok(Token::BigUIntLiteral { value, .. }) => {
@@ -471,11 +468,17 @@ impl Parser {
                         underscore: Separator::Underscore,
                     }))
                 } else {
-                    self.parse_primary()
+                    self.parse_expression(Precedence::Path)
                 }
             }
 
-            Token::SelfKeyword { .. } => self.parse_primary(),
+            Token::SelfKeyword { .. }
+            | Token::SelfType { .. }
+            | Token::Package { .. }
+            | Token::Super { .. } => {
+                let expr = self.parse_expression(Precedence::Path)?;
+                Ok(Expression::Path(PathExpr::parse(self, expr)?))
+            }
 
             Token::Minus { .. } => {
                 let expr = self.parse_expression(Precedence::Unary)?;
@@ -505,9 +508,8 @@ impl Parser {
                     // let expr = self.parse_expression(Precedence::Lowest)?;
                     Ok(Expression::Tuple(TupleExpr::parse(self)?))
                 } else {
-                    self.consume_token()?;
-                    let expr = self.parse_expression(Precedence::Lowest)?;
-                    Ok(Expression::Grouped(GroupedExpr::parse(self, expr)?))
+                    
+                    Ok(Expression::Grouped(GroupedExpr::parse(self)?))
                 }
             }
             Token::LBracket { .. } => Ok(Expression::Array(ArrayExpr::parse(self)?)),
@@ -549,10 +551,6 @@ impl Parser {
                 //         Err(ErrorsEmitted(()))
                 //     }
                 // }
-            }
-            Token::Super { .. } | Token::Package { .. } => {
-                let expr = self.parse_expression(Precedence::Path)?;
-                Ok(Expression::Path(PathExpr::parse(self, expr)?))
             }
             Token::Return { .. } => {
                 let expr = self.parse_expression(Precedence::Lowest)?;
@@ -651,7 +649,10 @@ impl Parser {
                 Ok(Expression::Range(RangeExpr::parse(self, left_expr)?))
             }
             Ok(Token::As { .. }) => Ok(Expression::TypeCast(TypeCastExpr::parse(self, left_expr)?)),
-            Ok(Token::LParen { .. }) => Ok(Expression::Call(CallExpr::parse(self, left_expr)?)), // TODO: or tuple struct
+            Ok(Token::LParen { .. }) => {
+                // TOF
+                Ok(Expression::Call(CallExpr::parse(self, left_expr)?))
+            }
             Ok(Token::LBrace { .. }) => Ok(Expression::Struct(StructExpr::parse(self)?)), // TODO: or match statement
             Ok(Token::LBracket { .. }) => Ok(Expression::Index(IndexExpr::parse(self, left_expr)?)),
             Ok(Token::Dot { .. }) => match self.unconsume() {
@@ -715,7 +716,7 @@ impl Parser {
             Ok(Token::Let { .. }) => self.parse_let_statement(),
             Ok(Token::If { .. }) => Ok(Statement::If(IfStmt::parse(self)?)),
             Ok(Token::Match { .. }) => self.parse_match_statement(),
-            Ok(Token::For { .. }) => self.parse_for_in_statement(),
+            Ok(Token::For { .. }) => Ok(Statement::ForIn(ForInStmt::parse(self)?)),
             Ok(Token::While { .. }) => self.parse_while_statement(),
             Ok(Token::Import { .. }) => {
                 Ok(Statement::Declaration(self.parse_import_declaration()?))
@@ -770,32 +771,8 @@ impl Parser {
         Ok(Statement::Expression(expression?))
     }
 
-    // TODO: what about `else-if` branches ?
-    /// Parse an `if` expression (i.e., `if (condition) { true block } else { false block }`).
-
     fn parse_match_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         todo!()
-    }
-
-    /// Parse a `for-in` expression (i.e., `for var in iterable { execution logic }`).
-    fn parse_for_in_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        self.expect_token(Token::For {
-            name: "for".to_string(),
-            span: self.stream.span(),
-        })?;
-
-        let variable = Box::new(Expression::Identifier(self.consume_identifier()?));
-
-        self.expect_token(Token::In {
-            name: "in".to_string(),
-            span: self.stream.span(),
-        })?;
-
-        let iterable = Box::new(self.parse_expression(Precedence::Lowest)?);
-
-        let body = Box::new(self.parse_expression(Precedence::Lowest)?);
-
-        Ok(Statement::ForIn(variable, iterable, body))
     }
 
     fn parse_while_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
@@ -919,6 +896,22 @@ impl Parser {
             Token::RBracket { .. } => Ok(Delimiter::RBracket),
             Token::LBrace { .. } => Ok(Delimiter::LBrace),
             Token::RBrace { .. } => Ok(Delimiter::RBrace),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: format!("`{:#?}`", expected),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
+
+    fn expect_binary_op(&mut self, expected: Token) -> Result<BinaryOp, ErrorsEmitted> {
+        let token = self.consume_token()?;
+
+        match token {
+            Token::Equals { .. } => Ok(BinaryOp::Assign),
+
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),

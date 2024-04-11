@@ -1,8 +1,8 @@
 use crate::{
     ast::{
         expression::{
-            CallExpr, ClosureExpr, FieldAccessExpr, GroupedExpr, IndexExpr, MethodCallExpr,
-            PathExpr, RangeExpr, ReturnExpr, TupleIndexExpr, TypeCastExpr, UnwrapExpr,
+            CallExpr, ClosureExpr, FieldAccessExpr, IndexExpr, MethodCallExpr, PathExpr, RangeExpr,
+            ReturnExpr, TupleIndexExpr, TypeCastExpr, UnwrapExpr,
         },
         Delimiter, Expression, Identifier,
     },
@@ -196,24 +196,5 @@ impl ParseExpression for ReturnExpr {
 impl ParseExpression for ClosureExpr {
     fn parse(parser: &mut Parser, expr: Expression) -> Result<ClosureExpr, ErrorsEmitted> {
         todo!()
-    }
-}
-
-impl ParseExpression for GroupedExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<GroupedExpr, ErrorsEmitted> {
-        let token = parser.expect_token(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        });
-
-        if let Ok(Token::RParen { .. }) = token {
-            Ok(GroupedExpr {
-                open_paren: Delimiter::LParen,
-                expression: Box::new(expr),
-                close_paren: Delimiter::RParen,
-            })
-        } else {
-            Err(token.unwrap_err())
-        }
     }
 }
