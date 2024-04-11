@@ -14,8 +14,9 @@ use crate::{
     ast::{
         expression::{
             ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, FieldAccessExpr, ForInStmt,
-            GroupedExpr, IfStmt, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr,
-            StructExpr, TupleExpr, TupleIndexExpr, TypeCastExpr, UnderscoreExpr, UnwrapExpr,
+            GroupedExpr, IfStmt, IndexExpr, LetStmt, MethodCallExpr, PathExpr, RangeExpr,
+            ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr, TypeCastExpr, UnderscoreExpr,
+            UnwrapExpr,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
         Separator, Statement, Type, UnaryOp,
@@ -504,11 +505,8 @@ impl Parser {
                             i: self.current + 2,
                         })
                 {
-                    // self.consume_token()?;
-                    // let expr = self.parse_expression(Precedence::Lowest)?;
                     Ok(Expression::Tuple(TupleExpr::parse(self)?))
                 } else {
-                    
                     Ok(Expression::Grouped(GroupedExpr::parse(self)?))
                 }
             }
@@ -713,7 +711,7 @@ impl Parser {
     /// Parse a `Statement`.
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         match self.consume_token() {
-            Ok(Token::Let { .. }) => self.parse_let_statement(),
+            Ok(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
             Ok(Token::If { .. }) => Ok(Statement::If(IfStmt::parse(self)?)),
             Ok(Token::Match { .. }) => self.parse_match_statement(),
             Ok(Token::For { .. }) => Ok(Statement::ForIn(ForInStmt::parse(self)?)),
@@ -740,24 +738,6 @@ impl Parser {
         }
     }
 
-    /// Parse an identifier and the assignment operation that binds the variable to a value.
-    fn parse_let_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        let identifier = self.consume_identifier();
-
-        self.expect_token(Token::Equals {
-            punc: '=',
-            span: self.stream.span(),
-        })?;
-
-        let value = self.parse_expression(Precedence::Assignment);
-
-        self.expect_token(Token::Semicolon {
-            punc: ';',
-            span: self.stream.span(),
-        })?;
-
-        Ok(Statement::Let(identifier?, value?))
-    }
 
     /// Parse an expression into a statement, separated by a semicolon.
     fn parse_expression_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
