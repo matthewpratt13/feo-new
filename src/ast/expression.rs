@@ -14,6 +14,14 @@ pub enum ClosureParams {
     None(BinaryOp),
 }
 
+#[derive(Debug, Clone)]
+pub struct MatchArm {
+    pub case: Expression,
+    pub guard_opt: Option<(Keyword, GroupedExpr)>, // `if (..)`
+    pub fat_arrow: Separator,
+    pub logic: Expression,
+}
+
 /// Enum representing the different path root options.
 #[derive(Debug, Clone)]
 pub enum PathPrefix {
@@ -24,7 +32,7 @@ pub enum PathPrefix {
     Identifier(Identifier),
 }
 
-/// Struct representing a function or closure parameter.
+/// Struct representing a function definition or closure parameter
 #[derive(Debug, Clone)]
 pub struct Param {
     pub id: Identifier,
@@ -142,6 +150,16 @@ pub struct LetStmt {
     pub type_ann_opt: Option<(Separator, Type)>, // `: Type`
     pub value_opt: Option<(BinaryOp, Expression)>, // `= value`
     pub semicolon: Separator,
+}
+
+#[derive(Debug, Clone)]
+pub struct MatchStmt {
+    pub kw_match: Keyword,
+    pub scrutinee: Expression,
+    pub open_brace: Delimiter,
+    pub arms_opt: Option<Vec<MatchArm>>,
+    pub final_arm: MatchArm, // default case
+    pub close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone)]
