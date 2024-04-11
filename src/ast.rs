@@ -4,10 +4,7 @@ pub mod expression;
 pub mod types;
 
 use self::expression::{
-    ArrayExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr,
-    ExpressionStmt, FieldAccessExpr, ForInStmt, GroupedExpr, IfStmt, IndexExpr, LetStmt, MatchStmt,
-    MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr,
-    TupleStructExpr, TypeCastExpr, UnderscoreExpr, UnwrapExpr, WhileStmt,
+    ArrayExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, ExpressionStmt, FieldAccessExpr, ForInStmt, GroupedExpr, IfStmt, IndexExpr, LetStmt, MatchStmt, MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr, TupleStructExpr, TypeCastExpr, UnaryExpr, UnderscoreExpr, UnwrapExpr, WhileStmt
 };
 pub use self::types::*;
 
@@ -170,9 +167,9 @@ pub enum Expression {
     Index(IndexExpr),
     TupleIndex(TupleIndexExpr),
     Unwrap(UnwrapExpr),
-    UnaryOp(UnaryOp, Box<Expression>),
+    Unary(UnaryExpr),
     TypeCast(TypeCastExpr),
-    BinaryOp(BinaryExpr),
+    Binary(BinaryExpr),
     Grouped(GroupedExpr),
     Return(ReturnExpr),
     Range(RangeExpr), // from-to, from, to, inclusive, to inclusive

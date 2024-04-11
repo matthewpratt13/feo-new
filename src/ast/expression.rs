@@ -1,6 +1,5 @@
 use super::{
-    BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator, Statement, Type,
-    UIntKind, UnwrapOp,
+    BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator, Statement, Type, UIntKind, UnaryOp, UnwrapOp
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -237,6 +236,12 @@ pub struct TypeCastExpr {
     pub operand: Box<Expression>,
     pub kw_as: Keyword,
     pub new_type: Type,
+}
+
+#[derive(Debug, Clone)]
+pub struct UnaryExpr {
+    pub op: UnaryOp,
+    pub expression: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]

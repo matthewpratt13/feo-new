@@ -7,6 +7,7 @@ mod expression_collection;
 mod item;
 mod precedence;
 mod statement;
+mod unary_expr;
 
 use std::collections::HashMap;
 
@@ -27,8 +28,9 @@ use crate::{
 
 pub use self::precedence::Precedence;
 use self::{
-    binary_expr::parse_binary_expression, expression::ParseExpression,
+    binary_expr::parse_binary_expr, expression::ParseExpression,
     expression_collection::ParseExpressionCollection, statement::ParseStatement,
+    unary_expr::parse_unary_expr,
 };
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
@@ -481,22 +483,16 @@ impl Parser {
                 Ok(Expression::Path(PathExpr::parse(self, expr)?))
             }
 
-            Token::Minus { .. } => {
-                let expr = self.parse_expression(Precedence::Unary)?;
-                Ok(Expression::UnaryOp(UnaryOp::Negate, Box::new(expr)))
-            }
-            Token::Bang { .. } => {
-                let expr = self.parse_expression(Precedence::Unary)?;
-                Ok(Expression::UnaryOp(UnaryOp::Not, Box::new(expr)))
-            }
-            Token::Ampersand { .. } => {
-                let expr = self.parse_expression(Precedence::Unary)?;
-                Ok(Expression::UnaryOp(UnaryOp::Reference, Box::new(expr)))
-            }
-            Token::Asterisk { .. } => {
-                let expr = self.parse_expression(Precedence::Unary)?;
-                Ok(Expression::UnaryOp(UnaryOp::Dereference, Box::new(expr)))
-            }
+            Token::Minus { .. } => Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Negate)?)),
+            Token::Bang { .. } => Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Not)?)),
+            Token::Ampersand { .. } => Ok(Expression::Unary(parse_unary_expr(
+                self,
+                UnaryOp::Reference,
+            )?)),
+            Token::Asterisk { .. } => Ok(Expression::Unary(parse_unary_expr(
+                self,
+                UnaryOp::Dereference,
+            )?)),
             Token::LParen { .. } => {
                 if let Ok(Token::Comma { .. }) =
                     self.peek_ahead_by(2)
@@ -578,68 +574,126 @@ impl Parser {
         let token = self.consume_token();
 
         match token {
-            Ok(Token::Plus { .. }) => parse_binary_expression(self, left_expr, BinaryOp::Add),
-            Ok(Token::Minus { .. }) => parse_binary_expression(self, left_expr, BinaryOp::Subtract),
-            Ok(Token::Asterisk { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::Multiply)
-            }
-            Ok(Token::Slash { .. }) => parse_binary_expression(self, left_expr, BinaryOp::Divide),
-            Ok(Token::Percent { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::Modulus)
-            }
-            Ok(Token::DblEquals { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::Equal)
-            }
-            Ok(Token::BangEquals { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::NotEqual)
-            }
-            Ok(Token::LessThan { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::LessThan)
-            }
-            Ok(Token::LessThanEquals { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::LessEqual)
-            }
-            Ok(Token::GreaterThan { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::GreaterThan)
-            }
-            Ok(Token::GreaterThanEquals { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::GreaterEqual)
-            }
-            Ok(Token::Equals { .. }) => parse_binary_expression(self, left_expr, BinaryOp::Assign),
-            Ok(Token::PlusEquals { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::AddAssign)
-            }
-            Ok(Token::MinusEquals { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::SubtractAssign)
-            }
-            Ok(Token::AsteriskEquals { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::MultiplyAssign)
-            }
-            Ok(Token::SlashEquals { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::DivideAssign)
-            }
-            Ok(Token::PercentEquals { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::ModulusAssign)
-            }
-            Ok(Token::DblAmpersand { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::LogicalAnd)
-            }
-            Ok(Token::DblPipe { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::LogicalOr)
-            }
-            Ok(Token::Ampersand { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::BitwiseAnd)
-            }
-            Ok(Token::Pipe { .. }) => parse_binary_expression(self, left_expr, BinaryOp::BitwiseOr),
-            Ok(Token::Caret { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::BitwiseXor)
-            }
-            Ok(Token::DblLessThan { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::ShiftLeft)
-            }
-            Ok(Token::DblGreaterThan { .. }) => {
-                parse_binary_expression(self, left_expr, BinaryOp::ShiftRight)
-            }
+            Ok(Token::Plus { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Add,
+            )?)),
+            Ok(Token::Minus { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Subtract,
+            )?)),
+            Ok(Token::Asterisk { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Multiply,
+            )?)),
+            Ok(Token::Slash { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Divide,
+            )?)),
+            Ok(Token::Percent { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Modulus,
+            )?)),
+            Ok(Token::DblEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Equal,
+            )?)),
+            Ok(Token::BangEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::NotEqual,
+            )?)),
+            Ok(Token::LessThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::LessThan,
+            )?)),
+            Ok(Token::LessThanEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::LessEqual,
+            )?)),
+            Ok(Token::GreaterThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::GreaterThan,
+            )?)),
+            Ok(Token::GreaterThanEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::GreaterEqual,
+            )?)),
+            Ok(Token::Equals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Assign,
+            )?)),
+            Ok(Token::PlusEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::AddAssign,
+            )?)),
+            Ok(Token::MinusEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::SubtractAssign,
+            )?)),
+            Ok(Token::AsteriskEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::MultiplyAssign,
+            )?)),
+            Ok(Token::SlashEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::DivideAssign,
+            )?)),
+            Ok(Token::PercentEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::ModulusAssign,
+            )?)),
+            Ok(Token::DblAmpersand { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::LogicalAnd,
+            )?)),
+            Ok(Token::DblPipe { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::LogicalOr,
+            )?)),
+            Ok(Token::Ampersand { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::BitwiseAnd,
+            )?)),
+            Ok(Token::Pipe { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::BitwiseOr,
+            )?)),
+            Ok(Token::Caret { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::BitwiseXor,
+            )?)),
+            Ok(Token::DblLessThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::ShiftLeft,
+            )?)),
+            Ok(Token::DblGreaterThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::ShiftRight,
+            )?)),
             Ok(Token::QuestionMark { .. }) => {
                 Ok(Expression::Unwrap(UnwrapExpr::parse(self, left_expr)?))
             }
