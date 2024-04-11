@@ -14,9 +14,9 @@ use crate::{
     ast::{
         expression::{
             ArrayExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr, ExpressionStmt,
-            FieldAccessExpr, ForInStmt, GroupedExpr, IfStmt, IndexExpr, LetStmt, MethodCallExpr,
-            PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr, TypeCastExpr,
-            UnderscoreExpr, UnwrapExpr, WhileStmt,
+            FieldAccessExpr, ForInStmt, GroupedExpr, IfStmt, IndexExpr, LetStmt, MatchStmt,
+            MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr,
+            TypeCastExpr, UnderscoreExpr, UnwrapExpr, WhileStmt,
         },
         BinaryOp, Declaration, Definition, Delimiter, Expression, Identifier, Keyword, Literal,
         Separator, Statement, Type, UnaryOp,
@@ -642,16 +642,16 @@ impl Parser {
             }
             Ok(Token::QuestionMark { .. }) => {
                 Ok(Expression::Unwrap(UnwrapExpr::parse(self, left_expr)?))
-            } // TODO: or ternary
+            }
             Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
                 Ok(Expression::Range(RangeExpr::parse(self, left_expr)?))
             }
             Ok(Token::As { .. }) => Ok(Expression::TypeCast(TypeCastExpr::parse(self, left_expr)?)),
             Ok(Token::LParen { .. }) => {
-                // TOF
+                // TODO: use symbol table to check whether this could be a `TupleStructExpr`
                 Ok(Expression::Call(CallExpr::parse(self, left_expr)?))
             }
-            Ok(Token::LBrace { .. }) => Ok(Expression::Struct(StructExpr::parse(self)?)), // TODO: or match statement
+            Ok(Token::LBrace { .. }) => Ok(Expression::Struct(StructExpr::parse(self)?)),
             Ok(Token::LBracket { .. }) => Ok(Expression::Index(IndexExpr::parse(self, left_expr)?)),
             Ok(Token::Dot { .. }) => match self.unconsume() {
                 Some(Token::Identifier { .. } | Token::SelfKeyword { .. }) => {
@@ -713,7 +713,7 @@ impl Parser {
         match self.consume_token() {
             Ok(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
             Ok(Token::If { .. }) => Ok(Statement::If(IfStmt::parse(self)?)),
-            Ok(Token::Match { .. }) => self.parse_match_statement(),
+            Ok(Token::Match { .. }) => Ok(Statement::Match(MatchStmt::parse(self)?)),
             Ok(Token::For { .. }) => Ok(Statement::ForIn(ForInStmt::parse(self)?)),
             Ok(Token::While { .. }) => Ok(Statement::While(WhileStmt::parse(self)?)),
             Ok(Token::Import { .. }) => {
@@ -736,14 +736,6 @@ impl Parser {
                 Ok(Statement::Expression(ExpressionStmt::parse(self)?))
             }
         }
-    }
-
-    fn parse_match_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        todo!()
-    }
-
-    fn parse_while_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        todo!()
     }
 
     ///////////////////////////////////////////////////////////////////////////

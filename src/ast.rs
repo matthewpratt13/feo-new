@@ -5,9 +5,9 @@ pub mod types;
 
 use self::expression::{
     ArrayExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ContinueExpr,
-    ExpressionStmt, FieldAccessExpr, ForInStmt, GroupedExpr, IfStmt, IndexExpr, LetStmt,
+    ExpressionStmt, FieldAccessExpr, ForInStmt, GroupedExpr, IfStmt, IndexExpr, LetStmt, MatchStmt,
     MethodCallExpr, PathExpr, RangeExpr, ReturnExpr, StructExpr, TupleExpr, TupleIndexExpr,
-    TypeCastExpr, UnderscoreExpr, UnwrapExpr, WhileStmt,
+    TupleStructExpr, TypeCastExpr, UnderscoreExpr, UnwrapExpr, WhileStmt,
 };
 pub use self::types::*;
 
@@ -183,7 +183,7 @@ pub enum Expression {
     Array(ArrayExpr),
     Tuple(TupleExpr),
     Struct(StructExpr),
-    TupleStruct,
+    TupleStruct(TupleStructExpr),
     Block(BlockExpr),
 }
 
@@ -194,7 +194,7 @@ pub enum Expression {
 pub enum Statement {
     Let(LetStmt),
     If(IfStmt),       // condition, true, false
-    Match,            // condition, body
+    Match(MatchStmt), // scrutinee, body
     ForIn(ForInStmt), // variable, iterable, body
     While(WhileStmt), // while, condition, body
     Definition(Definition),
