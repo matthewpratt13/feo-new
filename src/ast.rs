@@ -199,7 +199,7 @@ pub enum Statement {
 }
 
 // TODO: parse:
-/// Enum representing the different declaration nodes in the AST.
+/// Enum representing the different declaration nodes (items) in the AST.
 #[derive(Debug, Clone)]
 pub enum Declaration {
     Import(ImportDecl),

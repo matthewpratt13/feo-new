@@ -8,6 +8,8 @@ use crate::{
 
 use super::Parser;
 
+///////////////////////////////////////////////////////////////////////////
+
 pub(crate) trait ParseDeclaration
 where
     Self: Sized,
@@ -21,6 +23,8 @@ where
 {
     fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
 }
+
+///////////////////////////////////////////////////////////////////////////
 
 impl ParseDeclaration for ImportDecl {
     fn parse(parser: &mut Parser) -> Result<ImportDecl, ErrorsEmitted> {
