@@ -7,7 +7,7 @@ use crate::{
     token::Token,
 };
 
-use super::{expression_collection::ParseExpressionCollection, Parser, Precedence};
+use super::{compound_expr::ParseCompoundExpr, Parser, Precedence};
 
 ///////////////////////////////////////////////////////////////////////////
 

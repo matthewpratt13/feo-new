@@ -2,8 +2,8 @@
 #![allow(unused_variables)]
 
 mod binary_expr;
+mod compound_expr;
 mod expression;
-mod expression_collection;
 mod item;
 mod precedence;
 mod statement;
@@ -28,8 +28,8 @@ use crate::{
 pub use self::precedence::Precedence;
 use self::{
     binary_expr::parse_binary_expr,
+    compound_expr::ParseCompoundExpr,
     expression::ParseExpression,
-    expression_collection::ParseExpressionCollection,
     item::{ParseDeclaration, ParseDefinition},
     statement::ParseStatement,
     unary_expr::parse_unary_expr,

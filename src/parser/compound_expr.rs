@@ -8,26 +8,26 @@ use crate::{
 
 use super::{Parser, Precedence};
 
-pub(crate) trait ParseExpressionCollection
+pub(crate) trait ParseCompoundExpr
 where
     Self: Sized,
 {
     fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
 }
 
-impl ParseExpressionCollection for PathExpr {
+impl ParseCompoundExpr for PathExpr {
     fn parse(parser: &mut Parser) -> Result<PathExpr, ErrorsEmitted> {
         todo!()
     }
 }
 
-impl ParseExpressionCollection for ClosureExpr {
+impl ParseCompoundExpr for ClosureExpr {
     fn parse(parser: &mut Parser) -> Result<ClosureExpr, ErrorsEmitted> {
         todo!()
     }
 }
 
-impl ParseExpressionCollection for ArrayExpr {
+impl ParseCompoundExpr for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<ArrayExpr, ErrorsEmitted> {
         let open_bracket = parser.expect_delimiter(Token::LBracket {
             delim: '[',
@@ -63,7 +63,7 @@ impl ParseExpressionCollection for ArrayExpr {
     }
 }
 
-impl ParseExpressionCollection for TupleExpr {
+impl ParseCompoundExpr for TupleExpr {
     fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
         let open_paren = parser.expect_delimiter(Token::LParen {
             delim: '(',
@@ -99,7 +99,7 @@ impl ParseExpressionCollection for TupleExpr {
     }
 }
 
-impl ParseExpressionCollection for BlockExpr {
+impl ParseCompoundExpr for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
@@ -136,7 +136,7 @@ impl ParseExpressionCollection for BlockExpr {
     }
 }
 
-impl ParseExpressionCollection for GroupedExpr {
+impl ParseCompoundExpr for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {
         let open_paren = parser.expect_delimiter(Token::RParen {
             delim: '(',
