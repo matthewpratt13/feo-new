@@ -400,10 +400,7 @@ impl Parser {
 
     /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let token = self.peek_current().ok_or({
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        let token = self.consume_token()?;
 
         match token {
             Token::Identifier { name, .. } => Ok(Expression::Path(PathExpr {
@@ -420,11 +417,6 @@ impl Parser {
             Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
             Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
             Token::LParen { .. } => {
-                let open_paren = self.expect_delimiter(Token::LParen {
-                    delim: '(',
-                    span: self.stream.span(),
-                })?;
-
                 let expr = self.parse_expression(Precedence::Lowest)?;
 
                 let close_paren = self.expect_delimiter(Token::RParen {
@@ -440,7 +432,7 @@ impl Parser {
             }
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "identifier, `Self`, `_`, literal or `(`".to_string(),
+                    expected: "identifier, `_`, literal or `(`".to_string(),
                     found: token,
                 });
 
@@ -452,7 +444,10 @@ impl Parser {
     /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses),
     /// where the respective token type appears at the beginning of an expression.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let token = self.consume_token()?; // get the current token and advance the parser
+        let token = self.peek_current().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
         match token {
             Token::IntLiteral { .. }
@@ -470,8 +465,8 @@ impl Parser {
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Separator::Underscore,
                     }))
-                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_current()
+                } else if let Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                    self.peek_ahead_by(1)
                 {
                     Ok(Expression::Path(PathExpr::parse(self)?))
                 } else {
@@ -484,8 +479,8 @@ impl Parser {
             }
 
             Token::Package { .. } | Token::Super { .. } => {
-                if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_current()
+                if let Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                    self.peek_ahead_by(1)
                 {
                     Ok(Expression::Path(PathExpr::parse(self)?))
                 } else {
@@ -508,7 +503,7 @@ impl Parser {
                 UnaryOp::Dereference,
             )?)),
             Token::LParen { .. } => {
-                if let Ok(Token::Comma { .. }) = self.peek_ahead_by(1) {
+                if let Ok(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     Ok(Expression::Tuple(TupleExpr::parse(self)?))
                 } else {
                     Ok(Expression::Grouped(GroupedExpr::parse(self)?))
@@ -521,7 +516,8 @@ impl Parser {
             }
             Token::DblDot { .. } => {
                 let expr = self.parse_expression(Precedence::Range)?;
-                self.consume_token()?;
+                self.consume_token()?; // move to the next token after parsing
+
                 Ok(Expression::Range(RangeExpr {
                     from_opt: None,
                     op: RangeOp::RangeExclusive,
@@ -530,7 +526,7 @@ impl Parser {
             }
             Token::DotDotEquals { .. } => {
                 let expr = self.parse_expression(Precedence::Range)?;
-                self.consume_token()?;
+                self.consume_token()?; // move to the next token after parsing
 
                 Ok(Expression::Range(RangeExpr {
                     from_opt: None,
@@ -540,7 +536,7 @@ impl Parser {
             }
             Token::Return { .. } => {
                 let expr = self.parse_expression(Precedence::Lowest)?;
-                self.consume_token()?;
+                self.consume_token()?; // move to the next token after parsing
 
                 Ok(Expression::Return(ReturnExpr {
                     kw_return: Keyword::Return,
