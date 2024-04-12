@@ -477,7 +477,7 @@ impl Parser {
                             Ok(Expression::MethodCall(MethodCallExpr::parse(self, expr)?))
                         }
                         Ok(Token::UIntLiteral { .. }) => {
-                            let expr = self.parse_expression(Precedence::Index)?;
+                            let expr = self.parse_expression(Precedence::FieldAccess)?;
                             Ok(Expression::TupleIndex(TupleIndexExpr::parse(self, expr)?))
                         }
                         _ => {
@@ -504,7 +504,7 @@ impl Parser {
                     let expr = self.parse_expression(Precedence::Range)?;
                     Ok(Expression::Range(RangeExpr::parse(self, expr)?))
                 } else if let Ok(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    let expr = self.parse_expression(Precedence::Lowest)?;
+                    let expr = self.parse_expression(Precedence::Path)?;
                     Ok(Expression::Struct(StructExpr::parse(self, expr)?))
                 } else {
                     self.parse_primary()
@@ -514,7 +514,7 @@ impl Parser {
             Token::SelfType { .. } => {
                 if let Ok(Token::DblColon { .. }) = self.peek_ahead_by(1) {
                     if let Ok(Token::Identifier { .. }) = self.peek_ahead_by(2) {
-                        let expr = self.parse_expression(Precedence::Call)?;
+                        let expr = self.parse_expression(Precedence::Path)?;
                         Ok(Expression::Call(CallExpr::parse(self, expr)?))
                     } else {
                         let expr = self.parse_expression(Precedence::Path)?;
@@ -529,7 +529,7 @@ impl Parser {
             Token::SelfKeyword { .. } => {
                 if let Ok(Token::DblColon { .. }) = self.peek_ahead_by(1) {
                     if let Ok(Token::Identifier { .. }) = self.peek_ahead_by(2) {
-                        let expr = self.parse_expression(Precedence::Call)?;
+                        let expr = self.parse_expression(Precedence::Path)?;
                         Ok(Expression::Call(CallExpr::parse(self, expr)?))
                     } else {
                         let expr = self.parse_expression(Precedence::Path)?;
