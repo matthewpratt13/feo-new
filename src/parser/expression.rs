@@ -21,7 +21,6 @@ where
 
 ///////////////////////////////////////////////////////////////////////////
 
-
 impl ParseExpression for MethodCallExpr {
     fn parse(parser: &mut Parser, expr: Expression) -> Result<MethodCallExpr, ErrorsEmitted> {
         todo!()
@@ -60,17 +59,17 @@ impl ParseExpression for CallExpr {
         let open_paren = parser.expect_delimiter(Token::LParen {
             delim: '(',
             span: parser.stream.span(),
-        })?;
+        });
 
         // parse arguments – separated by commas – until a closing parenthesis
         loop {
-            if let Some(Token::RParen { delim: ')', .. }) = parser.peek_current() {
+            if let Some(Token::RParen {  .. }) = parser.peek_current() {
                 // end of arguments
                 parser.consume_token()?;
                 break;
             }
 
-            let arg_expr = parser.parse_expression(Precedence::Lowest);
+            let arg_expr = parser.parse_expression(Precedence::Call);
             args.push(arg_expr?);
 
             // error handling
@@ -84,23 +83,25 @@ impl ParseExpression for CallExpr {
                         expected: "`,` or `)`".to_string(),
                         found: token?,
                     });
-
-                    return Err(ErrorsEmitted(()));
                 }
             }
         }
 
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
+
         if args.is_empty() {
             Ok(CallExpr {
-                open_paren,
                 callee: Box::new(callee),
+                open_paren: open_paren?,
                 args_opt: None,
                 close_paren: Delimiter::RParen,
             })
         } else {
             Ok(CallExpr {
-                open_paren,
                 callee: Box::new(callee),
+                open_paren: open_paren?,
                 args_opt: Some(args),
                 close_paren: Delimiter::RParen,
             })

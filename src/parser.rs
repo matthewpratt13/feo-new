@@ -564,10 +564,7 @@ impl Parser {
     /// Parse infix expressions (e.g., binary operators), where the respective token type
     /// appears in the middle of an expression.
     fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let token = self.peek_current().ok_or({
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        let token = self.consume_token()?;
 
         match token {
             Token::Plus { .. } => Ok(Expression::Binary(parse_binary_expr(
@@ -837,6 +834,25 @@ impl Parser {
     /// HELPERS
     ///////////////////////////////////////////////////////////////////////////
 
+    /// Peek at the token at the current position.
+    fn peek_current(&self) -> Option<Token> {
+        self.stream.tokens().get(self.current).cloned()
+    }
+
+    /// Peek at the token `num_tokens` ahead of the token at the current position.
+    fn peek_ahead_by(&mut self, num_tokens: usize) -> Result<Token, ErrorsEmitted> {
+        let i = self.current + num_tokens;
+
+        let tokens = self.stream.tokens();
+
+        tokens.get(i).cloned().ok_or({
+            self.log_error(ParserErrorKind::TokenIndexOutOfBounds {
+                len: tokens.len(),
+                i,
+            });
+            ErrorsEmitted(())
+        })
+    }
     /// Advance the parser and return the current token.
     fn consume_token(&mut self) -> Result<Token, ErrorsEmitted> {
         if let Some(t) = self.peek_current() {
@@ -853,6 +869,7 @@ impl Parser {
         if self.current > 0 {
             self.current -= 1;
         }
+
         self.peek_current()
     }
 
@@ -967,26 +984,6 @@ impl Parser {
                 Err(ErrorsEmitted(()))
             }
         }
-    }
-
-    /// Peek at the token at the current position.
-    fn peek_current(&self) -> Option<Token> {
-        self.stream.tokens().get(self.current).cloned()
-    }
-
-    /// Peek at the token `num_tokens` ahead of the token at the current position.
-    fn peek_ahead_by(&mut self, num_tokens: usize) -> Result<Token, ErrorsEmitted> {
-        let i = self.current + num_tokens;
-
-        let tokens = self.stream.tokens();
-
-        tokens.get(i).cloned().ok_or({
-            self.log_error(ParserErrorKind::TokenIndexOutOfBounds {
-                len: tokens.len(),
-                i,
-            });
-            ErrorsEmitted(())
-        })
     }
 
     /// Advance the parser by one if the expected token matches the current one
