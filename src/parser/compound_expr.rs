@@ -1,8 +1,9 @@
 use crate::{
     ast::{
-        ArrayExpr, BlockExpr, ClosureExpr, Delimiter, Expression, GroupedExpr, Statement, TupleExpr,
+        ArrayExpr, BinaryOp, BlockExpr, ClosureExpr, ClosureParams, Delimiter, Expression,
+        GroupedExpr, Identifier, Param, Separator, Statement, TupleExpr,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
@@ -17,7 +18,78 @@ where
 
 impl ParseCompoundExpr for ClosureExpr {
     fn parse(parser: &mut Parser) -> Result<ClosureExpr, ErrorsEmitted> {
-        todo!()
+        let token = parser.consume_token();
+
+        let params = match token {
+            Ok(Token::Pipe { .. }) => {
+                let mut vec: Vec<Param> = Vec::new();
+
+                let curr_token = parser.peek_current().ok_or({
+                    parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                    ErrorsEmitted(())
+                })?;
+
+                while !parser.is_expected_token(&Token::Pipe {
+                    punc: '|',
+                    span: parser.stream.span(),
+                }) {
+                    let id = if let Ok(Token::Identifier { name, .. }) = parser.consume_token() {
+                        Ok(Identifier(name))
+                    } else {
+                        parser.log_error(ParserErrorKind::UnexpectedToken {
+                            expected: "identifier".to_string(),
+                            found: curr_token.clone(),
+                        });
+                        Err(ErrorsEmitted(()))
+                    };
+
+                    let ty = if let Ok(t) = parser.get_type() {
+                        Some(t)
+                    } else {
+                        None
+                    };
+
+                    let param = Param { id: id?, ty };
+
+                    vec.push(param);
+                }
+
+                Ok(ClosureParams::Some(
+                    BinaryOp::BitwiseOr,
+                    vec,
+                    BinaryOp::BitwiseOr,
+                ))
+            }
+            Ok(Token::DblPipe { .. }) => Ok(ClosureParams::None(BinaryOp::LogicalOr)),
+            _ => {
+                parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "`|` or `||`".to_string(),
+                    found: token?,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        };
+
+        let return_type_opt = if parser.is_expected_token(&Token::ThinArrow {
+            punc: "->".to_string(),
+            span: parser.stream.span(),
+        }) {
+            parser.consume_token()?;
+
+            let ty = parser.get_type();
+
+            Some((Separator::ThinArrow, ty?))
+        } else {
+            None
+        };
+
+        let expression = parser.parse_expression(Precedence::Lowest);
+
+        Ok(ClosureExpr {
+            params: params?,
+            return_type_opt,
+            expression: Box::new(expression?),
+        })
     }
 }
 
