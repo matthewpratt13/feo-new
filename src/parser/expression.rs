@@ -63,7 +63,7 @@ impl ParseExpression for CallExpr {
 
         // parse arguments – separated by commas – until a closing parenthesis
         loop {
-            if let Some(Token::RParen {  .. }) = parser.peek_current() {
+            if let Some(Token::RParen { .. }) = parser.peek_current() {
                 // end of arguments
                 parser.consume_token()?;
                 break;
@@ -163,14 +163,14 @@ impl ParseExpression for TypeCastExpr {
         let kw_as = parser.expect_keyword(Token::As {
             name: "as".to_string(),
             span: parser.stream.span(),
-        })?;
+        });
 
-        let new_type = parser.get_type()?;
+        let new_type = parser.get_type();
 
         Ok(TypeCastExpr {
             operand: Box::new(operand),
-            kw_as,
-            new_type,
+            kw_as: kw_as?,
+            new_type: new_type?,
         })
     }
 }
