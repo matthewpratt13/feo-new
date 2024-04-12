@@ -491,10 +491,9 @@ impl Parser {
 
             Token::Minus { .. } => Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Negate)?)),
             Token::Bang { .. } => Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Not)?)),
-            Token::Ampersand { .. } => Ok(Expression::Unary(parse_unary_expr(
-                self,
-                UnaryOp::Reference,
-            )?)),
+            Token::Ampersand { .. } | Token::AmpersandMut { .. } => Ok(Expression::Unary(
+                parse_unary_expr(self, UnaryOp::Reference)?,
+            )),
             Token::Asterisk { .. } => Ok(Expression::Unary(parse_unary_expr(
                 self,
                 UnaryOp::Dereference,
