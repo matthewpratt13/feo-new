@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         CallExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr, MethodCallExpr,
-        PathExpr, RangeExpr, StructExpr, StructField, TupleIndexExpr, TupleStructExpr,
+        PathExpr, RangeExpr, RangeOp, StructExpr, StructField, TupleIndexExpr, TupleStructExpr,
         TypeCastExpr, UnwrapExpr, UnwrapOp,
     },
     error::{ErrorsEmitted, ParserErrorKind},
@@ -325,8 +325,43 @@ impl ParseExpression for TypeCastExpr {
 }
 
 impl ParseExpression for RangeExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<RangeExpr, ErrorsEmitted> {
-        todo!()
+    fn parse(parser: &mut Parser, from: Expression) -> Result<RangeExpr, ErrorsEmitted> {
+        let token = parser.consume_token();
+
+        let op = if let Ok(t) = token {
+            match t {
+                Token::DblDot { .. } => Ok(RangeOp::RangeExclusive),
+                Token::DotDotEquals { .. } => Ok(RangeOp::RangeInclusive),
+                _ => {
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "range operator".to_string(),
+                        found: t,
+                    });
+                    Err(ErrorsEmitted(()))
+                }
+            }
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            Err(ErrorsEmitted(()))
+        };
+
+        parser.consume_token()?;
+
+        let to = parser.parse_expression(Precedence::Range);
+
+        if to.is_ok() {
+            Ok(RangeExpr {
+                from_opt: Some(Box::new(from)),
+                op: op?,
+                to_opt: Some(Box::new(to?)),
+            })
+        } else {
+            Ok(RangeExpr {
+                from_opt: Some(Box::new(from)),
+                op: op?,
+                to_opt: None,
+            })
+        }
     }
 }
 
@@ -345,14 +380,14 @@ impl ParseExpression for StructExpr {
             let token = parser.consume_token();
 
             let field_name = match token {
-                Ok(Token::Identifier { name, .. }) => name,
+                Ok(Token::Identifier { name, .. }) => Ok(name),
                 Ok(Token::RBrace { .. }) => break, // end of struct
                 _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "identifier or `}`".to_string(),
                         found: token?,
                     });
-                    return Err(ErrorsEmitted(()));
+                    Err(ErrorsEmitted(()))
                 }
             };
 
@@ -366,7 +401,7 @@ impl ParseExpression for StructExpr {
 
             // push field to list of fields
             fields.push(StructField {
-                name: Identifier(field_name),
+                name: Identifier(field_name?),
                 value: field_value?,
             });
 

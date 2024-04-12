@@ -643,13 +643,13 @@ impl Parser {
                     Ok(Expression::Range(RangeExpr {
                         from_opt: None,
                         op: RangeOp::RangeExclusive,
-                        to: Some(Box::new(expr)),
+                        to_opt: Some(Box::new(expr)),
                     }))
                 } else {
                     Ok(Expression::Range(RangeExpr {
                         from_opt: None,
                         op: RangeOp::RangeExclusive,
-                        to: None,
+                        to_opt: None,
                     }))
                 }
             }
@@ -660,7 +660,7 @@ impl Parser {
                 Ok(Expression::Range(RangeExpr {
                     from_opt: None,
                     op: RangeOp::RangeInclusive,
-                    to: Some(Box::new(expr)),
+                    to_opt: Some(Box::new(expr)),
                 }))
             }
             Token::Return { .. } => {
