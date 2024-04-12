@@ -698,6 +698,7 @@ impl Parser {
                 // TODO: use symbol table to check whether this could be a `TupleStructExpr`
                 Ok(Expression::Call(CallExpr::parse(self, left_expr)?))
             }
+            Token::LBracket { .. } => Ok(Expression::Index(IndexExpr::parse(self, left_expr)?)),
             Token::LBrace { .. } => match left_expr {
                 Expression::Path(_) => Ok(Expression::Struct(StructExpr::parse(self, left_expr)?)),
 
@@ -710,7 +711,6 @@ impl Parser {
                     Err(ErrorsEmitted(()))
                 }
             },
-            Token::LBracket { .. } => Ok(Expression::Index(IndexExpr::parse(self, left_expr)?)),
             Token::Dot { .. } => match left_expr {
                 Expression::Path(_) => {
                     let next_token = self.peek_ahead_by(1)?;

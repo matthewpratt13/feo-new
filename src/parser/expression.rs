@@ -114,7 +114,7 @@ impl ParseExpression for IndexExpr {
         let open_bracket = parser.expect_delimiter(Token::LBracket {
             delim: '[',
             span: parser.stream.span(),
-        })?;
+        });
 
         let token = parser.consume_token();
 
@@ -135,13 +135,13 @@ impl ParseExpression for IndexExpr {
         let close_bracket = parser.expect_delimiter(Token::RBracket {
             delim: ']',
             span: parser.stream.span(),
-        })?;
+        });
 
         Ok(IndexExpr {
             array: Box::new(array),
-            open_bracket,
+            open_bracket: open_bracket?,
             index,
-            close_bracket,
+            close_bracket: close_bracket?,
         })
     }
 }
