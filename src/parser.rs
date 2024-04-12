@@ -504,8 +504,23 @@ impl Parser {
                     let expr = self.parse_expression(Precedence::Range)?;
                     Ok(Expression::Range(RangeExpr::parse(self, expr)?))
                 } else if let Ok(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    let expr = self.parse_expression(Precedence::Path)?;
-                    Ok(Expression::Struct(StructExpr::parse(self, expr)?))
+                    let expr = self.parse_expression(Precedence::Lowest)?;
+                    match expr {
+                        Expression::Path(_) => {
+                            Ok(Expression::Struct(StructExpr::parse(self, expr)?))
+                        }
+                        _ => {
+                            let token = self.peek_current().ok_or({
+                                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                                ErrorsEmitted(())
+                            })?;
+                            self.log_error(ParserErrorKind::UnexpectedToken {
+                                expected: "path expression".to_string(),
+                                found: token,
+                            });
+                            Err(ErrorsEmitted(()))
+                        }
+                    }
                 } else {
                     self.parse_primary()
                 }
@@ -514,7 +529,7 @@ impl Parser {
             Token::SelfType { .. } => {
                 if let Ok(Token::DblColon { .. }) = self.peek_ahead_by(1) {
                     if let Ok(Token::Identifier { .. }) = self.peek_ahead_by(2) {
-                        let expr = self.parse_expression(Precedence::Path)?;
+                        let expr = self.parse_expression(Precedence::Call)?;
                         Ok(Expression::Call(CallExpr::parse(self, expr)?))
                     } else {
                         let expr = self.parse_expression(Precedence::Path)?;
@@ -529,7 +544,7 @@ impl Parser {
             Token::SelfKeyword { .. } => {
                 if let Ok(Token::DblColon { .. }) = self.peek_ahead_by(1) {
                     if let Ok(Token::Identifier { .. }) = self.peek_ahead_by(2) {
-                        let expr = self.parse_expression(Precedence::Path)?;
+                        let expr = self.parse_expression(Precedence::Call)?;
                         Ok(Expression::Call(CallExpr::parse(self, expr)?))
                     } else {
                         let expr = self.parse_expression(Precedence::Path)?;
