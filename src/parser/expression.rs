@@ -67,8 +67,80 @@ impl ParseExpression for PathExpr {
 }
 
 impl ParseExpression for MethodCallExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<MethodCallExpr, ErrorsEmitted> {
-        todo!()
+    fn parse(parser: &mut Parser, receiver: Expression) -> Result<MethodCallExpr, ErrorsEmitted> {
+        let mut args: Vec<Expression> = Vec::new();
+
+        let dot = parser.expect_separator(Token::Dot {
+            punc: '.',
+            span: parser.stream.span(),
+        })?;
+
+        let token = parser.consume_token()?;
+
+        let method_name = if let Token::Identifier { name, .. } = token {
+            Ok(Identifier(name))
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "identifier after `.`".to_string(),
+                found: token,
+            });
+            Err(ErrorsEmitted(()))
+        };
+
+        let open_paren = parser.expect_delimiter(Token::LParen {
+            delim: '(',
+            span: parser.stream.span(),
+        });
+
+        // parse arguments – separated by commas – until a closing parenthesis
+        loop {
+            if let Some(Token::RParen { .. }) = parser.peek_current() {
+                // end of arguments
+                parser.consume_token()?;
+                break;
+            }
+
+            let arg_expr = parser.parse_expression(Precedence::Lowest);
+            args.push(arg_expr?);
+
+            // error handling
+            let token = parser.consume_token();
+
+            match token {
+                Ok(Token::Comma { .. }) => continue, // more arguments
+                Ok(Token::RParen { .. }) => break,   // end of call expression
+                _ => {
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `)`".to_string(),
+                        found: token?,
+                    });
+                }
+            }
+        }
+
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
+
+        if args.is_empty() {
+            Ok(MethodCallExpr {
+                receiver: Box::new(receiver),
+                dot,
+                method_name: method_name?,
+                open_paren: open_paren?,
+                args_opt: None,
+                close_paren: Delimiter::RParen,
+            })
+        } else {
+            Ok(MethodCallExpr {
+                receiver: Box::new(receiver),
+                dot,
+                method_name: method_name?,
+                open_paren: open_paren?,
+                args_opt: Some(args),
+                close_paren: Delimiter::RParen,
+            })
+        }
     }
 }
 
