@@ -236,14 +236,14 @@ impl ParseExpression for IndexExpr {
         let token = parser.consume_token();
 
         let index = if let Ok(Token::UIntLiteral { value, .. }) = token {
-            value
+            Ok(value)
         } else if let Ok(_) = token {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "array index".to_string(),
                 found: token?,
             });
 
-            return Err(ErrorsEmitted(()));
+            Err(ErrorsEmitted(()))
         } else {
             parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
             return Err(ErrorsEmitted(()));
@@ -257,15 +257,39 @@ impl ParseExpression for IndexExpr {
         Ok(IndexExpr {
             array: Box::new(array),
             open_bracket,
-            index,
+            index: index?,
             close_bracket: close_bracket?,
         })
     }
 }
 
 impl ParseExpression for TupleIndexExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<TupleIndexExpr, ErrorsEmitted> {
-        todo!()
+    fn parse(parser: &mut Parser, operand: Expression) -> Result<TupleIndexExpr, ErrorsEmitted> {
+        let dot = parser.expect_separator(Token::Dot {
+            punc: '.',
+            span: parser.stream.span(),
+        })?;
+
+        let token = parser.consume_token();
+
+        let index = if let Ok(Token::UIntLiteral { value, .. }) = token {
+            Ok(value)
+        } else if let Ok(_) = token {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "tuple index".to_string(),
+                found: token?,
+            });
+            Err(ErrorsEmitted(()))
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            Err(ErrorsEmitted(()))
+        };
+
+        Ok(TupleIndexExpr {
+            operand: Box::new(operand),
+            dot,
+            index: index?,
+        })
     }
 }
 
