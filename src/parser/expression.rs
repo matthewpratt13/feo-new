@@ -59,13 +59,13 @@ impl ParseExpression for CallExpr {
         let open_paren = parser.expect_delimiter(Token::LParen {
             delim: '(',
             span: parser.stream.span(),
-        });
+        })?;
 
         // parse arguments – separated by commas – until a closing parenthesis
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
                 // end of arguments
-                let _ = parser.consume_token();
+                parser.consume_token()?;
                 break;
             }
 
@@ -94,14 +94,14 @@ impl ParseExpression for CallExpr {
         if args.is_empty() {
             Ok(CallExpr {
                 callee: Box::new(callee),
-                open_paren: open_paren?,
+                open_paren,
                 args_opt: None,
                 close_paren: Delimiter::RParen,
             })
         } else {
             Ok(CallExpr {
                 callee: Box::new(callee),
-                open_paren: open_paren?,
+                open_paren,
                 args_opt: Some(args),
                 close_paren: Delimiter::RParen,
             })
@@ -114,7 +114,7 @@ impl ParseExpression for IndexExpr {
         let open_bracket = parser.expect_delimiter(Token::LBracket {
             delim: '[',
             span: parser.stream.span(),
-        });
+        })?;
 
         let token = parser.consume_token();
 
@@ -139,7 +139,7 @@ impl ParseExpression for IndexExpr {
 
         Ok(IndexExpr {
             array: Box::new(array),
-            open_bracket: open_bracket?,
+            open_bracket,
             index,
             close_bracket: close_bracket?,
         })
@@ -163,13 +163,13 @@ impl ParseExpression for TypeCastExpr {
         let kw_as = parser.expect_keyword(Token::As {
             name: "as".to_string(),
             span: parser.stream.span(),
-        });
+        })?;
 
         let new_type = parser.get_type();
 
         Ok(TypeCastExpr {
             operand: Box::new(operand),
-            kw_as: kw_as?,
+            kw_as,
             new_type: new_type?,
         })
     }
@@ -188,7 +188,7 @@ impl ParseExpression for StructExpr {
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),
-        });
+        })?;
 
         // parse struct fields – separated by commas – until a closing brace
         loop {
@@ -247,7 +247,7 @@ impl ParseExpression for StructExpr {
 
         Ok(StructExpr {
             path: Box::new(path),
-            open_brace: open_brace?,
+            open_brace,
             fields,
             close_brace: close_brace?,
         })
@@ -261,13 +261,13 @@ impl ParseExpression for TupleStructExpr {
         let open_paren = parser.expect_delimiter(Token::LParen {
             delim: '(',
             span: parser.stream.span(),
-        });
+        })?;
 
         // parse struct fields – separated by commas – until a closing brace
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
                 // end of fields
-                let _ = parser.consume_token();
+                parser.consume_token()?;
                 break;
             }
 
@@ -295,7 +295,7 @@ impl ParseExpression for TupleStructExpr {
 
         Ok(TupleStructExpr {
             path: Box::new(path),
-            open_paren: open_paren?,
+            open_paren,
             elements: fields,
             close_paren: Delimiter::RParen,
         })

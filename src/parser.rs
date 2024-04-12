@@ -444,10 +444,7 @@ impl Parser {
     /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses),
     /// where the respective token type appears at the beginning of an expression.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let token = self.peek_current().ok_or({
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        let token = self.consume_token()?;
 
         match token {
             Token::IntLiteral { .. }
@@ -465,8 +462,8 @@ impl Parser {
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Separator::Underscore,
                     }))
-                } else if let Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_ahead_by(1)
+                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                    self.peek_current()
                 {
                     Ok(Expression::Path(PathExpr::parse(self)?))
                 } else {
@@ -479,13 +476,13 @@ impl Parser {
             }
 
             Token::Package { .. } | Token::Super { .. } => {
-                if let Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_ahead_by(1)
+                if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                    self.peek_current()
                 {
                     Ok(Expression::Path(PathExpr::parse(self)?))
                 } else {
                     self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "path expression".to_string(),
+                        expected: "path separator".to_string(),
                         found: token,
                     });
                     Err(ErrorsEmitted(()))
@@ -503,7 +500,7 @@ impl Parser {
                 UnaryOp::Dereference,
             )?)),
             Token::LParen { .. } => {
-                if let Ok(Token::Comma { .. }) = self.peek_ahead_by(2) {
+                if let Ok(Token::Comma { .. }) = self.peek_ahead_by(1) {
                     Ok(Expression::Tuple(TupleExpr::parse(self)?))
                 } else {
                     Ok(Expression::Grouped(GroupedExpr::parse(self)?))
@@ -516,7 +513,6 @@ impl Parser {
             }
             Token::DblDot { .. } => {
                 let expr = self.parse_expression(Precedence::Range)?;
-                self.consume_token()?; // move to the next token after parsing
 
                 Ok(Expression::Range(RangeExpr {
                     from_opt: None,
@@ -526,7 +522,6 @@ impl Parser {
             }
             Token::DotDotEquals { .. } => {
                 let expr = self.parse_expression(Precedence::Range)?;
-                self.consume_token()?; // move to the next token after parsing
 
                 Ok(Expression::Range(RangeExpr {
                     from_opt: None,
@@ -536,7 +531,6 @@ impl Parser {
             }
             Token::Return { .. } => {
                 let expr = self.parse_expression(Precedence::Lowest)?;
-                self.consume_token()?; // move to the next token after parsing
 
                 Ok(Expression::Return(ReturnExpr {
                     kw_return: Keyword::Return,
@@ -544,15 +538,13 @@ impl Parser {
                 }))
             }
 
-            Token::Break { name, span } => {
-                let kw_break = self.expect_keyword(Token::Break { name, span })?;
-                Ok(Expression::Break(BreakExpr { kw_break }))
-            }
+            Token::Break { name, .. } => Ok(Expression::Break(BreakExpr {
+                kw_break: Keyword::Break,
+            })),
 
-            Token::Continue { name, span } => {
-                let kw_continue = self.expect_keyword(Token::Continue { name, span })?;
-                Ok(Expression::Continue(ContinueExpr { kw_continue }))
-            }
+            Token::Continue { name, .. } => Ok(Expression::Continue(ContinueExpr {
+                kw_continue: Keyword::Continue,
+            })),
 
             _ => {
                 self.log_error(ParserErrorKind::InvalidToken { token });
@@ -699,10 +691,9 @@ impl Parser {
                 Expression::Path(_) => Ok(Expression::Call(CallExpr::parse(self, left_expr)?)),
 
                 _ => {
-                    let next_token = self.peek_ahead_by(1)?;
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "path expression".to_string(),
-                        found: next_token,
+                        found: token,
                     });
                     Err(ErrorsEmitted(()))
                 }
@@ -712,18 +703,22 @@ impl Parser {
                 Expression::Path(_) => Ok(Expression::Struct(StructExpr::parse(self, left_expr)?)),
 
                 _ => {
-                    let next_token = self.peek_ahead_by(1)?;
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "path expression".to_string(),
-                        found: next_token,
+                        found: token,
                     });
+
                     Err(ErrorsEmitted(()))
                 }
             },
             Token::Dot { .. } => match left_expr {
                 Expression::Path(_) => {
-                    let next_token = self.peek_ahead_by(1)?;
-                    match next_token {
+                    let curr_token = self.peek_current().ok_or({
+                        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                        ErrorsEmitted(())
+                    })?;
+
+                    match curr_token {
                         Token::LParen { .. } => Ok(Expression::MethodCall(MethodCallExpr::parse(
                             self, left_expr,
                         )?)),
@@ -737,10 +732,14 @@ impl Parser {
                 }
 
                 _ => {
-                    let next_token = self.peek_ahead_by(1)?;
+                    let curr_token = self.peek_current().ok_or({
+                        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                        ErrorsEmitted(())
+                    })?;
+
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "identifier or tuple index after `.`".to_string(),
-                        found: next_token,
+                        found: curr_token,
                     });
                     Err(ErrorsEmitted(()))
                 }

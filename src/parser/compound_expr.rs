@@ -1,6 +1,7 @@
 use crate::{
     ast::{
-        ArrayExpr, BlockExpr, ClosureExpr, Expression, GroupedExpr, PathExpr, Statement, TupleExpr,
+        ArrayExpr, BlockExpr, ClosureExpr, Delimiter, Expression, GroupedExpr, PathExpr, Statement,
+        TupleExpr,
     },
     error::ErrorsEmitted,
     token::Token,
@@ -29,11 +30,6 @@ impl ParseCompoundExpr for ClosureExpr {
 
 impl ParseCompoundExpr for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<ArrayExpr, ErrorsEmitted> {
-        let open_bracket = parser.expect_delimiter(Token::LBracket {
-            delim: '[',
-            span: parser.stream.span(),
-        })?;
-
         let mut elements: Vec<Expression> = Vec::new();
 
         while !parser.is_expected_token(&Token::RBracket {
@@ -53,23 +49,18 @@ impl ParseCompoundExpr for ArrayExpr {
         let close_bracket = parser.expect_delimiter(Token::RBracket {
             delim: ']',
             span: parser.stream.span(),
-        })?;
+        });
 
         Ok(ArrayExpr {
-            open_bracket,
+            open_bracket: Delimiter::LBrace,
             elements,
-            close_bracket,
+            close_bracket: close_bracket?,
         })
     }
 }
 
 impl ParseCompoundExpr for TupleExpr {
     fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
-
         let mut elements: Vec<Expression> = Vec::new();
 
         while !parser.is_expected_token(&Token::RParen {
@@ -89,23 +80,18 @@ impl ParseCompoundExpr for TupleExpr {
         let close_paren = parser.expect_delimiter(Token::RParen {
             delim: ')',
             span: parser.stream.span(),
-        })?;
+        });
 
         Ok(TupleExpr {
-            open_paren,
+            open_paren: Delimiter::LParen,
             elements,
-            close_paren,
+            close_paren: close_paren?,
         })
     }
 }
 
 impl ParseCompoundExpr for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
-
         let mut statements: Vec<Statement> = Vec::new();
 
         // parse expressions until a closing brace
@@ -125,35 +111,30 @@ impl ParseCompoundExpr for BlockExpr {
         let close_brace = parser.expect_delimiter(Token::RBrace {
             delim: '}',
             span: parser.stream.span(),
-        })?;
+        });
 
         Ok(BlockExpr {
-            open_brace,
+            open_brace: Delimiter::LBrace,
             statements,
             terminal_expression_opt,
-            close_brace,
+            close_brace: close_brace?,
         })
     }
 }
 
 impl ParseCompoundExpr for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {
-        let open_paren = parser.expect_delimiter(Token::RParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
-
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
         let close_paren = parser.expect_delimiter(Token::RParen {
             delim: ')',
             span: parser.stream.span(),
-        })?;
+        });
 
         Ok(GroupedExpr {
-            open_paren,
+            open_paren: Delimiter::LParen,
             expression: Box::new(expression),
-            close_paren,
+            close_paren: close_paren?,
         })
     }
 }
