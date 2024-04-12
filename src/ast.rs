@@ -127,7 +127,7 @@ pub enum BinaryOp {
 
 /// Struct representing the unwrap operator `?`.
 #[derive(Debug, Clone)]
-pub struct UnwrapOp(());
+pub struct UnwrapOp(pub ());
 
 /// Enum representing the different range operator AST nodes.
 #[derive(Debug, Clone, PartialEq)]

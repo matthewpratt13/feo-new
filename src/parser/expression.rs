@@ -2,7 +2,7 @@ use crate::{
     ast::{
         CallExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr, MethodCallExpr,
         PathExpr, RangeExpr, StructExpr, StructField, TupleIndexExpr, TupleStructExpr,
-        TypeCastExpr, UnwrapExpr,
+        TypeCastExpr, UnwrapExpr, UnwrapOp,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -295,7 +295,15 @@ impl ParseExpression for TupleIndexExpr {
 
 impl ParseExpression for UnwrapExpr {
     fn parse(parser: &mut Parser, expr: Expression) -> Result<UnwrapExpr, ErrorsEmitted> {
-        todo!()
+        parser.expect_token(Token::QuestionMark {
+            punc: '?',
+            span: parser.stream.span(),
+        })?;
+
+        Ok(UnwrapExpr {
+            expression: Box::new(expr),
+            op: UnwrapOp(()),
+        })
     }
 }
 
