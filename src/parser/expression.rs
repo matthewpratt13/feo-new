@@ -1,6 +1,8 @@
 use crate::{
     ast::{
-        CallExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, StructExpr, StructField, TupleIndexExpr, TupleStructExpr, TypeCastExpr, UnwrapExpr
+        CallExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr, MethodCallExpr,
+        PathExpr, RangeExpr, StructExpr, StructField, TupleIndexExpr, TupleStructExpr,
+        TypeCastExpr, UnwrapExpr,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -21,7 +23,46 @@ where
 
 impl ParseExpression for PathExpr {
     fn parse(parser: &mut Parser, expr: Expression) -> Result<PathExpr, ErrorsEmitted> {
-        todo!()
+        let mut tree: Vec<Identifier> = Vec::new();
+
+        let token = parser.peek_current().ok_or({
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
+
+        let root = match expr {
+            Expression::Path(p) => p.root,
+            _ => {
+                parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "path expression prefix".to_string(),
+                    found: token,
+                });
+
+                return Err(ErrorsEmitted(()));
+            }
+        };
+
+        parser.consume_token()?;
+
+        while let Ok(Token::DblColon { .. }) = parser.consume_token() {
+            if let Ok(Token::Identifier { name, .. }) = parser.consume_token() {
+                tree.push(Identifier(name));
+            } else {
+                break;
+            }
+        }
+
+        if tree.is_empty() {
+            Ok(PathExpr {
+                root,
+                tree_opt: None,
+            })
+        } else {
+            Ok(PathExpr {
+                root,
+                tree_opt: Some(tree),
+            })
+        }
     }
 }
 

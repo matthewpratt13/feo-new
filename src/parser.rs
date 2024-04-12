@@ -536,8 +536,11 @@ impl Parser {
                         Ok(Expression::Path(PathExpr::parse(self, expr)?))
                     }
                 } else {
-                    let expr = self.parse_expression(Precedence::Path)?;
-                    Ok(Expression::Path(PathExpr::parse(self, expr)?))
+                    self.consume_token()?;
+                    Ok(Expression::Path(PathExpr {
+                        root: PathPrefix::SelfType,
+                        tree_opt: None,
+                    }))
                 }
             }
 
@@ -560,27 +563,48 @@ impl Parser {
                             Ok(Expression::FieldAccess(FieldAccessExpr::parse(self, expr)?))
                         }
                     } else {
-                        let expr = self.parse_expression(Precedence::Path)?;
-                        Ok(Expression::Path(PathExpr::parse(self, expr)?))
+                        self.consume_token()?;
+                        Ok(Expression::Path(PathExpr {
+                            root: PathPrefix::SelfKw,
+                            tree_opt: None,
+                        }))
                     }
                 } else {
-                    let expr = self.parse_expression(Precedence::Path)?;
-                    Ok(Expression::Path(PathExpr::parse(self, expr)?))
+                    self.consume_token()?;
+                    Ok(Expression::Path(PathExpr {
+                        root: PathPrefix::SelfKw,
+                        tree_opt: None,
+                    }))
                 }
             }
 
-            Token::Package { .. } | Token::Super { .. } => {
+            Token::Package { .. } => {
                 if let Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_ahead_by(1)
                 {
                     let expr = self.parse_expression(Precedence::Path)?;
                     Ok(Expression::Path(PathExpr::parse(self, expr)?))
                 } else {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "path separator".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted(()))
+                    self.consume_token()?;
+                    Ok(Expression::Path(PathExpr {
+                        root: PathPrefix::Package,
+                        tree_opt: None,
+                    }))
+                }
+            }
+
+            Token::Super { .. } => {
+                if let Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                    self.peek_ahead_by(1)
+                {
+                    let expr = self.parse_expression(Precedence::Path)?;
+                    Ok(Expression::Path(PathExpr::parse(self, expr)?))
+                } else {
+                    self.consume_token()?;
+                    Ok(Expression::Path(PathExpr {
+                        root: PathPrefix::Super,
+                        tree_opt: None,
+                    }))
                 }
             }
 
@@ -989,6 +1013,20 @@ impl Parser {
                 });
                 Err(ErrorsEmitted(()))
             }
+        }
+    }
+
+    fn expect_identifier(&mut self, expected: Token) -> Result<Identifier, ErrorsEmitted> {
+        let token = self.consume_token()?;
+
+        if let Token::Identifier { name, .. } = expected {
+            Ok(Identifier(name))
+        } else {
+            self.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "identifier".to_string(),
+                found: token,
+            });
+            Err(ErrorsEmitted(()))
         }
     }
 
