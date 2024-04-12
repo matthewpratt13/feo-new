@@ -1,8 +1,6 @@
 use crate::{
     ast::{
-        CallExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr, MethodCallExpr,
-        RangeExpr, StructExpr, StructField, TupleIndexExpr, TupleStructExpr, TypeCastExpr,
-        UnwrapExpr,
+        CallExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, StructExpr, StructField, TupleIndexExpr, TupleStructExpr, TypeCastExpr, UnwrapExpr
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -20,6 +18,12 @@ where
 }
 
 ///////////////////////////////////////////////////////////////////////////
+
+impl ParseExpression for PathExpr {
+    fn parse(parser: &mut Parser, expr: Expression) -> Result<PathExpr, ErrorsEmitted> {
+        todo!()
+    }
+}
 
 impl ParseExpression for MethodCallExpr {
     fn parse(parser: &mut Parser, expr: Expression) -> Result<MethodCallExpr, ErrorsEmitted> {
@@ -69,7 +73,7 @@ impl ParseExpression for CallExpr {
                 break;
             }
 
-            let arg_expr = parser.parse_expression(Precedence::Call);
+            let arg_expr = parser.parse_expression(Precedence::Lowest);
             args.push(arg_expr?);
 
             // error handling

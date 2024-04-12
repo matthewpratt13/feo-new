@@ -23,7 +23,7 @@ pub enum Precedence {
     Quotient,           // `/`
     Remainder,          // `%`
     Exponentiation,     // `**`
-    Cast,               // "as"
+    TypeCast,           // "as"
     Unary,              // `-`, `*` `!`, `&`,`&mut`
     Unwrap,             // `?`
     Index,              // `x[0]`

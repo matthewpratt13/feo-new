@@ -1,7 +1,6 @@
 use crate::{
     ast::{
-        ArrayExpr, BlockExpr, ClosureExpr, Delimiter, Expression, GroupedExpr, PathExpr, Statement,
-        TupleExpr,
+        ArrayExpr, BlockExpr, ClosureExpr, Delimiter, Expression, GroupedExpr, Statement, TupleExpr,
     },
     error::ErrorsEmitted,
     token::Token,
@@ -14,12 +13,6 @@ where
     Self: Sized,
 {
     fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
-}
-
-impl ParseCompoundExpr for PathExpr {
-    fn parse(parser: &mut Parser) -> Result<PathExpr, ErrorsEmitted> {
-        todo!()
-    }
 }
 
 impl ParseCompoundExpr for ClosureExpr {

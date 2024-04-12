@@ -131,7 +131,7 @@ pub struct PathExpr {
 pub struct RangeExpr {
     pub from_opt: Option<Box<Expression>>,
     pub op: RangeOp, // `..` or `..=`
-    pub to: Box<Expression>,
+    pub to: Option<Box<Expression>>,
 }
 
 #[derive(Debug, Clone)]

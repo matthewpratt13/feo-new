@@ -65,7 +65,7 @@ impl Parser {
                 name: "as".to_string(),
                 span: self.stream.span(),
             },
-            Precedence::Cast,
+            Precedence::TypeCast,
         );
         self.precedences.insert(
             Token::DblAsterisk {
@@ -416,20 +416,7 @@ impl Parser {
             Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
             Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
             Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
-            Token::LParen { .. } => {
-                let expr = self.parse_expression(Precedence::Lowest)?;
-
-                let close_paren = self.expect_delimiter(Token::RParen {
-                    delim: ')',
-                    span: self.stream.span(),
-                })?;
-
-                Ok(Expression::Grouped(GroupedExpr {
-                    open_paren: Delimiter::LParen,
-                    expression: Box::new(expr),
-                    close_paren,
-                }))
-            }
+            Token::LParen { .. } => Ok(Expression::Grouped(GroupedExpr::parse(self)?)),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier, `_`, literal or `(`".to_string(),
@@ -444,14 +431,30 @@ impl Parser {
     /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses),
     /// where the respective token type appears at the beginning of an expression.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let token = self.consume_token()?;
+        let token = self.peek_current().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
         match token {
             Token::IntLiteral { .. }
             | Token::UIntLiteral { .. }
             | Token::BigUIntLiteral { .. }
-            | Token::HashLiteral { .. }
-            | Token::ByteLiteral { .. }
+            | Token::HashLiteral { .. } => {
+                if let Ok(Token::As { .. }) = self.peek_ahead_by(1) {
+                    let expr = self.parse_expression(Precedence::TypeCast)?;
+                    Ok(Expression::TypeCast(TypeCastExpr::parse(self, expr)?))
+                } else if let Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
+                    self.peek_ahead_by(1)
+                {
+                    let expr = self.parse_expression(Precedence::Range)?;
+                    Ok(Expression::Range(RangeExpr::parse(self, expr)?))
+                } else {
+                    self.parse_primary()
+                }
+            }
+
+            Token::ByteLiteral { .. }
             | Token::BytesLiteral { .. }
             | Token::StringLiteral { .. }
             | Token::CharLiteral { .. }
@@ -462,24 +465,101 @@ impl Parser {
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Separator::Underscore,
                     }))
-                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_current()
+                } else if let Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                    self.peek_ahead_by(1)
                 {
-                    Ok(Expression::Path(PathExpr::parse(self)?))
+                    let expr = self.parse_expression(Precedence::Path)?;
+                    Ok(Expression::Path(PathExpr::parse(self, expr)?))
+                } else if let Ok(Token::Dot { .. }) = self.peek_ahead_by(1) {
+                    match self.peek_ahead_by(2) {
+                        Ok(Token::LParen { .. }) => {
+                            let expr = self.parse_expression(Precedence::MethodCall)?;
+                            Ok(Expression::MethodCall(MethodCallExpr::parse(self, expr)?))
+                        }
+                        Ok(Token::UIntLiteral { .. }) => {
+                            let expr = self.parse_expression(Precedence::Index)?;
+                            Ok(Expression::TupleIndex(TupleIndexExpr::parse(self, expr)?))
+                        }
+                        _ => {
+                            let expr = self.parse_expression(Precedence::FieldAccess)?;
+                            Ok(Expression::FieldAccess(FieldAccessExpr::parse(self, expr)?))
+                        }
+                    }
+                } else if let Ok(Token::LParen { .. }) = self.peek_ahead_by(1) {
+                    // TODO: use symbol table to check whether this could be a `TupleStructExpr`
+                    let expr = self.parse_expression(Precedence::Call)?;
+                    Ok(Expression::Call(CallExpr::parse(self, expr)?))
+                } else if let Ok(Token::LBracket { .. }) = self.peek_ahead_by(1) {
+                    let expr = self.parse_expression(Precedence::Index)?;
+                    Ok(Expression::Index(IndexExpr::parse(self, expr)?))
+                } else if let Ok(Token::QuestionMark { .. }) = self.peek_ahead_by(1) {
+                    let expr = self.parse_expression(Precedence::Unwrap)?;
+                    Ok(Expression::Unwrap(UnwrapExpr::parse(self, expr)?))
+                } else if let Ok(Token::As { .. }) = self.peek_ahead_by(1) {
+                    let expr = self.parse_expression(Precedence::TypeCast)?;
+                    Ok(Expression::TypeCast(TypeCastExpr::parse(self, expr)?))
+                } else if let Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
+                    self.peek_ahead_by(1)
+                {
+                    let expr = self.parse_expression(Precedence::Range)?;
+                    Ok(Expression::Range(RangeExpr::parse(self, expr)?))
+                } else if let Ok(Token::LBrace { .. }) = self.peek_ahead_by(1) {
+                    let expr = self.parse_expression(Precedence::Lowest)?;
+                    Ok(Expression::Struct(StructExpr::parse(self, expr)?))
                 } else {
                     self.parse_primary()
                 }
             }
 
-            Token::SelfKeyword { .. } | Token::SelfType { .. } => {
-                Ok(Expression::Path(PathExpr::parse(self)?))
+            Token::SelfType { .. } => {
+                if let Ok(Token::DblColon { .. }) = self.peek_ahead_by(1) {
+                    if let Ok(Token::Identifier { .. }) = self.peek_ahead_by(2) {
+                        let expr = self.parse_expression(Precedence::Call)?;
+                        Ok(Expression::Call(CallExpr::parse(self, expr)?))
+                    } else {
+                        let expr = self.parse_expression(Precedence::Path)?;
+                        Ok(Expression::Path(PathExpr::parse(self, expr)?))
+                    }
+                } else {
+                    let expr = self.parse_expression(Precedence::Path)?;
+                    Ok(Expression::Path(PathExpr::parse(self, expr)?))
+                }
+            }
+
+            Token::SelfKeyword { .. } => {
+                if let Ok(Token::DblColon { .. }) = self.peek_ahead_by(1) {
+                    if let Ok(Token::Identifier { .. }) = self.peek_ahead_by(2) {
+                        let expr = self.parse_expression(Precedence::Call)?;
+                        Ok(Expression::Call(CallExpr::parse(self, expr)?))
+                    } else {
+                        let expr = self.parse_expression(Precedence::Path)?;
+                        Ok(Expression::Path(PathExpr::parse(self, expr)?))
+                    }
+                } else if let Ok(Token::Dot { .. }) = self.peek_ahead_by(1) {
+                    if let Ok(Token::Identifier { .. }) = self.peek_ahead_by(2) {
+                        if let Ok(Token::LParen { .. }) = self.peek_ahead_by(3) {
+                            let expr = self.parse_expression(Precedence::MethodCall)?;
+                            Ok(Expression::Path(PathExpr::parse(self, expr)?))
+                        } else {
+                            let expr = self.parse_expression(Precedence::FieldAccess)?;
+                            Ok(Expression::FieldAccess(FieldAccessExpr::parse(self, expr)?))
+                        }
+                    } else {
+                        let expr = self.parse_expression(Precedence::Path)?;
+                        Ok(Expression::Path(PathExpr::parse(self, expr)?))
+                    }
+                } else {
+                    let expr = self.parse_expression(Precedence::Path)?;
+                    Ok(Expression::Path(PathExpr::parse(self, expr)?))
+                }
             }
 
             Token::Package { .. } | Token::Super { .. } => {
-                if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_current()
+                if let Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                    self.peek_ahead_by(1)
                 {
-                    Ok(Expression::Path(PathExpr::parse(self)?))
+                    let expr = self.parse_expression(Precedence::Path)?;
+                    Ok(Expression::Path(PathExpr::parse(self, expr)?))
                 } else {
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "path separator".to_string(),
@@ -499,10 +579,10 @@ impl Parser {
                 UnaryOp::Dereference,
             )?)),
             Token::LParen { .. } => {
-                if let Ok(Token::Comma { .. }) = self.peek_ahead_by(1) {
+                if let Ok(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     Ok(Expression::Tuple(TupleExpr::parse(self)?))
                 } else {
-                    Ok(Expression::Grouped(GroupedExpr::parse(self)?))
+                    self.parse_primary()
                 }
             }
             Token::LBracket { .. } => Ok(Expression::Array(ArrayExpr::parse(self)?)),
@@ -511,24 +591,41 @@ impl Parser {
                 Ok(Expression::Closure(ClosureExpr::parse(self)?))
             }
             Token::DblDot { .. } => {
-                let expr = self.parse_expression(Precedence::Range)?;
+                if let Ok(
+                    Token::Identifier { .. }
+                    | Token::IntLiteral { .. }
+                    | Token::UIntLiteral { .. }
+                    | Token::BigUIntLiteral { .. }
+                    | Token::HashLiteral { .. },
+                ) = self.consume_token()
+                {
+                    let expr = self.parse_expression(Precedence::Range)?;
 
-                Ok(Expression::Range(RangeExpr {
-                    from_opt: None,
-                    op: RangeOp::RangeExclusive,
-                    to: Box::new(expr),
-                }))
+                    Ok(Expression::Range(RangeExpr {
+                        from_opt: None,
+                        op: RangeOp::RangeExclusive,
+                        to: Some(Box::new(expr)),
+                    }))
+                } else {
+                    Ok(Expression::Range(RangeExpr {
+                        from_opt: None,
+                        op: RangeOp::RangeExclusive,
+                        to: None,
+                    }))
+                }
             }
             Token::DotDotEquals { .. } => {
+                self.consume_token()?;
                 let expr = self.parse_expression(Precedence::Range)?;
 
                 Ok(Expression::Range(RangeExpr {
                     from_opt: None,
                     op: RangeOp::RangeInclusive,
-                    to: Box::new(expr),
+                    to: Some(Box::new(expr)),
                 }))
             }
             Token::Return { .. } => {
+                self.consume_token()?;
                 let expr = self.parse_expression(Precedence::Lowest)?;
 
                 Ok(Expression::Return(ReturnExpr {
@@ -537,13 +634,20 @@ impl Parser {
                 }))
             }
 
-            Token::Break { name, .. } => Ok(Expression::Break(BreakExpr {
-                kw_break: Keyword::Break,
-            })),
+            Token::Break { name, .. } => {
+                self.consume_token()?;
 
-            Token::Continue { name, .. } => Ok(Expression::Continue(ContinueExpr {
-                kw_continue: Keyword::Continue,
-            })),
+                Ok(Expression::Break(BreakExpr {
+                    kw_break: Keyword::Break,
+                }))
+            }
+
+            Token::Continue { name, .. } => {
+                self.consume_token()?;
+                Ok(Expression::Continue(ContinueExpr {
+                    kw_continue: Keyword::Continue,
+                }))
+            }
 
             _ => {
                 self.log_error(ParserErrorKind::InvalidToken { token });
@@ -681,68 +785,6 @@ impl Parser {
             Token::QuestionMark { .. } => {
                 Ok(Expression::Unwrap(UnwrapExpr::parse(self, left_expr)?))
             }
-            Token::DblDot { .. } | Token::DotDotEquals { .. } => {
-                Ok(Expression::Range(RangeExpr::parse(self, left_expr)?))
-            }
-            Token::As { .. } => Ok(Expression::TypeCast(TypeCastExpr::parse(self, left_expr)?)),
-            Token::LParen { .. } => match left_expr {
-                // TODO: use symbol table to check whether this could be a `TupleStructExpr`
-                Expression::Path(_) => Ok(Expression::Call(CallExpr::parse(self, left_expr)?)),
-
-                _ => {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "path expression".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted(()))
-                }
-            },
-            Token::LBracket { .. } => Ok(Expression::Index(IndexExpr::parse(self, left_expr)?)),
-            Token::LBrace { .. } => match left_expr {
-                Expression::Path(_) => Ok(Expression::Struct(StructExpr::parse(self, left_expr)?)),
-
-                _ => {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "path expression".to_string(),
-                        found: token,
-                    });
-
-                    Err(ErrorsEmitted(()))
-                }
-            },
-            Token::Dot { .. } => match left_expr {
-                Expression::Path(_) => {
-                    let curr_token = self.peek_current().ok_or({
-                        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                        ErrorsEmitted(())
-                    })?;
-
-                    match curr_token {
-                        Token::LParen { .. } => Ok(Expression::MethodCall(MethodCallExpr::parse(
-                            self, left_expr,
-                        )?)),
-                        Token::UIntLiteral { .. } => Ok(Expression::TupleIndex(
-                            TupleIndexExpr::parse(self, left_expr)?,
-                        )),
-                        _ => Ok(Expression::FieldAccess(FieldAccessExpr::parse(
-                            self, left_expr,
-                        )?)),
-                    }
-                }
-
-                _ => {
-                    let curr_token = self.peek_current().ok_or({
-                        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                        ErrorsEmitted(())
-                    })?;
-
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "identifier or tuple index after `.`".to_string(),
-                        found: curr_token,
-                    });
-                    Err(ErrorsEmitted(()))
-                }
-            },
 
             _ => {
                 self.log_error(ParserErrorKind::InvalidToken { token });
