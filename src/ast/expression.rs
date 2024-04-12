@@ -166,7 +166,7 @@ pub struct TupleIndexExpr {
 pub struct TupleStructExpr {
     pub path: Box<Expression>,
     pub open_paren: Delimiter,
-    pub fields_opt: Option<Vec<Expression>>,
+    pub elements: Vec<Expression>,
     pub close_paren: Delimiter,
 }
 

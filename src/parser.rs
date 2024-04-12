@@ -694,10 +694,19 @@ impl Parser {
                 Ok(Expression::Range(RangeExpr::parse(self, left_expr)?))
             }
             Token::As { .. } => Ok(Expression::TypeCast(TypeCastExpr::parse(self, left_expr)?)),
-            Token::LParen { .. } => {
+            Token::LParen { .. } => match left_expr {
                 // TODO: use symbol table to check whether this could be a `TupleStructExpr`
-                Ok(Expression::Call(CallExpr::parse(self, left_expr)?))
-            }
+                Expression::Path(_) => Ok(Expression::Call(CallExpr::parse(self, left_expr)?)),
+
+                _ => {
+                    let next_token = self.peek_ahead_by(1)?;
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "path expression".to_string(),
+                        found: next_token,
+                    });
+                    Err(ErrorsEmitted(()))
+                }
+            },
             Token::LBracket { .. } => Ok(Expression::Index(IndexExpr::parse(self, left_expr)?)),
             Token::LBrace { .. } => match left_expr {
                 Expression::Path(_) => Ok(Expression::Struct(StructExpr::parse(self, left_expr)?)),
@@ -705,7 +714,7 @@ impl Parser {
                 _ => {
                     let next_token = self.peek_ahead_by(1)?;
                     self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "struct expression".to_string(),
+                        expected: "path expression".to_string(),
                         found: next_token,
                     });
                     Err(ErrorsEmitted(()))

@@ -65,7 +65,7 @@ impl ParseExpression for CallExpr {
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
                 // end of arguments
-                parser.consume_token()?;
+                let _ = parser.consume_token();
                 break;
             }
 
@@ -77,7 +77,7 @@ impl ParseExpression for CallExpr {
 
             match token {
                 Ok(Token::Comma { .. }) => continue, // more arguments
-                Ok(Token::RParen { .. }) => break,   // end of arguments
+                Ok(Token::RParen { .. }) => break,   // end of call expression
                 _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `)`".to_string(),
@@ -183,12 +183,12 @@ impl ParseExpression for RangeExpr {
 
 impl ParseExpression for StructExpr {
     fn parse(parser: &mut Parser, path: Expression) -> Result<StructExpr, ErrorsEmitted> {
-        let mut fields: Vec<StructField> = Vec::new(); // stores struct fields
+        let mut fields: Vec<StructField> = Vec::new(); // store struct fields
 
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),
-        })?;
+        });
 
         // parse struct fields – separated by commas – until a closing brace
         loop {
@@ -210,29 +210,28 @@ impl ParseExpression for StructExpr {
             let colon = parser.expect_separator(Token::Colon {
                 punc: ':',
                 span: parser.stream.span(),
-            })?;
+            });
 
             // parse field value
-            let field_value = parser.parse_expression(Precedence::Lowest)?;
+            let field_value = parser.parse_expression(Precedence::Lowest);
 
             // push field to list of fields
             fields.push(StructField {
                 name: Identifier(field_name),
-                value: field_value,
+                value: field_value?,
             });
 
             // error handling
             let token = parser.consume_token();
 
             match token {
-                Ok(Token::Comma { .. }) => continue, // more fields
+                Ok(Token::Comma { .. }) => continue, // more arguments
                 Ok(Token::RBrace { .. }) => break,   // end of struct
                 _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `}`".to_string(),
                         found: token?,
                     });
-                    return Err(ErrorsEmitted(()));
                 }
             }
         }
@@ -240,70 +239,65 @@ impl ParseExpression for StructExpr {
         let close_brace = parser.expect_delimiter(Token::RBrace {
             delim: '}',
             span: parser.stream.span(),
-        })?;
+        });
+
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
 
         Ok(StructExpr {
             path: Box::new(path),
-            open_brace,
+            open_brace: open_brace?,
             fields,
-            close_brace,
+            close_brace: close_brace?,
         })
     }
 }
 
 impl ParseExpression for TupleStructExpr {
     fn parse(parser: &mut Parser, path: Expression) -> Result<Self, ErrorsEmitted> {
-        let token = parser.consume_token()?;
-
-        let mut fields: Vec<Expression> = Vec::new();
+        let mut fields: Vec<Expression> = Vec::new(); // store struct fields
 
         let open_paren = parser.expect_delimiter(Token::LParen {
             delim: '(',
             span: parser.stream.span(),
-        })?;
+        });
 
-        // parse arguments – separated by commas – until a closing parenthesis
+        // parse struct fields – separated by commas – until a closing brace
         loop {
-            if let Some(Token::RParen { delim: ')', .. }) = parser.peek_current() {
-                // end of arguments
-                parser.consume_token()?;
+            if let Some(Token::RParen { .. }) = parser.peek_current() {
+                // end of fields
+                let _ = parser.consume_token();
                 break;
             }
 
-            let arg_expr = parser.parse_expression(Precedence::Lowest);
-            fields.push(arg_expr?);
+            let field = parser.parse_expression(Precedence::Lowest);
+            fields.push(field?);
 
             // error handling
             let token = parser.consume_token();
 
             match token {
                 Ok(Token::Comma { .. }) => continue, // more arguments
-                Ok(Token::RParen { .. }) => break,   // end of arguments
+                Ok(Token::RParen { .. }) => break,   // end of struct
                 _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `)`".to_string(),
                         found: token?,
                     });
-
-                    return Err(ErrorsEmitted(()));
                 }
+            }
+
+            if !parser.errors().is_empty() {
+                return Err(ErrorsEmitted(()));
             }
         }
 
-        if fields.is_empty() {
-            Ok(TupleStructExpr {
-                open_paren,
-                path: Box::new(path),
-                fields_opt: None,
-                close_paren: Delimiter::RParen,
-            })
-        } else {
-            Ok(TupleStructExpr {
-                open_paren,
-                path: Box::new(path),
-                fields_opt: Some(fields),
-                close_paren: Delimiter::RParen,
-            })
-        }
+        Ok(TupleStructExpr {
+            path: Box::new(path),
+            open_paren: open_paren?,
+            elements: fields,
+            close_paren: Delimiter::RParen,
+        })
     }
 }
