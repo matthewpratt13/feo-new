@@ -1,8 +1,6 @@
 use crate::{
     ast::{
-        CallExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr, MethodCallExpr,
-        PathExpr, RangeExpr, RangeOp, StructExpr, StructField, TupleIndexExpr, TupleStructExpr,
-        TypeCastExpr, UnwrapExpr, UnwrapOp,
+        CallExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, RangeOp, Separator, StructExpr, StructField, TupleIndexExpr, TupleStructExpr, TypeCastExpr, UnwrapExpr, UnwrapOp
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -19,6 +17,8 @@ where
 
 impl ParseExpression for PathExpr {
     fn parse(parser: &mut Parser, prefix: Expression) -> Result<PathExpr, ErrorsEmitted> {
+        println!("ENTER `PathExpr::parse()`");
+
         let mut tree: Vec<Identifier> = Vec::new();
 
         let _ = parser.consume_token();
@@ -151,30 +151,36 @@ impl ParseExpression for PathExpr {
 //     }
 // }
 
-// impl ParseExpression for FieldAccessExpr {
-//     fn parse(parser: &mut Parser, object: Expression) -> Result<FieldAccessExpr, ErrorsEmitted> {
-//         let dot = parser.expect_separator(Token::Dot {
-//             punc: '.',
-//             span: parser.stream.span(),
-//         })?;
+impl ParseExpression for FieldAccessExpr {
+    fn parse(parser: &mut Parser, object: Expression) -> Result<FieldAccessExpr, ErrorsEmitted> {
 
-//         let token = parser.consume_token();
+        // let dot = parser.expect_separator(Token::Dot {
+        //     punc: '.',
+        //     span: parser.stream.span(),
+        // });
 
-//         if let Ok(Token::Identifier { name, .. }) = token {
-//             Ok(FieldAccessExpr {
-//                 object: Box::new(object),
-//                 dot,
-//                 field: Identifier(name),
-//             })
-//         } else {
-//             parser.log_error(ParserErrorKind::UnexpectedToken {
-//                 expected: "identifier after `.`".to_string(),
-//                 found: token?,
-//             });
-//             Err(ErrorsEmitted(()))
-//         }
-//     }
-// }
+        let token = parser.consume_token();
+
+        if let Some(Token::Identifier { name, .. }) = token {
+            Ok(FieldAccessExpr {
+                object: Box::new(object),
+                dot: Separator::Dot,
+                field: Identifier(name),
+            })
+        } else {
+            let token = parser.consume_token().ok_or({
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                ErrorsEmitted(())
+            });
+
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "identifier after `.`".to_string(),
+                found: token?,
+            });
+            Err(ErrorsEmitted(()))
+        }
+    }
+}
 
 // impl ParseExpression for CallExpr {
 //     fn parse(parser: &mut Parser, callee: Expression) -> Result<CallExpr, ErrorsEmitted> {
@@ -520,6 +526,20 @@ mod tests {
     #[ignore]
     fn test_path_expr() -> Result<(), ()> {
         let input = r#"package::module::Object"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn test_field_access_expr() -> Result<(), ()> {
+        let input = r#"object.field"#;
 
         let mut parser = test_utils::get_parser(input);
 

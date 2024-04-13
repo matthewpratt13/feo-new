@@ -176,62 +176,62 @@ impl Parser {
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Separator::Underscore,
                     }))
-                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_ahead_by(1)
-                {
-                    let expr = self.parse_expression(Precedence::Path)?;
-                    Ok(Expression::Path(PathExpr::parse(self, expr)?))
-                //     } else if let Ok(Token::Dot { .. }) = self.peek_ahead_by(1) {
-                //         match self.peek_ahead_by(2) {
-                //             Ok(Token::LParen { .. }) => {
-                //                 let expr = self.parse_expression(Precedence::MethodCall)?;
-                //                 Ok(Expression::MethodCall(MethodCallExpr::parse(self, expr)?))
-                //             }
-                //             Ok(Token::UIntLiteral { .. }) => {
-                //                 let expr = self.parse_expression(Precedence::FieldAccess)?;
-                //                 Ok(Expression::TupleIndex(TupleIndexExpr::parse(self, expr)?))
-                //             }
-                //             _ => {
-                //                 let expr = self.parse_expression(Precedence::FieldAccess)?;
-                //                 Ok(Expression::FieldAccess(FieldAccessExpr::parse(self, expr)?))
-                //             }
-                //         }
-                //     } else if let Ok(Token::LParen { .. }) = self.peek_ahead_by(1) {
-                // TODO: use symbol table to check whether this could be a `TupleStructExpr`
-                //         let expr = self.parse_expression(Precedence::Call)?;
-                //         Ok(Expression::Call(CallExpr::parse(self, expr)?))
-                //     } else if let Ok(Token::LBracket { .. }) = self.peek_ahead_by(1) {
-                //         let expr = self.parse_expression(Precedence::Index)?;
-                //         Ok(Expression::Index(IndexExpr::parse(self, expr)?))
-                //     } else if let Ok(Token::QuestionMark { .. }) = self.peek_ahead_by(1) {
-                //         let expr = self.parse_expression(Precedence::Unwrap)?;
-                //         Ok(Expression::Unwrap(UnwrapExpr::parse(self, expr)?))
-                //     } else if let Ok(Token::As { .. }) = self.peek_ahead_by(1) {
-                //         let expr = self.parse_expression(Precedence::TypeCast)?;
-                //         Ok(Expression::TypeCast(TypeCastExpr::parse(self, expr)?))
-                //     } else if let Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                //         self.peek_ahead_by(1)
-                //     {
-                //         let expr = self.parse_expression(Precedence::Range)?;
-                //         Ok(Expression::Range(RangeExpr::parse(self, expr)?))
-                //     } else if let Ok(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                //         let expr = self.parse_expression(Precedence::Lowest)?;
-                //         match expr {
-                //             Expression::Path(_) => {
-                //                 Ok(Expression::Struct(StructExpr::parse(self, expr)?))
-                //             }
-                //             _ => {
-                //                 let token = self.peek_current().ok_or({
-                //                     self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                //                     ErrorsEmitted(())
-                //                 })?;
-                //                 self.log_error(ParserErrorKind::UnexpectedToken {
-                //                     expected: "path expression".to_string(),
-                //                     found: token,
-                //                 });
-                //                 Err(ErrorsEmitted(()))
-                //             }
-                //         }
+                // } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                //     self.peek_ahead_by(1)
+                // {
+                //     let expr = self.parse_expression(Precedence::Path);
+                //     Ok(Expression::Path(PathExpr::parse(self, expr?)?))
+                // } else if let Some(Token::Dot { .. }) = self.peek_ahead_by(1) {
+                    // match self.peek_ahead_by(2) {
+                        // Some(Token::LParen { .. }) => {
+                        //     let expr = self.parse_expression(Precedence::MethodCall)?;
+                        //     Ok(Expression::MethodCall(MethodCallExpr::parse(self, expr)?))
+                        // }
+                        // Some(Token::UIntLiteral { .. }) => {
+                        //     let expr = self.parse_expression(Precedence::FieldAccess)?;
+                        //     Ok(Expression::TupleIndex(TupleIndexExpr::parse(self, expr)?))
+                        // }
+                        // _ => {
+                            // let expr = self.parse_expression(Precedence::FieldAccess)?;
+                            // Ok(Expression::FieldAccess(FieldAccessExpr::parse(self, expr)?))
+                        // }
+                    // }
+                    // } else if let Ok(Token::LParen { .. }) = self.peek_ahead_by(1) {
+                    // TODO: use symbol table to check whether this could be a `TupleStructExpr`
+                    //         let expr = self.parse_expression(Precedence::Call)?;
+                    //         Ok(Expression::Call(CallExpr::parse(self, expr)?))
+                    //     } else if let Ok(Token::LBracket { .. }) = self.peek_ahead_by(1) {
+                    //         let expr = self.parse_expression(Precedence::Index)?;
+                    //         Ok(Expression::Index(IndexExpr::parse(self, expr)?))
+                    //     } else if let Ok(Token::QuestionMark { .. }) = self.peek_ahead_by(1) {
+                    //         let expr = self.parse_expression(Precedence::Unwrap)?;
+                    //         Ok(Expression::Unwrap(UnwrapExpr::parse(self, expr)?))
+                    //     } else if let Ok(Token::As { .. }) = self.peek_ahead_by(1) {
+                    //         let expr = self.parse_expression(Precedence::TypeCast)?;
+                    //         Ok(Expression::TypeCast(TypeCastExpr::parse(self, expr)?))
+                    //     } else if let Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
+                    //         self.peek_ahead_by(1)
+                    //     {
+                    //         let expr = self.parse_expression(Precedence::Range)?;
+                    //         Ok(Expression::Range(RangeExpr::parse(self, expr)?))
+                    //     } else if let Ok(Token::LBrace { .. }) = self.peek_ahead_by(1) {
+                    //         let expr = self.parse_expression(Precedence::Lowest)?;
+                    //         match expr {
+                    //             Expression::Path(_) => {
+                    //                 Ok(Expression::Struct(StructExpr::parse(self, expr)?))
+                    //             }
+                    //             _ => {
+                    //                 let token = self.peek_current().ok_or({
+                    //                     self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                    //                     ErrorsEmitted(())
+                    //                 })?;
+                    //                 self.log_error(ParserErrorKind::UnexpectedToken {
+                    //                     expected: "path expression".to_string(),
+                    //                     found: token,
+                    //                 });
+                    //                 Err(ErrorsEmitted(()))
+                    //             }
+                    //         }
                 } else {
                     self.parse_primary()
                 }
@@ -545,6 +545,9 @@ impl Parser {
             // Some(Token::QuestionMark { .. }) => {
             //     Ok(Expression::Unwrap(UnwrapExpr::parse(self, left_expr)?))
             // }
+            Some(Token::Dot { .. }) => Ok(Expression::FieldAccess(FieldAccessExpr::parse(
+                self, left_expr,
+            )?)),
             Some(_) => {
                 self.log_error(ParserErrorKind::InvalidToken {
                     token: token.unwrap(),
