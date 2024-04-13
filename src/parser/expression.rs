@@ -98,19 +98,18 @@ impl ParseExpression for MethodCallExpr {
                 break;
             }
 
-            let arg_expr = parser.parse_expression(Precedence::Lowest);
-            args.push(arg_expr?);
+            let arg_expr = parser.parse_expression(Precedence::Lowest)?;
+            args.push(arg_expr);
 
-            // error handling
-            let token = parser.consume_token();
+            let curr_token = parser.consume_token();
 
-            match token {
+            match curr_token {
                 Ok(Token::Comma { .. }) => continue, // more arguments
-                Ok(Token::RParen { .. }) => break,   // end of call expression
+                Ok(Token::RParen { .. }) => break,   // end of method call expression
                 _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `)`".to_string(),
-                        found: token?,
+                        found: curr_token?,
                     });
                 }
             }
@@ -184,8 +183,8 @@ impl ParseExpression for CallExpr {
                 break;
             }
 
-            let arg_expr = parser.parse_expression(Precedence::Lowest);
-            args.push(arg_expr?);
+            let arg_expr = parser.parse_expression(Precedence::Lowest)?;
+            args.push(arg_expr);
 
             // error handling
             let token = parser.consume_token();
@@ -392,7 +391,7 @@ impl ParseExpression for StructExpr {
             // get the field name
             let token = parser.consume_token();
 
-            let field_name = match token {
+            let name = match token {
                 Ok(Token::Identifier { name, .. }) => Ok(name),
                 Ok(Token::RBrace { .. }) => break, // end of struct
                 _ => {
@@ -410,13 +409,15 @@ impl ParseExpression for StructExpr {
             });
 
             // parse field value
-            let field_value = parser.parse_expression(Precedence::Lowest);
+            let value = parser.parse_expression(Precedence::Lowest);
+
+            let field = StructField {
+                name: Identifier(name?),
+                value: value?,
+            };
 
             // push field to list of fields
-            fields.push(StructField {
-                name: Identifier(field_name?),
-                value: field_value?,
-            });
+            fields.push(field);
 
             // error handling
             let token = parser.consume_token();
@@ -474,8 +475,8 @@ impl ParseExpression for TupleStructExpr {
                 break;
             }
 
-            let element = parser.parse_expression(Precedence::Lowest);
-            elements.push(element?);
+            let element = parser.parse_expression(Precedence::Lowest)?;
+            elements.push(element);
 
             // error handling
             let token = parser.consume_token();

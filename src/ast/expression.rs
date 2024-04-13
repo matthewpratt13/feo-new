@@ -10,7 +10,7 @@ use super::{
 /// Enum representing whether or not a closure has parameters in its definition.
 #[derive(Debug, Clone)]
 pub enum ClosureParams {
-    Some(BinaryOp, Vec<Param>, BinaryOp),
+    Some(BinaryOp, Vec<ClosureParam>, BinaryOp),
     None(BinaryOp),
 }
 
@@ -24,9 +24,9 @@ pub enum PathPrefix {
     Identifier(Identifier),
 }
 
-/// Struct representing a function definition or closure parameter.
+/// Struct representing a closure parameter.
 #[derive(Debug, Clone)]
-pub struct Param {
+pub struct ClosureParam {
     pub id: Identifier,
     pub ty: Option<Type>,
 }

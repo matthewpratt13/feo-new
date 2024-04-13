@@ -1176,7 +1176,13 @@ impl Parser {
             Token::BoolType { .. } => Ok(Type::Bool),
             Token::CustomType { .. } => Ok(Type::UserDefined),
             Token::SelfType { .. } => Ok(Type::SelfType),
-            Token::LParen { .. } => Ok(Type::Tuple),
+            Token::LParen { .. } => {
+                if let Ok(Token::RParen { .. }) = self.peek_ahead_by(1) {
+                    Ok(Type::UnitType)
+                } else {
+                    Ok(Type::Tuple)
+                }
+            }
             Token::LBracket { .. } => Ok(Type::Array),
             Token::Func { .. } => Ok(Type::Function),
             Token::Ampersand { .. } => Ok(Type::Reference),

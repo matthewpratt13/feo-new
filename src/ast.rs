@@ -236,6 +236,8 @@ pub enum Type {
     Char,
     Bool,
 
+    UnitType,
+
     // built-in collections
     Array,
     Tuple,

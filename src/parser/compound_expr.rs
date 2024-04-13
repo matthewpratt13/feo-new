@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        ArrayExpr, BinaryOp, BlockExpr, ClosureExpr, ClosureParams, Delimiter, Expression,
-        GroupedExpr, Identifier, Param, Separator, Statement, TupleExpr,
+        ArrayExpr, BinaryOp, BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Delimiter,
+        Expression, GroupedExpr, Identifier, Separator, Statement, TupleExpr,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -22,12 +22,12 @@ impl ParseCompoundExpr for ClosureExpr {
 
         let params = match token {
             Ok(Token::Pipe { .. }) => {
-                let mut vec: Vec<Param> = Vec::new();
+                let mut vec: Vec<ClosureParam> = Vec::new();
 
                 let curr_token = parser.peek_current().ok_or({
                     parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
                     ErrorsEmitted(())
-                })?;
+                });
 
                 while !parser.tokens_match(Token::Pipe {
                     punc: '|',
@@ -38,7 +38,7 @@ impl ParseCompoundExpr for ClosureExpr {
                     } else {
                         parser.log_error(ParserErrorKind::UnexpectedToken {
                             expected: "identifier".to_string(),
-                            found: curr_token.clone(),
+                            found: curr_token.clone()?,
                         });
                         Err(ErrorsEmitted(()))
                     };
@@ -54,7 +54,7 @@ impl ParseCompoundExpr for ClosureExpr {
                         None
                     };
 
-                    let param = Param { id: id?, ty };
+                    let param = ClosureParam { id: id?, ty };
                     vec.push(param);
 
                     if let Some(Token::Comma { .. }) = parser.peek_current() {
@@ -90,7 +90,24 @@ impl ParseCompoundExpr for ClosureExpr {
             None
         };
 
-        let expression = parser.parse_expression(Precedence::Lowest);
+        let curr_token = parser.peek_current().ok_or({
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        });
+
+        if return_type_opt.is_some()
+            && !parser.is_expected_token(&Token::LBrace {
+                delim: '{',
+                span: parser.stream.span(),
+            })
+        {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "`{`".to_string(),
+                found: curr_token?,
+            })
+        }
+
+        let expression = parser.parse_expression(Precedence::Lowest)?;
 
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
@@ -99,7 +116,7 @@ impl ParseCompoundExpr for ClosureExpr {
         Ok(ClosureExpr {
             params: params?,
             return_type_opt,
-            expression: Box::new(expression?),
+            expression: Box::new(expression),
         })
     }
 }
@@ -112,7 +129,8 @@ impl ParseCompoundExpr for ArrayExpr {
             delim: ']',
             span: parser.stream.span(),
         }) {
-            elements.push(parser.parse_expression(Precedence::Lowest)?);
+            let element = parser.parse_expression(Precedence::Lowest)?;
+            elements.push(element);
 
             if !parser.tokens_match(Token::Comma {
                 punc: ',',
@@ -147,7 +165,8 @@ impl ParseCompoundExpr for TupleExpr {
             delim: ')',
             span: parser.stream.span(),
         }) {
-            elements.push(parser.parse_expression(Precedence::Lowest)?);
+            let element = parser.parse_expression(Precedence::Lowest)?;
+            elements.push(element);
 
             if !parser.tokens_match(Token::Comma {
                 punc: ',',
@@ -164,7 +183,7 @@ impl ParseCompoundExpr for TupleExpr {
 
         if elements.is_empty() {
             parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "tuple element".to_string(),
+                expected: "tuple element or `,`".to_string(),
             });
         }
 
@@ -189,7 +208,8 @@ impl ParseCompoundExpr for BlockExpr {
             delim: '}',
             span: parser.stream.span(),
         }) {
-            statements.push(parser.parse_statement()?);
+            let statement = parser.parse_statement()?;
+            statements.push(statement);
         }
 
         let terminal_expression_opt = if let Ok(e) = parser.parse_expression(Precedence::Lowest) {
