@@ -30,7 +30,7 @@ use self::{
     // expression::ParseExpression,
     // item::{ParseDeclaration, ParseDefinition},
     // statement::ParseStatement,
-    // unary_expr::parse_unary_expr,
+    unary_expr::parse_unary_expr,
 };
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
@@ -103,19 +103,25 @@ impl Parser {
         let token = self.consume_token();
 
         match token {
-            // Token::Identifier { name, .. } => Ok(Expression::Path(PathExpr {
-            //     root: PathPrefix::Identifier(Identifier(name)),
-            //     tree_opt: None,
-            // })),
-            // Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
+            Some(Token::Identifier { name, .. }) => Ok(Expression::Path(PathExpr {
+                root: PathPrefix::Identifier(Identifier(name)),
+                tree_opt: None,
+            })),
+            Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
             Some(Token::UIntLiteral { value, .. }) => Ok(Expression::Literal(Literal::UInt(value))),
-            // Token::BigUIntLiteral { value, .. } => Ok(Expression::Literal(Literal::BigUInt(value))),
-            // Token::ByteLiteral { value, .. } => Ok(Expression::Literal(Literal::Byte(value))),
-            // Token::BytesLiteral { value, .. } => Ok(Expression::Literal(Literal::Bytes(value))),
-            // Token::HashLiteral { value, .. } => Ok(Expression::Literal(Literal::Hash(value))),
-            // Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
-            // Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
-            // Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
+            Some(Token::BigUIntLiteral { value, .. }) => {
+                Ok(Expression::Literal(Literal::BigUInt(value)))
+            }
+            Some(Token::ByteLiteral { value, .. }) => Ok(Expression::Literal(Literal::Byte(value))),
+            Some(Token::BytesLiteral { value, .. }) => {
+                Ok(Expression::Literal(Literal::Bytes(value)))
+            }
+            Some(Token::HashLiteral { value, .. }) => Ok(Expression::Literal(Literal::Hash(value))),
+            Some(Token::StringLiteral { value, .. }) => {
+                Ok(Expression::Literal(Literal::String(value)))
+            }
+            Some(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
+            Some(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
             // Token::LParen { .. } => Ok(Expression::Grouped(GroupedExpr::parse(self)?)),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
@@ -134,13 +140,7 @@ impl Parser {
         println!("ENTER `parse_prefix()`");
         println!("CURRENT TOKEN: {:?}", self.peek_current());
 
-        // let token = self.consume_token();
         let token = self.peek_current();
-
-        // let token = self.peek_current().ok_or({
-        //     self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-        //     ErrorsEmitted(())
-        // })?;
 
         match token {
             Some(
@@ -162,11 +162,13 @@ impl Parser {
                 // }
             }
 
-            // Token::ByteLiteral { .. }
-            // | Token::BytesLiteral { .. }
-            // | Token::StringLiteral { .. }
-            // | Token::CharLiteral { .. }
-            // | Token::BoolLiteral { .. } => self.parse_primary(),
+            Some(
+                Token::ByteLiteral { .. }
+                | Token::BytesLiteral { .. }
+                | Token::StringLiteral { .. }
+                | Token::CharLiteral { .. }
+                | Token::BoolLiteral { .. },
+            ) => self.parse_primary(),
 
             // Token::Identifier { name, .. } => {
             //     if &name == "_" {
@@ -194,7 +196,7 @@ impl Parser {
             //             }
             //         }
             //     } else if let Ok(Token::LParen { .. }) = self.peek_ahead_by(1) {
-            //         // TODO: use symbol table to check whether this could be a `TupleStructExpr`
+            // TODO: use symbol table to check whether this could be a `TupleStructExpr`
             //         let expr = self.parse_expression(Precedence::Call)?;
             //         Ok(Expression::Call(CallExpr::parse(self, expr)?))
             //     } else if let Ok(Token::LBracket { .. }) = self.peek_ahead_by(1) {
@@ -315,16 +317,19 @@ impl Parser {
             //         }))
             //     }
             // }
-
-            // Token::Minus { .. } => Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Negate)?)),
-            // Token::Bang { .. } => Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Not)?)),
-            // Token::Ampersand { .. } | Token::AmpersandMut { .. } => Ok(Expression::Unary(
-            //     parse_unary_expr(self, UnaryOp::Reference)?,
-            // )),
-            // Token::Asterisk { .. } => Ok(Expression::Unary(parse_unary_expr(
-            //     self,
-            //     UnaryOp::Dereference,
-            // )?)),
+            Some(Token::Minus { .. }) => {
+                Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Negate)?))
+            }
+            Some(Token::Bang { .. }) => {
+                Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Not)?))
+            }
+            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Expression::Unary(
+                parse_unary_expr(self, UnaryOp::Reference)?,
+            )),
+            Some(Token::Asterisk { .. }) => Ok(Expression::Unary(parse_unary_expr(
+                self,
+                UnaryOp::Dereference,
+            )?)),
             // Token::LParen { .. } => {
             //     if let Ok(Token::Comma { .. }) = self.peek_ahead_by(2) {
             //         Ok(Expression::Tuple(TupleExpr::parse(self)?))
@@ -337,64 +342,64 @@ impl Parser {
             // Token::Pipe { .. } | Token::DblPipe { .. } => {
             //     Ok(Expression::Closure(ClosureExpr::parse(self)?))
             // }
-            // Token::DblDot { .. } => {
-            //     if let Ok(
-            //         Token::Identifier { .. }
-            //         | Token::IntLiteral { .. }
-            //         | Token::UIntLiteral { .. }
-            //         | Token::BigUIntLiteral { .. }
-            //         | Token::HashLiteral { .. },
-            //     ) = self.consume_token()
-            //     {
-            //         let expr = self.parse_expression(Precedence::Range)?;
+            Some(Token::DblDot { .. }) => {
+                if let Some(
+                    Token::Identifier { .. }
+                    | Token::IntLiteral { .. }
+                    | Token::UIntLiteral { .. }
+                    | Token::BigUIntLiteral { .. }
+                    | Token::HashLiteral { .. },
+                ) = self.consume_token()
+                {
+                    let expr = self.parse_expression(Precedence::Range)?;
 
-            //         Ok(Expression::Range(RangeExpr {
-            //             from_opt: None,
-            //             op: RangeOp::RangeExclusive,
-            //             to_opt: Some(Box::new(expr)),
-            //         }))
-            //     } else {
-            //         Ok(Expression::Range(RangeExpr {
-            //             from_opt: None,
-            //             op: RangeOp::RangeExclusive,
-            //             to_opt: None,
-            //         }))
-            //     }
-            // }
-            // Token::DotDotEquals { .. } => {
-            //     self.consume_token()?;
-            //     let expr = self.parse_expression(Precedence::Range)?;
+                    Ok(Expression::Range(RangeExpr {
+                        from_opt: None,
+                        op: RangeOp::RangeExclusive,
+                        to_opt: Some(Box::new(expr)),
+                    }))
+                } else {
+                    Ok(Expression::Range(RangeExpr {
+                        from_opt: None,
+                        op: RangeOp::RangeExclusive,
+                        to_opt: None,
+                    }))
+                }
+            }
+            Some(Token::DotDotEquals { .. }) => {
+                self.consume_token();
+                let expr = self.parse_expression(Precedence::Range)?;
 
-            //     Ok(Expression::Range(RangeExpr {
-            //         from_opt: None,
-            //         op: RangeOp::RangeInclusive,
-            //         to_opt: Some(Box::new(expr)),
-            //     }))
-            // }
-            // Token::Return { .. } => {
-            //     self.consume_token()?;
-            //     let expr = self.parse_expression(Precedence::Lowest)?;
+                Ok(Expression::Range(RangeExpr {
+                    from_opt: None,
+                    op: RangeOp::RangeInclusive,
+                    to_opt: Some(Box::new(expr)),
+                }))
+            }
+            Some(Token::Return { .. }) => {
+                self.consume_token();
+                let expr = self.parse_expression(Precedence::Lowest)?;
 
-            //     Ok(Expression::Return(ReturnExpr {
-            //         kw_return: Keyword::Return,
-            //         expression: Box::new(expr),
-            //     }))
-            // }
+                Ok(Expression::Return(ReturnExpr {
+                    kw_return: Keyword::Return,
+                    expression: Box::new(expr),
+                }))
+            }
 
-            // Token::Break { name, .. } => {
-            //     self.consume_token()?;
+            Some(Token::Break { name, .. }) => {
+                self.consume_token();
 
-            //     Ok(Expression::Break(BreakExpr {
-            //         kw_break: Keyword::Break,
-            //     }))
-            // }
+                Ok(Expression::Break(BreakExpr {
+                    kw_break: Keyword::Break,
+                }))
+            }
 
-            // Token::Continue { name, .. } => {
-            //     self.consume_token()?;
-            //     Ok(Expression::Continue(ContinueExpr {
-            //         kw_continue: Keyword::Continue,
-            //     }))
-            // }
+            Some(Token::Continue { name, .. }) => {
+                self.consume_token();
+                Ok(Expression::Continue(ContinueExpr {
+                    kw_continue: Keyword::Continue,
+                }))
+            }
             _ => {
                 self.log_error(ParserErrorKind::InvalidToken {
                     token: token.unwrap(),
