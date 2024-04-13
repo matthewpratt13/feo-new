@@ -1,6 +1,14 @@
 use fixed_hash::{construct_fixed_hash, impl_fixed_hash_conversions};
 use uint::construct_uint;
 
+mod ast;
+mod error;
+mod keccak;
+mod lexer;
+mod parser;
+mod span;
+mod token;
+
 // hexadecimal 256-bit unsigned integer
 construct_uint! {
     pub struct U256(4);
@@ -153,11 +161,3 @@ construct_fixed_hash! {
 
 impl_fixed_hash_conversions!(H256, H160);
 impl_fixed_hash_conversions!(H512, H256);
-
-mod ast;
-mod error;
-mod lexer;
-mod parser;
-mod span;
-mod token;
-mod keccak;

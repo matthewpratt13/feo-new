@@ -5,7 +5,7 @@ use crate::{
 
 use super::{Parser, Precedence};
 
-/// Parse a binary operations (e.g., arithmetic, logical and comparison expressions).
+/// Parse a binary operation (e.g., arithmetic, logical and comparison expressions).
 /// This method parses the operator and calls `parse_expression()` recursively to handle
 /// the right-hand side of the expression.
 pub(crate) fn parse_binary_expr(

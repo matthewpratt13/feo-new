@@ -7,9 +7,7 @@ use crate::{
     token::Token,
 };
 
-use super::{expression_collection::ParseExpressionCollection, Parser, Precedence};
-
-///////////////////////////////////////////////////////////////////////////
+use super::{compound_expr::ParseCompoundExpr, Parser, Precedence};
 
 pub(crate) trait ParseStatement
 where
@@ -17,8 +15,6 @@ where
 {
     fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
 }
-
-///////////////////////////////////////////////////////////////////////////
 
 impl ParseStatement for LetStmt {
     fn parse(parser: &mut Parser) -> Result<LetStmt, ErrorsEmitted> {
@@ -150,7 +146,7 @@ impl ParseStatement for MatchStmt {
             span: parser.stream.span(),
         })?;
 
-        while !parser.is_expected_token(Token::RBrace {
+        while !parser.is_expected_token(&Token::RBrace {
             delim: '}',
             span: parser.stream.span(),
         }) {
@@ -161,13 +157,13 @@ impl ParseStatement for MatchStmt {
                 ErrorsEmitted(())
             })?;
 
-            let guard_opt = if parser.is_expected_token(Token::If {
+            let guard_opt = if parser.is_expected_token(&Token::If {
                 name: "if".to_string(),
                 span: parser.stream.span(),
             }) {
                 let kw_if = parser.expect_keyword(token)?;
 
-                if parser.is_expected_token(Token::LParen {
+                if parser.is_expected_token(&Token::LParen {
                     delim: '(',
                     span: parser.stream.span(),
                 }) {

@@ -127,7 +127,7 @@ pub enum BinaryOp {
 
 /// Struct representing the unwrap operator `?`.
 #[derive(Debug, Clone)]
-pub struct UnwrapOp(());
+pub struct UnwrapOp(pub ());
 
 /// Enum representing the different range operator AST nodes.
 #[derive(Debug, Clone, PartialEq)]
@@ -170,8 +170,8 @@ pub enum Expression {
     TypeCast(TypeCastExpr),
     Binary(BinaryExpr),
     Grouped(GroupedExpr),
+    Range(RangeExpr),
     Return(ReturnExpr),
-    Range(RangeExpr), // from-to, from, to, inclusive, to inclusive
     Break(BreakExpr),
     Continue(ContinueExpr),
     Underscore(UnderscoreExpr),
@@ -198,28 +198,26 @@ pub enum Statement {
     Expression(ExpressionStmt),
 }
 
-// TODO: parse:
 /// Enum representing the different declaration nodes (items) in the AST.
 #[derive(Debug, Clone)]
 pub enum Declaration {
-    Import(ImportDecl),
-    Alias(AliasDecl),
-    Constant(ConstantDecl),
-    StaticItem(StaticItemDecl),
+    Import(ImportDecl),         // TODO
+    Alias(AliasDecl),           // TODO
+    Constant(ConstantDecl),     // TODO
+    StaticItem(StaticItemDecl), // TODO
 }
 
-// TODO: parse:
 /// Enum representing the different item definitions nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
 pub enum Definition {
-    Module(ModuleDef),
-    Trait(TraitDef),
-    Enum(EnumDef),
-    Struct(StructDef),
-    InherentImpl(InherentImplDef),
-    TraitImpl(TraitImplDef),
-    Function(FunctionDef),
+    Module(ModuleDef),             // TODO
+    Trait(TraitDef),               // TODO
+    Enum(EnumDef),                 // TODO
+    Struct(StructDef),             // TODO
+    InherentImpl(InherentImplDef), // TODO
+    TraitImpl(TraitImplDef),       // TODO
+    Function(FunctionDef),         // TODO
 }
 
 // TODO: parse:
@@ -237,6 +235,8 @@ pub enum Type {
     String,  // `Vec<u8>`
     Char,
     Bool,
+
+    UnitType, // ()
 
     // built-in collections
     Array,

@@ -10,7 +10,7 @@ use super::{
 /// Enum representing whether or not a closure has parameters in its definition.
 #[derive(Debug, Clone)]
 pub enum ClosureParams {
-    Some(BinaryOp, Vec<Param>, BinaryOp),
+    Some(BinaryOp, Vec<ClosureParam>, BinaryOp),
     None(BinaryOp),
 }
 
@@ -24,9 +24,9 @@ pub enum PathPrefix {
     Identifier(Identifier),
 }
 
-/// Struct representing a function definition or closure parameter
+/// Struct representing a closure parameter.
 #[derive(Debug, Clone)]
-pub struct Param {
+pub struct ClosureParam {
     pub id: Identifier,
     pub ty: Option<Type>,
 }
@@ -131,7 +131,7 @@ pub struct PathExpr {
 pub struct RangeExpr {
     pub from_opt: Option<Box<Expression>>,
     pub op: RangeOp, // `..` or `..=`
-    pub to: Box<Expression>,
+    pub to_opt: Option<Box<Expression>>,
 }
 
 #[derive(Debug, Clone)]
@@ -142,7 +142,7 @@ pub struct ReturnExpr {
 
 #[derive(Debug, Clone)]
 pub struct StructExpr {
-    pub path: PathExpr,
+    pub path: Box<Expression>,
     pub open_brace: Delimiter,
     pub fields: Vec<StructField>,
     pub close_brace: Delimiter,
@@ -164,9 +164,9 @@ pub struct TupleIndexExpr {
 
 #[derive(Debug, Clone)]
 pub struct TupleStructExpr {
-    pub path: PathExpr,
+    pub path: Box<Expression>,
     pub open_paren: Delimiter,
-    pub fields_opt: Option<Vec<Expression>>,
+    pub elements: Vec<Expression>,
     pub close_paren: Delimiter,
 }
 
