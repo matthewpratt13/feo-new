@@ -404,7 +404,7 @@ impl ParseExpression for StructExpr {
                 }
             };
 
-            let colon = parser.expect_separator(Token::Colon {
+            let _ = parser.expect_separator(Token::Colon {
                 punc: ':',
                 span: parser.stream.span(),
             });

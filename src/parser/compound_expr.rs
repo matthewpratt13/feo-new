@@ -29,7 +29,7 @@ impl ParseCompoundExpr for ClosureExpr {
                     ErrorsEmitted(())
                 })?;
 
-                while !parser.is_expected_token(&Token::Pipe {
+                while !parser.tokens_match(Token::Pipe {
                     punc: '|',
                     span: parser.stream.span(),
                 }) {
@@ -43,6 +43,11 @@ impl ParseCompoundExpr for ClosureExpr {
                         Err(ErrorsEmitted(()))
                     };
 
+                    let _ = parser.expect_separator(Token::Colon {
+                        punc: ':',
+                        span: parser.stream.span(),
+                    });
+
                     let ty = if let Ok(t) = parser.get_type() {
                         Some(t)
                     } else {
@@ -51,6 +56,10 @@ impl ParseCompoundExpr for ClosureExpr {
 
                     let param = Param { id: id?, ty };
                     vec.push(param);
+
+                    if let Some(Token::Comma { .. }) = parser.peek_current() {
+                        parser.consume_token()?;
+                    }
                 }
 
                 Ok(ClosureParams::Some(
