@@ -9,16 +9,12 @@ use crate::{
 
 use super::{compound_expr::ParseCompoundExpr, Parser, Precedence};
 
-///////////////////////////////////////////////////////////////////////////
-
 pub(crate) trait ParseStatement
 where
     Self: Sized,
 {
     fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
 }
-
-///////////////////////////////////////////////////////////////////////////
 
 impl ParseStatement for LetStmt {
     fn parse(parser: &mut Parser) -> Result<LetStmt, ErrorsEmitted> {

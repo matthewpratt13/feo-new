@@ -50,7 +50,6 @@ impl ParseCompoundExpr for ClosureExpr {
                     };
 
                     let param = Param { id: id?, ty };
-
                     vec.push(param);
                 }
 
@@ -77,13 +76,16 @@ impl ParseCompoundExpr for ClosureExpr {
             parser.consume_token()?;
 
             let ty = parser.get_type();
-
             Some((Separator::ThinArrow, ty?))
         } else {
             None
         };
 
         let expression = parser.parse_expression(Precedence::Lowest);
+
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
 
         Ok(ClosureExpr {
             params: params?,
@@ -116,8 +118,12 @@ impl ParseCompoundExpr for ArrayExpr {
             span: parser.stream.span(),
         });
 
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
+
         Ok(ArrayExpr {
-            open_bracket: Delimiter::LBrace,
+            open_bracket: Delimiter::LBracket,
             elements,
             close_bracket: close_bracket?,
         })
@@ -146,6 +152,16 @@ impl ParseCompoundExpr for TupleExpr {
             delim: ')',
             span: parser.stream.span(),
         });
+
+        if elements.is_empty() {
+            parser.log_error(ParserErrorKind::TokenNotFound {
+                expected: "tuple elements".to_string(),
+            });
+        }
+
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
 
         Ok(TupleExpr {
             open_paren: Delimiter::LParen,
@@ -178,6 +194,16 @@ impl ParseCompoundExpr for BlockExpr {
             span: parser.stream.span(),
         });
 
+        if statements.is_empty() {
+            parser.log_error(ParserErrorKind::TokenNotFound {
+                expected: "statements".to_string(),
+            });
+        }
+
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
+
         Ok(BlockExpr {
             open_brace: Delimiter::LBrace,
             statements,
@@ -195,6 +221,10 @@ impl ParseCompoundExpr for GroupedExpr {
             delim: ')',
             span: parser.stream.span(),
         });
+
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
 
         Ok(GroupedExpr {
             open_paren: Delimiter::LParen,

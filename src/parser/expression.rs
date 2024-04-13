@@ -10,8 +10,6 @@ use crate::{
 
 use super::{Parser, Precedence};
 
-///////////////////////////////////////////////////////////////////////////
-
 pub(crate) trait ParseExpression
 where
     Self: Sized,
@@ -19,37 +17,37 @@ where
     fn parse(parser: &mut Parser, expr: Expression) -> Result<Self, ErrorsEmitted>;
 }
 
-///////////////////////////////////////////////////////////////////////////
-
 impl ParseExpression for PathExpr {
-    fn parse(parser: &mut Parser, expr: Expression) -> Result<PathExpr, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, prefix: Expression) -> Result<PathExpr, ErrorsEmitted> {
         let mut tree: Vec<Identifier> = Vec::new();
 
-        let token = parser.peek_current().ok_or({
-            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        let token = parser.consume_token();
 
-        let root = match expr {
-            Expression::Path(p) => p.root,
+        let root = match prefix {
+            Expression::Path(p) => Ok(p.root),
             _ => {
                 parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "path expression prefix".to_string(),
-                    found: token,
+                    found: token?,
                 });
 
-                return Err(ErrorsEmitted(()));
+                Err(ErrorsEmitted(()))
             }
-        };
+        }?;
 
-        parser.consume_token()?;
+        while let Some(Token::DblColon { .. }) = parser.peek_current() {
+            parser.consume_token()?;
 
-        while let Ok(Token::DblColon { .. }) = parser.consume_token() {
-            if let Ok(Token::Identifier { name, .. }) = parser.consume_token() {
+            if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
+                parser.consume_token()?;
                 tree.push(Identifier(name));
             } else {
                 break;
             }
+        }
+
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
         }
 
         if tree.is_empty() {
@@ -75,14 +73,14 @@ impl ParseExpression for MethodCallExpr {
             span: parser.stream.span(),
         })?;
 
-        let token = parser.consume_token()?;
+        let token = parser.consume_token();
 
-        let method_name = if let Token::Identifier { name, .. } = token {
+        let method_name = if let Ok(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier after `.`".to_string(),
-                found: token,
+                found: token?,
             });
             Err(ErrorsEmitted(()))
         };
@@ -151,9 +149,9 @@ impl ParseExpression for FieldAccessExpr {
             span: parser.stream.span(),
         })?;
 
-        let token = parser.consume_token()?;
+        let token = parser.consume_token();
 
-        if let Token::Identifier { name, .. } = token {
+        if let Ok(Token::Identifier { name, .. }) = token {
             Ok(FieldAccessExpr {
                 object: Box::new(object),
                 dot,
@@ -162,7 +160,7 @@ impl ParseExpression for FieldAccessExpr {
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier after `.`".to_string(),
-                found: token,
+                found: token?,
             });
             Err(ErrorsEmitted(()))
         }
@@ -242,17 +240,20 @@ impl ParseExpression for IndexExpr {
                 expected: "array index".to_string(),
                 found: token?,
             });
-
             Err(ErrorsEmitted(()))
         } else {
             parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            return Err(ErrorsEmitted(()));
+            Err(ErrorsEmitted(()))
         };
 
         let close_bracket = parser.expect_delimiter(Token::RBracket {
             delim: ']',
             span: parser.stream.span(),
         });
+
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
 
         Ok(IndexExpr {
             array: Box::new(array),
@@ -285,6 +286,10 @@ impl ParseExpression for TupleIndexExpr {
             Err(ErrorsEmitted(()))
         };
 
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
+
         Ok(TupleIndexExpr {
             operand: Box::new(operand),
             dot,
@@ -299,6 +304,10 @@ impl ParseExpression for UnwrapExpr {
             punc: '?',
             span: parser.stream.span(),
         })?;
+
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
 
         Ok(UnwrapExpr {
             expression: Box::new(expr),
@@ -315,6 +324,10 @@ impl ParseExpression for TypeCastExpr {
         })?;
 
         let new_type = parser.get_type();
+
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
 
         Ok(TypeCastExpr {
             operand: Box::new(operand),
@@ -343,7 +356,7 @@ impl ParseExpression for RangeExpr {
         } else {
             parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
             Err(ErrorsEmitted(()))
-        };
+        }?;
 
         parser.consume_token()?;
 
@@ -352,13 +365,13 @@ impl ParseExpression for RangeExpr {
         if to.is_ok() {
             Ok(RangeExpr {
                 from_opt: Some(Box::new(from)),
-                op: op?,
+                op,
                 to_opt: Some(Box::new(to?)),
             })
         } else {
             Ok(RangeExpr {
                 from_opt: Some(Box::new(from)),
-                op: op?,
+                op,
                 to_opt: None,
             })
         }
@@ -425,6 +438,12 @@ impl ParseExpression for StructExpr {
             span: parser.stream.span(),
         });
 
+        if fields.is_empty() {
+            parser.log_error(ParserErrorKind::TokenNotFound {
+                expected: "struct fields".to_string(),
+            });
+        }
+
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
         }
@@ -440,7 +459,7 @@ impl ParseExpression for StructExpr {
 
 impl ParseExpression for TupleStructExpr {
     fn parse(parser: &mut Parser, path: Expression) -> Result<Self, ErrorsEmitted> {
-        let mut fields: Vec<Expression> = Vec::new(); // store struct fields
+        let mut elements: Vec<Expression> = Vec::new(); // store struct fields
 
         let open_paren = parser.expect_delimiter(Token::LParen {
             delim: '(',
@@ -455,8 +474,8 @@ impl ParseExpression for TupleStructExpr {
                 break;
             }
 
-            let field = parser.parse_expression(Precedence::Lowest);
-            fields.push(field?);
+            let element = parser.parse_expression(Precedence::Lowest);
+            elements.push(element?);
 
             // error handling
             let token = parser.consume_token();
@@ -471,16 +490,22 @@ impl ParseExpression for TupleStructExpr {
                     });
                 }
             }
+        }
 
-            if !parser.errors().is_empty() {
-                return Err(ErrorsEmitted(()));
-            }
+        if elements.is_empty() {
+            parser.log_error(ParserErrorKind::TokenNotFound {
+                expected: "tuple struct fields".to_string(),
+            });
+        }
+
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
         }
 
         Ok(TupleStructExpr {
             path: Box::new(path),
             open_paren,
-            elements: fields,
+            elements,
             close_paren: Delimiter::RParen,
         })
     }

@@ -24,7 +24,7 @@ pub enum PathPrefix {
     Identifier(Identifier),
 }
 
-/// Struct representing a function definition or closure parameter
+/// Struct representing a function definition or closure parameter.
 #[derive(Debug, Clone)]
 pub struct Param {
     pub id: Identifier,
