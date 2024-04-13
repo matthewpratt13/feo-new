@@ -159,23 +159,23 @@ pub enum Separator {
 #[derive(Debug, Clone)]
 pub enum Expression {
     Literal(Literal),
-    Path(PathExpr),             // TODO
-    MethodCall(MethodCallExpr), // TODO
+    Path(PathExpr),
+    MethodCall(MethodCallExpr),
     FieldAccess(FieldAccessExpr),
     Call(CallExpr),
     Index(IndexExpr),
-    TupleIndex(TupleIndexExpr), // TODO
-    Unwrap(UnwrapExpr),         // TODO
+    TupleIndex(TupleIndexExpr),
+    Unwrap(UnwrapExpr),
     Unary(UnaryExpr),
     TypeCast(TypeCastExpr),
     Binary(BinaryExpr),
     Grouped(GroupedExpr),
-    Range(RangeExpr),   // TODO
-    Return(ReturnExpr), // TODO
+    Range(RangeExpr),
+    Return(ReturnExpr),
     Break(BreakExpr),
     Continue(ContinueExpr),
     Underscore(UnderscoreExpr),
-    Closure(ClosureExpr), // TODO
+    Closure(ClosureExpr),
     Array(ArrayExpr),
     Tuple(TupleExpr),
     Struct(StructExpr),
@@ -236,7 +236,7 @@ pub enum Type {
     Char,
     Bool,
 
-    UnitType,
+    UnitType, // ()
 
     // built-in collections
     Array,

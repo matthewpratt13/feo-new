@@ -90,10 +90,8 @@ impl ParseExpression for MethodCallExpr {
             span: parser.stream.span(),
         });
 
-        // parse arguments – separated by commas – until a closing parenthesis
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
-                // end of arguments
                 parser.consume_token()?;
                 break;
             }
@@ -104,8 +102,8 @@ impl ParseExpression for MethodCallExpr {
             let curr_token = parser.consume_token();
 
             match curr_token {
-                Ok(Token::Comma { .. }) => continue, // more arguments
-                Ok(Token::RParen { .. }) => break,   // end of method call expression
+                Ok(Token::Comma { .. }) => continue,
+                Ok(Token::RParen { .. }) => break,
                 _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `)`".to_string(),
@@ -168,17 +166,15 @@ impl ParseExpression for FieldAccessExpr {
 
 impl ParseExpression for CallExpr {
     fn parse(parser: &mut Parser, callee: Expression) -> Result<CallExpr, ErrorsEmitted> {
-        let mut args: Vec<Expression> = Vec::new(); // store function arguments
+        let mut args: Vec<Expression> = Vec::new();
 
         let open_paren = parser.expect_delimiter(Token::LParen {
             delim: '(',
             span: parser.stream.span(),
         })?;
 
-        // parse arguments – separated by commas – until a closing parenthesis
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
-                // end of arguments
                 parser.consume_token()?;
                 break;
             }
@@ -186,12 +182,11 @@ impl ParseExpression for CallExpr {
             let arg_expr = parser.parse_expression(Precedence::Lowest)?;
             args.push(arg_expr);
 
-            // error handling
             let token = parser.consume_token();
 
             match token {
-                Ok(Token::Comma { .. }) => continue, // more arguments
-                Ok(Token::RParen { .. }) => break,   // end of call expression
+                Ok(Token::Comma { .. }) => continue,
+                Ok(Token::RParen { .. }) => break,
                 _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `)`".to_string(),
@@ -379,21 +374,19 @@ impl ParseExpression for RangeExpr {
 
 impl ParseExpression for StructExpr {
     fn parse(parser: &mut Parser, path: Expression) -> Result<StructExpr, ErrorsEmitted> {
-        let mut fields: Vec<StructField> = Vec::new(); // store struct fields
+        let mut fields: Vec<StructField> = Vec::new();
 
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),
         })?;
 
-        // parse struct fields – separated by commas – until a closing brace
         loop {
-            // get the field name
             let token = parser.consume_token();
 
             let name = match token {
                 Ok(Token::Identifier { name, .. }) => Ok(name),
-                Ok(Token::RBrace { .. }) => break, // end of struct
+                Ok(Token::RBrace { .. }) => break,
                 _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "identifier or `}`".to_string(),
@@ -408,7 +401,6 @@ impl ParseExpression for StructExpr {
                 span: parser.stream.span(),
             });
 
-            // parse field value
             let value = parser.parse_expression(Precedence::Lowest);
 
             let field = StructField {
@@ -416,15 +408,13 @@ impl ParseExpression for StructExpr {
                 value: value?,
             };
 
-            // push field to list of fields
             fields.push(field);
 
-            // error handling
             let token = parser.consume_token();
 
             match token {
-                Ok(Token::Comma { .. }) => continue, // more arguments
-                Ok(Token::RBrace { .. }) => break,   // end of struct
+                Ok(Token::Comma { .. }) => continue,
+                Ok(Token::RBrace { .. }) => break,
                 _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `}`".to_string(),
@@ -460,17 +450,15 @@ impl ParseExpression for StructExpr {
 
 impl ParseExpression for TupleStructExpr {
     fn parse(parser: &mut Parser, path: Expression) -> Result<Self, ErrorsEmitted> {
-        let mut elements: Vec<Expression> = Vec::new(); // store struct fields
+        let mut elements: Vec<Expression> = Vec::new();
 
         let open_paren = parser.expect_delimiter(Token::LParen {
             delim: '(',
             span: parser.stream.span(),
         })?;
 
-        // parse struct fields – separated by commas – until a closing brace
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
-                // end of fields
                 parser.consume_token()?;
                 break;
             }
@@ -478,12 +466,11 @@ impl ParseExpression for TupleStructExpr {
             let element = parser.parse_expression(Precedence::Lowest)?;
             elements.push(element);
 
-            // error handling
             let token = parser.consume_token();
 
             match token {
-                Ok(Token::Comma { .. }) => continue, // more arguments
-                Ok(Token::RParen { .. }) => break,   // end of struct
+                Ok(Token::Comma { .. }) => continue,
+                Ok(Token::RParen { .. }) => break,
                 _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `)`".to_string(),

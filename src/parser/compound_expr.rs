@@ -203,7 +203,6 @@ impl ParseCompoundExpr for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
 
-        // parse expressions until a closing brace
         while !parser.is_expected_token(&Token::RBrace {
             delim: '}',
             span: parser.stream.span(),

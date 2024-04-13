@@ -41,8 +41,8 @@ use self::{
 struct Parser {
     stream: TokenStream,
     current: usize,
-    errors: Vec<CompilerError<ParserErrorKind>>, // store compiler errors
-    precedences: HashMap<Token, Precedence>,     // record of precedence levels by operator
+    errors: Vec<CompilerError<ParserErrorKind>>,
+    precedences: HashMap<Token, Precedence>,
 }
 
 impl Parser {
