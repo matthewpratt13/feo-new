@@ -1016,20 +1016,6 @@ impl Parser {
         }
     }
 
-    fn expect_identifier(&mut self, expected: Token) -> Result<Identifier, ErrorsEmitted> {
-        let token = self.consume_token()?;
-
-        if let Token::Identifier { name, .. } = expected {
-            Ok(Identifier(name))
-        } else {
-            self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier".to_string(),
-                found: token,
-            });
-            Err(ErrorsEmitted(()))
-        }
-    }
-
     fn expect_delimiter(&mut self, expected: Token) -> Result<Delimiter, ErrorsEmitted> {
         let token = self.consume_token()?;
 
@@ -1054,7 +1040,29 @@ impl Parser {
         let token = self.consume_token()?;
 
         match token {
+            Token::Plus { .. } => Ok(BinaryOp::Add),
+            Token::Minus { .. } => Ok(BinaryOp::Subtract),
+            Token::Asterisk { .. } => Ok(BinaryOp::Multiply),
+            Token::Slash { .. } => Ok(BinaryOp::Divide),
+            Token::Percent { .. } => Ok(BinaryOp::Modulus),
+            Token::DblEquals { .. } => Ok(BinaryOp::Equal),
+            Token::BangEquals { .. } => Ok(BinaryOp::NotEqual),
+            Token::LessThan { .. } => Ok(BinaryOp::LessThan),
+            Token::LessThanEquals { .. } => Ok(BinaryOp::LessEqual),
+            Token::GreaterThan { .. } => Ok(BinaryOp::GreaterThan),
+            Token::GreaterThanEquals { .. } => Ok(BinaryOp::GreaterEqual),
             Token::Equals { .. } => Ok(BinaryOp::Assign),
+            Token::PlusEquals { .. } => Ok(BinaryOp::AddAssign),
+            Token::MinusEquals { .. } => Ok(BinaryOp::SubtractAssign),
+            Token::SlashEquals { .. } => Ok(BinaryOp::DivideAssign),
+            Token::PercentEquals { .. } => Ok(BinaryOp::ModulusAssign),
+            Token::DblAmpersand { .. } => Ok(BinaryOp::LogicalAnd),
+            Token::DblPipe { .. } => Ok(BinaryOp::LogicalOr),
+            Token::Ampersand { .. } => Ok(BinaryOp::BitwiseAnd),
+            Token::Pipe { .. } => Ok(BinaryOp::BitwiseOr),
+            Token::Caret { .. } => Ok(BinaryOp::BitwiseXor),
+            Token::DblLessThan { .. } => Ok(BinaryOp::ShiftLeft),
+            Token::DblGreaterThan { .. } => Ok(BinaryOp::ShiftRight),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
