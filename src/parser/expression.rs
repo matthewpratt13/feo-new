@@ -21,17 +21,19 @@ impl ParseExpression for PathExpr {
     fn parse(parser: &mut Parser, prefix: Expression) -> Result<PathExpr, ErrorsEmitted> {
         let mut tree: Vec<Identifier> = Vec::new();
 
-        let token = parser.consume_token().ok_or({
-            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        let _ = parser.consume_token();
 
         let root = match prefix {
             Expression::Path(p) => Ok(p.root),
             _ => {
+                let token = parser.consume_token().ok_or({
+                    parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                    ErrorsEmitted(())
+                });
+
                 parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "path expression prefix".to_string(),
-                    found: token,
+                    found: token?,
                 });
 
                 Err(ErrorsEmitted(()))
