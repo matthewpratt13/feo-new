@@ -13,9 +13,13 @@ pub(crate) fn parse_binary_expr(
     left_expr: Expression,
     op: BinaryOp,
 ) -> Result<BinaryExpr, ErrorsEmitted> {
+    println!("ENTER `parse_binary_expr()`");
+    println!("CURRENT TOKEN: {:?}", parser.peek_current());
+
     match op {
         BinaryOp::Add => {
             let right_expr = parser.parse_expression(Precedence::Sum)?;
+
             Ok(BinaryExpr {
                 lhs: Box::new(left_expr),
                 op,
