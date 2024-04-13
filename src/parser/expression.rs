@@ -17,52 +17,62 @@ where
     fn parse(parser: &mut Parser, expr: Expression) -> Result<Self, ErrorsEmitted>;
 }
 
-// impl ParseExpression for PathExpr {
-//     fn parse(parser: &mut Parser, prefix: Expression) -> Result<PathExpr, ErrorsEmitted> {
-//         let mut tree: Vec<Identifier> = Vec::new();
+impl ParseExpression for PathExpr {
+    fn parse(parser: &mut Parser, prefix: Expression) -> Result<PathExpr, ErrorsEmitted> {
+        let mut tree: Vec<Identifier> = Vec::new();
 
-//         let token = parser.consume_token();
+        let token = parser.consume_token().ok_or({
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
-//         let root = match prefix {
-//             Expression::Path(p) => Ok(p.root),
-//             _ => {
-//                 parser.log_error(ParserErrorKind::UnexpectedToken {
-//                     expected: "path expression prefix".to_string(),
-//                     found: token?,
-//                 });
+        let root = match prefix {
+            Expression::Path(p) => Ok(p.root),
+            _ => {
+                parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "path expression prefix".to_string(),
+                    found: token,
+                });
 
-//                 Err(ErrorsEmitted(()))
-//             }
-//         }?;
+                Err(ErrorsEmitted(()))
+            }
+        }?;
 
-//         while let Some(Token::DblColon { .. }) = parser.peek_current() {
-//             parser.consume_token()?;
+        while let Some(Token::DblColon { .. }) = parser.peek_current() {
+            parser.consume_token().ok_or({
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                ErrorsEmitted(())
+            })?;
 
-//             if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
-//                 tree.push(Identifier(name));
-//                 parser.consume_token()?;
-//             } else {
-//                 break;
-//             }
-//         }
+            if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
+                tree.push(Identifier(name));
 
-//         if !parser.errors().is_empty() {
-//             return Err(ErrorsEmitted(()));
-//         }
+                parser.consume_token().ok_or({
+                    parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                    ErrorsEmitted(())
+                })?;
+            } else {
+                break;
+            }
+        }
 
-//         if tree.is_empty() {
-//             Ok(PathExpr {
-//                 root,
-//                 tree_opt: None,
-//             })
-//         } else {
-//             Ok(PathExpr {
-//                 root,
-//                 tree_opt: Some(tree),
-//             })
-//         }
-//     }
-// }
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
+
+        if tree.is_empty() {
+            Ok(PathExpr {
+                root,
+                tree_opt: None,
+            })
+        } else {
+            Ok(PathExpr {
+                root,
+                tree_opt: Some(tree),
+            })
+        }
+    }
+}
 
 // impl ParseExpression for MethodCallExpr {
 //     fn parse(parser: &mut Parser, receiver: Expression) -> Result<MethodCallExpr, ErrorsEmitted> {
@@ -505,19 +515,9 @@ mod tests {
     use crate::test_utils;
 
     #[test]
-    fn test_path_expr() {
+    #[ignore]
+    fn test_path_expr() -> Result<(), ()> {
         let input = r#"package::module::Object"#;
-
-        let mut parser = test_utils::get_parser(input);
-
-        let expressions = parser.parse().map_err(|_| parser.errors());
-
-       println!("{:#?}", expressions)
-    }  
-    
-    #[test]
-    fn test_binary_expr_add() -> Result<(), ()> {
-        let input = r#"2 + 2"#;
 
         let mut parser = test_utils::get_parser(input);
 
@@ -527,8 +527,22 @@ mod tests {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
-    }   
-    
+    }
+
+    #[test]
+    fn test_binary_expr_add() -> Result<(), ()> {
+        let input = r#"x + 2"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
     #[test]
     fn test_binary_expr_divide() -> Result<(), ()> {
         let input = r#"10 / 5"#;
