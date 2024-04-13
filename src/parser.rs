@@ -693,158 +693,172 @@ impl Parser {
 
     /// Consume and check tokens, to ensure that the expected tokens are encountered
     /// during parsing. Return the relevant `ParserErrorKind` where applicable.
-    // fn expect_token(&mut self, expected: Token) -> Result<Token, ErrorsEmitted> {
-    //     let token = self.consume_token()?;
+    fn expect_token(&mut self, expected: Token) -> Result<Token, ErrorsEmitted> {
+        let token = self.consume_token().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
-    //     if token == expected {
-    //         Ok(token)
-    //     } else {
-    //         self.log_error(ParserErrorKind::UnexpectedToken {
-    //             expected: format!("`{:#?}`", expected),
-    //             found: token,
-    //         });
-    //         Err(ErrorsEmitted(()))
-    //     }
-    // }
+        if token == expected {
+            Ok(token)
+        } else {
+            self.log_error(ParserErrorKind::UnexpectedToken {
+                expected: format!("`{:#?}`", expected),
+                found: token,
+            });
+            Err(ErrorsEmitted(()))
+        }
+    }
 
-    // fn expect_keyword(&mut self, expected: Token) -> Result<Keyword, ErrorsEmitted> {
-    //     let token = self.consume_token()?;
+    fn expect_keyword(&mut self, expected: Token) -> Result<Keyword, ErrorsEmitted> {
+        let token = self.consume_token().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
-    //     match token {
-    //         Token::Import { .. } => Ok(Keyword::Import),
-    //         Token::Module { .. } => Ok(Keyword::Module),
-    //         Token::Package { .. } => Ok(Keyword::Package),
-    //         Token::SelfKeyword { .. } => Ok(Keyword::KwSelf),
-    //         Token::SelfType { .. } => Ok(Keyword::SelfType),
-    //         Token::Super { .. } => Ok(Keyword::Super),
-    //         Token::Pub { .. } => Ok(Keyword::Pub),
-    //         Token::As { .. } => Ok(Keyword::As),
-    //         Token::Const { .. } => Ok(Keyword::Const),
-    //         Token::Static { .. } => Ok(Keyword::Static),
-    //         Token::Func { .. } => Ok(Keyword::Func),
-    //         Token::Struct { .. } => Ok(Keyword::Struct),
-    //         Token::Enum { .. } => Ok(Keyword::Enum),
-    //         Token::Trait { .. } => Ok(Keyword::Trait),
-    //         Token::Impl { .. } => Ok(Keyword::Impl),
-    //         Token::If { .. } => Ok(Keyword::If),
-    //         Token::Else { .. } => Ok(Keyword::Else),
-    //         Token::Match { .. } => Ok(Keyword::Match),
-    //         Token::Loop { .. } => Ok(Keyword::Loop),
-    //         Token::For { .. } => Ok(Keyword::For),
-    //         Token::In { .. } => Ok(Keyword::In),
-    //         Token::While { .. } => Ok(Keyword::While),
-    //         Token::Break { .. } => Ok(Keyword::Break),
-    //         Token::Continue { .. } => Ok(Keyword::Continue),
-    //         Token::Return { .. } => Ok(Keyword::Return),
-    //         _ => {
-    //             self.log_error(ParserErrorKind::UnexpectedToken {
-    //                 expected: format!("`{:#?}`", expected),
-    //                 found: token,
-    //             });
-    //             Err(ErrorsEmitted(()))
-    //         }
-    //     }
-    // }
+        match token {
+            Token::Import { .. } => Ok(Keyword::Import),
+            Token::Module { .. } => Ok(Keyword::Module),
+            Token::Package { .. } => Ok(Keyword::Package),
+            Token::SelfKeyword { .. } => Ok(Keyword::KwSelf),
+            Token::SelfType { .. } => Ok(Keyword::SelfType),
+            Token::Super { .. } => Ok(Keyword::Super),
+            Token::Pub { .. } => Ok(Keyword::Pub),
+            Token::As { .. } => Ok(Keyword::As),
+            Token::Const { .. } => Ok(Keyword::Const),
+            Token::Static { .. } => Ok(Keyword::Static),
+            Token::Func { .. } => Ok(Keyword::Func),
+            Token::Struct { .. } => Ok(Keyword::Struct),
+            Token::Enum { .. } => Ok(Keyword::Enum),
+            Token::Trait { .. } => Ok(Keyword::Trait),
+            Token::Impl { .. } => Ok(Keyword::Impl),
+            Token::If { .. } => Ok(Keyword::If),
+            Token::Else { .. } => Ok(Keyword::Else),
+            Token::Match { .. } => Ok(Keyword::Match),
+            Token::Loop { .. } => Ok(Keyword::Loop),
+            Token::For { .. } => Ok(Keyword::For),
+            Token::In { .. } => Ok(Keyword::In),
+            Token::While { .. } => Ok(Keyword::While),
+            Token::Break { .. } => Ok(Keyword::Break),
+            Token::Continue { .. } => Ok(Keyword::Continue),
+            Token::Return { .. } => Ok(Keyword::Return),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: format!("`{:#?}`", expected),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
 
-    // fn expect_delimiter(&mut self, expected: Token) -> Result<Delimiter, ErrorsEmitted> {
-    //     let token = self.consume_token()?;
+    fn expect_delimiter(&mut self, expected: Token) -> Result<Delimiter, ErrorsEmitted> {
+        let token = self.consume_token().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
-    //     match token {
-    //         Token::LParen { .. } => Ok(Delimiter::LParen),
-    //         Token::RParen { .. } => Ok(Delimiter::RParen),
-    //         Token::LBracket { .. } => Ok(Delimiter::LBracket),
-    //         Token::RBracket { .. } => Ok(Delimiter::RBracket),
-    //         Token::LBrace { .. } => Ok(Delimiter::LBrace),
-    //         Token::RBrace { .. } => Ok(Delimiter::RBrace),
-    //         _ => {
-    //             self.log_error(ParserErrorKind::UnexpectedToken {
-    //                 expected: format!("`{:#?}`", expected),
-    //                 found: token,
-    //             });
-    //             Err(ErrorsEmitted(()))
-    //         }
-    //     }
-    // }
+        match token {
+            Token::LParen { .. } => Ok(Delimiter::LParen),
+            Token::RParen { .. } => Ok(Delimiter::RParen),
+            Token::LBracket { .. } => Ok(Delimiter::LBracket),
+            Token::RBracket { .. } => Ok(Delimiter::RBracket),
+            Token::LBrace { .. } => Ok(Delimiter::LBrace),
+            Token::RBrace { .. } => Ok(Delimiter::RBrace),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: format!("`{:#?}`", expected),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
 
-    // fn expect_binary_op(&mut self, expected: Token) -> Result<BinaryOp, ErrorsEmitted> {
-    //     let token = self.consume_token()?;
+    fn expect_binary_op(&mut self, expected: Token) -> Result<BinaryOp, ErrorsEmitted> {
+        let token = self.consume_token().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
-    //     match token {
-    //         Token::Plus { .. } => Ok(BinaryOp::Add),
-    //         Token::Minus { .. } => Ok(BinaryOp::Subtract),
-    //         Token::Asterisk { .. } => Ok(BinaryOp::Multiply),
-    //         Token::Slash { .. } => Ok(BinaryOp::Divide),
-    //         Token::Percent { .. } => Ok(BinaryOp::Modulus),
-    //         Token::DblEquals { .. } => Ok(BinaryOp::Equal),
-    //         Token::BangEquals { .. } => Ok(BinaryOp::NotEqual),
-    //         Token::LessThan { .. } => Ok(BinaryOp::LessThan),
-    //         Token::LessThanEquals { .. } => Ok(BinaryOp::LessEqual),
-    //         Token::GreaterThan { .. } => Ok(BinaryOp::GreaterThan),
-    //         Token::GreaterThanEquals { .. } => Ok(BinaryOp::GreaterEqual),
-    //         Token::Equals { .. } => Ok(BinaryOp::Assign),
-    //         Token::PlusEquals { .. } => Ok(BinaryOp::AddAssign),
-    //         Token::MinusEquals { .. } => Ok(BinaryOp::SubtractAssign),
-    //         Token::SlashEquals { .. } => Ok(BinaryOp::DivideAssign),
-    //         Token::PercentEquals { .. } => Ok(BinaryOp::ModulusAssign),
-    //         Token::DblAmpersand { .. } => Ok(BinaryOp::LogicalAnd),
-    //         Token::DblPipe { .. } => Ok(BinaryOp::LogicalOr),
-    //         Token::Ampersand { .. } => Ok(BinaryOp::BitwiseAnd),
-    //         Token::Pipe { .. } => Ok(BinaryOp::BitwiseOr),
-    //         Token::Caret { .. } => Ok(BinaryOp::BitwiseXor),
-    //         Token::DblLessThan { .. } => Ok(BinaryOp::ShiftLeft),
-    //         Token::DblGreaterThan { .. } => Ok(BinaryOp::ShiftRight),
-    //         _ => {
-    //             self.log_error(ParserErrorKind::UnexpectedToken {
-    //                 expected: format!("`{:#?}`", expected),
-    //                 found: token,
-    //             });
-    //             Err(ErrorsEmitted(()))
-    //         }
-    //     }
-    // }
+        match token {
+            Token::Plus { .. } => Ok(BinaryOp::Add),
+            Token::Minus { .. } => Ok(BinaryOp::Subtract),
+            Token::Asterisk { .. } => Ok(BinaryOp::Multiply),
+            Token::Slash { .. } => Ok(BinaryOp::Divide),
+            Token::Percent { .. } => Ok(BinaryOp::Modulus),
+            Token::DblEquals { .. } => Ok(BinaryOp::Equal),
+            Token::BangEquals { .. } => Ok(BinaryOp::NotEqual),
+            Token::LessThan { .. } => Ok(BinaryOp::LessThan),
+            Token::LessThanEquals { .. } => Ok(BinaryOp::LessEqual),
+            Token::GreaterThan { .. } => Ok(BinaryOp::GreaterThan),
+            Token::GreaterThanEquals { .. } => Ok(BinaryOp::GreaterEqual),
+            Token::Equals { .. } => Ok(BinaryOp::Assign),
+            Token::PlusEquals { .. } => Ok(BinaryOp::AddAssign),
+            Token::MinusEquals { .. } => Ok(BinaryOp::SubtractAssign),
+            Token::SlashEquals { .. } => Ok(BinaryOp::DivideAssign),
+            Token::PercentEquals { .. } => Ok(BinaryOp::ModulusAssign),
+            Token::DblAmpersand { .. } => Ok(BinaryOp::LogicalAnd),
+            Token::DblPipe { .. } => Ok(BinaryOp::LogicalOr),
+            Token::Ampersand { .. } => Ok(BinaryOp::BitwiseAnd),
+            Token::Pipe { .. } => Ok(BinaryOp::BitwiseOr),
+            Token::Caret { .. } => Ok(BinaryOp::BitwiseXor),
+            Token::DblLessThan { .. } => Ok(BinaryOp::ShiftLeft),
+            Token::DblGreaterThan { .. } => Ok(BinaryOp::ShiftRight),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: format!("`{:#?}`", expected),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
 
-    // fn expect_separator(&mut self, expected: Token) -> Result<Separator, ErrorsEmitted> {
-    //     let token = self.consume_token()?;
+    fn expect_separator(&mut self, expected: Token) -> Result<Separator, ErrorsEmitted> {
+        let token = self.consume_token().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
-    //     match token {
-    //         Token::Colon { .. } => Ok(Separator::Colon),
-    //         Token::Semicolon { .. } => Ok(Separator::Semicolon),
-    //         Token::Comma { .. } => Ok(Separator::Comma),
-    //         Token::Dot { .. } => Ok(Separator::Dot),
-    //         Token::DblColon { .. } => Ok(Separator::DblColon),
-    //         Token::ColonColonAsterisk { .. } => Ok(Separator::ColonColonAsterisk),
-    //         Token::ThinArrow { .. } => Ok(Separator::ThinArrow),
-    //         Token::FatArrow { .. } => Ok(Separator::FatArrow),
-
-    //         _ => {
-    //             self.log_error(ParserErrorKind::UnexpectedToken {
-    //                 expected: format!("`{:#?}`", expected),
-    //                 found: token,
-    //             });
-    //             Err(ErrorsEmitted(()))
-    //         }
-    //     }
-    // }
+        match token {
+            Token::Colon { .. } => Ok(Separator::Colon),
+            Token::Semicolon { .. } => Ok(Separator::Semicolon),
+            Token::Comma { .. } => Ok(Separator::Comma),
+            Token::Dot { .. } => Ok(Separator::Dot),
+            Token::DblColon { .. } => Ok(Separator::DblColon),
+            Token::ColonColonAsterisk { .. } => Ok(Separator::ColonColonAsterisk),
+            Token::ThinArrow { .. } => Ok(Separator::ThinArrow),
+            Token::FatArrow { .. } => Ok(Separator::FatArrow),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: format!("`{:#?}`", expected),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
 
     /// Advance the parser by one if the expected token matches the current one
     /// and return whether or not this is the case.
-    // fn tokens_match(&mut self, expected: Token) -> bool {
-    //     if self.is_expected_token(&expected) {
-    //         self.current += 1;
-    //         true
-    //     } else {
-    //         false
-    //     }
-    // }
+    fn tokens_match(&mut self, expected: Token) -> bool {
+        if self.is_expected_token(&expected) {
+            self.current += 1;
+            true
+        } else {
+            false
+        }
+    }
 
-    // /// Verify that the current token is the expected one.
-    // fn is_expected_token(&self, expected: &Token) -> bool {
-    //     if self.current < self.stream.tokens().len() {
-    //         &self.stream.tokens()[self.current] == expected
-    //     } else {
-    //         false
-    //     }
-    // }
+    /// Verify that the current token is the expected one.
+    fn is_expected_token(&self, expected: &Token) -> bool {
+        if self.current < self.stream.tokens().len() {
+            &self.stream.tokens()[self.current] == expected
+        } else {
+            false
+        }
+    }
 
     /// Retrieve the respective precedence level for an operator.
     fn precedence(&mut self, token: &Token) -> Precedence {
@@ -924,76 +938,80 @@ impl Parser {
         &self.errors
     }
 
-    // / Match a `Token` to a `Type` and return the `Type` or emit an error.
-    // fn get_type(&mut self) -> Result<Type, ErrorsEmitted> {
-    //     let token = self.consume_token()?;
+    /// Match a `Token` to a `Type` and return the `Type` or emit an error.
+    fn get_type(&mut self) -> Result<Type, ErrorsEmitted> {
+        let token = self.consume_token().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
-    //     match token {
-    //         Token::I32Type { .. } | Token::I64Type { .. } | Token::I128Type { .. } => Ok(Type::Int),
-    //         Token::U8Type { .. }
-    //         | Token::U16Type { .. }
-    //         | Token::U32Type { .. }
-    //         | Token::U64Type { .. }
-    //         | Token::U128Type { .. } => Ok(Type::UInt),
-    //         Token::U256Type { .. } => Ok(Type::BigUInt),
-    //         Token::U512Type { .. } => Ok(Type::BigUInt),
-    //         Token::ByteType { .. } => Ok(Type::Byte),
-    //         Token::B2Type { .. }
-    //         | Token::B3Type { .. }
-    //         | Token::B4Type { .. }
-    //         | Token::B5Type { .. }
-    //         | Token::B6Type { .. }
-    //         | Token::B7Type { .. }
-    //         | Token::B8Type { .. }
-    //         | Token::B9Type { .. }
-    //         | Token::B10Type { .. }
-    //         | Token::B11Type { .. }
-    //         | Token::B12Type { .. }
-    //         | Token::B13Type { .. }
-    //         | Token::B14Type { .. }
-    //         | Token::B15Type { .. }
-    //         | Token::B16Type { .. }
-    //         | Token::B17Type { .. }
-    //         | Token::B18Type { .. }
-    //         | Token::B19Type { .. }
-    //         | Token::B20Type { .. }
-    //         | Token::B21Type { .. }
-    //         | Token::B22Type { .. }
-    //         | Token::B23Type { .. }
-    //         | Token::B24Type { .. }
-    //         | Token::B25Type { .. }
-    //         | Token::B26Type { .. }
-    //         | Token::B27Type { .. }
-    //         | Token::B28Type { .. }
-    //         | Token::B29Type { .. }
-    //         | Token::B30Type { .. }
-    //         | Token::B31Type { .. }
-    //         | Token::B32Type { .. } => Ok(Type::Bytes),
-    //         Token::H160Type { .. } | Token::H256Type { .. } | Token::H512Type { .. } => {
-    //             Ok(Type::Hash)
-    //         }
-    //         Token::StringType { .. } => Ok(Type::String),
-    //         Token::CharType { .. } => Ok(Type::Char),
-    //         Token::BoolType { .. } => Ok(Type::Bool),
-    //         Token::CustomType { .. } => Ok(Type::UserDefined),
-    //         Token::SelfType { .. } => Ok(Type::SelfType),
-    //         Token::LParen { .. } => {
-    //             if let Ok(Token::RParen { .. }) = self.peek_ahead_by(1) {
-    //                 Ok(Type::UnitType)
-    //             } else {
-    //                 Ok(Type::Tuple)
-    //             }
-    //         }
-    //         Token::LBracket { .. } => Ok(Type::Array),
-    //         Token::Func { .. } => Ok(Type::Function),
-    //         Token::Ampersand { .. } => Ok(Type::Reference),
-    //         _ => {
-    //             self.log_error(ParserErrorKind::UnexpectedToken {
-    //                 expected: "type annotation".to_string(),
-    //                 found: token,
-    //             });
-    //             Err(ErrorsEmitted(()))
-    //         }
-    //     }
-    // }
+        match token {
+            Token::I32Type { .. } | Token::I64Type { .. } | Token::I128Type { .. } => Ok(Type::Int),
+            Token::U8Type { .. }
+            | Token::U16Type { .. }
+            | Token::U32Type { .. }
+            | Token::U64Type { .. }
+            | Token::U128Type { .. } => Ok(Type::UInt),
+            Token::U256Type { .. } => Ok(Type::BigUInt),
+            Token::U512Type { .. } => Ok(Type::BigUInt),
+            Token::ByteType { .. } => Ok(Type::Byte),
+
+            Token::B2Type { .. }
+            | Token::B3Type { .. }
+            | Token::B4Type { .. }
+            | Token::B5Type { .. }
+            | Token::B6Type { .. }
+            | Token::B7Type { .. }
+            | Token::B8Type { .. }
+            | Token::B9Type { .. }
+            | Token::B10Type { .. }
+            | Token::B11Type { .. }
+            | Token::B12Type { .. }
+            | Token::B13Type { .. }
+            | Token::B14Type { .. }
+            | Token::B15Type { .. }
+            | Token::B16Type { .. }
+            | Token::B17Type { .. }
+            | Token::B18Type { .. }
+            | Token::B19Type { .. }
+            | Token::B20Type { .. }
+            | Token::B21Type { .. }
+            | Token::B22Type { .. }
+            | Token::B23Type { .. }
+            | Token::B24Type { .. }
+            | Token::B25Type { .. }
+            | Token::B26Type { .. }
+            | Token::B27Type { .. }
+            | Token::B28Type { .. }
+            | Token::B29Type { .. }
+            | Token::B30Type { .. }
+            | Token::B31Type { .. }
+            | Token::B32Type { .. } => Ok(Type::Bytes),
+            Token::H160Type { .. } | Token::H256Type { .. } | Token::H512Type { .. } => {
+                Ok(Type::Hash)
+            }
+            Token::StringType { .. } => Ok(Type::String),
+            Token::CharType { .. } => Ok(Type::Char),
+            Token::BoolType { .. } => Ok(Type::Bool),
+            Token::CustomType { .. } => Ok(Type::UserDefined),
+            Token::SelfType { .. } => Ok(Type::SelfType),
+            Token::LParen { .. } => {
+                if let Ok(Token::RParen { .. }) = self.peek_ahead_by(1) {
+                    Ok(Type::UnitType)
+                } else {
+                    Ok(Type::Tuple)
+                }
+            }
+            Token::LBracket { .. } => Ok(Type::Array),
+            Token::Func { .. } => Ok(Type::Function),
+            Token::Ampersand { .. } => Ok(Type::Reference),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "type annotation".to_string(),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
 }
