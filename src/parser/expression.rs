@@ -39,8 +39,8 @@ impl ParseExpression for PathExpr {
             parser.consume_token()?;
 
             if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
-                parser.consume_token()?;
                 tree.push(Identifier(name));
+                parser.consume_token()?;
             } else {
                 break;
             }
@@ -237,7 +237,7 @@ impl ParseExpression for IndexExpr {
             Ok(value)
         } else if let Ok(_) = token {
             parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "array index".to_string(),
+                expected: "unsigned integer".to_string(),
                 found: token?,
             });
             Err(ErrorsEmitted(()))
@@ -277,7 +277,7 @@ impl ParseExpression for TupleIndexExpr {
             Ok(value)
         } else if let Ok(_) = token {
             parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "tuple index".to_string(),
+                expected: "unsigned integer".to_string(),
                 found: token?,
             });
             Err(ErrorsEmitted(()))
@@ -319,7 +319,7 @@ impl ParseExpression for UnwrapExpr {
 impl ParseExpression for TypeCastExpr {
     fn parse(parser: &mut Parser, operand: Expression) -> Result<TypeCastExpr, ErrorsEmitted> {
         let kw_as = parser.expect_keyword(Token::As {
-            name: "as".to_string(),
+            name: "`as` keyword".to_string(),
             span: parser.stream.span(),
         })?;
 
@@ -347,7 +347,7 @@ impl ParseExpression for RangeExpr {
                 Token::DotDotEquals { .. } => Ok(RangeOp::RangeInclusive),
                 _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "range operator".to_string(),
+                        expected: "`..` or `..=`".to_string(),
                         found: t,
                     });
                     Err(ErrorsEmitted(()))
@@ -440,7 +440,7 @@ impl ParseExpression for StructExpr {
 
         if fields.is_empty() {
             parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "struct fields".to_string(),
+                expected: "struct field".to_string(),
             });
         }
 
@@ -494,7 +494,7 @@ impl ParseExpression for TupleStructExpr {
 
         if elements.is_empty() {
             parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "tuple struct fields".to_string(),
+                expected: "tuple struct element".to_string(),
             });
         }
 

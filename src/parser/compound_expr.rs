@@ -155,7 +155,7 @@ impl ParseCompoundExpr for TupleExpr {
 
         if elements.is_empty() {
             parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "tuple elements".to_string(),
+                expected: "tuple element".to_string(),
             });
         }
 
@@ -196,7 +196,7 @@ impl ParseCompoundExpr for BlockExpr {
 
         if statements.is_empty() {
             parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "statements".to_string(),
+                expected: "statement".to_string(),
             });
         }
 
