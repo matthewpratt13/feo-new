@@ -498,3 +498,23 @@ impl ParseExpression for TupleStructExpr {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use crate::test_utils;
+
+    #[test]
+    fn test_path_expr() -> Result<(), ()> {
+        let input = r#"package::module::Object"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+}

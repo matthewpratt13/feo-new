@@ -38,7 +38,7 @@ use self::{
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
 #[derive(Debug)]
-struct Parser {
+pub(crate) struct Parser {
     stream: TokenStream,
     current: usize,
     errors: Vec<CompilerError<ParserErrorKind>>,
@@ -49,7 +49,7 @@ impl Parser {
     /// Create a new `Parser` instance.
     /// Initialize an empty `Vec` to store parser errors and an empty `HashMap`
     /// to store precedences.
-    fn new(stream: TokenStream) -> Self {
+    pub(crate) fn new(stream: TokenStream) -> Self {
         Parser {
             stream,
             current: 0,
@@ -366,12 +366,12 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Main parsing function that returns a `Vec<Statement>`.
-    fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
-        let mut statements: Vec<Statement> = Vec::new();
+    fn parse(&mut self) -> Result<Vec<Expression>, ErrorsEmitted> {
+        let mut expressions: Vec<Expression> = Vec::new();
         while self.current < self.stream.tokens().len() {
-            statements.push(self.parse_statement()?);
+            expressions.push(self.parse_expression(Precedence::Lowest)?);
         }
-        Ok(statements)
+        Ok(expressions)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -400,7 +400,10 @@ impl Parser {
 
     /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let token = self.consume_token()?;
+        let token = self.peek_current().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
         match token {
             Token::Identifier { name, .. } => Ok(Expression::Path(PathExpr {

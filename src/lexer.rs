@@ -12,7 +12,7 @@ use crate::{
 
 /// Struct that stores an input string and contains methods to render tokens (tokenize)
 /// from characters in that string.
-struct Lexer<'a> {
+pub struct Lexer<'a> {
     input: &'a str,
     pos: usize,
     peekable_chars: Peekable<Chars<'a>>,
@@ -24,7 +24,7 @@ impl<'a> Lexer<'a> {
     /// Initialize an empty `Vec` to store potential errors, and create an `Iterator`
     /// from the characters in the source string to traverse the input string
     /// and look ahead in the source code without moving forward.
-    fn new(input: &'a str) -> Self {
+    pub(crate) fn new(input: &'a str) -> Self {
         Lexer {
             input,
             pos: 0,
@@ -34,13 +34,13 @@ impl<'a> Lexer<'a> {
     }
 
     /// Get a list of the lexer's `CompilerError`.
-    fn errors(&self) -> &[CompilerError<LexErrorKind>] {
+    pub(crate) fn errors(&self) -> &[CompilerError<LexErrorKind>] {
         &self.errors
     }
 
     /// Main tokenizing function.
     /// Returns a stream of tokens generated from some input string (source code).
-    fn lex(&mut self) -> Result<TokenStream, ErrorsEmitted> {
+    pub(crate) fn lex(&mut self) -> Result<TokenStream, ErrorsEmitted> {
         let mut tokens: Vec<Token> = Vec::new();
 
         while let Some(c) = self.peek_current() {

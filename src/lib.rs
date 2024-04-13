@@ -7,6 +7,7 @@ mod keccak;
 mod lexer;
 mod parser;
 mod span;
+mod test_utils;
 mod token;
 
 // hexadecimal 256-bit unsigned integer
