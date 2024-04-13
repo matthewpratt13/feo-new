@@ -1,6 +1,8 @@
 use crate::{
     ast::{
-        CallExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr, MethodCallExpr, PathExpr, RangeExpr, RangeOp, Separator, StructExpr, StructField, TupleIndexExpr, TupleStructExpr, TypeCastExpr, UnwrapExpr, UnwrapOp
+        CallExpr, Delimiter, Expression, FieldAccessExpr, Identifier, IndexExpr, MethodCallExpr,
+        PathExpr, RangeExpr, RangeOp, Separator, StructExpr, StructField, TupleIndexExpr,
+        TupleStructExpr, TypeCastExpr, UnwrapExpr, UnwrapOp,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -76,89 +78,88 @@ impl ParseExpression for PathExpr {
     }
 }
 
-// impl ParseExpression for MethodCallExpr {
-//     fn parse(parser: &mut Parser, receiver: Expression) -> Result<MethodCallExpr, ErrorsEmitted> {
-//         let mut args: Vec<Expression> = Vec::new();
+impl ParseExpression for MethodCallExpr {
+    fn parse(parser: &mut Parser, receiver: Expression) -> Result<MethodCallExpr, ErrorsEmitted> {
+        let mut args: Vec<Expression> = Vec::new();
 
-//         let dot = parser.expect_separator(Token::Dot {
-//             punc: '.',
-//             span: parser.stream.span(),
-//         })?;
+        let token = parser.consume_token();
 
-//         let token = parser.consume_token();
+        let method_name = if let Some(Token::Identifier { name, .. }) = token {
+            Ok(Identifier(name))
+        } else {
+            let token = token.ok_or({
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                ErrorsEmitted(())
+            });
 
-//         let method_name = if let Ok(Token::Identifier { name, .. }) = token {
-//             Ok(Identifier(name))
-//         } else {
-//             parser.log_error(ParserErrorKind::UnexpectedToken {
-//                 expected: "identifier after `.`".to_string(),
-//                 found: token?,
-//             });
-//             Err(ErrorsEmitted(()))
-//         };
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "identifier after `.`".to_string(),
+                found: token?,
+            });
+            Err(ErrorsEmitted(()))
+        };
 
-//         let open_paren = parser.expect_delimiter(Token::LParen {
-//             delim: '(',
-//             span: parser.stream.span(),
-//         });
+        let open_paren = parser.expect_delimiter(Token::LParen {
+            delim: '(',
+            span: parser.stream.span(),
+        });
 
-//         loop {
-//             if let Some(Token::RParen { .. }) = parser.peek_current() {
-//                 parser.consume_token()?;
-//                 break;
-//             }
+        loop {
+            if let Some(Token::RParen { .. }) = parser.peek_current() {
+                parser.consume_token();
+                break;
+            }
 
-//             let arg_expr = parser.parse_expression(Precedence::Lowest)?;
-//             args.push(arg_expr);
+            let arg_expr = parser.parse_expression(Precedence::Lowest)?;
+            args.push(arg_expr);
 
-//             let curr_token = parser.consume_token();
+            let curr_token = parser.consume_token();
 
-//             match curr_token {
-//                 Ok(Token::Comma { .. }) => continue,
-//                 Ok(Token::RParen { .. }) => break,
-//                 _ => {
-//                     parser.log_error(ParserErrorKind::UnexpectedToken {
-//                         expected: "`,` or `)`".to_string(),
-//                         found: curr_token?,
-//                     });
-//                 }
-//             }
-//         }
+            match curr_token {
+                Some(Token::Comma { .. }) => continue,
+                Some(Token::RParen { .. }) => break,
+                _ => {
+                    let curr_token = curr_token.ok_or({
+                        parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                        ErrorsEmitted(())
+                    });
 
-//         if !parser.errors().is_empty() {
-//             return Err(ErrorsEmitted(()));
-//         }
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `)`".to_string(),
+                        found: curr_token?,
+                    });
+                }
+            }
+        }
 
-//         if args.is_empty() {
-//             Ok(MethodCallExpr {
-//                 receiver: Box::new(receiver),
-//                 dot,
-//                 method_name: method_name?,
-//                 open_paren: open_paren?,
-//                 args_opt: None,
-//                 close_paren: Delimiter::RParen,
-//             })
-//         } else {
-//             Ok(MethodCallExpr {
-//                 receiver: Box::new(receiver),
-//                 dot,
-//                 method_name: method_name?,
-//                 open_paren: open_paren?,
-//                 args_opt: Some(args),
-//                 close_paren: Delimiter::RParen,
-//             })
-//         }
-//     }
-// }
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
+
+        if args.is_empty() {
+            Ok(MethodCallExpr {
+                receiver: Box::new(receiver),
+                dot: Separator::Dot,
+                method_name: method_name?,
+                open_paren: open_paren?,
+                args_opt: None,
+                close_paren: Delimiter::RParen,
+            })
+        } else {
+            Ok(MethodCallExpr {
+                receiver: Box::new(receiver),
+                dot: Separator::Dot,
+                method_name: method_name?,
+                open_paren: open_paren?,
+                args_opt: Some(args),
+                close_paren: Delimiter::RParen,
+            })
+        }
+    }
+}
 
 impl ParseExpression for FieldAccessExpr {
     fn parse(parser: &mut Parser, object: Expression) -> Result<FieldAccessExpr, ErrorsEmitted> {
-
-        // let dot = parser.expect_separator(Token::Dot {
-        //     punc: '.',
-        //     span: parser.stream.span(),
-        // });
-
         let token = parser.consume_token();
 
         if let Some(Token::Identifier { name, .. }) = token {
@@ -182,172 +183,132 @@ impl ParseExpression for FieldAccessExpr {
     }
 }
 
-// impl ParseExpression for CallExpr {
-//     fn parse(parser: &mut Parser, callee: Expression) -> Result<CallExpr, ErrorsEmitted> {
-//         let mut args: Vec<Expression> = Vec::new();
+impl ParseExpression for CallExpr {
+    fn parse(parser: &mut Parser, callee: Expression) -> Result<CallExpr, ErrorsEmitted> {
+        let mut args: Vec<Expression> = Vec::new();
 
-//         let open_paren = parser.expect_delimiter(Token::LParen {
-//             delim: '(',
-//             span: parser.stream.span(),
-//         })?;
+        loop {
+            if let Some(Token::RParen { .. }) = parser.peek_current() {
+                parser.consume_token();
+                break;
+            }
 
-//         loop {
-//             if let Some(Token::RParen { .. }) = parser.peek_current() {
-//                 parser.consume_token()?;
-//                 break;
-//             }
+            let arg_expr = parser.parse_expression(Precedence::Lowest)?;
+            args.push(arg_expr);
 
-//             let arg_expr = parser.parse_expression(Precedence::Lowest)?;
-//             args.push(arg_expr);
+            let token = parser.consume_token();
 
-//             let token = parser.consume_token();
+            match token {
+                Some(Token::Comma { .. }) => continue,
+                Some(Token::RParen { .. }) => break,
+                _ => {
+                    let token = parser.peek_current().ok_or({
+                        parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                        ErrorsEmitted(())
+                    });
 
-//             match token {
-//                 Ok(Token::Comma { .. }) => continue,
-//                 Ok(Token::RParen { .. }) => break,
-//                 _ => {
-//                     parser.log_error(ParserErrorKind::UnexpectedToken {
-//                         expected: "`,` or `)`".to_string(),
-//                         found: token?,
-//                     });
-//                 }
-//             }
-//         }
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `)`".to_string(),
+                        found: token?,
+                    });
+                }
+            }
+        }
 
-//         if !parser.errors().is_empty() {
-//             return Err(ErrorsEmitted(()));
-//         }
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
 
-//         if args.is_empty() {
-//             Ok(CallExpr {
-//                 callee: Box::new(callee),
-//                 open_paren,
-//                 args_opt: None,
-//                 close_paren: Delimiter::RParen,
-//             })
-//         } else {
-//             Ok(CallExpr {
-//                 callee: Box::new(callee),
-//                 open_paren,
-//                 args_opt: Some(args),
-//                 close_paren: Delimiter::RParen,
-//             })
-//         }
-//     }
-// }
+        if args.is_empty() {
+            Ok(CallExpr {
+                callee: Box::new(callee),
+                open_paren: Delimiter::LParen,
+                args_opt: None,
+                close_paren: Delimiter::RParen,
+            })
+        } else {
+            Ok(CallExpr {
+                callee: Box::new(callee),
+                open_paren: Delimiter::LParen,
+                args_opt: Some(args),
+                close_paren: Delimiter::RParen,
+            })
+        }
+    }
+}
 
-// impl ParseExpression for IndexExpr {
-//     fn parse(parser: &mut Parser, array: Expression) -> Result<IndexExpr, ErrorsEmitted> {
-//         let open_bracket = parser.expect_delimiter(Token::LBracket {
-//             delim: '[',
-//             span: parser.stream.span(),
-//         })?;
+impl ParseExpression for IndexExpr {
+    fn parse(parser: &mut Parser, array: Expression) -> Result<IndexExpr, ErrorsEmitted> {
+        let token = parser.consume_token();
 
-//         let token = parser.consume_token();
+        let index = if let Some(Token::UIntLiteral { value, .. }) = token {
+            Ok(value)
+        } else if let Some(_) = token {
+            let token = token.ok_or({
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                ErrorsEmitted(())
+            });
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "unsigned integer".to_string(),
+                found: token?,
+            });
+            Err(ErrorsEmitted(()))
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            Err(ErrorsEmitted(()))
+        };
 
-//         let index = if let Ok(Token::UIntLiteral { value, .. }) = token {
-//             Ok(value)
-//         } else if let Ok(_) = token {
-//             parser.log_error(ParserErrorKind::UnexpectedToken {
-//                 expected: "unsigned integer".to_string(),
-//                 found: token?,
-//             });
-//             Err(ErrorsEmitted(()))
-//         } else {
-//             parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-//             Err(ErrorsEmitted(()))
-//         };
+        let close_bracket = parser.expect_delimiter(Token::RBracket {
+            delim: ']',
+            span: parser.stream.span(),
+        });
 
-//         let close_bracket = parser.expect_delimiter(Token::RBracket {
-//             delim: ']',
-//             span: parser.stream.span(),
-//         });
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
 
-//         if !parser.errors().is_empty() {
-//             return Err(ErrorsEmitted(()));
-//         }
+        Ok(IndexExpr {
+            array: Box::new(array),
+            open_bracket: Delimiter::LBracket,
+            index: index?,
+            close_bracket: close_bracket?,
+        })
+    }
+}
 
-//         Ok(IndexExpr {
-//             array: Box::new(array),
-//             open_bracket,
-//             index: index?,
-//             close_bracket: close_bracket?,
-//         })
-//     }
-// }
+impl ParseExpression for TupleIndexExpr {
+    fn parse(parser: &mut Parser, operand: Expression) -> Result<TupleIndexExpr, ErrorsEmitted> {
+        let token = parser.consume_token();
 
-// impl ParseExpression for TupleIndexExpr {
-//     fn parse(parser: &mut Parser, operand: Expression) -> Result<TupleIndexExpr, ErrorsEmitted> {
-//         let dot = parser.expect_separator(Token::Dot {
-//             punc: '.',
-//             span: parser.stream.span(),
-//         })?;
+        let index = if let Some(Token::UIntLiteral { value, .. }) = token {
+            Ok(value)
+        } else if let Some(_) = token {
+            let token = token.ok_or({
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                ErrorsEmitted(())
+            });
 
-//         let token = parser.consume_token();
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "unsigned integer".to_string(),
+                found: token?,
+            });
+            Err(ErrorsEmitted(()))
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            Err(ErrorsEmitted(()))
+        };
 
-//         let index = if let Ok(Token::UIntLiteral { value, .. }) = token {
-//             Ok(value)
-//         } else if let Ok(_) = token {
-//             parser.log_error(ParserErrorKind::UnexpectedToken {
-//                 expected: "unsigned integer".to_string(),
-//                 found: token?,
-//             });
-//             Err(ErrorsEmitted(()))
-//         } else {
-//             parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-//             Err(ErrorsEmitted(()))
-//         };
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
 
-//         if !parser.errors().is_empty() {
-//             return Err(ErrorsEmitted(()));
-//         }
-
-//         Ok(TupleIndexExpr {
-//             operand: Box::new(operand),
-//             dot,
-//             index: index?,
-//         })
-//     }
-// }
-
-// impl ParseExpression for UnwrapExpr {
-//     fn parse(parser: &mut Parser, expr: Expression) -> Result<UnwrapExpr, ErrorsEmitted> {
-//         parser.expect_token(Token::QuestionMark {
-//             punc: '?',
-//             span: parser.stream.span(),
-//         })?;
-
-//         if !parser.errors().is_empty() {
-//             return Err(ErrorsEmitted(()));
-//         }
-
-//         Ok(UnwrapExpr {
-//             expression: Box::new(expr),
-//             op: UnwrapOp(()),
-//         })
-//     }
-// }
-
-// impl ParseExpression for TypeCastExpr {
-//     fn parse(parser: &mut Parser, operand: Expression) -> Result<TypeCastExpr, ErrorsEmitted> {
-//         let kw_as = parser.expect_keyword(Token::As {
-//             name: "`as` keyword".to_string(),
-//             span: parser.stream.span(),
-//         })?;
-
-//         let new_type = parser.get_type();
-
-//         if !parser.errors().is_empty() {
-//             return Err(ErrorsEmitted(()));
-//         }
-
-//         Ok(TypeCastExpr {
-//             operand: Box::new(operand),
-//             kw_as,
-//             new_type: new_type?,
-//         })
-//     }
-// }
+        Ok(TupleIndexExpr {
+            operand: Box::new(operand),
+            dot: Separator::Dot,
+            index: index?,
+        })
+    }
+}
 
 // impl ParseExpression for RangeExpr {
 //     fn parse(parser: &mut Parser, from: Expression) -> Result<RangeExpr, ErrorsEmitted> {
@@ -538,8 +499,92 @@ mod tests {
     }
 
     #[test]
+    fn test_method_call_expr() -> Result<(), ()> {
+        let input = r#"receiver.method(foo, bar)"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn test_call_expr() -> Result<(), ()> {
+        let input = r#"foo(bar, baz)"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn test_index_expr() -> Result<(), ()> {
+        let input = r#"array[0]"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn test_tuple_index_expr() -> Result<(), ()> {
+        let input = r#"tuple.0"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
     fn test_field_access_expr() -> Result<(), ()> {
         let input = r#"object.field"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn test_unwrap_expr() -> Result<(), ()> {
+        let input = r#"(x + 2)?"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn test_type_cast_expr() -> Result<(), ()> {
+        let input = r#"x as u32"#;
 
         let mut parser = test_utils::get_parser(input);
 
