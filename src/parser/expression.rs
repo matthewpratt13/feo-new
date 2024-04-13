@@ -527,5 +527,19 @@ mod tests {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
+    }   
+    
+    #[test]
+    fn test_binary_expr_divide() -> Result<(), ()> {
+        let input = r#"10 / 5"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
     }
 }

@@ -9,8 +9,6 @@ mod precedence;
 mod statement;
 mod unary_expr;
 
-use std::collections::HashMap;
-
 use crate::{
     ast::{
         AliasDecl, ArrayExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ConstantDecl,
@@ -42,7 +40,6 @@ pub(crate) struct Parser {
     stream: TokenStream,
     current: usize,
     errors: Vec<CompilerError<ParserErrorKind>>,
-    precedences: HashMap<Token, Precedence>,
 }
 
 impl Parser {
@@ -54,313 +51,7 @@ impl Parser {
             stream,
             current: 0,
             errors: Vec::new(),
-            precedences: HashMap::new(),
         }
-    }
-
-    /// Define precedence levels for operators.
-    fn init_precedences(&mut self) {
-        self.precedences.insert(
-            Token::As {
-                name: "as".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::TypeCast,
-        );
-        self.precedences.insert(
-            Token::DblAsterisk {
-                punc: "**".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Exponentiation,
-        );
-        self.precedences.insert(
-            Token::Minus {
-                punc: '-',
-                span: self.stream.span(),
-            },
-            Precedence::Unary,
-        );
-        self.precedences.insert(
-            Token::Bang {
-                punc: '!',
-                span: self.stream.span(),
-            },
-            Precedence::Unary,
-        );
-        self.precedences.insert(
-            Token::Asterisk {
-                punc: '*',
-                span: self.stream.span(),
-            },
-            Precedence::Unary,
-        );
-        self.precedences.insert(
-            Token::Ampersand {
-                punc: '&',
-                span: self.stream.span(),
-            },
-            Precedence::Unary,
-        );
-        self.precedences.insert(
-            Token::AmpersandMut {
-                punc: "&mut".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Unary,
-        );
-        self.precedences.insert(
-            Token::Percent {
-                punc: '%',
-                span: self.stream.span(),
-            },
-            Precedence::Remainder,
-        );
-        self.precedences.insert(
-            Token::Slash {
-                punc: '/',
-                span: self.stream.span(),
-            },
-            Precedence::Quotient,
-        );
-        self.precedences.insert(
-            Token::Asterisk {
-                punc: '*',
-                span: self.stream.span(),
-            },
-            Precedence::Product,
-        );
-        self.precedences.insert(
-            Token::Minus {
-                punc: '-',
-                span: self.stream.span(),
-            },
-            Precedence::Difference,
-        );
-        self.precedences.insert(
-            Token::Plus {
-                punc: '+',
-                span: self.stream.span(),
-            },
-            Precedence::Sum,
-        );
-        self.precedences.insert(
-            Token::Pipe {
-                punc: '|',
-                span: self.stream.span(),
-            },
-            Precedence::BitwiseOr,
-        );
-        self.precedences.insert(
-            Token::Caret {
-                punc: '^',
-                span: self.stream.span(),
-            },
-            Precedence::BitwiseXor,
-        );
-        self.precedences.insert(
-            Token::Ampersand {
-                punc: '&',
-                span: self.stream.span(),
-            },
-            Precedence::BitwiseAnd,
-        );
-        self.precedences.insert(
-            Token::DblLessThan {
-                punc: "<<".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Shift,
-        );
-        self.precedences.insert(
-            Token::DblGreaterThan {
-                punc: ">>".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Shift,
-        );
-        self.precedences.insert(
-            Token::GreaterThanEquals {
-                punc: ">=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::GreaterThanOrEqual,
-        );
-        self.precedences.insert(
-            Token::GreaterThan {
-                punc: '>',
-                span: self.stream.span(),
-            },
-            Precedence::GreaterThan,
-        );
-        self.precedences.insert(
-            Token::LessThanEquals {
-                punc: "<=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::LessThanOrEqual,
-        );
-        self.precedences.insert(
-            Token::LessThan {
-                punc: '<',
-                span: self.stream.span(),
-            },
-            Precedence::LessThan,
-        );
-        self.precedences.insert(
-            Token::BangEquals {
-                punc: "!=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::NotEqual,
-        );
-        self.precedences.insert(
-            Token::DblEquals {
-                punc: "==".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Equal,
-        );
-        self.precedences.insert(
-            Token::DblAmpersand {
-                punc: "&&".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::LogicalAnd,
-        );
-        self.precedences.insert(
-            Token::DblPipe {
-                punc: "||".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::LogicalOr,
-        );
-        self.precedences.insert(
-            Token::PercentEquals {
-                punc: "%=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::CompoundAssignment,
-        );
-        self.precedences.insert(
-            Token::SlashEquals {
-                punc: "/=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::CompoundAssignment,
-        );
-        self.precedences.insert(
-            Token::AsteriskEquals {
-                punc: "*=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::CompoundAssignment,
-        );
-        self.precedences.insert(
-            Token::MinusEquals {
-                punc: "-=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::CompoundAssignment,
-        );
-        self.precedences.insert(
-            Token::PlusEquals {
-                punc: "+=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::CompoundAssignment,
-        );
-        self.precedences.insert(
-            Token::Equals {
-                punc: '=',
-                span: self.stream.span(),
-            },
-            Precedence::Assignment,
-        );
-        self.precedences.insert(
-            Token::DblDot {
-                punc: "..".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Range,
-        );
-        self.precedences.insert(
-            Token::DotDotEquals {
-                punc: "..=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Range,
-        );
-        self.precedences.insert(
-            Token::QuestionMark {
-                punc: '?',
-                span: self.stream.span(),
-            },
-            Precedence::Unwrap,
-        );
-        self.precedences.insert(
-            Token::Dot {
-                punc: '.',
-                span: self.stream.span(),
-            },
-            Precedence::MethodCall,
-        );
-        self.precedences.insert(
-            Token::Dot {
-                punc: '.',
-                span: self.stream.span(),
-            },
-            Precedence::FieldAccess,
-        );
-        self.precedences.insert(
-            Token::DblColon {
-                punc: "::".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Path,
-        );
-        self.precedences.insert(
-            Token::ColonColonAsterisk {
-                punc: "::*".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Path,
-        );
-        self.precedences.insert(
-            Token::LBracket {
-                delim: '(',
-                span: self.stream.span(),
-            },
-            Precedence::Call,
-        );
-        self.precedences.insert(
-            Token::LBracket {
-                delim: '[',
-                span: self.stream.span(),
-            },
-            Precedence::Index,
-        );
-        self.precedences.insert(
-            Token::Break {
-                name: "break".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Lowest,
-        );
-        self.precedences.insert(
-            Token::Continue {
-                name: "continue".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Lowest,
-        );
-        self.precedences.insert(
-            Token::Return {
-                name: "return".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Lowest,
-        );
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -727,122 +418,122 @@ impl Parser {
                 left_expr,
                 BinaryOp::Add,
             )?)),
-            // Token::Minus { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::Subtract,
-            // )?)),
-            // Token::Asterisk { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::Multiply,
-            // )?)),
-            // Token::Slash { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::Divide,
-            // )?)),
-            // Token::Percent { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::Modulus,
-            // )?)),
-            // Token::DblEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::Equal,
-            // )?)),
-            // Token::BangEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::NotEqual,
-            // )?)),
-            // Token::LessThan { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::LessThan,
-            // )?)),
-            // Token::LessThanEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::LessEqual,
-            // )?)),
-            // Token::GreaterThan { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::GreaterThan,
-            // )?)),
-            // Token::GreaterThanEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::GreaterEqual,
-            // )?)),
-            // Token::Equals { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::Assign,
-            // )?)),
-            // Token::PlusEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::AddAssign,
-            // )?)),
-            // Token::MinusEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::SubtractAssign,
-            // )?)),
-            // Token::AsteriskEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::MultiplyAssign,
-            // )?)),
-            // Token::SlashEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::DivideAssign,
-            // )?)),
-            // Token::PercentEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::ModulusAssign,
-            // )?)),
-            // Token::DblAmpersand { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::LogicalAnd,
-            // )?)),
-            // Token::DblPipe { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::LogicalOr,
-            // )?)),
-            // Token::Ampersand { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::BitwiseAnd,
-            // )?)),
-            // Token::Pipe { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::BitwiseOr,
-            // )?)),
-            // Token::Caret { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::BitwiseXor,
-            // )?)),
-            // Token::DblLessThan { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::ShiftLeft,
-            // )?)),
-            // Token::DblGreaterThan { .. } => Ok(Expression::Binary(parse_binary_expr(
-            //     self,
-            //     left_expr,
-            //     BinaryOp::ShiftRight,
-            // )?)),
-            // Token::QuestionMark { .. } => {
+            Some(Token::Minus { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Subtract,
+            )?)),
+            Some(Token::Asterisk { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Multiply,
+            )?)),
+            Some(Token::Slash { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Divide,
+            )?)),
+            Some(Token::Percent { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Modulus,
+            )?)),
+            Some(Token::DblEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Equal,
+            )?)),
+            Some(Token::BangEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::NotEqual,
+            )?)),
+            Some(Token::LessThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::LessThan,
+            )?)),
+            Some(Token::LessThanEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::LessEqual,
+            )?)),
+            Some(Token::GreaterThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::GreaterThan,
+            )?)),
+            Some(Token::GreaterThanEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::GreaterEqual,
+            )?)),
+            Some(Token::Equals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::Assign,
+            )?)),
+            Some(Token::PlusEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::AddAssign,
+            )?)),
+            Some(Token::MinusEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::SubtractAssign,
+            )?)),
+            Some(Token::AsteriskEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::MultiplyAssign,
+            )?)),
+            Some(Token::SlashEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::DivideAssign,
+            )?)),
+            Some(Token::PercentEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::ModulusAssign,
+            )?)),
+            Some(Token::DblAmpersand { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::LogicalAnd,
+            )?)),
+            Some(Token::DblPipe { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::LogicalOr,
+            )?)),
+            Some(Token::Ampersand { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::BitwiseAnd,
+            )?)),
+            Some(Token::Pipe { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::BitwiseOr,
+            )?)),
+            Some(Token::Caret { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::BitwiseXor,
+            )?)),
+            Some(Token::DblLessThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::ShiftLeft,
+            )?)),
+            Some(Token::DblGreaterThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+                self,
+                left_expr,
+                BinaryOp::ShiftRight,
+            )?)),
+            // Some(Token::QuestionMark { .. }) => {
             //     Ok(Expression::Unwrap(UnwrapExpr::parse(self, left_expr)?))
             // }
             Some(_) => {
@@ -965,6 +656,22 @@ impl Parser {
             ErrorsEmitted(())
         })
     }
+
+    /// Peek at the token `num_tokens` behind the token at the current position.
+    fn peek_behind_by(&mut self, num_tokens: usize) -> Result<Token, ErrorsEmitted> {
+        let i = self.current - num_tokens;
+
+        let tokens = self.stream.tokens();
+
+        tokens.get(i).cloned().ok_or({
+            self.log_error(ParserErrorKind::TokenIndexOutOfBounds {
+                len: tokens.len(),
+                i,
+            });
+            ErrorsEmitted(())
+        })
+    }
+
     /// Advance the parser and return the current token.
     fn consume_token(&mut self) -> Option<Token> {
         if let Some(t) = self.peek_current() {
@@ -1140,168 +847,70 @@ impl Parser {
     // }
 
     /// Retrieve the respective precedence level for an operator.
-    fn precedence(&self, token: &Token) -> Precedence {
+    fn precedence(&mut self, token: &Token) -> Precedence {
         match token {
-            // Token::Identifier { name, span } => todo!(),
-            // Token::IntLiteral { value, span } => todo!(),
-            Token::UIntLiteral { value, span } => Precedence::Lowest,
-            // Token::BigUIntLiteral { value, span } => todo!(),
-            // Token::ByteLiteral { value, span } => todo!(),
-            // Token::BytesLiteral { value, span } => todo!(),
-            // Token::HashLiteral { value, span } => todo!(),
-            // Token::StringLiteral { value, span } => todo!(),
-            // Token::CharLiteral { value, span } => todo!(),
-            // Token::BoolLiteral { value, span } => todo!(),
-            // Token::Let { name, span } => todo!(),
-            // Token::Mut { name, span } => todo!(),
-            // Token::Ref { name, span } => todo!(),
-            // Token::Pub { name, span } => todo!(),
-            // Token::Func { name, span } => todo!(),
-            // Token::Contract { name, span } => todo!(),
-            // Token::Library { name, span } => todo!(),
-            // Token::Interface { name, span } => todo!(),
-            // Token::Script { name, span } => todo!(),
-            // Token::Constructor { name, span } => todo!(),
-            // Token::Modifier { name, span } => todo!(),
-            // Token::Test { name, span } => todo!(),
-            // Token::Event { name, span } => todo!(),
-            // Token::Error { name, span } => todo!(),
-            // Token::Abstract { name, span } => todo!(),
-            // Token::Payable { name, span } => todo!(),
-            // Token::Storage { name, span } => todo!(),
-            // Token::View { name, span } => todo!(),
-            // Token::Topic { name, span } => todo!(),
-            // Token::Calldata { name, span } => todo!(),
-            // Token::Return { name, span } => todo!(),
-            // Token::Struct { name, span } => todo!(),
-            // Token::Enum { name, span } => todo!(),
-            // Token::Trait { name, span } => todo!(),
-            // Token::Impl { name, span } => todo!(),
-            // Token::Module { name, span } => todo!(),
-            // Token::Extern { name, span } => todo!(),
-            // Token::Import { name, span } => todo!(),
-            // Token::Package { name, span } => todo!(),
-            // Token::Super { name, span } => todo!(),
-            // Token::SelfKeyword { name, span } => todo!(),
-            // Token::Const { name, span } => todo!(),
-            // Token::Static { name, span } => todo!(),
-            // Token::Unsafe { name, span } => todo!(),
-            // Token::Alias { name, span } => todo!(),
-            // Token::As { name, span } => todo!(),
-            // Token::If { name, span } => todo!(),
-            // Token::Else { name, span } => todo!(),
-            // Token::Match { name, span } => todo!(),
-            // Token::For { name, span } => todo!(),
-            // Token::In { name, span } => todo!(),
-            // Token::Loop { name, span } => todo!(),
-            // Token::While { name, span } => todo!(),
-            // Token::Break { name, span } => todo!(),
-            // Token::Continue { name, span } => todo!(),
-            // Token::I32Type { name, span } => todo!(),
-            // Token::I64Type { name, span } => todo!(),
-            // Token::I128Type { name, span } => todo!(),
-            // Token::U8Type { name, span } => todo!(),
-            // Token::U16Type { name, span } => todo!(),
-            // Token::U32Type { name, span } => todo!(),
-            // Token::U64Type { name, span } => todo!(),
-            // Token::U128Type { name, span } => todo!(),
-            // Token::U256Type { name, span } => todo!(),
-            // Token::U512Type { name, span } => todo!(),
-            // Token::ByteType { name, span } => todo!(),
-            // Token::B2Type { name, span } => todo!(),
-            // Token::B3Type { name, span } => todo!(),
-            // Token::B4Type { name, span } => todo!(),
-            // Token::B5Type { name, span } => todo!(),
-            // Token::B6Type { name, span } => todo!(),
-            // Token::B7Type { name, span } => todo!(),
-            // Token::B8Type { name, span } => todo!(),
-            // Token::B9Type { name, span } => todo!(),
-            // Token::B10Type { name, span } => todo!(),
-            // Token::B11Type { name, span } => todo!(),
-            // Token::B12Type { name, span } => todo!(),
-            // Token::B13Type { name, span } => todo!(),
-            // Token::B14Type { name, span } => todo!(),
-            // Token::B15Type { name, span } => todo!(),
-            // Token::B16Type { name, span } => todo!(),
-            // Token::B17Type { name, span } => todo!(),
-            // Token::B18Type { name, span } => todo!(),
-            // Token::B19Type { name, span } => todo!(),
-            // Token::B20Type { name, span } => todo!(),
-            // Token::B21Type { name, span } => todo!(),
-            // Token::B22Type { name, span } => todo!(),
-            // Token::B23Type { name, span } => todo!(),
-            // Token::B24Type { name, span } => todo!(),
-            // Token::B25Type { name, span } => todo!(),
-            // Token::B26Type { name, span } => todo!(),
-            // Token::B27Type { name, span } => todo!(),
-            // Token::B28Type { name, span } => todo!(),
-            // Token::B29Type { name, span } => todo!(),
-            // Token::B30Type { name, span } => todo!(),
-            // Token::B31Type { name, span } => todo!(),
-            // Token::B32Type { name, span } => todo!(),
-            // Token::H160Type { name, span } => todo!(),
-            // Token::H256Type { name, span } => todo!(),
-            // Token::H512Type { name, span } => todo!(),
-            // Token::StringType { name, span } => todo!(),
-            // Token::CharType { name, span } => todo!(),
-            // Token::BoolType { name, span } => todo!(),
-            // Token::SelfType { name, span } => todo!(),
-            // Token::CustomType { name, span } => todo!(),
-            // Token::LParen { delim, span } => todo!(),
-            // Token::RParen { delim, span } => todo!(),
-            // Token::LBrace { delim, span } => todo!(),
-            // Token::RBrace { delim, span } => todo!(),
-            // Token::LBracket { delim, span } => todo!(),
-            // Token::RBracket { delim, span } => todo!(),
-            // Token::Colon { punc, span } => todo!(),
-            // Token::Semicolon { punc, span } => todo!(),
-            // Token::Comma { punc, span } => todo!(),
-            // Token::Dot { punc, span } => todo!(),
-            // Token::DblColon { punc, span } => todo!(),
-            // Token::ColonColonAsterisk { punc, span } => todo!(),
-            // Token::HashSign { punc, span } => todo!(),
-            // Token::HashBang { punc, span } => todo!(),
-            // Token::ThinArrow { punc, span } => todo!(),
-            // Token::FatArrow { punc, span } => todo!(),
-            // Token::Bang { punc, span } => todo!(),
-            // Token::DollarSign { punc, span } => todo!(),
-            // Token::Percent { punc, span } => todo!(),
-            // Token::Ampersand { punc, span } => todo!(),
-            // Token::Asterisk { punc, span } => todo!(),
-            Token::Plus { punc, span } => Precedence::Sum,
-            // Token::Minus { punc, span } => todo!(),
-            // Token::Slash { punc, span } => todo!(),
-            // Token::LessThan { punc, span } => todo!(),
-            // Token::Equals { punc, span } => todo!(),
-            // Token::GreaterThan { punc, span } => todo!(),
-            // Token::QuestionMark { punc, span } => todo!(),
-            // Token::AtSign { punc, span } => todo!(),
-            // Token::Backslash { punc, span } => todo!(),
-            // Token::Caret { punc, span } => todo!(),
-            // Token::Backtick { punc, span } => todo!(),
-            // Token::Pipe { punc, span } => todo!(),
-            // Token::DblDot { punc, span } => todo!(),
-            // Token::DotDotEquals { punc, span } => todo!(),
-            // Token::BangEquals { punc, span } => todo!(),
-            // Token::PercentEquals { punc, span } => todo!(),
-            // Token::DblAsterisk { punc, span } => todo!(),
-            // Token::AsteriskEquals { punc, span } => todo!(),
-            // Token::DblAmpersand { punc, span } => todo!(),
-            // Token::AmpersandMut { punc, span } => todo!(),
-            // Token::PlusEquals { punc, span } => todo!(),
-            // Token::MinusEquals { punc, span } => todo!(),
-            // Token::SlashEquals { punc, span } => todo!(),
-            // Token::DblLessThan { punc, span } => todo!(),
-            // Token::LessThanEquals { punc, span } => todo!(),
-            // Token::DblEquals { punc, span } => todo!(),
-            // Token::DblGreaterThan { punc, span } => todo!(),
-            // Token::GreaterThanEquals { punc, span } => todo!(),
-            // Token::DblPipe { punc, span } => todo!(),
-            // Token::LineComment { span } => todo!(),
-            // Token::BlockComment { span } => todo!(),
-            // Token::DocComment { comment, span } => todo!(),
-            // Token::EOF => todo!(),
-            _ => panic!(),
+            Token::As { .. } => Precedence::TypeCast,
+            Token::LParen { .. } => Precedence::Call,
+            Token::RBracket { .. } => Precedence::Index,
+            Token::Dot { .. } => match self.peek_ahead_by(1) {
+                Ok(Token::Identifier { .. }) => match self.peek_ahead_by(2) {
+                    Ok(Token::LParen { .. }) => Precedence::MethodCall,
+                    _ => Precedence::FieldAccess,
+                },
+                Ok(Token::UIntLiteral { .. }) => Precedence::Index,
+                _ => Precedence::Lowest,
+            },
+            Token::DblColon { .. } => Precedence::Path,
+            Token::ColonColonAsterisk { .. } => Precedence::Path,
+            Token::Bang { .. } => Precedence::Unary,
+            Token::Percent { .. } => Precedence::Remainder,
+            Token::Ampersand { .. } => {
+                if self.peek_behind_by(1).is_ok() {
+                    Precedence::BitwiseAnd
+                } else {
+                    Precedence::Unary
+                }
+            }
+            Token::Asterisk { .. } => {
+                if self.peek_behind_by(1).is_ok() {
+                    Precedence::Product
+                } else {
+                    Precedence::Unary
+                }
+            }
+            Token::Plus { .. } => Precedence::Sum,
+            Token::Minus { .. } => {
+                if self.peek_behind_by(1).is_ok() {
+                    Precedence::Difference
+                } else {
+                    Precedence::Unary
+                }
+            }
+            Token::Slash { .. } => Precedence::Quotient,
+            Token::LessThan { .. } => Precedence::LessThan,
+            Token::Equals { .. } => Precedence::Assignment,
+            Token::GreaterThan { .. } => Precedence::GreaterThan,
+            Token::QuestionMark { .. } => Precedence::Unwrap,
+            Token::Caret { .. } => Precedence::BitwiseXor,
+            Token::Pipe { .. } => Precedence::BitwiseOr,
+            Token::DblDot { .. } => Precedence::Range,
+            Token::DotDotEquals { .. } => Precedence::Range,
+            Token::BangEquals { .. } => Precedence::NotEqual,
+            Token::PercentEquals { .. } => Precedence::CompoundAssignment,
+            Token::DblAsterisk { .. } => Precedence::Exponentiation,
+            Token::AsteriskEquals { .. } => Precedence::CompoundAssignment,
+            Token::DblAmpersand { .. } => Precedence::LogicalAnd,
+            Token::AmpersandMut { .. } => Precedence::Unary,
+            Token::PlusEquals { .. } => Precedence::CompoundAssignment,
+            Token::MinusEquals { .. } => Precedence::CompoundAssignment,
+            Token::SlashEquals { .. } => Precedence::CompoundAssignment,
+            Token::DblLessThan { .. } => Precedence::Shift,
+            Token::LessThanEquals { .. } => Precedence::LessThanOrEqual,
+            Token::DblEquals { .. } => Precedence::Equal,
+            Token::DblGreaterThan { .. } => Precedence::Shift,
+            Token::GreaterThanEquals { .. } => Precedence::GreaterThanOrEqual,
+            Token::DblPipe { .. } => Precedence::LogicalOr,
+            _ => Precedence::Lowest,
         }
     }
 
