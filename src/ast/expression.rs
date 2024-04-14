@@ -19,7 +19,7 @@ pub enum ClosureParams {
 pub enum PathPrefix {
     Package,
     Super,
-    SelfKw,
+    SelfKeyword,
     SelfType,
     Identifier(Identifier),
 }

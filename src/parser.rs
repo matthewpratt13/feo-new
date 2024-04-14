@@ -192,7 +192,7 @@ impl Parser {
             Some(Token::SelfKeyword { .. }) => {
                 self.consume_token();
                 Ok(Expression::Path(PathExpr {
-                    root: PathPrefix::SelfKw,
+                    root: PathPrefix::SelfKeyword,
                     tree_opt: None,
                 }))
             }
@@ -698,7 +698,7 @@ impl Parser {
             Some(Token::Import { .. }) => Ok(Keyword::Import),
             Some(Token::Mod { .. }) => Ok(Keyword::Mod),
             Some(Token::Package { .. }) => Ok(Keyword::Package),
-            Some(Token::SelfKeyword { .. }) => Ok(Keyword::KwSelf),
+            Some(Token::SelfKeyword { .. }) => Ok(Keyword::SelfKeyword),
             Some(Token::SelfType { .. }) => Ok(Keyword::SelfType),
             Some(Token::Super { .. }) => Ok(Keyword::Super),
             Some(Token::Pub { .. }) => Ok(Keyword::Pub),

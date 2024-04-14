@@ -43,7 +43,7 @@ pub enum Keyword {
     Import,
     Mod,
     Package,
-    KwSelf,
+    SelfKeyword,
     SelfType,
     Super,
     Pub,
