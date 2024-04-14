@@ -7,7 +7,7 @@ use crate::{
     token::Token,
 };
 
-use super::{compound_expr::ParseCompoundExpr, Parser, Precedence};
+use super::{Parser, Precedence};
 
 pub(crate) trait ParseStatement
 where
@@ -16,284 +16,284 @@ where
     fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
 }
 
-// impl ParseStatement for LetStmt {
-//     fn parse(parser: &mut Parser) -> Result<LetStmt, ErrorsEmitted> {
-//         let kw_let = parser.expect_keyword(Token::Let {
-//             name: "let".to_string(),
-//             span: parser.stream.span(),
-//         })?;
+impl ParseStatement for LetStmt {
+    fn parse(parser: &mut Parser) -> Result<LetStmt, ErrorsEmitted> {
+        let kw_let = parser.expect_keyword(Token::Let {
+            name: "let".to_string(),
+            span: parser.stream.span(),
+        })?;
 
-//         let assignee = parser.parse_expression(Precedence::Path)?;
+        let assignee = parser.parse_expression(Precedence::Path)?;
 
-//         let equals = parser.expect_separator(Token::Equals {
-//             punc: '=',
-//             span: parser.stream.span(),
-//         })?;
+        let equals = parser.expect_separator(Token::Equals {
+            punc: '=',
+            span: parser.stream.span(),
+        })?;
 
-//         let type_ann_opt = if let Ok(colon) = parser.expect_separator(Token::Colon {
-//             punc: ':',
-//             span: parser.stream.span(),
-//         }) {
-//             let ty = parser.get_type()?;
-//             Some((colon, ty))
-//         } else {
-//             None
-//         };
+        let type_ann_opt = if let Ok(colon) = parser.expect_separator(Token::Colon {
+            punc: ':',
+            span: parser.stream.span(),
+        }) {
+            let ty = parser.get_type()?;
+            Some((colon, ty))
+        } else {
+            None
+        };
 
-//         let value_opt = if let Ok(equals) = parser.expect_binary_op(Token::Equals {
-//             punc: '=',
-//             span: parser.stream.span(),
-//         }) {
-//             let value = parser.parse_expression(Precedence::Lowest)?;
-//             Some((equals, value))
-//         } else {
-//             None
-//         };
+        let value_opt = if let Ok(equals) = parser.expect_binary_op(Token::Equals {
+            punc: '=',
+            span: parser.stream.span(),
+        }) {
+            let value = parser.parse_expression(Precedence::Lowest)?;
+            Some((equals, value))
+        } else {
+            None
+        };
 
-//         let semicolon = parser.expect_separator(Token::Semicolon {
-//             punc: ';',
-//             span: parser.stream.span(),
-//         })?;
+        let semicolon = parser.expect_separator(Token::Semicolon {
+            punc: ';',
+            span: parser.stream.span(),
+        })?;
 
-//         Ok(LetStmt {
-//             kw_let,
-//             assignee,
-//             type_ann_opt,
-//             value_opt,
-//             semicolon,
-//         })
-//     }
-// }
+        Ok(LetStmt {
+            kw_let,
+            assignee,
+            type_ann_opt,
+            value_opt,
+            semicolon,
+        })
+    }
+}
 
-// impl ParseStatement for IfStmt {
-//     fn parse(parser: &mut Parser) -> Result<IfStmt, ErrorsEmitted> {
-//         let mut else_if_blocks: Vec<(Keyword, Box<IfStmt>)> = Vec::new();
+impl ParseStatement for IfStmt {
+    fn parse(parser: &mut Parser) -> Result<IfStmt, ErrorsEmitted> {
+        let mut else_if_blocks: Vec<(Keyword, Box<IfStmt>)> = Vec::new();
 
-//         let mut trailing_else_block_opt = None::<(Keyword, BlockExpr)>;
+        let mut trailing_else_block_opt = None::<(Keyword, BlockExpr)>;
 
-//         let kw_if = parser.expect_keyword(Token::If {
-//             name: "if".to_string(),
-//             span: parser.stream.span(),
-//         })?;
+        let kw_if = parser.expect_keyword(Token::If {
+            name: "if".to_string(),
+            span: parser.stream.span(),
+        })?;
 
-//         let condition = GroupedExpr::parse(parser)?;
+        let condition = GroupedExpr::parse(parser)?;
 
-//         let token = parser.peek_current().ok_or({
-//             parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-//             ErrorsEmitted(())
-//         })?;
+        let token = parser.peek_current().ok_or({
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
-//         let if_block = if let Token::LBrace { .. } = token {
-//             BlockExpr::parse(parser)?
-//         } else {
-//             parser.log_error(ParserErrorKind::UnexpectedToken {
-//                 expected: "block expression".to_string(),
-//                 found: token,
-//             });
-//             return Err(ErrorsEmitted(()));
-//         };
+        let if_block = if let Token::LBrace { .. } = token {
+            BlockExpr::parse(parser)?
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "block expression".to_string(),
+                found: token,
+            });
+            return Err(ErrorsEmitted(()));
+        };
 
-//         while let Some(Token::Else { .. }) = parser.peek_current() {
-//             parser.consume_token()?;
+        while let Some(Token::Else { .. }) = parser.peek_current() {
+            parser.consume_token();
 
-//             if let Some(Token::LBrace { .. }) = parser.peek_current() {
-//                 let block = BlockExpr::parse(parser)?;
-//                 trailing_else_block_opt = Some((Keyword::Else, block));
-//                 break;
-//             }
+            if let Some(Token::LBrace { .. }) = parser.peek_current() {
+                let block = BlockExpr::parse(parser)?;
+                trailing_else_block_opt = Some((Keyword::Else, block));
+                break;
+            }
 
-//             if let Some(Token::If { .. }) = parser.peek_current() {
-//                 let if_stmt = IfStmt::parse(parser)?;
-//                 else_if_blocks.push((Keyword::Else, Box::new(if_stmt)));
-//             } else {
-//                 break;
-//             }
-//         }
+            if let Some(Token::If { .. }) = parser.peek_current() {
+                let if_stmt = IfStmt::parse(parser)?;
+                else_if_blocks.push((Keyword::Else, Box::new(if_stmt)));
+            } else {
+                break;
+            }
+        }
 
-//         if else_if_blocks.is_empty() {
-//             Ok(IfStmt {
-//                 kw_if,
-//                 condition,
-//                 if_block,
-//                 else_if_blocks_opt: None,
-//                 trailing_else_block_opt,
-//             })
-//         } else {
-//             Ok(IfStmt {
-//                 kw_if,
-//                 condition,
-//                 if_block,
-//                 else_if_blocks_opt: Some(else_if_blocks),
-//                 trailing_else_block_opt,
-//             })
-//         }
-//     }
-// }
+        if else_if_blocks.is_empty() {
+            Ok(IfStmt {
+                kw_if,
+                condition,
+                if_block,
+                else_if_blocks_opt: None,
+                trailing_else_block_opt,
+            })
+        } else {
+            Ok(IfStmt {
+                kw_if,
+                condition,
+                if_block,
+                else_if_blocks_opt: Some(else_if_blocks),
+                trailing_else_block_opt,
+            })
+        }
+    }
+}
 
-// impl ParseStatement for MatchStmt {
-//     fn parse(parser: &mut Parser) -> Result<MatchStmt, ErrorsEmitted> {
-//         let kw_match = parser.expect_keyword(Token::Match {
-//             name: "match".to_string(),
-//             span: parser.stream.span(),
-//         })?;
+impl ParseStatement for MatchStmt {
+    fn parse(parser: &mut Parser) -> Result<MatchStmt, ErrorsEmitted> {
+        let kw_match = parser.expect_keyword(Token::Match {
+            name: "match".to_string(),
+            span: parser.stream.span(),
+        })?;
 
-//         let mut match_arms: Vec<MatchArm> = Vec::new();
+        let mut match_arms: Vec<MatchArm> = Vec::new();
 
-//         let scrutinee = parser.parse_expression(Precedence::Lowest)?;
+        let scrutinee = parser.parse_expression(Precedence::Lowest)?;
 
-//         let open_brace = parser.expect_delimiter(Token::LBrace {
-//             delim: '{',
-//             span: parser.stream.span(),
-//         })?;
+        let open_brace = parser.expect_delimiter(Token::LBrace {
+            delim: '{',
+            span: parser.stream.span(),
+        })?;
 
-//         while !parser.is_expected_token(&Token::RBrace {
-//             delim: '}',
-//             span: parser.stream.span(),
-//         }) {
-//             let case = parser.parse_expression(Precedence::Lowest)?;
+        while !parser.is_expected_token(&Token::RBrace {
+            delim: '}',
+            span: parser.stream.span(),
+        }) {
+            let case = parser.parse_expression(Precedence::Lowest)?;
 
-//             let token = parser.peek_current().ok_or({
-//                 parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-//                 ErrorsEmitted(())
-//             })?;
+            let token = parser.peek_current().ok_or({
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                ErrorsEmitted(())
+            })?;
 
-//             let guard_opt = if parser.is_expected_token(&Token::If {
-//                 name: "if".to_string(),
-//                 span: parser.stream.span(),
-//             }) {
-//                 let kw_if = parser.expect_keyword(token)?;
+            let guard_opt = if parser.is_expected_token(&Token::If {
+                name: "if".to_string(),
+                span: parser.stream.span(),
+            }) {
+                let kw_if = parser.expect_keyword(token)?;
 
-//                 if parser.is_expected_token(&Token::LParen {
-//                     delim: '(',
-//                     span: parser.stream.span(),
-//                 }) {
-//                     Some((kw_if, GroupedExpr::parse(parser)?))
-//                 } else {
-//                     None
-//                 }
-//             } else {
-//                 None
-//             };
+                if parser.is_expected_token(&Token::LParen {
+                    delim: '(',
+                    span: parser.stream.span(),
+                }) {
+                    Some((kw_if, GroupedExpr::parse(parser)?))
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
 
-//             let fat_arrow = parser.expect_separator(Token::FatArrow {
-//                 punc: "=>".to_string(),
-//                 span: parser.stream.span(),
-//             })?;
+            let fat_arrow = parser.expect_separator(Token::FatArrow {
+                punc: "=>".to_string(),
+                span: parser.stream.span(),
+            })?;
 
-//             let logic = parser.parse_expression(Precedence::Lowest)?;
+            let logic = parser.parse_expression(Precedence::Lowest)?;
 
-//             let arm = MatchArm {
-//                 case,
-//                 guard_opt,
-//                 fat_arrow,
-//                 logic,
-//             };
+            let arm = MatchArm {
+                case,
+                guard_opt,
+                fat_arrow,
+                logic,
+            };
 
-//             match_arms.push(arm);
+            match_arms.push(arm);
 
-//             if parser.tokens_match(Token::Comma {
-//                 punc: ',',
-//                 span: parser.stream.span(),
-//             }) {
-//                 continue;
-//             }
-//         }
+            if parser.tokens_match(Token::Comma {
+                punc: ',',
+                span: parser.stream.span(),
+            }) {
+                continue;
+            }
+        }
 
-//         let final_arm = if let Some(a) = match_arms.pop() {
-//             a
-//         } else {
-//             parser.log_error(ParserErrorKind::TokenNotFound {
-//                 expected: "match arm".to_string(),
-//             });
-//             return Err(ErrorsEmitted(()));
-//         };
+        let final_arm = if let Some(a) = match_arms.pop() {
+            a
+        } else {
+            parser.log_error(ParserErrorKind::TokenNotFound {
+                expected: "match arm".to_string(),
+            });
+            return Err(ErrorsEmitted(()));
+        };
 
-//         let close_brace = parser.expect_delimiter(Token::RBrace {
-//             delim: '}',
-//             span: parser.stream.span(),
-//         })?;
+        let close_brace = parser.expect_delimiter(Token::RBrace {
+            delim: '}',
+            span: parser.stream.span(),
+        })?;
 
-//         if match_arms.is_empty() {
-//             Ok(MatchStmt {
-//                 kw_match,
-//                 scrutinee,
-//                 open_brace,
-//                 arms_opt: None,
-//                 final_arm,
-//                 close_brace,
-//             })
-//         } else {
-//             Ok(MatchStmt {
-//                 kw_match,
-//                 scrutinee,
-//                 open_brace,
-//                 arms_opt: Some(match_arms),
-//                 final_arm,
-//                 close_brace,
-//             })
-//         }
-//     }
-// }
+        if match_arms.is_empty() {
+            Ok(MatchStmt {
+                kw_match,
+                scrutinee,
+                open_brace,
+                arms_opt: None,
+                final_arm,
+                close_brace,
+            })
+        } else {
+            Ok(MatchStmt {
+                kw_match,
+                scrutinee,
+                open_brace,
+                arms_opt: Some(match_arms),
+                final_arm,
+                close_brace,
+            })
+        }
+    }
+}
 
-// impl ParseStatement for ForInStmt {
-//     fn parse(parser: &mut Parser) -> Result<ForInStmt, ErrorsEmitted> {
-//         let kw_for = parser.expect_keyword(Token::For {
-//             name: "for".to_string(),
-//             span: parser.stream.span(),
-//         })?;
+impl ParseStatement for ForInStmt {
+    fn parse(parser: &mut Parser) -> Result<ForInStmt, ErrorsEmitted> {
+        let kw_for = parser.expect_keyword(Token::For {
+            name: "for".to_string(),
+            span: parser.stream.span(),
+        })?;
 
-//         let assignee = parser.parse_expression(Precedence::Path)?;
+        let assignee = parser.parse_expression(Precedence::Path)?;
 
-//         let kw_in = parser.expect_keyword(Token::In {
-//             name: "in".to_string(),
-//             span: parser.stream.span(),
-//         })?;
+        let kw_in = parser.expect_keyword(Token::In {
+            name: "in".to_string(),
+            span: parser.stream.span(),
+        })?;
 
-//         let iterable = parser.parse_expression(Precedence::Lowest)?;
+        let iterable = parser.parse_expression(Precedence::Lowest)?;
 
-//         let block = BlockExpr::parse(parser)?;
+        let block = BlockExpr::parse(parser)?;
 
-//         Ok(ForInStmt {
-//             kw_for,
-//             assignee,
-//             kw_in,
-//             iterable,
-//             block,
-//         })
-//     }
-// }
+        Ok(ForInStmt {
+            kw_for,
+            assignee,
+            kw_in,
+            iterable,
+            block,
+        })
+    }
+}
 
-// impl ParseStatement for WhileStmt {
-//     fn parse(parser: &mut Parser) -> Result<WhileStmt, ErrorsEmitted> {
-//         let kw_while = parser.expect_keyword(Token::While {
-//             name: "while".to_string(),
-//             span: parser.stream.span(),
-//         })?;
+impl ParseStatement for WhileStmt {
+    fn parse(parser: &mut Parser) -> Result<WhileStmt, ErrorsEmitted> {
+        let kw_while = parser.expect_keyword(Token::While {
+            name: "while".to_string(),
+            span: parser.stream.span(),
+        })?;
 
-//         let condition = GroupedExpr::parse(parser)?;
+        let condition = GroupedExpr::parse(parser)?;
 
-//         let block = BlockExpr::parse(parser)?;
+        let block = BlockExpr::parse(parser)?;
 
-//         Ok(WhileStmt {
-//             kw_while,
-//             condition,
-//             block,
-//         })
-//     }
-// }
+        Ok(WhileStmt {
+            kw_while,
+            condition,
+            block,
+        })
+    }
+}
 
-// impl ParseStatement for ExpressionStmt {
-//     fn parse(parser: &mut Parser) -> Result<ExpressionStmt, ErrorsEmitted> {
-//         let expression = parser.parse_expression(Precedence::Lowest)?;
+impl ParseStatement for ExpressionStmt {
+    fn parse(parser: &mut Parser) -> Result<ExpressionStmt, ErrorsEmitted> {
+        let expression = parser.parse_expression(Precedence::Lowest)?;
 
-//         let semicolon = parser.expect_separator(Token::Semicolon {
-//             punc: ';',
-//             span: parser.stream.span(),
-//         })?;
+        let semicolon = parser.expect_separator(Token::Semicolon {
+            punc: ';',
+            span: parser.stream.span(),
+        })?;
 
-//         Ok(ExpressionStmt {
-//             expression,
-//             semicolon,
-//         })
-//     }
-// }
+        Ok(ExpressionStmt {
+            expression,
+            semicolon,
+        })
+    }
+}

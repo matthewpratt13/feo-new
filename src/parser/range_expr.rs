@@ -31,8 +31,7 @@ impl RangeExpr {
 
 #[cfg(test)]
 mod tests {
-
-    use crate::test_utils;
+    use crate::parser::test_utils;
 
     #[test]
     fn test_range_expr_excl() -> Result<(), ()> {

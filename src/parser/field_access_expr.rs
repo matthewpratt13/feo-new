@@ -7,7 +7,10 @@ use crate::{
 use super::Parser;
 
 impl FieldAccessExpr {
-    pub(crate) fn parse(parser: &mut Parser, object: Expression) -> Result<FieldAccessExpr, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        object: Expression,
+    ) -> Result<FieldAccessExpr, ErrorsEmitted> {
         let token = parser.consume_token();
 
         if let Some(Token::Identifier { name, .. }) = token {
@@ -30,10 +33,8 @@ impl FieldAccessExpr {
 }
 
 #[cfg(test)]
-#[cfg(test)]
 mod tests {
-
-    use crate::test_utils;
+    use crate::parser::test_utils;
 
     #[test]
     fn test_field_access_expr() -> Result<(), ()> {

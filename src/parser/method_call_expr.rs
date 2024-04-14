@@ -84,8 +84,7 @@ impl MethodCallExpr {
 
 #[cfg(test)]
 mod tests {
-
-    use crate::test_utils;
+    use crate::parser::test_utils;
 
     #[test]
     fn test_method_call_expr() -> Result<(), ()> {

@@ -7,7 +7,10 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl CallExpr {
-    pub(crate) fn parse(parser: &mut Parser, callee: Expression) -> Result<CallExpr, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        callee: Expression,
+    ) -> Result<CallExpr, ErrorsEmitted> {
         let mut args: Vec<Expression> = Vec::new();
 
         loop {
@@ -58,8 +61,7 @@ impl CallExpr {
 
 #[cfg(test)]
 mod tests {
-
-    use crate::test_utils;
+    use crate::parser::test_utils;
 
     #[test]
     fn test_call_expr() -> Result<(), ()> {

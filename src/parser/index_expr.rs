@@ -7,7 +7,10 @@ use crate::{
 use super::Parser;
 
 impl IndexExpr {
-    pub(crate) fn parse(parser: &mut Parser, array: Expression) -> Result<IndexExpr, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        array: Expression,
+    ) -> Result<IndexExpr, ErrorsEmitted> {
         let token = parser.consume_token();
 
         let index = if let Some(Token::UIntLiteral { value, .. }) = token {
@@ -43,8 +46,7 @@ impl IndexExpr {
 
 #[cfg(test)]
 mod tests {
-
-    use crate::test_utils;
+    use crate::parser::test_utils;
 
     #[test]
     fn test_index_expr() -> Result<(), ()> {

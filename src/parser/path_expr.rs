@@ -1,34 +1,16 @@
 use crate::{
-    ast::{Expression, Identifier, PathExpr},
-    error::{ErrorsEmitted, ParserErrorKind},
+    ast::{Identifier, PathExpr, PathPrefix},
+    error::ErrorsEmitted,
     token::Token,
 };
 
 use super::Parser;
 
 impl PathExpr {
-    pub(crate) fn parse(parser: &mut Parser, prefix: Expression) -> Result<PathExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser, root: PathPrefix) -> Result<PathExpr, ErrorsEmitted> {
         println!("ENTER `PathExpr::parse()`");
 
         let mut tree: Vec<Identifier> = Vec::new();
-
-        let token = parser.consume_token();
-
-        let root = match prefix {
-            Expression::Path(p) => Ok(p.root),
-            _ => {
-                let token = token.ok_or({
-                    parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                    ErrorsEmitted(())
-                })?;
-
-                parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "path expression prefix".to_string(),
-                    found: token,
-                });
-                Err(ErrorsEmitted(()))
-            }
-        }?;
 
         while let Some(Token::DblColon { .. }) = parser.peek_current() {
             parser.consume_token();
@@ -60,8 +42,7 @@ impl PathExpr {
 
 #[cfg(test)]
 mod tests {
-
-    use crate::test_utils;
+    use crate::parser::test_utils;
 
     #[test]
     #[ignore]

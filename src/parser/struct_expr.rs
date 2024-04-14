@@ -7,7 +7,10 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl StructExpr {
-    fn parse(parser: &mut Parser, path: Expression) -> Result<StructExpr, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        path: Expression,
+    ) -> Result<StructExpr, ErrorsEmitted> {
         let mut fields: Vec<StructField> = Vec::new();
 
         let open_brace = parser.expect_delimiter(Token::LBrace {
