@@ -333,7 +333,6 @@ impl Parser {
                 self.log_error(ParserErrorKind::InvalidToken { token: t });
                 Err(ErrorsEmitted(()))
             }
-
             None => {
                 self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))

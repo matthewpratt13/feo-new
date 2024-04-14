@@ -33,7 +33,9 @@ impl CallExpr {
                         found: t,
                     });
                 }
-                None => parser.log_error(ParserErrorKind::UnexpectedEndOfInput),
+                None => parser.log_error(ParserErrorKind::TokenNotFound {
+                    expected: "`)`".to_string(),
+                }),
             }
         }
 
