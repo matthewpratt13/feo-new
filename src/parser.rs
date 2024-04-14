@@ -549,28 +549,29 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        let token = self.peek_current().ok_or({
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        let token = self.peek_current();
 
         match token {
-            Token::Let { .. } => Ok(Statement::Let(LetStmt::parse(self)?)),
-            Token::If { .. } => Ok(Statement::If(IfStmt::parse(self)?)),
-            Token::Match { .. } => Ok(Statement::Match(MatchStmt::parse(self)?)),
-            Token::For { .. } => Ok(Statement::ForIn(ForInStmt::parse(self)?)),
-            Token::While { .. } => Ok(Statement::While(WhileStmt::parse(self)?)),
+            Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
+            Some(Token::If { .. }) => Ok(Statement::If(IfStmt::parse(self)?)),
+            Some(Token::Match { .. }) => Ok(Statement::Match(MatchStmt::parse(self)?)),
+            Some(Token::For { .. }) => Ok(Statement::ForIn(ForInStmt::parse(self)?)),
+            Some(Token::While { .. }) => Ok(Statement::While(WhileStmt::parse(self)?)),
 
-            Token::Import { .. }
-            | Token::Alias { .. }
-            | Token::Const { .. }
-            | Token::Static { .. } => Ok(Statement::Declaration(self.parse_declaration()?)),
+            Some(
+                Token::Import { .. }
+                | Token::Alias { .. }
+                | Token::Const { .. }
+                | Token::Static { .. },
+            ) => Ok(Statement::Declaration(self.parse_declaration()?)),
 
-            Token::Mod { .. }
-            | Token::Trait { .. }
-            | Token::Enum { .. }
-            | Token::Struct { .. }
-            | Token::Impl { .. } => Ok(Statement::Definition(self.parse_definition()?)),
+            Some(
+                Token::Mod { .. }
+                | Token::Trait { .. }
+                | Token::Enum { .. }
+                | Token::Struct { .. }
+                | Token::Impl { .. },
+            ) => Ok(Statement::Definition(self.parse_definition()?)),
 
             _ => Ok(Statement::Expression(ExpressionStmt::parse(self)?)),
         }
