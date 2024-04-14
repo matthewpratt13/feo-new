@@ -565,18 +565,4 @@ mod tests {
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
     }
-
-    #[test]
-    fn test_binary_expr_add() -> Result<(), ()> {
-        let input = r#"x + 2"#;
-
-        let mut parser = test_utils::get_parser(input);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
 }

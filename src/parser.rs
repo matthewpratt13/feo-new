@@ -9,8 +9,6 @@ mod precedence;
 mod statement;
 mod unary_expr;
 
-use std::path::Path;
-
 use crate::{
     ast::{
         AliasDecl, ArrayExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ConstantDecl,
