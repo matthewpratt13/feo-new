@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, Delimiter, Statement},
+    ast::{BlockExpr, Statement},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -8,6 +8,11 @@ use super::{Parser, Precedence};
 
 impl BlockExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
+        let open_brace = parser.expect_delimiter(Token::LBrace {
+            delim: '{',
+            span: parser.stream.span(),
+        })?;
+
         let mut statements: Vec<Statement> = Vec::new();
 
         while !parser.is_expected_token(&Token::RBrace {
@@ -40,7 +45,7 @@ impl BlockExpr {
         }
 
         Ok(BlockExpr {
-            open_brace: Delimiter::LBrace,
+            open_brace,
             statements,
             terminal_expression_opt,
             close_brace: close_brace?,

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Expression, Separator, TupleExpr, TupleIndexExpr},
+    ast::{Expression, Separator, TupleExpr, TupleIndexExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -8,6 +8,11 @@ use super::{Parser, Precedence};
 
 impl TupleExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
+        let open_paren = parser.expect_delimiter(Token::LParen {
+            delim: '(',
+            span: parser.stream.span(),
+        })?;
+
         let mut elements: Vec<Expression> = Vec::new();
 
         while !parser.is_expected_token(&Token::RParen {
@@ -41,7 +46,7 @@ impl TupleExpr {
         }
 
         Ok(TupleExpr {
-            open_paren: Delimiter::LParen,
+            open_paren,
             elements,
             close_paren: close_paren?,
         })
