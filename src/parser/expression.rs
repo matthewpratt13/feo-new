@@ -23,38 +23,29 @@ impl ParseExpression for PathExpr {
 
         let mut tree: Vec<Identifier> = Vec::new();
 
-        let _ = parser.consume_token();
+        let token = parser.consume_token();
 
         let root = match prefix {
             Expression::Path(p) => Ok(p.root),
             _ => {
-                let token = parser.consume_token().ok_or({
+                let token = token.ok_or({
                     parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
                     ErrorsEmitted(())
-                });
+                })?;
 
                 parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "path expression prefix".to_string(),
-                    found: token?,
+                    found: token,
                 });
-
                 Err(ErrorsEmitted(()))
             }
         }?;
 
         while let Some(Token::DblColon { .. }) = parser.peek_current() {
-            parser.consume_token().ok_or({
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                ErrorsEmitted(())
-            })?;
+            parser.consume_token();
 
             if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
                 tree.push(Identifier(name));
-
-                parser.consume_token().ok_or({
-                    parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                    ErrorsEmitted(())
-                })?;
             } else {
                 break;
             }
@@ -86,16 +77,14 @@ impl ParseExpression for MethodCallExpr {
 
         let method_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
-        } else {
-            let token = token.ok_or({
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                ErrorsEmitted(())
-            });
-
+        } else if let Some(t) = token {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier after `.`".to_string(),
-                found: token?,
+                found: t,
             });
+            Err(ErrorsEmitted(()))
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
             Err(ErrorsEmitted(()))
         };
 
@@ -118,17 +107,13 @@ impl ParseExpression for MethodCallExpr {
             match curr_token {
                 Some(Token::Comma { .. }) => continue,
                 Some(Token::RParen { .. }) => break,
-                _ => {
-                    let curr_token = curr_token.ok_or({
-                        parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                        ErrorsEmitted(())
-                    });
-
+                Some(t) => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `)`".to_string(),
-                        found: curr_token?,
+                        found: t,
                     });
                 }
+                None => parser.log_error(ParserErrorKind::UnexpectedEndOfInput),
             }
         }
 
@@ -168,16 +153,14 @@ impl ParseExpression for FieldAccessExpr {
                 dot: Separator::Dot,
                 field: Identifier(name),
             })
-        } else {
-            let token = parser.consume_token().ok_or({
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                ErrorsEmitted(())
-            });
-
+        } else if let Some(t) = token {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier after `.`".to_string(),
-                found: token?,
+                found: t,
             });
+            Err(ErrorsEmitted(()))
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
             Err(ErrorsEmitted(()))
         }
     }
@@ -201,17 +184,13 @@ impl ParseExpression for CallExpr {
             match token {
                 Some(Token::Comma { .. }) => continue,
                 Some(Token::RParen { .. }) => break,
-                _ => {
-                    let token = parser.peek_current().ok_or({
-                        parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                        ErrorsEmitted(())
-                    });
-
+                Some(t) => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`,` or `)`".to_string(),
-                        found: token?,
+                        found: t,
                     });
                 }
+                None => parser.log_error(ParserErrorKind::UnexpectedEndOfInput),
             }
         }
 
@@ -243,14 +222,10 @@ impl ParseExpression for IndexExpr {
 
         let index = if let Some(Token::UIntLiteral { value, .. }) = token {
             Ok(value)
-        } else if let Some(_) = token {
-            let token = token.ok_or({
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                ErrorsEmitted(())
-            });
+        } else if let Some(t) = token {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "unsigned integer".to_string(),
-                found: token?,
+                found: t,
             });
             Err(ErrorsEmitted(()))
         } else {
@@ -282,15 +257,10 @@ impl ParseExpression for TupleIndexExpr {
 
         let index = if let Some(Token::UIntLiteral { value, .. }) = token {
             Ok(value)
-        } else if let Some(_) = token {
-            let token = token.ok_or({
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                ErrorsEmitted(())
-            });
-
+        } else if let Some(t) = token {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "unsigned integer".to_string(),
-                found: token?,
+                found: t,
             });
             Err(ErrorsEmitted(()))
         } else {
