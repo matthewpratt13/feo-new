@@ -146,7 +146,6 @@ impl TupleStructExpr {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::parser::test_utils;
@@ -159,7 +158,7 @@ mod tests {
             baz: 10
         }"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, true);
 
         let expressions = parser.parse();
 
@@ -169,4 +168,3 @@ mod tests {
         }
     }
 }
-

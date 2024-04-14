@@ -102,7 +102,7 @@ mod tests {
     fn parse_tuple_index_expr() -> Result<(), ()> {
         let input = r#"tuple.0"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, true);
 
         let expressions = parser.parse();
 
