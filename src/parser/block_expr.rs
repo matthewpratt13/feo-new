@@ -47,3 +47,27 @@ impl BlockExpr {
         })
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::test_utils;
+
+    #[test]
+    fn parse_block_expr() -> Result<(), ()> {
+        let input = r#"
+        {
+            x + 2
+        }"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+}
+

@@ -85,6 +85,20 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
+    fn parse_tuple_expr() -> Result<(), ()> {
+        let input = r#"(true, "foo", 10)"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
     fn parse_tuple_index_expr() -> Result<(), ()> {
         let input = r#"tuple.0"#;
 
