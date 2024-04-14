@@ -177,7 +177,9 @@ impl Parser {
                         underscore: Separator::Underscore,
                     }))
                 } else {
-                    self.parse_primary()
+                    let root = PathPrefix::Identifier(Identifier(name));
+                    let expr = PathExpr::parse(self, root)?;
+                    Ok(Expression::Path(expr))
                 }
             }
             Some(Token::SelfType { .. }) => {
@@ -193,6 +195,17 @@ impl Parser {
                     root: PathPrefix::SelfKw,
                     tree_opt: None,
                 }))
+            }
+            Some(Token::Package { .. }) => {
+                self.consume_token();
+                Ok(Expression::Path(PathExpr::parse(
+                    self,
+                    PathPrefix::Package,
+                )?))
+            }
+            Some(Token::Super { .. }) => {
+                self.consume_token();
+                Ok(Expression::Path(PathExpr::parse(self, PathPrefix::Super)?))
             }
             Some(Token::Minus { .. }) => {
                 Ok(Expression::Unary(UnaryExpr::parse(self, UnaryOp::Negate)?))
@@ -457,46 +470,6 @@ impl Parser {
                 left_expr,
                 BinaryOp::ShiftRight,
             )?)),
-            Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
-                match self.peek_behind_by(1) {
-                    Some(Token::Package { .. }) => {
-                        let root = PathPrefix::Package;
-                        let expr = PathExpr::parse(self, root)?;
-                        Ok(Expression::Path(expr))
-                    }
-                    Some(Token::Super { .. }) => {
-                        let root = PathPrefix::Super;
-                        let expr = PathExpr::parse(self, root)?;
-                        Ok(Expression::Path(expr))
-                    }
-                    Some(Token::SelfKeyword { .. }) => {
-                        let root = PathPrefix::SelfKw;
-                        let expr = PathExpr::parse(self, root)?;
-                        Ok(Expression::Path(expr))
-                    }
-                    Some(Token::SelfType { .. }) => {
-                        let root = PathPrefix::SelfType;
-                        let expr = PathExpr::parse(self, root)?;
-                        Ok(Expression::Path(expr))
-                    }
-                    Some(Token::Identifier { name, .. }) => {
-                        let root = PathPrefix::Identifier(Identifier(name));
-                        let expr = PathExpr::parse(self, root)?;
-                        Ok(Expression::Path(expr))
-                    }
-                    Some(t) => {
-                        self.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "path root".to_string(),
-                            found: t,
-                        });
-                        Err(ErrorsEmitted(()))
-                    }
-                    None => {
-                        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                        Err(ErrorsEmitted(()))
-                    }
-                }
-            }
             Some(Token::LParen { .. }) => {
                 let expr = CallExpr::parse(self, left_expr)?;
 
@@ -595,7 +568,7 @@ impl Parser {
             | Token::Const { .. }
             | Token::Static { .. } => Ok(Statement::Declaration(self.parse_declaration()?)),
 
-            Token::Module { .. }
+            Token::Mod { .. }
             | Token::Trait { .. }
             | Token::Enum { .. }
             | Token::Struct { .. }
@@ -637,7 +610,7 @@ impl Parser {
         })?;
 
         match token {
-            Token::Module { .. } => Ok(Definition::Module(ModuleDef::parse(self)?)),
+            Token::Mod { .. } => Ok(Definition::Module(ModuleDef::parse(self)?)),
             Token::Trait { .. } => Ok(Definition::Trait(TraitDef::parse(self)?)),
             Token::Enum { .. } => Ok(Definition::Enum(EnumDef::parse(self)?)),
             Token::Struct { .. } => Ok(Definition::Struct(StructDef::parse(self)?)),
@@ -723,7 +696,7 @@ impl Parser {
 
         match token {
             Some(Token::Import { .. }) => Ok(Keyword::Import),
-            Some(Token::Module { .. }) => Ok(Keyword::Module),
+            Some(Token::Mod { .. }) => Ok(Keyword::Module),
             Some(Token::Package { .. }) => Ok(Keyword::Package),
             Some(Token::SelfKeyword { .. }) => Ok(Keyword::KwSelf),
             Some(Token::SelfType { .. }) => Ok(Keyword::SelfType),

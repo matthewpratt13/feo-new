@@ -361,7 +361,7 @@ impl<'a> Lexer<'a> {
                         Err(ErrorsEmitted(()))
                     }
                 }
-                "module" => Ok(Token::Module { name, span }),
+                "mod" => Ok(Token::Mod { name, span }),
                 "mut" => Ok(Token::Mut { name, span }),
                 "package" => Ok(Token::Package { name, span }),
                 "payable" => {
@@ -1129,7 +1129,7 @@ fn is_keyword(value: &str) -> bool {
         "loop",
         "match",
         "modifier",
-        "module",
+        "mod",
         "mut",
         "package",
         "payable",
@@ -1249,7 +1249,7 @@ mod tests {
         let input = r#"
         #[abstract]
         #![contract]
-        pub module foo {
+        pub mod foo {
             #[storage]
             const balances: [U256] = [0x1234, 0x5678, 0x90AB, 0xCDEF];
             

@@ -49,7 +49,7 @@ pub enum Token {
     Enum { name: String, span: Span },
     Trait { name: String, span: Span },
     Impl { name: String, span: Span },
-    Module { name: String, span: Span },
+    Mod { name: String, span: Span },
     Extern { name: String, span: Span }, // attribute, notated `#[extern]`
     Import { name: String, span: Span },
     Package { name: String, span: Span },

@@ -8,17 +8,20 @@ use super::Parser;
 
 impl PathExpr {
     pub(crate) fn parse(parser: &mut Parser, root: PathPrefix) -> Result<PathExpr, ErrorsEmitted> {
-        println!("ENTER `PathExpr::parse()`");
-
         let mut tree: Vec<Identifier> = Vec::new();
 
-        while let Some(Token::DblColon { .. }) = parser.peek_current() {
-            parser.consume_token();
-
-            if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
+        if let Some(Token::DblColon { .. }) = parser.consume_token() {
+            while let Some(Token::Identifier { name, .. }) = parser.consume_token() {
                 tree.push(Identifier(name));
-            } else {
-                break;
+
+                if !parser.is_expected_token(&Token::DblColon {
+                    punc: "::".to_string(),
+                    span: parser.stream.span(),
+                }) {
+                    parser.consume_token();
+                } else {
+                    break;
+                }
             }
         }
 
@@ -45,7 +48,7 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    #[ignore]
+    // #[ignore]
     fn test_path_expr() -> Result<(), ()> {
         let input = r#"package::module::Object"#;
 
