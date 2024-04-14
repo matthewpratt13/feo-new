@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Separator, TupleExpr, TupleIndexExpr},
+    ast::{Delimiter, Expression, Separator, TupleExpr, TupleIndexExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -15,25 +15,36 @@ impl TupleExpr {
 
         let mut elements: Vec<Expression> = Vec::new();
 
-        while !parser.is_expected_token(&Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        }) {
+        loop {
+            if let Some(Token::RBracket { .. }) = parser.peek_current() {
+                parser.consume_token();
+                break;
+            }
+
             let element = parser.parse_expression(Precedence::Lowest)?;
             elements.push(element);
 
-            if !parser.tokens_match(Token::Comma {
-                punc: ',',
-                span: parser.stream.span(),
-            }) {
-                break;
+            let token = parser.consume_token();
+
+            match token {
+                Some(Token::Comma { .. }) => continue,
+                Some(Token::RParen { .. }) => break,
+                Some(t) => {
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`,` or `)`".to_string(),
+                        found: t,
+                    });
+                }
+                None => parser.log_error(ParserErrorKind::TokenNotFound {
+                    expected: "`)`".to_string(),
+                }),
             }
         }
 
-        let close_paren = parser.expect_delimiter(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        });
+        // let close_paren = parser.expect_delimiter(Token::RParen {
+        //     delim: ')',
+        //     span: parser.stream.span(),
+        // });
 
         if elements.is_empty() {
             parser.log_error(ParserErrorKind::TokenNotFound {
@@ -48,7 +59,7 @@ impl TupleExpr {
         Ok(TupleExpr {
             open_paren,
             elements,
-            close_paren: close_paren?,
+            close_paren: Delimiter::RParen,
         })
     }
 }
