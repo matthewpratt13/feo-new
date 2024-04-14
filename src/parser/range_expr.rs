@@ -5,25 +5,27 @@ use crate::{
 
 use super::{Parser, Precedence};
 
-pub(crate) fn parse_range_expr(
-    parser: &mut Parser,
-    from: Expression,
-    op: RangeOp,
-) -> Result<RangeExpr, ErrorsEmitted> {
-    let to = parser.parse_expression(Precedence::Range);
+impl RangeExpr {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        from: Expression,
+        op: RangeOp,
+    ) -> Result<RangeExpr, ErrorsEmitted> {
+        let to = parser.parse_expression(Precedence::Range);
 
-    if to.is_ok() {
-        Ok(RangeExpr {
-            from_opt: Some(Box::new(from)),
-            op,
-            to_opt: Some(Box::new(to?)),
-        })
-    } else {
-        Ok(RangeExpr {
-            from_opt: Some(Box::new(from)),
-            op,
-            to_opt: None,
-        })
+        if to.is_ok() {
+            Ok(RangeExpr {
+                from_opt: Some(Box::new(from)),
+                op,
+                to_opt: Some(Box::new(to?)),
+            })
+        } else {
+            Ok(RangeExpr {
+                from_opt: Some(Box::new(from)),
+                op,
+                to_opt: None,
+            })
+        }
     }
 }
 

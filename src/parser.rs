@@ -13,27 +13,25 @@ mod unary_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ConstantDecl,
-        ContinueExpr, Declaration, Definition, Delimiter, EnumDef, Expression, ExpressionStmt,
-        FieldAccessExpr, ForInStmt, FunctionDef, GroupedExpr, Identifier, IfStmt, ImportDecl,
-        IndexExpr, InherentImplDef, Keyword, LetStmt, Literal, MatchStmt, MethodCallExpr,
-        ModuleDef, PathExpr, PathPrefix, RangeExpr, RangeOp, ReturnExpr, Separator, Statement,
-        StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr,
-        Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, WhileStmt,
+        AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
+        ConstantDecl, ContinueExpr, Declaration, Definition, Delimiter, EnumDef, Expression,
+        ExpressionStmt, FieldAccessExpr, ForInStmt, FunctionDef, GroupedExpr, Identifier, IfStmt,
+        ImportDecl, IndexExpr, InherentImplDef, Keyword, LetStmt, Literal, MatchStmt,
+        MethodCallExpr, ModuleDef, PathExpr, PathPrefix, RangeExpr, RangeOp, ReturnExpr, Separator,
+        Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr,
+        TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr,
+        UnwrapOp, WhileStmt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
-    parser::range_expr::parse_range_expr,
     token::{Token, TokenStream},
 };
 
 pub use self::precedence::Precedence;
 use self::{
-    binary_expr::parse_binary_expr,
     compound_expr::ParseCompoundExpr,
     expression::ParseExpression,
     item::{ParseDeclaration, ParseDefinition},
     statement::ParseStatement,
-    unary_expr::parse_unary_expr,
 };
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
@@ -297,15 +295,15 @@ impl Parser {
             //     }
             // }
             Some(Token::Minus { .. }) => {
-                Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Negate)?))
+                Ok(Expression::Unary(UnaryExpr::parse(self, UnaryOp::Negate)?))
             }
             Some(Token::Bang { .. }) => {
-                Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Not)?))
+                Ok(Expression::Unary(UnaryExpr::parse(self, UnaryOp::Not)?))
             }
             Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Expression::Unary(
-                parse_unary_expr(self, UnaryOp::Reference)?,
+                UnaryExpr::parse(self, UnaryOp::Reference)?,
             )),
-            Some(Token::Asterisk { .. }) => Ok(Expression::Unary(parse_unary_expr(
+            Some(Token::Asterisk { .. }) => Ok(Expression::Unary(UnaryExpr::parse(
                 self,
                 UnaryOp::Dereference,
             )?)),
@@ -446,122 +444,122 @@ impl Parser {
         let token = self.consume_token();
 
         match token {
-            Some(Token::Plus { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Plus { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Add,
             )?)),
-            Some(Token::Minus { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Minus { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Subtract,
             )?)),
-            Some(Token::Asterisk { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Asterisk { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Multiply,
             )?)),
-            Some(Token::Slash { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Slash { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Divide,
             )?)),
-            Some(Token::Percent { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Percent { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Modulus,
             )?)),
-            Some(Token::DblEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::DblEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Equal,
             )?)),
-            Some(Token::BangEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::BangEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::NotEqual,
             )?)),
-            Some(Token::LessThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::LessThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::LessThan,
             )?)),
-            Some(Token::LessThanEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::LessThanEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::LessEqual,
             )?)),
-            Some(Token::GreaterThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::GreaterThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::GreaterThan,
             )?)),
-            Some(Token::GreaterThanEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::GreaterThanEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::GreaterEqual,
             )?)),
-            Some(Token::Equals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Equals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Assign,
             )?)),
-            Some(Token::PlusEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::PlusEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::AddAssign,
             )?)),
-            Some(Token::MinusEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::MinusEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::SubtractAssign,
             )?)),
-            Some(Token::AsteriskEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::AsteriskEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::MultiplyAssign,
             )?)),
-            Some(Token::SlashEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::SlashEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::DivideAssign,
             )?)),
-            Some(Token::PercentEquals { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::PercentEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::ModulusAssign,
             )?)),
-            Some(Token::DblAmpersand { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::DblAmpersand { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::LogicalAnd,
             )?)),
-            Some(Token::DblPipe { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::DblPipe { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::LogicalOr,
             )?)),
-            Some(Token::Ampersand { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Ampersand { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::BitwiseAnd,
             )?)),
-            Some(Token::Pipe { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Pipe { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::BitwiseOr,
             )?)),
-            Some(Token::Caret { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Caret { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::BitwiseXor,
             )?)),
-            Some(Token::DblLessThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::DblLessThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::ShiftLeft,
             )?)),
-            Some(Token::DblGreaterThan { .. }) => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::DblGreaterThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::ShiftRight,
@@ -627,13 +625,13 @@ impl Parser {
             },
 
             Some(Token::DblDot { .. }) => {
-                let range_expr = parse_range_expr(self, left_expr, RangeOp::RangeExclusive)?;
+                let range_expr = RangeExpr::parse(self, left_expr, RangeOp::RangeExclusive)?;
 
                 Ok(Expression::Range(range_expr))
             }
 
             Some(Token::DotDotEquals { .. }) => {
-                let range_expr = parse_range_expr(self, left_expr, RangeOp::RangeInclusive)?;
+                let range_expr = RangeExpr::parse(self, left_expr, RangeOp::RangeInclusive)?;
 
                 Ok(Expression::Range(range_expr))
             }
