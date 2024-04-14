@@ -8,12 +8,12 @@ use super::{Parser, Precedence};
 
 impl ArrayExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<ArrayExpr, ErrorsEmitted> {
-        let mut elements: Vec<Expression> = Vec::new();
-
         let open_bracket = parser.expect_delimiter(Token::LBracket {
             delim: '[',
             span: parser.stream.span(),
         })?;
+
+        let mut elements: Vec<Expression> = Vec::new();
 
         while !parser.is_expected_token(&Token::RBracket {
             delim: ']',

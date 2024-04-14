@@ -11,12 +11,12 @@ impl StructExpr {
         parser: &mut Parser,
         path: Expression,
     ) -> Result<StructExpr, ErrorsEmitted> {
-        let mut fields: Vec<StructField> = Vec::new();
-
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),
         })?;
+
+        let mut fields: Vec<StructField> = Vec::new();
 
         loop {
             let token = parser.consume_token();
