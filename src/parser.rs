@@ -52,8 +52,7 @@ pub(crate) struct Parser {
 
 impl Parser {
     /// Create a new `Parser` instance.
-    /// Initialize an empty `Vec` to store parser errors and an empty `HashMap`
-    /// to store precedences.
+    /// Initialize an empty `Vec` to store parser errors.
     pub(crate) fn new(stream: TokenStream) -> Self {
         Parser {
             stream,
@@ -165,7 +164,6 @@ impl Parser {
                 | Token::BigUIntLiteral { .. }
                 | Token::HashLiteral { .. },
             ) => self.parse_primary(),
-
             Some(
                 Token::ByteLiteral { .. }
                 | Token::BytesLiteral { .. }
@@ -173,7 +171,6 @@ impl Parser {
                 | Token::CharLiteral { .. }
                 | Token::BoolLiteral { .. },
             ) => self.parse_primary(),
-
             Some(Token::Identifier { name, .. }) => {
                 if &name == "_" {
                     Ok(Expression::Underscore(UnderscoreExpr {
@@ -237,7 +234,6 @@ impl Parser {
                         });
                         Err(ErrorsEmitted(()))
                     }
-
                     None => {
                         self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                         Err(ErrorsEmitted(()))
@@ -461,7 +457,6 @@ impl Parser {
                 left_expr,
                 BinaryOp::ShiftRight,
             )?)),
-
             Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
                 match self.peek_behind_by(1) {
                     Some(Token::Package { .. }) => {
@@ -571,7 +566,6 @@ impl Parser {
                 self.log_error(ParserErrorKind::InvalidToken { token: t });
                 Err(ErrorsEmitted(()))
             }
-
             None => {
                 self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
@@ -924,7 +918,13 @@ impl Parser {
             Token::GreaterThan { .. } => Precedence::GreaterThan,
             Token::QuestionMark { .. } => Precedence::Unwrap,
             Token::Caret { .. } => Precedence::BitwiseXor,
-            Token::Pipe { .. } => Precedence::BitwiseOr,
+            Token::Pipe { .. } => {
+                if self.peek_behind_by(1).is_some() {
+                    Precedence::Lowest // closure with arguments
+                } else {
+                    Precedence::BitwiseOr
+                }
+            }
             Token::DblDot { .. } => Precedence::Range,
             Token::DotDotEquals { .. } => Precedence::Range,
             Token::BangEquals { .. } => Precedence::NotEqual,
@@ -941,7 +941,13 @@ impl Parser {
             Token::DblEquals { .. } => Precedence::Equal,
             Token::DblGreaterThan { .. } => Precedence::Shift,
             Token::GreaterThanEquals { .. } => Precedence::GreaterThanOrEqual,
-            Token::DblPipe { .. } => Precedence::LogicalOr,
+            Token::DblPipe { .. } => {
+                if self.peek_behind_by(1).is_some() {
+                    Precedence::Lowest // closure without arguments
+                } else {
+                    Precedence::LogicalOr
+                }
+            }
             _ => Precedence::Lowest,
         }
     }
@@ -961,20 +967,17 @@ impl Parser {
         let token = self.consume_token();
 
         match token {
-            Some(Token::I32Type { .. } | Token::I64Type { .. }) | Some(Token::I128Type { .. }) => {
-                Ok(Type::Int)
-            }
-            Some(
-                Token::U8Type { .. }
-                | Token::U16Type { .. }
-                | Token::U32Type { .. }
-                | Token::U64Type { .. }
-                | Token::U128Type { .. },
-            ) => Ok(Type::UInt),
-            Some(Token::U256Type { .. }) => Ok(Type::BigUInt),
-            Some(Token::U512Type { .. }) => Ok(Type::BigUInt),
+            Some(Token::I32Type { .. }) => Ok(Type::I32),
+            Some(Token::I64Type { .. }) => Ok(Type::I64),
+            Some(Token::I128Type { .. }) => Ok(Type::I128),
+            Some(Token::U8Type { .. }) => Ok(Type::U8),
+            Some(Token::U16Type { .. }) => Ok(Type::U16),
+            Some(Token::U32Type { .. }) => Ok(Type::U32),
+            Some(Token::U64Type { .. }) => Ok(Type::U64),
+            Some(Token::U128Type { .. }) => Ok(Type::U128),
+            Some(Token::U256Type { .. }) => Ok(Type::U256),
+            Some(Token::U512Type { .. }) => Ok(Type::U512),
             Some(Token::ByteType { .. }) => Ok(Type::Byte),
-
             Some(
                 Token::B2Type { .. }
                 | Token::B3Type { .. }
@@ -1008,9 +1011,9 @@ impl Parser {
                 | Token::B31Type { .. }
                 | Token::B32Type { .. },
             ) => Ok(Type::Bytes),
-            Some(Token::H160Type { .. } | Token::H256Type { .. } | Token::H512Type { .. }) => {
-                Ok(Type::Hash)
-            }
+            Some(Token::H160Type { .. }) => Ok(Type::H160),
+            Some(Token::H256Type { .. }) => Ok(Type::H256),
+            Some(Token::H512Type { .. }) => Ok(Type::H512),
             Some(Token::StringType { .. }) => Ok(Type::String),
             Some(Token::CharType { .. }) => Ok(Type::Char),
             Some(Token::BoolType { .. }) => Ok(Type::Bool),
@@ -1025,7 +1028,8 @@ impl Parser {
             }
             Some(Token::LBracket { .. }) => Ok(Type::Array),
             Some(Token::Func { .. }) => Ok(Type::Function),
-            Some(Token::Ampersand { .. }) => Ok(Type::Reference),
+            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Type::Reference),
+            Some(Token::Identifier { .. }) => Ok(Type::UserDefined),
             Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "type annotation".to_string(),

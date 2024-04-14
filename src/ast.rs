@@ -226,12 +226,21 @@ pub enum Definition {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     // primitives
-    Int,     // `i32`–`i128`
-    UInt,    // `u8`–`u128`
-    BigUInt, // `u256` and `u512`
-    Byte,    // equivalent to `u8`
-    Bytes,   // `b2`–`b32`
-    Hash,    // `h160`, `h256` and `h512`
+    I32,    
+    I64,    
+    I128,   
+    U8,   
+    U16,    
+    U32,    
+    U64,    
+    U128,    
+    U256, 
+    U512, 
+    Byte,    
+    Bytes,
+    H160,    
+    H256,    
+    H512,    
     String,  // `Vec<u8>`
     Char,
     Bool,
