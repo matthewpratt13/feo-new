@@ -2,6 +2,7 @@
 #![allow(unused_variables)]
 
 mod binary_expr;
+mod closure_expr;
 mod compound_expr;
 mod expression;
 mod item;
