@@ -23,3 +23,23 @@ pub(crate) fn parse_unary_expr(
         }),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::test_utils;
+
+    #[test]
+    #[ignore]
+    fn test_unary_expr_negate() -> Result<(), ()> {
+        let input = r#"-x"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+}
