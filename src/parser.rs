@@ -6,6 +6,7 @@ mod compound_expr;
 mod expression;
 mod item;
 mod precedence;
+mod range_expr;
 mod statement;
 mod unary_expr;
 
@@ -20,6 +21,7 @@ use crate::{
         Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, WhileStmt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
+    parser::range_expr::parse_range_expr,
     token::{Token, TokenStream},
 };
 
@@ -342,6 +344,7 @@ impl Parser {
                     }))
                 }
             }
+
             Some(Token::DotDotEquals { .. }) => {
                 self.consume_token();
                 let expr = self.parse_expression(Precedence::Range)?;
@@ -621,6 +624,18 @@ impl Parser {
                     Err(ErrorsEmitted(()))
                 }
             },
+
+            Some(Token::DblDot { .. }) => {
+                let range_expr = parse_range_expr(self, left_expr, RangeOp::RangeExclusive)?;
+
+                Ok(Expression::Range(range_expr))
+            }
+
+            Some(Token::DotDotEquals { .. }) => {
+                let range_expr = parse_range_expr(self, left_expr, RangeOp::RangeInclusive)?;
+
+                Ok(Expression::Range(range_expr))
+            }
 
             Some(t) => {
                 self.log_error(ParserErrorKind::InvalidToken { token: t });

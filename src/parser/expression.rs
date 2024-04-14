@@ -279,47 +279,6 @@ impl ParseExpression for TupleIndexExpr {
     }
 }
 
-// impl ParseExpression for RangeExpr {
-//     fn parse(parser: &mut Parser, from: Expression) -> Result<RangeExpr, ErrorsEmitted> {
-//         let token = parser.consume_token();
-
-//         let op = if let Ok(t) = token {
-//             match t {
-//                 Token::DblDot { .. } => Ok(RangeOp::RangeExclusive),
-//                 Token::DotDotEquals { .. } => Ok(RangeOp::RangeInclusive),
-//                 _ => {
-//                     parser.log_error(ParserErrorKind::UnexpectedToken {
-//                         expected: "`..` or `..=`".to_string(),
-//                         found: t,
-//                     });
-//                     Err(ErrorsEmitted(()))
-//                 }
-//             }
-//         } else {
-//             parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-//             Err(ErrorsEmitted(()))
-//         }?;
-
-//         parser.consume_token()?;
-
-//         let to = parser.parse_expression(Precedence::Range);
-
-//         if to.is_ok() {
-//             Ok(RangeExpr {
-//                 from_opt: Some(Box::new(from)),
-//                 op,
-//                 to_opt: Some(Box::new(to?)),
-//             })
-//         } else {
-//             Ok(RangeExpr {
-//                 from_opt: Some(Box::new(from)),
-//                 op,
-//                 to_opt: None,
-//             })
-//         }
-//     }
-// }
-
 // impl ParseExpression for StructExpr {
 //     fn parse(parser: &mut Parser, path: Expression) -> Result<StructExpr, ErrorsEmitted> {
 //         let mut fields: Vec<StructField> = Vec::new();
@@ -564,4 +523,5 @@ mod tests {
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
     }
+
 }
