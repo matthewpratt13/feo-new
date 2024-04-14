@@ -7,7 +7,7 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl ClosureExpr {
-    fn parse(parser: &mut Parser) -> Result<ClosureExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<ClosureExpr, ErrorsEmitted> {
         let token = parser.consume_token();
 
         let params = match token {

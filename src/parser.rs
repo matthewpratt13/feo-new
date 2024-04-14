@@ -2,13 +2,20 @@
 #![allow(unused_variables)]
 
 mod binary_expr;
+mod call_expr;
 mod closure_expr;
 mod compound_expr;
 mod expression;
+mod field_access_expr;
+mod index_expr;
 mod item;
+mod method_call_expr;
+mod path_expr;
 mod precedence;
 mod range_expr;
 mod statement;
+mod struct_expr;
+mod tuple_expr;
 mod unary_expr;
 
 use crate::{
@@ -29,7 +36,6 @@ use crate::{
 pub use self::precedence::Precedence;
 use self::{
     compound_expr::ParseCompoundExpr,
-    expression::ParseExpression,
     item::{ParseDeclaration, ParseDefinition},
     statement::ParseStatement,
 };
@@ -1106,6 +1112,40 @@ impl Parser {
                 self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::test_utils;
+
+    #[test]
+    fn test_unwrap_expr() -> Result<(), ()> {
+        let input = r#"(x + 2)?"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn test_type_cast_expr() -> Result<(), ()> {
+        let input = r#"x as u32"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
         }
     }
 }
