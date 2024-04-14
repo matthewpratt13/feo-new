@@ -82,6 +82,9 @@ impl Parser {
         while let Some(t) = self.peek_current() {
             let curr_precedence = self.precedence(&t);
 
+            println!("CURRENT PRECEDENCE: {:?}", curr_precedence);
+            println!("CURRENT TOKEN: {:?}", self.peek_current());
+
             if precedence < curr_precedence {
                 left_expr = self.parse_infix(left_expr)?;
             } else {
