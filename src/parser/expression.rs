@@ -483,6 +483,20 @@ mod tests {
     }
 
     #[test]
+    fn test_field_access_expr() -> Result<(), ()> {
+        let input = r#"object.field"#;
+
+        let mut parser = test_utils::get_parser(input);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
     fn test_call_expr() -> Result<(), ()> {
         let input = r#"foo(bar, baz)"#;
 
@@ -513,20 +527,6 @@ mod tests {
     #[test]
     fn test_tuple_index_expr() -> Result<(), ()> {
         let input = r#"tuple.0"#;
-
-        let mut parser = test_utils::get_parser(input);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn test_field_access_expr() -> Result<(), ()> {
-        let input = r#"object.field"#;
 
         let mut parser = test_utils::get_parser(input);
 
