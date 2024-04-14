@@ -123,6 +123,7 @@ pub enum BinaryOp {
     BitwiseXor,
     ShiftLeft,
     ShiftRight,
+    Exponentiation,
 }
 
 /// Struct representing the unwrap operator `?`.

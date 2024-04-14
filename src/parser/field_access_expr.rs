@@ -37,10 +37,10 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn test_field_access_expr() -> Result<(), ()> {
+    fn parse_field_access_expr() -> Result<(), ()> {
         let input = r#"object.field"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

@@ -32,10 +32,10 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn test_grouped_expr() -> Result<(), ()> {
+    fn parse_grouped_expr() -> Result<(), ()> {
         let input = r#"(x + 2)"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

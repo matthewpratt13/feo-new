@@ -49,10 +49,10 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn test_index_expr() -> Result<(), ()> {
+    fn parse_index_expr() -> Result<(), ()> {
         let input = r#"array[0]"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

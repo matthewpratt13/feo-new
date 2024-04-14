@@ -49,7 +49,7 @@ impl<'a> Lexer<'a> {
             match c {
                 _ if c.is_whitespace() => self.skip_whitespace(),
 
-                _ if c == '/' && self.peek_next() == Some('/') || self.peek_next() == Some('*') => {
+                _ if c == '/' && (self.peek_next() == Some('/') || self.peek_next() == Some('*')) => {
                     tokens.push(self.tokenize_doc_comment()?);
                 }
 

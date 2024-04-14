@@ -470,19 +470,21 @@ impl Parser {
                 left_expr,
                 BinaryOp::ShiftRight,
             )?)),
+            Some(Token::DblAsterisk { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+                self,
+                left_expr,
+                BinaryOp::Exponentiation,
+            )?)),
             Some(Token::LParen { .. }) => {
                 let expr = CallExpr::parse(self, left_expr)?;
-
                 Ok(Expression::Call(expr))
             }
             Some(Token::LBracket { .. }) => {
                 let expr = IndexExpr::parse(self, left_expr)?;
-
                 Ok(Expression::Index(expr))
             }
             Some(Token::LBrace { .. }) => {
                 let expr = StructExpr::parse(self, left_expr)?;
-
                 Ok(Expression::Struct(expr))
             }
             Some(Token::As { .. }) => {
@@ -517,7 +519,6 @@ impl Parser {
                         expected: "identifier or index".to_string(),
                         found: t,
                     });
-
                     Err(ErrorsEmitted(()))
                 }
                 None => {
@@ -527,12 +528,10 @@ impl Parser {
             },
             Some(Token::DblDot { .. }) => {
                 let expr = RangeExpr::parse(self, left_expr, RangeOp::RangeExclusive)?;
-
                 Ok(Expression::Range(expr))
             }
             Some(Token::DotDotEquals { .. }) => {
                 let expr = RangeExpr::parse(self, left_expr, RangeOp::RangeInclusive)?;
-
                 Ok(Expression::Range(expr))
             }
             Some(t) => {
@@ -1023,10 +1022,10 @@ mod tests {
     use super::test_utils;
 
     #[test]
-    fn test_unwrap_expr() -> Result<(), ()> {
+    fn parse_unwrap_expr() -> Result<(), ()> {
         let input = r#"(x + 2)?"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 
@@ -1037,10 +1036,10 @@ mod tests {
     }
 
     #[test]
-    fn test_type_cast_expr() -> Result<(), ()> {
+    fn parse_type_cast_expr() -> Result<(), ()> {
         let input = r#"x as u32"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

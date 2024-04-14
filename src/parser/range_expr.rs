@@ -34,10 +34,10 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn test_range_expr_excl() -> Result<(), ()> {
+    fn parse_range_expr_excl() -> Result<(), ()> {
         let input = r#"1..10"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 
@@ -48,10 +48,10 @@ mod tests {
     }
 
     #[test]
-    fn test_range_expr_incl() -> Result<(), ()> {
+    fn parse_range_expr_incl() -> Result<(), ()> {
         let input = r#"..=10"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 
@@ -62,10 +62,10 @@ mod tests {
     }
 
     #[test]
-    fn test_range_expr_full() -> Result<(), ()> {
+    fn parse_range_expr_full() -> Result<(), ()> {
         let input = r#".."#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

@@ -87,10 +87,10 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn test_method_call_expr() -> Result<(), ()> {
+    fn parse_method_call_expr() -> Result<(), ()> {
         let input = r#"receiver.method(foo, bar)"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

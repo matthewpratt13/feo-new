@@ -85,10 +85,10 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn test_tuple_index_expr() -> Result<(), ()> {
+    fn parse_tuple_index_expr() -> Result<(), ()> {
         let input = r#"tuple.0"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

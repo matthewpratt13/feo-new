@@ -211,6 +211,14 @@ impl BinaryExpr {
                     rhs: Box::new(right_expr),
                 })
             }
+            BinaryOp::Exponentiation => {
+                let right_expr = parser.parse_expression(Precedence::Exponentiation)?;
+                Ok(BinaryExpr {
+                    lhs: Box::new(left_expr),
+                    op,
+                    rhs: Box::new(right_expr),
+                })
+            }
         }
     }
 }
@@ -220,10 +228,10 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn test_binary_expr_add() -> Result<(), ()> {
+    fn parse_binary_expr_add() -> Result<(), ()> {
         let input = r#"2 + 2"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 
@@ -234,10 +242,10 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_expr_multiply() -> Result<(), ()> {
+    fn parse_binary_expr_multiply() -> Result<(), ()> {
         let input = r#"x * 2"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 
@@ -248,10 +256,10 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_expr_less_than() -> Result<(), ()> {
+    fn parse_binary_expr_less_than() -> Result<(), ()> {
         let input = r#"4 < 5"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 
@@ -262,10 +270,10 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_expr_assign() -> Result<(), ()> {
+    fn parse_binary_expr_assign() -> Result<(), ()> {
         let input = r#"x = 5"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 
@@ -276,10 +284,10 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_expr_logical_and() -> Result<(), ()> {
+    fn parse_binary_expr_logical_and() -> Result<(), ()> {
         let input = r#"x && y"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 
@@ -290,10 +298,10 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_expr_bitwise_xor() -> Result<(), ()> {
+    fn parse_binary_expr_bitwise_xor() -> Result<(), ()> {
         let input = r#"x ^ y"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 
@@ -304,10 +312,24 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_expr_shift_left() -> Result<(), ()> {
+    fn parse_binary_expr_shift_left() -> Result<(), ()> {
         let input = r#"2 << 4"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_binary_expr_exponent() -> Result<(), ()> {
+        let input = r#"x**2"#;
+
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

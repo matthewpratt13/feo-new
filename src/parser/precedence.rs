@@ -22,7 +22,7 @@ pub enum Precedence {
     Product,            // `*`
     Quotient,           // `/`
     Remainder,          // `%`
-    Exponentiation,     // `**` // TODO: add to `parser_binary_expr()`
+    Exponentiation,     // `**`
     TypeCast,           // "as"
     Unary,              // `-`, `*` `!`, `&`,`&mut`
     Unwrap,             // `?`

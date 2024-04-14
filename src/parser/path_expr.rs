@@ -48,11 +48,10 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    // #[ignore]
-    fn test_path_expr() -> Result<(), ()> {
+    fn parse_path_expr() -> Result<(), ()> {
         let input = r#"package::module::Object"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

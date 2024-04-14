@@ -4,6 +4,7 @@ use crate::{
 };
 
 use super::{Parser, Precedence};
+
 impl UnaryExpr {
     pub(crate) fn parse(parser: &mut Parser, op: UnaryOp) -> Result<UnaryExpr, ErrorsEmitted> {
         parser.consume_token();
@@ -24,11 +25,10 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    // #[ignore]
-    fn test_unary_expr_negate() -> Result<(), ()> {
+    fn parse_unary_expr_negate() -> Result<(), ()> {
         let input = r#"-x"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 
@@ -40,10 +40,10 @@ mod tests {
 
     #[test]
     // #[ignore]
-    fn test_unary_expr_reference() -> Result<(), ()> {
+    fn parse_unary_expr_reference() -> Result<(), ()> {
         let input = r#"&x"#;
 
-        let mut parser = test_utils::get_parser(input);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 
