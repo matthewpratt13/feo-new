@@ -375,6 +375,52 @@ impl Parser {
                     kw_continue: Keyword::Continue,
                 }))
             }
+
+            Some(Token::Dot { .. }) => {
+                let next_token = self.peek_ahead_by(1);
+
+                match next_token {
+                    Some(Token::Identifier { .. } | Token::UIntLiteral { .. }) => {
+                        self.consume_token();
+                        Err(ErrorsEmitted(()))
+                    }
+                    Some(t) => {
+                        self.log_error(ParserErrorKind::UnexpectedToken {
+                            expected: "identifier or tuple index after `.`".to_string(),
+                            found: t,
+                        });
+                        Err(ErrorsEmitted(()))
+                    }
+
+                    None => {
+                        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                        Err(ErrorsEmitted(()))
+                    }
+                }
+            }
+
+            Some(Token::QuestionMark { .. }) => match self.peek_behind_by(1) {
+                Some(Token::Identifier { .. }) => {
+                    self.consume_token();
+                    Err(ErrorsEmitted(()))
+                }
+                Some(t) => {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "expression before `?`".to_string(),
+                        found: t,
+                    });
+                    Err(ErrorsEmitted(()))
+                }
+
+                None => {
+                    self.log_error(ParserErrorKind::TokenIndexOutOfBounds {
+                        len: self.stream.tokens().len(),
+                        i: self.current,
+                    });
+                    Err(ErrorsEmitted(()))
+                }
+            },
+
             Some(t) => {
                 self.log_error(ParserErrorKind::InvalidToken { token: t });
                 Err(ErrorsEmitted(()))

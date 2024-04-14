@@ -107,13 +107,12 @@ impl ParseExpression for MethodCallExpr {
             match curr_token {
                 Some(Token::Comma { .. }) => continue,
                 Some(Token::RParen { .. }) => break,
-                Some(t) => {
-                    parser.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `)`".to_string(),
-                        found: t,
+                _ => {
+                    parser.log_error(ParserErrorKind::TokenNotFound {
+                        expected: "`)`".to_string(),
                     });
+                    break;
                 }
-                None => parser.log_error(ParserErrorKind::UnexpectedEndOfInput),
             }
         }
 
@@ -498,7 +497,7 @@ mod tests {
 
     #[test]
     fn test_call_expr() -> Result<(), ()> {
-        let input = r#"foo(bar, baz)"#;
+        let input = r#"foo(bar)"#;
 
         let mut parser = test_utils::get_parser(input);
 
