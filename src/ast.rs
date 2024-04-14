@@ -41,7 +41,7 @@ pub struct Identifier(pub String);
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
     Import,
-    Module,
+    Mod,
     Package,
     KwSelf,
     SelfType,
@@ -226,22 +226,22 @@ pub enum Definition {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     // primitives
-    I32,    
-    I64,    
-    I128,   
-    U8,   
-    U16,    
-    U32,    
-    U64,    
-    U128,    
-    U256, 
-    U512, 
-    Byte,    
+    I32,
+    I64,
+    I128,
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+    U256,
+    U512,
+    Byte,
     Bytes,
-    H160,    
-    H256,    
-    H512,    
-    String,  // `Vec<u8>`
+    H160,
+    H256,
+    H512,
+    String, // `Vec<u8>`
     Char,
     Bool,
 

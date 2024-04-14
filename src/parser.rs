@@ -696,7 +696,7 @@ impl Parser {
 
         match token {
             Some(Token::Import { .. }) => Ok(Keyword::Import),
-            Some(Token::Mod { .. }) => Ok(Keyword::Module),
+            Some(Token::Mod { .. }) => Ok(Keyword::Mod),
             Some(Token::Package { .. }) => Ok(Keyword::Package),
             Some(Token::SelfKeyword { .. }) => Ok(Keyword::KwSelf),
             Some(Token::SelfType { .. }) => Ok(Keyword::SelfType),
