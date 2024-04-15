@@ -140,7 +140,6 @@ impl Parser {
                     expected: "identifier, `_`, literal or `(`".to_string(),
                     found: t,
                 });
-
                 Err(ErrorsEmitted(()))
             }
             None => {
@@ -177,6 +176,13 @@ impl Parser {
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Separator::Underscore,
                     }))
+                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                    self.peek_current()
+                {
+                    Ok(Expression::Path(PathExpr::parse(
+                        self,
+                        PathPrefix::Identifier(Identifier(name)),
+                    )?))
                 } else {
                     self.parse_primary()
                 }
@@ -343,7 +349,6 @@ impl Parser {
             }
             Some(Token::Break { name, .. }) => {
                 self.consume_token();
-
                 Ok(Expression::Break(BreakExpr {
                     kw_break: Keyword::Break,
                 }))
@@ -509,10 +514,6 @@ impl Parser {
             Some(Token::LBracket { .. }) => {
                 let expr = IndexExpr::parse(self, left_expr)?;
                 Ok(Expression::Index(expr))
-            }
-            Some(Token::LBrace { .. }) => {
-                let expr = StructExpr::parse(self, left_expr)?;
-                Ok(Expression::Struct(expr))
             }
             Some(Token::As { .. }) => {
                 let new_type = self.get_type()?;
@@ -857,26 +858,6 @@ impl Parser {
                 self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
-        }
-    }
-
-    /// Advance the parser by one if the expected token matches the current one
-    /// and return whether or not this is the case.
-    fn tokens_match(&mut self, expected: Token) -> bool {
-        if self.is_expected_token(&expected) {
-            self.current += 1;
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Verify that the current token is the expected one.
-    fn is_expected_token(&self, expected: &Token) -> bool {
-        if self.current < self.stream.tokens().len() {
-            &self.stream.tokens()[self.current] == expected
-        } else {
-            false
         }
     }
 

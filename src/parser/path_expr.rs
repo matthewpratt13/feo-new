@@ -14,10 +14,7 @@ impl PathExpr {
             while let Some(Token::Identifier { name, .. }) = parser.consume_token() {
                 tree.push(Identifier(name));
 
-                if !parser.is_expected_token(&Token::DblColon {
-                    punc: "::".to_string(),
-                    span: parser.stream.span(),
-                }) {
+                if let Some(Token::DblColon { .. }) = parser.peek_current() {
                     parser.consume_token();
                 } else {
                     break;
@@ -59,8 +56,8 @@ mod tests {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
-    }   
-    
+    }
+
     #[test]
     fn parse_path_expr_identifier() -> Result<(), ()> {
         let input = r#"foo_bar"#;

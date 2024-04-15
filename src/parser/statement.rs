@@ -146,10 +146,12 @@ impl ParseStatement for MatchStmt {
             span: parser.stream.span(),
         })?;
 
-        while !parser.is_expected_token(&Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        }) {
+        loop {
+            if let Some(Token::RBrace { .. }) = parser.peek_current() {
+                parser.consume_token();
+                break;
+            }
+
             let case = parser.parse_expression(Precedence::Lowest)?;
 
             let token = parser.peek_current().ok_or({
@@ -157,16 +159,10 @@ impl ParseStatement for MatchStmt {
                 ErrorsEmitted(())
             })?;
 
-            let guard_opt = if parser.is_expected_token(&Token::If {
-                name: "if".to_string(),
-                span: parser.stream.span(),
-            }) {
+            let guard_opt = if let Some(Token::If { .. }) = parser.peek_current() {
                 let kw_if = parser.expect_keyword(token)?;
 
-                if parser.is_expected_token(&Token::LParen {
-                    delim: '(',
-                    span: parser.stream.span(),
-                }) {
+                if let Some(Token::LParen { .. }) = parser.peek_current() {
                     Some((kw_if, GroupedExpr::parse(parser)?))
                 } else {
                     None
@@ -191,13 +187,60 @@ impl ParseStatement for MatchStmt {
 
             match_arms.push(arm);
 
-            if parser.tokens_match(Token::Comma {
-                punc: ',',
-                span: parser.stream.span(),
-            }) {
+            if let Some(Token::Comma { .. }) = parser.peek_current() {
                 continue;
             }
         }
+
+        // while !parser.is_expected_token(&Token::RBrace {
+        //     delim: '}',
+        //     span: parser.stream.span(),
+        // }) {
+        //     let case = parser.parse_expression(Precedence::Lowest)?;
+
+        //     let token = parser.peek_current().ok_or({
+        //         parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+        //         ErrorsEmitted(())
+        //     })?;
+
+        //     let guard_opt = if let Some(Token::If { .. }) = parser.peek_current() {
+        //         let kw_if = parser.expect_keyword(token)?;
+
+        //         if parser.is_expected_token(&Token::LParen {
+        //             delim: '(',
+        //             span: parser.stream.span(),
+        //         }) {
+        //             Some((kw_if, GroupedExpr::parse(parser)?))
+        //         } else {
+        //             None
+        //         }
+        //     } else {
+        //         None
+        //     };
+
+        //     let fat_arrow = parser.expect_separator(Token::FatArrow {
+        //         punc: "=>".to_string(),
+        //         span: parser.stream.span(),
+        //     })?;
+
+        //     let logic = parser.parse_expression(Precedence::Lowest)?;
+
+        //     let arm = MatchArm {
+        //         case,
+        //         guard_opt,
+        //         fat_arrow,
+        //         logic,
+        //     };
+
+        //     match_arms.push(arm);
+
+        //     if parser.tokens_match(Token::Comma {
+        //         punc: ',',
+        //         span: parser.stream.span(),
+        //     }) {
+        //         continue;
+        //     }
+        // }
 
         let final_arm = if let Some(a) = match_arms.pop() {
             a
@@ -300,7 +343,7 @@ impl ParseStatement for ExpressionStmt {
         } else {
             None
         };
-        
+
         println!("EXIT `ExpressionStmt::parse()`");
         println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
