@@ -203,7 +203,7 @@ where
             error_kind,
             line: line_count,
             col: last_line_len,
-            _source: Arc::new(slice.to_string()),
+            _source: Arc::new(source.to_string()),
         }
     }
 }

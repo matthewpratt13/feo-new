@@ -1,25 +1,39 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+mod array_expr;
 mod binary_expr;
-mod compound_expr;
-mod expression;
+mod block_expr;
+mod call_expr;
+mod closure_expr;
+mod field_access_expr;
+mod for_in_expr;
+mod grouped_expr;
+mod if_expr;
+mod index_expr;
 mod item;
+mod match_expr;
+mod method_call_expr;
+mod path_expr;
 mod precedence;
+mod range_expr;
 mod statement;
+mod struct_expr;
+mod test_utils;
+mod tuple_expr;
 mod unary_expr;
-
-use std::collections::HashMap;
+mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ConstantDecl,
-        ContinueExpr, Declaration, Definition, Delimiter, EnumDef, Expression, ExpressionStmt,
-        FieldAccessExpr, ForInStmt, FunctionDef, GroupedExpr, Identifier, IfStmt, ImportDecl,
-        IndexExpr, InherentImplDef, Keyword, LetStmt, Literal, MatchStmt, MethodCallExpr,
-        ModuleDef, PathExpr, PathPrefix, RangeExpr, RangeOp, ReturnExpr, Separator, Statement,
-        StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr,
-        Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, WhileStmt,
+        AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
+        ConstantDecl, ContinueExpr, Declaration, Definition, Delimiter, EnumDef, Expression,
+        ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef, GroupedExpr, Identifier, IfExpr,
+        ImportDecl, IndexExpr, InherentImplDef, Keyword, LetStmt, Literal, MatchExpr,
+        MethodCallExpr, ModuleDef, PathExpr, PathPrefix, RangeExpr, RangeOp, ReturnExpr, Separator,
+        Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr,
+        TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr,
+        UnwrapOp, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -27,351 +41,39 @@ use crate::{
 
 pub use self::precedence::Precedence;
 use self::{
-    binary_expr::parse_binary_expr,
-    compound_expr::ParseCompoundExpr,
-    expression::ParseExpression,
     item::{ParseDeclaration, ParseDefinition},
     statement::ParseStatement,
-    unary_expr::parse_unary_expr,
 };
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
 #[derive(Debug)]
-struct Parser {
+pub(crate) struct Parser {
     stream: TokenStream,
     current: usize,
     errors: Vec<CompilerError<ParserErrorKind>>,
-    precedences: HashMap<Token, Precedence>,
 }
 
 impl Parser {
     /// Create a new `Parser` instance.
-    /// Initialize an empty `Vec` to store parser errors and an empty `HashMap`
-    /// to store precedences.
-    fn new(stream: TokenStream) -> Self {
+    /// Initialize an empty `Vec` to store parser errors.
+    pub(crate) fn new(stream: TokenStream) -> Self {
         Parser {
             stream,
             current: 0,
             errors: Vec::new(),
-            precedences: HashMap::new(),
         }
-    }
-
-    /// Define precedence levels for operators.
-    fn init_precedences(&mut self) {
-        self.precedences.insert(
-            Token::As {
-                name: "as".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::TypeCast,
-        );
-        self.precedences.insert(
-            Token::DblAsterisk {
-                punc: "**".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Exponentiation,
-        );
-        self.precedences.insert(
-            Token::Minus {
-                punc: '-',
-                span: self.stream.span(),
-            },
-            Precedence::Unary,
-        );
-        self.precedences.insert(
-            Token::Bang {
-                punc: '!',
-                span: self.stream.span(),
-            },
-            Precedence::Unary,
-        );
-        self.precedences.insert(
-            Token::Asterisk {
-                punc: '*',
-                span: self.stream.span(),
-            },
-            Precedence::Unary,
-        );
-        self.precedences.insert(
-            Token::Ampersand {
-                punc: '&',
-                span: self.stream.span(),
-            },
-            Precedence::Unary,
-        );
-        self.precedences.insert(
-            Token::AmpersandMut {
-                punc: "&mut".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Unary,
-        );
-        self.precedences.insert(
-            Token::Percent {
-                punc: '%',
-                span: self.stream.span(),
-            },
-            Precedence::Remainder,
-        );
-        self.precedences.insert(
-            Token::Slash {
-                punc: '/',
-                span: self.stream.span(),
-            },
-            Precedence::Quotient,
-        );
-        self.precedences.insert(
-            Token::Asterisk {
-                punc: '*',
-                span: self.stream.span(),
-            },
-            Precedence::Product,
-        );
-        self.precedences.insert(
-            Token::Minus {
-                punc: '-',
-                span: self.stream.span(),
-            },
-            Precedence::Difference,
-        );
-        self.precedences.insert(
-            Token::Plus {
-                punc: '+',
-                span: self.stream.span(),
-            },
-            Precedence::Sum,
-        );
-        self.precedences.insert(
-            Token::Pipe {
-                punc: '|',
-                span: self.stream.span(),
-            },
-            Precedence::BitwiseOr,
-        );
-        self.precedences.insert(
-            Token::Caret {
-                punc: '^',
-                span: self.stream.span(),
-            },
-            Precedence::BitwiseXor,
-        );
-        self.precedences.insert(
-            Token::Ampersand {
-                punc: '&',
-                span: self.stream.span(),
-            },
-            Precedence::BitwiseAnd,
-        );
-        self.precedences.insert(
-            Token::DblLessThan {
-                punc: "<<".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Shift,
-        );
-        self.precedences.insert(
-            Token::DblGreaterThan {
-                punc: ">>".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Shift,
-        );
-        self.precedences.insert(
-            Token::GreaterThanEquals {
-                punc: ">=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::GreaterThanOrEqual,
-        );
-        self.precedences.insert(
-            Token::GreaterThan {
-                punc: '>',
-                span: self.stream.span(),
-            },
-            Precedence::GreaterThan,
-        );
-        self.precedences.insert(
-            Token::LessThanEquals {
-                punc: "<=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::LessThanOrEqual,
-        );
-        self.precedences.insert(
-            Token::LessThan {
-                punc: '<',
-                span: self.stream.span(),
-            },
-            Precedence::LessThan,
-        );
-        self.precedences.insert(
-            Token::BangEquals {
-                punc: "!=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::NotEqual,
-        );
-        self.precedences.insert(
-            Token::DblEquals {
-                punc: "==".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Equal,
-        );
-        self.precedences.insert(
-            Token::DblAmpersand {
-                punc: "&&".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::LogicalAnd,
-        );
-        self.precedences.insert(
-            Token::DblPipe {
-                punc: "||".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::LogicalOr,
-        );
-        self.precedences.insert(
-            Token::PercentEquals {
-                punc: "%=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::CompoundAssignment,
-        );
-        self.precedences.insert(
-            Token::SlashEquals {
-                punc: "/=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::CompoundAssignment,
-        );
-        self.precedences.insert(
-            Token::AsteriskEquals {
-                punc: "*=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::CompoundAssignment,
-        );
-        self.precedences.insert(
-            Token::MinusEquals {
-                punc: "-=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::CompoundAssignment,
-        );
-        self.precedences.insert(
-            Token::PlusEquals {
-                punc: "+=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::CompoundAssignment,
-        );
-        self.precedences.insert(
-            Token::Equals {
-                punc: '=',
-                span: self.stream.span(),
-            },
-            Precedence::Assignment,
-        );
-        self.precedences.insert(
-            Token::DblDot {
-                punc: "..".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Range,
-        );
-        self.precedences.insert(
-            Token::DotDotEquals {
-                punc: "..=".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Range,
-        );
-        self.precedences.insert(
-            Token::QuestionMark {
-                punc: '?',
-                span: self.stream.span(),
-            },
-            Precedence::Unwrap,
-        );
-        self.precedences.insert(
-            Token::Dot {
-                punc: '.',
-                span: self.stream.span(),
-            },
-            Precedence::MethodCall,
-        );
-        self.precedences.insert(
-            Token::Dot {
-                punc: '.',
-                span: self.stream.span(),
-            },
-            Precedence::FieldAccess,
-        );
-        self.precedences.insert(
-            Token::DblColon {
-                punc: "::".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Path,
-        );
-        self.precedences.insert(
-            Token::ColonColonAsterisk {
-                punc: "::*".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Path,
-        );
-        self.precedences.insert(
-            Token::LBracket {
-                delim: '(',
-                span: self.stream.span(),
-            },
-            Precedence::Call,
-        );
-        self.precedences.insert(
-            Token::LBracket {
-                delim: '[',
-                span: self.stream.span(),
-            },
-            Precedence::Index,
-        );
-        self.precedences.insert(
-            Token::Break {
-                name: "break".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Lowest,
-        );
-        self.precedences.insert(
-            Token::Continue {
-                name: "continue".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Lowest,
-        );
-        self.precedences.insert(
-            Token::Return {
-                name: "return".to_string(),
-                span: self.stream.span(),
-            },
-            Precedence::Lowest,
-        );
     }
 
     ///////////////////////////////////////////////////////////////////////////
 
     /// Main parsing function that returns a `Vec<Statement>`.
-    fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
-        let mut statements: Vec<Statement> = Vec::new();
+    fn parse(&mut self) -> Result<Vec<Expression>, ErrorsEmitted> {
+        let mut expressions: Vec<Expression> = Vec::new();
         while self.current < self.stream.tokens().len() {
-            statements.push(self.parse_statement()?);
+            expressions.push(self.parse_expression(Precedence::Lowest)?);
         }
-        Ok(statements)
+        Ok(expressions)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -380,49 +82,72 @@ impl Parser {
 
     /// Recursively parse an expression based on operator precedence.
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
+        println!("ENTER `parse_expression()`");
+        println!("INPUT PRECEDENCE: {:?}\n", precedence);
+
         let mut left_expr = self.parse_prefix()?;
 
-        let curr_token = self.peek_current().ok_or({
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        println!("PREFIX EXPRESSION: {:?}", left_expr.clone());
+        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
 
-        while let Some(curr_precedence) = self.precedence(&curr_token) {
+        while let Some(t) = self.peek_current() {
+            let curr_precedence = self.precedence(&t);
+
+            println!("CURRENT PRECEDENCE: {:?}", curr_precedence);
+
             if precedence < curr_precedence {
                 left_expr = self.parse_infix(left_expr)?;
+                println!("INFIX EXPRESSION: {:?}", left_expr.clone());
+                println!("CURRENT TOKEN: {:?}\n", self.peek_current());
             } else {
                 break;
             }
         }
+
+        println!("RETURNED EXPRESSION: {:?}", left_expr);
+        println!("EXIT `parse_expression()`");
+        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
 
         Ok(left_expr)
     }
 
     /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let token = self.consume_token()?;
+        println!("ENTER `parse_primary()`");
+        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
+
+        let token = self.consume_token();
 
         match token {
-            Token::Identifier { name, .. } => Ok(Expression::Path(PathExpr {
+            Some(Token::Identifier { name, .. }) => Ok(Expression::Path(PathExpr {
                 root: PathPrefix::Identifier(Identifier(name)),
                 tree_opt: None,
             })),
-            Token::IntLiteral { value, .. } => Ok(Expression::Literal(Literal::Int(value))),
-            Token::UIntLiteral { value, .. } => Ok(Expression::Literal(Literal::UInt(value))),
-            Token::BigUIntLiteral { value, .. } => Ok(Expression::Literal(Literal::BigUInt(value))),
-            Token::ByteLiteral { value, .. } => Ok(Expression::Literal(Literal::Byte(value))),
-            Token::BytesLiteral { value, .. } => Ok(Expression::Literal(Literal::Bytes(value))),
-            Token::HashLiteral { value, .. } => Ok(Expression::Literal(Literal::Hash(value))),
-            Token::StringLiteral { value, .. } => Ok(Expression::Literal(Literal::String(value))),
-            Token::CharLiteral { value, .. } => Ok(Expression::Literal(Literal::Char(value))),
-            Token::BoolLiteral { value, .. } => Ok(Expression::Literal(Literal::Bool(value))),
-            Token::LParen { .. } => Ok(Expression::Grouped(GroupedExpr::parse(self)?)),
-            _ => {
+            Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
+            Some(Token::UIntLiteral { value, .. }) => Ok(Expression::Literal(Literal::UInt(value))),
+            Some(Token::BigUIntLiteral { value, .. }) => {
+                Ok(Expression::Literal(Literal::BigUInt(value)))
+            }
+            Some(Token::ByteLiteral { value, .. }) => Ok(Expression::Literal(Literal::Byte(value))),
+            Some(Token::BytesLiteral { value, .. }) => {
+                Ok(Expression::Literal(Literal::Bytes(value)))
+            }
+            Some(Token::HashLiteral { value, .. }) => Ok(Expression::Literal(Literal::Hash(value))),
+            Some(Token::StringLiteral { value, .. }) => {
+                Ok(Expression::Literal(Literal::String(value)))
+            }
+            Some(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
+            Some(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
+            Some(Token::LParen { .. }) => Ok(Expression::Grouped(GroupedExpr::parse(self)?)),
+            Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier, `_`, literal or `(`".to_string(),
-                    found: token,
+                    found: t,
                 });
-
+                Err(ErrorsEmitted(()))
+            }
+            None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
@@ -431,206 +156,160 @@ impl Parser {
     /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses),
     /// where the respective token type appears at the beginning of an expression.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
-        let token = self.peek_current().ok_or({
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        println!("ENTER `parse_prefix()`");
+        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
+
+        let token = self.peek_current();
 
         match token {
-            Token::IntLiteral { .. }
-            | Token::UIntLiteral { .. }
-            | Token::BigUIntLiteral { .. }
-            | Token::HashLiteral { .. } => {
-                if let Ok(Token::As { .. }) = self.peek_ahead_by(1) {
-                    let expr = self.parse_expression(Precedence::TypeCast)?;
-                    Ok(Expression::TypeCast(TypeCastExpr::parse(self, expr)?))
-                } else if let Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
-                {
-                    let expr = self.parse_expression(Precedence::Range)?;
-                    Ok(Expression::Range(RangeExpr::parse(self, expr)?))
-                } else {
-                    self.parse_primary()
-                }
-            }
-
-            Token::ByteLiteral { .. }
-            | Token::BytesLiteral { .. }
-            | Token::StringLiteral { .. }
-            | Token::CharLiteral { .. }
-            | Token::BoolLiteral { .. } => self.parse_primary(),
-
-            Token::Identifier { name, .. } => {
+            Some(
+                Token::IntLiteral { .. }
+                | Token::UIntLiteral { .. }
+                | Token::BigUIntLiteral { .. }
+                | Token::HashLiteral { .. },
+            ) => self.parse_primary(),
+            Some(
+                Token::ByteLiteral { .. }
+                | Token::BytesLiteral { .. }
+                | Token::StringLiteral { .. }
+                | Token::CharLiteral { .. }
+                | Token::BoolLiteral { .. },
+            ) => self.parse_primary(),
+            Some(Token::Identifier { name, .. }) => {
                 if &name == "_" {
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Separator::Underscore,
                     }))
-                } else if let Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_ahead_by(1)
+                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                    self.peek_current()
                 {
-                    let expr = self.parse_expression(Precedence::Path)?;
-                    Ok(Expression::Path(PathExpr::parse(self, expr)?))
-                } else if let Ok(Token::Dot { .. }) = self.peek_ahead_by(1) {
-                    match self.peek_ahead_by(2) {
-                        Ok(Token::LParen { .. }) => {
-                            let expr = self.parse_expression(Precedence::MethodCall)?;
-                            Ok(Expression::MethodCall(MethodCallExpr::parse(self, expr)?))
-                        }
-                        Ok(Token::UIntLiteral { .. }) => {
-                            let expr = self.parse_expression(Precedence::FieldAccess)?;
-                            Ok(Expression::TupleIndex(TupleIndexExpr::parse(self, expr)?))
-                        }
-                        _ => {
-                            let expr = self.parse_expression(Precedence::FieldAccess)?;
-                            Ok(Expression::FieldAccess(FieldAccessExpr::parse(self, expr)?))
-                        }
-                    }
-                } else if let Ok(Token::LParen { .. }) = self.peek_ahead_by(1) {
-                    // TODO: use symbol table to check whether this could be a `TupleStructExpr`
-                    let expr = self.parse_expression(Precedence::Call)?;
-                    Ok(Expression::Call(CallExpr::parse(self, expr)?))
-                } else if let Ok(Token::LBracket { .. }) = self.peek_ahead_by(1) {
-                    let expr = self.parse_expression(Precedence::Index)?;
-                    Ok(Expression::Index(IndexExpr::parse(self, expr)?))
-                } else if let Ok(Token::QuestionMark { .. }) = self.peek_ahead_by(1) {
-                    let expr = self.parse_expression(Precedence::Unwrap)?;
-                    Ok(Expression::Unwrap(UnwrapExpr::parse(self, expr)?))
-                } else if let Ok(Token::As { .. }) = self.peek_ahead_by(1) {
-                    let expr = self.parse_expression(Precedence::TypeCast)?;
-                    Ok(Expression::TypeCast(TypeCastExpr::parse(self, expr)?))
-                } else if let Ok(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
-                {
-                    let expr = self.parse_expression(Precedence::Range)?;
-                    Ok(Expression::Range(RangeExpr::parse(self, expr)?))
-                } else if let Ok(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    let expr = self.parse_expression(Precedence::Lowest)?;
-                    match expr {
-                        Expression::Path(_) => {
-                            Ok(Expression::Struct(StructExpr::parse(self, expr)?))
-                        }
-                        _ => {
-                            let token = self.peek_current().ok_or({
-                                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                                ErrorsEmitted(())
-                            })?;
-                            self.log_error(ParserErrorKind::UnexpectedToken {
-                                expected: "path expression".to_string(),
-                                found: token,
-                            });
-                            Err(ErrorsEmitted(()))
-                        }
-                    }
+                    Ok(Expression::Path(PathExpr::parse(
+                        self,
+                        PathPrefix::Identifier(Identifier(name)),
+                    )?))
                 } else {
                     self.parse_primary()
                 }
             }
-
-            Token::SelfType { .. } => {
-                if let Ok(Token::DblColon { .. }) = self.peek_ahead_by(1) {
-                    if let Ok(Token::Identifier { .. }) = self.peek_ahead_by(2) {
-                        let expr = self.parse_expression(Precedence::Call)?;
-                        Ok(Expression::Call(CallExpr::parse(self, expr)?))
-                    } else {
-                        let expr = self.parse_expression(Precedence::Path)?;
-                        Ok(Expression::Path(PathExpr::parse(self, expr)?))
-                    }
-                } else {
-                    self.consume_token()?;
-                    Ok(Expression::Path(PathExpr {
-                        root: PathPrefix::SelfType,
-                        tree_opt: None,
-                    }))
-                }
+            Some(Token::SelfType { .. }) => {
+                self.consume_token();
+                Ok(Expression::Path(PathExpr {
+                    root: PathPrefix::SelfType,
+                    tree_opt: None,
+                }))
             }
-
-            Token::SelfKeyword { .. } => {
-                if let Ok(Token::DblColon { .. }) = self.peek_ahead_by(1) {
-                    if let Ok(Token::Identifier { .. }) = self.peek_ahead_by(2) {
-                        let expr = self.parse_expression(Precedence::Call)?;
-                        Ok(Expression::Call(CallExpr::parse(self, expr)?))
-                    } else {
-                        let expr = self.parse_expression(Precedence::Path)?;
-                        Ok(Expression::Path(PathExpr::parse(self, expr)?))
-                    }
-                } else if let Ok(Token::Dot { .. }) = self.peek_ahead_by(1) {
-                    if let Ok(Token::Identifier { .. }) = self.peek_ahead_by(2) {
-                        if let Ok(Token::LParen { .. }) = self.peek_ahead_by(3) {
-                            let expr = self.parse_expression(Precedence::MethodCall)?;
-                            Ok(Expression::Path(PathExpr::parse(self, expr)?))
-                        } else {
-                            let expr = self.parse_expression(Precedence::FieldAccess)?;
-                            Ok(Expression::FieldAccess(FieldAccessExpr::parse(self, expr)?))
-                        }
-                    } else {
-                        self.consume_token()?;
-                        Ok(Expression::Path(PathExpr {
-                            root: PathPrefix::SelfKw,
-                            tree_opt: None,
-                        }))
-                    }
-                } else {
-                    self.consume_token()?;
-                    Ok(Expression::Path(PathExpr {
-                        root: PathPrefix::SelfKw,
-                        tree_opt: None,
-                    }))
-                }
+            Some(Token::SelfKeyword { .. }) => {
+                self.consume_token();
+                Ok(Expression::Path(PathExpr {
+                    root: PathPrefix::SelfKeyword,
+                    tree_opt: None,
+                }))
             }
-
-            Token::Package { .. } => {
-                if let Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_ahead_by(1)
-                {
-                    let expr = self.parse_expression(Precedence::Path)?;
-                    Ok(Expression::Path(PathExpr::parse(self, expr)?))
-                } else {
-                    self.consume_token()?;
-                    Ok(Expression::Path(PathExpr {
-                        root: PathPrefix::Package,
-                        tree_opt: None,
-                    }))
-                }
+            Some(Token::Package { .. }) => {
+                self.consume_token();
+                Ok(Expression::Path(PathExpr::parse(
+                    self,
+                    PathPrefix::Package,
+                )?))
             }
-
-            Token::Super { .. } => {
-                if let Ok(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_ahead_by(1)
-                {
-                    let expr = self.parse_expression(Precedence::Path)?;
-                    Ok(Expression::Path(PathExpr::parse(self, expr)?))
-                } else {
-                    self.consume_token()?;
-                    Ok(Expression::Path(PathExpr {
-                        root: PathPrefix::Super,
-                        tree_opt: None,
-                    }))
-                }
+            Some(Token::Super { .. }) => {
+                self.consume_token();
+                Ok(Expression::Path(PathExpr::parse(self, PathPrefix::Super)?))
             }
-
-            Token::Minus { .. } => Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Negate)?)),
-            Token::Bang { .. } => Ok(Expression::Unary(parse_unary_expr(self, UnaryOp::Not)?)),
-            Token::Ampersand { .. } | Token::AmpersandMut { .. } => Ok(Expression::Unary(
-                parse_unary_expr(self, UnaryOp::Reference)?,
+            Some(Token::Minus { .. }) => {
+                Ok(Expression::Unary(UnaryExpr::parse(self, UnaryOp::Negate)?))
+            }
+            Some(Token::Bang { .. }) => {
+                Ok(Expression::Unary(UnaryExpr::parse(self, UnaryOp::Not)?))
+            }
+            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Expression::Unary(
+                UnaryExpr::parse(self, UnaryOp::Reference)?,
             )),
-            Token::Asterisk { .. } => Ok(Expression::Unary(parse_unary_expr(
+            Some(Token::Asterisk { .. }) => Ok(Expression::Unary(UnaryExpr::parse(
                 self,
                 UnaryOp::Dereference,
             )?)),
-            Token::LParen { .. } => {
-                if let Ok(Token::Comma { .. }) = self.peek_ahead_by(2) {
+            Some(Token::LParen { .. }) => {
+                if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     Ok(Expression::Tuple(TupleExpr::parse(self)?))
                 } else {
                     self.parse_primary()
                 }
             }
-            Token::LBracket { .. } => Ok(Expression::Array(ArrayExpr::parse(self)?)),
-            Token::LBrace { .. } => Ok(Expression::Block(BlockExpr::parse(self)?)),
-            Token::Pipe { .. } | Token::DblPipe { .. } => {
+            Some(Token::LBracket { .. }) => Ok(Expression::Array(ArrayExpr::parse(self)?)),
+            Some(Token::LBrace { .. }) => match self.peek_behind_by(1) {
+                Some(Token::Identifier { name, .. }) => {
+                    let path = PathExpr {
+                        root: PathPrefix::Identifier(Identifier(name)),
+                        tree_opt: None,
+                    };
+
+                    Ok(Expression::Struct(StructExpr::parse(
+                        self,
+                        Expression::Path(path),
+                    )?))
+                }
+
+                Some(Token::SelfType { .. }) => {
+                    let path = PathExpr {
+                        root: PathPrefix::SelfType,
+                        tree_opt: None,
+                    };
+
+                    Ok(Expression::Struct(StructExpr::parse(
+                        self,
+                        Expression::Path(path),
+                    )?))
+                }
+
+                _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
+            },
+            Some(Token::Pipe { .. } | Token::DblPipe { .. }) => {
                 Ok(Expression::Closure(ClosureExpr::parse(self)?))
             }
-            Token::DblDot { .. } => {
-                if let Ok(
+            Some(Token::Dot { .. }) => {
+                let next_token = self.peek_ahead_by(1);
+
+                match next_token {
+                    Some(Token::Identifier { .. } | Token::UIntLiteral { .. }) => {
+                        self.consume_token();
+                        Err(ErrorsEmitted(()))
+                    }
+                    Some(t) => {
+                        self.log_error(ParserErrorKind::UnexpectedToken {
+                            expected: "identifier or tuple index after `.`".to_string(),
+                            found: t,
+                        });
+                        Err(ErrorsEmitted(()))
+                    }
+                    None => {
+                        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                        Err(ErrorsEmitted(()))
+                    }
+                }
+            }
+            Some(Token::QuestionMark { .. }) => match self.peek_behind_by(1) {
+                Some(Token::Identifier { .. }) => {
+                    self.consume_token();
+                    Err(ErrorsEmitted(()))
+                }
+                Some(t) => {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "expression before `?`".to_string(),
+                        found: t,
+                    });
+                    Err(ErrorsEmitted(()))
+                }
+                None => {
+                    self.log_error(ParserErrorKind::TokenIndexOutOfBounds {
+                        len: self.stream.tokens().len(),
+                        i: self.current,
+                    });
+                    Err(ErrorsEmitted(()))
+                }
+            },
+            Some(Token::DblDot { .. }) => {
+                if let Some(
                     Token::Identifier { .. }
                     | Token::IntLiteral { .. }
                     | Token::UIntLiteral { .. }
@@ -653,8 +332,8 @@ impl Parser {
                     }))
                 }
             }
-            Token::DotDotEquals { .. } => {
-                self.consume_token()?;
+            Some(Token::DotDotEquals { .. }) => {
+                self.consume_token();
                 let expr = self.parse_expression(Precedence::Range)?;
 
                 Ok(Expression::Range(RangeExpr {
@@ -663,8 +342,18 @@ impl Parser {
                     to_opt: Some(Box::new(expr)),
                 }))
             }
-            Token::Return { .. } => {
-                self.consume_token()?;
+
+            Some(Token::If { .. }) => Ok(Expression::If(IfExpr::parse(self)?)),
+
+            // TODO: distinguish from `StructExpr` (i.e., after the `match` keyword)
+            Some(Token::Match { .. }) => Ok(Expression::Match(MatchExpr::parse(self)?)),
+
+            Some(Token::For { .. }) => Ok(Expression::ForIn(ForInExpr::parse(self)?)),
+
+            Some(Token::While { .. }) => Ok(Expression::While(WhileExpr::parse(self)?)),
+
+            Some(Token::Return { .. }) => {
+                self.consume_token();
                 let expr = self.parse_expression(Precedence::Lowest)?;
 
                 Ok(Expression::Return(ReturnExpr {
@@ -672,24 +361,27 @@ impl Parser {
                     expression: Box::new(expr),
                 }))
             }
-
-            Token::Break { name, .. } => {
-                self.consume_token()?;
-
+            Some(Token::Break { name, .. }) => {
+                self.consume_token();
                 Ok(Expression::Break(BreakExpr {
                     kw_break: Keyword::Break,
                 }))
             }
-
-            Token::Continue { name, .. } => {
-                self.consume_token()?;
+            Some(Token::Continue { name, .. }) => {
+                self.consume_token();
                 Ok(Expression::Continue(ContinueExpr {
                     kw_continue: Keyword::Continue,
                 }))
             }
-
-            _ => {
-                self.log_error(ParserErrorKind::InvalidToken { token });
+            Some(t) => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "expression prefix".to_string(),
+                    found: t,
+                });
+                Err(ErrorsEmitted(()))
+            }
+            None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
@@ -698,135 +390,198 @@ impl Parser {
     /// Parse infix expressions (e.g., binary operators), where the respective token type
     /// appears in the middle of an expression.
     fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let token = self.consume_token()?;
+        println!("ENTER `parse_infix()`");
+        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
+
+        let token = self.consume_token();
 
         match token {
-            Token::Plus { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Plus { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Add,
             )?)),
-            Token::Minus { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Minus { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Subtract,
             )?)),
-            Token::Asterisk { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Asterisk { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Multiply,
             )?)),
-            Token::Slash { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Slash { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Divide,
             )?)),
-            Token::Percent { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Percent { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Modulus,
             )?)),
-            Token::DblEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::DblEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Equal,
             )?)),
-            Token::BangEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::BangEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::NotEqual,
             )?)),
-            Token::LessThan { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::LessThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::LessThan,
             )?)),
-            Token::LessThanEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::LessThanEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::LessEqual,
             )?)),
-            Token::GreaterThan { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::GreaterThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::GreaterThan,
             )?)),
-            Token::GreaterThanEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::GreaterThanEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::GreaterEqual,
             )?)),
-            Token::Equals { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Equals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::Assign,
             )?)),
-            Token::PlusEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::PlusEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::AddAssign,
             )?)),
-            Token::MinusEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::MinusEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::SubtractAssign,
             )?)),
-            Token::AsteriskEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::AsteriskEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::MultiplyAssign,
             )?)),
-            Token::SlashEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::SlashEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::DivideAssign,
             )?)),
-            Token::PercentEquals { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::PercentEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::ModulusAssign,
             )?)),
-            Token::DblAmpersand { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::DblAmpersand { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::LogicalAnd,
             )?)),
-            Token::DblPipe { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::DblPipe { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::LogicalOr,
             )?)),
-            Token::Ampersand { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Ampersand { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::BitwiseAnd,
             )?)),
-            Token::Pipe { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Pipe { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::BitwiseOr,
             )?)),
-            Token::Caret { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::Caret { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::BitwiseXor,
             )?)),
-            Token::DblLessThan { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::DblLessThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::ShiftLeft,
             )?)),
-            Token::DblGreaterThan { .. } => Ok(Expression::Binary(parse_binary_expr(
+            Some(Token::DblGreaterThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
                 BinaryOp::ShiftRight,
             )?)),
-            Token::QuestionMark { .. } => {
-                Ok(Expression::Unwrap(UnwrapExpr::parse(self, left_expr)?))
+            Some(Token::DblAsterisk { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+                self,
+                left_expr,
+                BinaryOp::Exponentiation,
+            )?)),
+            Some(Token::LParen { .. }) => {
+                let expr = CallExpr::parse(self, left_expr)?;
+                Ok(Expression::Call(expr))
             }
+            Some(Token::LBracket { .. }) => {
+                let expr = IndexExpr::parse(self, left_expr)?;
+                Ok(Expression::Index(expr))
+            }
+            Some(Token::As { .. }) => {
+                let new_type = self.get_type()?;
 
-            _ => {
-                self.log_error(ParserErrorKind::InvalidToken { token });
+                let expr = TypeCastExpr {
+                    operand: Box::new(left_expr),
+                    kw_as: Keyword::As,
+                    new_type,
+                };
+
+                Ok(Expression::TypeCast(expr))
+            }
+            Some(Token::QuestionMark { .. }) => Ok(Expression::Unwrap(UnwrapExpr {
+                expression: Box::new(left_expr),
+                op: UnwrapOp(()),
+            })),
+            Some(Token::Dot { .. }) => match self.peek_current() {
+                Some(Token::Identifier { .. }) => match self.peek_ahead_by(1) {
+                    Some(Token::LParen { .. }) => Ok(Expression::MethodCall(
+                        MethodCallExpr::parse(self, left_expr)?,
+                    )),
+                    _ => Ok(Expression::FieldAccess(FieldAccessExpr::parse(
+                        self, left_expr,
+                    )?)),
+                },
+                Some(Token::UIntLiteral { .. }) => Ok(Expression::TupleIndex(
+                    TupleIndexExpr::parse(self, left_expr)?,
+                )),
+                Some(t) => {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "identifier or index".to_string(),
+                        found: t,
+                    });
+                    Err(ErrorsEmitted(()))
+                }
+                None => {
+                    self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                    Err(ErrorsEmitted(()))
+                }
+            },
+            Some(Token::DblDot { .. }) => {
+                let expr = RangeExpr::parse(self, left_expr, RangeOp::RangeExclusive)?;
+                Ok(Expression::Range(expr))
+            }
+            Some(Token::DotDotEquals { .. }) => {
+                let expr = RangeExpr::parse(self, left_expr, RangeOp::RangeInclusive)?;
+                Ok(Expression::Range(expr))
+            }
+            Some(t) => {
+                self.log_error(ParserErrorKind::InvalidToken { token: t });
+                Err(ErrorsEmitted(()))
+            }
+            None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
@@ -837,28 +592,25 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        let token = self.peek_current().ok_or({
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        let token = self.peek_current();
 
         match token {
-            Token::Let { .. } => Ok(Statement::Let(LetStmt::parse(self)?)),
-            Token::If { .. } => Ok(Statement::If(IfStmt::parse(self)?)),
-            Token::Match { .. } => Ok(Statement::Match(MatchStmt::parse(self)?)),
-            Token::For { .. } => Ok(Statement::ForIn(ForInStmt::parse(self)?)),
-            Token::While { .. } => Ok(Statement::While(WhileStmt::parse(self)?)),
+            Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
 
-            Token::Import { .. }
-            | Token::Alias { .. }
-            | Token::Const { .. }
-            | Token::Static { .. } => Ok(Statement::Declaration(self.parse_declaration()?)),
+            Some(
+                Token::Import { .. }
+                | Token::Alias { .. }
+                | Token::Const { .. }
+                | Token::Static { .. },
+            ) => Ok(Statement::Declaration(self.parse_declaration()?)),
 
-            Token::Module { .. }
-            | Token::Trait { .. }
-            | Token::Enum { .. }
-            | Token::Struct { .. }
-            | Token::Impl { .. } => Ok(Statement::Definition(self.parse_definition()?)),
+            Some(
+                Token::Mod { .. }
+                | Token::Trait { .. }
+                | Token::Enum { .. }
+                | Token::Struct { .. }
+                | Token::Impl { .. },
+            ) => Ok(Statement::Definition(self.parse_definition()?)),
 
             _ => Ok(Statement::Expression(ExpressionStmt::parse(self)?)),
         }
@@ -896,12 +648,12 @@ impl Parser {
         })?;
 
         match token {
-            Token::Module { .. } => Ok(Definition::Module(ModuleDef::parse(self)?)),
+            Token::Mod { .. } => Ok(Definition::Module(ModuleDef::parse(self)?)),
             Token::Trait { .. } => Ok(Definition::Trait(TraitDef::parse(self)?)),
             Token::Enum { .. } => Ok(Definition::Enum(EnumDef::parse(self)?)),
             Token::Struct { .. } => Ok(Definition::Struct(StructDef::parse(self)?)),
             Token::Impl { .. } => {
-                if let Ok(Token::For { .. }) = self.peek_ahead_by(2) {
+                if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
                     Ok(Definition::TraitImpl(TraitImplDef::parse(self)?))
                 } else {
                     Ok(Definition::InherentImpl(InherentImplDef::parse(self)?))
@@ -928,27 +680,32 @@ impl Parser {
     }
 
     /// Peek at the token `num_tokens` ahead of the token at the current position.
-    fn peek_ahead_by(&mut self, num_tokens: usize) -> Result<Token, ErrorsEmitted> {
+    fn peek_ahead_by(&mut self, num_tokens: usize) -> Option<Token> {
         let i = self.current + num_tokens;
 
-        let tokens = self.stream.tokens();
-
-        tokens.get(i).cloned().ok_or({
-            self.log_error(ParserErrorKind::TokenIndexOutOfBounds {
-                len: tokens.len(),
-                i,
-            });
-            ErrorsEmitted(())
-        })
+        if i < self.stream.tokens().len() {
+            self.stream.tokens().get(i).cloned()
+        } else {
+            None
+        }
     }
+
+    /// Peek at the token `num_tokens` behind the token at the current position.
+    fn peek_behind_by(&mut self, num_tokens: usize) -> Option<Token> {
+        if self.current > 0 {
+            self.stream.tokens().get(self.current - num_tokens).cloned()
+        } else {
+            None
+        }
+    }
+
     /// Advance the parser and return the current token.
-    fn consume_token(&mut self) -> Result<Token, ErrorsEmitted> {
+    fn consume_token(&mut self) -> Option<Token> {
         if let Some(t) = self.peek_current() {
             self.current += 1;
-            Ok(t)
+            Some(t)
         } else {
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            Err(ErrorsEmitted(()))
+            None
         }
     }
 
@@ -964,7 +721,10 @@ impl Parser {
     /// Consume and check tokens, to ensure that the expected tokens are encountered
     /// during parsing. Return the relevant `ParserErrorKind` where applicable.
     fn expect_token(&mut self, expected: Token) -> Result<Token, ErrorsEmitted> {
-        let token = self.consume_token()?;
+        let token = self.consume_token().ok_or({
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            ErrorsEmitted(())
+        })?;
 
         if token == expected {
             Ok(token)
@@ -978,147 +738,217 @@ impl Parser {
     }
 
     fn expect_keyword(&mut self, expected: Token) -> Result<Keyword, ErrorsEmitted> {
-        let token = self.consume_token()?;
+        let token = self.consume_token();
 
         match token {
-            Token::Import { .. } => Ok(Keyword::Import),
-            Token::Module { .. } => Ok(Keyword::Module),
-            Token::Package { .. } => Ok(Keyword::Package),
-            Token::SelfKeyword { .. } => Ok(Keyword::KwSelf),
-            Token::SelfType { .. } => Ok(Keyword::SelfType),
-            Token::Super { .. } => Ok(Keyword::Super),
-            Token::Pub { .. } => Ok(Keyword::Pub),
-            Token::As { .. } => Ok(Keyword::As),
-            Token::Const { .. } => Ok(Keyword::Const),
-            Token::Static { .. } => Ok(Keyword::Static),
-            Token::Func { .. } => Ok(Keyword::Func),
-            Token::Struct { .. } => Ok(Keyword::Struct),
-            Token::Enum { .. } => Ok(Keyword::Enum),
-            Token::Trait { .. } => Ok(Keyword::Trait),
-            Token::Impl { .. } => Ok(Keyword::Impl),
-            Token::If { .. } => Ok(Keyword::If),
-            Token::Else { .. } => Ok(Keyword::Else),
-            Token::Match { .. } => Ok(Keyword::Match),
-            Token::Loop { .. } => Ok(Keyword::Loop),
-            Token::For { .. } => Ok(Keyword::For),
-            Token::In { .. } => Ok(Keyword::In),
-            Token::While { .. } => Ok(Keyword::While),
-            Token::Break { .. } => Ok(Keyword::Break),
-            Token::Continue { .. } => Ok(Keyword::Continue),
-            Token::Return { .. } => Ok(Keyword::Return),
-            _ => {
+            Some(Token::Import { .. }) => Ok(Keyword::Import),
+            Some(Token::Mod { .. }) => Ok(Keyword::Mod),
+            Some(Token::Package { .. }) => Ok(Keyword::Package),
+            Some(Token::SelfKeyword { .. }) => Ok(Keyword::SelfKeyword),
+            Some(Token::SelfType { .. }) => Ok(Keyword::SelfType),
+            Some(Token::Super { .. }) => Ok(Keyword::Super),
+            Some(Token::Pub { .. }) => Ok(Keyword::Pub),
+            Some(Token::As { .. }) => Ok(Keyword::As),
+            Some(Token::Const { .. }) => Ok(Keyword::Const),
+            Some(Token::Static { .. }) => Ok(Keyword::Static),
+            Some(Token::Func { .. }) => Ok(Keyword::Func),
+            Some(Token::Struct { .. }) => Ok(Keyword::Struct),
+            Some(Token::Enum { .. }) => Ok(Keyword::Enum),
+            Some(Token::Trait { .. }) => Ok(Keyword::Trait),
+            Some(Token::Impl { .. }) => Ok(Keyword::Impl),
+            Some(Token::If { .. }) => Ok(Keyword::If),
+            Some(Token::Else { .. }) => Ok(Keyword::Else),
+            Some(Token::Match { .. }) => Ok(Keyword::Match),
+            Some(Token::Loop { .. }) => Ok(Keyword::Loop),
+            Some(Token::For { .. }) => Ok(Keyword::For),
+            Some(Token::In { .. }) => Ok(Keyword::In),
+            Some(Token::While { .. }) => Ok(Keyword::While),
+            Some(Token::Break { .. }) => Ok(Keyword::Break),
+            Some(Token::Continue { .. }) => Ok(Keyword::Continue),
+            Some(Token::Return { .. }) => Ok(Keyword::Return),
+            Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
-                    found: token,
+                    found: t,
                 });
+                Err(ErrorsEmitted(()))
+            }
+            None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
     }
 
     fn expect_delimiter(&mut self, expected: Token) -> Result<Delimiter, ErrorsEmitted> {
-        let token = self.consume_token()?;
+        let token = self.consume_token();
 
         match token {
-            Token::LParen { .. } => Ok(Delimiter::LParen),
-            Token::RParen { .. } => Ok(Delimiter::RParen),
-            Token::LBracket { .. } => Ok(Delimiter::LBracket),
-            Token::RBracket { .. } => Ok(Delimiter::RBracket),
-            Token::LBrace { .. } => Ok(Delimiter::LBrace),
-            Token::RBrace { .. } => Ok(Delimiter::RBrace),
-            _ => {
+            Some(Token::LParen { .. }) => Ok(Delimiter::LParen),
+            Some(Token::RParen { .. }) => Ok(Delimiter::RParen),
+            Some(Token::LBracket { .. }) => Ok(Delimiter::LBracket),
+            Some(Token::RBracket { .. }) => Ok(Delimiter::RBracket),
+            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+            Some(Token::RBrace { .. }) => Ok(Delimiter::RBrace),
+            Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
-                    found: token,
+                    found: t,
                 });
+                Err(ErrorsEmitted(()))
+            }
+            None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
     }
 
     fn expect_binary_op(&mut self, expected: Token) -> Result<BinaryOp, ErrorsEmitted> {
-        let token = self.consume_token()?;
+        let token = self.consume_token();
 
         match token {
-            Token::Plus { .. } => Ok(BinaryOp::Add),
-            Token::Minus { .. } => Ok(BinaryOp::Subtract),
-            Token::Asterisk { .. } => Ok(BinaryOp::Multiply),
-            Token::Slash { .. } => Ok(BinaryOp::Divide),
-            Token::Percent { .. } => Ok(BinaryOp::Modulus),
-            Token::DblEquals { .. } => Ok(BinaryOp::Equal),
-            Token::BangEquals { .. } => Ok(BinaryOp::NotEqual),
-            Token::LessThan { .. } => Ok(BinaryOp::LessThan),
-            Token::LessThanEquals { .. } => Ok(BinaryOp::LessEqual),
-            Token::GreaterThan { .. } => Ok(BinaryOp::GreaterThan),
-            Token::GreaterThanEquals { .. } => Ok(BinaryOp::GreaterEqual),
-            Token::Equals { .. } => Ok(BinaryOp::Assign),
-            Token::PlusEquals { .. } => Ok(BinaryOp::AddAssign),
-            Token::MinusEquals { .. } => Ok(BinaryOp::SubtractAssign),
-            Token::SlashEquals { .. } => Ok(BinaryOp::DivideAssign),
-            Token::PercentEquals { .. } => Ok(BinaryOp::ModulusAssign),
-            Token::DblAmpersand { .. } => Ok(BinaryOp::LogicalAnd),
-            Token::DblPipe { .. } => Ok(BinaryOp::LogicalOr),
-            Token::Ampersand { .. } => Ok(BinaryOp::BitwiseAnd),
-            Token::Pipe { .. } => Ok(BinaryOp::BitwiseOr),
-            Token::Caret { .. } => Ok(BinaryOp::BitwiseXor),
-            Token::DblLessThan { .. } => Ok(BinaryOp::ShiftLeft),
-            Token::DblGreaterThan { .. } => Ok(BinaryOp::ShiftRight),
-            _ => {
+            Some(Token::Plus { .. }) => Ok(BinaryOp::Add),
+            Some(Token::Minus { .. }) => Ok(BinaryOp::Subtract),
+            Some(Token::Asterisk { .. }) => Ok(BinaryOp::Multiply),
+            Some(Token::Slash { .. }) => Ok(BinaryOp::Divide),
+            Some(Token::Percent { .. }) => Ok(BinaryOp::Modulus),
+            Some(Token::DblEquals { .. }) => Ok(BinaryOp::Equal),
+            Some(Token::BangEquals { .. }) => Ok(BinaryOp::NotEqual),
+            Some(Token::LessThan { .. }) => Ok(BinaryOp::LessThan),
+            Some(Token::LessThanEquals { .. }) => Ok(BinaryOp::LessEqual),
+            Some(Token::GreaterThan { .. }) => Ok(BinaryOp::GreaterThan),
+            Some(Token::GreaterThanEquals { .. }) => Ok(BinaryOp::GreaterEqual),
+            Some(Token::Equals { .. }) => Ok(BinaryOp::Assign),
+            Some(Token::PlusEquals { .. }) => Ok(BinaryOp::AddAssign),
+            Some(Token::MinusEquals { .. }) => Ok(BinaryOp::SubtractAssign),
+            Some(Token::SlashEquals { .. }) => Ok(BinaryOp::DivideAssign),
+            Some(Token::PercentEquals { .. }) => Ok(BinaryOp::ModulusAssign),
+            Some(Token::DblAmpersand { .. }) => Ok(BinaryOp::LogicalAnd),
+            Some(Token::DblPipe { .. }) => Ok(BinaryOp::LogicalOr),
+            Some(Token::Ampersand { .. }) => Ok(BinaryOp::BitwiseAnd),
+            Some(Token::Pipe { .. }) => Ok(BinaryOp::BitwiseOr),
+            Some(Token::Caret { .. }) => Ok(BinaryOp::BitwiseXor),
+            Some(Token::DblLessThan { .. }) => Ok(BinaryOp::ShiftLeft),
+            Some(Token::DblGreaterThan { .. }) => Ok(BinaryOp::ShiftRight),
+            Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
-                    found: token,
+                    found: t,
                 });
+                Err(ErrorsEmitted(()))
+            }
+            None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
     }
 
     fn expect_separator(&mut self, expected: Token) -> Result<Separator, ErrorsEmitted> {
-        let token = self.consume_token()?;
+        let token = self.consume_token();
 
         match token {
-            Token::Colon { .. } => Ok(Separator::Colon),
-            Token::Semicolon { .. } => Ok(Separator::Semicolon),
-            Token::Comma { .. } => Ok(Separator::Comma),
-            Token::Dot { .. } => Ok(Separator::Dot),
-            Token::DblColon { .. } => Ok(Separator::DblColon),
-            Token::ColonColonAsterisk { .. } => Ok(Separator::ColonColonAsterisk),
-            Token::ThinArrow { .. } => Ok(Separator::ThinArrow),
-            Token::FatArrow { .. } => Ok(Separator::FatArrow),
-
-            _ => {
+            Some(Token::Colon { .. }) => Ok(Separator::Colon),
+            Some(Token::Semicolon { .. }) => Ok(Separator::Semicolon),
+            Some(Token::Comma { .. }) => Ok(Separator::Comma),
+            Some(Token::Dot { .. }) => Ok(Separator::Dot),
+            Some(Token::DblColon { .. }) => Ok(Separator::DblColon),
+            Some(Token::ColonColonAsterisk { .. }) => Ok(Separator::ColonColonAsterisk),
+            Some(Token::ThinArrow { .. }) => Ok(Separator::ThinArrow),
+            Some(Token::FatArrow { .. }) => Ok(Separator::FatArrow),
+            Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
-                    found: token,
+                    found: t,
                 });
+                Err(ErrorsEmitted(()))
+            }
+            None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
     }
 
-    /// Advance the parser by one if the expected token matches the current one
-    /// and return whether or not this is the case.
-    fn tokens_match(&mut self, expected: Token) -> bool {
-        if self.is_expected_token(&expected) {
-            self.current += 1;
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Verify that the current token is the expected one.
-    fn is_expected_token(&self, expected: &Token) -> bool {
-        if self.current < self.stream.tokens().len() {
-            &self.stream.tokens()[self.current] == expected
-        } else {
-            false
-        }
-    }
-
     /// Retrieve the respective precedence level for an operator.
-    fn precedence(&self, token: &Token) -> Option<Precedence> {
-        self.precedences.get(token).cloned()
+    fn precedence(&mut self, token: &Token) -> Precedence {
+        match token {
+            Token::As { .. } => Precedence::TypeCast,
+            Token::LParen { .. } => Precedence::Call,
+            Token::LBracket { .. } => Precedence::Index,
+            Token::Dot { .. } => match self.peek_ahead_by(1) {
+                Some(Token::Identifier { .. }) => match self.peek_ahead_by(2) {
+                    Some(Token::LParen { .. }) => Precedence::MethodCall,
+                    _ => Precedence::FieldAccess,
+                },
+                Some(Token::UIntLiteral { .. }) => Precedence::Index,
+                _ => Precedence::Lowest,
+            },
+            Token::DblColon { .. } => Precedence::Path,
+            Token::ColonColonAsterisk { .. } => Precedence::Path,
+            Token::Bang { .. } => Precedence::Unary,
+            Token::Percent { .. } => Precedence::Remainder,
+            Token::Ampersand { .. } => {
+                if self.peek_behind_by(1).is_some() {
+                    Precedence::BitwiseAnd
+                } else {
+                    Precedence::Unary
+                }
+            }
+            Token::Asterisk { .. } => {
+                if self.peek_behind_by(1).is_some() {
+                    Precedence::Product
+                } else {
+                    Precedence::Unary
+                }
+            }
+            Token::Plus { .. } => Precedence::Sum,
+            Token::Minus { .. } => {
+                if self.peek_behind_by(1).is_some() {
+                    Precedence::Difference
+                } else {
+                    Precedence::Unary
+                }
+            }
+            Token::Slash { .. } => Precedence::Quotient,
+            Token::LessThan { .. } => Precedence::LessThan,
+            Token::Equals { .. } => Precedence::Assignment,
+            Token::GreaterThan { .. } => Precedence::GreaterThan,
+            Token::QuestionMark { .. } => Precedence::Unwrap,
+            Token::Caret { .. } => Precedence::BitwiseXor,
+            Token::Pipe { .. } => {
+                if self.peek_behind_by(1).is_some() {
+                    Precedence::Lowest // closure with arguments
+                } else {
+                    Precedence::BitwiseOr
+                }
+            }
+            Token::DblDot { .. } => Precedence::Range,
+            Token::DotDotEquals { .. } => Precedence::Range,
+            Token::BangEquals { .. } => Precedence::NotEqual,
+            Token::PercentEquals { .. } => Precedence::CompoundAssignment,
+            Token::DblAsterisk { .. } => Precedence::Exponentiation,
+            Token::AsteriskEquals { .. } => Precedence::CompoundAssignment,
+            Token::DblAmpersand { .. } => Precedence::LogicalAnd,
+            Token::AmpersandMut { .. } => Precedence::Unary,
+            Token::PlusEquals { .. } => Precedence::CompoundAssignment,
+            Token::MinusEquals { .. } => Precedence::CompoundAssignment,
+            Token::SlashEquals { .. } => Precedence::CompoundAssignment,
+            Token::DblLessThan { .. } => Precedence::Shift,
+            Token::LessThanEquals { .. } => Precedence::LessThanOrEqual,
+            Token::DblEquals { .. } => Precedence::Equal,
+            Token::DblGreaterThan { .. } => Precedence::Shift,
+            Token::GreaterThanEquals { .. } => Precedence::GreaterThanOrEqual,
+            Token::DblPipe { .. } => {
+                if self.peek_behind_by(1).is_some() {
+                    Precedence::Lowest // closure without arguments
+                } else {
+                    Precedence::LogicalOr
+                }
+            }
+            _ => Precedence::Lowest,
+        }
     }
 
     /// Log information about an error that occurred during lexing.
@@ -1133,74 +963,161 @@ impl Parser {
 
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     fn get_type(&mut self) -> Result<Type, ErrorsEmitted> {
-        let token = self.consume_token()?;
+        println!("ENTER `get_type()`");
+        println!("CURRENT TOKEN: {:?}", self.peek_current());
+        let token = self.consume_token();
 
         match token {
-            Token::I32Type { .. } | Token::I64Type { .. } | Token::I128Type { .. } => Ok(Type::Int),
-            Token::U8Type { .. }
-            | Token::U16Type { .. }
-            | Token::U32Type { .. }
-            | Token::U64Type { .. }
-            | Token::U128Type { .. } => Ok(Type::UInt),
-            Token::U256Type { .. } => Ok(Type::BigUInt),
-            Token::U512Type { .. } => Ok(Type::BigUInt),
-            Token::ByteType { .. } => Ok(Type::Byte),
-            Token::B2Type { .. }
-            | Token::B3Type { .. }
-            | Token::B4Type { .. }
-            | Token::B5Type { .. }
-            | Token::B6Type { .. }
-            | Token::B7Type { .. }
-            | Token::B8Type { .. }
-            | Token::B9Type { .. }
-            | Token::B10Type { .. }
-            | Token::B11Type { .. }
-            | Token::B12Type { .. }
-            | Token::B13Type { .. }
-            | Token::B14Type { .. }
-            | Token::B15Type { .. }
-            | Token::B16Type { .. }
-            | Token::B17Type { .. }
-            | Token::B18Type { .. }
-            | Token::B19Type { .. }
-            | Token::B20Type { .. }
-            | Token::B21Type { .. }
-            | Token::B22Type { .. }
-            | Token::B23Type { .. }
-            | Token::B24Type { .. }
-            | Token::B25Type { .. }
-            | Token::B26Type { .. }
-            | Token::B27Type { .. }
-            | Token::B28Type { .. }
-            | Token::B29Type { .. }
-            | Token::B30Type { .. }
-            | Token::B31Type { .. }
-            | Token::B32Type { .. } => Ok(Type::Bytes),
-            Token::H160Type { .. } | Token::H256Type { .. } | Token::H512Type { .. } => {
-                Ok(Type::Hash)
-            }
-            Token::StringType { .. } => Ok(Type::String),
-            Token::CharType { .. } => Ok(Type::Char),
-            Token::BoolType { .. } => Ok(Type::Bool),
-            Token::CustomType { .. } => Ok(Type::UserDefined),
-            Token::SelfType { .. } => Ok(Type::SelfType),
-            Token::LParen { .. } => {
-                if let Ok(Token::RParen { .. }) = self.peek_ahead_by(1) {
+            Some(Token::I32Type { .. }) => Ok(Type::I32),
+            Some(Token::I64Type { .. }) => Ok(Type::I64),
+            Some(Token::I128Type { .. }) => Ok(Type::I128),
+            Some(Token::U8Type { .. }) => Ok(Type::U8),
+            Some(Token::U16Type { .. }) => Ok(Type::U16),
+            Some(Token::U32Type { .. }) => Ok(Type::U32),
+            Some(Token::U64Type { .. }) => Ok(Type::U64),
+            Some(Token::U128Type { .. }) => Ok(Type::U128),
+            Some(Token::U256Type { .. }) => Ok(Type::U256),
+            Some(Token::U512Type { .. }) => Ok(Type::U512),
+            Some(Token::ByteType { .. }) => Ok(Type::Byte),
+            Some(
+                Token::B2Type { .. }
+                | Token::B3Type { .. }
+                | Token::B4Type { .. }
+                | Token::B5Type { .. }
+                | Token::B6Type { .. }
+                | Token::B7Type { .. }
+                | Token::B8Type { .. }
+                | Token::B9Type { .. }
+                | Token::B10Type { .. }
+                | Token::B11Type { .. }
+                | Token::B12Type { .. }
+                | Token::B13Type { .. }
+                | Token::B14Type { .. }
+                | Token::B15Type { .. }
+                | Token::B16Type { .. }
+                | Token::B17Type { .. }
+                | Token::B18Type { .. }
+                | Token::B19Type { .. }
+                | Token::B20Type { .. }
+                | Token::B21Type { .. }
+                | Token::B22Type { .. }
+                | Token::B23Type { .. }
+                | Token::B24Type { .. }
+                | Token::B25Type { .. }
+                | Token::B26Type { .. }
+                | Token::B27Type { .. }
+                | Token::B28Type { .. }
+                | Token::B29Type { .. }
+                | Token::B30Type { .. }
+                | Token::B31Type { .. }
+                | Token::B32Type { .. },
+            ) => Ok(Type::Bytes),
+            Some(Token::H160Type { .. }) => Ok(Type::H160),
+            Some(Token::H256Type { .. }) => Ok(Type::H256),
+            Some(Token::H512Type { .. }) => Ok(Type::H512),
+            Some(Token::StringType { .. }) => Ok(Type::String),
+            Some(Token::CharType { .. }) => Ok(Type::Char),
+            Some(Token::BoolType { .. }) => Ok(Type::Bool),
+            Some(Token::CustomType { .. }) => Ok(Type::UserDefined),
+            Some(Token::SelfType { .. }) => Ok(Type::SelfType),
+            Some(Token::LParen { .. }) => {
+                if let Some(Token::RParen { .. }) = self.peek_current() {
+                    self.consume_token();
                     Ok(Type::UnitType)
                 } else {
                     Ok(Type::Tuple)
                 }
             }
-            Token::LBracket { .. } => Ok(Type::Array),
-            Token::Func { .. } => Ok(Type::Function),
-            Token::Ampersand { .. } => Ok(Type::Reference),
-            _ => {
+            Some(Token::LBracket { .. }) => Ok(Type::Array),
+            Some(Token::Func { .. }) => Ok(Type::Function),
+            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Type::Reference),
+            Some(Token::Identifier { .. }) => Ok(Type::UserDefined),
+            Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "type annotation".to_string(),
-                    found: token,
+                    found: t,
                 });
                 Err(ErrorsEmitted(()))
             }
+            None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::test_utils;
+
+    #[test]
+    fn parse_unwrap_expr() -> Result<(), ()> {
+        let input = r#"(x + 2)?"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_type_cast_expr() -> Result<(), ()> {
+        let input = r#"x as u32"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_return_expr() -> Result<(), ()> {
+        let input = r#"return (x + 2)"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_break_expr() -> Result<(), ()> {
+        let input = r#"break"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_continue_expr() -> Result<(), ()> {
+        let input = r#"continue"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
         }
     }
 }

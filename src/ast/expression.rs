@@ -19,7 +19,7 @@ pub enum ClosureParams {
 pub enum PathPrefix {
     Package,
     Super,
-    SelfKw,
+    SelfKeyword,
     SelfType,
     Identifier(Identifier),
 }
@@ -36,6 +36,15 @@ pub struct ClosureParam {
 pub struct StructField {
     pub name: Identifier,
     pub value: Expression,
+}
+
+/// Struct representing a single arm in a match statement.
+#[derive(Debug, Clone)]
+pub struct MatchArm {
+    pub case: Box<Expression>,
+    pub guard_opt: Option<(Keyword, GroupedExpr)>, // `if (..)`
+    pub fat_arrow: Separator,
+    pub logic: Box<Expression>,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -60,7 +69,6 @@ pub struct BinaryExpr {
 pub struct BlockExpr {
     pub open_brace: Delimiter,
     pub statements: Vec<Statement>,
-    pub terminal_expression_opt: Option<Box<Expression>>,
     pub close_brace: Delimiter,
 }
 
@@ -97,10 +105,28 @@ pub struct FieldAccessExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct ForInExpr {
+    pub kw_for: Keyword,
+    pub assignee: Box<Expression>,
+    pub kw_in: Keyword,
+    pub iterable: Box<Expression>,
+    pub block: BlockExpr,
+}
+
+#[derive(Debug, Clone)]
 pub struct GroupedExpr {
     pub open_paren: Delimiter,
     pub expression: Box<Expression>,
     pub close_paren: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct IfExpr {
+    pub kw_if: Keyword,
+    pub condition: GroupedExpr,
+    pub if_block: BlockExpr,
+    pub else_if_blocks_opt: Option<Vec<(Keyword, Box<IfExpr>)>>, // `else`, `if { .. }`
+    pub trailing_else_block_opt: Option<(Keyword, BlockExpr)>,   // `else { .. }`
 }
 
 #[derive(Debug, Clone)]
@@ -109,6 +135,16 @@ pub struct IndexExpr {
     pub open_bracket: Delimiter,
     pub index: UIntKind,
     pub close_bracket: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct MatchExpr {
+    pub kw_match: Keyword,
+    pub scrutinee: Box<Expression>,
+    pub open_brace: Delimiter,
+    pub arms_opt: Option<Vec<MatchArm>>,
+    pub final_arm: MatchArm, // default case
+    pub close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone)]
@@ -192,4 +228,11 @@ pub struct UnderscoreExpr {
 pub struct UnwrapExpr {
     pub expression: Box<Expression>,
     pub op: UnwrapOp,
+}
+
+#[derive(Debug, Clone)]
+pub struct WhileExpr {
+    pub kw_while: Keyword,
+    pub condition: GroupedExpr,
+    pub block: BlockExpr,
 }

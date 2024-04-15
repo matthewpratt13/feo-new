@@ -41,9 +41,9 @@ pub struct Identifier(pub String);
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
     Import,
-    Module,
+    Mod,
     Package,
-    KwSelf,
+    SelfKeyword,
     SelfType,
     Super,
     Pub,
@@ -123,6 +123,7 @@ pub enum BinaryOp {
     BitwiseXor,
     ShiftLeft,
     ShiftRight,
+    Exponentiation,
 }
 
 /// Struct representing the unwrap operator `?`.
@@ -181,6 +182,10 @@ pub enum Expression {
     Struct(StructExpr),
     TupleStruct(TupleStructExpr),
     Block(BlockExpr),
+    If(IfExpr),       // condition, true, false
+    Match(MatchExpr), // scrutinee, body
+    ForIn(ForInExpr), // variable, iterable, body
+    While(WhileExpr), // while, condition, body
 }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
@@ -189,10 +194,6 @@ pub enum Expression {
 #[derive(Debug, Clone)]
 pub enum Statement {
     Let(LetStmt),
-    If(IfStmt),       // condition, true, false
-    Match(MatchStmt), // scrutinee, body
-    ForIn(ForInStmt), // variable, iterable, body
-    While(WhileStmt), // while, condition, body
     Declaration(Declaration),
     Definition(Definition),
     Expression(ExpressionStmt),
@@ -226,13 +227,22 @@ pub enum Definition {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     // primitives
-    Int,     // `i32`–`i128`
-    UInt,    // `u8`–`u128`
-    BigUInt, // `u256` and `u512`
-    Byte,    // equivalent to `u8`
-    Bytes,   // `b2`–`b32`
-    Hash,    // `h160`, `h256` and `h512`
-    String,  // `Vec<u8>`
+    I32,
+    I64,
+    I128,
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+    U256,
+    U512,
+    Byte,
+    Bytes,
+    H160,
+    H256,
+    H512,
+    String, // `Vec<u8>`
     Char,
     Bool,
 

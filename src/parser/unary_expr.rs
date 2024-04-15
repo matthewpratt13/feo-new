@@ -5,17 +5,51 @@ use crate::{
 
 use super::{Parser, Precedence};
 
-pub(crate) fn parse_unary_expr(
-    parser: &mut Parser,
-    op: UnaryOp,
-) -> Result<UnaryExpr, ErrorsEmitted> {
-    let expression = parser.parse_expression(Precedence::Unary)?;
-    parser.consume_token()?;
+impl UnaryExpr {
+    pub(crate) fn parse(parser: &mut Parser, op: UnaryOp) -> Result<UnaryExpr, ErrorsEmitted> {
+        parser.consume_token();
 
-    match op {
-        _ => Ok(UnaryExpr {
-            expression: Box::new(expression),
-            op,
-        }),
+        let expression = parser.parse_expression(Precedence::Unary)?;
+
+        match op {
+            _ => Ok(UnaryExpr {
+                expression: Box::new(expression),
+                op,
+            }),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::test_utils;
+
+    #[test]
+    fn parse_unary_expr_negate() -> Result<(), ()> {
+        let input = r#"-x"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    // #[ignore]
+    fn parse_unary_expr_reference() -> Result<(), ()> {
+        let input = r#"&x"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
     }
 }
