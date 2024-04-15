@@ -330,7 +330,10 @@ impl Parser {
                 }))
             }
             Some(t) => {
-                self.log_error(ParserErrorKind::InvalidToken { token: t });
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "expression prefix".to_string(),
+                    found: t,
+                });
                 Err(ErrorsEmitted(()))
             }
             None => {

@@ -13,6 +13,7 @@ impl ArrayExpr {
             span: parser.stream.span(),
         })?;
 
+        println!("ENTER `ArrayExpr::parse()`");
         let mut elements: Vec<Expression> = Vec::new();
 
         loop {
@@ -35,7 +36,7 @@ impl ArrayExpr {
                         found: t,
                     });
                 }
-                None => parser.log_error(ParserErrorKind::TokenNotFound {
+                _ => parser.log_error(ParserErrorKind::TokenNotFound {
                     expected: "`]`".to_string(),
                 }),
             }
@@ -67,7 +68,7 @@ impl ArrayExpr {
         }
 
         Ok(ArrayExpr {
-            open_bracket,
+            open_bracket: Delimiter::LBracket,
             elements,
             close_bracket: Delimiter::RBracket,
         })
@@ -80,9 +81,9 @@ mod tests {
 
     #[test]
     fn parse_array_expr() -> Result<(), ()> {
-        let input = r#"[1, 2, 3, 4]~"#;
+        let input = r#"[1, 2, 3, 4]"#;
 
-        let mut parser = test_utils::get_parser(input, true);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

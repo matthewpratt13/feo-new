@@ -49,7 +49,9 @@ impl<'a> Lexer<'a> {
             match c {
                 _ if c.is_whitespace() => self.skip_whitespace(),
 
-                _ if c == '/' && (self.peek_next() == Some('/') || self.peek_next() == Some('*')) => {
+                _ if c == '/'
+                    && (self.peek_next() == Some('/') || self.peek_next() == Some('*')) =>
+                {
                     tokens.push(self.tokenize_doc_comment()?);
                 }
 
@@ -141,15 +143,21 @@ impl<'a> Lexer<'a> {
                 '!' | '#' | '%' | '&' | '*' | '+' | '/' | '-' | '.' | ':' | '<' | '=' | '>'
                 | '?' | '@' | '\\' | '^' | '`' | '|' => tokens.push(self.tokenize_punctuation()?),
 
-                _ if !self.peek_next().is_some() => tokens.push(Token::EOF),
-
                 _ => {
+                    let span = Span::new(self.input, start_pos, self.pos);
+                    tokens.push(Token::UnrecognizedChar { punc: c, span });
+
                     self.log_error(LexErrorKind::UnrecognizedChar {
                         value: format!("{}", c),
                     });
-                    return Err(ErrorsEmitted(()));
+
+                    self.advance();
                 }
             }
+        }
+
+        if !self.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
         }
 
         let stream = TokenStream::new(&tokens, self.input, 0, self.pos);
@@ -562,41 +570,44 @@ impl<'a> Lexer<'a> {
     fn tokenize_delimiter(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
-        let delim = self
-            .peek_current()
-            .ok_or(self.log_error(LexErrorKind::CharNotFound {
-                expected: "delimiter".to_string(),
-            }));
+        let delim = self.peek_current();
 
         match delim {
-            Ok('(') => {
+            Some('(') => {
                 self.advance(); // move past opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
                 Ok(Token::LParen { delim: '(', span })
             }
 
-            Ok('[') => {
+            Some('[') => {
                 self.advance(); // move past opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
                 Ok(Token::LBracket { delim: '[', span })
             }
 
-            Ok('{') => {
+            Some('{') => {
                 self.advance(); // move past opening delimiter
                 let span = Span::new(self.input, start_pos, self.pos);
                 Ok(Token::LBrace { delim: '{', span })
             }
 
-            Ok(')') => self.tokenize_closing_delimiter(')'),
+            Some(')') => self.tokenize_closing_delimiter(')'),
 
-            Ok(']') => self.tokenize_closing_delimiter(']'),
+            Some(']') => self.tokenize_closing_delimiter(']'),
 
-            Ok('}') => self.tokenize_closing_delimiter('}'),
+            Some('}') => self.tokenize_closing_delimiter('}'),
 
-            _ => {
+            Some(d) => {
                 self.log_error(LexErrorKind::UnexpectedChar {
                     expected: "delimiter".to_string(),
-                    found: delim.map_err(|_| ErrorsEmitted(()))?,
+                    found: d,
+                });
+                Err(ErrorsEmitted(()))
+            }
+
+            None => {
+                self.log_error(LexErrorKind::CharNotFound {
+                    expected: "delimiter".to_string(),
                 });
                 Err(ErrorsEmitted(()))
             }
@@ -1364,6 +1375,22 @@ mod tests {
             bar: String,
             baz: u64,
         }"#;
+
+        let mut lexer = Lexer::new(input);
+
+        let stream = lexer.lex().expect(&format!(
+            "unable to tokenize input. current char: `{:?}`\n{:#?}",
+            lexer.peek_current(),
+            lexer.errors(),
+        ));
+
+        println!("{:#?}", stream);
+    }
+
+    #[test]
+    #[should_panic]
+    fn tokenize_unrecognized_chars() {
+        let input = r#"~ § ±"#;
 
         let mut lexer = Lexer::new(input);
 

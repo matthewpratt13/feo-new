@@ -184,6 +184,8 @@ pub enum Token {
 
     DocComment { comment: String, span: Span },
 
+    UnrecognizedChar { punc: char, span: Span },
+
     EOF,
 }
 
