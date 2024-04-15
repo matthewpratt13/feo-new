@@ -42,27 +42,6 @@ impl ArrayExpr {
             }
         }
 
-        // while !parser.is_expected_token(&Token::RBracket {
-        //     delim: ']',
-        //     span: parser.stream.span(),
-        // }) {
-        //     let element = parser.parse_expression(Precedence::Lowest)?;
-        //     elements.push(element);
-
-        //     if !parser.tokens_match(Token::Comma {
-        //         punc: ',',
-        //         span: parser.stream.span(),
-        //     }) {
-        //         println!("CURRENT TOKEN: {:#?}", parser.peek_current());
-        //         break;
-        //     }
-        // }
-
-        // let close_bracket = parser.expect_delimiter(Token::RBracket {
-        //     delim: ']',
-        //     span: parser.stream.span(),
-        // });
-
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
         }
