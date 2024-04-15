@@ -112,6 +112,15 @@ pub struct GroupedExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct IfExpr {
+    pub kw_if: Keyword,
+    pub condition: GroupedExpr,
+    pub if_block: BlockExpr,
+    pub else_if_blocks_opt: Option<Vec<(Keyword, Box<IfExpr>)>>, // `else`, `if { .. }`
+    pub trailing_else_block_opt: Option<(Keyword, BlockExpr)>,   // `else { .. }`
+}
+
+#[derive(Debug, Clone)]
 pub struct IndexExpr {
     pub array: Box<Expression>,
     pub open_bracket: Delimiter,

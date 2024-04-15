@@ -8,6 +8,7 @@ mod call_expr;
 mod closure_expr;
 mod field_access_expr;
 mod grouped_expr;
+mod if_expr;
 mod index_expr;
 mod item;
 mod match_expr;
@@ -25,7 +26,7 @@ use crate::{
     ast::{
         AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
         ConstantDecl, ContinueExpr, Declaration, Definition, Delimiter, EnumDef, Expression,
-        ExpressionStmt, FieldAccessExpr, ForInStmt, FunctionDef, GroupedExpr, Identifier, IfStmt,
+        ExpressionStmt, FieldAccessExpr, ForInStmt, FunctionDef, GroupedExpr, Identifier, IfExpr,
         ImportDecl, IndexExpr, InherentImplDef, Keyword, LetStmt, Literal, MatchExpr,
         MethodCallExpr, ModuleDef, PathExpr, PathPrefix, RangeExpr, RangeOp, ReturnExpr, Separator,
         Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr,
@@ -340,6 +341,8 @@ impl Parser {
                 }))
             }
 
+            Some(Token::If { .. }) => Ok(Expression::If(IfExpr::parse(self)?)),
+
             // TODO: distinguish from `StructExpr` (i.e., after the `match` keyword)
             Some(Token::Match { .. }) => Ok(Expression::Match(MatchExpr::parse(self)?)),
 
@@ -587,7 +590,6 @@ impl Parser {
 
         match token {
             Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
-            Some(Token::If { .. }) => Ok(Statement::If(IfStmt::parse(self)?)),
             Some(Token::For { .. }) => Ok(Statement::ForIn(ForInStmt::parse(self)?)),
             Some(Token::While { .. }) => Ok(Statement::While(WhileStmt::parse(self)?)),
 

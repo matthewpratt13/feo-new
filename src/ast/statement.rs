@@ -4,7 +4,6 @@ use super::{BinaryOp, BlockExpr, Expression, GroupedExpr, Keyword, Separator, Ty
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 
-
 ///////////////////////////////////////////////////////////////////////////
 /// NODES
 ///////////////////////////////////////////////////////////////////////////
@@ -24,14 +23,7 @@ pub struct ForInStmt {
     pub block: BlockExpr,
 }
 
-#[derive(Debug, Clone)]
-pub struct IfStmt {
-    pub kw_if: Keyword,
-    pub condition: GroupedExpr,
-    pub if_block: BlockExpr,
-    pub else_if_blocks_opt: Option<Vec<(Keyword, Box<IfStmt>)>>, // `else`, `if { .. }`
-    pub trailing_else_block_opt: Option<(Keyword, BlockExpr)>,   // `else { .. }`
-}
+
 
 #[derive(Debug, Clone)]
 pub struct LetStmt {
@@ -41,7 +33,6 @@ pub struct LetStmt {
     pub value_opt: Option<(BinaryOp, Expression)>, // `= value`
     pub semicolon: Separator,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct WhileStmt {
