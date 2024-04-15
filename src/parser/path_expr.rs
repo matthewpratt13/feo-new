@@ -59,5 +59,19 @@ mod tests {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
+    }   
+    
+    #[test]
+    fn parse_path_expr_identifier() -> Result<(), ()> {
+        let input = r#"foo_bar"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
     }
 }

@@ -227,39 +227,33 @@ impl Parser {
                 }
             }
             Some(Token::LBracket { .. }) => Ok(Expression::Array(ArrayExpr::parse(self)?)),
-            Some(Token::LBrace { .. }) => {
-                if self.current > 0 {
-                    match self.peek_behind_by(1) {
-                        Some(Token::Identifier { name, .. }) => {
-                            let path = PathExpr {
-                                root: PathPrefix::Identifier(Identifier(name)),
-                                tree_opt: None,
-                            };
+            Some(Token::LBrace { .. }) => match self.peek_behind_by(1) {
+                Some(Token::Identifier { name, .. }) => {
+                    let path = PathExpr {
+                        root: PathPrefix::Identifier(Identifier(name)),
+                        tree_opt: None,
+                    };
 
-                            Ok(Expression::Struct(StructExpr::parse(
-                                self,
-                                Expression::Path(path),
-                            )?))
-                        }
-
-                        Some(Token::SelfType { .. }) => {
-                            let path = PathExpr {
-                                root: PathPrefix::SelfType,
-                                tree_opt: None,
-                            };
-
-                            Ok(Expression::Struct(StructExpr::parse(
-                                self,
-                                Expression::Path(path),
-                            )?))
-                        }
-
-                        _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
-                    }
-                } else {
-                    Ok(Expression::Block(BlockExpr::parse(self)?))
+                    Ok(Expression::Struct(StructExpr::parse(
+                        self,
+                        Expression::Path(path),
+                    )?))
                 }
-            }
+
+                Some(Token::SelfType { .. }) => {
+                    let path = PathExpr {
+                        root: PathPrefix::SelfType,
+                        tree_opt: None,
+                    };
+
+                    Ok(Expression::Struct(StructExpr::parse(
+                        self,
+                        Expression::Path(path),
+                    )?))
+                }
+
+                _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
+            },
             Some(Token::Pipe { .. } | Token::DblPipe { .. }) => {
                 Ok(Expression::Closure(ClosureExpr::parse(self)?))
             }
@@ -677,13 +671,21 @@ impl Parser {
     /// Peek at the token `num_tokens` ahead of the token at the current position.
     fn peek_ahead_by(&mut self, num_tokens: usize) -> Option<Token> {
         let i = self.current + num_tokens;
-        self.stream.tokens().get(i).cloned()
+
+        if i < self.stream.tokens().len() {
+            self.stream.tokens().get(i).cloned()
+        } else {
+            None
+        }
     }
 
     /// Peek at the token `num_tokens` behind the token at the current position.
     fn peek_behind_by(&mut self, num_tokens: usize) -> Option<Token> {
-        let i = self.current - num_tokens;
-        self.stream.tokens().get(i).cloned()
+        if self.current > 0 {
+            self.stream.tokens().get(self.current - num_tokens).cloned()
+        } else {
+            None
+        }
     }
 
     /// Advance the parser and return the current token.
