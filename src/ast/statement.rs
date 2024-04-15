@@ -20,7 +20,7 @@ pub struct MatchArm {
 #[derive(Debug, Clone)]
 pub struct ExpressionStmt {
     pub expression: Expression,
-    pub semicolon: Separator,
+    pub semicolon_opt: Option<Separator>,
 }
 
 #[derive(Debug, Clone)]

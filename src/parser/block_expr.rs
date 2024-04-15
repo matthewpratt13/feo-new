@@ -4,7 +4,7 @@ use crate::{
     token::Token,
 };
 
-use super::{Parser, Precedence};
+use super::Parser;
 
 impl BlockExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
@@ -15,19 +15,17 @@ impl BlockExpr {
 
         let mut statements: Vec<Statement> = Vec::new();
 
-        while !parser.is_expected_token(&Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        }) {
-            let statement = parser.parse_statement()?;
-            statements.push(statement);
+        while let Ok(s) = parser.parse_statement() {
+            statements.push(s);
+
+            if let Some(Token::RBrace { .. }) = parser.peek_current() {
+                break;
+            }
         }
 
-        let terminal_expression_opt = if let Ok(e) = parser.parse_expression(Precedence::Lowest) {
-            Some(Box::new(e))
-        } else {
-            None
-        };
+        println!("EXIT `parser.parse_statement()` WHILE LOOP");
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+        println!("BLOCK EXPRESSION STATEMENTS: {:#?}\n", statements.clone());
 
         let close_brace = parser.expect_delimiter(Token::RBrace {
             delim: '}',
@@ -47,7 +45,6 @@ impl BlockExpr {
         Ok(BlockExpr {
             open_brace,
             statements,
-            terminal_expression_opt,
             close_brace: close_brace?,
         })
     }
@@ -61,10 +58,11 @@ mod tests {
     fn parse_block_expr() -> Result<(), ()> {
         let input = r#"
         {
-            x + 2
+            x + 2;
+            y
         }"#;
 
-        let mut parser = test_utils::get_parser(input, true);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

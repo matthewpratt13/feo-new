@@ -60,7 +60,6 @@ pub struct BinaryExpr {
 pub struct BlockExpr {
     pub open_brace: Delimiter,
     pub statements: Vec<Statement>,
-    pub terminal_expression_opt: Option<Box<Expression>>,
     pub close_brace: Delimiter,
 }
 

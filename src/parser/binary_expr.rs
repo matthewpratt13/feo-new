@@ -15,7 +15,7 @@ impl BinaryExpr {
         op: BinaryOp,
     ) -> Result<BinaryExpr, ErrorsEmitted> {
         println!("ENTER `parse_binary_expr()`");
-        println!("CURRENT TOKEN: {:?}", parser.peek_current());
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
         match op {
             BinaryOp::Add => {

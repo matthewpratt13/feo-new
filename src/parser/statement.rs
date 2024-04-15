@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         BlockExpr, ExpressionStmt, ForInStmt, GroupedExpr, IfStmt, Keyword, LetStmt, MatchArm,
-        MatchStmt, WhileStmt,
+        MatchStmt, Separator, WhileStmt,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -284,16 +284,29 @@ impl ParseStatement for WhileStmt {
 
 impl ParseStatement for ExpressionStmt {
     fn parse(parser: &mut Parser) -> Result<ExpressionStmt, ErrorsEmitted> {
+        println!("ENTER `ExpressionStmt::parse()`\n");
+
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        let semicolon = parser.expect_separator(Token::Semicolon {
-            punc: ';',
-            span: parser.stream.span(),
-        })?;
+        let semicolon_opt = if let Some(Token::Semicolon { .. }) = parser.peek_current() {
+            println!("ENCOUNTER `;`");
+
+            parser.consume_token();
+
+            println!("SKIP `;`");
+            println!("CURRENT TOKEN: {:?}", parser.peek_current());
+
+            Some(Separator::Semicolon)
+        } else {
+            None
+        };
+        
+        println!("EXIT `ExpressionStmt::parse()`");
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
         Ok(ExpressionStmt {
             expression,
-            semicolon,
+            semicolon_opt,
         })
     }
 }

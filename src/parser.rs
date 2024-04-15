@@ -79,21 +79,22 @@ impl Parser {
     /// Recursively parse an expression based on operator precedence.
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
         println!("ENTER `parse_expression()`");
-        println!("INPUT PRECEDENCE: {:?}", precedence);
+        println!("INPUT PRECEDENCE: {:?}\n", precedence);
 
         let mut left_expr = self.parse_prefix()?;
 
         println!("PREFIX EXPRESSION: {:?}", left_expr.clone());
-        println!("CURRENT TOKEN: {:?}", self.peek_current());
+        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
 
         while let Some(t) = self.peek_current() {
             let curr_precedence = self.precedence(&t);
 
             println!("CURRENT PRECEDENCE: {:?}", curr_precedence);
-            println!("CURRENT TOKEN: {:?}", self.peek_current());
 
             if precedence < curr_precedence {
                 left_expr = self.parse_infix(left_expr)?;
+                println!("INFIX EXPRESSION: {:?}", left_expr.clone());
+                println!("CURRENT TOKEN: {:?}\n", self.peek_current());
             } else {
                 break;
             }
@@ -101,7 +102,7 @@ impl Parser {
 
         println!("RETURNED EXPRESSION: {:?}", left_expr);
         println!("EXIT `parse_expression()`");
-        println!("CURRENT TOKEN: {:?}", self.peek_current());
+        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
 
         Ok(left_expr)
     }
@@ -109,7 +110,7 @@ impl Parser {
     /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
         println!("ENTER `parse_primary()`");
-        println!("CURRENT TOKEN: {:?}", self.peek_current());
+        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
 
         let token = self.consume_token();
 
@@ -153,7 +154,7 @@ impl Parser {
     /// where the respective token type appears at the beginning of an expression.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
         println!("ENTER `parse_prefix()`");
-        println!("CURRENT TOKEN: {:?}", self.peek_current());
+        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
 
         let token = self.peek_current();
 
@@ -347,7 +348,7 @@ impl Parser {
     /// appears in the middle of an expression.
     fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         println!("ENTER `parse_infix()`");
-        println!("CURRENT TOKEN: {:?}", self.peek_current());
+        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
 
         let token = self.consume_token();
 
