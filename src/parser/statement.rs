@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, ExpressionStmt, ForInStmt, GroupedExpr, LetStmt, Separator, WhileStmt},
+    ast::{BlockExpr, ExpressionStmt, GroupedExpr, LetStmt, Separator, WhileStmt},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -58,34 +58,6 @@ impl ParseStatement for LetStmt {
             type_ann_opt,
             value_opt,
             semicolon,
-        })
-    }
-}
-
-impl ParseStatement for ForInStmt {
-    fn parse(parser: &mut Parser) -> Result<ForInStmt, ErrorsEmitted> {
-        let kw_for = parser.expect_keyword(Token::For {
-            name: "for".to_string(),
-            span: parser.stream.span(),
-        })?;
-
-        let assignee = parser.parse_expression(Precedence::Path)?;
-
-        let kw_in = parser.expect_keyword(Token::In {
-            name: "in".to_string(),
-            span: parser.stream.span(),
-        })?;
-
-        let iterable = parser.parse_expression(Precedence::Lowest)?;
-
-        let block = BlockExpr::parse(parser)?;
-
-        Ok(ForInStmt {
-            kw_for,
-            assignee,
-            kw_in,
-            iterable,
-            block,
         })
     }
 }

@@ -14,16 +14,6 @@ pub struct ExpressionStmt {
     pub semicolon_opt: Option<Separator>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ForInStmt {
-    pub kw_for: Keyword,
-    pub assignee: Expression,
-    pub kw_in: Keyword,
-    pub iterable: Expression,
-    pub block: BlockExpr,
-}
-
-
 
 #[derive(Debug, Clone)]
 pub struct LetStmt {

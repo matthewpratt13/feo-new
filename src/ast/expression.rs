@@ -105,6 +105,15 @@ pub struct FieldAccessExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct ForInExpr {
+    pub kw_for: Keyword,
+    pub assignee: Box<Expression>,
+    pub kw_in: Keyword,
+    pub iterable: Box<Expression>,
+    pub block: BlockExpr,
+}
+
+#[derive(Debug, Clone)]
 pub struct GroupedExpr {
     pub open_paren: Delimiter,
     pub expression: Box<Expression>,
