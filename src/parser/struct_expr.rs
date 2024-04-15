@@ -11,6 +11,8 @@ impl StructExpr {
         parser: &mut Parser,
         path: Expression,
     ) -> Result<StructExpr, ErrorsEmitted> {
+        println!("ENTER `StructExpr::parse()`");
+        println!("CURRENT TOKEN: {:?}", parser.peek_current());
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),
@@ -19,6 +21,11 @@ impl StructExpr {
         let mut fields: Vec<StructField> = Vec::new();
 
         loop {
+            if let Some(Token::RBrace { .. }) = parser.peek_current() {
+                parser.consume_token();
+                break;
+            }
+
             let token = parser.consume_token();
 
             let name = match token {
@@ -32,7 +39,9 @@ impl StructExpr {
                     Err(ErrorsEmitted(()))
                 }
                 None => {
-                    parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                    parser.log_error(ParserErrorKind::TokenNotFound {
+                        expected: "`}`".to_string(),
+                    });
                     Err(ErrorsEmitted(()))
                 }
             };
@@ -63,15 +72,13 @@ impl StructExpr {
                     });
                 }
                 None => {
-                    parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                    parser.log_error(ParserErrorKind::TokenNotFound {
+                        expected: "`}`".to_string(),
+                    });
+                    return Err(ErrorsEmitted(()));
                 }
             }
         }
-
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        });
 
         if fields.is_empty() {
             parser.log_error(ParserErrorKind::TokenNotFound {
@@ -85,9 +92,9 @@ impl StructExpr {
 
         Ok(StructExpr {
             path: Box::new(path),
-            open_brace,
+            open_brace: Delimiter::LBrace,
             fields,
-            close_brace: close_brace?,
+            close_brace: Delimiter::RBrace,
         })
     }
 }
@@ -155,10 +162,10 @@ mod tests {
         let input = r#"
         SomeStruct {
             foo: "bar",
-            baz: 10
+            baz: 10,
         }"#;
 
-        let mut parser = test_utils::get_parser(input, true);
+        let mut parser = test_utils::get_parser(input, false);
 
         let expressions = parser.parse();
 

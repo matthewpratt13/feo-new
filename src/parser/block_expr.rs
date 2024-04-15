@@ -8,10 +8,14 @@ use super::Parser;
 
 impl BlockExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
+        println!("ENTER `BlockExpr::parse()`");
+
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),
         })?;
+
+        println!("CURRENT TOKEN (AFTER `{{`): {:?}\n", parser.peek_current());
 
         let mut statements: Vec<Statement> = Vec::new();
 

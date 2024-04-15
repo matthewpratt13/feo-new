@@ -229,7 +229,33 @@ impl Parser {
                 }
             }
             Some(Token::LBracket { .. }) => Ok(Expression::Array(ArrayExpr::parse(self)?)),
-            Some(Token::LBrace { .. }) => Ok(Expression::Block(BlockExpr::parse(self)?)),
+            Some(Token::LBrace { .. }) => match self.peek_behind_by(1) {
+                Some(Token::Identifier { name, .. }) => {
+                    let path = PathExpr {
+                        root: PathPrefix::Identifier(Identifier(name)),
+                        tree_opt: None,
+                    };
+
+                    Ok(Expression::Struct(StructExpr::parse(
+                        self,
+                        Expression::Path(path),
+                    )?))
+                }
+
+                Some(Token::SelfType { .. }) => {
+                    let path = PathExpr {
+                        root: PathPrefix::SelfType,
+                        tree_opt: None,
+                    };
+
+                    Ok(Expression::Struct(StructExpr::parse(
+                        self,
+                        Expression::Path(path),
+                    )?))
+                }
+
+                _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
+            },
             Some(Token::Pipe { .. } | Token::DblPipe { .. }) => {
                 Ok(Expression::Closure(ClosureExpr::parse(self)?))
             }
