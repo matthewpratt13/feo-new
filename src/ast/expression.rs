@@ -38,6 +38,15 @@ pub struct StructField {
     pub value: Expression,
 }
 
+/// Struct representing a single arm in a match statement.
+#[derive(Debug, Clone)]
+pub struct MatchArm {
+    pub case: Box<Expression>,
+    pub guard_opt: Option<(Keyword, GroupedExpr)>, // `if (..)`
+    pub fat_arrow: Separator,
+    pub logic: Box<Expression>,
+}
+
 ///////////////////////////////////////////////////////////////////////////
 /// NODES
 ///////////////////////////////////////////////////////////////////////////
@@ -108,6 +117,16 @@ pub struct IndexExpr {
     pub open_bracket: Delimiter,
     pub index: UIntKind,
     pub close_bracket: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct MatchExpr {
+    pub kw_match: Keyword,
+    pub scrutinee: Box<Expression>,
+    pub open_brace: Delimiter,
+    pub arms_opt: Option<Vec<MatchArm>>,
+    pub final_arm: MatchArm, // default case
+    pub close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone)]

@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        BlockExpr, ExpressionStmt, ForInStmt, GroupedExpr, IfStmt, Keyword, LetStmt, MatchArm,
-        MatchStmt, Separator, WhileStmt,
+        BlockExpr, ExpressionStmt, ForInStmt, GroupedExpr, IfStmt, Keyword, LetStmt, Separator,
+        WhileStmt,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -125,104 +125,6 @@ impl ParseStatement for IfStmt {
                 if_block,
                 else_if_blocks_opt: Some(else_if_blocks),
                 trailing_else_block_opt,
-            })
-        }
-    }
-}
-
-impl ParseStatement for MatchStmt {
-    fn parse(parser: &mut Parser) -> Result<MatchStmt, ErrorsEmitted> {
-        let kw_match = parser.expect_keyword(Token::Match {
-            name: "match".to_string(),
-            span: parser.stream.span(),
-        })?;
-
-        let mut match_arms: Vec<MatchArm> = Vec::new();
-
-        let scrutinee = parser.parse_expression(Precedence::Lowest)?;
-
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
-
-        loop {
-            if let Some(Token::RBrace { .. }) = parser.peek_current() {
-                parser.consume_token();
-                break;
-            }
-
-            let case = parser.parse_expression(Precedence::Lowest)?;
-
-            let token = parser.peek_current().ok_or({
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                ErrorsEmitted(())
-            })?;
-
-            let guard_opt = if let Some(Token::If { .. }) = parser.peek_current() {
-                let kw_if = parser.expect_keyword(token)?;
-
-                if let Some(Token::LParen { .. }) = parser.peek_current() {
-                    Some((kw_if, GroupedExpr::parse(parser)?))
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
-
-            let fat_arrow = parser.expect_separator(Token::FatArrow {
-                punc: "=>".to_string(),
-                span: parser.stream.span(),
-            })?;
-
-            let logic = parser.parse_expression(Precedence::Lowest)?;
-
-            let arm = MatchArm {
-                case,
-                guard_opt,
-                fat_arrow,
-                logic,
-            };
-
-            match_arms.push(arm);
-
-            if let Some(Token::Comma { .. }) = parser.peek_current() {
-                continue;
-            }
-        }
-
-        let final_arm = if let Some(a) = match_arms.pop() {
-            a
-        } else {
-            parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "match arm".to_string(),
-            });
-            return Err(ErrorsEmitted(()));
-        };
-
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        })?;
-
-        if match_arms.is_empty() {
-            Ok(MatchStmt {
-                kw_match,
-                scrutinee,
-                open_brace,
-                arms_opt: None,
-                final_arm,
-                close_brace,
-            })
-        } else {
-            Ok(MatchStmt {
-                kw_match,
-                scrutinee,
-                open_brace,
-                arms_opt: Some(match_arms),
-                final_arm,
-                close_brace,
             })
         }
     }

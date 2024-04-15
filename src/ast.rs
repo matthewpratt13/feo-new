@@ -182,6 +182,7 @@ pub enum Expression {
     Struct(StructExpr),
     TupleStruct(TupleStructExpr),
     Block(BlockExpr),
+    Match(MatchExpr), // scrutinee, body
 }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
@@ -191,7 +192,6 @@ pub enum Expression {
 pub enum Statement {
     Let(LetStmt),
     If(IfStmt),       // condition, true, false
-    Match(MatchStmt), // scrutinee, body
     ForIn(ForInStmt), // variable, iterable, body
     While(WhileStmt), // while, condition, body
     Declaration(Declaration),

@@ -1,17 +1,9 @@
-use super::{BinaryOp, BlockExpr, Delimiter, Expression, GroupedExpr, Keyword, Separator, Type};
+use super::{BinaryOp, BlockExpr, Expression, GroupedExpr, Keyword, Separator, Type};
 
 ///////////////////////////////////////////////////////////////////////////
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 
-/// Struct representing a single arm in a match statement.
-#[derive(Debug, Clone)]
-pub struct MatchArm {
-    pub case: Expression,
-    pub guard_opt: Option<(Keyword, GroupedExpr)>, // `if (..)`
-    pub fat_arrow: Separator,
-    pub logic: Expression,
-}
 
 ///////////////////////////////////////////////////////////////////////////
 /// NODES
@@ -50,15 +42,6 @@ pub struct LetStmt {
     pub semicolon: Separator,
 }
 
-#[derive(Debug, Clone)]
-pub struct MatchStmt {
-    pub kw_match: Keyword,
-    pub scrutinee: Expression,
-    pub open_brace: Delimiter,
-    pub arms_opt: Option<Vec<MatchArm>>,
-    pub final_arm: MatchArm, // default case
-    pub close_brace: Delimiter,
-}
 
 #[derive(Debug, Clone)]
 pub struct WhileStmt {
