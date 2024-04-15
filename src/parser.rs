@@ -22,6 +22,7 @@ mod struct_expr;
 mod test_utils;
 mod tuple_expr;
 mod unary_expr;
+mod while_expr;
 
 use crate::{
     ast::{
@@ -32,7 +33,7 @@ use crate::{
         MethodCallExpr, ModuleDef, PathExpr, PathPrefix, RangeExpr, RangeOp, ReturnExpr, Separator,
         Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr,
         TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr,
-        UnwrapOp, WhileStmt,
+        UnwrapOp, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -349,6 +350,8 @@ impl Parser {
 
             Some(Token::For { .. }) => Ok(Expression::ForIn(ForInExpr::parse(self)?)),
 
+            Some(Token::While { .. }) => Ok(Expression::While(WhileExpr::parse(self)?)),
+
             Some(Token::Return { .. }) => {
                 self.consume_token();
                 let expr = self.parse_expression(Precedence::Lowest)?;
@@ -593,7 +596,6 @@ impl Parser {
 
         match token {
             Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
-            Some(Token::While { .. }) => Ok(Statement::While(WhileStmt::parse(self)?)),
 
             Some(
                 Token::Import { .. }

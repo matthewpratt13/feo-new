@@ -14,7 +14,6 @@ pub struct ExpressionStmt {
     pub semicolon_opt: Option<Separator>,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct LetStmt {
     pub kw_let: Keyword,
@@ -25,7 +24,7 @@ pub struct LetStmt {
 }
 
 #[derive(Debug, Clone)]
-pub struct WhileStmt {
+pub struct WhileExpr {
     pub kw_while: Keyword,
     pub condition: GroupedExpr,
     pub block: BlockExpr,

@@ -185,6 +185,7 @@ pub enum Expression {
     If(IfExpr),       // condition, true, false
     Match(MatchExpr), // scrutinee, body
     ForIn(ForInExpr), // variable, iterable, body
+    While(WhileExpr), // while, condition, body
 }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
@@ -193,7 +194,6 @@ pub enum Expression {
 #[derive(Debug, Clone)]
 pub enum Statement {
     Let(LetStmt),
-    While(WhileStmt), // while, condition, body
     Declaration(Declaration),
     Definition(Definition),
     Expression(ExpressionStmt),

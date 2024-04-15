@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, ExpressionStmt, GroupedExpr, LetStmt, Separator, WhileStmt},
+    ast::{ExpressionStmt, LetStmt, Separator},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -58,25 +58,6 @@ impl ParseStatement for LetStmt {
             type_ann_opt,
             value_opt,
             semicolon,
-        })
-    }
-}
-
-impl ParseStatement for WhileStmt {
-    fn parse(parser: &mut Parser) -> Result<WhileStmt, ErrorsEmitted> {
-        let kw_while = parser.expect_keyword(Token::While {
-            name: "while".to_string(),
-            span: parser.stream.span(),
-        })?;
-
-        let condition = GroupedExpr::parse(parser)?;
-
-        let block = BlockExpr::parse(parser)?;
-
-        Ok(WhileStmt {
-            kw_while,
-            condition,
-            block,
         })
     }
 }
