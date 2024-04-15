@@ -13,7 +13,6 @@ impl ArrayExpr {
             span: parser.stream.span(),
         })?;
 
-        println!("ENTER `ArrayExpr::parse()`");
         let mut elements: Vec<Expression> = Vec::new();
 
         loop {
