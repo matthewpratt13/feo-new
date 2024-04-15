@@ -1085,4 +1085,46 @@ mod tests {
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
     }
+
+    #[test]
+    fn parse_return_expr() -> Result<(), ()> {
+        let input = r#"return (x + 2)"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_break_expr() -> Result<(), ()> {
+        let input = r#"break"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_continue_expr() -> Result<(), ()> {
+        let input = r#"continue"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
 }
