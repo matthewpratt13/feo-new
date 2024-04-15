@@ -1,8 +1,4 @@
-use super::{BinaryOp, BlockExpr, Expression, GroupedExpr, Keyword, Separator, Type};
-
-///////////////////////////////////////////////////////////////////////////
-/// HELPER TYPES
-///////////////////////////////////////////////////////////////////////////
+use super::{BinaryOp, Expression, Keyword, Separator, Type};
 
 ///////////////////////////////////////////////////////////////////////////
 /// NODES
@@ -21,11 +17,4 @@ pub struct LetStmt {
     pub type_ann_opt: Option<(Separator, Type)>, // `: Type`
     pub value_opt: Option<(BinaryOp, Expression)>, // `= value`
     pub semicolon: Separator,
-}
-
-#[derive(Debug, Clone)]
-pub struct WhileExpr {
-    pub kw_while: Keyword,
-    pub condition: GroupedExpr,
-    pub block: BlockExpr,
 }
