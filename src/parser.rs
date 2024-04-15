@@ -692,7 +692,7 @@ impl Parser {
 
     /// Peek at the token `num_tokens` behind the token at the current position.
     fn peek_behind_by(&mut self, num_tokens: usize) -> Option<Token> {
-        if self.current > 0 {
+        if self.current >= num_tokens  {
             self.stream.tokens().get(self.current - num_tokens).cloned()
         } else {
             None
