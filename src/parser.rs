@@ -178,10 +178,7 @@ impl Parser {
                         underscore: Separator::Underscore,
                     }))
                 } else {
-                    let root = PathPrefix::Identifier(Identifier(name));
-                    let expr = PathExpr::parse(self, root)?;
-
-                    Ok(Expression::Path(expr))
+                    self.parse_primary()
                 }
             }
             Some(Token::SelfType { .. }) => {
@@ -973,6 +970,8 @@ impl Parser {
 
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     fn get_type(&mut self) -> Result<Type, ErrorsEmitted> {
+        println!("ENTER `get_type()`");
+        println!("CURRENT TOKEN: {:?}", self.peek_current());
         let token = self.consume_token();
 
         match token {
@@ -1029,7 +1028,8 @@ impl Parser {
             Some(Token::CustomType { .. }) => Ok(Type::UserDefined),
             Some(Token::SelfType { .. }) => Ok(Type::SelfType),
             Some(Token::LParen { .. }) => {
-                if let Some(Token::RParen { .. }) = self.peek_ahead_by(1) {
+                if let Some(Token::RParen { .. }) = self.peek_current() {
+                    self.consume_token();
                     Ok(Type::UnitType)
                 } else {
                     Ok(Type::Tuple)

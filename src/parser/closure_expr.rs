@@ -14,32 +14,38 @@ impl ClosureExpr {
             Some(Token::Pipe { .. }) => {
                 let mut vec: Vec<ClosureParam> = Vec::new();
 
-                let curr_token = parser.peek_current().ok_or({
-                    parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                    ErrorsEmitted(())
-                });
+                loop {
+                    println!("ENTER CLOSURE PARAM LOOP");
 
-                while !parser.tokens_match(Token::Pipe {
-                    punc: '|',
-                    span: parser.stream.span(),
-                }) {
-                    let id = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
-                        Ok(Identifier(name))
-                    } else {
-                        parser.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "identifier".to_string(),
-                            found: curr_token.clone()?,
-                        });
-                        Err(ErrorsEmitted(()))
+                    if let Some(Token::Pipe { .. }) = parser.peek_current() {
+                        parser.consume_token();
+                        break;
+                    }
+
+                    let id = match parser.peek_current() {
+                        Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+                        Some(t) => {
+                            parser.log_error(ParserErrorKind::UnexpectedToken {
+                                expected: "identifier".to_string(),
+                                found: t,
+                            });
+
+                            Err(ErrorsEmitted(()))
+                        }
+                        None => {
+                            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                            Err(ErrorsEmitted(()))
+                        }
                     };
 
-                    let _ = parser.expect_separator(Token::Colon {
-                        punc: ':',
-                        span: parser.stream.span(),
-                    });
+                    println!("CLOSURE PARAM NAME: {:?}", id);
+                    println!("CURRENT TOKEN: {:?}", parser.peek_current());
 
-                    let ty = if let Ok(t) = parser.get_type() {
-                        Some(t)
+                    parser.consume_token();
+
+                    let ty = if let Some(Token::Colon { .. }) = parser.peek_current() {
+                        parser.consume_token();
+                        Some(parser.get_type()?)
                     } else {
                         None
                     };
@@ -73,34 +79,18 @@ impl ClosureExpr {
             }
         };
 
-        let return_type_opt = if parser.is_expected_token(&Token::ThinArrow {
-            punc: "->".to_string(),
-            span: parser.stream.span(),
-        }) {
-            parser.consume_token();
+        println!("CLOSURE PARAMS: {:?}\n", params);
 
+        let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
+            parser.consume_token();
             let ty = parser.get_type();
             Some((Separator::ThinArrow, ty?))
         } else {
             None
         };
 
-        let curr_token = parser.peek_current().ok_or({
-            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        });
-
-        if return_type_opt.is_some()
-            && !parser.is_expected_token(&Token::LBrace {
-                delim: '{',
-                span: parser.stream.span(),
-            })
-        {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`{`".to_string(),
-                found: curr_token?,
-            })
-        }
+        println!("RETURN TYPE (OPTIONAL): {:?}\n", return_type_opt);
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
@@ -121,8 +111,24 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn parse_closure_expr() -> Result<(), ()> {
-        let input = r#"|x| x + 2"#;
+    fn parse_closure_expr_without_body() -> Result<(), ()> {
+        let input = r#"|| 2 + 2"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_closure_expr_with_body() -> Result<(), ()> {
+        let input = r#"|world: String| -> () {
+            print("hello {}", world);
+        }"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
