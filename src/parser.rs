@@ -339,6 +339,8 @@ impl Parser {
                     to_opt: Some(Box::new(expr)),
                 }))
             }
+
+            // TODO: distinguish from `StructExpr` (i.e., after the `match` keyword)
             Some(Token::Match { .. }) => Ok(Expression::Match(MatchExpr::parse(self)?)),
 
             Some(Token::Return { .. }) => {
