@@ -27,9 +27,6 @@ impl GroupedExpr {
             return Err(ErrorsEmitted(()));
         }
 
-        println!("EXIT `GroupedExpr::parse()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-
         Ok(GroupedExpr {
             open_paren: Delimiter::LParen,
             expression: Box::new(expression),

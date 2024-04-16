@@ -38,7 +38,7 @@ impl IfExpr {
 
         let if_block = if let Some(Token::LBrace { .. }) = token {
             println!(
-                "CURRENT TOKEN GOING INTO AN IF BLOCK: {:?}\n",
+                "CURRENT TOKEN ENTERING AN IF BLOCK: {:?}\n",
                 parser.peek_current()
             );
 
@@ -73,7 +73,7 @@ impl IfExpr {
         println!("ELSE-IF BLOCKS: {:#?}\n", else_if_blocks.clone());
 
         if else_if_blocks.is_empty() {
-            println!("EXIT `IfExpr::parse()` with no else-if blocks");
+            println!("EXIT `IfExpr::parse()` WITHOUT ELSE-IF BLOCKS");
             println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
             Ok(IfExpr {
@@ -84,7 +84,7 @@ impl IfExpr {
                 trailing_else_block_opt,
             })
         } else {
-            println!("EXIT `IfExpr::parse()` with  else-if blocks");
+            println!("EXIT `IfExpr::parse()` WITH ELSE-IF BLOCKS");
             println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
             Ok(IfExpr {
                 kw_if,
