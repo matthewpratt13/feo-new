@@ -24,6 +24,10 @@ impl Span {
         }
     }
 
+    pub fn start(&self) -> usize {
+        self.start
+    }
+
     /// Retrieve a reference to the  source code.
     pub fn input(&self) -> Arc<String> {
         Arc::clone(&self.input)
