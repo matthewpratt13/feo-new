@@ -19,12 +19,9 @@ impl IfExpr {
 
         let condition = GroupedExpr::parse(parser)?;
 
-        let token = parser.peek_current().ok_or({
-            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        let token = parser.peek_current();
 
-        let if_block = if let Token::LBrace { .. } = token {
+        let if_block = if let Some(Token::LBrace { .. }) = token {
             BlockExpr::parse(parser)?
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {

@@ -27,15 +27,13 @@ impl CallExpr {
             match token {
                 Some(Token::Comma { .. }) => continue,
                 Some(Token::RParen { .. }) => break,
-                Some(t) => {
-                    parser.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `)`".to_string(),
-                        found: t,
-                    });
-                }
-                None => parser.log_error(ParserErrorKind::TokenNotFound {
-                    expected: "`)`".to_string(),
+                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "`,` or `)`".to_string(),
+                    found: Some(t),
                 }),
+                None => {
+                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                }
             }
         }
 

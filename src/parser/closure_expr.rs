@@ -22,18 +22,16 @@ impl ClosureExpr {
                         break;
                     }
 
-                    let id = match parser.peek_current() {
+                    let curr_token = parser.peek_current();
+
+                    let id = match curr_token {
                         Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
-                        Some(t) => {
+                        _ => {
                             parser.log_error(ParserErrorKind::UnexpectedToken {
                                 expected: "identifier".to_string(),
-                                found: t,
+                                found: curr_token,
                             });
 
-                            Err(ErrorsEmitted(()))
-                        }
-                        None => {
-                            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
                             Err(ErrorsEmitted(()))
                         }
                     };
@@ -65,16 +63,11 @@ impl ClosureExpr {
                 ))
             }
             Some(Token::DblPipe { .. }) => Ok(ClosureParams::None(BinaryOp::LogicalOr)),
-            Some(t) => {
+            _ => {
                 parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`|` or `||`".to_string(),
-                    found: t,
+                    found: token,
                 });
-                Err(ErrorsEmitted(()))
-            }
-
-            None => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         };

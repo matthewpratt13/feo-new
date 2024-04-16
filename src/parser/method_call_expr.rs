@@ -17,14 +17,11 @@ impl MethodCallExpr {
 
         let method_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
-        } else if let Some(t) = token {
+        } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier after `.`".to_string(),
-                found: t,
+                found: token,
             });
-            Err(ErrorsEmitted(()))
-        } else {
-            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
             Err(ErrorsEmitted(()))
         };
 
@@ -47,11 +44,12 @@ impl MethodCallExpr {
             match curr_token {
                 Some(Token::Comma { .. }) => continue,
                 Some(Token::RParen { .. }) => break,
-                _ => {
-                    parser.log_error(ParserErrorKind::TokenNotFound {
-                        expected: "`)`".to_string(),
-                    });
-                    break;
+                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "`,` or `)`".to_string(),
+                    found: Some(t),
+                }),
+                None => {
+                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
                 }
             }
         }

@@ -92,7 +92,6 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::MissingQuote { quote } => {
                 writeln!(f, "missing quote: expected `{quote}`, found none")
             }
-
             LexErrorKind::MissingDelimiter { delim } => {
                 writeln!(f, "missing delimiter: expected `{delim}`, found none")
             }
@@ -124,22 +123,17 @@ impl Error for LexErrorKind {}
 pub enum ParserErrorKind {
     UnexpectedToken {
         expected: String,
-        found: Token,
-    },
-
-    InvalidToken {
-        token: Token,
+        found: Option<Token>,
     },
 
     UnexpectedEndOfInput,
 
-    TokenIndexOutOfBounds {
-        len: usize,
-        i: usize,
-    },
-
     TokenNotFound {
         expected: String,
+    },
+
+    MissingDelimiter {
+        delim: char,
     },
 
     #[default]
@@ -157,19 +151,11 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::UnexpectedEndOfInput => {
                 writeln!(f, "parsing error: unexpected end of input")
             }
-            ParserErrorKind::InvalidToken { token } => writeln!(
-                f,
-                "parsing error: invalid token in current context – `{:#?}`)",
-                token
-            ),
             ParserErrorKind::TokenNotFound { expected } => {
                 writeln!(f, "token not found: expected {expected}, found none")
             }
-            ParserErrorKind::TokenIndexOutOfBounds { len, i } => {
-                writeln!(
-                    f,
-                    "token index out of bounds: length is {len}, index is {i}"
-                )
+            ParserErrorKind::MissingDelimiter { delim } => {
+                writeln!(f, "missing delimiter: expected `{delim}`, found none")
             }
             ParserErrorKind::UnknownError => writeln!(f, "unknown parser error"),
         }

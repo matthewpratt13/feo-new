@@ -31,16 +31,10 @@ impl StructExpr {
             let name = match token {
                 Some(Token::Identifier { name, .. }) => Ok(name),
                 Some(Token::RBrace { .. }) => break,
-                Some(t) => {
+                _ => {
                     parser.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "identifier or `}`".to_string(),
-                        found: t,
-                    });
-                    Err(ErrorsEmitted(()))
-                }
-                None => {
-                    parser.log_error(ParserErrorKind::TokenNotFound {
-                        expected: "`}`".to_string(),
+                        found: token,
                     });
                     Err(ErrorsEmitted(()))
                 }
@@ -65,17 +59,12 @@ impl StructExpr {
             match token {
                 Some(Token::Comma { .. }) => continue,
                 Some(Token::RBrace { .. }) => break,
-                Some(t) => {
-                    parser.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `}`".to_string(),
-                        found: t,
-                    });
-                }
+                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "`,` or `}`".to_string(),
+                    found: Some(t),
+                }),
                 None => {
-                    parser.log_error(ParserErrorKind::TokenNotFound {
-                        expected: "`}`".to_string(),
-                    });
-                    return Err(ErrorsEmitted(()));
+                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
                 }
             }
         }
@@ -122,14 +111,12 @@ impl TupleStructExpr {
             match token {
                 Some(Token::Comma { .. }) => continue,
                 Some(Token::RParen { .. }) => break,
-                Some(t) => {
-                    parser.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `)`".to_string(),
-                        found: t,
-                    });
-                }
+                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "`,` or `)`".to_string(),
+                    found: Some(t),
+                }),
                 None => {
-                    parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
                 }
             }
         }

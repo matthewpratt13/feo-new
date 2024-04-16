@@ -29,15 +29,13 @@ impl TupleExpr {
             match token {
                 Some(Token::Comma { .. }) => continue,
                 Some(Token::RParen { .. }) => break,
-                Some(t) => {
-                    parser.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `)`".to_string(),
-                        found: t,
-                    });
-                }
-                None => parser.log_error(ParserErrorKind::TokenNotFound {
-                    expected: "`)`".to_string(),
+                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "`,` or `)`".to_string(),
+                    found: Some(t),
                 }),
+                None => {
+                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                }
             }
         }
 
@@ -73,14 +71,11 @@ impl TupleIndexExpr {
 
         let index = if let Some(Token::UIntLiteral { value, .. }) = token {
             Ok(value)
-        } else if let Some(t) = token {
+        } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "unsigned integer".to_string(),
-                found: t,
+                found: token,
             });
-            Err(ErrorsEmitted(()))
-        } else {
-            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
             Err(ErrorsEmitted(()))
         };
 
