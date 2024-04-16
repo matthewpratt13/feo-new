@@ -15,14 +15,11 @@ impl IndexExpr {
 
         let index = if let Some(Token::UIntLiteral { value, .. }) = token {
             Ok(value)
-        } else if let Some(t) = token {
+        } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "unsigned integer".to_string(),
-                found: t,
+                found: token,
             });
-            Err(ErrorsEmitted(()))
-        } else {
-            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
             Err(ErrorsEmitted(()))
         };
 

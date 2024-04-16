@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::{
-    ast::{BigUIntKind, Bytes, HashKind, IntKind, UIntKind},
+    ast::{BigUInt, Byte, Bytes, Hash, Int, Str, UInt},
     span::Span,
 };
 
@@ -13,13 +13,13 @@ pub enum Token {
     Identifier { name: String, span: Span },
 
     // literals
-    IntLiteral { value: IntKind, span: Span },
-    UIntLiteral { value: UIntKind, span: Span },
-    BigUIntLiteral { value: BigUIntKind, span: Span },
-    ByteLiteral { value: u8, span: Span },
+    IntLiteral { value: Int, span: Span },
+    UIntLiteral { value: UInt, span: Span },
+    BigUIntLiteral { value: BigUInt, span: Span },
+    ByteLiteral { value: Byte, span: Span },
     BytesLiteral { value: Bytes, span: Span },
-    HashLiteral { value: HashKind, span: Span },
-    StringLiteral { value: Vec<u8>, span: Span },
+    HashLiteral { value: Hash, span: Span },
+    StrLiteral { value: Str, span: Span },
     CharLiteral { value: char, span: Span },
     BoolLiteral { value: bool, span: Span },
 
@@ -31,33 +31,32 @@ pub enum Token {
     Func { name: String, span: Span },
     Contract { name: String, span: Span }, // type of module, notated `#![contract]`
     Library { name: String, span: Span },  // type of module, notated `#![library]`
-    Interface { name: String, span: Span }, // type of trait, notated `#![interface]`
     Script { name: String, span: Span },   // type of module, notated `#![script]`
-    Constructor { name: String, span: Span }, // type of function, notated `#![constructor]`
-    Modifier { name: String, span: Span }, // type of function, notated `#![modifier]`
-    Test { name: String, span: Span },     // type of function, notated `#![test]`
-    Event { name: String, span: Span },    // type of struct, notated `#![event]`
-    Error { name: String, span: Span },    // type of struct, notated `#![error]`
-    Abstract { name: String, span: Span }, // attribute, notated `#[abstract]`
-    Payable { name: String, span: Span },  // attribute, notated `#[payable]`
-    Storage { name: String, span: Span },  // attribute, notated `#[storage]`
-    View { name: String, span: Span },     // attribute, notated `#[view]`
-    Topic { name: String, span: Span },    // attribute, notated `#[topic]`
-    Calldata { name: String, span: Span }, // attribute, notated `#[calldata]`
+    Interface { name: String, span: Span }, // type of module, notated `#![interface]`
+    Constructor { name: String, span: Span }, // type of function notated `#[constructor]`
+    Modifier { name: String, span: Span }, // type of function, notated `#[modifier]`
+    Test { name: String, span: Span },     // type of function, notated `#[test]`
+    View { name: String, span: Span },     // function attribute, notated` #[view]`
+    Extern { name: String, span: Span },   // function attribute, notated `#[extern]`
+    Payable { name: String, span: Span },  // function attribute, notated `#[payable]`
+    Event { name: String, span: Span },    // type of struct, notated `#[event]`
+    Error { name: String, span: Span },    // type of struct, notated `#[error]`
+    Storage { name: String, span: Span },  // variable attribute, notated `#[storage]
+    Topic { name: String, span: Span },    // variable attribute, notated `#[topic]`
+    Calldata { name: String, span: Span }, // variable attribute, notated `#[calldata]`
+    Unsafe { name: String, span: Span },   // variable attribute, notated `#![unsafe]`
     Return { name: String, span: Span },
     Struct { name: String, span: Span },
     Enum { name: String, span: Span },
     Trait { name: String, span: Span },
     Impl { name: String, span: Span },
     Mod { name: String, span: Span },
-    Extern { name: String, span: Span }, // attribute, notated `#[extern]`
     Import { name: String, span: Span },
     Package { name: String, span: Span },
     Super { name: String, span: Span },
     SelfKeyword { name: String, span: Span },
     Const { name: String, span: Span },
     Static { name: String, span: Span },
-    Unsafe { name: String, span: Span }, // attribute, notated `#[unsafe]`
     Alias { name: String, span: Span },
     As { name: String, span: Span },
     If { name: String, span: Span },
@@ -83,40 +82,15 @@ pub enum Token {
     U512Type { name: String, span: Span },
     ByteType { name: String, span: Span },
     B2Type { name: String, span: Span },
-    B3Type { name: String, span: Span },
     B4Type { name: String, span: Span },
-    B5Type { name: String, span: Span },
-    B6Type { name: String, span: Span },
-    B7Type { name: String, span: Span },
     B8Type { name: String, span: Span },
-    B9Type { name: String, span: Span },
-    B10Type { name: String, span: Span },
-    B11Type { name: String, span: Span },
-    B12Type { name: String, span: Span },
-    B13Type { name: String, span: Span },
-    B14Type { name: String, span: Span },
-    B15Type { name: String, span: Span },
     B16Type { name: String, span: Span },
-    B17Type { name: String, span: Span },
-    B18Type { name: String, span: Span },
-    B19Type { name: String, span: Span },
-    B20Type { name: String, span: Span },
-    B21Type { name: String, span: Span },
-    B22Type { name: String, span: Span },
-    B23Type { name: String, span: Span },
-    B24Type { name: String, span: Span },
-    B25Type { name: String, span: Span },
-    B26Type { name: String, span: Span },
-    B27Type { name: String, span: Span },
-    B28Type { name: String, span: Span },
-    B29Type { name: String, span: Span },
-    B30Type { name: String, span: Span },
-    B31Type { name: String, span: Span },
     B32Type { name: String, span: Span },
     H160Type { name: String, span: Span },
     H256Type { name: String, span: Span },
     H512Type { name: String, span: Span },
-    StringType { name: String, span: Span },
+    StringType { name: String, span: Span }, // reserved as a token, but not used
+    StrType { name: String, span: Span },
     CharType { name: String, span: Span },
     BoolType { name: String, span: Span },
     SelfType { name: String, span: Span },
@@ -187,6 +161,148 @@ pub enum Token {
     UnrecognizedChar { punc: char, span: Span },
 
     EOF,
+}
+
+impl Token {
+    /// Retrieve the `Span` of a given `Token`.
+    pub fn span(&self) -> Span {
+        match self.clone() {
+            Token::Identifier { span, .. } => span,
+            Token::IntLiteral { span, .. } => span,
+            Token::UIntLiteral { span, .. } => span,
+            Token::BigUIntLiteral { span, .. } => span,
+            Token::ByteLiteral { span, .. } => span,
+            Token::BytesLiteral { span, .. } => span,
+            Token::HashLiteral { span, .. } => span,
+            Token::StrLiteral { span, .. } => span,
+            Token::CharLiteral { span, .. } => span,
+            Token::BoolLiteral { span, .. } => span,
+            Token::Let { span, .. } => span,
+            Token::Mut { span, .. } => span,
+            Token::Ref { span, .. } => span,
+            Token::Pub { span, .. } => span,
+            Token::Func { span, .. } => span,
+            Token::Contract { span, .. } => span,
+            Token::Library { span, .. } => span,
+            Token::Script { span, .. } => span,
+            Token::Interface { span, .. } => span,
+            Token::Constructor { span, .. } => span,
+            Token::Modifier { span, .. } => span,
+            Token::Test { span, .. } => span,
+            Token::View { span, .. } => span,
+            Token::Extern { span, .. } => span,
+            Token::Payable { span, .. } => span,
+            Token::Event { span, .. } => span,
+            Token::Error { span, .. } => span,
+            Token::Storage { span, .. } => span,
+            Token::Topic { span, .. } => span,
+            Token::Calldata { span, .. } => span,
+            Token::Unsafe { span, .. } => span,
+            Token::Return { span, .. } => span,
+            Token::Struct { span, .. } => span,
+            Token::Enum { span, .. } => span,
+            Token::Trait { span, .. } => span,
+            Token::Impl { span, .. } => span,
+            Token::Mod { span, .. } => span,
+            Token::Import { span, .. } => span,
+            Token::Package { span, .. } => span,
+            Token::Super { span, .. } => span,
+            Token::SelfKeyword { span, .. } => span,
+            Token::Const { span, .. } => span,
+            Token::Static { span, .. } => span,
+            Token::Alias { span, .. } => span,
+            Token::As { span, .. } => span,
+            Token::If { span, .. } => span,
+            Token::Else { span, .. } => span,
+            Token::Match { span, .. } => span,
+            Token::For { span, .. } => span,
+            Token::In { span, .. } => span,
+            Token::Loop { span, .. } => span,
+            Token::While { span, .. } => span,
+            Token::Break { span, .. } => span,
+            Token::Continue { span, .. } => span,
+            Token::I32Type { span, .. } => span,
+            Token::I64Type { span, .. } => span,
+            Token::I128Type { span, .. } => span,
+            Token::U8Type { span, .. } => span,
+            Token::U16Type { span, .. } => span,
+            Token::U32Type { span, .. } => span,
+            Token::U64Type { span, .. } => span,
+            Token::U128Type { span, .. } => span,
+            Token::U256Type { span, .. } => span,
+            Token::U512Type { span, .. } => span,
+            Token::ByteType { span, .. } => span,
+            Token::B2Type { span, .. } => span,
+            Token::B4Type { span, .. } => span,
+            Token::B8Type { span, .. } => span,
+            Token::B16Type { span, .. } => span,
+            Token::B32Type { span, .. } => span,
+            Token::H160Type { span, .. } => span,
+            Token::H256Type { span, .. } => span,
+            Token::H512Type { span, .. } => span,
+            Token::StringType { span, .. } => span,
+            Token::StrType { span, .. } => span,
+            Token::CharType { span, .. } => span,
+            Token::BoolType { span, .. } => span,
+            Token::SelfType { span, .. } => span,
+            Token::CustomType { span, .. } => span,
+            Token::LParen { span, .. } => span,
+            Token::RParen { span, .. } => span,
+            Token::LBrace { span, .. } => span,
+            Token::RBrace { span, .. } => span,
+            Token::LBracket { span, .. } => span,
+            Token::RBracket { span, .. } => span,
+            Token::Colon { span, .. } => span,
+            Token::Semicolon { span, .. } => span,
+            Token::Comma { span, .. } => span,
+            Token::Dot { span, .. } => span,
+            Token::DblColon { span, .. } => span,
+            Token::ColonColonAsterisk { span, .. } => span,
+            Token::HashSign { span, .. } => span,
+            Token::HashBang { span, .. } => span,
+            Token::ThinArrow { span, .. } => span,
+            Token::FatArrow { span, .. } => span,
+            Token::Bang { span, .. } => span,
+            Token::DollarSign { span, .. } => span,
+            Token::Percent { span, .. } => span,
+            Token::Ampersand { span, .. } => span,
+            Token::Asterisk { span, .. } => span,
+            Token::Plus { span, .. } => span,
+            Token::Minus { span, .. } => span,
+            Token::Slash { span, .. } => span,
+            Token::LessThan { span, .. } => span,
+            Token::Equals { span, .. } => span,
+            Token::GreaterThan { span, .. } => span,
+            Token::QuestionMark { span, .. } => span,
+            Token::AtSign { span, .. } => span,
+            Token::Backslash { span, .. } => span,
+            Token::Caret { span, .. } => span,
+            Token::Backtick { span, .. } => span,
+            Token::Pipe { span, .. } => span,
+            Token::DblDot { span, .. } => span,
+            Token::DotDotEquals { span, .. } => span,
+            Token::BangEquals { span, .. } => span,
+            Token::PercentEquals { span, .. } => span,
+            Token::DblAsterisk { span, .. } => span,
+            Token::AsteriskEquals { span, .. } => span,
+            Token::DblAmpersand { span, .. } => span,
+            Token::AmpersandMut { span, .. } => span,
+            Token::PlusEquals { span, .. } => span,
+            Token::MinusEquals { span, .. } => span,
+            Token::SlashEquals { span, .. } => span,
+            Token::DblLessThan { span, .. } => span,
+            Token::LessThanEquals { span, .. } => span,
+            Token::DblEquals { span, .. } => span,
+            Token::DblGreaterThan { span, .. } => span,
+            Token::GreaterThanEquals { span, .. } => span,
+            Token::DblPipe { span, .. } => span,
+            Token::LineComment { span, .. } => span,
+            Token::BlockComment { span, .. } => span,
+            Token::DocComment { span, .. } => span,
+            Token::UnrecognizedChar { span, .. } => span,
+            Token::EOF => Span::new("", 0, 0),
+        }
+    }
 }
 
 /// Collection of `Token` as a result of the lexing process.

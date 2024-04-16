@@ -12,8 +12,8 @@
 - `h160`: 160-bit (20-byte) hash. E.g., `let owner: h160 = $0x12345123451234512345` (EVM address)
 - `h256`: 256-bit (32-byte) hash. E.g., `let pub_key: h256 = $0x12345678123456781234567812345678;`
 - `h512`: 512-bit (64-byte) hash
-- `byte`: Single byte literal. E.g., `let x = b"x";`
-- `b2`–`b32`: static byte array (string literal) of 2–32 bytes. E.g., `let x: b3 = b"foo";`
+- `byte`: Single byte string. E.g., `let x = b"x";`
+- `b2`, `b4`, `b8`, `b16`, `b32`: static byte string of 2, 4, 8, 16 or 32 bytes. E.g., `let x: b4 = b"foo";`
 - `i32`: 32-bit signed integer. E.g., `let x: i32 = -2_147_483_648;`
 - `i64`: 64-bit signed integer (default signed integer type). E.g., `let x = -1234;`
 - `i128`: 128-bit signed integer
@@ -27,8 +27,8 @@
 
 ## Dynamic Values
 
-- `String`: growable array of type `byte`. E.g., `let str = "hello"; x.push(" world");`
-- `Vec<T>`: growable array of type `T`. E.g., `let vec: Vec<u256> = Vec::new(); vec.push(0xABCD);`
+- `str`: growable string literal. E.g., `let foo = "bar";`
+- `Vec<T>`: growable array of type `T`. E.g., `let vec: Vec<u256> = Vec::new();`
 - `Mapping<K, V>`: store of key-value pairs. E.g., `let balances: Mapping<u160, u256>;`
 
 ## Other Types

@@ -29,15 +29,13 @@ impl ArrayExpr {
             match token {
                 Some(Token::Comma { .. }) => continue,
                 Some(Token::RBracket { .. }) => break,
-                Some(t) => {
-                    parser.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`,` or `]`".to_string(),
-                        found: t,
-                    });
-                }
-                _ => parser.log_error(ParserErrorKind::TokenNotFound {
-                    expected: "`]`".to_string(),
+                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "`,` or `]`".to_string(),
+                    found: Some(t),
                 }),
+                None => {
+                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ']' });
+                }
             }
         }
 
@@ -45,11 +43,19 @@ impl ArrayExpr {
             return Err(ErrorsEmitted(()));
         }
 
-        Ok(ArrayExpr {
-            open_bracket: Delimiter::LBracket,
-            elements,
-            close_bracket: Delimiter::RBracket,
-        })
+        if elements.is_empty() {
+            Ok(ArrayExpr {
+                open_bracket: Delimiter::LBracket,
+                elements_opt: None,
+                close_bracket: Delimiter::RBracket,
+            })
+        } else {
+            Ok(ArrayExpr {
+                open_bracket: Delimiter::LBracket,
+                elements_opt: Some(elements),
+                close_bracket: Delimiter::RBracket,
+            })
+        }
     }
 }
 

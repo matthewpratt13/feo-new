@@ -1,5 +1,8 @@
 use crate::{
-    ast::{BinaryOp, ClosureExpr, ClosureParam, ClosureParams, Identifier, Separator},
+    ast::{
+        BinaryOp, BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Identifier,
+        Separator,
+    },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -22,18 +25,16 @@ impl ClosureExpr {
                         break;
                     }
 
-                    let id = match parser.peek_current() {
+                    let curr_token = parser.peek_current();
+
+                    let id = match curr_token {
                         Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
-                        Some(t) => {
+                        _ => {
                             parser.log_error(ParserErrorKind::UnexpectedToken {
                                 expected: "identifier".to_string(),
-                                found: t,
+                                found: curr_token,
                             });
 
-                            Err(ErrorsEmitted(()))
-                        }
-                        None => {
-                            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
                             Err(ErrorsEmitted(()))
                         }
                     };
@@ -65,16 +66,11 @@ impl ClosureExpr {
                 ))
             }
             Some(Token::DblPipe { .. }) => Ok(ClosureParams::None(BinaryOp::LogicalOr)),
-            Some(t) => {
+            _ => {
                 parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`|` or `||`".to_string(),
-                    found: t,
+                    found: token,
                 });
-                Err(ErrorsEmitted(()))
-            }
-
-            None => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         };
@@ -92,7 +88,11 @@ impl ClosureExpr {
         println!("RETURN TYPE (OPTIONAL): {:?}\n", return_type_opt);
         println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
-        let expression = parser.parse_expression(Precedence::Lowest)?;
+        let expression = if return_type_opt.is_some() {
+            Expression::Block(BlockExpr::parse(parser)?)
+        } else {
+            parser.parse_expression(Precedence::Lowest)?
+        };
 
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
@@ -111,7 +111,7 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn parse_closure_expr_without_body() -> Result<(), ()> {
+    fn parse_closure_expr_without_block() -> Result<(), ()> {
         let input = r#"|| 2 + 2"#;
 
         let mut parser = test_utils::get_parser(input, false);
@@ -125,8 +125,8 @@ mod tests {
     }
 
     #[test]
-    fn parse_closure_expr_with_body() -> Result<(), ()> {
-        let input = r#"|world: String| -> () {
+    fn parse_closure_expr_with_block() -> Result<(), ()> {
+        let input = r#"|world: str| -> () {
             print("hello {}", world);
         }"#;
 

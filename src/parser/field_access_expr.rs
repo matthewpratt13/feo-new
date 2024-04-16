@@ -19,14 +19,11 @@ impl FieldAccessExpr {
                 dot: Separator::Dot,
                 field: Identifier(name),
             })
-        } else if let Some(t) = token {
+        } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "identifier after `.`".to_string(),
-                found: t,
+                found: token,
             });
-            Err(ErrorsEmitted(()))
-        } else {
-            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
             Err(ErrorsEmitted(()))
         }
     }

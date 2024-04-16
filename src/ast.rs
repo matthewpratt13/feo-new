@@ -14,13 +14,13 @@ pub use self::{expression::*, item::*, statement::*, types::*};
 /// Enum representing the different literal AST nodes.
 #[derive(Debug, Clone)]
 pub enum Literal {
-    Int(IntKind),
-    UInt(UIntKind),
-    BigUInt(BigUIntKind),
-    Byte(u8),
+    Int(Int),
+    UInt(UInt),
+    BigUInt(BigUInt),
+    Byte(Byte),
     Bytes(Bytes),
-    Hash(HashKind),
-    String(Vec<u8>),
+    Hash(Hash),
+    Str(Str),
     Char(char),
     Bool(bool),
 }
@@ -36,6 +36,8 @@ pub struct Identifier(pub String);
 ///////////////////////////////////////////////////////////////////////////
 /// KEYWORDS
 ///////////////////////////////////////////////////////////////////////////
+
+// TODO: add `ModuleAttr`, `FunctionAttr`, `StructAttr` and `VariableAttr` enums
 
 /// Enum representing the different keyword AST nodes.
 #[derive(Debug, Clone, PartialEq)]
@@ -237,12 +239,12 @@ pub enum Type {
     U128,
     U256,
     U512,
-    Byte,
+    Byte, // `u8`
     Bytes,
     H160,
     H256,
     H512,
-    String, // `Vec<u8>`
+    Str, // `Vec<u8>`
     Char,
     Bool,
 
@@ -267,40 +269,55 @@ pub enum Type {
 pub fn get_bytes(value: &[u8]) -> Bytes {
     let bytes = match value.len() {
         0 => panic!("empty slice"),
-        1 => panic!("byte arrays must have more than one element"),
+        1 => panic!("byte string literals must have more than one character"),
         2 => Bytes::B2(B2::from_slice(value)),
-        3 => Bytes::B3(B3::from_slice(value)),
+        3 => Bytes::B4(B4::from(&pad_zeroes::<3, 4>(value))),
         4 => Bytes::B4(B4::from_slice(value)),
-        5 => Bytes::B5(B5::from_slice(value)),
-        6 => Bytes::B6(B6::from_slice(value)),
-        7 => Bytes::B7(B7::from_slice(value)),
+        5 => Bytes::B8(B8::from(&pad_zeroes::<5, 8>(value))),
+        6 => Bytes::B8(B8::from(&pad_zeroes::<6, 8>(value))),
+        7 => Bytes::B8(B8::from(&pad_zeroes::<7, 8>(value))),
         8 => Bytes::B8(B8::from_slice(value)),
-        9 => Bytes::B9(B9::from_slice(value)),
-        10 => Bytes::B10(B10::from_slice(value)),
-        11 => Bytes::B11(B11::from_slice(value)),
-        12 => Bytes::B12(B12::from_slice(value)),
-        13 => Bytes::B13(B13::from_slice(value)),
-        14 => Bytes::B14(B14::from_slice(value)),
-        15 => Bytes::B15(B15::from_slice(value)),
+        9 => Bytes::B16(B16::from(&pad_zeroes::<9, 16>(value))),
+        10 => Bytes::B16(B16::from(&pad_zeroes::<10, 16>(value))),
+        11 => Bytes::B16(B16::from(&pad_zeroes::<11, 16>(value))),
+        12 => Bytes::B16(B16::from(&pad_zeroes::<12, 16>(value))),
+        13 => Bytes::B16(B16::from(&pad_zeroes::<13, 16>(value))),
+        14 => Bytes::B16(B16::from(&pad_zeroes::<14, 16>(value))),
+        15 => Bytes::B16(B16::from(&pad_zeroes::<15, 16>(value))),
         16 => Bytes::B16(B16::from_slice(value)),
-        17 => Bytes::B17(B17::from_slice(value)),
-        18 => Bytes::B18(B18::from_slice(value)),
-        19 => Bytes::B19(B19::from_slice(value)),
-        20 => Bytes::B20(B20::from_slice(value)),
-        21 => Bytes::B21(B21::from_slice(value)),
-        22 => Bytes::B22(B22::from_slice(value)),
-        23 => Bytes::B23(B23::from_slice(value)),
-        24 => Bytes::B24(B24::from_slice(value)),
-        25 => Bytes::B25(B25::from_slice(value)),
-        26 => Bytes::B26(B26::from_slice(value)),
-        27 => Bytes::B27(B27::from_slice(value)),
-        28 => Bytes::B28(B28::from_slice(value)),
-        29 => Bytes::B29(B29::from_slice(value)),
-        30 => Bytes::B30(B30::from_slice(value)),
-        31 => Bytes::B31(B31::from_slice(value)),
+        17 => Bytes::B32(B32::from(&pad_zeroes::<17, 32>(value))),
+        18 => Bytes::B32(B32::from(&pad_zeroes::<18, 32>(value))),
+        19 => Bytes::B32(B32::from(&pad_zeroes::<19, 32>(value))),
+        20 => Bytes::B32(B32::from(&pad_zeroes::<20, 32>(value))),
+        21 => Bytes::B32(B32::from(&pad_zeroes::<21, 32>(value))),
+        22 => Bytes::B32(B32::from(&pad_zeroes::<22, 32>(value))),
+        23 => Bytes::B32(B32::from(&pad_zeroes::<23, 32>(value))),
+        24 => Bytes::B32(B32::from(&pad_zeroes::<24, 32>(value))),
+        25 => Bytes::B32(B32::from(&pad_zeroes::<25, 32>(value))),
+        26 => Bytes::B32(B32::from(&pad_zeroes::<26, 32>(value))),
+        27 => Bytes::B32(B32::from(&pad_zeroes::<27, 32>(value))),
+        28 => Bytes::B32(B32::from(&pad_zeroes::<28, 32>(value))),
+        29 => Bytes::B32(B32::from(&pad_zeroes::<29, 32>(value))),
+        30 => Bytes::B32(B32::from(&pad_zeroes::<30, 32>(value))),
+        31 => Bytes::B32(B32::from(&pad_zeroes::<31, 32>(value))),
         32 => Bytes::B32(B32::from_slice(value)),
         _ => panic!("slice too big"),
     };
 
     bytes
+}
+
+/// Pad an input byte slice with zeroes to turn it into a fixed size array.
+/// Useful when converting a byte string literal into a `Bytes` literal.
+#[track_caller]
+fn pad_zeroes<const A: usize, const B: usize>(slice: &[u8]) -> [u8; B] {
+    assert!(B >= A, "input size is greater than target size");
+
+    let arr: [u8; A] = slice
+        .try_into()
+        .expect("unable to convert slice into fixed size byte array");
+    let mut target = [0; B];
+
+    target[..A].copy_from_slice(&arr);
+    target
 }

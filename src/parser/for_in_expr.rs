@@ -33,3 +33,27 @@ impl ForInExpr {
         })
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::test_utils;
+
+    #[test]
+    fn parse_for_in_expr() -> Result<(), ()> {
+        let input = r#"
+        for x in 0..=5 {
+            x += 1;
+        }
+        "#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+}

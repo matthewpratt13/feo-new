@@ -8,7 +8,15 @@ use super::{Parser, Precedence};
 
 impl GroupedExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {
+        println!("ENTER `GroupedExpr::parse()`");
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+
         let expression = parser.parse_expression(Precedence::Lowest)?;
+
+        println!(
+            "CURRENT TOKEN AFTER INNER EXPRESSION: {:?}",
+            parser.peek_current()
+        );
 
         let close_paren = parser.expect_delimiter(Token::RParen {
             delim: ')',

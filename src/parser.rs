@@ -133,21 +133,15 @@ impl Parser {
                 Ok(Expression::Literal(Literal::Bytes(value)))
             }
             Some(Token::HashLiteral { value, .. }) => Ok(Expression::Literal(Literal::Hash(value))),
-            Some(Token::StringLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::String(value)))
-            }
+            Some(Token::StrLiteral { value, .. }) => Ok(Expression::Literal(Literal::Str(value))),
             Some(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
             Some(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
             Some(Token::LParen { .. }) => Ok(Expression::Grouped(GroupedExpr::parse(self)?)),
-            Some(t) => {
+            _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier, `_`, literal or `(`".to_string(),
-                    found: t,
+                    found: token,
                 });
-                Err(ErrorsEmitted(()))
-            }
-            None => {
-                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
@@ -171,7 +165,7 @@ impl Parser {
             Some(
                 Token::ByteLiteral { .. }
                 | Token::BytesLiteral { .. }
-                | Token::StringLiteral { .. }
+                | Token::StrLiteral { .. }
                 | Token::CharLiteral { .. }
                 | Token::BoolLiteral { .. },
             ) => self.parse_primary(),
@@ -244,10 +238,7 @@ impl Parser {
                         tree_opt: None,
                     };
 
-                    Ok(Expression::Struct(StructExpr::parse(
-                        self,
-                        Expression::Path(path),
-                    )?))
+                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
                 }
 
                 Some(Token::SelfType { .. }) => {
@@ -256,10 +247,7 @@ impl Parser {
                         tree_opt: None,
                     };
 
-                    Ok(Expression::Struct(StructExpr::parse(
-                        self,
-                        Expression::Path(path),
-                    )?))
+                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
                 }
 
                 _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
@@ -275,15 +263,11 @@ impl Parser {
                         self.consume_token();
                         Err(ErrorsEmitted(()))
                     }
-                    Some(t) => {
+                    _ => {
                         self.log_error(ParserErrorKind::UnexpectedToken {
                             expected: "identifier or tuple index after `.`".to_string(),
-                            found: t,
+                            found: token,
                         });
-                        Err(ErrorsEmitted(()))
-                    }
-                    None => {
-                        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                         Err(ErrorsEmitted(()))
                     }
                 }
@@ -293,17 +277,10 @@ impl Parser {
                     self.consume_token();
                     Err(ErrorsEmitted(()))
                 }
-                Some(t) => {
+                _ => {
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "expression before `?`".to_string(),
-                        found: t,
-                    });
-                    Err(ErrorsEmitted(()))
-                }
-                None => {
-                    self.log_error(ParserErrorKind::TokenIndexOutOfBounds {
-                        len: self.stream.tokens().len(),
-                        i: self.current,
+                        found: token,
                     });
                     Err(ErrorsEmitted(()))
                 }
@@ -354,11 +331,15 @@ impl Parser {
 
             Some(Token::Return { .. }) => {
                 self.consume_token();
-                let expr = self.parse_expression(Precedence::Lowest)?;
+                let expression_opt = if let Some(t) = self.peek_current() {
+                    Some(Box::new(self.parse_expression(Precedence::Lowest)?))
+                } else {
+                    None
+                };
 
                 Ok(Expression::Return(ReturnExpr {
                     kw_return: Keyword::Return,
-                    expression: Box::new(expr),
+                    expression_opt,
                 }))
             }
             Some(Token::Break { name, .. }) => {
@@ -376,7 +357,7 @@ impl Parser {
             Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "expression prefix".to_string(),
-                    found: t,
+                    found: Some(t),
                 });
                 Err(ErrorsEmitted(()))
             }
@@ -556,15 +537,11 @@ impl Parser {
                 Some(Token::UIntLiteral { .. }) => Ok(Expression::TupleIndex(
                     TupleIndexExpr::parse(self, left_expr)?,
                 )),
-                Some(t) => {
+                _ => {
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "identifier or index".to_string(),
-                        found: t,
+                        found: token,
                     });
-                    Err(ErrorsEmitted(()))
-                }
-                None => {
-                    self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                     Err(ErrorsEmitted(()))
                 }
             },
@@ -577,7 +554,10 @@ impl Parser {
                 Ok(Expression::Range(expr))
             }
             Some(t) => {
-                self.log_error(ParserErrorKind::InvalidToken { token: t });
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "expression infix".to_string(),
+                    found: Some(t),
+                });
                 Err(ErrorsEmitted(()))
             }
             None => {
@@ -621,16 +601,13 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     fn parse_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
-        let token = self.peek_current().ok_or({
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        let token = self.peek_current();
 
         match token {
-            Token::Import { .. } => Ok(Declaration::Import(ImportDecl::parse(self)?)),
-            Token::Alias { .. } => Ok(Declaration::Alias(AliasDecl::parse(self)?)),
-            Token::Const { .. } => Ok(Declaration::Constant(ConstantDecl::parse(self)?)),
-            Token::Static { .. } => Ok(Declaration::StaticItem(StaticItemDecl::parse(self)?)),
+            Some(Token::Import { .. }) => Ok(Declaration::Import(ImportDecl::parse(self)?)),
+            Some(Token::Alias { .. }) => Ok(Declaration::Alias(AliasDecl::parse(self)?)),
+            Some(Token::Const { .. }) => Ok(Declaration::Constant(ConstantDecl::parse(self)?)),
+            Some(Token::Static { .. }) => Ok(Declaration::StaticItem(StaticItemDecl::parse(self)?)),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "declaration item".to_string(),
@@ -642,24 +619,21 @@ impl Parser {
     }
 
     fn parse_definition(&mut self) -> Result<Definition, ErrorsEmitted> {
-        let token = self.peek_current().ok_or({
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
+        let token = self.peek_current();
 
         match token {
-            Token::Mod { .. } => Ok(Definition::Module(ModuleDef::parse(self)?)),
-            Token::Trait { .. } => Ok(Definition::Trait(TraitDef::parse(self)?)),
-            Token::Enum { .. } => Ok(Definition::Enum(EnumDef::parse(self)?)),
-            Token::Struct { .. } => Ok(Definition::Struct(StructDef::parse(self)?)),
-            Token::Impl { .. } => {
+            Some(Token::Mod { .. }) => Ok(Definition::Module(ModuleDef::parse(self)?)),
+            Some(Token::Trait { .. }) => Ok(Definition::Trait(TraitDef::parse(self)?)),
+            Some(Token::Enum { .. }) => Ok(Definition::Enum(EnumDef::parse(self)?)),
+            Some(Token::Struct { .. }) => Ok(Definition::Struct(StructDef::parse(self)?)),
+            Some(Token::Impl { .. }) => {
                 if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
                     Ok(Definition::TraitImpl(TraitImplDef::parse(self)?))
                 } else {
                     Ok(Definition::InherentImpl(InherentImplDef::parse(self)?))
                 }
             }
-            Token::Func { .. } => Ok(Definition::Function(FunctionDef::parse(self)?)),
+            Some(Token::Func { .. }) => Ok(Definition::Function(FunctionDef::parse(self)?)),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "definition item".to_string(),
@@ -692,7 +666,7 @@ impl Parser {
 
     /// Peek at the token `num_tokens` behind the token at the current position.
     fn peek_behind_by(&mut self, num_tokens: usize) -> Option<Token> {
-        if self.current > 0 {
+        if self.current >= num_tokens {
             self.stream.tokens().get(self.current - num_tokens).cloned()
         } else {
             None
@@ -731,7 +705,7 @@ impl Parser {
         } else {
             self.log_error(ParserErrorKind::UnexpectedToken {
                 expected: format!("`{:#?}`", expected),
-                found: token,
+                found: Some(token),
             });
             Err(ErrorsEmitted(()))
         }
@@ -766,15 +740,11 @@ impl Parser {
             Some(Token::Break { .. }) => Ok(Keyword::Break),
             Some(Token::Continue { .. }) => Ok(Keyword::Continue),
             Some(Token::Return { .. }) => Ok(Keyword::Return),
-            Some(t) => {
+            _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
-                    found: t,
+                    found: token,
                 });
-                Err(ErrorsEmitted(()))
-            }
-            None => {
-                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
@@ -790,15 +760,15 @@ impl Parser {
             Some(Token::RBracket { .. }) => Ok(Delimiter::RBracket),
             Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
             Some(Token::RBrace { .. }) => Ok(Delimiter::RBrace),
-            Some(t) => {
+            Some(_) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
-                    found: t,
+                    found: token,
                 });
                 Err(ErrorsEmitted(()))
             }
             None => {
-                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                self.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
                 Err(ErrorsEmitted(()))
             }
         }
@@ -831,15 +801,11 @@ impl Parser {
             Some(Token::Caret { .. }) => Ok(BinaryOp::BitwiseXor),
             Some(Token::DblLessThan { .. }) => Ok(BinaryOp::ShiftLeft),
             Some(Token::DblGreaterThan { .. }) => Ok(BinaryOp::ShiftRight),
-            Some(t) => {
+            _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
-                    found: t,
+                    found: token,
                 });
-                Err(ErrorsEmitted(()))
-            }
-            None => {
-                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
@@ -857,15 +823,11 @@ impl Parser {
             Some(Token::ColonColonAsterisk { .. }) => Ok(Separator::ColonColonAsterisk),
             Some(Token::ThinArrow { .. }) => Ok(Separator::ThinArrow),
             Some(Token::FatArrow { .. }) => Ok(Separator::FatArrow),
-            Some(t) => {
+            _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
-                    found: t,
+                    found: token,
                 });
-                Err(ErrorsEmitted(()))
-            }
-            None => {
-                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
@@ -951,9 +913,13 @@ impl Parser {
         }
     }
 
-    /// Log information about an error that occurred during lexing.
+    /// Log information about an error that occurred during parsing.
     fn log_error(&mut self, error_kind: ParserErrorKind) {
-        let error = CompilerError::new(error_kind, self.stream.span().substring(), self.current);
+        let error = CompilerError::new(
+            error_kind,
+            &self.stream.span().input(),
+            self.stream.tokens()[self.current - 1].span().start(),
+        );
         self.errors.push(error);
     }
 
@@ -981,41 +947,15 @@ impl Parser {
             Some(Token::ByteType { .. }) => Ok(Type::Byte),
             Some(
                 Token::B2Type { .. }
-                | Token::B3Type { .. }
                 | Token::B4Type { .. }
-                | Token::B5Type { .. }
-                | Token::B6Type { .. }
-                | Token::B7Type { .. }
                 | Token::B8Type { .. }
-                | Token::B9Type { .. }
-                | Token::B10Type { .. }
-                | Token::B11Type { .. }
-                | Token::B12Type { .. }
-                | Token::B13Type { .. }
-                | Token::B14Type { .. }
-                | Token::B15Type { .. }
                 | Token::B16Type { .. }
-                | Token::B17Type { .. }
-                | Token::B18Type { .. }
-                | Token::B19Type { .. }
-                | Token::B20Type { .. }
-                | Token::B21Type { .. }
-                | Token::B22Type { .. }
-                | Token::B23Type { .. }
-                | Token::B24Type { .. }
-                | Token::B25Type { .. }
-                | Token::B26Type { .. }
-                | Token::B27Type { .. }
-                | Token::B28Type { .. }
-                | Token::B29Type { .. }
-                | Token::B30Type { .. }
-                | Token::B31Type { .. }
                 | Token::B32Type { .. },
             ) => Ok(Type::Bytes),
             Some(Token::H160Type { .. }) => Ok(Type::H160),
             Some(Token::H256Type { .. }) => Ok(Type::H256),
             Some(Token::H512Type { .. }) => Ok(Type::H512),
-            Some(Token::StringType { .. }) => Ok(Type::String),
+            Some(Token::StrType { .. }) => Ok(Type::Str),
             Some(Token::CharType { .. }) => Ok(Type::Char),
             Some(Token::BoolType { .. }) => Ok(Type::Bool),
             Some(Token::CustomType { .. }) => Ok(Type::UserDefined),
@@ -1032,15 +972,11 @@ impl Parser {
             Some(Token::Func { .. }) => Ok(Type::Function),
             Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Type::Reference),
             Some(Token::Identifier { .. }) => Ok(Type::UserDefined),
-            Some(t) => {
+            _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "type annotation".to_string(),
-                    found: t,
+                    found: token,
                 });
-                Err(ErrorsEmitted(()))
-            }
-            None => {
-                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
         }
