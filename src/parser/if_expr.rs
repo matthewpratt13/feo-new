@@ -17,12 +17,12 @@ impl IfExpr {
             span: parser.stream.span(),
         })?;
 
-        let condition = GroupedExpr::parse(parser)?;
+        let condition = Box::new(GroupedExpr::parse(parser)?);
 
         let token = parser.peek_current();
 
         let if_block = if let Some(Token::LBrace { .. }) = token {
-            BlockExpr::parse(parser)?
+            Box::new(BlockExpr::parse(parser)?)
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
                 expected: "block expression".to_string(),

@@ -39,7 +39,7 @@ impl MatchExpr {
                 let kw_if = parser.expect_keyword(token)?;
 
                 if let Some(Token::LParen { .. }) = parser.peek_current() {
-                    Some((kw_if, GroupedExpr::parse(parser)?))
+                    Some((kw_if, Box::new(GroupedExpr::parse(parser)?)))
                 } else {
                     None
                 }

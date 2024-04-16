@@ -32,7 +32,11 @@ pub enum LexErrorKind {
         name: String,
     },
 
-    UnrecognizedAttribute {
+    UnrecognizedInnerAttribute {
+        name: String,
+    },    
+    
+    UnrecognizedOuterAttribute {
         name: String,
     },
 
@@ -67,7 +71,6 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::ParseBigUIntError => writeln!(f, "error parsing big unsigned integer"),
             LexErrorKind::ParseHashError => writeln!(f, "error parsing hash"),
             LexErrorKind::ParseBoolError => writeln!(f, "error parsing boolean"),
-
             LexErrorKind::UnrecognizedChar { value } => {
                 writeln!(f, "syntax error: unrecognized character – `{value}`")
             }
@@ -77,8 +80,11 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::UnrecognizedKeyword { name } => {
                 writeln!(f, "syntax error: unrecognized keyword – `{name}`")
             }
-            LexErrorKind::UnrecognizedAttribute { name } => {
-                writeln!(f, "syntax error: unrecognized attribute – `{name}`")
+            LexErrorKind::UnrecognizedInnerAttribute { name } => {
+                writeln!(f, "syntax error: unrecognized inner attribute – `{name}`")
+            }      
+            LexErrorKind::UnrecognizedOuterAttribute { name } => {
+                writeln!(f, "syntax error: unrecognized outer attribute – `{name}`")
             }
 
             LexErrorKind::ReservedChar => {

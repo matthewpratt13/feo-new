@@ -240,10 +240,7 @@ impl Parser {
                         tree_opt: None,
                     };
 
-                    Ok(Expression::Struct(StructExpr::parse(
-                        self,
-                        Expression::Path(path),
-                    )?))
+                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
                 }
 
                 Some(Token::SelfType { .. }) => {
@@ -252,10 +249,7 @@ impl Parser {
                         tree_opt: None,
                     };
 
-                    Ok(Expression::Struct(StructExpr::parse(
-                        self,
-                        Expression::Path(path),
-                    )?))
+                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
                 }
 
                 _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
@@ -339,11 +333,15 @@ impl Parser {
 
             Some(Token::Return { .. }) => {
                 self.consume_token();
-                let expr = self.parse_expression(Precedence::Lowest)?;
+                let expression_opt = if let Some(t) = self.peek_current() {
+                    Some(Box::new(self.parse_expression(Precedence::Lowest)?))
+                } else {
+                    None
+                };
 
                 Ok(Expression::Return(ReturnExpr {
                     kw_return: Keyword::Return,
-                    expression: Box::new(expr),
+                    expression_opt,
                 }))
             }
             Some(Token::Break { name, .. }) => {
@@ -917,9 +915,25 @@ impl Parser {
         }
     }
 
-    /// Log information about an error that occurred during lexing.
+    // TODO: `self.current` is the TOKEN position, not the CHARACTER position, so for accuracy,
+    // TODO: we will need to get the CHARACTER position, either by advancing `self.current`
+    // TODO: by the token length (which would require getting each token's length), or by accessing
+    // TODO: each token's `Span` (which would require getting each token's `Span`).
+    // TODO: the latter sounds more useful. both would require pattern matching.
+    // TODO: investigate the potential benefits of implementing a `Spanned` trait – how often do we
+    // TODO: need to access a token / node's span, and what information do we really need?
+    // TODO: each token has a span and nodes are made up of tokens.
+    // TODO: in the event that we need to access a node's span, we would need a way to access
+    // TODO: its individual tokens' spans, which could prove difficult as each node it different.
+    // TODO: this is where the `Spanned` trait comes in...
+    // TODO: however, this sounds like a lot of extra code. 
+    // TODO: why do we even need spans? – to report errors.
+    // TODO: how much granularity do we need? – that is the question.
+    // TODO: proposal: simply pattern-match to get each token's span to report token errors.
+    // TODO: node position (i.e., span) should not really be relevant.
+    /// Log information about an error that occurred during parsing.
     fn log_error(&mut self, error_kind: ParserErrorKind) {
-        let error = CompilerError::new(error_kind, self.stream.span().substring(), self.current);
+        let error = CompilerError::new(error_kind, &self.stream.span().input(), self.current);
         self.errors.push(error);
     }
 

@@ -1,6 +1,6 @@
 use crate::{
     ast::{BlockExpr, Statement},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -36,21 +36,23 @@ impl BlockExpr {
             span: parser.stream.span(),
         });
 
-        if statements.is_empty() {
-            parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "statement".to_string(),
-            });
-        }
-
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
         }
 
-        Ok(BlockExpr {
-            open_brace,
-            statements,
-            close_brace: close_brace?,
-        })
+        if statements.is_empty() {
+            Ok(BlockExpr {
+                open_brace,
+                statements_opt: None,
+                close_brace: close_brace?,
+            })
+        } else {
+            Ok(BlockExpr {
+                open_brace,
+                statements_opt: Some(statements),
+                close_brace: close_brace?,
+            })
+        }
     }
 }
 

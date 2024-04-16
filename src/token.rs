@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::{
-    ast::{BigUIntKind, Bytes, HashKind, IntKind, UIntKind},
+    ast::{BigUIntKind, Byte, Bytes, HashKind, IntKind, UIntKind},
     span::Span,
 };
 
@@ -16,7 +16,7 @@ pub enum Token {
     IntLiteral { value: IntKind, span: Span },
     UIntLiteral { value: UIntKind, span: Span },
     BigUIntLiteral { value: BigUIntKind, span: Span },
-    ByteLiteral { value: u8, span: Span },
+    ByteLiteral { value: Byte, span: Span },
     BytesLiteral { value: Bytes, span: Span },
     HashLiteral { value: HashKind, span: Span },
     StringLiteral { value: Vec<u8>, span: Span },
@@ -31,33 +31,32 @@ pub enum Token {
     Func { name: String, span: Span },
     Contract { name: String, span: Span }, // type of module, notated `#![contract]`
     Library { name: String, span: Span },  // type of module, notated `#![library]`
-    Interface { name: String, span: Span }, // type of trait, notated `#![interface]`
     Script { name: String, span: Span },   // type of module, notated `#![script]`
-    Constructor { name: String, span: Span }, // type of function, notated `#![constructor]`
-    Modifier { name: String, span: Span }, // type of function, notated `#![modifier]`
-    Test { name: String, span: Span },     // type of function, notated `#![test]`
-    Event { name: String, span: Span },    // type of struct, notated `#![event]`
-    Error { name: String, span: Span },    // type of struct, notated `#![error]`
-    Abstract { name: String, span: Span }, // attribute, notated `#[abstract]`
-    Payable { name: String, span: Span },  // attribute, notated `#[payable]`
-    Storage { name: String, span: Span },  // attribute, notated `#[storage]`
-    View { name: String, span: Span },     // attribute, notated `#[view]`
-    Topic { name: String, span: Span },    // attribute, notated `#[topic]`
-    Calldata { name: String, span: Span }, // attribute, notated `#[calldata]`
+    Interface { name: String, span: Span }, // type of module, notated `#![interface]`
+    Constructor { name: String, span: Span }, // type of function notated `#[constructor]`
+    Modifier { name: String, span: Span }, // type of function, notated `#[modifier]`
+    Test { name: String, span: Span },     // type of function, notated `#[test]`
+    View { name: String, span: Span },     // function attribute, notated` #[view]`
+    Extern { name: String, span: Span },   // function attribute, notated `#[extern]`
+    Payable { name: String, span: Span },  // function attribute, notated `#[payable]`
+    Event { name: String, span: Span },    // type of struct, notated `#[event]`
+    Error { name: String, span: Span },    // type of struct, notated `#[error]`
+    Storage { name: String, span: Span },  // variable attribute, notated `#[storage]
+    Topic { name: String, span: Span },    // variable attribute, notated `#[topic]`
+    Calldata { name: String, span: Span }, // variable attribute, notated `#[calldata]`
+    Unsafe { name: String, span: Span },   // variable attribute, notated `#![unsafe]`
     Return { name: String, span: Span },
     Struct { name: String, span: Span },
     Enum { name: String, span: Span },
     Trait { name: String, span: Span },
     Impl { name: String, span: Span },
     Mod { name: String, span: Span },
-    Extern { name: String, span: Span }, // attribute, notated `#[extern]`
     Import { name: String, span: Span },
     Package { name: String, span: Span },
     Super { name: String, span: Span },
     SelfKeyword { name: String, span: Span },
     Const { name: String, span: Span },
     Static { name: String, span: Span },
-    Unsafe { name: String, span: Span }, // attribute, notated `#[unsafe]`
     Alias { name: String, span: Span },
     As { name: String, span: Span },
     If { name: String, span: Span },

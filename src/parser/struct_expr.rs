@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Expression, Identifier, StructExpr, StructField, TupleStructExpr},
+    ast::{Delimiter, Expression, Identifier, PathExpr, StructExpr, StructField, TupleStructExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -7,10 +7,7 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl StructExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        path: Expression,
-    ) -> Result<StructExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<StructExpr, ErrorsEmitted> {
         println!("ENTER `StructExpr::parse()`");
         println!("CURRENT TOKEN: {:?}", parser.peek_current());
         let open_brace = parser.expect_delimiter(Token::LBrace {
@@ -20,6 +17,8 @@ impl StructExpr {
 
         let mut fields: Vec<StructField> = Vec::new();
 
+        // TODO: add logic to allow for variable attributes (`VariableAttr` node type)
+        // TODO i.e., `#[unsafe]`, `#[storage]` and `#[calldata] and `#[topic]`
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
                 parser.consume_token();
@@ -69,27 +68,30 @@ impl StructExpr {
             }
         }
 
-        if fields.is_empty() {
-            parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "struct field".to_string(),
-            });
-        }
-
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
         }
 
-        Ok(StructExpr {
-            path: Box::new(path),
-            open_brace: Delimiter::LBrace,
-            fields,
-            close_brace: Delimiter::RBrace,
-        })
+        if fields.is_empty() {
+            Ok(StructExpr {
+                path,
+                open_brace: Delimiter::LBrace,
+                fields_opt: None,
+                close_brace: Delimiter::RBrace,
+            })
+        } else {
+            Ok(StructExpr {
+                path,
+                open_brace: Delimiter::LBrace,
+                fields_opt: Some(fields),
+                close_brace: Delimiter::RBrace,
+            })
+        }
     }
 }
 
 impl TupleStructExpr {
-    fn parse(parser: &mut Parser, path: Expression) -> Result<Self, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, path: PathExpr) -> Result<Self, ErrorsEmitted> {
         let mut elements: Vec<Expression> = Vec::new();
 
         let open_paren = parser.expect_delimiter(Token::LParen {
@@ -121,22 +123,25 @@ impl TupleStructExpr {
             }
         }
 
-        if elements.is_empty() {
-            parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "tuple struct element".to_string(),
-            });
-        }
-
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
         }
 
-        Ok(TupleStructExpr {
-            path: Box::new(path),
-            open_paren,
-            elements,
-            close_paren: Delimiter::RParen,
-        })
+        if elements.is_empty() {
+            Ok(TupleStructExpr {
+                path,
+                open_paren,
+                elements_opt: None,
+                close_paren: Delimiter::RParen,
+            })
+        } else {
+            Ok(TupleStructExpr {
+                path,
+                open_paren,
+                elements_opt: Some(elements),
+                close_paren: Delimiter::RParen,
+            })
+        }
     }
 }
 

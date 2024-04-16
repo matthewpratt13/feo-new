@@ -43,11 +43,19 @@ impl ArrayExpr {
             return Err(ErrorsEmitted(()));
         }
 
-        Ok(ArrayExpr {
-            open_bracket: Delimiter::LBracket,
-            elements,
-            close_bracket: Delimiter::RBracket,
-        })
+        if elements.is_empty() {
+            Ok(ArrayExpr {
+                open_bracket: Delimiter::LBracket,
+                elements_opt: None,
+                close_bracket: Delimiter::RBracket,
+            })
+        } else {
+            Ok(ArrayExpr {
+                open_bracket: Delimiter::LBracket,
+                elements_opt: Some(elements),
+                close_bracket: Delimiter::RBracket,
+            })
+        }
     }
 }
 

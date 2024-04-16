@@ -17,7 +17,7 @@ pub enum Literal {
     Int(IntKind),
     UInt(UIntKind),
     BigUInt(BigUIntKind),
-    Byte(u8),
+    Byte(Byte),
     Bytes(Bytes),
     Hash(HashKind),
     String(Vec<u8>),
@@ -36,6 +36,8 @@ pub struct Identifier(pub String);
 ///////////////////////////////////////////////////////////////////////////
 /// KEYWORDS
 ///////////////////////////////////////////////////////////////////////////
+
+// TODO: add `ModuleAttr`, `FunctionAttr`, `StructAttr` and `VariableAttr` enums
 
 /// Enum representing the different keyword AST nodes.
 #[derive(Debug, Clone, PartialEq)]

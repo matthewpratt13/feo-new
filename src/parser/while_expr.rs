@@ -19,7 +19,7 @@ impl WhileExpr {
 
         Ok(WhileExpr {
             kw_while,
-            condition,
+            condition: Box::new(condition),
             block,
         })
     }

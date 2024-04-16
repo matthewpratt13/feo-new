@@ -34,6 +34,7 @@ pub struct ClosureParam {
 /// Struct representing a single field in a struct expression, with a name and value.
 #[derive(Debug, Clone)]
 pub struct StructField {
+    // TODO: add `attributes: VariableAttr` field
     pub name: Identifier,
     pub value: Expression,
 }
@@ -42,7 +43,7 @@ pub struct StructField {
 #[derive(Debug, Clone)]
 pub struct MatchArm {
     pub case: Box<Expression>,
-    pub guard_opt: Option<(Keyword, GroupedExpr)>, // `if (..)`
+    pub guard_opt: Option<(Keyword, Box<GroupedExpr>)>, // `if (..)`
     pub fat_arrow: Separator,
     pub logic: Box<Expression>,
 }
@@ -54,7 +55,7 @@ pub struct MatchArm {
 #[derive(Debug, Clone)]
 pub struct ArrayExpr {
     pub open_bracket: Delimiter,
-    pub elements: Vec<Expression>,
+    pub elements_opt: Option<Vec<Expression>>,
     pub close_bracket: Delimiter,
 }
 
@@ -68,7 +69,7 @@ pub struct BinaryExpr {
 #[derive(Debug, Clone)]
 pub struct BlockExpr {
     pub open_brace: Delimiter,
-    pub statements: Vec<Statement>,
+    pub statements_opt: Option<Vec<Statement>>,
     pub close_brace: Delimiter,
 }
 
@@ -123,8 +124,8 @@ pub struct GroupedExpr {
 #[derive(Debug, Clone)]
 pub struct IfExpr {
     pub kw_if: Keyword,
-    pub condition: GroupedExpr,
-    pub if_block: BlockExpr,
+    pub condition: Box<GroupedExpr>,
+    pub if_block: Box<BlockExpr>,
     pub else_if_blocks_opt: Option<Vec<(Keyword, Box<IfExpr>)>>, // `else`, `if { .. }`
     pub trailing_else_block_opt: Option<(Keyword, BlockExpr)>,   // `else { .. }`
 }
@@ -173,14 +174,14 @@ pub struct RangeExpr {
 #[derive(Debug, Clone)]
 pub struct ReturnExpr {
     pub kw_return: Keyword,
-    pub expression: Box<Expression>,
+    pub expression_opt: Option<Box<Expression>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct StructExpr {
-    pub path: Box<Expression>,
+    pub path: PathExpr,
     pub open_brace: Delimiter,
-    pub fields: Vec<StructField>,
+    pub fields_opt: Option<Vec<StructField>>,
     pub close_brace: Delimiter,
 }
 
@@ -200,9 +201,9 @@ pub struct TupleIndexExpr {
 
 #[derive(Debug, Clone)]
 pub struct TupleStructExpr {
-    pub path: Box<Expression>,
+    pub path: PathExpr,
     pub open_paren: Delimiter,
-    pub elements: Vec<Expression>,
+    pub elements_opt: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
 }
 
@@ -233,6 +234,6 @@ pub struct UnwrapExpr {
 #[derive(Debug, Clone)]
 pub struct WhileExpr {
     pub kw_while: Keyword,
-    pub condition: GroupedExpr,
+    pub condition: Box<GroupedExpr>,
     pub block: BlockExpr,
 }

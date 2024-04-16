@@ -3,7 +3,7 @@
 use std::{iter::Peekable, str::Chars};
 
 use crate::{
-    ast::{self, BigUIntKind, HashKind, IntKind, UIntKind},
+    ast::{self, BigUIntKind, Byte, HashKind, IntKind, UIntKind},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{Token, TokenStream},
@@ -252,16 +252,6 @@ impl<'a> Lexer<'a> {
         // or return a `Token::Identifier`
         if is_keyword(&name) {
             match name.as_str() {
-                "abstract" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
-                    }
-                }
                 "alias" => Ok(Token::Alias { name, span }),
                 "as" => Ok(Token::As { name, span }),
                 "break" => Ok(Token::Break { name, span }),
@@ -277,7 +267,7 @@ impl<'a> Lexer<'a> {
                 }
                 "constructor" => {
                     if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_inner_attribute(name, span);
+                        let token = self.tokenize_outer_attribute(name, span);
                         self.advance();
                         token
                     } else {
@@ -299,9 +289,19 @@ impl<'a> Lexer<'a> {
                 }
                 "else" => Ok(Token::Else { name, span }),
                 "enum" => Ok(Token::Enum { name, span }),
+                "error" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "event" => {
                     if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_inner_attribute(name, span);
+                        let token = self.tokenize_outer_attribute(name, span);
                         self.advance();
                         token
                     } else {
@@ -361,7 +361,7 @@ impl<'a> Lexer<'a> {
                 "match" => Ok(Token::Match { name, span }),
                 "modifier" => {
                     if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_inner_attribute(name, span);
+                        let token = self.tokenize_outer_attribute(name, span);
                         self.advance();
                         token
                     } else {
@@ -411,7 +411,7 @@ impl<'a> Lexer<'a> {
                 "super" => Ok(Token::Super { name, span }),
                 "test" => {
                     if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_inner_attribute(name, span);
+                        let token = self.tokenize_outer_attribute(name, span);
                         self.advance();
                         token
                     } else {
@@ -444,7 +444,7 @@ impl<'a> Lexer<'a> {
                 }),
                 "unsafe" => {
                     if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
+                        let token = self.tokenize_inner_attribute(name, span);
                         self.advance();
                         token
                     } else {
@@ -528,16 +528,20 @@ impl<'a> Lexer<'a> {
         span: Span,
     ) -> Result<Token, ErrorsEmitted> {
         match name.as_str() {
-            "abstract" => Ok(Token::Abstract { name, span }),
             "calldata" => Ok(Token::Calldata { name, span }),
+            "constructor" => Ok(Token::Constructor { name, span }),
+            "error" => Ok(Token::Error { name, span }),
+            "event" => Ok(Token::Event { name, span }),
             "extern" => Ok(Token::Extern { name, span }),
+            "modifier" => Ok(Token::Modifier { name, span }),
             "payable" => Ok(Token::Payable { name, span }),
             "storage" => Ok(Token::Storage { name, span }),
+            "test" => Ok(Token::Test { name, span }),
             "topic" => Ok(Token::Topic { name, span }),
-            "unsafe" => Ok(Token::Unsafe { name, span }),
             "view" => Ok(Token::View { name, span }),
+
             _ => {
-                self.log_error(LexErrorKind::UnrecognizedAttribute { name });
+                self.log_error(LexErrorKind::UnrecognizedOuterAttribute { name });
                 Err(ErrorsEmitted(()))
             }
         }
@@ -550,17 +554,14 @@ impl<'a> Lexer<'a> {
         span: Span,
     ) -> Result<Token, ErrorsEmitted> {
         match name.as_str() {
-            "constructor" => Ok(Token::Constructor { name, span }),
             "contract" => Ok(Token::Contract { name, span }),
-            "error" => Ok(Token::Error { name, span }),
-            "event" => Ok(Token::Event { name, span }),
             "interface" => Ok(Token::Interface { name, span }),
             "library" => Ok(Token::Library { name, span }),
-            "modifier" => Ok(Token::Modifier { name, span }),
             "script" => Ok(Token::Script { name, span }),
-            "test" => Ok(Token::Test { name, span }),
+            "unsafe" => Ok(Token::Unsafe { name, span }),
+
             _ => {
-                self.log_error(LexErrorKind::UnrecognizedAttribute { name });
+                self.log_error(LexErrorKind::UnrecognizedInnerAttribute { name });
                 Err(ErrorsEmitted(()))
             }
         }
@@ -744,7 +745,7 @@ impl<'a> Lexer<'a> {
 
                     if value.len() == 1 {
                         return Ok(Token::ByteLiteral {
-                            value: value.as_bytes()[0],
+                            value: Byte(value.as_bytes()[0]),
                             span,
                         });
                     }
@@ -1112,7 +1113,6 @@ impl<'a> Lexer<'a> {
 /// List of reserved keywords to match against some input string.
 fn is_keyword(value: &str) -> bool {
     [
-        "abstract",
         "alias",
         "as",
         "break",
@@ -1258,16 +1258,15 @@ mod tests {
     #[test]
     fn tokenize_attributes() {
         let input = r#"
-        #[abstract]
         #![contract]
         pub mod foo {
             #[storage]
             const balances: [U256] = [0x1234, 0x5678, 0x90AB, 0xCDEF];
             
-            #![interface]
+            #[interface]
             trait Bar
 
-            #![constructor]
+            #[constructor]
             pub func new() -> Contract
             
             #[extern]

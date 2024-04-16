@@ -3,7 +3,7 @@ pub use crate::{
     B28, B29, B3, B30, B31, B32, B4, B5, B6, B7, B8, B9, H160, H256, H512, U256, U512,
 };
 
-/// Enum representing the different signed integer types.
+/// Wrappers for the different signed integer types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum IntKind {
     I32(i32),
@@ -11,7 +11,7 @@ pub enum IntKind {
     I128(i128),
 }
 
-/// Enum representing the different unsigned integer types.
+/// Wrappers for the different unsigned integer types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum UIntKind {
     U8(u8),
@@ -21,14 +21,18 @@ pub enum UIntKind {
     U128(u128),
 }
 
-/// Enum representing the different big unsigned integer types.
+/// Wrappers for the different big unsigned integer types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum BigUIntKind {
     U256(U256),
     U512(U512),
 }
 
-/// Enum representing the different byte array types.
+/// Struct that wraps a `u8` into a new type that is usually treated as a single text character.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Byte(pub u8);
+
+/// Wrappers for the different byte array types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Bytes {
     B2(B2),
@@ -64,7 +68,7 @@ pub enum Bytes {
     B32(B32),
 }
 
-/// Enum representing the different hash types.
+/// Wrappers for the different hash types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum HashKind {
     H160(H160),
