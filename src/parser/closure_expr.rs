@@ -111,7 +111,7 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn parse_closure_expr_without_body() -> Result<(), ()> {
+    fn parse_closure_expr_without_block() -> Result<(), ()> {
         let input = r#"|| 2 + 2"#;
 
         let mut parser = test_utils::get_parser(input, false);
@@ -125,7 +125,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_closure_expr_with_body() -> Result<(), ()> {
+    fn parse_closure_expr_with_block() -> Result<(), ()> {
         let input = r#"|world: String| -> () {
             print("hello {}", world);
         }"#;
