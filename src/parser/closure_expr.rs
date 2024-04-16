@@ -1,5 +1,8 @@
 use crate::{
-    ast::{BinaryOp, BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Identifier, Separator},
+    ast::{
+        BinaryOp, BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Identifier,
+        Separator,
+    },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -90,8 +93,6 @@ impl ClosureExpr {
         } else {
             parser.parse_expression(Precedence::Lowest)?
         };
-
-        // let expression = parser.parse_expression(Precedence::Lowest)?;
 
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
