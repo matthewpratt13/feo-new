@@ -3,7 +3,7 @@
 use std::{iter::Peekable, str::Chars};
 
 use crate::{
-    ast::{self, BigUIntKind, Byte, HashKind, IntKind, UIntKind},
+    ast::{self, BigUInt, Byte, Hash, Int, Str, UInt},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{Token, TokenStream},
@@ -475,40 +475,15 @@ impl<'a> Lexer<'a> {
                 "u512" => Ok(Token::U512Type { name, span }),
                 "byte" => Ok(Token::ByteType { name, span }),
                 "b2" => Ok(Token::B2Type { name, span }),
-                "b3" => Ok(Token::B3Type { name, span }),
                 "b4" => Ok(Token::B4Type { name, span }),
-                "b5" => Ok(Token::B5Type { name, span }),
-                "b6" => Ok(Token::B6Type { name, span }),
-                "b7" => Ok(Token::B7Type { name, span }),
                 "b8" => Ok(Token::B8Type { name, span }),
-                "b9" => Ok(Token::B9Type { name, span }),
-                "b10" => Ok(Token::B10Type { name, span }),
-                "b11" => Ok(Token::B11Type { name, span }),
-                "b12" => Ok(Token::B12Type { name, span }),
-                "b13" => Ok(Token::B13Type { name, span }),
-                "b14" => Ok(Token::B14Type { name, span }),
-                "b15" => Ok(Token::B15Type { name, span }),
                 "b16" => Ok(Token::B16Type { name, span }),
-                "b17" => Ok(Token::B17Type { name, span }),
-                "b18" => Ok(Token::B18Type { name, span }),
-                "b19" => Ok(Token::B19Type { name, span }),
-                "b20" => Ok(Token::B20Type { name, span }),
-                "b21" => Ok(Token::B21Type { name, span }),
-                "b22" => Ok(Token::B22Type { name, span }),
-                "b23" => Ok(Token::B23Type { name, span }),
-                "b24" => Ok(Token::B24Type { name, span }),
-                "b25" => Ok(Token::B25Type { name, span }),
-                "b26" => Ok(Token::B26Type { name, span }),
-                "b27" => Ok(Token::B27Type { name, span }),
-                "b28" => Ok(Token::B28Type { name, span }),
-                "b29" => Ok(Token::B29Type { name, span }),
-                "b30" => Ok(Token::B30Type { name, span }),
-                "b31" => Ok(Token::B31Type { name, span }),
                 "b32" => Ok(Token::B32Type { name, span }),
                 "h160" => Ok(Token::H160Type { name, span }),
                 "h256" => Ok(Token::H256Type { name, span }),
                 "h512" => Ok(Token::H512Type { name, span }),
                 "String" => Ok(Token::StringType { name, span }),
+                "str" => Ok(Token::StrType { name, span }),
                 "char" => Ok(Token::CharType { name, span }),
                 "bool" => Ok(Token::BoolType { name, span }),
                 _ => {
@@ -699,8 +674,8 @@ impl<'a> Lexer<'a> {
 
                     let span = Span::new(self.input, start_pos, self.pos);
 
-                    return Ok(Token::StringLiteral {
-                        value: value.as_bytes().to_vec(),
+                    return Ok(Token::StrLiteral {
+                        value: Str(value.as_bytes().to_vec()),
                         span,
                     });
                 }
@@ -856,7 +831,7 @@ impl<'a> Lexer<'a> {
 
         if let Ok(v) = value {
             Ok(Token::BigUIntLiteral {
-                value: BigUIntKind::U256(v),
+                value: BigUInt::U256(v),
                 span,
             })
         } else {
@@ -904,7 +879,7 @@ impl<'a> Lexer<'a> {
         let span = Span::new(self.input, start_pos, self.pos);
 
         Ok(Token::HashLiteral {
-            value: HashKind::H256(value),
+            value: Hash::H256(value),
             span,
         })
     }
@@ -945,7 +920,7 @@ impl<'a> Lexer<'a> {
 
             if let Ok(v) = value {
                 Ok(Token::IntLiteral {
-                    value: IntKind::I64(v),
+                    value: Int::I64(v),
                     span,
                 })
             } else {
@@ -964,7 +939,7 @@ impl<'a> Lexer<'a> {
 
             if let Ok(v) = value {
                 Ok(Token::UIntLiteral {
-                    value: UIntKind::U64(v),
+                    value: UInt::U64(v),
                     span,
                 })
             } else {
@@ -1172,40 +1147,15 @@ fn is_keyword(value: &str) -> bool {
         "u512",
         "byte",
         "b2",
-        "b3",
         "b4",
-        "b5",
-        "b6",
-        "b7",
         "b8",
-        "b9",
-        "b10",
-        "b11",
-        "b12",
-        "b13",
-        "b14",
-        "b15",
         "b16",
-        "b17",
-        "b18",
-        "b19",
-        "b20",
-        "b21",
-        "b22",
-        "b23",
-        "b24",
-        "b25",
-        "b26",
-        "b27",
-        "b28",
-        "b29",
-        "b30",
-        "b31",
         "b32",
         "h160",
         "h256",
         "h512",
         "String",
+        "str",
         "char",
         "bool",
     ]
@@ -1261,7 +1211,7 @@ mod tests {
         #![contract]
         pub mod foo {
             #[storage]
-            const balances: [U256] = [0x1234, 0x5678, 0x90AB, 0xCDEF];
+            const balances: [u256] = [0x1234, 0x5678, 0x90AB, 0xCDEF];
             
             #[interface]
             trait Bar
@@ -1306,7 +1256,7 @@ mod tests {
     fn tokenize_function() {
         let input = r#"
         func foo(param1: u64, param2: char, param3: bool) -> ReturnType {
-            let bar: b3 = b"bar";
+            let bar: b4 = b"bar";
             
             if (param3) {
                 print("{}", param2);
@@ -1371,7 +1321,7 @@ mod tests {
         /// These is a doc comment
         /// for the struct called `Foo`.
         pub struct Foo {
-            bar: String,
+            bar: str,
             baz: u64,
         }"#;
 

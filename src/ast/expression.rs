@@ -1,6 +1,6 @@
 use super::{
     BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator, Statement, Type,
-    UIntKind, UnaryOp, UnwrapOp,
+    UInt, UnaryOp, UnwrapOp,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -134,7 +134,7 @@ pub struct IfExpr {
 pub struct IndexExpr {
     pub array: Box<Expression>,
     pub open_bracket: Delimiter,
-    pub index: UIntKind,
+    pub index: UInt,
     pub close_bracket: Delimiter,
 }
 
@@ -196,7 +196,7 @@ pub struct TupleExpr {
 pub struct TupleIndexExpr {
     pub operand: Box<Expression>,
     pub dot: Separator,
-    pub index: UIntKind,
+    pub index: UInt,
 }
 
 #[derive(Debug, Clone)]

@@ -133,9 +133,7 @@ impl Parser {
                 Ok(Expression::Literal(Literal::Bytes(value)))
             }
             Some(Token::HashLiteral { value, .. }) => Ok(Expression::Literal(Literal::Hash(value))),
-            Some(Token::StringLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::String(value)))
-            }
+            Some(Token::StrLiteral { value, .. }) => Ok(Expression::Literal(Literal::Str(value))),
             Some(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
             Some(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
             Some(Token::LParen { .. }) => Ok(Expression::Grouped(GroupedExpr::parse(self)?)),
@@ -167,7 +165,7 @@ impl Parser {
             Some(
                 Token::ByteLiteral { .. }
                 | Token::BytesLiteral { .. }
-                | Token::StringLiteral { .. }
+                | Token::StrLiteral { .. }
                 | Token::CharLiteral { .. }
                 | Token::BoolLiteral { .. },
             ) => self.parse_primary(),
@@ -949,41 +947,15 @@ impl Parser {
             Some(Token::ByteType { .. }) => Ok(Type::Byte),
             Some(
                 Token::B2Type { .. }
-                | Token::B3Type { .. }
                 | Token::B4Type { .. }
-                | Token::B5Type { .. }
-                | Token::B6Type { .. }
-                | Token::B7Type { .. }
                 | Token::B8Type { .. }
-                | Token::B9Type { .. }
-                | Token::B10Type { .. }
-                | Token::B11Type { .. }
-                | Token::B12Type { .. }
-                | Token::B13Type { .. }
-                | Token::B14Type { .. }
-                | Token::B15Type { .. }
                 | Token::B16Type { .. }
-                | Token::B17Type { .. }
-                | Token::B18Type { .. }
-                | Token::B19Type { .. }
-                | Token::B20Type { .. }
-                | Token::B21Type { .. }
-                | Token::B22Type { .. }
-                | Token::B23Type { .. }
-                | Token::B24Type { .. }
-                | Token::B25Type { .. }
-                | Token::B26Type { .. }
-                | Token::B27Type { .. }
-                | Token::B28Type { .. }
-                | Token::B29Type { .. }
-                | Token::B30Type { .. }
-                | Token::B31Type { .. }
                 | Token::B32Type { .. },
             ) => Ok(Type::Bytes),
             Some(Token::H160Type { .. }) => Ok(Type::H160),
             Some(Token::H256Type { .. }) => Ok(Type::H256),
             Some(Token::H512Type { .. }) => Ok(Type::H512),
-            Some(Token::StringType { .. }) => Ok(Type::String),
+            Some(Token::StrType { .. }) => Ok(Type::Str),
             Some(Token::CharType { .. }) => Ok(Type::Char),
             Some(Token::BoolType { .. }) => Ok(Type::Bool),
             Some(Token::CustomType { .. }) => Ok(Type::UserDefined),

@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn parse_closure_expr_with_block() -> Result<(), ()> {
-        let input = r#"|world: String| -> () {
+        let input = r#"|world: str| -> () {
             print("hello {}", world);
         }"#;
 
