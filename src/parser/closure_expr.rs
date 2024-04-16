@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BinaryOp, ClosureExpr, ClosureParam, ClosureParams, Identifier, Separator},
+    ast::{BinaryOp, BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Identifier, Separator},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -85,7 +85,13 @@ impl ClosureExpr {
         println!("RETURN TYPE (OPTIONAL): {:?}\n", return_type_opt);
         println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
-        let expression = parser.parse_expression(Precedence::Lowest)?;
+        let expression = if return_type_opt.is_some() {
+            Expression::Block(BlockExpr::parse(parser)?)
+        } else {
+            parser.parse_expression(Precedence::Lowest)?
+        };
+
+        // let expression = parser.parse_expression(Precedence::Lowest)?;
 
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
