@@ -68,12 +68,13 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Main parsing function that returns a `Vec<Statement>`.
-    fn parse(&mut self) -> Result<Vec<Expression>, ErrorsEmitted> {
-        let mut expressions: Vec<Expression> = Vec::new();
+    fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
+        let mut statements: Vec<Statement> = Vec::new();
         while self.current < self.stream.tokens().len() {
-            expressions.push(self.parse_expression(Precedence::Lowest)?);
+           let statement = self.parse_statement()?;
+           statements.push(statement);
         }
-        Ok(expressions)
+        Ok(statements)
     }
 
     ///////////////////////////////////////////////////////////////////////////

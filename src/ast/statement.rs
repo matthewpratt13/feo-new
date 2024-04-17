@@ -16,5 +16,5 @@ pub struct LetStmt {
     pub assignee: Expression,
     pub type_ann_opt: Option<(Separator, Type)>, // `: Type`
     pub value_opt: Option<(BinaryOp, Expression)>, // `= value`
-    pub semicolon: Separator,
+    // pub semicolon: Separator,
 }

@@ -1,6 +1,6 @@
 use crate::{
-    ast::{ExpressionStmt, LetStmt, Separator},
-    error::ErrorsEmitted,
+    ast::{ExpressionStmt, Keyword, LetStmt, Separator},
+    error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
@@ -15,17 +15,17 @@ where
 
 impl ParseStatement for LetStmt {
     fn parse(parser: &mut Parser) -> Result<LetStmt, ErrorsEmitted> {
-        let kw_let = parser.expect_keyword(Token::Let {
-            name: "let".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_let = if let Some(Token::Let { .. }) = parser.consume_token() {
+            Ok(Keyword::Let)
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "`let`".to_string(),
+                found: parser.peek_current(),
+            });
+            Err(ErrorsEmitted(()))
+        }?;
 
         let assignee = parser.parse_expression(Precedence::Path)?;
-
-        let equals = parser.expect_separator(Token::Equals {
-            punc: '=',
-            span: parser.stream.span(),
-        })?;
 
         let type_ann_opt = if let Ok(colon) = parser.expect_separator(Token::Colon {
             punc: ':',
@@ -47,17 +47,17 @@ impl ParseStatement for LetStmt {
             None
         };
 
-        let semicolon = parser.expect_separator(Token::Semicolon {
-            punc: ';',
-            span: parser.stream.span(),
-        })?;
+        // let semicolon = parser.expect_separator(Token::Semicolon {
+        //     punc: ';',
+        //     span: parser.stream.span(),
+        // })?;
 
         Ok(LetStmt {
             kw_let,
             assignee,
             type_ann_opt,
             value_opt,
-            semicolon,
+            // semicolon,
         })
     }
 }
@@ -94,6 +94,20 @@ impl ParseStatement for ExpressionStmt {
 #[cfg(test)]
 mod tests {
     use crate::parser::test_utils;
+
+    #[test]
+    fn parse_let_stmt() -> Result<(), ()> {
+        let input = r#"let x: str = "hello world";"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
 
     #[test]
     fn parse_expression_stmt() -> Result<(), ()> {
