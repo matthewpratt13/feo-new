@@ -33,7 +33,16 @@ pub struct InherentImplDef {}
 pub struct ModuleDef {}
 
 #[derive(Debug, Clone)]
-pub struct StaticItemDecl {}
+pub struct StaticItemDecl {
+    // pub attributes_opt: Option<Vec<VariableAttr>>,
+    // pub visibility_opt: Option<Visibility>,
+    pub kw_static: Keyword,
+    pub kw_mut_opt: Option<Keyword>,
+    pub item_name: Identifier,
+    pub item_type: Type,
+    pub assignment_opt: Option<Box<Expression>>,
+    pub semicolon: Separator,
+}
 
 #[derive(Debug, Clone)]
 pub struct StructDef {}
