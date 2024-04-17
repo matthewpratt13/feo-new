@@ -1,8 +1,5 @@
 use crate::{
-    ast::{
-        AliasDecl, ConstantDecl, EnumDef, FunctionDef, ImportDecl, InherentImplDef, ModuleDef,
-        StaticItemDecl, StructDef, TraitDef, TraitImplDef,
-    },
+    ast::{EnumDef, FunctionDef, InherentImplDef, ModuleDef, StructDef, TraitDef, TraitImplDef},
     error::ErrorsEmitted,
 };
 
@@ -20,30 +17,6 @@ where
     Self: Sized,
 {
     fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
-}
-
-impl ParseDeclaration for ImportDecl {
-    fn parse(parser: &mut Parser) -> Result<ImportDecl, ErrorsEmitted> {
-        todo!()
-    }
-}
-
-impl ParseDeclaration for AliasDecl {
-    fn parse(parser: &mut Parser) -> Result<AliasDecl, ErrorsEmitted> {
-        todo!()
-    }
-}
-
-impl ParseDeclaration for ConstantDecl {
-    fn parse(parser: &mut Parser) -> Result<ConstantDecl, ErrorsEmitted> {
-        todo!()
-    }
-}
-
-impl ParseDeclaration for StaticItemDecl {
-    fn parse(parser: &mut Parser) -> Result<StaticItemDecl, ErrorsEmitted> {
-        todo!()
-    }
 }
 
 impl ParseDefinition for ModuleDef {

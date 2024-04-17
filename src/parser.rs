@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+mod alias_decl;
 mod array_expr;
 mod binary_expr;
 mod block_expr;
 mod call_expr;
 mod closure_expr;
+mod constant_decl;
 mod field_access_expr;
 mod for_in_expr;
 mod grouped_expr;
@@ -19,6 +21,7 @@ mod path_expr;
 mod precedence;
 mod range_expr;
 mod statement;
+mod static_item_decl;
 mod struct_expr;
 mod test_utils;
 mod tuple_expr;

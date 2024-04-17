@@ -1,10 +1,16 @@
 use crate::{
-    ast::{Identifier, PathExpr, PathPrefix, PathSubset},
+    ast::{Identifier, ImportDecl, PathExpr, PathPrefix, PathSubset},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
-use super::Parser;
+use super::{item::ParseDeclaration, Parser};
+
+impl ParseDeclaration for ImportDecl {
+    fn parse(parser: &mut Parser) -> Result<ImportDecl, ErrorsEmitted> {
+        todo!()
+    }
+}
 
 impl PathSubset {
     pub(crate) fn parse(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
