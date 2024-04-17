@@ -68,12 +68,13 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Main parsing function that returns a `Vec<Statement>`.
-    fn parse(&mut self) -> Result<Vec<Expression>, ErrorsEmitted> {
-        let mut expressions: Vec<Expression> = Vec::new();
+    fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
+        let mut statements: Vec<Statement> = Vec::new();
         while self.current < self.stream.tokens().len() {
-            expressions.push(self.parse_expression(Precedence::Lowest)?);
+           let statement = self.parse_statement()?;
+           statements.push(statement);
         }
-        Ok(expressions)
+        Ok(statements)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -102,6 +103,10 @@ impl Parser {
             } else {
                 break;
             }
+        }
+
+        if let Some(Token::Semicolon { .. }) = self.peek_current() {
+            self.consume_token();
         }
 
         println!("RETURNED EXPRESSION: {:?}", left_expr);
@@ -354,6 +359,7 @@ impl Parser {
                     kw_continue: Keyword::Continue,
                 }))
             }
+
             Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "expression prefix".to_string(),
