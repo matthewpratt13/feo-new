@@ -56,7 +56,7 @@ pub enum Token {
     SelfKeyword { name: String, span: Span },
     Const { name: String, span: Span },
     Static { name: String, span: Span },
-    Unsafe { name: String, span: Span },   // TODO: find an application for this
+    Unsafe { name: String, span: Span },
     Alias { name: String, span: Span },
     As { name: String, span: Span },
     If { name: String, span: Span },

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, Statement},
+    ast::{BlockExpr, Keyword, Statement},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -9,6 +9,13 @@ use super::Parser;
 impl BlockExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
         println!("ENTER `BlockExpr::parse()`");
+
+        let kw_unsafe_opt = if let Some(Token::Unsafe { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Some(Keyword::Unsafe)
+        } else {
+            None
+        };
 
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
@@ -42,12 +49,14 @@ impl BlockExpr {
 
         if statements.is_empty() {
             Ok(BlockExpr {
+                kw_unsafe_opt,
                 open_brace,
                 statements_opt: None,
                 close_brace: close_brace?,
             })
         } else {
             Ok(BlockExpr {
+                kw_unsafe_opt,
                 open_brace,
                 statements_opt: Some(statements),
                 close_brace: close_brace?,
@@ -63,7 +72,7 @@ mod tests {
     #[test]
     fn parse_block_expr() -> Result<(), ()> {
         let input = r#"
-        {
+        unsafe {
             x + 2;
             y
         }"#;

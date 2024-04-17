@@ -232,6 +232,8 @@ impl Parser {
                 self,
                 UnaryOp::Dereference,
             )?)),
+            Some(Token::Unsafe { .. }) => Ok(Expression::Block(BlockExpr::parse(self)?)),
+
             Some(Token::LParen { .. }) => {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     Ok(Expression::Tuple(TupleExpr::parse(self)?))
