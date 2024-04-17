@@ -11,9 +11,9 @@ pub enum ImportTree {
 
 #[derive(Debug, Clone)]
 pub enum Visibility {
-    Private,
-    PubPackage(Keyword, Delimiter, Keyword, Delimiter), // `pub(package)`
-    Pub(Keyword),                                       // `pub`
+    Private,                   // default
+    PubPackage(PubPackageVis), // `pub(package)`
+    Pub(Keyword),              // `pub`
 }
 
 #[derive(Debug, Clone)]
@@ -24,14 +24,22 @@ pub struct PathSubset {
     pub close_brace: Delimiter,
 }
 
+#[derive(Debug, Clone)]
+pub struct PubPackageVis {
+    pub kw_pub: Keyword,
+    pub open_paren: Delimiter,
+    pub kw_package: Keyword,
+    pub close_paren: Delimiter,
+}
+
 ///////////////////////////////////////////////////////////////////////////
 /// NODES
 ///////////////////////////////////////////////////////////////////////////
-use super::{Delimiter, Expression, Identifier, Keyword, PathExpr, Separator, Type};
+use super::{Delimiter, Expression, OuterAttr, Identifier, Keyword, PathExpr, Separator, Type};
 
 #[derive(Debug, Clone)]
 pub struct AliasDecl {
-    // pub attributes_opt: Option<Vec<VariableAttr>>,
+    pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub kw_alias: Keyword,
     pub alias_name: Identifier,
@@ -41,7 +49,7 @@ pub struct AliasDecl {
 
 #[derive(Debug, Clone)]
 pub struct ConstantDecl {
-    // pub attributes_opt: Option<Vec<VariableAttr>>,
+    pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub kw_const: Keyword,
     pub item_name: Identifier,
@@ -58,7 +66,7 @@ pub struct FunctionDef {}
 
 #[derive(Debug, Clone)]
 pub struct ImportDecl {
-    // pub attributes_opt: Option<Vec<VariableAttr>>,
+    pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub kw_import: Keyword,
     pub import_trees: Vec<ImportTree>,
@@ -73,7 +81,7 @@ pub struct ModuleDef {}
 
 #[derive(Debug, Clone)]
 pub struct StaticItemDecl {
-    // pub attributes_opt: Option<Vec<VariableAttr>>,
+    pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub kw_static: Keyword,
     pub kw_mut_opt: Option<Keyword>,

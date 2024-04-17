@@ -37,10 +37,8 @@ pub struct Identifier(pub String);
 /// KEYWORDS
 ///////////////////////////////////////////////////////////////////////////
 
-// TODO: add `ModuleAttr`, `FunctionAttr`, `StructAttr` and `VariableAttr` enums
-
 /// Enum representing the different keyword AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Keyword {
     Import,
     Mod,
@@ -70,12 +68,35 @@ pub enum Keyword {
     Let,
 }
 
+#[derive(Debug, Clone)]
+pub enum InnerAttr {
+    Contract,
+    Interface,
+    Library,
+    Script,
+}
+
+#[derive(Debug, Clone)]
+pub enum OuterAttr {
+    Calldata,
+    Constructor,
+    Error,
+    Event,
+    Extern,
+    Modifier,
+    Payable,
+    Storage,
+    Test,
+    Topic,
+    View,
+}
+
 ///////////////////////////////////////////////////////////////////////////
 /// DELIMITERS
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different delimiter AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Delimiter {
     LParen,
     RParen,
@@ -90,7 +111,7 @@ pub enum Delimiter {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different unary operator AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum UnaryOp {
     Negate,       // `-`
     Not,          // `!`
@@ -100,7 +121,7 @@ pub enum UnaryOp {
 }
 
 /// Enum representing the different binary operator AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum BinaryOp {
     Add,
     Subtract,
@@ -134,14 +155,14 @@ pub enum BinaryOp {
 pub struct UnwrapOp(pub ());
 
 /// Enum representing the different range operator AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum RangeOp {
     RangeExclusive, // `..`
     RangeInclusive, // `..=`
 }
 
 /// Enum representing the different separator (punctuation) AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Separator {
     Colon,
     Semicolon,

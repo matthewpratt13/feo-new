@@ -442,16 +442,7 @@ impl<'a> Lexer<'a> {
 
                     span,
                 }),
-                "unsafe" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_inner_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
-                    }
-                }
+                "unsafe" => Ok(Token::Unsafe { name, span }),
                 "view" => {
                     if let Some(']') = self.peek_current() {
                         let token = self.tokenize_outer_attribute(name, span);
@@ -533,7 +524,6 @@ impl<'a> Lexer<'a> {
             "interface" => Ok(Token::Interface { name, span }),
             "library" => Ok(Token::Library { name, span }),
             "script" => Ok(Token::Script { name, span }),
-            "unsafe" => Ok(Token::Unsafe { name, span }),
 
             _ => {
                 self.log_error(LexErrorKind::UnrecognizedInnerAttribute { name });

@@ -30,11 +30,11 @@ use crate::{
         AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
         ConstantDecl, ContinueExpr, Declaration, Definition, Delimiter, EnumDef, Expression,
         ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef, GroupedExpr, Identifier, IfExpr,
-        ImportDecl, IndexExpr, InherentImplDef, Keyword, LetStmt, Literal, MatchExpr,
-        MethodCallExpr, ModuleDef, PathExpr, PathPrefix, RangeExpr, RangeOp, ReturnExpr, Separator,
-        Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr,
-        TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr,
-        UnwrapOp, WhileExpr,
+        ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Keyword, LetStmt, Literal, MatchExpr,
+        MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, RangeExpr, RangeOp, ReturnExpr,
+        Separator, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef,
+        TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr,
+        UnwrapExpr, UnwrapOp, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -751,6 +751,49 @@ impl Parser {
             Some(Token::Break { .. }) => Ok(Keyword::Break),
             Some(Token::Continue { .. }) => Ok(Keyword::Continue),
             Some(Token::Return { .. }) => Ok(Keyword::Return),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: format!("`{:#?}`", expected),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
+
+    fn expect_inner_attr(&mut self, expected: Token) -> Result<InnerAttr, ErrorsEmitted> {
+        let token = self.consume_token();
+
+        match token {
+            Some(Token::Contract { .. }) => Ok(InnerAttr::Contract),
+            Some(Token::Interface { .. }) => Ok(InnerAttr::Interface),
+            Some(Token::Library { .. }) => Ok(InnerAttr::Library),
+            Some(Token::Script { .. }) => Ok(InnerAttr::Script),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: format!("`{:#?}`", expected),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
+
+    fn expect_outer_attr(&mut self, expected: Token) -> Result<OuterAttr, ErrorsEmitted> {
+        let token = self.consume_token();
+
+        match token {
+            Some(Token::Calldata { .. }) => Ok(OuterAttr::Calldata),
+            Some(Token::Constructor { .. }) => Ok(OuterAttr::Constructor),
+            Some(Token::Error { .. }) => Ok(OuterAttr::Error),
+            Some(Token::Event { .. }) => Ok(OuterAttr::Event),
+            Some(Token::Extern { .. }) => Ok(OuterAttr::Extern),
+            Some(Token::Modifier { .. }) => Ok(OuterAttr::Modifier),
+            Some(Token::Payable { .. }) => Ok(OuterAttr::Payable),
+            Some(Token::Storage { .. }) => Ok(OuterAttr::Storage),
+            Some(Token::Test { .. }) => Ok(OuterAttr::Test),
+            Some(Token::Topic { .. }) => Ok(OuterAttr::Topic),
+            Some(Token::View { .. }) => Ok(OuterAttr::View),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
