@@ -1001,13 +1001,11 @@ impl Parser {
             Some(Token::U256Type { .. }) => Ok(Type::U256),
             Some(Token::U512Type { .. }) => Ok(Type::U512),
             Some(Token::ByteType { .. }) => Ok(Type::Byte),
-            Some(
-                Token::B2Type { .. }
-                | Token::B4Type { .. }
-                | Token::B8Type { .. }
-                | Token::B16Type { .. }
-                | Token::B32Type { .. },
-            ) => Ok(Type::Bytes),
+            Some(Token::B2Type { .. }) => Ok(Type::B2),
+            Some(Token::B4Type { .. }) => Ok(Type::B4),
+            Some(Token::B8Type { .. }) => Ok(Type::B8),
+            Some(Token::B16Type { .. }) => Ok(Type::B16),
+            Some(Token::B32Type { .. }) => Ok(Type::B32),
             Some(Token::H160Type { .. }) => Ok(Type::H160),
             Some(Token::H256Type { .. }) => Ok(Type::H256),
             Some(Token::H512Type { .. }) => Ok(Type::H512),

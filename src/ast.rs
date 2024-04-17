@@ -263,7 +263,11 @@ pub enum Type {
     U256,
     U512,
     Byte, // `u8`
-    Bytes,
+    B2,
+    B4,
+    B8,
+    B16,
+    B32,
     H160,
     H256,
     H512,
