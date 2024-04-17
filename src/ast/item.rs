@@ -28,7 +28,7 @@ pub struct AliasDecl {
     // pub visibility_opt: Option<Visibility>,
     pub kw_alias: Keyword,
     pub alias_name: Identifier,
-    pub type_ann_opt: Option<(Separator, Type)>, // `= Type`
+    pub assignment_opt: Option<(Separator, Type)>, // `= Type`
     pub semicolon: Separator,
 }
 
