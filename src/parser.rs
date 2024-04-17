@@ -104,6 +104,10 @@ impl Parser {
             }
         }
 
+        if let Some(Token::Semicolon { .. }) = self.peek_current() {
+            self.consume_token();
+        }
+
         println!("RETURNED EXPRESSION: {:?}", left_expr);
         println!("EXIT `parse_expression()`");
         println!("CURRENT TOKEN: {:?}\n", self.peek_current());
@@ -354,6 +358,7 @@ impl Parser {
                     kw_continue: Keyword::Continue,
                 }))
             }
+
             Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "expression prefix".to_string(),
