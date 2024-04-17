@@ -1,7 +1,26 @@
 ///////////////////////////////////////////////////////////////////////////
+/// HELPER TYPES
+///////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Clone)]
+pub enum ImportTree {
+    SimplePath(PathExpr),           // `package::module::Foo`
+    PathSubset(PathSubset),         // `::{ Foo, Bar }`
+    PathRecursive(Box<ImportTree>), // package::module::{ Foo, bar::{ Baz } }
+}
+
+#[derive(Debug, Clone)]
+pub struct PathSubset {
+    pub dbl_colon: Separator,
+    pub open_brace: Delimiter,
+    pub trees: Vec<PathExpr>,
+    pub close_brace: Delimiter,
+}
+
+///////////////////////////////////////////////////////////////////////////
 /// NODES
 ///////////////////////////////////////////////////////////////////////////
-use super::{Expression, Identifier, Keyword, Separator, Type};
+use super::{Delimiter, Expression, Identifier, Keyword, PathExpr, Separator, Type};
 
 #[derive(Debug, Clone)]
 pub struct AliasDecl {
@@ -31,7 +50,13 @@ pub struct EnumDef {}
 pub struct FunctionDef {}
 
 #[derive(Debug, Clone)]
-pub struct ImportDecl {}
+pub struct ImportDecl {
+    // pub attributes_opt: Option<Vec<VariableAttr>>,
+    // pub visibility_opt: Option<Visibility>,
+    pub kw_import: Keyword,
+    pub import_trees: Vec<ImportTree>,
+    pub semicolon: Separator,
+}
 
 #[derive(Debug, Clone)]
 pub struct InherentImplDef {}

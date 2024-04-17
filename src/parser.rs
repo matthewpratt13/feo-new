@@ -10,6 +10,7 @@ mod field_access_expr;
 mod for_in_expr;
 mod grouped_expr;
 mod if_expr;
+mod import_decl;
 mod index_expr;
 mod item;
 mod match_expr;
@@ -71,8 +72,8 @@ impl Parser {
     fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
         while self.current < self.stream.tokens().len() {
-           let statement = self.parse_statement()?;
-           statements.push(statement);
+            let statement = self.parse_statement()?;
+            statements.push(statement);
         }
         Ok(statements)
     }
@@ -127,6 +128,7 @@ impl Parser {
             Some(Token::Identifier { name, .. }) => Ok(Expression::Path(PathExpr {
                 root: PathPrefix::Identifier(Identifier(name)),
                 tree_opt: None,
+                wildcard_opt: None,
             })),
             Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
             Some(Token::UIntLiteral { value, .. }) => Ok(Expression::Literal(Literal::UInt(value))),
@@ -195,6 +197,7 @@ impl Parser {
                 Ok(Expression::Path(PathExpr {
                     root: PathPrefix::SelfType,
                     tree_opt: None,
+                    wildcard_opt: None,
                 }))
             }
             Some(Token::SelfKeyword { .. }) => {
@@ -202,6 +205,7 @@ impl Parser {
                 Ok(Expression::Path(PathExpr {
                     root: PathPrefix::SelfKeyword,
                     tree_opt: None,
+                    wildcard_opt: None,
                 }))
             }
             Some(Token::Package { .. }) => {
@@ -241,6 +245,7 @@ impl Parser {
                     let path = PathExpr {
                         root: PathPrefix::Identifier(Identifier(name)),
                         tree_opt: None,
+                        wildcard_opt: None,
                     };
 
                     Ok(Expression::Struct(StructExpr::parse(self, path)?))
@@ -250,6 +255,7 @@ impl Parser {
                     let path = PathExpr {
                         root: PathPrefix::SelfType,
                         tree_opt: None,
+                        wildcard_opt: None,
                     };
 
                     Ok(Expression::Struct(StructExpr::parse(self, path)?))
@@ -324,7 +330,6 @@ impl Parser {
                     to_opt: Some(Box::new(expr)),
                 }))
             }
-
             Some(Token::If { .. }) => Ok(Expression::If(IfExpr::parse(self)?)),
 
             // TODO: distinguish from `StructExpr` (i.e., after the `match` keyword)

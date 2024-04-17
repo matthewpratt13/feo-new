@@ -162,6 +162,7 @@ pub struct MethodCallExpr {
 pub struct PathExpr {
     pub root: PathPrefix,
     pub tree_opt: Option<Vec<Identifier>>,
+    pub wildcard_opt: Option<Separator>, // `::*`
 }
 
 #[derive(Debug, Clone)]
