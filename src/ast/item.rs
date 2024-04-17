@@ -4,7 +4,14 @@
 use super::{Expression, Identifier, Keyword, Separator, Type};
 
 #[derive(Debug, Clone)]
-pub struct AliasDecl {}
+pub struct AliasDecl {
+    // pub attributes_opt: Option<Vec<VariableAttr>>,
+    // pub visibility_opt: Option<Visibility>,
+    pub kw_alias: Keyword,
+    pub alias_name: Identifier,
+    pub type_ann_opt: Option<(Separator, Type)>, // `= Type`
+    pub semicolon: Separator,
+}
 
 #[derive(Debug, Clone)]
 pub struct ConstantDecl {
