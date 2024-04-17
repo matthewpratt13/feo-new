@@ -47,17 +47,11 @@ impl ParseStatement for LetStmt {
             None
         };
 
-        // let semicolon = parser.expect_separator(Token::Semicolon {
-        //     punc: ';',
-        //     span: parser.stream.span(),
-        // })?;
-
         Ok(LetStmt {
             kw_let,
             assignee,
             type_ann_opt,
             value_opt,
-            // semicolon,
         })
     }
 }
