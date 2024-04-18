@@ -1,5 +1,5 @@
 use crate::{
-    ast::{ConstantDecl, Identifier, OuterAttr},
+    ast::{ConstantDecl, Identifier, OuterAttr, Visibility},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -10,9 +10,8 @@ impl ParseDeclaration for ConstantDecl {
     fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
+        visibility: Visibility,
     ) -> Result<ConstantDecl, ErrorsEmitted> {
-        let visibility = parser.get_visibility()?;
-
         let kw_const = parser.expect_keyword(Token::Const {
             name: "const".to_string(),
             span: parser.stream.span(),
@@ -41,6 +40,15 @@ impl ParseDeclaration for ConstantDecl {
         } else {
             None
         };
+
+        if let Some(Token::Semicolon { .. }) = parser.peek_behind_by(1) {
+            ()
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "`;`".to_string(),
+                found: parser.peek_current(),
+            })
+        }
 
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
@@ -76,7 +84,7 @@ mod tests {
     fn parse_constant_decl() -> Result<(), ()> {
         let input = r#"
         #[storage]
-        const foo: str = "bar";"#;
+        pub const foo: str = "bar";"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

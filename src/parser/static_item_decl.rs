@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Identifier, Keyword, OuterAttr, StaticItemDecl},
+    ast::{Identifier, Keyword, OuterAttr, StaticItemDecl, Visibility},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -10,9 +10,8 @@ impl ParseDeclaration for StaticItemDecl {
     fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
+        visibility: Visibility,
     ) -> Result<StaticItemDecl, ErrorsEmitted> {
-        let visibility = parser.get_visibility()?;
-
         let kw_static = parser.expect_keyword(Token::Static {
             name: "static".to_string(),
             span: parser.stream.span(),
@@ -48,6 +47,15 @@ impl ParseDeclaration for StaticItemDecl {
         } else {
             None
         };
+
+        if let Some(Token::Semicolon { .. }) = parser.peek_behind_by(1) {
+            ()
+        } else {
+            parser.log_error(ParserErrorKind::UnexpectedToken {
+                expected: "`;`".to_string(),
+                found: parser.peek_current(),
+            })
+        }
 
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
@@ -85,7 +93,7 @@ mod tests {
     fn parse_static_item_decl() -> Result<(), ()> {
         let input = r#"
         #[storage]
-        static mut foo: str = "bar";"#;
+        pub(package) static mut foo: str = "bar";"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

@@ -615,7 +615,8 @@ impl Parser {
                 | Token::Error { .. }
                 | Token::Storage { .. }
                 | Token::Topic { .. }
-                | Token::Calldata { .. },
+                | Token::Calldata { .. }
+                | Token::Pub { .. },
             ) => self.get_item(),
 
             Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
@@ -1045,39 +1046,41 @@ impl Parser {
             self.consume_token();
         }
 
+        let visibility = self.get_visibility()?;
+
         let token = self.peek_current();
 
         match token {
             Some(Token::Import { .. }) => Ok(Statement::Declaration(Declaration::Import(
-                ImportDecl::parse(self, outer_attributes)?,
+                ImportDecl::parse(self, outer_attributes, visibility)?,
             ))),
             Some(Token::Alias { .. }) => Ok(Statement::Declaration(Declaration::Alias(
-                AliasDecl::parse(self, outer_attributes)?,
+                AliasDecl::parse(self, outer_attributes, visibility)?,
             ))),
             Some(Token::Const { .. }) => Ok(Statement::Declaration(Declaration::Constant(
-                ConstantDecl::parse(self, outer_attributes)?,
+                ConstantDecl::parse(self, outer_attributes, visibility)?,
             ))),
             Some(Token::Static { .. }) => Ok(Statement::Declaration(Declaration::StaticItem(
-                StaticItemDecl::parse(self, outer_attributes)?,
+                StaticItemDecl::parse(self, outer_attributes, visibility)?,
             ))),
             Some(Token::Mod { .. }) => Ok(Statement::Definition(Definition::Module(
-                ModuleDef::parse(self, inner_attributes)?,
+                ModuleDef::parse(self, inner_attributes, visibility)?,
             ))),
             Some(Token::Trait { .. }) => Ok(Statement::Definition(Definition::Trait(
-                TraitDef::parse(self, outer_attributes)?,
+                TraitDef::parse(self, outer_attributes, visibility)?,
             ))),
             Some(Token::Enum { .. }) => Ok(Statement::Definition(Definition::Enum(
-                EnumDef::parse(self, outer_attributes)?,
+                EnumDef::parse(self, outer_attributes, visibility)?,
             ))),
             Some(Token::Struct { .. }) => Ok(Statement::Definition(Definition::Struct(
-                StructDef::parse(self, outer_attributes)?,
+                StructDef::parse(self, outer_attributes, visibility)?,
             ))),
             Some(Token::Impl { .. }) => match self.peek_ahead_by(2) {
                 Some(Token::For { .. }) => Ok(Statement::Definition(Definition::TraitImpl(
-                    TraitImplDef::parse(self, outer_attributes)?,
+                    TraitImplDef::parse(self, outer_attributes, visibility)?,
                 ))),
                 Some(Token::LBrace { .. }) => Ok(Statement::Definition(Definition::InherentImpl(
-                    InherentImplDef::parse(self, outer_attributes)?,
+                    InherentImplDef::parse(self, outer_attributes, visibility)?,
                 ))),
                 _ => {
                     self.log_error(ParserErrorKind::UnexpectedToken {

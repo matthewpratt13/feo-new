@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Identifier, ImportDecl, OuterAttr, PathExpr, PathPrefix, PathSubset},
+    ast::{Identifier, ImportDecl, OuterAttr, PathExpr, PathPrefix, PathSubset, Visibility},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -7,7 +7,11 @@ use crate::{
 use super::{item::ParseDeclaration, Parser};
 
 impl ParseDeclaration for ImportDecl {
-    fn parse(parser: &mut Parser, attributes: Vec<OuterAttr>) -> Result<ImportDecl, ErrorsEmitted> {
+    fn parse(
+        parser: &mut Parser,
+        attributes: Vec<OuterAttr>,
+        visibility: Visibility,
+    ) -> Result<ImportDecl, ErrorsEmitted> {
         todo!()
     }
 }
