@@ -77,3 +77,24 @@ impl ParseDeclaration for ConstantDecl {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::test_utils;
+
+    #[test]
+    fn parse_constant_decl() -> Result<(), ()> {
+        let input = r#"
+        #[storage]
+        const foo: str = "bar;""#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+}

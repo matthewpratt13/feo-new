@@ -591,22 +591,34 @@ impl Parser {
         let token = self.peek_current();
 
         match token {
-            Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
-
             Some(
                 Token::Import { .. }
                 | Token::Alias { .. }
                 | Token::Const { .. }
-                | Token::Static { .. },
-            ) => Ok(Statement::Declaration(self.parse_declaration()?)),
-
-            Some(
-                Token::Mod { .. }
+                | Token::Static { .. }
+                | Token::Mod { .. }
                 | Token::Trait { .. }
                 | Token::Enum { .. }
                 | Token::Struct { .. }
-                | Token::Impl { .. },
-            ) => Ok(Statement::Definition(self.parse_definition()?)),
+                | Token::Impl { .. }
+                | Token::Contract { .. }
+                | Token::Library { .. }
+                | Token::Script { .. }
+                | Token::Interface { .. }
+                | Token::Constructor { .. }
+                | Token::Modifier { .. }
+                | Token::Test { .. }
+                | Token::View { .. }
+                | Token::Extern { .. }
+                | Token::Payable { .. }
+                | Token::Event { .. }
+                | Token::Error { .. }
+                | Token::Storage { .. }
+                | Token::Topic { .. }
+                | Token::Calldata { .. },
+            ) => self.get_item(),
+
+            Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
 
             _ => Ok(Statement::Expression(ExpressionStmt::parse(self)?)),
         }
@@ -616,48 +628,82 @@ impl Parser {
     /// ITEMS
     ///////////////////////////////////////////////////////////////////////////
 
-    fn parse_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
-        let token = self.peek_current();
+    // fn parse_declaration(&mut self) -> Result<Statement, ErrorsEmitted> {
+    //     let mut peek_counter: usize = 0;
 
-        match token {
-            Some(Token::Import { .. }) => Ok(Declaration::Import(ImportDecl::parse(self)?)),
-            Some(Token::Alias { .. }) => Ok(Declaration::Alias(AliasDecl::parse(self)?)),
-            Some(Token::Const { .. }) => Ok(Declaration::Constant(ConstantDecl::parse(self)?)),
-            Some(Token::Static { .. }) => Ok(Declaration::StaticItem(StaticItemDecl::parse(self)?)),
-            _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "declaration item".to_string(),
-                    found: token,
-                });
-                Err(ErrorsEmitted(()))
-            }
-        }
-    }
+    //     while let Some(oa) = self.get_outer_attr() {
+    //         peek_counter += 1;
+    //     }
+
+    //     let token = self.peek_ahead_by(peek_counter);
+
+    //     self.get_item(token)
+
+    // match token {
+    //     Some(Token::Import { .. }) => Ok(Declaration::Import(ImportDecl::parse(self)?)),
+    //     Some(Token::Alias { .. }) => Ok(Declaration::Alias(AliasDecl::parse(self)?)),
+    //     Some(Token::Const { .. }) => Ok(Declaration::Constant(ConstantDecl::parse(self)?)),
+    //     Some(Token::Static { .. }) => Ok(Declaration::StaticItem(StaticItemDecl::parse(self)?)),
+    //     _ => {
+    //         self.log_error(ParserErrorKind::UnexpectedToken {
+    //             expected: "declaration item".to_string(),
+    //             found: token,
+    //         });
+    //         Err(ErrorsEmitted(()))
+    //     }
+    // }
+    // }
 
     fn parse_definition(&mut self) -> Result<Definition, ErrorsEmitted> {
         let token = self.peek_current();
 
-        match token {
-            Some(Token::Mod { .. }) => Ok(Definition::Module(ModuleDef::parse(self)?)),
-            Some(Token::Trait { .. }) => Ok(Definition::Trait(TraitDef::parse(self)?)),
-            Some(Token::Enum { .. }) => Ok(Definition::Enum(EnumDef::parse(self)?)),
-            Some(Token::Struct { .. }) => Ok(Definition::Struct(StructDef::parse(self)?)),
-            Some(Token::Impl { .. }) => {
-                if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
-                    Ok(Definition::TraitImpl(TraitImplDef::parse(self)?))
-                } else {
-                    Ok(Definition::InherentImpl(InherentImplDef::parse(self)?))
-                }
-            }
-            Some(Token::Func { .. }) => Ok(Definition::Function(FunctionDef::parse(self)?)),
-            _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "definition item".to_string(),
-                    found: token,
-                });
-                Err(ErrorsEmitted(()))
-            }
+        match self.get_inner_attr() {
+            _ => match self.get_outer_attr() {
+                _ => match token {
+                    Some(Token::Mod { .. }) => Ok(Definition::Module(ModuleDef::parse(self)?)),
+                    Some(Token::Trait { .. }) => Ok(Definition::Trait(TraitDef::parse(self)?)),
+                    Some(Token::Enum { .. }) => Ok(Definition::Enum(EnumDef::parse(self)?)),
+                    Some(Token::Struct { .. }) => Ok(Definition::Struct(StructDef::parse(self)?)),
+                    Some(Token::Impl { .. }) => {
+                        if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
+                            Ok(Definition::TraitImpl(TraitImplDef::parse(self)?))
+                        } else {
+                            Ok(Definition::InherentImpl(InherentImplDef::parse(self)?))
+                        }
+                    }
+                    Some(Token::Func { .. }) => Ok(Definition::Function(FunctionDef::parse(self)?)),
+                    _ => {
+                        self.log_error(ParserErrorKind::UnexpectedToken {
+                            expected: "definition item".to_string(),
+                            found: token,
+                        });
+                        Err(ErrorsEmitted(()))
+                    }
+                },
+            },
         }
+
+        // match token {
+        //     Some(Token::Mod { .. }) => Ok(Definition::Module(ModuleDef::parse(self)?)),
+        //     Some(Token::Trait { .. }) => Ok(Definition::Trait(TraitDef::parse(self)?)),
+        //     Some(Token::Enum { .. }) => Ok(Definition::Enum(EnumDef::parse(self)?)),
+        //     Some(Token::Struct { .. }) => Ok(Definition::Struct(StructDef::parse(self)?)),
+        //     Some(Token::Impl { .. }) => {
+        //         if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
+        //             Ok(Definition::TraitImpl(TraitImplDef::parse(self)?))
+        //         } else {
+        //             Ok(Definition::InherentImpl(InherentImplDef::parse(self)?))
+        //         }
+        //     }
+        //     Some(Token::Func { .. }) => Ok(Definition::Function(FunctionDef::parse(self)?)),
+        //     _ => {
+        //         self.log_error(ParserErrorKind::UnexpectedToken {
+        //             expected: "definition item".to_string(),
+        //             found: token,
+        //         });
+        //         Err(ErrorsEmitted(()))
+        //     }
+        // }
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -934,7 +980,7 @@ impl Parser {
         let error = CompilerError::new(
             error_kind,
             &self.stream.span().input(),
-            self.stream.tokens()[self.current - 1].span().start(),
+            self.stream.tokens()[self.current].span().start(),
         );
         self.errors.push(error);
     }
@@ -996,7 +1042,7 @@ impl Parser {
         }
     }
 
-    pub fn get_outer_attr(&mut self) -> Option<OuterAttr> {
+    fn get_outer_attr(&self) -> Option<OuterAttr> {
         let token = self.peek_current();
 
         match token {
@@ -1015,7 +1061,7 @@ impl Parser {
         }
     }
 
-    pub fn get_inner_attr(&mut self) -> Option<InnerAttr> {
+    fn get_inner_attr(&self) -> Option<InnerAttr> {
         let token = self.peek_current();
 
         match token {
@@ -1027,7 +1073,7 @@ impl Parser {
         }
     }
 
-    pub fn get_visibility(&mut self) -> Result<Visibility, ErrorsEmitted> {
+    fn get_visibility(&mut self) -> Result<Visibility, ErrorsEmitted> {
         let token = self.peek_current();
 
         match token {
@@ -1061,6 +1107,40 @@ impl Parser {
                 }
             }
             _ => Ok(Visibility::Private),
+        }
+    }
+
+    fn get_item(&mut self) -> Result<Statement, ErrorsEmitted> {
+        let token = self.peek_current();
+
+        match token {
+            Some(Token::Import { .. }) => Ok(Statement::Declaration(Declaration::Import(
+                ImportDecl::parse(self)?,
+            ))),
+            Some(Token::Alias { .. }) => Ok(Statement::Declaration(Declaration::Alias(
+                AliasDecl::parse(self)?,
+            ))),
+            Some(Token::Const { .. }) => Ok(Statement::Declaration(Declaration::Constant(
+                ConstantDecl::parse(self)?,
+            ))),
+            Some(Token::Static { .. }) => Ok(Statement::Declaration(Declaration::StaticItem(
+                StaticItemDecl::parse(self)?,
+            ))),
+            // TODO: change below to same pattern as above
+            Some(
+                Token::Mod { .. }
+                | Token::Trait { .. }
+                | Token::Enum { .. }
+                | Token::Struct { .. }
+                | Token::Impl { .. },
+            ) => Ok(Statement::Definition(self.parse_definition()?)),
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "declaration or definition item".to_string(),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
         }
     }
 }
