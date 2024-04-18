@@ -67,6 +67,7 @@ pub enum Keyword {
     Return,
     Unsafe,
     Let,
+    Mut,
 }
 
 #[derive(Debug, Clone)]
