@@ -13,7 +13,7 @@ pub enum ImportTree {
 pub enum Visibility {
     Private,                   // default
     PubPackage(PubPackageVis), // `pub(package)`
-    Pub(Keyword),              // `pub`
+    Pub,                       // `pub`
 }
 
 #[derive(Debug, Clone)]
@@ -35,7 +35,7 @@ pub struct PubPackageVis {
 ///////////////////////////////////////////////////////////////////////////
 /// NODES
 ///////////////////////////////////////////////////////////////////////////
-use super::{Delimiter, Expression, OuterAttr, Identifier, Keyword, PathExpr, Separator, Type};
+use super::{Delimiter, Expression, Identifier, Keyword, OuterAttr, PathExpr, Separator, Type};
 
 #[derive(Debug, Clone)]
 pub struct AliasDecl {

@@ -34,10 +34,10 @@ use crate::{
         ConstantDecl, ContinueExpr, Declaration, Definition, Delimiter, EnumDef, Expression,
         ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef, GroupedExpr, Identifier, IfExpr,
         ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Keyword, LetStmt, Literal, MatchExpr,
-        MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, RangeExpr, RangeOp, ReturnExpr,
-        Separator, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef,
-        TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr,
-        UnwrapExpr, UnwrapOp, WhileExpr,
+        MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr,
+        RangeOp, ReturnExpr, Separator, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef,
+        TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp,
+        UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -766,49 +766,6 @@ impl Parser {
         }
     }
 
-    fn expect_inner_attr(&mut self, expected: Token) -> Result<InnerAttr, ErrorsEmitted> {
-        let token = self.consume_token();
-
-        match token {
-            Some(Token::Contract { .. }) => Ok(InnerAttr::Contract),
-            Some(Token::Interface { .. }) => Ok(InnerAttr::Interface),
-            Some(Token::Library { .. }) => Ok(InnerAttr::Library),
-            Some(Token::Script { .. }) => Ok(InnerAttr::Script),
-            _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: format!("`{:#?}`", expected),
-                    found: token,
-                });
-                Err(ErrorsEmitted(()))
-            }
-        }
-    }
-
-    fn expect_outer_attr(&mut self, expected: Token) -> Result<OuterAttr, ErrorsEmitted> {
-        let token = self.consume_token();
-
-        match token {
-            Some(Token::Calldata { .. }) => Ok(OuterAttr::Calldata),
-            Some(Token::Constructor { .. }) => Ok(OuterAttr::Constructor),
-            Some(Token::Error { .. }) => Ok(OuterAttr::Error),
-            Some(Token::Event { .. }) => Ok(OuterAttr::Event),
-            Some(Token::Extern { .. }) => Ok(OuterAttr::Extern),
-            Some(Token::Modifier { .. }) => Ok(OuterAttr::Modifier),
-            Some(Token::Payable { .. }) => Ok(OuterAttr::Payable),
-            Some(Token::Storage { .. }) => Ok(OuterAttr::Storage),
-            Some(Token::Test { .. }) => Ok(OuterAttr::Test),
-            Some(Token::Topic { .. }) => Ok(OuterAttr::Topic),
-            Some(Token::View { .. }) => Ok(OuterAttr::View),
-            _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: format!("`{:#?}`", expected),
-                    found: token,
-                });
-                Err(ErrorsEmitted(()))
-            }
-        }
-    }
-
     fn expect_delimiter(&mut self, expected: Token) -> Result<Delimiter, ErrorsEmitted> {
         let token = self.consume_token();
 
@@ -1036,6 +993,74 @@ impl Parser {
                 });
                 Err(ErrorsEmitted(()))
             }
+        }
+    }
+
+    pub fn get_outer_attr(&mut self) -> Option<OuterAttr> {
+        let token = self.peek_current();
+
+        match token {
+            Some(Token::Calldata { .. }) => Some(OuterAttr::Calldata),
+            Some(Token::Constructor { .. }) => Some(OuterAttr::Constructor),
+            Some(Token::Error { .. }) => Some(OuterAttr::Error),
+            Some(Token::Event { .. }) => Some(OuterAttr::Event),
+            Some(Token::Extern { .. }) => Some(OuterAttr::Extern),
+            Some(Token::Modifier { .. }) => Some(OuterAttr::Modifier),
+            Some(Token::Payable { .. }) => Some(OuterAttr::Payable),
+            Some(Token::Storage { .. }) => Some(OuterAttr::Storage),
+            Some(Token::Test { .. }) => Some(OuterAttr::Test),
+            Some(Token::Topic { .. }) => Some(OuterAttr::Topic),
+            Some(Token::View { .. }) => Some(OuterAttr::View),
+            _ => None,
+        }
+    }
+
+    pub fn get_inner_attr(&mut self) -> Option<InnerAttr> {
+        let token = self.peek_current();
+
+        match token {
+            Some(Token::Contract { .. }) => Some(InnerAttr::Contract),
+            Some(Token::Interface { .. }) => Some(InnerAttr::Interface),
+            Some(Token::Library { .. }) => Some(InnerAttr::Library),
+            Some(Token::Script { .. }) => Some(InnerAttr::Script),
+            _ => None,
+        }
+    }
+
+    pub fn get_visibility(&mut self) -> Result<Visibility, ErrorsEmitted> {
+        let token = self.peek_current();
+
+        match token {
+            Some(Token::Pub { .. }) => {
+                self.consume_token();
+
+                match self.peek_current() {
+                    Some(Token::LParen { .. }) => {
+                        self.consume_token();
+
+                        let kw_package = self.expect_keyword(Token::Package {
+                            name: "package".to_string(),
+                            span: self.stream.span(),
+                        })?;
+
+                        let close_paren = self.expect_delimiter(Token::RParen {
+                            delim: ')',
+                            span: self.stream.span(),
+                        })?;
+
+                        let pub_package = PubPackageVis {
+                            kw_pub: Keyword::Pub,
+                            open_paren: Delimiter::LParen,
+                            kw_package,
+                            close_paren,
+                        };
+
+                        Ok(Visibility::PubPackage(pub_package))
+                    }
+                    _ => Ok(Visibility::Pub),
+                }
+            }
+            _ => Ok(Visibility::Private),
         }
     }
 }
