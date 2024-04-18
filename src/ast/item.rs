@@ -43,8 +43,7 @@ pub struct AliasDecl {
     pub visibility: Visibility,
     pub kw_alias: Keyword,
     pub alias_name: Identifier,
-    pub assignment_opt: Option<(Separator, Type)>, // `= Type`
-    pub semicolon: Separator,
+    pub original_type_opt: Option<Type>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,7 +53,7 @@ pub struct ConstantDecl {
     pub kw_const: Keyword,
     pub item_name: Identifier,
     pub item_type: Type,
-    pub assignment_opt: Option<Box<Expression>>,
+    pub value_opt: Option<Box<Expression>>,
 }
 
 #[derive(Debug, Clone)]
@@ -86,7 +85,7 @@ pub struct StaticItemDecl {
     pub kw_mut_opt: Option<Keyword>,
     pub item_name: Identifier,
     pub item_type: Type,
-    pub assignment_opt: Option<Box<Expression>>,
+    pub value_opt: Option<Box<Expression>>,
 }
 
 #[derive(Debug, Clone)]

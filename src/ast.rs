@@ -50,6 +50,7 @@ pub enum Keyword {
     As,
     Const,
     Static,
+    Alias,
     Func,
     Struct,
     Enum,

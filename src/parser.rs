@@ -705,6 +705,7 @@ impl Parser {
             Some(Token::As { .. }) => Ok(Keyword::As),
             Some(Token::Const { .. }) => Ok(Keyword::Const),
             Some(Token::Static { .. }) => Ok(Keyword::Static),
+            Some(Token::Alias { .. }) => Ok(Keyword::Alias),
             Some(Token::Func { .. }) => Ok(Keyword::Func),
             Some(Token::Struct { .. }) => Ok(Keyword::Struct),
             Some(Token::Enum { .. }) => Ok(Keyword::Enum),
@@ -720,6 +721,8 @@ impl Parser {
             Some(Token::Break { .. }) => Ok(Keyword::Break),
             Some(Token::Continue { .. }) => Ok(Keyword::Continue),
             Some(Token::Return { .. }) => Ok(Keyword::Return),
+            Some(Token::Let { .. }) => Ok(Keyword::Let),
+            Some(Token::Mut { .. }) => Ok(Keyword::Mut),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),

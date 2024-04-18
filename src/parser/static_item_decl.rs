@@ -42,7 +42,7 @@ impl ParseDeclaration for StaticItemDecl {
 
         let item_type = parser.get_type()?;
 
-        let assignment_opt = if let Some(Token::Equals { .. }) = parser.peek_current() {
+        let value_opt = if let Some(Token::Equals { .. }) = parser.peek_current() {
             parser.consume_token();
             Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
         } else {
@@ -61,7 +61,7 @@ impl ParseDeclaration for StaticItemDecl {
                 kw_mut_opt,
                 item_name,
                 item_type,
-                assignment_opt,
+                value_opt,
             })
         } else {
             Ok(StaticItemDecl {
@@ -71,7 +71,7 @@ impl ParseDeclaration for StaticItemDecl {
                 kw_mut_opt,
                 item_name,
                 item_type,
-                assignment_opt,
+                value_opt,
             })
         }
     }
