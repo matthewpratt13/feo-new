@@ -7,14 +7,10 @@ use crate::{
 use super::{item::ParseDeclaration, Parser, Precedence};
 
 impl ParseDeclaration for ConstantDecl {
-    fn parse(parser: &mut Parser) -> Result<ConstantDecl, ErrorsEmitted> {
-        let mut attributes: Vec<OuterAttr> = Vec::new();
-
-        while let Some(oa) = parser.get_outer_attr() {
-            parser.consume_token();
-            attributes.push(oa);
-        }
-
+    fn parse(
+        parser: &mut Parser,
+        attributes: Vec<OuterAttr>,
+    ) -> Result<ConstantDecl, ErrorsEmitted> {
         let visibility = parser.get_visibility()?;
 
         let kw_const = parser.expect_keyword(Token::Const {
@@ -39,16 +35,12 @@ impl ParseDeclaration for ConstantDecl {
 
         let item_type = parser.get_type()?;
 
-        let assignment_opt = if let Some(Token::Equals { .. }) = parser.consume_token() {
+        let assignment_opt = if let Some(Token::Equals { .. }) = parser.peek_current() {
+            parser.consume_token();
             Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
         } else {
             None
         };
-
-        let semicolon = parser.expect_separator(Token::Semicolon {
-            punc: ';',
-            span: parser.stream.span(),
-        })?;
 
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
@@ -62,7 +54,6 @@ impl ParseDeclaration for ConstantDecl {
                 item_name,
                 item_type,
                 assignment_opt,
-                semicolon,
             })
         } else {
             Ok(ConstantDecl {
@@ -72,7 +63,6 @@ impl ParseDeclaration for ConstantDecl {
                 item_name,
                 item_type,
                 assignment_opt,
-                semicolon,
             })
         }
     }
@@ -86,7 +76,7 @@ mod tests {
     fn parse_constant_decl() -> Result<(), ()> {
         let input = r#"
         #[storage]
-        const foo: str = "bar;""#;
+        const foo: str = "bar";"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

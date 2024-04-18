@@ -1,5 +1,5 @@
 use crate::{
-    ast::{EnumDef, FunctionDef, InherentImplDef, ModuleDef, StructDef, TraitDef, TraitImplDef},
+    ast::{EnumDef, FunctionDef, InherentImplDef, ModuleDef, OuterAttr, StructDef, TraitDef, TraitImplDef},
     error::ErrorsEmitted,
 };
 
@@ -9,7 +9,10 @@ pub(crate) trait ParseDeclaration
 where
     Self: Sized,
 {
-    fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
+    fn parse(
+        parser: &mut Parser,
+        attributes: Vec<OuterAttr>,
+    ) -> Result<Self, ErrorsEmitted>;
 }
 
 pub(crate) trait ParseDefinition

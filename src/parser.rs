@@ -980,7 +980,7 @@ impl Parser {
         let error = CompilerError::new(
             error_kind,
             &self.stream.span().input(),
-            self.stream.tokens()[self.current].span().start(),
+            self.stream.tokens()[self.current - 1].span().start(),
         );
         self.errors.push(error);
     }
@@ -1111,20 +1111,27 @@ impl Parser {
     }
 
     fn get_item(&mut self) -> Result<Statement, ErrorsEmitted> {
+        let mut attributes: Vec<OuterAttr> = Vec::new();
+
+        while let Some(a) = self.get_outer_attr() {
+            attributes.push(a);
+            self.consume_token();
+        }
+
         let token = self.peek_current();
 
         match token {
             Some(Token::Import { .. }) => Ok(Statement::Declaration(Declaration::Import(
-                ImportDecl::parse(self)?,
+                ImportDecl::parse(self, attributes)?,
             ))),
             Some(Token::Alias { .. }) => Ok(Statement::Declaration(Declaration::Alias(
-                AliasDecl::parse(self)?,
+                AliasDecl::parse(self, attributes)?,
             ))),
             Some(Token::Const { .. }) => Ok(Statement::Declaration(Declaration::Constant(
-                ConstantDecl::parse(self)?,
+                ConstantDecl::parse(self, attributes)?,
             ))),
             Some(Token::Static { .. }) => Ok(Statement::Declaration(Declaration::StaticItem(
-                StaticItemDecl::parse(self)?,
+                StaticItemDecl::parse(self, attributes)?,
             ))),
             // TODO: change below to same pattern as above
             Some(

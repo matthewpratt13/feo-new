@@ -55,7 +55,6 @@ pub struct ConstantDecl {
     pub item_name: Identifier,
     pub item_type: Type,
     pub assignment_opt: Option<Box<Expression>>,
-    pub semicolon: Separator,
 }
 
 #[derive(Debug, Clone)]
