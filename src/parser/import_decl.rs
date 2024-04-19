@@ -62,7 +62,9 @@ impl ImportTree {
         let first_segment = PathSegment::parse(parser)?;
         segments.push(first_segment);
 
-        while let Some(Token::DblColon { .. }) = parser.consume_token() {
+        while let Some(Token::DblColon { .. }) = parser.peek_current() {
+            parser.consume_token();
+
             let next_segment = PathSegment::parse(parser)?;
             segments.push(next_segment);
         }
@@ -73,7 +75,7 @@ impl ImportTree {
 
 impl PathSegment {
     fn parse(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted> {
-        let token = parser.consume_token();
+        let token = parser.peek_current();
 
         let root = match token {
             Some(Token::Package { .. }) => Ok(PathPrefix::Package),
@@ -90,12 +92,16 @@ impl PathSegment {
             }
         }?;
 
-        let subset_opt = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+        parser.consume_token();
+
+        let subset_opt = if let Some(Token::LBrace { .. }) = parser.peek_ahead_by(1) {
             parser.consume_token();
             Some(PathSubset::parse(parser)?)
         } else {
             None
         };
+
+        println!("CURRENT TOKEN: {:?}", parser.peek_current());
 
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
@@ -107,19 +113,28 @@ impl PathSegment {
 
 impl PathSubset {
     fn parse(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
+        let mut trees: Vec<ImportTree> = Vec::new();
+
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),
         })?;
 
-        let mut trees: Vec<ImportTree> = Vec::new();
+        loop {
+            if let Some(Token::RBrace { .. }) = parser.peek_current() {
+                break;
+            }
 
-        while let Some(Token::Identifier { .. }) = parser.consume_token() {
             let tree = ImportTree::parse(parser)?;
             trees.push(tree);
 
-            match parser.peek_current() {
-                Some(Token::Comma { .. }) => continue,
+            let token = parser.peek_current();
+
+            match token {
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
+                }
                 Some(Token::RBrace { .. }) => break,
                 Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`,` or `}`".to_string(),
@@ -130,6 +145,23 @@ impl PathSubset {
                 }
             }
         }
+
+        // while let Some(Token::Identifier { .. }) = parser.consume_token() {
+        //     let tree = ImportTree::parse(parser)?;
+        //     trees.push(tree);
+
+        //     match parser.peek_current() {
+        //         Some(Token::Comma { .. }) => continue,
+        //         Some(Token::RBrace { .. }) => break,
+        //         Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
+        //             expected: "`,` or `}`".to_string(),
+        //             found: Some(t),
+        //         }),
+        //         None => {
+        //             parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
+        //         }
+        //     }
+        // }
 
         let close_brace = parser.expect_delimiter(Token::RBrace {
             delim: '}',
@@ -153,8 +185,32 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn parse_import_decl() -> Result<(), ()> {
+    fn parse_import_decl_simple() -> Result<(), ()> {
         let input = r#"pub import package::module::Object;"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_import_decl_nested() -> Result<(), ()> {
+        let input = r#"
+        pub import package::module::{
+            SomeObject,
+            inner_module::{ 
+                SomeInnerObject,
+                AnotherInnerObject
+            },
+            another_inner_module::some_function,
+            SOME_CONSTANT,
+        };
+        "#;
 
         let mut parser = test_utils::get_parser(input, false);
 
