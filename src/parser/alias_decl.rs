@@ -36,6 +36,11 @@ impl ParseDeclaration for AliasDecl {
             None
         };
 
+        let semicolon = parser.expect_separator(Token::Semicolon {
+            punc: ';',
+            span: parser.stream.span(),
+        })?;
+
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
         }
@@ -47,6 +52,7 @@ impl ParseDeclaration for AliasDecl {
                 kw_alias,
                 alias_name,
                 original_type_opt,
+                semicolon,
             })
         } else {
             Ok(AliasDecl {
@@ -55,6 +61,7 @@ impl ParseDeclaration for AliasDecl {
                 kw_alias,
                 alias_name,
                 original_type_opt,
+                semicolon,
             })
         }
     }
@@ -64,7 +71,6 @@ impl ParseDeclaration for AliasDecl {
 mod tests {
     use crate::parser::test_utils;
 
-    #[ignore]
     #[test]
     fn parse_alias_decl() -> Result<(), ()> {
         let input = r#"alias Foo = u64;"#;

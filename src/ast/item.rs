@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
-use super::{Delimiter, Expression, Identifier, Keyword, OuterAttr, PathExpr, Type};
+use super::{Delimiter, Expression, Identifier, Keyword, OuterAttr, PathExpr, Separator, Type};
 
 #[derive(Debug, Clone)]
 pub enum Visibility {
@@ -47,6 +47,7 @@ pub struct AliasDecl {
     pub kw_alias: Keyword,
     pub alias_name: Identifier,
     pub original_type_opt: Option<Type>,
+    pub semicolon: Separator,
 }
 
 #[derive(Debug, Clone)]
