@@ -37,10 +37,8 @@ pub struct Identifier(pub String);
 /// KEYWORDS
 ///////////////////////////////////////////////////////////////////////////
 
-// TODO: add `ModuleAttr`, `FunctionAttr`, `StructAttr` and `VariableAttr` enums
-
 /// Enum representing the different keyword AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Keyword {
     Import,
     Mod,
@@ -52,6 +50,7 @@ pub enum Keyword {
     As,
     Const,
     Static,
+    Alias,
     Func,
     Struct,
     Enum,
@@ -67,7 +66,32 @@ pub enum Keyword {
     Break,
     Continue,
     Return,
+    Unsafe,
     Let,
+    Mut,
+}
+
+#[derive(Debug, Clone)]
+pub enum InnerAttr {
+    Contract,
+    Interface,
+    Library,
+    Script,
+}
+
+#[derive(Debug, Clone)]
+pub enum OuterAttr {
+    Calldata,
+    Constructor,
+    Error,
+    Event,
+    Extern,
+    Modifier,
+    Payable,
+    Storage,
+    Test,
+    Topic,
+    View,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -75,7 +99,7 @@ pub enum Keyword {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different delimiter AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Delimiter {
     LParen,
     RParen,
@@ -90,7 +114,7 @@ pub enum Delimiter {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different unary operator AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum UnaryOp {
     Negate,       // `-`
     Not,          // `!`
@@ -100,7 +124,7 @@ pub enum UnaryOp {
 }
 
 /// Enum representing the different binary operator AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum BinaryOp {
     Add,
     Subtract,
@@ -134,14 +158,14 @@ pub enum BinaryOp {
 pub struct UnwrapOp(pub ());
 
 /// Enum representing the different range operator AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum RangeOp {
     RangeExclusive, // `..`
     RangeInclusive, // `..=`
 }
 
 /// Enum representing the different separator (punctuation) AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Separator {
     Colon,
     Semicolon,
@@ -205,10 +229,10 @@ pub enum Statement {
 /// Enum representing the different declaration nodes (items) in the AST.
 #[derive(Debug, Clone)]
 pub enum Declaration {
-    Import(ImportDecl),         // TODO
-    Alias(AliasDecl),           // TODO
-    Constant(ConstantDecl),     // TODO
-    StaticItem(StaticItemDecl), // TODO
+    Import(ImportDecl),
+    Alias(AliasDecl),
+    Constant(ConstantDecl),
+    StaticItem(StaticItemDecl),
 }
 
 /// Enum representing the different item definitions nodes in the AST.
@@ -241,7 +265,11 @@ pub enum Type {
     U256,
     U512,
     Byte, // `u8`
-    Bytes,
+    B2,
+    B4,
+    B8,
+    B16,
+    B32,
     H160,
     H256,
     H512,

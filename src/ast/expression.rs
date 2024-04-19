@@ -68,6 +68,7 @@ pub struct BinaryExpr {
 
 #[derive(Debug, Clone)]
 pub struct BlockExpr {
+    pub kw_unsafe_opt: Option<Keyword>,
     pub open_brace: Delimiter,
     pub statements_opt: Option<Vec<Statement>>,
     pub close_brace: Delimiter,
@@ -162,6 +163,7 @@ pub struct MethodCallExpr {
 pub struct PathExpr {
     pub root: PathPrefix,
     pub tree_opt: Option<Vec<Identifier>>,
+    pub wildcard_opt: Option<Separator>, // `::*`
 }
 
 #[derive(Debug, Clone)]

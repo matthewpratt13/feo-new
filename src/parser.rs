@@ -1,15 +1,18 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+mod alias_decl;
 mod array_expr;
 mod binary_expr;
 mod block_expr;
 mod call_expr;
 mod closure_expr;
+mod constant_decl;
 mod field_access_expr;
 mod for_in_expr;
 mod grouped_expr;
 mod if_expr;
+mod import_decl;
 mod index_expr;
 mod item;
 mod match_expr;
@@ -18,6 +21,7 @@ mod path_expr;
 mod precedence;
 mod range_expr;
 mod statement;
+mod static_item_decl;
 mod struct_expr;
 mod test_utils;
 mod tuple_expr;
@@ -28,12 +32,12 @@ use crate::{
     ast::{
         AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
         ConstantDecl, ContinueExpr, Declaration, Definition, Delimiter, EnumDef, Expression,
-        ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef, GroupedExpr, Identifier, IfExpr,
-        ImportDecl, IndexExpr, InherentImplDef, Keyword, LetStmt, Literal, MatchExpr,
-        MethodCallExpr, ModuleDef, PathExpr, PathPrefix, RangeExpr, RangeOp, ReturnExpr, Separator,
-        Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr,
-        TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr,
-        UnwrapOp, WhileExpr,
+        ExpressionStmt, FieldAccessExpr, ForInExpr, GroupedExpr, Identifier, IfExpr, ImportDecl,
+        IndexExpr, InherentImplDef, InnerAttr, Keyword, LetStmt, Literal, MatchExpr,
+        MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr,
+        RangeOp, ReturnExpr, Separator, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef,
+        TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp,
+        UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -71,8 +75,8 @@ impl Parser {
     fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
         while self.current < self.stream.tokens().len() {
-           let statement = self.parse_statement()?;
-           statements.push(statement);
+            let statement = self.parse_statement()?;
+            statements.push(statement);
         }
         Ok(statements)
     }
@@ -127,6 +131,7 @@ impl Parser {
             Some(Token::Identifier { name, .. }) => Ok(Expression::Path(PathExpr {
                 root: PathPrefix::Identifier(Identifier(name)),
                 tree_opt: None,
+                wildcard_opt: None,
             })),
             Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
             Some(Token::UIntLiteral { value, .. }) => Ok(Expression::Literal(Literal::UInt(value))),
@@ -195,6 +200,7 @@ impl Parser {
                 Ok(Expression::Path(PathExpr {
                     root: PathPrefix::SelfType,
                     tree_opt: None,
+                    wildcard_opt: None,
                 }))
             }
             Some(Token::SelfKeyword { .. }) => {
@@ -202,6 +208,7 @@ impl Parser {
                 Ok(Expression::Path(PathExpr {
                     root: PathPrefix::SelfKeyword,
                     tree_opt: None,
+                    wildcard_opt: None,
                 }))
             }
             Some(Token::Package { .. }) => {
@@ -228,6 +235,8 @@ impl Parser {
                 self,
                 UnaryOp::Dereference,
             )?)),
+            Some(Token::Unsafe { .. }) => Ok(Expression::Block(BlockExpr::parse(self)?)),
+
             Some(Token::LParen { .. }) => {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     Ok(Expression::Tuple(TupleExpr::parse(self)?))
@@ -241,6 +250,7 @@ impl Parser {
                     let path = PathExpr {
                         root: PathPrefix::Identifier(Identifier(name)),
                         tree_opt: None,
+                        wildcard_opt: None,
                     };
 
                     Ok(Expression::Struct(StructExpr::parse(self, path)?))
@@ -250,6 +260,7 @@ impl Parser {
                     let path = PathExpr {
                         root: PathPrefix::SelfType,
                         tree_opt: None,
+                        wildcard_opt: None,
                     };
 
                     Ok(Expression::Struct(StructExpr::parse(self, path)?))
@@ -324,7 +335,6 @@ impl Parser {
                     to_opt: Some(Box::new(expr)),
                 }))
             }
-
             Some(Token::If { .. }) => Ok(Expression::If(IfExpr::parse(self)?)),
 
             // TODO: distinguish from `StructExpr` (i.e., after the `match` keyword)
@@ -581,72 +591,37 @@ impl Parser {
         let token = self.peek_current();
 
         match token {
-            Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
-
             Some(
                 Token::Import { .. }
                 | Token::Alias { .. }
                 | Token::Const { .. }
-                | Token::Static { .. },
-            ) => Ok(Statement::Declaration(self.parse_declaration()?)),
-
-            Some(
-                Token::Mod { .. }
+                | Token::Static { .. }
+                | Token::Mod { .. }
                 | Token::Trait { .. }
                 | Token::Enum { .. }
                 | Token::Struct { .. }
-                | Token::Impl { .. },
-            ) => Ok(Statement::Definition(self.parse_definition()?)),
+                | Token::Impl { .. }
+                | Token::Contract { .. }
+                | Token::Library { .. }
+                | Token::Script { .. }
+                | Token::Interface { .. }
+                | Token::Constructor { .. }
+                | Token::Modifier { .. }
+                | Token::Test { .. }
+                | Token::View { .. }
+                | Token::Extern { .. }
+                | Token::Payable { .. }
+                | Token::Event { .. }
+                | Token::Error { .. }
+                | Token::Storage { .. }
+                | Token::Topic { .. }
+                | Token::Calldata { .. }
+                | Token::Pub { .. },
+            ) => self.get_item(),
+
+            Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
 
             _ => Ok(Statement::Expression(ExpressionStmt::parse(self)?)),
-        }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    /// ITEMS
-    ///////////////////////////////////////////////////////////////////////////
-
-    fn parse_declaration(&mut self) -> Result<Declaration, ErrorsEmitted> {
-        let token = self.peek_current();
-
-        match token {
-            Some(Token::Import { .. }) => Ok(Declaration::Import(ImportDecl::parse(self)?)),
-            Some(Token::Alias { .. }) => Ok(Declaration::Alias(AliasDecl::parse(self)?)),
-            Some(Token::Const { .. }) => Ok(Declaration::Constant(ConstantDecl::parse(self)?)),
-            Some(Token::Static { .. }) => Ok(Declaration::StaticItem(StaticItemDecl::parse(self)?)),
-            _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "declaration item".to_string(),
-                    found: token,
-                });
-                Err(ErrorsEmitted(()))
-            }
-        }
-    }
-
-    fn parse_definition(&mut self) -> Result<Definition, ErrorsEmitted> {
-        let token = self.peek_current();
-
-        match token {
-            Some(Token::Mod { .. }) => Ok(Definition::Module(ModuleDef::parse(self)?)),
-            Some(Token::Trait { .. }) => Ok(Definition::Trait(TraitDef::parse(self)?)),
-            Some(Token::Enum { .. }) => Ok(Definition::Enum(EnumDef::parse(self)?)),
-            Some(Token::Struct { .. }) => Ok(Definition::Struct(StructDef::parse(self)?)),
-            Some(Token::Impl { .. }) => {
-                if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
-                    Ok(Definition::TraitImpl(TraitImplDef::parse(self)?))
-                } else {
-                    Ok(Definition::InherentImpl(InherentImplDef::parse(self)?))
-                }
-            }
-            Some(Token::Func { .. }) => Ok(Definition::Function(FunctionDef::parse(self)?)),
-            _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "definition item".to_string(),
-                    found: token,
-                });
-                Err(ErrorsEmitted(()))
-            }
         }
     }
 
@@ -731,6 +706,7 @@ impl Parser {
             Some(Token::As { .. }) => Ok(Keyword::As),
             Some(Token::Const { .. }) => Ok(Keyword::Const),
             Some(Token::Static { .. }) => Ok(Keyword::Static),
+            Some(Token::Alias { .. }) => Ok(Keyword::Alias),
             Some(Token::Func { .. }) => Ok(Keyword::Func),
             Some(Token::Struct { .. }) => Ok(Keyword::Struct),
             Some(Token::Enum { .. }) => Ok(Keyword::Enum),
@@ -746,6 +722,8 @@ impl Parser {
             Some(Token::Break { .. }) => Ok(Keyword::Break),
             Some(Token::Continue { .. }) => Ok(Keyword::Continue),
             Some(Token::Return { .. }) => Ok(Keyword::Return),
+            Some(Token::Let { .. }) => Ok(Keyword::Let),
+            Some(Token::Mut { .. }) => Ok(Keyword::Mut),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
@@ -951,13 +929,11 @@ impl Parser {
             Some(Token::U256Type { .. }) => Ok(Type::U256),
             Some(Token::U512Type { .. }) => Ok(Type::U512),
             Some(Token::ByteType { .. }) => Ok(Type::Byte),
-            Some(
-                Token::B2Type { .. }
-                | Token::B4Type { .. }
-                | Token::B8Type { .. }
-                | Token::B16Type { .. }
-                | Token::B32Type { .. },
-            ) => Ok(Type::Bytes),
+            Some(Token::B2Type { .. }) => Ok(Type::B2),
+            Some(Token::B4Type { .. }) => Ok(Type::B4),
+            Some(Token::B8Type { .. }) => Ok(Type::B8),
+            Some(Token::B16Type { .. }) => Ok(Type::B16),
+            Some(Token::B32Type { .. }) => Ok(Type::B32),
             Some(Token::H160Type { .. }) => Ok(Type::H160),
             Some(Token::H256Type { .. }) => Ok(Type::H256),
             Some(Token::H512Type { .. }) => Ok(Type::H512),
@@ -981,6 +957,142 @@ impl Parser {
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "type annotation".to_string(),
+                    found: token,
+                });
+                Err(ErrorsEmitted(()))
+            }
+        }
+    }
+
+    fn get_outer_attr(&self) -> Option<OuterAttr> {
+        let token = self.peek_current();
+
+        match token {
+            Some(Token::Calldata { .. }) => Some(OuterAttr::Calldata),
+            Some(Token::Constructor { .. }) => Some(OuterAttr::Constructor),
+            Some(Token::Error { .. }) => Some(OuterAttr::Error),
+            Some(Token::Event { .. }) => Some(OuterAttr::Event),
+            Some(Token::Extern { .. }) => Some(OuterAttr::Extern),
+            Some(Token::Modifier { .. }) => Some(OuterAttr::Modifier),
+            Some(Token::Payable { .. }) => Some(OuterAttr::Payable),
+            Some(Token::Storage { .. }) => Some(OuterAttr::Storage),
+            Some(Token::Test { .. }) => Some(OuterAttr::Test),
+            Some(Token::Topic { .. }) => Some(OuterAttr::Topic),
+            Some(Token::View { .. }) => Some(OuterAttr::View),
+            _ => None,
+        }
+    }
+
+    fn get_inner_attr(&self) -> Option<InnerAttr> {
+        let token = self.peek_current();
+
+        match token {
+            Some(Token::Contract { .. }) => Some(InnerAttr::Contract),
+            Some(Token::Interface { .. }) => Some(InnerAttr::Interface),
+            Some(Token::Library { .. }) => Some(InnerAttr::Library),
+            Some(Token::Script { .. }) => Some(InnerAttr::Script),
+            _ => None,
+        }
+    }
+
+    fn get_visibility(&mut self) -> Result<Visibility, ErrorsEmitted> {
+        let token = self.peek_current();
+
+        match token {
+            Some(Token::Pub { .. }) => {
+                self.consume_token();
+
+                match self.peek_current() {
+                    Some(Token::LParen { .. }) => {
+                        self.consume_token();
+
+                        let kw_package = self.expect_keyword(Token::Package {
+                            name: "package".to_string(),
+                            span: self.stream.span(),
+                        })?;
+
+                        let close_paren = self.expect_delimiter(Token::RParen {
+                            delim: ')',
+                            span: self.stream.span(),
+                        })?;
+
+                        let pub_package = PubPackageVis {
+                            kw_pub: Keyword::Pub,
+                            open_paren: Delimiter::LParen,
+                            kw_package,
+                            close_paren,
+                        };
+
+                        Ok(Visibility::PubPackage(pub_package))
+                    }
+                    _ => Ok(Visibility::Pub),
+                }
+            }
+            _ => Ok(Visibility::Private),
+        }
+    }
+
+    fn get_item(&mut self) -> Result<Statement, ErrorsEmitted> {
+        let mut outer_attributes: Vec<OuterAttr> = Vec::new();
+        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
+
+        while let Some(oa) = self.get_outer_attr() {
+            outer_attributes.push(oa);
+            self.consume_token();
+        }
+
+        while let Some(ia) = self.get_inner_attr() {
+            inner_attributes.push(ia);
+            self.consume_token();
+        }
+
+        let visibility = self.get_visibility()?;
+
+        let token = self.peek_current();
+
+        match token {
+            Some(Token::Import { .. }) => Ok(Statement::Declaration(Declaration::Import(
+                ImportDecl::parse(self, outer_attributes, visibility)?,
+            ))),
+            Some(Token::Alias { .. }) => Ok(Statement::Declaration(Declaration::Alias(
+                AliasDecl::parse(self, outer_attributes, visibility)?,
+            ))),
+            Some(Token::Const { .. }) => Ok(Statement::Declaration(Declaration::Constant(
+                ConstantDecl::parse(self, outer_attributes, visibility)?,
+            ))),
+            Some(Token::Static { .. }) => Ok(Statement::Declaration(Declaration::StaticItem(
+                StaticItemDecl::parse(self, outer_attributes, visibility)?,
+            ))),
+            Some(Token::Mod { .. }) => Ok(Statement::Definition(Definition::Module(
+                ModuleDef::parse(self, inner_attributes, visibility)?,
+            ))),
+            Some(Token::Trait { .. }) => Ok(Statement::Definition(Definition::Trait(
+                TraitDef::parse(self, outer_attributes, visibility)?,
+            ))),
+            Some(Token::Enum { .. }) => Ok(Statement::Definition(Definition::Enum(
+                EnumDef::parse(self, outer_attributes, visibility)?,
+            ))),
+            Some(Token::Struct { .. }) => Ok(Statement::Definition(Definition::Struct(
+                StructDef::parse(self, outer_attributes, visibility)?,
+            ))),
+            Some(Token::Impl { .. }) => match self.peek_ahead_by(2) {
+                Some(Token::For { .. }) => Ok(Statement::Definition(Definition::TraitImpl(
+                    TraitImplDef::parse(self, outer_attributes, visibility)?,
+                ))),
+                Some(Token::LBrace { .. }) => Ok(Statement::Definition(Definition::InherentImpl(
+                    InherentImplDef::parse(self, outer_attributes, visibility)?,
+                ))),
+                _ => {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`for` or `{`".to_string(),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted(()))
+                }
+            },
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "declaration or definition item".to_string(),
                     found: token,
                 });
                 Err(ErrorsEmitted(()))
