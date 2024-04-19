@@ -22,7 +22,9 @@ impl ParseDeclaration for ImportDecl {
 
         let tree = ImportTree::parse(parser)?;
 
-        if let Some(Token::Semicolon { .. }) = parser.consume_token() {
+        parser.consume_token();
+
+        if let Some(Token::Semicolon { .. }) = parser.peek_behind_by(1) {
             ()
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
@@ -71,7 +73,7 @@ impl ImportTree {
 
 impl PathSegment {
     fn parse(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted> {
-        let token = parser.peek_current();
+        let token = parser.consume_token();
 
         let root = match token {
             Some(Token::Package { .. }) => Ok(PathPrefix::Package),
@@ -88,25 +90,23 @@ impl PathSegment {
             }
         }?;
 
-        parser.consume_token();
-
-        let subset = PathSubset::parse(parser)?;
+        let subset_opt = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Some(PathSubset::parse(parser)?)
+        } else {
+            None
+        };
 
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
         }
 
-        Ok(PathSegment { root, subset })
+        Ok(PathSegment { root, subset_opt })
     }
 }
 
 impl PathSubset {
     fn parse(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
-        let dbl_colon = parser.expect_separator(Token::DblColon {
-            punc: "::".to_string(),
-            span: parser.stream.span(),
-        })?;
-
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),
@@ -141,10 +141,28 @@ impl PathSubset {
         }
 
         Ok(PathSubset {
-            dbl_colon,
             open_brace,
             trees,
             close_brace,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::test_utils;
+
+    #[test]
+    fn parse_import_decl() -> Result<(), ()> {
+        let input = r#"pub import package::module::Object;"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
     }
 }

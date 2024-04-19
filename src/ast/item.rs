@@ -18,12 +18,11 @@ pub struct ImportTree {
 #[derive(Debug, Clone)]
 pub struct PathSegment {
     pub root: PathPrefix,
-    pub subset: PathSubset,
+    pub subset_opt: Option<PathSubset>,
 }
 
 #[derive(Debug, Clone)]
 pub struct PathSubset {
-    pub dbl_colon: Separator,
     pub open_brace: Delimiter,
     pub trees: Vec<ImportTree>,
     pub close_brace: Delimiter,
