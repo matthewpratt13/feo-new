@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        Identifier, ImportDecl, ImportTree, OuterAttr, PathPrefix, PathSegment, PathSubset,
+        ImportDecl, ImportTree, OuterAttr, PathExpr, PathPrefix, PathSegment, PathSubset,
         Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
@@ -75,14 +75,14 @@ impl ImportTree {
 
 impl PathSegment {
     fn parse(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted> {
-        let token = parser.peek_current();
+        let token = parser.consume_token();
 
         let root = match token {
-            Some(Token::Package { .. }) => Ok(PathPrefix::Package),
-            Some(Token::Super { .. }) => Ok(PathPrefix::Super),
-            Some(Token::SelfKeyword { .. }) => Ok(PathPrefix::SelfKeyword),
-            Some(Token::SelfType { .. }) => Ok(PathPrefix::SelfType),
-            Some(Token::Identifier { name, .. }) => Ok(PathPrefix::Identifier(Identifier(name))),
+            Some(Token::Package { .. }) => PathExpr::parse(parser, PathPrefix::Package),
+            Some(Token::Super { .. }) => PathExpr::parse(parser, PathPrefix::Package),
+            Some(Token::SelfKeyword { .. }) => PathExpr::parse(parser, PathPrefix::Package),
+            Some(Token::SelfType { .. }) => PathExpr::parse(parser, PathPrefix::Package),
+            Some(Token::Identifier { name, .. }) => PathExpr::parse(parser, PathPrefix::Package),
             _ => {
                 parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "path prefix".to_string(),
@@ -91,8 +91,6 @@ impl PathSegment {
                 Err(ErrorsEmitted(()))
             }
         }?;
-
-        parser.consume_token();
 
         let subset_opt = if let Some(Token::LBrace { .. }) = parser.peek_ahead_by(1) {
             parser.consume_token();
@@ -188,7 +186,7 @@ mod tests {
                 SomeInnerObject,
                 AnotherInnerObject
             },
-            another_inner_module::some_function,
+            another_inner_module::*,
             SOME_CONSTANT,
         };"#;
 

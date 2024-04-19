@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
-use super::{Delimiter, Expression, Identifier, Keyword, OuterAttr, PathPrefix, Type};
+use super::{Delimiter, Expression, Identifier, Keyword, OuterAttr, PathExpr, Type};
 
 #[derive(Debug, Clone)]
 pub enum Visibility {
@@ -17,7 +17,7 @@ pub struct ImportTree {
 
 #[derive(Debug, Clone)]
 pub struct PathSegment {
-    pub root: PathPrefix,
+    pub root: PathExpr,
     pub subset_opt: Option<PathSubset>,
 }
 
