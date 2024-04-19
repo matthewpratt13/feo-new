@@ -239,13 +239,13 @@ pub enum Declaration {
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
 pub enum Definition {
-    Module(ModuleDef),             // TODO
+    Module(ModuleItem),             // TODO
     Trait(TraitDef),               // TODO
     Enum(EnumDef),                 // TODO
     Struct(StructDef),             // TODO
     InherentImpl(InherentImplDef), // TODO
     TraitImpl(TraitImplDef),       // TODO
-    Function(FunctionDef),         // TODO
+    Function(FunctionItem),         // TODO
 }
 
 // TODO: parse:

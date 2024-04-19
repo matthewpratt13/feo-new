@@ -1,7 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
-use super::{Delimiter, Expression, Identifier, Keyword, OuterAttr, PathExpr, Separator, Type};
+use super::{
+    BlockExpr, Delimiter, Expression, Identifier, InnerAttr, Keyword, OuterAttr, PathExpr,
+    Separator, Type,
+};
 
 #[derive(Debug, Clone)]
 pub enum Visibility {
@@ -61,10 +64,28 @@ pub struct ConstantDecl {
 }
 
 #[derive(Debug, Clone)]
-pub struct EnumDef {}
+pub struct EnumDef {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub visibility: Visibility,
+    pub kw_enum: Keyword,
+    pub enum_name: Identifier,
+    pub open_brace: Delimiter,
+    // pub variants: Vec<EnumVariant>,
+    pub close_brace: Delimiter,
+}
 
 #[derive(Debug, Clone)]
-pub struct FunctionDef {}
+pub struct FunctionItem {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub visibility: Visibility,
+    pub kw_func: Keyword,
+    pub function_name: Identifier,
+    pub open_paren: Delimiter,
+    // pub params_opt: Option<Vec<FunctionParam>>,
+    pub close_paren: Delimiter,
+    pub return_type_opt: Option<Box<Type>>,
+    pub block_opt: Option<BlockExpr>,
+}
 
 #[derive(Debug, Clone)]
 pub struct ImportDecl {
@@ -75,10 +96,25 @@ pub struct ImportDecl {
 }
 
 #[derive(Debug, Clone)]
-pub struct InherentImplDef {}
+pub struct InherentImplDef {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub kw_impl: Keyword,
+    pub nominal_type: Type,
+    pub open_brace: Delimiter,
+    // pub associated_items_opt: Option<Vec<InherentImplItem>>,
+    pub close_brace: Delimiter,
+}
 
 #[derive(Debug, Clone)]
-pub struct ModuleDef {}
+pub struct ModuleItem {
+    pub attributes_opt: Option<Vec<InnerAttr>>,
+    pub visibility: Visibility,
+    pub kw_mod: Keyword,
+    pub module_name: Identifier,
+    pub open_brace_opt: Option<Delimiter>,
+    // pub items_opt: Option<Vec<Item>>,
+    pub close_brace_opt: Option<Delimiter>,
+}
 
 #[derive(Debug, Clone)]
 pub struct StaticItemDecl {
@@ -92,10 +128,47 @@ pub struct StaticItemDecl {
 }
 
 #[derive(Debug, Clone)]
-pub struct StructDef {}
+pub struct StructDef {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub visibility: Visibility,
+    pub kw_struct: Keyword,
+    pub struct_name: Identifier,
+    pub open_brace: Delimiter,
+    // pub fields_opt: Option<Vec<StructDefField>>,
+    pub close_brace: Delimiter,
+}
 
 #[derive(Debug, Clone)]
-pub struct TraitDef {}
+pub struct TupleStructDef {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub visibility: Visibility,
+    pub kw_struct: Keyword,
+    pub struct_name: Identifier,
+    pub open_paren: Delimiter,
+    // pub fields_opt: Option<Vec<TupleStructDefField>>,
+    pub close_paren: Delimiter,
+    pub semicolon: Separator,
+}
 
 #[derive(Debug, Clone)]
-pub struct TraitImplDef {}
+pub struct TraitDef {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub visibility: Visibility,
+    pub kw_trait: Keyword,
+    pub trait_name: Identifier,
+    pub open_brace: Delimiter,
+    // pub associated_items_opt: Option<Vec<TraitDefItem>>,
+    pub close_brace: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct TraitImplDef {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub kw_impl: Keyword,
+    // pub implemented_trait_path: TypePath,
+    pub kw_for: Keyword,
+    pub implementing_type: Type,
+    pub open_brace_opt: Option<Delimiter>,
+    // pub associated_items_opt: Option<Vec<TraitImplItem>>,
+    pub close_brace_opt: Option<Delimiter>,
+}

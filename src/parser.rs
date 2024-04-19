@@ -11,7 +11,7 @@ mod constant_decl;
 mod enum_def;
 mod field_access_expr;
 mod for_in_expr;
-mod function_def;
+mod function_item;
 mod grouped_expr;
 mod if_expr;
 mod impl_def;
@@ -20,7 +20,7 @@ mod index_expr;
 mod item;
 mod match_expr;
 mod method_call_expr;
-mod module_def;
+mod module_item;
 mod path_expr;
 mod precedence;
 mod range_expr;
@@ -40,7 +40,7 @@ use crate::{
         ConstantDecl, ContinueExpr, Declaration, Definition, Delimiter, EnumDef, Expression,
         ExpressionStmt, FieldAccessExpr, ForInExpr, GroupedExpr, Identifier, IfExpr, ImportDecl,
         IndexExpr, InherentImplDef, InnerAttr, Keyword, LetStmt, Literal, MatchExpr,
-        MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr,
+        MethodCallExpr, ModuleItem, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr,
         RangeOp, ReturnExpr, Separator, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef,
         TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp,
         UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
@@ -1070,7 +1070,7 @@ impl Parser {
                 StaticItemDecl::parse(self, outer_attributes, visibility)?,
             ))),
             Some(Token::Mod { .. }) => Ok(Statement::Definition(Definition::Module(
-                ModuleDef::parse(self, inner_attributes, visibility)?,
+                ModuleItem::parse(self, inner_attributes, visibility)?,
             ))),
             Some(Token::Trait { .. }) => Ok(Statement::Definition(Definition::Trait(
                 TraitDef::parse(self, outer_attributes, visibility)?,
