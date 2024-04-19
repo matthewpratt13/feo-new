@@ -146,23 +146,6 @@ impl PathSubset {
             }
         }
 
-        // while let Some(Token::Identifier { .. }) = parser.consume_token() {
-        //     let tree = ImportTree::parse(parser)?;
-        //     trees.push(tree);
-
-        //     match parser.peek_current() {
-        //         Some(Token::Comma { .. }) => continue,
-        //         Some(Token::RBrace { .. }) => break,
-        //         Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-        //             expected: "`,` or `}`".to_string(),
-        //             found: Some(t),
-        //         }),
-        //         None => {
-        //             parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
-        //         }
-        //     }
-        // }
-
         let close_brace = parser.expect_delimiter(Token::RBrace {
             delim: '}',
             span: parser.stream.span(),

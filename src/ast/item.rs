@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
-use super::{Delimiter, Expression, Identifier, Keyword, OuterAttr, PathPrefix, Separator, Type};
+use super::{Delimiter, Expression, Identifier, Keyword, OuterAttr, PathPrefix, Type};
 
 #[derive(Debug, Clone)]
 pub enum Visibility {
