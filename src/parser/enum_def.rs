@@ -161,10 +161,9 @@ impl EnumVariantStruct {
                 break;
             }
 
-            let token = parser.peek_current();
+            let token = parser.consume_token();
 
             let field_name = if let Some(Token::Identifier { name, .. }) = token {
-                parser.consume_token();
                 Ok(Identifier(name))
             } else {
                 parser.log_error(ParserErrorKind::UnexpectedToken {
@@ -174,24 +173,21 @@ impl EnumVariantStruct {
                 Err(ErrorsEmitted(()))
             }?;
 
-            let token = parser.peek_current();
-
-            if let Some(Token::Colon { .. }) = token {
-                parser.consume_token();
-            } else {
-                parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`:`".to_string(),
-                    found: token,
-                });
-                return Err(ErrorsEmitted(()));
-            }
+            let _ = parser.expect_separator(Token::Colon {
+                punc: ':',
+                span: parser.stream.span(),
+            })?;
 
             let field_type = parser.get_type()?;
-
             fields.push((field_name, field_type));
 
+            let token = parser.peek_current();
+
             match token {
-                Some(Token::Comma { .. }) => continue,
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
+                }
                 Some(Token::RBrace { .. }) => break,
                 Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`,` or `}`".to_string(),
@@ -244,7 +240,10 @@ impl EnumVariantTuple {
             let token = parser.peek_current();
 
             match token {
-                Some(Token::Comma { .. }) => continue,
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue
+                },
                 Some(Token::RParen { .. }) => break,
                 Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`,` or `)`".to_string(),
@@ -266,5 +265,30 @@ impl EnumVariantTuple {
             element_types,
             close_paren,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::test_utils;
+
+    #[test]
+    fn parse_enum_def() -> Result<(), ()> {
+        let input = r#"
+        #[error]
+        pub enum Foo {
+            OrdinaryVariant,
+            StructVariant { param1: SomeType, param2: AnotherType },
+            TupleVariant(SomeType, AnotherType),
+        }"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
     }
 }
