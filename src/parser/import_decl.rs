@@ -101,8 +101,6 @@ impl PathSegment {
             None
         };
 
-        println!("CURRENT TOKEN: {:?}", parser.peek_current());
-
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
         }
@@ -192,8 +190,7 @@ mod tests {
             },
             another_inner_module::some_function,
             SOME_CONSTANT,
-        };
-        "#;
+        };"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
