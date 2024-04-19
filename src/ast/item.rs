@@ -41,22 +41,22 @@ pub enum Visibility {
 #[derive(Debug, Clone)]
 pub struct EnumVariantStruct {
     pub open_brace: Delimiter,
-    pub field_opt: Option<Vec<StructDefField>>,
+    pub fields_opt: Option<Vec<(Identifier, Type)>>,
     pub close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone)]
 pub struct EnumVariantTuple {
     pub open_paren: Delimiter,
-    pub elements: Vec<TupleStructDefField>,
+    pub element_types: Vec<Type>,
     pub close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone)]
 pub struct EnumVariant {
-    pub attributes_opt: Option<OuterAttr>,
+    pub attributes_opt: Option<Vec<OuterAttr>>,
     pub variant_name: Identifier,
-    pub variant_type_opt: EnumVariantType,
+    pub variant_type_opt: Option<EnumVariantType>,
 }
 
 #[derive(Debug, Clone)]
