@@ -102,13 +102,13 @@ pub struct StructDefField {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub field_name: Identifier,
-    pub field_type: Type,
+    pub field_type: Box<Type>,
 }
 
 #[derive(Debug, Clone)]
 pub struct TupleStructDefField {
     pub visibility: Visibility,
-    pub field_type: Type,
+    pub field_type: Box<Type>,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -131,7 +131,7 @@ pub struct ConstantDecl {
     pub visibility: Visibility,
     pub kw_const: Keyword,
     pub item_name: Identifier,
-    pub item_type: Type,
+    pub item_type: Box<Type>,
     pub value_opt: Option<Box<Expression>>,
 }
 
