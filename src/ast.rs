@@ -229,10 +229,10 @@ pub enum Statement {
 /// Enum representing the different declaration nodes (items) in the AST.
 #[derive(Debug, Clone)]
 pub enum Declaration {
-    Import(ImportDecl),         // TODO
-    Alias(AliasDecl),           // TODO
-    Constant(ConstantDecl),     // TODO
-    StaticItem(StaticItemDecl), // TODO
+    Import(ImportDecl),
+    Alias(AliasDecl),
+    Constant(ConstantDecl),
+    StaticItem(StaticItemDecl),
 }
 
 /// Enum representing the different item definitions nodes in the AST.
