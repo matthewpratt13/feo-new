@@ -221,31 +221,25 @@ pub enum Expression {
 #[derive(Debug, Clone)]
 pub enum Statement {
     Let(LetStmt),
-    Declaration(Declaration),
-    Definition(Definition),
+    Item(Item),
     Expression(ExpressionStmt),
 }
 
-/// Enum representing the different declaration nodes (items) in the AST.
-#[derive(Debug, Clone)]
-pub enum Declaration {
-    Import(ImportDecl),
-    Alias(AliasDecl),
-    Constant(ConstantDecl),
-    StaticItem(StaticItemDecl),
-}
-
-/// Enum representing the different item definitions nodes in the AST.
+/// Enum representing the different item nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
-pub enum Definition {
-    Module(ModuleItem),             // TODO
-    Trait(TraitDef),               // TODO
-    Enum(EnumDef),                 // TODO
-    Struct(StructDef),             // TODO
-    InherentImpl(InherentImplDef), // TODO
-    TraitImpl(TraitImplDef),       // TODO
-    Function(FunctionItem),         // TODO
+pub enum Item {
+    ImportDecl(ImportDecl),
+    AliasDecl(AliasDecl),
+    ConstantDecl(ConstantDecl),
+    StaticItemDecl(StaticItemDecl),
+    Module(ModuleItem),               // TODO
+    TraitDef(TraitDef),               // TODO
+    EnumDef(EnumDef),                 // TODO
+    StructDef(StructDef),             // TODO
+    InherentImplDef(InherentImplDef), // TODO
+    TraitImplDef(TraitImplDef),       // TODO
+    Function(FunctionItem),           // TODO
 }
 
 // TODO: parse:

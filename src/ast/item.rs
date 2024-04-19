@@ -2,15 +2,67 @@
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 use super::{
-    BlockExpr, Delimiter, Expression, Identifier, InnerAttr, Keyword, OuterAttr, PathExpr,
-    Separator, Type,
+    BlockExpr, Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathExpr,
+    Separator, Type, UnaryOp,
 };
+
+#[derive(Debug, Clone)]
+pub enum EnumVariantType {
+    Struct(EnumVariantStruct),
+    Tuple(EnumVariantTuple),
+}
+
+#[derive(Debug, Clone)]
+pub enum FunctionOrMethodParam {
+    FunctionParam(FunctionParam),
+    MethodParam(SelfParam),
+}
+
+#[derive(Debug, Clone)]
+pub enum InherentImplItem {
+    ConstantDecl(ConstantDecl),
+    FunctionItem(FunctionItem),
+}
+
+#[derive(Debug, Clone)]
+pub enum TraitItem {
+    AliasDecl(AliasDecl),
+    ConstantDecl(ConstantDecl),
+    FunctionItem(FunctionItem),
+}
 
 #[derive(Debug, Clone)]
 pub enum Visibility {
     Private,                   // default
     PubPackage(PubPackageVis), // `pub(package)`
     Pub,                       // `pub`
+}
+
+#[derive(Debug, Clone)]
+pub struct EnumVariantStruct {
+    pub open_brace: Delimiter,
+    pub field_opt: Option<Vec<StructDefField>>,
+    pub close_brace: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct EnumVariantTuple {
+    pub open_paren: Delimiter,
+    pub elements: Vec<TupleStructDefField>,
+    pub close_paren: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct EnumVariant {
+    pub attributes_opt: Option<OuterAttr>,
+    pub variant_name: Identifier,
+    pub variant_type_opt: EnumVariantType,
+}
+
+#[derive(Debug, Clone)]
+pub struct FunctionParam {
+    pub param: Box<Expression>,
+    pub param_type: Box<Type>,
 }
 
 #[derive(Debug, Clone)]
@@ -37,6 +89,26 @@ pub struct PubPackageVis {
     pub open_paren: Delimiter,
     pub kw_package: Keyword,
     pub close_paren: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct SelfParam {
+    pub prefix_opt: Option<UnaryOp>,
+    pub kw_self: Keyword,
+}
+
+#[derive(Debug, Clone)]
+pub struct StructDefField {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub visibility: Visibility,
+    pub field_name: Identifier,
+    pub field_type: Type,
+}
+
+#[derive(Debug, Clone)]
+pub struct TupleStructDefField {
+    pub visibility: Visibility,
+    pub field_type: Type,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -70,7 +142,7 @@ pub struct EnumDef {
     pub kw_enum: Keyword,
     pub enum_name: Identifier,
     pub open_brace: Delimiter,
-    // pub variants: Vec<EnumVariant>,
+    pub variants: Vec<EnumVariant>,
     pub close_brace: Delimiter,
 }
 
@@ -81,7 +153,7 @@ pub struct FunctionItem {
     pub kw_func: Keyword,
     pub function_name: Identifier,
     pub open_paren: Delimiter,
-    // pub params_opt: Option<Vec<FunctionParam>>,
+    pub params_opt: Option<Vec<FunctionOrMethodParam>>,
     pub close_paren: Delimiter,
     pub return_type_opt: Option<Box<Type>>,
     pub block_opt: Option<BlockExpr>,
@@ -101,7 +173,7 @@ pub struct InherentImplDef {
     pub kw_impl: Keyword,
     pub nominal_type: Type,
     pub open_brace: Delimiter,
-    // pub associated_items_opt: Option<Vec<InherentImplItem>>,
+    pub associated_items_opt: Option<Vec<InherentImplItem>>,
     pub close_brace: Delimiter,
 }
 
@@ -112,7 +184,7 @@ pub struct ModuleItem {
     pub kw_mod: Keyword,
     pub module_name: Identifier,
     pub open_brace_opt: Option<Delimiter>,
-    // pub items_opt: Option<Vec<Item>>,
+    pub items_opt: Option<Vec<Item>>,
     pub close_brace_opt: Option<Delimiter>,
 }
 
@@ -134,7 +206,7 @@ pub struct StructDef {
     pub kw_struct: Keyword,
     pub struct_name: Identifier,
     pub open_brace: Delimiter,
-    // pub fields_opt: Option<Vec<StructDefField>>,
+    pub fields_opt: Option<Vec<StructDefField>>,
     pub close_brace: Delimiter,
 }
 
@@ -145,7 +217,7 @@ pub struct TupleStructDef {
     pub kw_struct: Keyword,
     pub struct_name: Identifier,
     pub open_paren: Delimiter,
-    // pub fields_opt: Option<Vec<TupleStructDefField>>,
+    pub fields_opt: Option<Vec<TupleStructDefField>>,
     pub close_paren: Delimiter,
     pub semicolon: Separator,
 }
@@ -157,7 +229,7 @@ pub struct TraitDef {
     pub kw_trait: Keyword,
     pub trait_name: Identifier,
     pub open_brace: Delimiter,
-    // pub associated_items_opt: Option<Vec<TraitDefItem>>,
+    pub associated_items_opt: Option<Vec<TraitItem>>,
     pub close_brace: Delimiter,
 }
 
@@ -165,10 +237,10 @@ pub struct TraitDef {
 pub struct TraitImplDef {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub kw_impl: Keyword,
-    // pub implemented_trait_path: TypePath,
+    pub implemented_trait_path: PathExpr,
     pub kw_for: Keyword,
     pub implementing_type: Type,
     pub open_brace_opt: Option<Delimiter>,
-    // pub associated_items_opt: Option<Vec<TraitImplItem>>,
+    pub associated_items_opt: Option<Vec<TraitItem>>,
     pub close_brace_opt: Option<Delimiter>,
 }
