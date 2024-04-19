@@ -1,13 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
-
-#[derive(Debug, Clone)]
-pub enum ImportTree {
-    SimplePath(PathExpr),           // `package::module::Foo`
-    PathSubset(PathSubset),         // `::{ Foo, Bar }`
-    PathRecursive(Box<ImportTree>), // package::module::{ Foo, bar::{ Baz } }
-}
+use super::{Delimiter, Expression, Identifier, Keyword, OuterAttr, PathPrefix, Separator, Type};
 
 #[derive(Debug, Clone)]
 pub enum Visibility {
@@ -17,10 +11,21 @@ pub enum Visibility {
 }
 
 #[derive(Debug, Clone)]
+pub struct ImportTree {
+    pub segments: Vec<PathSegment>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PathSegment {
+    pub root: PathPrefix,
+    pub subset: PathSubset,
+}
+
+#[derive(Debug, Clone)]
 pub struct PathSubset {
     pub dbl_colon: Separator,
     pub open_brace: Delimiter,
-    pub trees: Vec<PathExpr>,
+    pub trees: Vec<ImportTree>,
     pub close_brace: Delimiter,
 }
 
@@ -35,7 +40,6 @@ pub struct PubPackageVis {
 ///////////////////////////////////////////////////////////////////////////
 /// NODES
 ///////////////////////////////////////////////////////////////////////////
-use super::{Delimiter, Expression, Identifier, Keyword, OuterAttr, PathExpr, Separator, Type};
 
 #[derive(Debug, Clone)]
 pub struct AliasDecl {
@@ -67,8 +71,7 @@ pub struct ImportDecl {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub kw_import: Keyword,
-    pub import_trees: Vec<ImportTree>,
-    pub semicolon: Separator,
+    pub tree: ImportTree,
 }
 
 #[derive(Debug, Clone)]
