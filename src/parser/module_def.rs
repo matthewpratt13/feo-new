@@ -168,3 +168,67 @@ impl ModuleDef {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::test_utils;
+
+    #[test]
+    fn parse_module_def() -> Result<(), ()> {
+        let input = r#"
+        #![contract]
+        mod foo {
+            #[storage]
+            static mut OWNER: h160 = 0x12345123451234512345;
+
+            #[interface]
+            pub trait Bar {
+                func transfer(&mut self, to: h160, amount: u256) -> Baz;
+            }
+
+            #[event]
+            pub struct Baz {
+                #[topic]
+                to: h160,
+                amount: u256,
+            }
+
+            pub struct Foo {
+                owner: h160,
+                balance: u256,
+            }
+
+            impl Foo {
+                #[modifier]
+                pub func only_owner(caller: h160) -> bool {
+                    if (caller != OWNER) {
+                        return true
+                    }
+                }
+
+                #[constructor]
+                pub func new(address: h160, amount: u256) -> Foo {
+                    Foo { owner: address, balance: amount }
+                }
+            }
+
+            impl Bar for Foo {
+                func transfer(&mut self, to: h160, amount: u256) -> Baz {
+                    self.balance -= amount;
+                    to.balance += amount;
+
+                    Baz { to: to, amount: amount }
+                }
+            }
+        }"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+}
