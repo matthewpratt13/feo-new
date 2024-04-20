@@ -15,6 +15,9 @@ impl FunctionDef {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<FunctionDef, ErrorsEmitted> {
+        println!("ENTER `FunctionDef::parse()`");
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+
         let kw_func = parser.expect_keyword(Token::Func {
             name: "func".to_string(),
             span: parser.stream.span(),
@@ -46,10 +49,16 @@ impl FunctionDef {
             parser.consume_token();
         }
 
+        println!("ENTER LOOP");
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
                 break;
             }
+
+            println!("LOOP ITERATION");
+            println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
             let param = FunctionOrMethodParam::parse(parser)?;
             params.push(param);
@@ -90,6 +99,9 @@ impl FunctionDef {
             None
         };
 
+        println!("EXIT `FunctionDef::parse()`");
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
         }
@@ -121,7 +133,10 @@ impl FunctionDef {
 }
 
 impl FunctionOrMethodParam {
-    fn parse(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
+        println!("ENTER `FunctionOrMethodParam::parse()`");
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+
         let prefix_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
             parser.peek_current()
         {
@@ -132,6 +147,9 @@ impl FunctionOrMethodParam {
         };
 
         let token = parser.consume_token();
+
+        println!("OPTIONAL PREFIX: {:?}", prefix_opt);
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
         let param = if let Some(Token::SelfKeyword { .. }) = token {
             let self_param = SelfParam {
@@ -162,6 +180,11 @@ impl FunctionOrMethodParam {
             Err(ErrorsEmitted(()))
         };
 
+        println!("PARAM: {:?}", param);
+
+        println!("EXIT `FunctionOrMethodParam::parse()`");
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+
         param
     }
 }
@@ -174,7 +197,7 @@ mod tests {
     fn parse_function_def_without_block() -> Result<(), ()> {
         let input = r#"
         #[modifier]
-        pub func only_owner(&mut self, caller: u160)"#;
+        pub func only_owner(&mut self, caller: h160)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
