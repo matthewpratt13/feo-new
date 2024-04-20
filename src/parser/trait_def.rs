@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, FunctionOrMethodParam, Identifier, MethodSig, OuterAttr, TraitDef,
-        TraitItem, Visibility,
+        TraitDefItem, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -23,7 +23,7 @@ impl ParseDefinition for TraitDef {
             span: parser.stream.span(),
         })?;
 
-        let mut associated_items: Vec<TraitItem> = Vec::new();
+        let mut associated_items: Vec<TraitDefItem> = Vec::new();
 
         let token = parser.consume_token();
 
@@ -59,19 +59,19 @@ impl ParseDefinition for TraitDef {
             let token = parser.peek_current();
 
             let associated_item = if let Some(Token::Const { .. }) = token {
-                Ok(TraitItem::ConstantDecl(ConstantDecl::parse(
+                Ok(TraitDefItem::ConstantDecl(ConstantDecl::parse(
                     parser,
                     item_attributes,
                     item_visibility,
                 )?))
             } else if let Some(Token::Alias { .. }) = token {
-                Ok(TraitItem::AliasDecl(AliasDecl::parse(
+                Ok(TraitDefItem::AliasDecl(AliasDecl::parse(
                     parser,
                     item_attributes,
                     item_visibility,
                 )?))
             } else if let Some(Token::Func { .. }) = token {
-                Ok(TraitItem::MethodSig(MethodSig::parse(
+                Ok(TraitDefItem::MethodSig(MethodSig::parse(
                     parser,
                     item_attributes,
                     item_visibility,
@@ -263,4 +263,3 @@ mod tests {
         }
     }
 }
-

@@ -25,10 +25,17 @@ pub enum InherentImplItem {
 }
 
 #[derive(Debug, Clone)]
-pub enum TraitItem {
+pub enum TraitDefItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     MethodSig(MethodSig),
+}
+
+#[derive(Debug, Clone)]
+pub enum TraitImplItem {
+    AliasDecl(AliasDecl),
+    ConstantDecl(ConstantDecl),
+    FunctionDef(FunctionDef),
 }
 
 #[derive(Debug, Clone)]
@@ -242,7 +249,7 @@ pub struct TraitDef {
     pub kw_trait: Keyword,
     pub trait_name: Identifier,
     pub open_brace: Delimiter,
-    pub associated_items_opt: Option<Vec<TraitItem>>,
+    pub associated_items_opt: Option<Vec<TraitDefItem>>,
     pub close_brace: Delimiter,
 }
 
@@ -254,6 +261,6 @@ pub struct TraitImplDef {
     pub kw_for: Keyword,
     pub implementing_type: Type,
     pub open_brace_opt: Option<Delimiter>,
-    pub associated_items_opt: Option<Vec<TraitItem>>,
+    pub associated_items_opt: Option<Vec<TraitDefItem>>,
     pub close_brace_opt: Option<Delimiter>,
 }
