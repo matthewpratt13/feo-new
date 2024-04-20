@@ -174,13 +174,16 @@ impl MethodSig {
         if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = parser.peek_current() {
             let param = FunctionOrMethodParam::parse(parser)?;
             params.push(param);
-            parser.consume_token();
         }
 
         println!("ENTER LOOP");
         println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
         loop {
+            if let Some(Token::Comma { .. }) = parser.peek_current() {
+                parser.consume_token();
+            }
+
             if let Some(Token::RParen { .. }) = parser.peek_current() {
                 break;
             }
