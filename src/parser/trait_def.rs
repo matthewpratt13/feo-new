@@ -85,23 +85,6 @@ impl ParseDefinition for TraitDef {
             }?;
 
             associated_items.push(associated_item);
-
-            // let token = parser.peek_current();
-
-            // match token {
-            //     Some(Token::Semicolon { .. }) => {
-            //         parser.consume_token();
-            //         continue;
-            //     }
-            //     Some(Token::RParen { .. }) => break,
-            //     Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-            //         expected: "`;` or `)`".to_string(),
-            //         found: Some(t),
-            //     }),
-            //     None => {
-            //         parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
-            //     }
-            // }
         }
 
         let close_brace = parser.expect_delimiter(Token::RBrace {
