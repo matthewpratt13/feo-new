@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        BlockExpr, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier, Keyword,
+        BlockExpr, FunctionDef, FunctionOrMethodParam, FunctionParam, Identifier, Keyword,
         OuterAttr, SelfParam, UnaryOp, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
@@ -9,12 +9,12 @@ use crate::{
 
 use super::Parser;
 
-impl FunctionItem {
+impl FunctionDef {
     pub(crate) fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
-    ) -> Result<FunctionItem, ErrorsEmitted> {
+    ) -> Result<FunctionDef, ErrorsEmitted> {
         let kw_func = parser.expect_keyword(Token::Func {
             name: "func".to_string(),
             span: parser.stream.span(),
@@ -75,7 +75,7 @@ impl FunctionItem {
             return Err(ErrorsEmitted(()));
         }
 
-        Ok(FunctionItem {
+        Ok(FunctionDef {
             attributes_opt: {
                 if attributes.is_empty() {
                     None

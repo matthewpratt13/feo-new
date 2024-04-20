@@ -233,13 +233,13 @@ pub enum Item {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     StaticItemDecl(StaticItemDecl),
-    Module(ModuleItem),               // TODO
+    ModuleDef(ModuleDef),             // TODO
     TraitDef(TraitDef),               // TODO
     EnumDef(EnumDef),                 // TODO
     StructDef(StructDef),             // TODO
     InherentImplDef(InherentImplDef), // TODO
     TraitImplDef(TraitImplDef),       // TODO
-    Function(FunctionItem),           // TODO
+    FunctionDef(FunctionDef),         // TODO
 }
 
 // TODO: parse:

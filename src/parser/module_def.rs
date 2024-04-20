@@ -1,16 +1,16 @@
 use crate::{
-    ast::{InnerAttr, ModuleItem, Visibility},
+    ast::{InnerAttr, ModuleDef, Visibility},
     error::ErrorsEmitted,
 };
 
 use super::Parser;
 
-impl ModuleItem {
+impl ModuleDef {
     pub(crate) fn parse(
         parser: &mut Parser,
         attributes: Vec<InnerAttr>,
         visibility: Visibility,
-    ) -> Result<ModuleItem, ErrorsEmitted> {
+    ) -> Result<ModuleDef, ErrorsEmitted> {
         todo!()
     }
 }
