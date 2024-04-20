@@ -46,7 +46,7 @@ impl FunctionDef {
             parser.consume_token();
         }
 
-        while let Some(Token::Identifier { .. }) = parser.consume_token() {
+        while let Some(Token::Identifier { .. }) = parser.peek_current() {
             let param = FunctionOrMethodParam::parse(parser)?;
             params.push(param);
         }
@@ -142,5 +142,26 @@ impl FunctionOrMethodParam {
         };
 
         param
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::test_utils;
+
+    #[test]
+    fn parse_function_def_without_block() -> Result<(), ()> {
+        let input = r#"
+        #[modifier]
+        pub func only_owner(&mut self, caller: u160)"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
     }
 }

@@ -36,14 +36,7 @@ mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
-        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
-        FieldAccessExpr, ForInExpr, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr,
-        InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr,
-        ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr, RangeOp, ReturnExpr,
-        Separator, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef,
-        TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr,
-        UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
+        AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr, RangeOp, ReturnExpr, Separator, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -1089,6 +1082,12 @@ impl Parser {
                 visibility,
             )?))),
             Some(Token::Struct { .. }) => Ok(Statement::Item(Item::StructDef(StructDef::parse(
+                self,
+                outer_attributes,
+                visibility,
+            )?))),         
+            
+            Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionDef(FunctionDef::parse(
                 self,
                 outer_attributes,
                 visibility,
