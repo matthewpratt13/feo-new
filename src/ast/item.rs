@@ -260,7 +260,7 @@ pub struct TraitImplDef {
     pub implemented_trait_path: PathExpr,
     pub kw_for: Keyword,
     pub implementing_type: Type,
-    pub open_brace_opt: Option<Delimiter>,
-    pub associated_items_opt: Option<Vec<TraitDefItem>>,
-    pub close_brace_opt: Option<Delimiter>,
+    pub open_brace: Delimiter,
+    pub associated_items_opt: Option<Vec<TraitImplItem>>,
+    pub close_brace: Delimiter,
 }
