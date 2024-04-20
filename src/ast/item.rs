@@ -61,7 +61,7 @@ pub struct EnumVariant {
 
 #[derive(Debug, Clone)]
 pub struct FunctionParam {
-    pub param: Box<Expression>,
+    pub param: Identifier,
     pub param_type: Box<Type>,
 }
 
