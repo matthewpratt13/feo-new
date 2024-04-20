@@ -233,7 +233,7 @@ pub enum Item {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     StaticItemDecl(StaticItemDecl),
-    ModuleDef(Box<ModuleDef>), // TODO
+    ModuleDef(Box<ModuleDef>),
     TraitDef(TraitDef),
     EnumDef(EnumDef),
     StructDef(StructDef),
@@ -242,7 +242,6 @@ pub enum Item {
     FunctionDef(FunctionDef),
 }
 
-// TODO: parse:
 /// Enum representing the language's different types, which help to define a value's
 /// memory interpretation and the appropriate operations that may be performed.
 #[derive(Debug, Clone, PartialEq)]
@@ -344,4 +343,3 @@ fn pad_zeroes<const A: usize, const B: usize>(slice: &[u8]) -> [u8; B] {
     target[..A].copy_from_slice(&arr);
     target
 }
-
