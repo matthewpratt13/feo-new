@@ -72,12 +72,6 @@ impl FunctionDef {
             }
         }
 
-        // while let Some(Token::Identifier { .. }) = parser.peek_current() {
-        //     let param = FunctionOrMethodParam::parse(parser)?;
-        //     params.push(param);
-        //     parser.consume_token();
-        // }
-
         let close_paren = parser.expect_delimiter(Token::RParen {
             delim: ')',
             span: parser.stream.span(),
