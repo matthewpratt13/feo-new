@@ -74,6 +74,10 @@ impl ParseDefinition for EnumDef {
             span: parser.stream.span(),
         })?;
 
+        if !parser.errors().is_empty() {
+            return Err(ErrorsEmitted(()));
+        }
+
         if attributes.is_empty() {
             Ok(EnumDef {
                 attributes_opt: None,
@@ -242,8 +246,8 @@ impl EnumVariantTuple {
             match token {
                 Some(Token::Comma { .. }) => {
                     parser.consume_token();
-                    continue
-                },
+                    continue;
+                }
                 Some(Token::RParen { .. }) => break,
                 Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`,` or `)`".to_string(),

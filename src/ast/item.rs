@@ -206,7 +206,7 @@ pub struct StructDef {
     pub kw_struct: Keyword,
     pub struct_name: Identifier,
     pub open_brace: Delimiter,
-    pub fields_opt: Option<Vec<StructDefField>>,
+    pub fields: Vec<StructDefField>,
     pub close_brace: Delimiter,
 }
 
