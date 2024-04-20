@@ -203,9 +203,9 @@ pub struct ModuleDef {
     pub visibility: Visibility,
     pub kw_mod: Keyword,
     pub module_name: Identifier,
-    pub open_brace_opt: Option<Delimiter>,
+    pub open_brace: Delimiter,
     pub items_opt: Option<Vec<Item>>,
-    pub close_brace_opt: Option<Delimiter>,
+    pub close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone)]

@@ -233,7 +233,7 @@ pub enum Item {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     StaticItemDecl(StaticItemDecl),
-    ModuleDef(ModuleDef), // TODO
+    ModuleDef(Box<ModuleDef>), // TODO
     TraitDef(TraitDef),
     EnumDef(EnumDef),
     StructDef(StructDef),
@@ -344,3 +344,4 @@ fn pad_zeroes<const A: usize, const B: usize>(slice: &[u8]) -> [u8; B] {
     target[..A].copy_from_slice(&arr);
     target
 }
+

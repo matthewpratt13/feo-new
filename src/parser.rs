@@ -1077,11 +1077,9 @@ impl Parser {
             Some(Token::Static { .. }) => Ok(Statement::Item(Item::StaticItemDecl(
                 StaticItemDecl::parse(self, outer_attributes, visibility)?,
             ))),
-            Some(Token::Mod { .. }) => Ok(Statement::Item(Item::ModuleDef(ModuleDef::parse(
-                self,
-                inner_attributes,
-                visibility,
-            )?))),
+            Some(Token::Mod { .. }) => Ok(Statement::Item(Item::ModuleDef(Box::new(
+                ModuleDef::parse(self, inner_attributes, visibility)?,
+            )))),
             Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
                 self,
                 outer_attributes,
