@@ -280,7 +280,7 @@ pub enum Type {
     UserDefined, // struct, enum, trait, alias, constant (paths / items)
 
     Function,
-    Reference, //  `&Type` / `&mut Type`
+    Reference(Box<Type>), //  `&Type` / `&mut Type`
     SelfType,
 }
 

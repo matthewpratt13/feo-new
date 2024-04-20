@@ -36,7 +36,14 @@ mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr, RangeOp, ReturnExpr, Separator, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr
+        AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
+        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
+        FieldAccessExpr, ForInExpr, FunctionDef, GroupedExpr, Identifier, IfExpr, ImportDecl,
+        IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr,
+        MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr,
+        RangeOp, ReturnExpr, Separator, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef,
+        TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp,
+        UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -951,7 +958,11 @@ impl Parser {
             }
             Some(Token::LBracket { .. }) => Ok(Type::Array),
             Some(Token::Func { .. }) => Ok(Type::Function),
-            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Type::Reference),
+            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => {
+                let inner_type = Box::new(self.get_type()?);
+
+                Ok(Type::Reference(inner_type))
+            }
             Some(Token::Identifier { .. }) => Ok(Type::UserDefined),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
@@ -1085,8 +1096,8 @@ impl Parser {
                 self,
                 outer_attributes,
                 visibility,
-            )?))),         
-            
+            )?))),
+
             Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionDef(FunctionDef::parse(
                 self,
                 outer_attributes,

@@ -46,10 +46,37 @@ impl FunctionDef {
             parser.consume_token();
         }
 
-        while let Some(Token::Identifier { .. }) = parser.peek_current() {
+        loop {
+            if let Some(Token::RParen { .. }) = parser.peek_current() {
+                break;
+            }
+
             let param = FunctionOrMethodParam::parse(parser)?;
             params.push(param);
+
+            let token = parser.peek_current();
+
+            match token {
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
+                }
+                Some(Token::RParen { .. }) => break,
+                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "`,` or `)`".to_string(),
+                    found: Some(t),
+                }),
+                None => {
+                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                }
+            }
         }
+
+        // while let Some(Token::Identifier { .. }) = parser.peek_current() {
+        //     let param = FunctionOrMethodParam::parse(parser)?;
+        //     params.push(param);
+        //     parser.consume_token();
+        // }
 
         let close_paren = parser.expect_delimiter(Token::RParen {
             delim: ')',
@@ -154,6 +181,44 @@ mod tests {
         let input = r#"
         #[modifier]
         pub func only_owner(&mut self, caller: u160)"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_function_def_with_block() -> Result<(), ()> {
+        let input = r#"
+        pub func foo(bar: &mut str, baz: u64) -> CustomType {
+            let arr = [10, 20, 30, 40];
+            let mut counter = 0;
+            
+            if (baz < 30) {
+                print("foobar");
+            } else {
+                bar.push("baz")
+            }
+
+            for element in arr {
+                print("{}", element);
+            }
+
+            while (counter < bar.len()) {
+                counter += 1;
+            }
+
+            return CustomType {
+                param1: true,
+                param2: x + 2,
+                param3: b"foo",
+            };
+        }"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

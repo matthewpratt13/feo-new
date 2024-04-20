@@ -25,14 +25,19 @@ impl ParseStatement for LetStmt {
             Err(ErrorsEmitted(()))
         }?;
 
+        let kw_mut_opt = if let Some(Token::Mut { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Some(Keyword::Mut)
+        } else {
+            None
+        };
+
         let assignee = parser.parse_expression(Precedence::Path)?;
 
-        let type_ann_opt = if let Ok(colon) = parser.expect_separator(Token::Colon {
-            punc: ':',
-            span: parser.stream.span(),
-        }) {
+        let type_ann_opt = if let Some(Token::Colon { .. }) = parser.peek_current() {
+            parser.consume_token();
             let ty = parser.get_type()?;
-            Some((colon, ty))
+            Some((Separator::Colon, ty))
         } else {
             None
         };
@@ -49,6 +54,7 @@ impl ParseStatement for LetStmt {
 
         Ok(LetStmt {
             kw_let,
+            kw_mut_opt,
             assignee,
             type_ann_opt,
             value_opt,
