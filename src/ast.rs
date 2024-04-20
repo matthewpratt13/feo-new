@@ -221,34 +221,27 @@ pub enum Expression {
 #[derive(Debug, Clone)]
 pub enum Statement {
     Let(LetStmt),
-    Declaration(Declaration),
-    Definition(Definition),
+    Item(Item),
     Expression(ExpressionStmt),
 }
 
-/// Enum representing the different declaration nodes (items) in the AST.
-#[derive(Debug, Clone)]
-pub enum Declaration {
-    Import(ImportDecl),
-    Alias(AliasDecl),
-    Constant(ConstantDecl),
-    StaticItem(StaticItemDecl),
-}
-
-/// Enum representing the different item definitions nodes in the AST.
+/// Enum representing the different item nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone)]
-pub enum Definition {
-    Module(ModuleDef),             // TODO
-    Trait(TraitDef),               // TODO
-    Enum(EnumDef),                 // TODO
-    Struct(StructDef),             // TODO
-    InherentImpl(InherentImplDef), // TODO
-    TraitImpl(TraitImplDef),       // TODO
-    Function(FunctionDef),         // TODO
+pub enum Item {
+    ImportDecl(ImportDecl),
+    AliasDecl(AliasDecl),
+    ConstantDecl(ConstantDecl),
+    StaticItemDecl(StaticItemDecl),
+    ModuleDef(Box<ModuleDef>),
+    TraitDef(TraitDef),
+    EnumDef(EnumDef),
+    StructDef(StructDef),
+    InherentImplDef(InherentImplDef),
+    TraitImplDef(TraitImplDef),
+    FunctionDef(FunctionDef),
 }
 
-// TODO: parse:
 /// Enum representing the language's different types, which help to define a value's
 /// memory interpretation and the appropriate operations that may be performed.
 #[derive(Debug, Clone, PartialEq)]
@@ -286,7 +279,7 @@ pub enum Type {
     UserDefined, // struct, enum, trait, alias, constant (paths / items)
 
     Function,
-    Reference, //  `&Type` / `&mut Type`
+    Reference(Box<Type>), //  `&Type` / `&mut Type`
     SelfType,
 }
 

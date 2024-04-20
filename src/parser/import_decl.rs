@@ -79,9 +79,8 @@ impl PathSegment {
 
         let root = match token {
             Some(Token::Package { .. }) => PathExpr::parse(parser, PathPrefix::Package),
-            Some(Token::Super { .. }) => PathExpr::parse(parser, PathPrefix::Package),
-            Some(Token::SelfKeyword { .. }) => PathExpr::parse(parser, PathPrefix::Package),
-            Some(Token::SelfType { .. }) => PathExpr::parse(parser, PathPrefix::Package),
+            Some(Token::Super { .. }) => PathExpr::parse(parser, PathPrefix::Super),
+            Some(Token::SelfKeyword { .. }) => PathExpr::parse(parser, PathPrefix::SelfKeyword),
             Some(Token::Identifier { name, .. }) => PathExpr::parse(parser, PathPrefix::Package),
             _ => {
                 parser.log_error(ParserErrorKind::UnexpectedToken {

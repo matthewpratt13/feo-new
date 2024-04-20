@@ -32,7 +32,7 @@ impl ParseDeclaration for ConstantDecl {
             span: parser.stream.span(),
         })?;
 
-        let item_type = parser.get_type()?;
+        let item_type = Box::new(parser.get_type()?);
 
         let value_opt = if let Some(Token::Equals { .. }) = parser.peek_current() {
             parser.consume_token();

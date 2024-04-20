@@ -8,22 +8,28 @@ mod block_expr;
 mod call_expr;
 mod closure_expr;
 mod constant_decl;
+mod enum_def;
 mod field_access_expr;
 mod for_in_expr;
+mod function_def;
 mod grouped_expr;
 mod if_expr;
+mod impl_def;
 mod import_decl;
 mod index_expr;
 mod item;
 mod match_expr;
 mod method_call_expr;
+mod module_def;
 mod path_expr;
 mod precedence;
 mod range_expr;
 mod statement;
 mod static_item_decl;
+mod struct_def;
 mod struct_expr;
 mod test_utils;
+mod trait_def;
 mod tuple_expr;
 mod unary_expr;
 mod while_expr;
@@ -31,9 +37,9 @@ mod while_expr;
 use crate::{
     ast::{
         AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
-        ConstantDecl, ContinueExpr, Declaration, Definition, Delimiter, EnumDef, Expression,
-        ExpressionStmt, FieldAccessExpr, ForInExpr, GroupedExpr, Identifier, IfExpr, ImportDecl,
-        IndexExpr, InherentImplDef, InnerAttr, Keyword, LetStmt, Literal, MatchExpr,
+        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
+        FieldAccessExpr, ForInExpr, FunctionDef, GroupedExpr, Identifier, IfExpr, ImportDecl,
+        IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr,
         MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr,
         RangeOp, ReturnExpr, Separator, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef,
         TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp,
@@ -952,7 +958,11 @@ impl Parser {
             }
             Some(Token::LBracket { .. }) => Ok(Type::Array),
             Some(Token::Func { .. }) => Ok(Type::Function),
-            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Type::Reference),
+            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => {
+                let inner_type = Box::new(self.get_type()?);
+
+                Ok(Type::Reference(inner_type))
+            }
             Some(Token::Identifier { .. }) => Ok(Type::UserDefined),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
@@ -1051,35 +1061,51 @@ impl Parser {
         let token = self.peek_current();
 
         match token {
-            Some(Token::Import { .. }) => Ok(Statement::Declaration(Declaration::Import(
-                ImportDecl::parse(self, outer_attributes, visibility)?,
-            ))),
-            Some(Token::Alias { .. }) => Ok(Statement::Declaration(Declaration::Alias(
-                AliasDecl::parse(self, outer_attributes, visibility)?,
-            ))),
-            Some(Token::Const { .. }) => Ok(Statement::Declaration(Declaration::Constant(
+            Some(Token::Import { .. }) => Ok(Statement::Item(Item::ImportDecl(ImportDecl::parse(
+                self,
+                outer_attributes,
+                visibility,
+            )?))),
+            Some(Token::Alias { .. }) => Ok(Statement::Item(Item::AliasDecl(AliasDecl::parse(
+                self,
+                outer_attributes,
+                visibility,
+            )?))),
+            Some(Token::Const { .. }) => Ok(Statement::Item(Item::ConstantDecl(
                 ConstantDecl::parse(self, outer_attributes, visibility)?,
             ))),
-            Some(Token::Static { .. }) => Ok(Statement::Declaration(Declaration::StaticItem(
+            Some(Token::Static { .. }) => Ok(Statement::Item(Item::StaticItemDecl(
                 StaticItemDecl::parse(self, outer_attributes, visibility)?,
             ))),
-            Some(Token::Mod { .. }) => Ok(Statement::Definition(Definition::Module(
+            Some(Token::Mod { .. }) => Ok(Statement::Item(Item::ModuleDef(Box::new(
                 ModuleDef::parse(self, inner_attributes, visibility)?,
-            ))),
-            Some(Token::Trait { .. }) => Ok(Statement::Definition(Definition::Trait(
-                TraitDef::parse(self, outer_attributes, visibility)?,
-            ))),
-            Some(Token::Enum { .. }) => Ok(Statement::Definition(Definition::Enum(
-                EnumDef::parse(self, outer_attributes, visibility)?,
-            ))),
-            Some(Token::Struct { .. }) => Ok(Statement::Definition(Definition::Struct(
-                StructDef::parse(self, outer_attributes, visibility)?,
-            ))),
+            )))),
+            Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
+                self,
+                outer_attributes,
+                visibility,
+            )?))),
+            Some(Token::Enum { .. }) => Ok(Statement::Item(Item::EnumDef(EnumDef::parse(
+                self,
+                outer_attributes,
+                visibility,
+            )?))),
+            Some(Token::Struct { .. }) => Ok(Statement::Item(Item::StructDef(StructDef::parse(
+                self,
+                outer_attributes,
+                visibility,
+            )?))),
+
+            Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionDef(FunctionDef::parse(
+                self,
+                outer_attributes,
+                visibility,
+            )?))),
             Some(Token::Impl { .. }) => match self.peek_ahead_by(2) {
-                Some(Token::For { .. }) => Ok(Statement::Definition(Definition::TraitImpl(
+                Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
                     TraitImplDef::parse(self, outer_attributes, visibility)?,
                 ))),
-                Some(Token::LBrace { .. }) => Ok(Statement::Definition(Definition::InherentImpl(
+                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
                     InherentImplDef::parse(self, outer_attributes, visibility)?,
                 ))),
                 _ => {
