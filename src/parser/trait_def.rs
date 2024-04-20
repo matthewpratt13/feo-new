@@ -126,9 +126,6 @@ impl MethodSig {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<MethodSig, ErrorsEmitted> {
-        println!("ENTER `MethodSig::parse()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-
         let kw_func = parser.expect_keyword(Token::Func {
             name: "func".to_string(),
             span: parser.stream.span(),
@@ -159,9 +156,6 @@ impl MethodSig {
             params.push(param);
         }
 
-        println!("ENTER LOOP");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-
         loop {
             if let Some(Token::Comma { .. }) = parser.peek_current() {
                 parser.consume_token();
@@ -170,9 +164,6 @@ impl MethodSig {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
                 break;
             }
-
-            println!("LOOP ITERATION");
-            println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
             let param = FunctionOrMethodParam::parse(parser)?;
             params.push(param);
@@ -211,9 +202,6 @@ impl MethodSig {
             punc: ';',
             span: parser.stream.span(),
         })?;
-
-        println!("EXIT `MethodSig::parse()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));
