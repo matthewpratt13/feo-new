@@ -39,18 +39,16 @@ impl FunctionDef {
             span: parser.stream.span(),
         })?;
 
-        while let Some(t) = parser.consume_token() {
-            if let Token::Ampersand { .. } | Token::AmpersandMut { .. } | Token::Identifier { .. } =
-                t
-            {
-                let param = FunctionOrMethodParam::parse(parser)?;
-                params.push(param);
-            } else {
-                parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`&`, `&mut` or identifier".to_string(),
-                    found: Some(t),
-                });
-            }
+        // `&self` and `&mut self` can only occur as the first parameter in a method
+        if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = parser.peek_current() {
+            let param = FunctionOrMethodParam::parse(parser)?;
+            params.push(param);
+            parser.consume_token();
+        }
+
+        while let Some(Token::Identifier { .. }) = parser.consume_token() {
+            let param = FunctionOrMethodParam::parse(parser)?;
+            params.push(param);
         }
 
         let close_paren = parser.expect_delimiter(Token::RParen {
@@ -103,9 +101,9 @@ impl FunctionDef {
 
 impl FunctionOrMethodParam {
     fn parse(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
-        let token = parser.peek_current();
-
-        let prefix_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = token {
+        let prefix_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
+            parser.peek_current()
+        {
             parser.consume_token();
             Some(UnaryOp::Reference)
         } else {
