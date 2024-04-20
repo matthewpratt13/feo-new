@@ -196,7 +196,7 @@ mod tests {
             if (baz < 30) {
                 print("foobar");
             } else {
-                bar.push("baz")
+                bar.push("baz");
             }
 
             for element in arr {
