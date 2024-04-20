@@ -109,3 +109,43 @@ impl ParseDefinition for TraitImplDef {
         todo!()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::test_utils;
+
+    #[test]
+    fn parse_impl_def_inherent() -> Result<(), ()> {
+        let input = r#"
+        impl Foo {
+            #[storage]
+            const BAR: str = "bar";
+
+            #[constructor]
+            pub func new(param1: char, param2: bool) -> Foo {
+                Foo {
+                    param1,
+                    param2
+                }
+            }
+
+            #[view]
+            pub func get_param1(&self) -> char {
+                self.param1
+            }
+
+            func set_param2(&mut self) {
+                self.param2 = false
+            }
+        }"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+}
