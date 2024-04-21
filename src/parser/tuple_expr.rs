@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Expression, Separator, TupleExpr, TupleIndexExpr},
+    ast::{Expression, Separator, TupleExpr, TupleIndexExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -16,48 +16,35 @@ impl TupleExpr {
         let mut elements: Vec<Expression> = Vec::new();
 
         loop {
-            if let Some(Token::RBracket { .. }) = parser.peek_current() {
-                parser.consume_token();
+            if let Some(Token::RParen { .. }) = parser.peek_current() {
                 break;
             }
 
             let element = parser.parse_expression(Precedence::Lowest)?;
             elements.push(element);
 
-            let token = parser.consume_token();
-
-            match token {
-                Some(Token::Comma { .. }) => continue,
+            match parser.peek_current() {
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
+                }
                 Some(Token::RParen { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `)`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
+
+                _ => {
                     parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
                 }
             }
         }
 
-        // let close_paren = parser.expect_delimiter(Token::RParen {
-        //     delim: ')',
-        //     span: parser.stream.span(),
-        // });
-
-        if elements.is_empty() {
-            parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "tuple element or `,`".to_string(),
-            });
-        }
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
+        let close_paren = parser.expect_delimiter(Token::RParen {
+            delim: ')',
+            span: parser.stream.span(),
+        })?;
 
         Ok(TupleExpr {
             open_paren,
             elements,
-            close_paren: Delimiter::RParen,
+            close_paren,
         })
     }
 }
@@ -79,10 +66,6 @@ impl TupleIndexExpr {
             Err(ErrorsEmitted(()))
         };
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
         Ok(TupleIndexExpr {
             operand: Box::new(operand),
             dot: Separator::Dot,
@@ -97,7 +80,7 @@ mod tests {
 
     #[test]
     fn parse_tuple_expr() -> Result<(), ()> {
-        let input = r#"(true, "foo", 10)"#;
+        let input = r#"(true, "foo", 10, x,)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
