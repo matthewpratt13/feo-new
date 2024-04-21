@@ -361,31 +361,6 @@ impl Parser {
 
             Some(Token::While { .. }) => Ok(Expression::While(WhileExpr::parse(self)?)),
 
-            Some(Token::Return { .. }) => {
-                self.consume_token();
-                let expression_opt = if let Some(t) = self.peek_current() {
-                    Some(Box::new(self.parse_expression(Precedence::Lowest)?))
-                } else {
-                    None
-                };
-
-                Ok(Expression::Return(ReturnExpr {
-                    kw_return: Keyword::Return,
-                    expression_opt,
-                }))
-            }
-            Some(Token::Break { name, .. }) => {
-                self.consume_token();
-                Ok(Expression::Break(BreakExpr {
-                    kw_break: Keyword::Break,
-                }))
-            }
-            Some(Token::Continue { name, .. }) => {
-                self.consume_token();
-                Ok(Expression::Continue(ContinueExpr {
-                    kw_continue: Keyword::Continue,
-                }))
-            }
             Some(Token::Some { .. }) => {
                 self.consume_token();
                 let token = self.consume_token();
@@ -463,6 +438,33 @@ impl Parser {
                 Ok(Expression::ResultExpr(ResultExpr {
                     kw_ok_or_err: Keyword::Err,
                     expression: Box::new(expression),
+                }))
+            }
+
+            Some(Token::Break { name, .. }) => {
+                self.consume_token();
+                Ok(Expression::Break(BreakExpr {
+                    kw_break: Keyword::Break,
+                }))
+            }
+            Some(Token::Continue { name, .. }) => {
+                self.consume_token();
+                Ok(Expression::Continue(ContinueExpr {
+                    kw_continue: Keyword::Continue,
+                }))
+            }
+
+            Some(Token::Return { .. }) => {
+                self.consume_token();
+                let expression_opt = if let Some(t) = self.peek_current() {
+                    Some(Box::new(self.parse_expression(Precedence::Lowest)?))
+                } else {
+                    None
+                };
+
+                Ok(Expression::Return(ReturnExpr {
+                    kw_return: Keyword::Return,
+                    expression_opt,
                 }))
             }
 
@@ -1484,7 +1486,7 @@ mod tests {
 
     #[test]
     fn parse_return_expr() -> Result<(), ()> {
-        let input = r#"return (x + 2)"#;
+        let input = r#"return Object { foo: "bar", baz: x };"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
