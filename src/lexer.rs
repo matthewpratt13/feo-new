@@ -477,6 +477,9 @@ impl<'a> Lexer<'a> {
                 "str" => Ok(Token::StrType { name, span }),
                 "char" => Ok(Token::CharType { name, span }),
                 "bool" => Ok(Token::BoolType { name, span }),
+                "Option" => Ok(Token::OptionType { name, span }),
+                "Result" => Ok(Token::ResultType { name, span }),
+                "Vec" => Ok(Token::VecType { name, span }),
                 _ => {
                     self.log_error(LexErrorKind::UnrecognizedKeyword { name });
                     Err(ErrorsEmitted(()))
@@ -1148,6 +1151,9 @@ fn is_keyword(value: &str) -> bool {
         "str",
         "char",
         "bool",
+        "Option",
+        "Result",
+        "Vec",
     ]
     .contains(&value)
 }
@@ -1245,7 +1251,7 @@ mod tests {
     #[test]
     fn tokenize_function() {
         let input = r#"
-        func foo(param1: u64, param2: char, param3: bool) -> ReturnType {
+        func foo(param1: u64, param2: char, param3: bool) -> Result<ReturnType, Err> {
             let bar: b4 = b"bar";
             
             if (param3) {
@@ -1258,9 +1264,9 @@ mod tests {
                 param1 += 2;
             }
 
-            return ReturnType {
+            return Ok(ReturnType {
                 baz: "hello world"
-            }
+            })
         }
         "#;
 

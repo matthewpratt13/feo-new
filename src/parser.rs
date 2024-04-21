@@ -1099,6 +1099,62 @@ impl Parser {
                 Ok(Type::Reference(inner_type))
             }
             Some(Token::Identifier { name, .. }) => Ok(Type::UserDefined(name)),
+
+            Some(Token::VecType { .. }) => {
+                let _ = self.expect_binary_op(Token::LessThan {
+                    punc: '<',
+                    span: self.stream.span(),
+                })?;
+
+                let ty = self.get_type()?;
+
+                let _ = self.expect_binary_op(Token::GreaterThan {
+                    punc: '>',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Type::Vec(Box::new(ty)))
+            }
+
+            Some(Token::OptionType { .. }) => {
+                let _ = self.expect_binary_op(Token::LessThan {
+                    punc: '<',
+                    span: self.stream.span(),
+                })?;
+
+                let ty = self.get_type()?;
+
+                let _ = self.expect_binary_op(Token::GreaterThan {
+                    punc: '>',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Type::Option(Box::new(ty)))
+            }
+
+            Some(Token::ResultType { .. }) => {
+                let _ = self.expect_binary_op(Token::LessThan {
+                    punc: '<',
+                    span: self.stream.span(),
+                })?;
+
+                let ok = Box::new(self.get_type()?);
+
+                let _ = self.expect_separator(Token::Comma {
+                    punc: '.',
+                    span: self.stream.span(),
+                })?;
+
+                let err = Box::new(self.get_type()?);
+
+                let _ = self.expect_binary_op(Token::GreaterThan {
+                    punc: '>',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Type::Result { ok, err })
+            }
+
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "type annotation".to_string(),

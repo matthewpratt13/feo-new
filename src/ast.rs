@@ -287,6 +287,14 @@ pub enum Type {
     },
     Reference(Box<Type>), //  `&Type` / `&mut Type`
     SelfType(String),
+
+    Vec(Box<Type>),
+
+    Option(Box<Type>),
+    Result {
+        ok: Box<Type>,
+        err: Box<Type>,
+    },
 }
 
 ///////////////////////////////////////////////////////////////////////////
