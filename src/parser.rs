@@ -41,7 +41,7 @@ use crate::{
         FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier,
         IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
         MatchExpr, MethodCallExpr, ModuleDef, NoneExpr, OuterAttr, PathExpr, PathPrefix,
-        PubPackageVis, RangeExpr, RangeOp, ReturnExpr, Separator, SomeExpr, Statement,
+        PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement,
         StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr,
         Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility,
         WhileExpr,
@@ -377,7 +377,7 @@ impl Parser {
                 }))
             }
             Some(Token::Some { .. }) => {
-                let token = self.consume_token();
+                let token = self.peek_current();
                 let expression = if let Some(Token::LParen { .. }) = token {
                     GroupedExpr::parse(self)
                 } else {
@@ -396,8 +396,6 @@ impl Parser {
 
             Some(Token::None { .. }) => {
                 let type_ann_opt = if let Some(Token::DblColon { .. }) = self.peek_current() {
-                    self.consume_token();
-
                     let _ = self.expect_binary_op(Token::LessThan {
                         punc: '<',
                         span: self.stream.span(),
@@ -418,6 +416,42 @@ impl Parser {
                 Ok(Expression::NoneExpr(NoneExpr {
                     kw_none: Keyword::None,
                     type_ann_opt,
+                }))
+            }
+
+            Some(Token::Ok { .. }) => {
+                let token = self.peek_current();
+                let expression = if let Some(Token::LParen { .. }) = token {
+                    GroupedExpr::parse(self)
+                } else {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`(`".to_string(),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted(()))
+                }?;
+
+                Ok(Expression::ResultExpr(ResultExpr {
+                    kw_ok_or_err: Keyword::Ok,
+                    expression,
+                }))
+            }
+
+            Some(Token::Err { .. }) => {
+                let token = self.peek_current();
+                let expression = if let Some(Token::LParen { .. }) = token {
+                    GroupedExpr::parse(self)
+                } else {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`(`".to_string(),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted(()))
+                }?;
+
+                Ok(Expression::ResultExpr(ResultExpr {
+                    kw_ok_or_err: Keyword::Err,
+                    expression,
                 }))
             }
 
