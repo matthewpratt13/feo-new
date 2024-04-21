@@ -274,7 +274,10 @@ pub enum Type {
     UnitType, // ()
 
     // built-in collections
-    Array(Box<Type>, UInt),
+    Array {
+        element_type: Box<Type>,
+        num_elements: UInt,
+    },
     Tuple(Vec<Type>),
 
     UserDefined(String), // struct, enum, trait, alias, constant (paths / items)

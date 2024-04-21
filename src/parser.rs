@@ -972,7 +972,10 @@ impl Parser {
                 })?;
 
                 if let Some(Token::UIntLiteral { value, .. }) = self.consume_token() {
-                    Ok(Type::Array(Box::new(ty), value))
+                    Ok(Type::Array {
+                        element_type: Box::new(ty),
+                        num_elements: value,
+                    })
                 } else {
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "uint literal".to_string(),
