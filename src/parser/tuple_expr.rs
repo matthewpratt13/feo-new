@@ -64,12 +64,12 @@ impl TupleIndexExpr {
                 found: token,
             });
             Err(ErrorsEmitted(()))
-        };
+        }?;
 
         Ok(TupleIndexExpr {
             operand: Box::new(operand),
             dot: Separator::Dot,
-            index: index?,
+            index,
         })
     }
 }

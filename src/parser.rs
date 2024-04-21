@@ -287,8 +287,10 @@ impl Parser {
                         Err(ErrorsEmitted(()))
                     }
                     _ => {
+                        let token = self.peek_ahead_by(1);
+
                         self.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "identifier or tuple index after `.`".to_string(),
+                            expected: "identifier or unsigned integer after `.`".to_string(),
                             found: token,
                         });
                         Err(ErrorsEmitted(()))

@@ -115,6 +115,15 @@ impl<'a> Lexer<'a> {
                     tokens.push(self.tokenize_numeric()?)
                 }
 
+                '.' => match self.peek_next() {
+                    Some('.') => tokens.push(self.tokenize_punctuation()?),
+                    _ => {
+                        self.advance();
+                        let span = Span::new(self.input, start_pos, self.pos);
+                        tokens.push(Token::Dot { punc: '.', span })
+                    }
+                },
+
                 ',' => {
                     self.advance();
                     let span = Span::new(self.input, start_pos, self.pos);
@@ -140,8 +149,8 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
-                '!' | '#' | '%' | '&' | '*' | '+' | '/' | '-' | '.' | ':' | '<' | '=' | '>'
-                | '?' | '@' | '\\' | '^' | '`' | '|' => tokens.push(self.tokenize_punctuation()?),
+                '!' | '#' | '%' | '&' | '*' | '+' | '/' | '-' | ':' | '<' | '=' | '>' | '?'
+                | '@' | '\\' | '^' | '`' | '|' => tokens.push(self.tokenize_punctuation()?),
 
                 _ => {
                     let span = Span::new(self.input, start_pos, self.pos);
