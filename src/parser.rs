@@ -191,6 +191,13 @@ impl Parser {
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Separator::Underscore,
                     }))
+                } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
+                    self.consume_token();
+
+                    Ok(Expression::Struct(StructExpr::parse(
+                        self,
+                        PathPrefix::Identifier(Identifier(name)),
+                    )?))
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_current()
                 {
@@ -203,12 +210,20 @@ impl Parser {
                 }
             }
             Some(Token::SelfType { .. }) => {
-                self.consume_token();
-                Ok(Expression::Path(PathExpr {
-                    root: PathPrefix::SelfType,
-                    tree_opt: None,
-                    wildcard_opt: None,
-                }))
+                if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
+                    self.consume_token();
+
+                    Ok(Expression::Struct(StructExpr::parse(
+                        self,
+                        PathPrefix::SelfType,
+                    )?))
+                } else {
+                    Ok(Expression::Path(PathExpr {
+                        root: PathPrefix::SelfType,
+                        tree_opt: None,
+                        wildcard_opt: None,
+                    }))
+                }
             }
             Some(Token::SelfKeyword { .. }) => {
                 self.consume_token();
@@ -252,29 +267,8 @@ impl Parser {
                 }
             }
             Some(Token::LBracket { .. }) => Ok(Expression::Array(ArrayExpr::parse(self)?)),
-            Some(Token::LBrace { .. }) => match self.peek_behind_by(1) {
-                Some(Token::Identifier { name, .. }) => {
-                    let path = PathExpr {
-                        root: PathPrefix::Identifier(Identifier(name)),
-                        tree_opt: None,
-                        wildcard_opt: None,
-                    };
+            Some(Token::LBrace { .. }) => Ok(Expression::Block(BlockExpr::parse(self)?)),
 
-                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
-                }
-
-                Some(Token::SelfType { .. }) => {
-                    let path = PathExpr {
-                        root: PathPrefix::SelfType,
-                        tree_opt: None,
-                        wildcard_opt: None,
-                    };
-
-                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
-                }
-
-                _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
-            },
             Some(Token::Pipe { .. } | Token::DblPipe { .. }) => {
                 Ok(Expression::Closure(ClosureExpr::parse(self)?))
             }

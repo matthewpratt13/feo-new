@@ -1,5 +1,8 @@
 use crate::{
-    ast::{Delimiter, Expression, Identifier, PathExpr, StructExpr, StructField, TupleStructExpr},
+    ast::{
+        Delimiter, Expression, Identifier, PathExpr, PathPrefix, StructExpr, StructField,
+        TupleStructExpr,
+    },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -7,9 +10,19 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl StructExpr {
-    pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<StructExpr, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        root: PathPrefix,
+    ) -> Result<StructExpr, ErrorsEmitted> {
+
         println!("ENTER `StructExpr::parse()`");
-        println!("CURRENT TOKEN: {:?}", parser.peek_current());
+        
+        let path = PathExpr {
+            root,
+            tree_opt: None,
+            wildcard_opt: None,
+        };
+
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),
@@ -17,11 +30,8 @@ impl StructExpr {
 
         let mut fields: Vec<StructField> = Vec::new();
 
-        // TODO: add logic to allow for variable attributes (`VariableAttr` node type)
-        // TODO i.e., `#[unsafe]`, `#[storage]` and `#[calldata] and `#[topic]`
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
-                parser.consume_token();
                 break;
             }
 
@@ -31,62 +41,58 @@ impl StructExpr {
                 Some(Token::Identifier { name, .. }) => Ok(name),
                 Some(Token::RBrace { .. }) => break,
                 _ => {
-                    parser.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "identifier or `}`".to_string(),
-                        found: token,
-                    });
+                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
                     Err(ErrorsEmitted(()))
                 }
-            };
+            }?;
 
             let _ = parser.expect_separator(Token::Colon {
                 punc: ':',
                 span: parser.stream.span(),
             });
 
-            let value = parser.parse_expression(Precedence::Lowest);
+            let value = parser.parse_expression(Precedence::Lowest)?;
 
             let field = StructField {
-                name: Identifier(name?),
-                value: value?,
+                name: Identifier(name),
+                value,
             };
 
             fields.push(field);
 
-            let token = parser.consume_token();
-
-            match token {
-                Some(Token::Comma { .. }) => continue,
+            match parser.peek_current() {
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
+                }
                 Some(Token::RBrace { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `}`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
+                _ => {
                     parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
                 }
             }
         }
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
+        let close_brace = parser.expect_delimiter(Token::RBrace {
+            delim: '}',
+            span: parser.stream.span(),
+        })?;
 
-        if fields.is_empty() {
-            Ok(StructExpr {
-                path,
-                open_brace: Delimiter::LBrace,
-                fields_opt: None,
-                close_brace: Delimiter::RBrace,
-            })
-        } else {
-            Ok(StructExpr {
-                path,
-                open_brace: Delimiter::LBrace,
-                fields_opt: Some(fields),
-                close_brace: Delimiter::RBrace,
-            })
-        }
+        // if !parser.errors().is_empty() {
+        //     return Err(ErrorsEmitted(()));
+        // }
+
+        Ok(StructExpr {
+            path,
+            open_brace,
+            fields_opt: {
+                if fields.is_empty() {
+                    None
+                } else {
+                    Some(fields)
+                }
+            },
+            close_brace,
+        })
     }
 }
 
@@ -154,7 +160,7 @@ mod tests {
         let input = r#"
         SomeStruct {
             foo: "bar",
-            baz: 10,
+            baz: -10,
         }"#;
 
         let mut parser = test_utils::get_parser(input, false);
