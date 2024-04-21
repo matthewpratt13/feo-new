@@ -135,7 +135,7 @@ pub struct IfExpr {
 pub struct IndexExpr {
     pub array: Box<Expression>,
     pub open_bracket: Delimiter,
-    pub index: UInt,
+    pub index: Box<Expression>,
     pub close_bracket: Delimiter,
 }
 

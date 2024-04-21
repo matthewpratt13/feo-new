@@ -280,6 +280,7 @@ impl Parser {
 
                 _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
             },
+
             Some(Token::LBracket { .. }) => Ok(Expression::Array(ArrayExpr::parse(self)?)),
 
             Some(Token::Pipe { .. } | Token::DblPipe { .. }) => {
@@ -618,6 +619,7 @@ impl Parser {
                 Ok(Expression::Call(expr))
             }
             Some(Token::LBracket { .. }) => {
+                
                 let expr = IndexExpr::parse(self, left_expr)?;
                 Ok(Expression::Index(expr))
             }
