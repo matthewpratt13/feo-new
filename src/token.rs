@@ -99,6 +99,7 @@ pub enum Token {
     BoolType { name: String, span: Span },
     SelfType { name: String, span: Span },
     VecType { name: String, span: Span },
+    MappingType { name: String, span: Span },
     OptionType { name: String, span: Span },
     ResultType { name: String, span: Span },
 
@@ -256,6 +257,7 @@ impl Token {
             Token::BoolType { span, .. } => span,
             Token::SelfType { span, .. } => span,
             Token::VecType { span, .. } => span,
+            Token::MappingType { span, .. } => span,
             Token::OptionType { span, .. } => span,
             Token::ResultType { span, .. } => span,
             Token::LParen { span, .. } => span,

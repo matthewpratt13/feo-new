@@ -296,6 +296,10 @@ pub enum Type {
     SelfType(String),
 
     Vec(Box<Type>),
+    Mapping {
+        key_type: Box<Type>,
+        value_type: Box<Type>,
+    },
 
     Option(Box<Type>),
     Result {

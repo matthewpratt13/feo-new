@@ -199,7 +199,7 @@ mod tests {
     fn parse_function_def_without_block() -> Result<(), ()> {
         let input = r#"
         #[modifier]
-        pub func only_owner(&mut self, caller: h160, balances: Vec<u256>)"#;
+        pub func only_owner(&mut self, caller: h160, balances: Mapping<u160, u256>)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

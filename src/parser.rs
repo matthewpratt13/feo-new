@@ -1178,7 +1178,6 @@ impl Parser {
                 let inner_type = Box::new(self.get_type()?);
                 Ok(Type::Reference(inner_type))
             }
-            Some(Token::Identifier { name, .. }) => Ok(Type::UserDefined(name)),
 
             Some(Token::VecType { .. }) => {
                 let _ = self.expect_binary_op(Token::LessThan {
@@ -1194,6 +1193,32 @@ impl Parser {
                 })?;
 
                 Ok(Type::Vec(Box::new(ty)))
+            }
+
+            Some(Token::MappingType { .. }) => {
+                let _ = self.expect_binary_op(Token::LessThan {
+                    punc: '<',
+                    span: self.stream.span(),
+                })?;
+
+                let key_type = Box::new(self.get_type()?);
+
+                let _ = self.expect_separator(Token::Comma {
+                    punc: '.',
+                    span: self.stream.span(),
+                })?;
+
+                let value_type = Box::new(self.get_type()?);
+
+                let _ = self.expect_binary_op(Token::GreaterThan {
+                    punc: '>',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Type::Mapping {
+                    key_type,
+                    value_type,
+                })
             }
 
             Some(Token::OptionType { .. }) => {
@@ -1234,6 +1259,8 @@ impl Parser {
 
                 Ok(Type::Result { ok, err })
             }
+
+            Some(Token::Identifier { name, .. }) => Ok(Type::UserDefined(name)),
 
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {

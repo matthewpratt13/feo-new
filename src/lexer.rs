@@ -485,6 +485,7 @@ impl<'a> Lexer<'a> {
                 "Option" => Ok(Token::OptionType { name, span }),
                 "Result" => Ok(Token::ResultType { name, span }),
                 "Vec" => Ok(Token::VecType { name, span }),
+                "Mapping" => Ok(Token::MappingType { name, span }),
                 _ => {
                     self.log_error(LexErrorKind::UnrecognizedKeyword { name });
                     Err(ErrorsEmitted(()))
@@ -1163,6 +1164,7 @@ fn is_keyword(value: &str) -> bool {
         "Option",
         "Result",
         "Vec",
+        "Mapping",
     ]
     .contains(&value)
 }
