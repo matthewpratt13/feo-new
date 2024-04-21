@@ -223,8 +223,8 @@ mod tests {
             #[constructor]
             pub func new(param1: char, param2: bool) -> Foo {
                 Foo {
-                    param1,
-                    param2
+                    param1: param1,
+                    param2: param2
                 }
             }
 

@@ -194,13 +194,24 @@ impl Parser {
                 } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     self.consume_token();
 
-                    let path = PathExpr {
-                        root: PathPrefix::Identifier(Identifier(name)),
-                        tree_opt: None,
-                        wildcard_opt: None,
-                    };
+                    match self.peek_ahead_by(2) {
+                        Some(Token::Colon { .. }) => {
+                            let path = PathExpr {
+                                root: PathPrefix::Identifier(Identifier(name)),
+                                tree_opt: None,
+                                wildcard_opt: None,
+                            };
 
-                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
+                            Ok(Expression::Struct(StructExpr::parse(self, path)?))
+                        }
+                        _ => {
+                            // self.unconsume_token();
+                            Ok(Expression::Path(PathExpr::parse(
+                                self,
+                                PathPrefix::Identifier(Identifier(name)),
+                            )?))
+                        }
+                    }
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_current()
                 {
