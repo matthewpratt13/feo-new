@@ -14,9 +14,6 @@ impl StructExpr {
         parser: &mut Parser,
         root: PathPrefix,
     ) -> Result<StructExpr, ErrorsEmitted> {
-
-        println!("ENTER `StructExpr::parse()`");
-        
         let path = PathExpr {
             root,
             tree_opt: None,
@@ -83,7 +80,7 @@ impl StructExpr {
 
         Ok(StructExpr {
             path,
-            open_brace,
+            open_brace: Delimiter::LBrace,
             fields_opt: {
                 if fields.is_empty() {
                     None
