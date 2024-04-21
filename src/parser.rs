@@ -25,6 +25,7 @@ mod path_expr;
 mod precedence;
 mod range_expr;
 mod result_expr;
+mod return_expr;
 mod some_expr;
 mod statement;
 mod static_item_decl;
@@ -391,19 +392,7 @@ impl Parser {
                 }))
             }
 
-            Some(Token::Return { .. }) => {
-                self.consume_token();
-                let expression_opt = if let Some(t) = self.peek_current() {
-                    Some(Box::new(self.parse_expression(Precedence::Lowest)?))
-                } else {
-                    None
-                };
-
-                Ok(Expression::Return(ReturnExpr {
-                    kw_return: Keyword::Return,
-                    expression_opt,
-                }))
-            }
+            Some(Token::Return { .. }) => Ok(Expression::Return(ReturnExpr::parse(self)?)),
 
             Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
@@ -1415,20 +1404,6 @@ mod tests {
     #[test]
     fn parse_type_cast_expr() -> Result<(), ()> {
         let input = r#"x as u64"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn parse_return_expr() -> Result<(), ()> {
-        let input = r#"return Object { foo: "bar", baz: x };"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
