@@ -3,7 +3,6 @@
 mod expression;
 mod item;
 mod statement;
-mod ty;
 mod types;
 
 pub use self::{expression::*, item::*, statement::*, types::*};
