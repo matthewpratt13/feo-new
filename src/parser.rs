@@ -188,6 +188,7 @@ impl Parser {
             ) => self.parse_primary(),
             Some(Token::Identifier { name, .. }) => {
                 if &name == "_" {
+                    self.consume_token();
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Separator::Underscore,
                     }))
@@ -1441,7 +1442,7 @@ mod tests {
 
     #[test]
     fn parse_type_cast_expr() -> Result<(), ()> {
-        let input = r#"x as u32"#;
+        let input = r#"x as u64"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
@@ -1484,6 +1485,20 @@ mod tests {
     #[test]
     fn parse_continue_expr() -> Result<(), ()> {
         let input = r#"continue"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }   
+    
+     #[test]
+    fn parse_underscore_expr() -> Result<(), ()> {
+        let input = r#"_"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
