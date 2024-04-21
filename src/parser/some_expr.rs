@@ -34,7 +34,7 @@ mod tests {
 
     #[test]
     fn parse_some_expr() -> Result<(), ()> {
-        let input = r#"Some(SomeStruct { foo: "bar", baz: -10 })"#;
+        let input = r#"Some(SomeStruct { foo: "bar", baz: -10 });"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
