@@ -21,16 +21,12 @@ impl GroupedExpr {
         let close_paren = parser.expect_delimiter(Token::RParen {
             delim: ')',
             span: parser.stream.span(),
-        });
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
+        })?;
 
         Ok(GroupedExpr {
             open_paren: Delimiter::LParen,
             expression: Box::new(expression),
-            close_paren: close_paren?,
+            close_paren,
         })
     }
 }

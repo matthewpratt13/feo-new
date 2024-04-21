@@ -619,7 +619,6 @@ impl Parser {
                 Ok(Expression::Call(expr))
             }
             Some(Token::LBracket { .. }) => {
-                
                 let expr = IndexExpr::parse(self, left_expr)?;
                 Ok(Expression::Index(expr))
             }
@@ -849,7 +848,22 @@ impl Parser {
                 Err(ErrorsEmitted(()))
             }
             None => {
-                self.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
+                let delim = match expected {
+                    Token::LParen { delim, .. } => delim,
+                    Token::RParen { delim, .. } => delim,
+                    Token::LBracket { delim, .. } => delim,
+                    Token::RBracket { delim, .. } => delim,
+                    Token::LBrace { delim, .. } => delim,
+                    Token::RBrace { delim, .. } => delim,
+                    _ => {
+                        self.log_error(ParserErrorKind::UnexpectedToken {
+                            expected: "delimiter".to_string(),
+                            found: Some(expected),
+                        });
+                        return Err(ErrorsEmitted(()));
+                    }
+                };
+                self.log_error(ParserErrorKind::MissingDelimiter { delim });
                 Err(ErrorsEmitted(()))
             }
         }
