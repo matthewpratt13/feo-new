@@ -192,13 +192,6 @@ impl Parser {
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Separator::Underscore,
                     }))
-                } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    self.consume_token();
-
-                    Ok(Expression::Struct(StructExpr::parse(
-                        self,
-                        PathPrefix::Identifier(Identifier(name)),
-                    )?))
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_current()
                 {
@@ -267,8 +260,28 @@ impl Parser {
                     self.parse_primary()
                 }
             }
+            Some(Token::LBrace { .. }) => match self.peek_behind_by(1) {
+                Some(Token::Identifier { name, .. }) => Ok(Expression::Struct(StructExpr::parse(
+                    self,
+                    PathPrefix::Identifier(Identifier(name)),
+                )?)),
+
+                Some(Token::SelfType { .. }) => {
+                    let path = PathExpr {
+                        root: PathPrefix::SelfType,
+                        tree_opt: None,
+                        wildcard_opt: None,
+                    };
+
+                    Ok(Expression::Struct(StructExpr::parse(
+                        self,
+                        PathPrefix::SelfType,
+                    )?))
+                }
+
+                _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
+            },
             Some(Token::LBracket { .. }) => Ok(Expression::Array(ArrayExpr::parse(self)?)),
-            Some(Token::LBrace { .. }) => Ok(Expression::Block(BlockExpr::parse(self)?)),
 
             Some(Token::Pipe { .. } | Token::DblPipe { .. }) => {
                 Ok(Expression::Closure(ClosureExpr::parse(self)?))
@@ -1494,9 +1507,9 @@ mod tests {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
-    }   
-    
-     #[test]
+    }
+
+    #[test]
     fn parse_underscore_expr() -> Result<(), ()> {
         let input = r#"_"#;
 

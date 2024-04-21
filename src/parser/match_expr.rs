@@ -47,7 +47,7 @@ impl MatchExpr {
             println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
             let guard_opt = if let Expression::Underscore(UnderscoreExpr { .. }) = case {
-                parser.consume_token();
+                // parser.consume_token();
 
                 if let Some(Token::If { .. }) = parser.peek_current() {
                     let kw_if = parser.expect_keyword(Token::If {
