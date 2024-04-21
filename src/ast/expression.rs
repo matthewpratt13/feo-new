@@ -162,7 +162,6 @@ pub struct MethodCallExpr {
 #[derive(Debug, Clone)]
 pub struct NoneExpr {
     pub kw_none: Keyword,
-    pub type_ann_opt: Option<Box<Type>>,
 }
 
 #[derive(Debug, Clone)]
@@ -182,7 +181,7 @@ pub struct RangeExpr {
 #[derive(Debug, Clone)]
 pub struct ResultExpr {
     pub kw_ok_or_err: Keyword,
-    pub expression: GroupedExpr,
+    pub expression: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]
@@ -194,7 +193,7 @@ pub struct ReturnExpr {
 #[derive(Debug, Clone)]
 pub struct SomeExpr {
     pub kw_some: Keyword,
-    pub expression: GroupedExpr,
+    pub expression: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]

@@ -377,9 +377,10 @@ impl Parser {
                 }))
             }
             Some(Token::Some { .. }) => {
-                let token = self.peek_current();
+                self.consume_token();
+                let token = self.consume_token();
                 let expression = if let Some(Token::LParen { .. }) = token {
-                    GroupedExpr::parse(self)
+                    self.parse_expression(Precedence::Lowest)
                 } else {
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`(`".to_string(),
@@ -388,41 +389,30 @@ impl Parser {
                     Err(ErrorsEmitted(()))
                 }?;
 
+                let _ = self.expect_delimiter(Token::RParen {
+                    delim: ')',
+                    span: self.stream.span(),
+                })?;
+
                 Ok(Expression::SomeExpr(SomeExpr {
                     kw_some: Keyword::Some,
-                    expression,
+                    expression: Box::new(expression),
                 }))
             }
 
             Some(Token::None { .. }) => {
-                let type_ann_opt = if let Some(Token::DblColon { .. }) = self.peek_current() {
-                    let _ = self.expect_binary_op(Token::LessThan {
-                        punc: '<',
-                        span: self.stream.span(),
-                    })?;
-
-                    let ty = Box::new(self.get_type()?);
-
-                    let _ = self.expect_binary_op(Token::GreaterThan {
-                        punc: '>',
-                        span: self.stream.span(),
-                    })?;
-
-                    Some(ty)
-                } else {
-                    None
-                };
+                self.consume_token();
 
                 Ok(Expression::NoneExpr(NoneExpr {
                     kw_none: Keyword::None,
-                    type_ann_opt,
                 }))
             }
 
             Some(Token::Ok { .. }) => {
-                let token = self.peek_current();
+                self.consume_token();
+                let token = self.consume_token();
                 let expression = if let Some(Token::LParen { .. }) = token {
-                    GroupedExpr::parse(self)
+                    self.parse_expression(Precedence::Lowest)
                 } else {
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`(`".to_string(),
@@ -431,16 +421,22 @@ impl Parser {
                     Err(ErrorsEmitted(()))
                 }?;
 
+                let _ = self.expect_delimiter(Token::RParen {
+                    delim: ')',
+                    span: self.stream.span(),
+                })?;
+
                 Ok(Expression::ResultExpr(ResultExpr {
                     kw_ok_or_err: Keyword::Ok,
-                    expression,
+                    expression: Box::new(expression),
                 }))
             }
 
             Some(Token::Err { .. }) => {
-                let token = self.peek_current();
+                self.consume_token();
+                let token = self.consume_token();
                 let expression = if let Some(Token::LParen { .. }) = token {
-                    GroupedExpr::parse(self)
+                    self.parse_expression(Precedence::Lowest)
                 } else {
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "`(`".to_string(),
@@ -449,9 +445,14 @@ impl Parser {
                     Err(ErrorsEmitted(()))
                 }?;
 
+                let _ = self.expect_delimiter(Token::RParen {
+                    delim: ')',
+                    span: self.stream.span(),
+                })?;
+
                 Ok(Expression::ResultExpr(ResultExpr {
                     kw_ok_or_err: Keyword::Err,
-                    expression,
+                    expression: Box::new(expression),
                 }))
             }
 
@@ -1460,6 +1461,48 @@ mod tests {
     #[test]
     fn parse_continue_expr() -> Result<(), ()> {
         let input = r#"continue"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_some_expr() -> Result<(), ()> {
+        let input = r#"Some(foo)"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_none_expr() -> Result<(), ()> {
+        let input = r#"None"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_result_expr() -> Result<(), ()> {
+        let input = r#"Ok(x + 2)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
