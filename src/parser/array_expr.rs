@@ -1,5 +1,5 @@
 use crate::{
-    ast::{ArrayExpr, Delimiter, Expression},
+    ast::{ArrayExpr, Expression},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -17,45 +17,41 @@ impl ArrayExpr {
 
         loop {
             if let Some(Token::RBracket { .. }) = parser.peek_current() {
-                parser.consume_token();
                 break;
             }
 
             let element = parser.parse_expression(Precedence::Lowest)?;
             elements.push(element);
 
-            let token = parser.consume_token();
-
-            match token {
-                Some(Token::Comma { .. }) => continue,
+            match parser.peek_current() {
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
+                }
                 Some(Token::RBracket { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `]`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
+
+                _ => {
                     parser.log_error(ParserErrorKind::MissingDelimiter { delim: ']' });
                 }
             }
         }
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
+        let close_bracket = parser.expect_delimiter(Token::RBracket {
+            delim: ']',
+            span: parser.stream.span(),
+        })?;
 
-        if elements.is_empty() {
-            Ok(ArrayExpr {
-                open_bracket: Delimiter::LBracket,
-                elements_opt: None,
-                close_bracket: Delimiter::RBracket,
-            })
-        } else {
-            Ok(ArrayExpr {
-                open_bracket: Delimiter::LBracket,
-                elements_opt: Some(elements),
-                close_bracket: Delimiter::RBracket,
-            })
-        }
+        Ok(ArrayExpr {
+            open_bracket,
+            elements_opt: {
+                if elements.is_empty() {
+                    None
+                } else {
+                    Some(elements)
+                }
+            },
+            close_bracket,
+        })
     }
 }
 
@@ -64,7 +60,21 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn parse_array_expr() -> Result<(), ()> {
+    fn parse_array_expr_empty() -> Result<(), ()> {
+        let input = r#"[]"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_array_expr_with_elements() -> Result<(), ()> {
         let input = r#"[1, 2, 3, 4]"#;
 
         let mut parser = test_utils::get_parser(input, false);
