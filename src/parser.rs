@@ -953,13 +953,42 @@ impl Parser {
                     Ok(Type::UnitType)
                 } else {
                     let mut types: Vec<Type> = Vec::new();
-                    while let Some(t) = self.peek_current() {
-                        if let Token::RParen { .. } = t {
+
+                    loop {
+                        if let Some(Token::Comma { .. }) = self.peek_current() {
+                            self.consume_token();
+                        }
+
+                        if let Some(Token::RParen { .. }) = self.peek_current() {
                             break;
                         }
 
-                        types.push(self.get_type()?)
+                        let ty = self.get_type()?;
+                        types.push(ty);
+
+                        let token = self.peek_current();
+
+                        match token {
+                            Some(Token::Comma { .. }) => {
+                                self.consume_token();
+                                continue;
+                            }
+                            Some(Token::RParen { .. }) => break,
+                            Some(t) => self.log_error(ParserErrorKind::UnexpectedToken {
+                                expected: "`,` or `)`".to_string(),
+                                found: Some(t),
+                            }),
+                            None => {
+                                self.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                            }
+                        }
                     }
+
+                    let _ = self.expect_delimiter(Token::RParen {
+                        delim: ')',
+                        span: self.stream.span(),
+                    })?;
+
                     Ok(Type::Tuple(types))
                 }
             }
@@ -971,18 +1000,26 @@ impl Parser {
                     span: self.stream.span(),
                 })?;
 
-                if let Some(Token::UIntLiteral { value, .. }) = self.consume_token() {
-                    Ok(Type::Array {
-                        element_type: Box::new(ty),
-                        num_elements: value,
-                    })
-                } else {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "uint literal".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted(()))
-                }
+                let num_elements =
+                    if let Some(Token::UIntLiteral { value, .. }) = self.consume_token() {
+                        Ok(value)
+                    } else {
+                        self.log_error(ParserErrorKind::UnexpectedToken {
+                            expected: "uint literal".to_string(),
+                            found: token,
+                        });
+                        Err(ErrorsEmitted(()))
+                    }?;
+
+                let _ = self.expect_delimiter(Token::RBracket {
+                    delim: '}',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Type::Array {
+                    element_type: Box::new(ty),
+                    num_elements,
+                })
             }
             Some(Token::Func { .. }) => {
                 let mut params: Vec<FunctionOrMethodParam> = Vec::new();
