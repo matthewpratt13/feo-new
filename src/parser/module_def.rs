@@ -202,7 +202,7 @@ mod tests {
                 #[modifier]
                 pub func only_owner(caller: h160) -> bool {
                     if (caller != OWNER) {
-                        return true
+                        return true;
                     }
                 }
 

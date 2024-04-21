@@ -104,10 +104,6 @@ impl FunctionDef {
         println!("EXIT `FunctionDef::parse()`");
         println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
         Ok(FunctionDef {
             attributes_opt: {
                 if attributes.is_empty() {
