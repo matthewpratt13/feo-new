@@ -15,47 +15,43 @@ impl CallExpr {
 
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
-                parser.consume_token();
                 break;
             }
 
             let arg_expr = parser.parse_expression(Precedence::Lowest)?;
             args.push(arg_expr);
 
-            let token = parser.consume_token();
+            let token = parser.peek_current();
 
             match token {
-                Some(Token::Comma { .. }) => continue,
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
+                }
                 Some(Token::RParen { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `)`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
+                _ => {
                     parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
                 }
             }
         }
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
+        let close_paren = parser.expect_delimiter(Token::RParen {
+            delim: ')',
+            span: parser.stream.span(),
+        })?;
 
-        if args.is_empty() {
-            Ok(CallExpr {
-                callee: Box::new(callee),
-                open_paren: Delimiter::LParen,
-                args_opt: None,
-                close_paren: Delimiter::RParen,
-            })
-        } else {
-            Ok(CallExpr {
-                callee: Box::new(callee),
-                open_paren: Delimiter::LParen,
-                args_opt: Some(args),
-                close_paren: Delimiter::RParen,
-            })
-        }
+        Ok(CallExpr {
+            callee: Box::new(callee),
+            open_paren: Delimiter::LParen,
+            args_opt: {
+                if args.is_empty() {
+                    None
+                } else {
+                    Some(args)
+                }
+            },
+            close_paren,
+        })
     }
 }
 
@@ -65,7 +61,7 @@ mod tests {
 
     #[test]
     fn parse_call_expr() -> Result<(), ()> {
-        let input = r#"foo(bar)"#;
+        let input = r#"foo(b"bar", x, -10)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
