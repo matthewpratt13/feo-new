@@ -47,7 +47,7 @@ mod tests {
 
     #[test]
     fn parse_result_expr() -> Result<(), ()> {
-        let input = r#"Ok(x + 2)"#;
+        let input = r#"Ok(foo)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
