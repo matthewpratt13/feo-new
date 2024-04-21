@@ -40,29 +40,37 @@ impl PathExpr {
             None
         };
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
-        if tree.is_empty() {
-            Ok(PathExpr {
-                root,
-                tree_opt: None,
-                wildcard_opt,
-            })
-        } else {
-            Ok(PathExpr {
-                root,
-                tree_opt: Some(tree),
-                wildcard_opt,
-            })
-        }
+        Ok(PathExpr {
+            root,
+            tree_opt: {
+                if tree.is_empty() {
+                    None
+                } else {
+                    Some(tree)
+                }
+            },
+            wildcard_opt,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::parser::test_utils;
+
+    #[test]
+    fn parse_path_expr_identifier() -> Result<(), ()> {
+        let input = r#"foo_bar"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
 
     #[test]
     fn parse_path_expr() -> Result<(), ()> {
@@ -79,8 +87,8 @@ mod tests {
     }
 
     #[test]
-    fn parse_path_expr_identifier() -> Result<(), ()> {
-        let input = r#"foo_bar"#;
+    fn parse_path_expr_wildcard() -> Result<(), ()> {
+        let input = r#"self::module::*"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

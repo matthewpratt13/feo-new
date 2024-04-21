@@ -221,11 +221,10 @@ impl Parser {
             }
             Some(Token::SelfKeyword { .. }) => {
                 self.consume_token();
-                Ok(Expression::Path(PathExpr {
-                    root: PathPrefix::SelfKeyword,
-                    tree_opt: None,
-                    wildcard_opt: None,
-                }))
+                Ok(Expression::Path(PathExpr::parse(
+                    self,
+                    PathPrefix::SelfKeyword,
+                )?))
             }
             Some(Token::Package { .. }) => {
                 self.consume_token();
