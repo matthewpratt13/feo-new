@@ -40,10 +40,11 @@ use crate::{
         ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
         FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier,
         IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
-        MatchExpr, MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis,
-        RangeExpr, RangeOp, ReturnExpr, Separator, Statement, StaticItemDecl, StructDef,
-        StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr,
-        UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
+        MatchExpr, MethodCallExpr, ModuleDef, NoneExpr, OuterAttr, PathExpr, PathPrefix,
+        PubPackageVis, RangeExpr, RangeOp, ReturnExpr, Separator, SomeExpr, Statement,
+        StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr,
+        Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility,
+        WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -373,6 +374,50 @@ impl Parser {
                 self.consume_token();
                 Ok(Expression::Continue(ContinueExpr {
                     kw_continue: Keyword::Continue,
+                }))
+            }
+            Some(Token::Some { .. }) => {
+                let token = self.consume_token();
+                let expression = if let Some(Token::LParen { .. }) = token {
+                    GroupedExpr::parse(self)
+                } else {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`(`".to_string(),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted(()))
+                }?;
+
+                Ok(Expression::SomeExpr(SomeExpr {
+                    kw_some: Keyword::Some,
+                    expression,
+                }))
+            }
+
+            Some(Token::None { .. }) => {
+                let type_ann_opt = if let Some(Token::DblColon { .. }) = self.peek_current() {
+                    self.consume_token();
+
+                    let _ = self.expect_binary_op(Token::LessThan {
+                        punc: '<',
+                        span: self.stream.span(),
+                    })?;
+
+                    let ty = Box::new(self.get_type()?);
+
+                    let _ = self.expect_binary_op(Token::GreaterThan {
+                        punc: '>',
+                        span: self.stream.span(),
+                    })?;
+
+                    Some(ty)
+                } else {
+                    None
+                };
+
+                Ok(Expression::NoneExpr(NoneExpr {
+                    kw_none: Keyword::None,
+                    type_ann_opt,
                 }))
             }
 

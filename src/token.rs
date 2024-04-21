@@ -68,6 +68,10 @@ pub enum Token {
     While { name: String, span: Span },
     Break { name: String, span: Span },
     Continue { name: String, span: Span },
+    Some { name: String, span: Span },
+    None { name: String, span: Span },
+    Ok { name: String, span: Span },
+    Err { name: String, span: Span },
 
     // types
     I32Type { name: String, span: Span },
@@ -223,6 +227,10 @@ impl Token {
             Token::While { span, .. } => span,
             Token::Break { span, .. } => span,
             Token::Continue { span, .. } => span,
+            Token::Some { span, .. } => span,
+            Token::None { span, .. } => span,
+            Token::Ok { span, .. } => span,
+            Token::Err { span, .. } => span,
             Token::I32Type { span, .. } => span,
             Token::I64Type { span, .. } => span,
             Token::I128Type { span, .. } => span,

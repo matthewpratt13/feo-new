@@ -299,6 +299,7 @@ impl<'a> Lexer<'a> {
                         Err(ErrorsEmitted(()))
                     }
                 }
+                "Err" => Ok(Token::Err { name, span }),
                 "event" => {
                     if let Some(']') = self.peek_current() {
                         let token = self.tokenize_outer_attribute(name, span);
@@ -371,6 +372,8 @@ impl<'a> Lexer<'a> {
                 }
                 "mod" => Ok(Token::Mod { name, span }),
                 "mut" => Ok(Token::Mut { name, span }),
+                "Ok" => Ok(Token::Ok { name, span }),
+                "None" => Ok(Token::None { name, span }),
                 "package" => Ok(Token::Package { name, span }),
                 "payable" => {
                     if let Some(']') = self.peek_current() {
@@ -396,6 +399,8 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 "self" => Ok(Token::SelfKeyword { name, span }),
+                "Some" => Ok(Token::Some { name, span }),
+
                 "static" => Ok(Token::Static { name, span }),
                 "storage" => {
                     if let Some(']') = self.peek_current() {
@@ -1093,6 +1098,7 @@ fn is_keyword(value: &str) -> bool {
         "else",
         "enum",
         "error",
+        "Err",
         "event",
         "extern",
         "false",
@@ -1110,6 +1116,8 @@ fn is_keyword(value: &str) -> bool {
         "modifier",
         "mod",
         "mut",
+        "None",
+        "Ok",
         "package",
         "payable",
         "pub",
@@ -1117,6 +1125,7 @@ fn is_keyword(value: &str) -> bool {
         "return",
         "script",
         "self",
+        "Some",
         "static",
         "storage",
         "struct",

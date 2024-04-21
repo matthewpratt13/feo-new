@@ -69,6 +69,10 @@ pub enum Keyword {
     Unsafe,
     Let,
     Mut,
+    Some,
+    None,
+    Ok,
+    Err,
 }
 
 #[derive(Debug, Clone)]
@@ -213,6 +217,9 @@ pub enum Expression {
     Match(MatchExpr), // scrutinee, body
     ForIn(ForInExpr), // variable, iterable, body
     While(WhileExpr), // while, condition, body
+    SomeExpr(SomeExpr),
+    NoneExpr(NoneExpr),
+    ResultExpr(ResultExpr),
 }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
