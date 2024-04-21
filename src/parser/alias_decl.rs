@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn parse_alias_decl() -> Result<(), ()> {
-        let input = r#"pub(package) alias Foo = u64;"#;
+        let input = r#"pub(package) alias Foo = (u64, bool, char);"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

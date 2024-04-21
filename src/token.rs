@@ -94,7 +94,6 @@ pub enum Token {
     CharType { name: String, span: Span },
     BoolType { name: String, span: Span },
     SelfType { name: String, span: Span },
-    CustomType { name: String, span: Span },
 
     // delimiters
     LParen { delim: char, span: Span },
@@ -245,7 +244,6 @@ impl Token {
             Token::CharType { span, .. } => span,
             Token::BoolType { span, .. } => span,
             Token::SelfType { span, .. } => span,
-            Token::CustomType { span, .. } => span,
             Token::LParen { span, .. } => span,
             Token::RParen { span, .. } => span,
             Token::LBrace { span, .. } => span,

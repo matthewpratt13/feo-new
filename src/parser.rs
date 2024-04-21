@@ -38,12 +38,12 @@ use crate::{
     ast::{
         AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
         ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
-        FieldAccessExpr, ForInExpr, FunctionDef, GroupedExpr, Identifier, IfExpr, ImportDecl,
-        IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr,
-        MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr,
-        RangeOp, ReturnExpr, Separator, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef,
-        TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryExpr, UnaryOp,
-        UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
+        FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier,
+        IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
+        MatchExpr, MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis,
+        RangeExpr, RangeOp, ReturnExpr, Separator, Statement, StaticItemDecl, StructDef,
+        StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr,
+        UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -924,46 +924,181 @@ impl Parser {
         let token = self.consume_token();
 
         match token {
-            Some(Token::I32Type { .. }) => Ok(Type::I32),
-            Some(Token::I64Type { .. }) => Ok(Type::I64),
-            Some(Token::I128Type { .. }) => Ok(Type::I128),
-            Some(Token::U8Type { .. }) => Ok(Type::U8),
-            Some(Token::U16Type { .. }) => Ok(Type::U16),
-            Some(Token::U32Type { .. }) => Ok(Type::U32),
-            Some(Token::U64Type { .. }) => Ok(Type::U64),
-            Some(Token::U128Type { .. }) => Ok(Type::U128),
-            Some(Token::U256Type { .. }) => Ok(Type::U256),
-            Some(Token::U512Type { .. }) => Ok(Type::U512),
-            Some(Token::ByteType { .. }) => Ok(Type::Byte),
-            Some(Token::B2Type { .. }) => Ok(Type::B2),
-            Some(Token::B4Type { .. }) => Ok(Type::B4),
-            Some(Token::B8Type { .. }) => Ok(Type::B8),
-            Some(Token::B16Type { .. }) => Ok(Type::B16),
-            Some(Token::B32Type { .. }) => Ok(Type::B32),
-            Some(Token::H160Type { .. }) => Ok(Type::H160),
-            Some(Token::H256Type { .. }) => Ok(Type::H256),
-            Some(Token::H512Type { .. }) => Ok(Type::H512),
-            Some(Token::StrType { .. }) => Ok(Type::Str),
-            Some(Token::CharType { .. }) => Ok(Type::Char),
-            Some(Token::BoolType { .. }) => Ok(Type::Bool),
-            Some(Token::CustomType { .. }) => Ok(Type::UserDefined),
-            Some(Token::SelfType { .. }) => Ok(Type::SelfType),
+            Some(Token::I32Type { name, .. }) => Ok(Type::I32(name)),
+            Some(Token::I64Type { name, .. }) => Ok(Type::I64(name)),
+            Some(Token::I128Type { name, .. }) => Ok(Type::I128(name)),
+            Some(Token::U8Type { name, .. }) => Ok(Type::U8(name)),
+            Some(Token::U16Type { name, .. }) => Ok(Type::U16(name)),
+            Some(Token::U32Type { name, .. }) => Ok(Type::U32(name)),
+            Some(Token::U64Type { name, .. }) => Ok(Type::U64(name)),
+            Some(Token::U128Type { name, .. }) => Ok(Type::U128(name)),
+            Some(Token::U256Type { name, .. }) => Ok(Type::U256(name)),
+            Some(Token::U512Type { name, .. }) => Ok(Type::U512(name)),
+            Some(Token::ByteType { name, .. }) => Ok(Type::Byte(name)),
+            Some(Token::B2Type { name, .. }) => Ok(Type::B2(name)),
+            Some(Token::B4Type { name, .. }) => Ok(Type::B4(name)),
+            Some(Token::B8Type { name, .. }) => Ok(Type::B8(name)),
+            Some(Token::B16Type { name, .. }) => Ok(Type::B16(name)),
+            Some(Token::B32Type { name, .. }) => Ok(Type::B32(name)),
+            Some(Token::H160Type { name, .. }) => Ok(Type::H160(name)),
+            Some(Token::H256Type { name, .. }) => Ok(Type::H256(name)),
+            Some(Token::H512Type { name, .. }) => Ok(Type::H512(name)),
+            Some(Token::StrType { name, .. }) => Ok(Type::Str(name)),
+            Some(Token::CharType { name, .. }) => Ok(Type::Char(name)),
+            Some(Token::BoolType { name, .. }) => Ok(Type::Bool(name)),
+            Some(Token::SelfType { name, .. }) => Ok(Type::SelfType(name)),
             Some(Token::LParen { .. }) => {
                 if let Some(Token::RParen { .. }) = self.peek_current() {
                     self.consume_token();
                     Ok(Type::UnitType)
                 } else {
-                    Ok(Type::Tuple)
+                    let mut types: Vec<Type> = Vec::new();
+
+                    loop {
+                        if let Some(Token::Comma { .. }) = self.peek_current() {
+                            self.consume_token();
+                        }
+
+                        if let Some(Token::RParen { .. }) = self.peek_current() {
+                            break;
+                        }
+
+                        let ty = self.get_type()?;
+                        types.push(ty);
+
+                        let token = self.peek_current();
+
+                        match token {
+                            Some(Token::Comma { .. }) => {
+                                self.consume_token();
+                                continue;
+                            }
+                            Some(Token::RParen { .. }) => break,
+                            Some(t) => self.log_error(ParserErrorKind::UnexpectedToken {
+                                expected: "`,` or `)`".to_string(),
+                                found: Some(t),
+                            }),
+                            None => {
+                                self.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                            }
+                        }
+                    }
+
+                    let _ = self.expect_delimiter(Token::RParen {
+                        delim: ')',
+                        span: self.stream.span(),
+                    })?;
+
+                    Ok(Type::Tuple(types))
                 }
             }
-            Some(Token::LBracket { .. }) => Ok(Type::Array),
-            Some(Token::Func { .. }) => Ok(Type::Function),
+            Some(Token::LBracket { .. }) => {
+                let ty = self.get_type()?;
+
+                let _ = self.expect_separator(Token::Semicolon {
+                    punc: ';',
+                    span: self.stream.span(),
+                })?;
+
+                let num_elements =
+                    if let Some(Token::UIntLiteral { value, .. }) = self.consume_token() {
+                        Ok(value)
+                    } else {
+                        self.log_error(ParserErrorKind::UnexpectedToken {
+                            expected: "uint literal".to_string(),
+                            found: token,
+                        });
+                        Err(ErrorsEmitted(()))
+                    }?;
+
+                let _ = self.expect_delimiter(Token::RBracket {
+                    delim: '}',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Type::Array {
+                    element_type: Box::new(ty),
+                    num_elements,
+                })
+            }
+            Some(Token::Func { .. }) => {
+                let mut params: Vec<FunctionOrMethodParam> = Vec::new();
+
+                let function_name = if let Some(Token::Identifier { name, .. }) = token {
+                    Ok(Identifier(name))
+                } else {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "identifier".to_string(),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted(()))
+                }?;
+
+                let _ = self.expect_delimiter(Token::LParen {
+                    delim: '(',
+                    span: self.stream.span(),
+                })?;
+
+                // `&self` and `&mut self` can only occur as the first parameter in a method
+                if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
+                    self.peek_current()
+                {
+                    let param = FunctionOrMethodParam::parse(self)?;
+                    params.push(param);
+                }
+
+                loop {
+                    if let Some(Token::Comma { .. }) = self.peek_current() {
+                        self.consume_token();
+                    }
+
+                    if let Some(Token::RParen { .. }) = self.peek_current() {
+                        break;
+                    }
+
+                    let param = FunctionOrMethodParam::parse(self)?;
+                    params.push(param);
+
+                    let token = self.peek_current();
+
+                    match token {
+                        Some(Token::Comma { .. }) => {
+                            self.consume_token();
+                            continue;
+                        }
+                        Some(Token::RParen { .. }) => break,
+                        Some(t) => self.log_error(ParserErrorKind::UnexpectedToken {
+                            expected: "`,` or `)`".to_string(),
+                            found: Some(t),
+                        }),
+                        None => {
+                            self.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                        }
+                    }
+                }
+
+                let _ = self.expect_delimiter(Token::RParen {
+                    delim: ')',
+                    span: self.stream.span(),
+                })?;
+
+                let return_type_opt = if let Some(Token::ThinArrow { .. }) = self.peek_current() {
+                    self.consume_token();
+                    Some(Box::new(self.get_type()?))
+                } else {
+                    None
+                };
+
+                Ok(Type::Function {
+                    function_name,
+                    return_type_opt,
+                })
+            }
             Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => {
                 let inner_type = Box::new(self.get_type()?);
-
                 Ok(Type::Reference(inner_type))
             }
-            Some(Token::Identifier { .. }) => Ok(Type::UserDefined),
+            Some(Token::Identifier { name, .. }) => Ok(Type::UserDefined(name)),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "type annotation".to_string(),

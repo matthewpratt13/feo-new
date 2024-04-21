@@ -30,7 +30,7 @@ pub enum Literal {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Wrapper type, turning a `String` into an `Identifier` AST node.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Identifier(pub String);
 
 ///////////////////////////////////////////////////////////////////////////
@@ -247,40 +247,46 @@ pub enum Item {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     // primitives
-    I32,
-    I64,
-    I128,
-    U8,
-    U16,
-    U32,
-    U64,
-    U128,
-    U256,
-    U512,
-    Byte, // `u8`
-    B2,
-    B4,
-    B8,
-    B16,
-    B32,
-    H160,
-    H256,
-    H512,
-    Str, // `Vec<u8>`
-    Char,
-    Bool,
+    I32(String),
+    I64(String),
+    I128(String),
+    U8(String),
+    U16(String),
+    U32(String),
+    U64(String),
+    U128(String),
+    U256(String),
+    U512(String),
+    Byte(String), // `u8`
+    B2(String),
+    B4(String),
+    B8(String),
+    B16(String),
+    B32(String),
+    H160(String),
+    H256(String),
+    H512(String),
+    Str(String), // `Vec<u8>`
+    Char(String),
+    Bool(String),
 
     UnitType, // ()
 
     // built-in collections
-    Array,
-    Tuple,
+    Array {
+        element_type: Box<Type>,
+        num_elements: UInt,
+    },
+    Tuple(Vec<Type>),
 
-    UserDefined, // struct, enum, trait, alias, constant (paths / items)
+    UserDefined(String), // struct, enum, trait, alias, constant (paths / items)
 
-    Function,
+    Function {
+        function_name: Identifier,
+        return_type_opt: Option<Box<Type>>,
+    },
     Reference(Box<Type>), //  `&Type` / `&mut Type`
-    SelfType,
+    SelfType(String),
 }
 
 ///////////////////////////////////////////////////////////////////////////
