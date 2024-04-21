@@ -24,6 +24,7 @@ mod module_def;
 mod path_expr;
 mod precedence;
 mod range_expr;
+mod some_expr;
 mod statement;
 mod static_item_decl;
 mod struct_def;
@@ -207,10 +208,9 @@ impl Parser {
                 if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     self.consume_token();
 
-                    Ok(Expression::Struct(StructExpr::parse(
-                        self,
-                        PathPrefix::SelfType,
-                    )?))
+                    let path = PathExpr::parse(self, PathPrefix::SelfType)?;
+
+                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
                 } else {
                     Ok(Expression::Path(PathExpr {
                         root: PathPrefix::SelfType,
@@ -260,10 +260,15 @@ impl Parser {
                 }
             }
             Some(Token::LBrace { .. }) => match self.peek_behind_by(1) {
-                Some(Token::Identifier { name, .. }) => Ok(Expression::Struct(StructExpr::parse(
-                    self,
-                    PathPrefix::Identifier(Identifier(name)),
-                )?)),
+                Some(Token::Identifier { name, .. }) => {
+                    let path = PathExpr {
+                        root: PathPrefix::Identifier(Identifier(name)),
+                        tree_opt: None,
+                        wildcard_opt: None,
+                    };
+
+                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
+                }
 
                 Some(Token::SelfType { .. }) => {
                     let path = PathExpr {
@@ -272,10 +277,7 @@ impl Parser {
                         wildcard_opt: None,
                     };
 
-                    Ok(Expression::Struct(StructExpr::parse(
-                        self,
-                        PathPrefix::SelfType,
-                    )?))
+                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
                 }
 
                 _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
@@ -361,29 +363,7 @@ impl Parser {
 
             Some(Token::While { .. }) => Ok(Expression::While(WhileExpr::parse(self)?)),
 
-            Some(Token::Some { .. }) => {
-                self.consume_token();
-                let token = self.consume_token();
-                let expression = if let Some(Token::LParen { .. }) = token {
-                    self.parse_expression(Precedence::Lowest)
-                } else {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`(`".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted(()))
-                }?;
-
-                let _ = self.expect_delimiter(Token::RParen {
-                    delim: ')',
-                    span: self.stream.span(),
-                })?;
-
-                Ok(Expression::SomeExpr(SomeExpr {
-                    kw_some: Keyword::Some,
-                    expression: Box::new(expression),
-                }))
-            }
+            Some(Token::Some { .. }) => Ok(Expression::SomeExpr(SomeExpr::parse(self)?)),
 
             Some(Token::None { .. }) => {
                 self.consume_token();
@@ -624,6 +604,7 @@ impl Parser {
                 let expr = IndexExpr::parse(self, left_expr)?;
                 Ok(Expression::Index(expr))
             }
+
             Some(Token::As { .. }) => {
                 let new_type = self.get_type()?;
 
@@ -969,6 +950,10 @@ impl Parser {
                 } else {
                     Precedence::Unary
                 }
+            }
+
+            Token::Some { .. } | Token::None { .. } | Token::Ok { .. } | Token::Err { .. } => {
+                Precedence::Unary
             }
             Token::Slash { .. } => Precedence::Quotient,
             Token::LessThan { .. } => Precedence::LessThan,
@@ -1529,20 +1514,6 @@ mod tests {
     #[test]
     fn parse_underscore_expr() -> Result<(), ()> {
         let input = r#"_"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn parse_some_expr() -> Result<(), ()> {
-        let input = r#"Some(foo)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

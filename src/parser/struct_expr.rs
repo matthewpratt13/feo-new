@@ -1,8 +1,5 @@
 use crate::{
-    ast::{
-        Delimiter, Expression, Identifier, PathExpr, PathPrefix, StructExpr, StructField,
-        TupleStructExpr,
-    },
+    ast::{Delimiter, Expression, Identifier, PathExpr, StructExpr, StructField, TupleStructExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -10,16 +7,7 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl StructExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        root: PathPrefix,
-    ) -> Result<StructExpr, ErrorsEmitted> {
-        let path = PathExpr {
-            root,
-            tree_opt: None,
-            wildcard_opt: None,
-        };
-
+    pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<StructExpr, ErrorsEmitted> {
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),
