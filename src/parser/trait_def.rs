@@ -92,10 +92,6 @@ impl ParseDefinition for TraitDef {
             span: parser.stream.span(),
         })?;
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
         Ok(TraitDef {
             attributes_opt: {
                 if attributes.is_empty() {
@@ -198,14 +194,10 @@ impl MethodSig {
             None
         };
 
-        let semicolon = parser.expect_separator(Token::Semicolon {
+        let _ = parser.expect_separator(Token::Semicolon {
             punc: ';',
             span: parser.stream.span(),
         })?;
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
 
         Ok(MethodSig {
             attributes_opt: {
@@ -228,7 +220,6 @@ impl MethodSig {
             },
             close_paren,
             return_type_opt,
-            semicolon,
         })
     }
 }

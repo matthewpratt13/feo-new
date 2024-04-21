@@ -52,6 +52,11 @@ impl ParseStatement for LetStmt {
             None
         };
 
+        let _ = parser.expect_separator(Token::Semicolon {
+            punc: ';',
+            span: parser.stream.span(),
+        })?;
+
         Ok(LetStmt {
             kw_let,
             kw_mut_opt,

@@ -22,36 +22,23 @@ impl ParseDeclaration for ImportDecl {
 
         let tree = ImportTree::parse(parser)?;
 
-        parser.consume_token();
+        let _ = parser.expect_separator(Token::Semicolon {
+            punc: ';',
+            span: parser.stream.span(),
+        })?;
 
-        if let Some(Token::Semicolon { .. }) = parser.peek_behind_by(1) {
-            ()
-        } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`;`".to_string(),
-                found: parser.peek_current(),
-            })
-        }
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
-        if attributes.is_empty() {
-            Ok(ImportDecl {
-                attributes_opt: None,
-                visibility,
-                kw_import,
-                tree,
-            })
-        } else {
-            Ok(ImportDecl {
-                attributes_opt: Some(attributes),
-                visibility,
-                kw_import,
-                tree,
-            })
-        }
+        Ok(ImportDecl {
+            attributes_opt: {
+                if attributes.is_empty() {
+                    None
+                } else {
+                    Some(attributes)
+                }
+            },
+            visibility,
+            kw_import,
+            tree,
+        })
     }
 }
 

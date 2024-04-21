@@ -41,38 +41,26 @@ impl ParseDeclaration for ConstantDecl {
             None
         };
 
-        if let Some(Token::Semicolon { .. }) = parser.peek_behind_by(1) {
-            ()
-        } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`;`".to_string(),
-                found: parser.peek_current(),
-            })
-        }
+        let _ = parser.expect_separator(Token::Semicolon {
+            punc: ';',
+            span: parser.stream.span(),
+        })?;
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
+        Ok(ConstantDecl {
+            attributes_opt: {
+                if attributes.is_empty() {
+                    None
+                } else {
+                    Some(attributes)
+                }
+            },
 
-        if attributes.is_empty() {
-            Ok(ConstantDecl {
-                attributes_opt: None,
-                visibility,
-                kw_const,
-                item_name,
-                item_type,
-                value_opt,
-            })
-        } else {
-            Ok(ConstantDecl {
-                attributes_opt: Some(attributes),
-                visibility,
-                kw_const,
-                item_name,
-                item_type,
-                value_opt,
-            })
-        }
+            visibility,
+            kw_const,
+            item_name,
+            item_type,
+            value_opt,
+        })
     }
 }
 

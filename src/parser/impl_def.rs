@@ -73,10 +73,6 @@ impl ParseDefinition for InherentImplDef {
             span: parser.stream.span(),
         })?;
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
         Ok(InherentImplDef {
             attributes_opt: {
                 if attributes.is_empty() {
@@ -187,10 +183,6 @@ impl ParseDefinition for TraitImplDef {
             delim: '}',
             span: parser.stream.span(),
         })?;
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
 
         Ok(TraitImplDef {
             attributes_opt: {

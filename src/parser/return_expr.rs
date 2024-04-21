@@ -9,11 +9,12 @@ impl ReturnExpr {
             span: parser.stream.span(),
         })?;
 
-        let expression_opt = if let Some(t) = parser.consume_token() {
+        let expression_opt = if let Some(t) = parser.peek_current() {
             Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
         } else {
             None
         };
+
 
 
         Ok(ReturnExpr {
