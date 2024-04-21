@@ -749,6 +749,10 @@ impl Parser {
             Some(Token::Return { .. }) => Ok(Keyword::Return),
             Some(Token::Let { .. }) => Ok(Keyword::Let),
             Some(Token::Mut { .. }) => Ok(Keyword::Mut),
+            Some(Token::Some { .. }) => Ok(Keyword::Some),
+            Some(Token::None { .. }) => Ok(Keyword::None),
+            Some(Token::Ok { .. }) => Ok(Keyword::Ok),
+            Some(Token::Err { .. }) => Ok(Keyword::Err),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),

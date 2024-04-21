@@ -1,14 +1,13 @@
-use crate::{
-    ast::{Keyword, SomeExpr},
-    error::ErrorsEmitted,
-    token::Token,
-};
+use crate::{ast::SomeExpr, error::ErrorsEmitted, token::Token};
 
 use super::{Parser, Precedence};
 
 impl SomeExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<SomeExpr, ErrorsEmitted> {
-        parser.consume_token();
+        let kw_some = parser.expect_keyword(Token::Some {
+            name: "Some".to_string(),
+            span: parser.stream.span(),
+        })?;
 
         let _ = parser.expect_delimiter(Token::LParen {
             delim: '(',
@@ -23,7 +22,7 @@ impl SomeExpr {
         })?;
 
         Ok(SomeExpr {
-            kw_some: Keyword::Some,
+            kw_some,
             expression: Box::new(expression),
         })
     }

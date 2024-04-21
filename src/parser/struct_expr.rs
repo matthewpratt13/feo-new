@@ -8,6 +8,8 @@ use super::{Parser, Precedence};
 
 impl StructExpr {
     pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<StructExpr, ErrorsEmitted> {
+
+        println!("ENTER `StructExpr::parse()`");
         let open_brace = parser.expect_delimiter(Token::LBrace {
             delim: '{',
             span: parser.stream.span(),

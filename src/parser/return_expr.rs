@@ -9,12 +9,12 @@ impl ReturnExpr {
             span: parser.stream.span(),
         })?;
 
-        let expression_opt = if let Some(t) = parser.peek_current() {
-            parser.consume_token();
+        let expression_opt = if let Some(t) = parser.consume_token() {
             Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
         } else {
             None
         };
+
 
         Ok(ReturnExpr {
             kw_return,
@@ -26,7 +26,6 @@ impl ReturnExpr {
 #[cfg(test)]
 mod tests {
     use crate::parser::test_utils;
-
 
     #[test]
     fn parse_return_expr() -> Result<(), ()> {
