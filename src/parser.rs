@@ -24,6 +24,7 @@ mod module_def;
 mod path_expr;
 mod precedence;
 mod range_expr;
+mod result_expr;
 mod some_expr;
 mod statement;
 mod static_item_decl;
@@ -373,52 +374,8 @@ impl Parser {
                 }))
             }
 
-            Some(Token::Ok { .. }) => {
-                self.consume_token();
-                let token = self.consume_token();
-                let expression = if let Some(Token::LParen { .. }) = token {
-                    self.parse_expression(Precedence::Lowest)
-                } else {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`(`".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted(()))
-                }?;
-
-                let _ = self.expect_delimiter(Token::RParen {
-                    delim: ')',
-                    span: self.stream.span(),
-                })?;
-
-                Ok(Expression::ResultExpr(ResultExpr {
-                    kw_ok_or_err: Keyword::Ok,
-                    expression: Box::new(expression),
-                }))
-            }
-
-            Some(Token::Err { .. }) => {
-                self.consume_token();
-                let token = self.consume_token();
-                let expression = if let Some(Token::LParen { .. }) = token {
-                    self.parse_expression(Precedence::Lowest)
-                } else {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`(`".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted(()))
-                }?;
-
-                let _ = self.expect_delimiter(Token::RParen {
-                    delim: ')',
-                    span: self.stream.span(),
-                })?;
-
-                Ok(Expression::ResultExpr(ResultExpr {
-                    kw_ok_or_err: Keyword::Err,
-                    expression: Box::new(expression),
-                }))
+            Some(Token::Ok { .. } | Token::Err { .. }) => {
+                Ok(Expression::ResultExpr(ResultExpr::parse(self)?))
             }
 
             Some(Token::Break { name, .. }) => {
@@ -1514,34 +1471,6 @@ mod tests {
     #[test]
     fn parse_underscore_expr() -> Result<(), ()> {
         let input = r#"_"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn parse_none_expr() -> Result<(), ()> {
-        let input = r#"None"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn parse_result_expr() -> Result<(), ()> {
-        let input = r#"Ok(x + 2)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
