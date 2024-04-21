@@ -40,10 +40,11 @@ use crate::{
         ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
         FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier,
         IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
-        MatchExpr, MethodCallExpr, ModuleDef, OuterAttr, PathExpr, PathPrefix, PubPackageVis,
-        RangeExpr, RangeOp, ReturnExpr, Separator, Statement, StaticItemDecl, StructDef,
-        StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr,
-        UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
+        MatchExpr, MethodCallExpr, ModuleDef, NoneExpr, OuterAttr, PathExpr, PathPrefix,
+        PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement,
+        StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr,
+        Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility,
+        WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -373,6 +374,85 @@ impl Parser {
                 self.consume_token();
                 Ok(Expression::Continue(ContinueExpr {
                     kw_continue: Keyword::Continue,
+                }))
+            }
+            Some(Token::Some { .. }) => {
+                self.consume_token();
+                let token = self.consume_token();
+                let expression = if let Some(Token::LParen { .. }) = token {
+                    self.parse_expression(Precedence::Lowest)
+                } else {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`(`".to_string(),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted(()))
+                }?;
+
+                let _ = self.expect_delimiter(Token::RParen {
+                    delim: ')',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Expression::SomeExpr(SomeExpr {
+                    kw_some: Keyword::Some,
+                    expression: Box::new(expression),
+                }))
+            }
+
+            Some(Token::None { .. }) => {
+                self.consume_token();
+
+                Ok(Expression::NoneExpr(NoneExpr {
+                    kw_none: Keyword::None,
+                }))
+            }
+
+            Some(Token::Ok { .. }) => {
+                self.consume_token();
+                let token = self.consume_token();
+                let expression = if let Some(Token::LParen { .. }) = token {
+                    self.parse_expression(Precedence::Lowest)
+                } else {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`(`".to_string(),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted(()))
+                }?;
+
+                let _ = self.expect_delimiter(Token::RParen {
+                    delim: ')',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Expression::ResultExpr(ResultExpr {
+                    kw_ok_or_err: Keyword::Ok,
+                    expression: Box::new(expression),
+                }))
+            }
+
+            Some(Token::Err { .. }) => {
+                self.consume_token();
+                let token = self.consume_token();
+                let expression = if let Some(Token::LParen { .. }) = token {
+                    self.parse_expression(Precedence::Lowest)
+                } else {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`(`".to_string(),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted(()))
+                }?;
+
+                let _ = self.expect_delimiter(Token::RParen {
+                    delim: ')',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Expression::ResultExpr(ResultExpr {
+                    kw_ok_or_err: Keyword::Err,
+                    expression: Box::new(expression),
                 }))
             }
 
@@ -1098,7 +1178,90 @@ impl Parser {
                 let inner_type = Box::new(self.get_type()?);
                 Ok(Type::Reference(inner_type))
             }
+
+            Some(Token::VecType { .. }) => {
+                let _ = self.expect_binary_op(Token::LessThan {
+                    punc: '<',
+                    span: self.stream.span(),
+                })?;
+
+                let ty = self.get_type()?;
+
+                let _ = self.expect_binary_op(Token::GreaterThan {
+                    punc: '>',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Type::Vec(Box::new(ty)))
+            }
+
+            Some(Token::MappingType { .. }) => {
+                let _ = self.expect_binary_op(Token::LessThan {
+                    punc: '<',
+                    span: self.stream.span(),
+                })?;
+
+                let key_type = Box::new(self.get_type()?);
+
+                let _ = self.expect_separator(Token::Comma {
+                    punc: '.',
+                    span: self.stream.span(),
+                })?;
+
+                let value_type = Box::new(self.get_type()?);
+
+                let _ = self.expect_binary_op(Token::GreaterThan {
+                    punc: '>',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Type::Mapping {
+                    key_type,
+                    value_type,
+                })
+            }
+
+            Some(Token::OptionType { .. }) => {
+                let _ = self.expect_binary_op(Token::LessThan {
+                    punc: '<',
+                    span: self.stream.span(),
+                })?;
+
+                let ty = self.get_type()?;
+
+                let _ = self.expect_binary_op(Token::GreaterThan {
+                    punc: '>',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Type::Option(Box::new(ty)))
+            }
+
+            Some(Token::ResultType { .. }) => {
+                let _ = self.expect_binary_op(Token::LessThan {
+                    punc: '<',
+                    span: self.stream.span(),
+                })?;
+
+                let ok = Box::new(self.get_type()?);
+
+                let _ = self.expect_separator(Token::Comma {
+                    punc: '.',
+                    span: self.stream.span(),
+                })?;
+
+                let err = Box::new(self.get_type()?);
+
+                let _ = self.expect_binary_op(Token::GreaterThan {
+                    punc: '>',
+                    span: self.stream.span(),
+                })?;
+
+                Ok(Type::Result { ok, err })
+            }
+
             Some(Token::Identifier { name, .. }) => Ok(Type::UserDefined(name)),
+
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "type annotation".to_string(),
@@ -1325,6 +1488,48 @@ mod tests {
     #[test]
     fn parse_continue_expr() -> Result<(), ()> {
         let input = r#"continue"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_some_expr() -> Result<(), ()> {
+        let input = r#"Some(foo)"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_none_expr() -> Result<(), ()> {
+        let input = r#"None"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_result_expr() -> Result<(), ()> {
+        let input = r#"Ok(x + 2)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

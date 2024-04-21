@@ -160,6 +160,11 @@ pub struct MethodCallExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct NoneExpr {
+    pub kw_none: Keyword,
+}
+
+#[derive(Debug, Clone)]
 pub struct PathExpr {
     pub root: PathPrefix,
     pub tree_opt: Option<Vec<Identifier>>,
@@ -174,9 +179,21 @@ pub struct RangeExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct ResultExpr {
+    pub kw_ok_or_err: Keyword,
+    pub expression: Box<Expression>,
+}
+
+#[derive(Debug, Clone)]
 pub struct ReturnExpr {
     pub kw_return: Keyword,
     pub expression_opt: Option<Box<Expression>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SomeExpr {
+    pub kw_some: Keyword,
+    pub expression: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]

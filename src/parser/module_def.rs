@@ -213,7 +213,7 @@ mod tests {
             }
 
             impl Bar for Foo {
-                func transfer(&mut self, to: h160, amount: u256) -> Baz {
+                func transfer(&mut self, to: h160, amount: u256) -> Result<Baz, Error> {
                     self.balance -= amount;
                     to.balance += amount;
 

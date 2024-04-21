@@ -299,6 +299,7 @@ impl<'a> Lexer<'a> {
                         Err(ErrorsEmitted(()))
                     }
                 }
+                "Err" => Ok(Token::Err { name, span }),
                 "event" => {
                     if let Some(']') = self.peek_current() {
                         let token = self.tokenize_outer_attribute(name, span);
@@ -371,6 +372,8 @@ impl<'a> Lexer<'a> {
                 }
                 "mod" => Ok(Token::Mod { name, span }),
                 "mut" => Ok(Token::Mut { name, span }),
+                "Ok" => Ok(Token::Ok { name, span }),
+                "None" => Ok(Token::None { name, span }),
                 "package" => Ok(Token::Package { name, span }),
                 "payable" => {
                     if let Some(']') = self.peek_current() {
@@ -396,6 +399,8 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 "self" => Ok(Token::SelfKeyword { name, span }),
+                "Some" => Ok(Token::Some { name, span }),
+
                 "static" => Ok(Token::Static { name, span }),
                 "storage" => {
                     if let Some(']') = self.peek_current() {
@@ -477,6 +482,10 @@ impl<'a> Lexer<'a> {
                 "str" => Ok(Token::StrType { name, span }),
                 "char" => Ok(Token::CharType { name, span }),
                 "bool" => Ok(Token::BoolType { name, span }),
+                "Option" => Ok(Token::OptionType { name, span }),
+                "Result" => Ok(Token::ResultType { name, span }),
+                "Vec" => Ok(Token::VecType { name, span }),
+                "Mapping" => Ok(Token::MappingType { name, span }),
                 _ => {
                     self.log_error(LexErrorKind::UnrecognizedKeyword { name });
                     Err(ErrorsEmitted(()))
@@ -1090,6 +1099,7 @@ fn is_keyword(value: &str) -> bool {
         "else",
         "enum",
         "error",
+        "Err",
         "event",
         "extern",
         "false",
@@ -1107,6 +1117,8 @@ fn is_keyword(value: &str) -> bool {
         "modifier",
         "mod",
         "mut",
+        "None",
+        "Ok",
         "package",
         "payable",
         "pub",
@@ -1114,6 +1126,7 @@ fn is_keyword(value: &str) -> bool {
         "return",
         "script",
         "self",
+        "Some",
         "static",
         "storage",
         "struct",
@@ -1148,6 +1161,10 @@ fn is_keyword(value: &str) -> bool {
         "str",
         "char",
         "bool",
+        "Option",
+        "Result",
+        "Vec",
+        "Mapping",
     ]
     .contains(&value)
 }
@@ -1245,7 +1262,7 @@ mod tests {
     #[test]
     fn tokenize_function() {
         let input = r#"
-        func foo(param1: u64, param2: char, param3: bool) -> ReturnType {
+        func foo(param1: u64, param2: char, param3: bool) -> Result<ReturnType, Err> {
             let bar: b4 = b"bar";
             
             if (param3) {
@@ -1258,9 +1275,9 @@ mod tests {
                 param1 += 2;
             }
 
-            return ReturnType {
+            return Ok(ReturnType {
                 baz: "hello world"
-            }
+            })
         }
         "#;
 

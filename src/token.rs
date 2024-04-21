@@ -68,6 +68,10 @@ pub enum Token {
     While { name: String, span: Span },
     Break { name: String, span: Span },
     Continue { name: String, span: Span },
+    Some { name: String, span: Span },
+    None { name: String, span: Span },
+    Ok { name: String, span: Span },
+    Err { name: String, span: Span },
 
     // types
     I32Type { name: String, span: Span },
@@ -94,6 +98,10 @@ pub enum Token {
     CharType { name: String, span: Span },
     BoolType { name: String, span: Span },
     SelfType { name: String, span: Span },
+    VecType { name: String, span: Span },
+    MappingType { name: String, span: Span },
+    OptionType { name: String, span: Span },
+    ResultType { name: String, span: Span },
 
     // delimiters
     LParen { delim: char, span: Span },
@@ -220,6 +228,10 @@ impl Token {
             Token::While { span, .. } => span,
             Token::Break { span, .. } => span,
             Token::Continue { span, .. } => span,
+            Token::Some { span, .. } => span,
+            Token::None { span, .. } => span,
+            Token::Ok { span, .. } => span,
+            Token::Err { span, .. } => span,
             Token::I32Type { span, .. } => span,
             Token::I64Type { span, .. } => span,
             Token::I128Type { span, .. } => span,
@@ -244,6 +256,10 @@ impl Token {
             Token::CharType { span, .. } => span,
             Token::BoolType { span, .. } => span,
             Token::SelfType { span, .. } => span,
+            Token::VecType { span, .. } => span,
+            Token::MappingType { span, .. } => span,
+            Token::OptionType { span, .. } => span,
+            Token::ResultType { span, .. } => span,
             Token::LParen { span, .. } => span,
             Token::RParen { span, .. } => span,
             Token::LBrace { span, .. } => span,

@@ -69,6 +69,10 @@ pub enum Keyword {
     Unsafe,
     Let,
     Mut,
+    Some,
+    None,
+    Ok,
+    Err,
 }
 
 #[derive(Debug, Clone)]
@@ -213,6 +217,9 @@ pub enum Expression {
     Match(MatchExpr), // scrutinee, body
     ForIn(ForInExpr), // variable, iterable, body
     While(WhileExpr), // while, condition, body
+    SomeExpr(SomeExpr),
+    NoneExpr(NoneExpr),
+    ResultExpr(ResultExpr),
 }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
@@ -287,6 +294,18 @@ pub enum Type {
     },
     Reference(Box<Type>), //  `&Type` / `&mut Type`
     SelfType(String),
+
+    Vec(Box<Type>),
+    Mapping {
+        key_type: Box<Type>,
+        value_type: Box<Type>,
+    },
+
+    Option(Box<Type>),
+    Result {
+        ok: Box<Type>,
+        err: Box<Type>,
+    },
 }
 
 ///////////////////////////////////////////////////////////////////////////
