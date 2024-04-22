@@ -190,6 +190,8 @@ pub enum Separator {
     Underscore,
     LeftAngledBracket,
     RightAngledBracket,
+    Pipe,
+    DblPipe,
 }
 
 ///////////////////////////////////////////////////////////////////////////

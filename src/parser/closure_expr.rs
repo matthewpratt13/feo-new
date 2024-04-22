@@ -1,8 +1,5 @@
 use crate::{
-    ast::{
-        BinaryOp, BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Identifier,
-        Separator,
-    },
+    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Identifier, Separator},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -48,13 +45,9 @@ impl ClosureExpr {
                     }
                 }
 
-                Ok(ClosureParams::Some(
-                    BinaryOp::BitwiseOr,
-                    vec,
-                    BinaryOp::BitwiseOr,
-                ))
+                Ok(ClosureParams::Some(Separator::Pipe, vec, Separator::Pipe))
             }
-            Some(Token::DblPipe { .. }) => Ok(ClosureParams::None(BinaryOp::LogicalOr)),
+            Some(Token::DblPipe { .. }) => Ok(ClosureParams::None(Separator::DblPipe)),
             _ => {
                 parser.log_unexpected_token("`|` or `||`".to_string());
                 Err(ErrorsEmitted(()))

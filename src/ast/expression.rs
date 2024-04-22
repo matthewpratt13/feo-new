@@ -10,8 +10,8 @@ use super::{
 /// Enum representing whether or not a closure has parameters in its definition.
 #[derive(Debug, Clone)]
 pub enum ClosureParams {
-    Some(BinaryOp, Vec<ClosureParam>, BinaryOp),
-    None(BinaryOp),
+    Some(Separator, Vec<ClosureParam>, Separator),
+    None(Separator),
 }
 
 /// Enum representing the different path root options.
@@ -121,7 +121,7 @@ pub struct ContinueExpr {
 #[derive(Debug, Clone)]
 pub struct DereferenceExpr {
     pub op: UnaryOp,
-    pub expression: Box<PlaceExpr>,
+    pub expression: PlaceExpr,
 }
 
 #[derive(Debug, Clone)]
@@ -176,7 +176,7 @@ pub struct MatchExpr {
 
 #[derive(Debug, Clone)]
 pub struct MethodCallExpr {
-    pub receiver: Box<PlaceExpr>,
+    pub receiver: PlaceExpr,
     pub dot: Separator,
     pub method_name: Identifier,
     pub open_paren: Delimiter,

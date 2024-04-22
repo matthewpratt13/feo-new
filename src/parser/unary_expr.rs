@@ -43,7 +43,7 @@ impl DereferenceExpr {
 
         match op {
             _ => Ok(DereferenceExpr {
-                expression: Box::new(expression),
+                expression,
                 op,
             }),
         }

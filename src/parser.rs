@@ -770,6 +770,8 @@ impl Parser {
             Some(Token::FatArrow { .. }) => Ok(Separator::FatArrow),
             Some(Token::LessThan { .. }) => Ok(Separator::LeftAngledBracket),
             Some(Token::GreaterThan { .. }) => Ok(Separator::RightAngledBracket),
+            Some(Token::Pipe { .. }) => Ok(Separator::Pipe),
+            Some(Token::DblPipe { .. }) => Ok(Separator::DblPipe),
 
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
