@@ -12,6 +12,7 @@ impl IndexExpr {
         array: Expression,
     ) -> Result<IndexExpr, ErrorsEmitted> {
         let index = parser.parse_primary()?;
+        parser.consume_token();
 
         let close_bracket = parser.expect_delimiter(Token::RBracket {
             delim: ']',

@@ -105,7 +105,9 @@ mod tests {
     fn parse_if_expr() -> Result<(), ()> {
         let input = r#"
         if (x < 5) {
-            return true;
+            if (x > 2) {
+                return true;
+            }
         } else if (x == 5) {
             return true;
         } else {

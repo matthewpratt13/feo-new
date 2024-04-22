@@ -131,7 +131,7 @@ impl Parser {
         println!("ENTER `parse_primary()`");
         println!("CURRENT TOKEN: {:?}\n", self.peek_current());
 
-        let token = self.consume_token();
+        let token = self.peek_current();
 
         match token {
             Some(Token::Identifier { name, .. }) => Ok(Expression::Path(PathExpr {
@@ -152,7 +152,10 @@ impl Parser {
             Some(Token::StrLiteral { value, .. }) => Ok(Expression::Literal(Literal::Str(value))),
             Some(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
             Some(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
-            Some(Token::LParen { .. }) => Ok(Expression::Grouped(GroupedExpr::parse(self)?)),
+            Some(Token::LParen { .. }) => {
+                self.consume_token();
+                Ok(Expression::Grouped(GroupedExpr::parse(self)?))
+            }
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier, `_`, literal or `(`".to_string(),
@@ -176,15 +179,18 @@ impl Parser {
                 Token::IntLiteral { .. }
                 | Token::UIntLiteral { .. }
                 | Token::BigUIntLiteral { .. }
-                | Token::HashLiteral { .. },
-            ) => self.parse_primary(),
-            Some(
-                Token::ByteLiteral { .. }
+                | Token::HashLiteral { .. }
+                | Token::ByteLiteral { .. }
                 | Token::BytesLiteral { .. }
                 | Token::StrLiteral { .. }
                 | Token::CharLiteral { .. }
                 | Token::BoolLiteral { .. },
-            ) => self.parse_primary(),
+            ) => {
+                let lit = self.parse_primary();
+                self.consume_token();
+                lit
+            }
+
             Some(Token::Identifier { name, .. }) => {
                 if &name == "_" {
                     self.consume_token();
@@ -204,13 +210,10 @@ impl Parser {
 
                             Ok(Expression::Struct(StructExpr::parse(self, path)?))
                         }
-                        _ => {
-                            // self.unconsume_token();
-                            Ok(Expression::Path(PathExpr::parse(
-                                self,
-                                PathPrefix::Identifier(Identifier(name)),
-                            )?))
-                        }
+                        _ => Ok(Expression::Path(PathExpr::parse(
+                            self,
+                            PathPrefix::Identifier(Identifier(name)),
+                        )?)),
                     }
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_current()
@@ -220,7 +223,9 @@ impl Parser {
                         PathPrefix::Identifier(Identifier(name)),
                     )?))
                 } else {
-                    self.parse_primary()
+                    let id = self.parse_primary();
+                    self.consume_token();
+                    id
                 }
             }
             Some(Token::SelfType { .. }) => {
