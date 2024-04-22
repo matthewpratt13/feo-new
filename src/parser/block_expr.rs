@@ -42,6 +42,13 @@ impl BlockExpr {
             }?;
 
             statements.push(statement);
+
+            match parser.peek_current() {
+                Some(Token::RBracket { .. }) | None => break,
+                Some(_) => {
+                    continue;
+                }
+            }
         }
 
         println!("EXIT `parser.parse_statement()` WHILE LOOP");
