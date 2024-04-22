@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, GroupedExpr, MatchArm, MatchExpr, UnderscoreExpr},
+    ast::{Delimiter, Expression, GroupedExpr, MatchArm, MatchExpr, PlaceExpr, UnderscoreExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -15,7 +15,7 @@ impl MatchExpr {
 
         let mut match_arms: Vec<MatchArm> = Vec::new();
 
-        let scrutinee = parser.parse_expression(Precedence::Lowest)?;
+        let scrutinee = PlaceExpr::try_from(parser.parse_expression(Precedence::Lowest)?)?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
@@ -102,7 +102,7 @@ impl MatchExpr {
 
         Ok(MatchExpr {
             kw_match,
-            scrutinee: AssigneeExpr(Box::new(scrutinee)),
+            scrutinee,
             open_brace,
             arms_opt: {
                 if match_arms.is_empty() {

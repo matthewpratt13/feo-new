@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, Separator, TupleExpr, TupleIndexExpr},
+    ast::{Delimiter, Expression, PlaceExpr, Separator, TupleExpr, TupleIndexExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -66,7 +66,7 @@ impl TupleExpr {
 impl TupleIndexExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
-        operand: Expression,
+        operand: PlaceExpr,
     ) -> Result<TupleIndexExpr, ErrorsEmitted> {
         let token = parser.consume_token();
 
@@ -81,7 +81,7 @@ impl TupleIndexExpr {
         }?;
 
         Ok(TupleIndexExpr {
-            operand: AssigneeExpr(Box::new(operand)),
+            operand: Box::new(operand),
             dot: Separator::Dot,
             index,
         })

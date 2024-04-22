@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, CallExpr, Delimiter, Expression},
+    ast::{CallExpr, Delimiter, Expression, PlaceExpr},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -9,7 +9,7 @@ use super::{Parser, Precedence};
 impl CallExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
-        callee: Expression,
+        callee: PlaceExpr,
     ) -> Result<CallExpr, ErrorsEmitted> {
         let mut args: Vec<Expression> = Vec::new();
 
@@ -50,7 +50,7 @@ impl CallExpr {
         }?;
 
         Ok(CallExpr {
-            callee: AssigneeExpr(Box::new(callee)),
+            callee,
             open_paren: Delimiter::LParen,
             args_opt: {
                 if args.is_empty() {

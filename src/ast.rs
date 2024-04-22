@@ -5,6 +5,8 @@ mod item;
 mod statement;
 mod types;
 
+use crate::error::ErrorsEmitted;
+
 pub use self::{expression::*, item::*, statement::*, types::*};
 
 ///////////////////////////////////////////////////////////////////////////
@@ -223,7 +225,100 @@ pub enum Expression {
 }
 
 #[derive(Debug, Clone)]
-pub struct AssigneeExpr(pub Box<Expression>);
+pub enum ValueExpr {
+    Literal(Literal),
+    PathExpr(PathExpr),
+    MethodCallExpr(MethodCallExpr),
+    FieldAccessExpr(FieldAccessExpr),
+    CallExpr(CallExpr),
+    IndexExpr(IndexExpr),
+    TupleIndexExpr(TupleIndexExpr),
+    UnwrapExpr(UnwrapExpr),
+    UnaryExpr(UnaryExpr),
+    TypeCastExpr(TypeCastExpr),
+    BinaryExpr(BinaryExpr),
+    GroupedExpr(GroupedExpr),
+    RangeExpr(RangeExpr),
+    ClosureExpr(ClosureExpr),
+    BlockExpr(BlockExpr),
+    UnderscoreExpr(UnderscoreExpr),
+    ArrayExpr(ArrayExpr),
+    StructExpr(StructExpr),
+    TupleStructExpr(TupleStructExpr),
+    TupleExpr(TupleExpr),
+    IfExpr(IfExpr),
+    MatchExpr(MatchExpr),
+    ForInExpr(ForInExpr),
+    WhileExpr(WhileExpr),
+    SomeExpr(SomeExpr),
+    NoneExpr(NoneExpr),
+    ResultExpr(ResultExpr),
+}
+
+impl TryFrom<Expression> for ValueExpr {
+    type Error = ErrorsEmitted;
+
+    fn try_from(value: Expression) -> Result<Self, Self::Error> {
+        match value {
+            Expression::Literal(l) => Ok(ValueExpr::Literal(l)),
+            Expression::Path(p) => Ok(ValueExpr::PathExpr(p)),
+            Expression::MethodCall(mc) => Ok(ValueExpr::MethodCallExpr(mc)),
+            Expression::FieldAccess(fa) => Ok(ValueExpr::FieldAccessExpr(fa)),
+            Expression::Call(c) => Ok(ValueExpr::CallExpr(c)),
+            Expression::Index(i) => Ok(ValueExpr::IndexExpr(i)),
+            Expression::TupleIndex(ti) => Ok(ValueExpr::TupleIndexExpr(ti)),
+            Expression::Unwrap(u) => Ok(ValueExpr::UnwrapExpr(u)),
+            Expression::Unary(u) => Ok(ValueExpr::UnaryExpr(u)),
+            Expression::TypeCast(tc) => Ok(ValueExpr::TypeCastExpr(tc)),
+            Expression::Binary(b) => Ok(ValueExpr::BinaryExpr(b)),
+            Expression::Grouped(g) => Ok(ValueExpr::GroupedExpr(g)),
+            Expression::Range(r) => Ok(ValueExpr::RangeExpr(r)),
+            Expression::Underscore(u) => Ok(ValueExpr::UnderscoreExpr(u)),
+            Expression::Closure(c) => Ok(ValueExpr::ClosureExpr(c)),
+            Expression::Array(a) => Ok(ValueExpr::ArrayExpr(a)),
+            Expression::Tuple(t) => Ok(ValueExpr::TupleExpr(t)),
+            Expression::Struct(s) => Ok(ValueExpr::StructExpr(s)),
+            Expression::TupleStruct(ts) => Ok(ValueExpr::TupleStructExpr(ts)),
+            Expression::Block(b) => Ok(ValueExpr::BlockExpr(b)),
+            Expression::If(i) => Ok(ValueExpr::IfExpr(i)),
+            Expression::Match(m) => Ok(ValueExpr::MatchExpr(m)),
+            Expression::ForIn(fi) => Ok(ValueExpr::ForInExpr(fi)),
+            Expression::While(w) => Ok(ValueExpr::WhileExpr(w)),
+            Expression::SomeExpr(s) => Ok(ValueExpr::SomeExpr(s)),
+            Expression::NoneExpr(n) => Ok(ValueExpr::NoneExpr(n)),
+            Expression::ResultExpr(r) => Ok(ValueExpr::ResultExpr(r)),
+            _ => Err(ErrorsEmitted(())),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum PlaceExpr {
+    PathExpr(PathExpr),
+    FieldAccessExpr(FieldAccessExpr), // place expression when on the LHS
+    IndexExpr(IndexExpr),             // place expression when on the LHS
+    TupleIndexExpr(TupleIndexExpr),   // place expression when on the LHS
+    UnaryExpr(UnaryExpr),             // operand of `*`
+    BinaryExpr(BinaryExpr),           // LHS of compound assignment expression
+    UnderscoreExpr(UnderscoreExpr),
+}
+
+impl TryFrom<Expression> for PlaceExpr {
+    type Error = ErrorsEmitted;
+
+    fn try_from(value: Expression) -> Result<Self, Self::Error> {
+        match value {
+            Expression::Path(p) => Ok(PlaceExpr::PathExpr(p)),
+            Expression::FieldAccess(fa) => Ok(PlaceExpr::FieldAccessExpr(fa)),
+            Expression::Index(i) => Ok(PlaceExpr::IndexExpr(i)),
+            Expression::TupleIndex(ti) => Ok(PlaceExpr::TupleIndexExpr(ti)),
+            Expression::Unary(u) => Ok(PlaceExpr::UnaryExpr(u)),
+            Expression::Binary(b) => Ok(PlaceExpr::BinaryExpr(b)),
+            Expression::Underscore(u) => Ok(PlaceExpr::UnderscoreExpr(u)),
+            _ => Err(ErrorsEmitted(())),
+        }
+    }
+}
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
 /// A `Statement` is a component of a block, which is a component of an outer expression

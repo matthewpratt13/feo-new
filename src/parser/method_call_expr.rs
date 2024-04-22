@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr, Separator},
+    ast::{Delimiter, Expression, Identifier, MethodCallExpr, PlaceExpr, Separator},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -9,7 +9,7 @@ use super::{Parser, Precedence};
 impl MethodCallExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
-        receiver: Expression,
+        receiver: PlaceExpr,
     ) -> Result<MethodCallExpr, ErrorsEmitted> {
         let mut args: Vec<Expression> = Vec::new();
 
@@ -71,7 +71,7 @@ impl MethodCallExpr {
         }?;
 
         Ok(MethodCallExpr {
-            receiver: AssigneeExpr(Box::new(receiver)),
+            receiver: Box::new(receiver),
             dot: Separator::Dot,
             method_name,
             open_paren,

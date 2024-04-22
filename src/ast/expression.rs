@@ -1,6 +1,6 @@
 use super::{
-    AssigneeExpr, BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator,
-    Statement, Type, UInt, UnaryOp, UnwrapOp,
+    BinaryOp, Delimiter, Expression, Identifier, Keyword, PlaceExpr, RangeOp, Separator, Statement,
+    Type, UInt, UnaryOp, UnwrapOp,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -23,7 +23,6 @@ pub enum PathPrefix {
     SelfType,
     Identifier(Identifier),
 }
-
 
 /// Struct representing a closure parameter.
 #[derive(Debug, Clone)]
@@ -52,8 +51,6 @@ pub struct MatchArm {
 /// NODES
 ///////////////////////////////////////////////////////////////////////////
 
-// expression is assignee expression if it has assignee expression elements
-// assignee = place or value expression
 #[derive(Debug, Clone)]
 pub struct ArrayExpr {
     pub open_bracket: Delimiter,
@@ -61,7 +58,6 @@ pub struct ArrayExpr {
     pub close_bracket: Delimiter,
 }
 
-// LHS of compound assignment expression is place / assignee expression
 #[derive(Debug, Clone)]
 pub struct BinaryExpr {
     pub lhs: Box<Expression>,
@@ -84,7 +80,7 @@ pub struct BreakExpr {
 
 #[derive(Debug, Clone)]
 pub struct CallExpr {
-    pub callee: AssigneeExpr,
+    pub callee: PlaceExpr,
     pub open_paren: Delimiter,
     pub args_opt: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
@@ -104,7 +100,7 @@ pub struct ContinueExpr {
 
 #[derive(Debug, Clone)]
 pub struct FieldAccessExpr {
-    pub object: AssigneeExpr,
+    pub object: Box<PlaceExpr>,
     pub dot: Separator,
     pub field: Identifier,
 }
@@ -136,16 +132,16 @@ pub struct IfExpr {
 
 #[derive(Debug, Clone)]
 pub struct IndexExpr {
-    pub array: AssigneeExpr,
+    pub array: Box<PlaceExpr>,
     pub open_bracket: Delimiter,
-    pub index: AssigneeExpr,
+    pub index: Box<Expression>,
     pub close_bracket: Delimiter,
 }
 
 #[derive(Debug, Clone)]
 pub struct MatchExpr {
     pub kw_match: Keyword,
-    pub scrutinee: AssigneeExpr,
+    pub scrutinee: PlaceExpr,
     pub open_brace: Delimiter,
     pub arms_opt: Option<Vec<MatchArm>>,
     pub final_arm: MatchArm, // default case
@@ -154,7 +150,7 @@ pub struct MatchExpr {
 
 #[derive(Debug, Clone)]
 pub struct MethodCallExpr {
-    pub receiver: AssigneeExpr,
+    pub receiver: Box<PlaceExpr>,
     pub dot: Separator,
     pub method_name: Identifier,
     pub open_paren: Delimiter,
@@ -167,7 +163,6 @@ pub struct NoneExpr {
     pub kw_none: Keyword,
 }
 
-// place expression
 #[derive(Debug, Clone)]
 pub struct PathExpr {
     pub root: PathPrefix,
@@ -200,8 +195,6 @@ pub struct SomeExpr {
     pub expression: Box<Expression>,
 }
 
-// expression is assignee expression if it has assignee expression fields
-// assignee = place or value expression
 #[derive(Debug, Clone)]
 pub struct StructExpr {
     pub path: PathExpr,
@@ -210,8 +203,6 @@ pub struct StructExpr {
     pub close_brace: Delimiter,
 }
 
-// expression is assignee expression if it has assignee expression elements
-// assignee = place or value expression
 #[derive(Debug, Clone)]
 pub struct TupleExpr {
     pub open_paren: Delimiter,
@@ -221,13 +212,11 @@ pub struct TupleExpr {
 
 #[derive(Debug, Clone)]
 pub struct TupleIndexExpr {
-    pub operand: AssigneeExpr,
+    pub operand: Box<PlaceExpr>,
     pub dot: Separator,
     pub index: UInt,
 }
 
-// expression is assignee expression if it has assignee expression elements
-// assignee = place or value expression
 #[derive(Debug, Clone)]
 pub struct TupleStructExpr {
     pub path: PathExpr,
@@ -243,7 +232,6 @@ pub struct TypeCastExpr {
     pub new_type: Type,
 }
 
-// operand of dereference expression is place / assignee expression
 #[derive(Debug, Clone)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
@@ -252,7 +240,7 @@ pub struct UnaryExpr {
 
 #[derive(Debug, Clone)]
 pub struct UnderscoreExpr {
-    pub underscore: Separator, // also assignee expression
+    pub underscore: Separator,
 }
 
 #[derive(Debug, Clone)]

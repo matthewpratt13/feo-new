@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, Expression, FieldAccessExpr, Identifier, Separator},
+    ast::{FieldAccessExpr, Identifier, PlaceExpr, Separator},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -9,13 +9,13 @@ use super::Parser;
 impl FieldAccessExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
-        object: Expression,
+        object: PlaceExpr,
     ) -> Result<FieldAccessExpr, ErrorsEmitted> {
         let token = parser.consume_token();
 
         if let Some(Token::Identifier { name, .. }) = token {
             Ok(FieldAccessExpr {
-                object: AssigneeExpr(Box::new(object)),
+                object: Box::new(object),
                 dot: Separator::Dot,
                 field: Identifier(name),
             })

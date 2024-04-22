@@ -43,7 +43,7 @@ use crate::{
         ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
         FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier,
         IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
-        MatchExpr, MethodCallExpr, ModuleDef, NoneExpr, OuterAttr, PathExpr, PathPrefix,
+        MatchExpr, MethodCallExpr, ModuleDef, NoneExpr, OuterAttr, PathExpr, PathPrefix, PlaceExpr,
         PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement,
         StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr,
         Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility,
@@ -543,11 +543,11 @@ impl Parser {
                 BinaryOp::Exponentiation,
             )?)),
             Some(Token::LParen { .. }) => {
-                let expr = CallExpr::parse(self, left_expr)?;
+                let expr = CallExpr::parse(self, PlaceExpr::try_from(left_expr)?)?;
                 Ok(Expression::Call(expr))
             }
             Some(Token::LBracket { .. }) => {
-                let expr = IndexExpr::parse(self, left_expr)?;
+                let expr = IndexExpr::parse(self, PlaceExpr::try_from(left_expr)?)?;
                 Ok(Expression::Index(expr))
             }
 
@@ -569,14 +569,15 @@ impl Parser {
             Some(Token::Dot { .. }) => match self.peek_current() {
                 Some(Token::Identifier { .. }) => match self.peek_ahead_by(1) {
                     Some(Token::LParen { .. }) => Ok(Expression::MethodCall(
-                        MethodCallExpr::parse(self, left_expr)?,
+                        MethodCallExpr::parse(self, PlaceExpr::try_from(left_expr)?)?,
                     )),
                     _ => Ok(Expression::FieldAccess(FieldAccessExpr::parse(
-                        self, left_expr,
+                        self,
+                        PlaceExpr::try_from(left_expr)?,
                     )?)),
                 },
                 Some(Token::UIntLiteral { .. }) => Ok(Expression::TupleIndex(
-                    TupleIndexExpr::parse(self, left_expr)?,
+                    TupleIndexExpr::parse(self, PlaceExpr::try_from(left_expr)?)?,
                 )),
                 _ => {
                     self.log_error(ParserErrorKind::UnexpectedToken {
