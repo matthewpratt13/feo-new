@@ -1,5 +1,8 @@
 use crate::{
-    ast::{Identifier, Keyword, OuterAttr, StaticItemDecl, Visibility},
+    ast::{
+        AssigneeExpr, Identifier, Keyword, OuterAttr, PathExpr, PathPrefix, StaticItemDecl,
+        Visibility,
+    },
     error::ErrorsEmitted,
     token::Token,
 };
@@ -25,7 +28,8 @@ impl ParseDeclaration for StaticItemDecl {
         };
 
         let item_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
-            Ok(Identifier(name))
+            let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)))?;
+            Ok(AssigneeExpr::Path(path))
         } else {
             parser.log_unexpected_token("identifier".to_string());
             Err(ErrorsEmitted(()))
