@@ -1,12 +1,11 @@
 use super::{
-    AssigneeExpr, BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator,
-    Statement, Type, UInt, UnaryOp, UnwrapOp,
+    BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator, Statement, Type,
+    UInt, UnaryOp, UnwrapOp,
 };
 
 ///////////////////////////////////////////////////////////////////////////
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
-
 
 /// Enum representing whether or not a closure has parameters in its definition.
 #[derive(Debug, Clone)]
@@ -69,7 +68,7 @@ pub struct ClosureParam {
 #[derive(Debug, Clone)]
 pub struct StructField {
     pub name: Identifier,
-    pub value: AssigneeExpr,
+    pub value: Box<Expression>,
 }
 
 /// Struct representing a single arm in a match statement.
@@ -88,7 +87,7 @@ pub struct MatchArm {
 #[derive(Debug, Clone)]
 pub struct ArrayExpr {
     pub open_bracket: Delimiter,
-    pub elements_opt: Option<Vec<AssigneeExpr>>,
+    pub elements_opt: Option<Vec<Expression>>,
     pub close_bracket: Delimiter,
 }
 
@@ -244,7 +243,7 @@ pub struct StructExpr {
 #[derive(Debug, Clone)]
 pub struct TupleExpr {
     pub open_paren: Delimiter,
-    pub elements: Vec<Scrutinee>,
+    pub elements: Vec<Expression>,
     pub close_paren: Delimiter,
 }
 
@@ -261,7 +260,7 @@ pub struct TupleIndexExpr {
 pub struct TupleStructExpr {
     pub path: PathExpr,
     pub open_paren: Delimiter,
-    pub elements_opt: Option<Vec<Scrutinee>>,
+    pub elements_opt: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
 }
 

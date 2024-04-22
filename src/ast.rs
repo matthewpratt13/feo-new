@@ -5,6 +5,8 @@ mod item;
 mod statement;
 mod types;
 
+use std::collections::HashMap;
+
 pub use self::{expression::*, item::*, statement::*, types::*};
 
 ///////////////////////////////////////////////////////////////////////////
@@ -235,12 +237,12 @@ pub enum AssigneeExpr {
     Scrutinee(Scrutinee),
     StaticVariable(StaticVariable),
     TupleIndexOperand(TupleIndexOperand),
-    Array(ArrayExpr),
-    GroupedExpr(GroupedExpr),
-    Tuple(TupleExpr),
+    Array(Vec<AssigneeExpr>),
+    GroupedExpr(Box<AssigneeExpr>),
+    Tuple(Vec<AssigneeExpr>),
     PathExpr(PathExpr),
-    Struct(StructExpr),
-    TupleStruct(TupleStructExpr),
+    Struct(Vec<HashMap<Identifier, AssigneeExpr>>),
+    TupleStruct(Vec<AssigneeExpr>),
     UnderscoreExpr(UnderscoreExpr),
 }
 
