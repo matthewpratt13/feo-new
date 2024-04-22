@@ -1,11 +1,12 @@
 use super::{
-    BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator, Statement, Type,
-    UInt, UnaryOp, UnwrapOp,
+    AssigneeExpr, BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator,
+    Statement, Type, UInt, UnaryOp, UnwrapOp,
 };
 
 ///////////////////////////////////////////////////////////////////////////
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
+
 
 /// Enum representing whether or not a closure has parameters in its definition.
 #[derive(Debug, Clone)]
@@ -24,6 +25,39 @@ pub enum PathPrefix {
     Identifier(Identifier),
 }
 
+#[derive(Debug, Clone)]
+pub struct ArrayIndex(pub Box<Expression>);
+
+#[derive(Debug, Clone)]
+pub struct CompoundAssignmentOperand(pub Box<Expression>);
+
+#[derive(Debug, Clone)]
+pub struct DereferencedOperand(pub Box<Expression>);
+
+#[derive(Debug, Clone)]
+pub struct FieldAccessObject(pub Box<Expression>);
+
+#[derive(Debug, Clone)]
+pub struct FunctionCallCallee(pub Box<Expression>);
+
+#[derive(Debug, Clone)]
+pub struct IndexedArray(pub Box<Expression>);
+
+#[derive(Debug, Clone)]
+pub struct LetStatementInitializer(pub Box<Expression>);
+
+#[derive(Debug, Clone)]
+pub struct MethodCallReceiver(pub Box<Expression>);
+
+#[derive(Debug, Clone)]
+pub struct Scrutinee(pub Box<Expression>);
+
+#[derive(Debug, Clone)]
+pub struct StaticVariable(pub Box<Expression>);
+
+#[derive(Debug, Clone)]
+pub struct TupleIndexOperand(pub Box<Expression>);
+
 /// Struct representing a closure parameter.
 #[derive(Debug, Clone)]
 pub struct ClosureParam {
@@ -34,9 +68,8 @@ pub struct ClosureParam {
 /// Struct representing a single field in a struct expression, with a name and value.
 #[derive(Debug, Clone)]
 pub struct StructField {
-    // TODO: add `attributes: VariableAttr` field
     pub name: Identifier,
-    pub value: Expression,
+    pub value: AssigneeExpr,
 }
 
 /// Struct representing a single arm in a match statement.
@@ -55,10 +88,11 @@ pub struct MatchArm {
 #[derive(Debug, Clone)]
 pub struct ArrayExpr {
     pub open_bracket: Delimiter,
-    pub elements_opt: Option<Vec<Expression>>,
+    pub elements_opt: Option<Vec<AssigneeExpr>>,
     pub close_bracket: Delimiter,
 }
 
+// LHS of compound assignment expression is place expression
 #[derive(Debug, Clone)]
 pub struct BinaryExpr {
     pub lhs: Box<Expression>,
@@ -81,7 +115,7 @@ pub struct BreakExpr {
 
 #[derive(Debug, Clone)]
 pub struct CallExpr {
-    pub callee: Box<Expression>,
+    pub callee: FunctionCallCallee,
     pub open_paren: Delimiter,
     pub args_opt: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
@@ -101,7 +135,7 @@ pub struct ContinueExpr {
 
 #[derive(Debug, Clone)]
 pub struct FieldAccessExpr {
-    pub object: Box<Expression>,
+    pub object: FieldAccessObject,
     pub dot: Separator,
     pub field: Identifier,
 }
@@ -133,16 +167,16 @@ pub struct IfExpr {
 
 #[derive(Debug, Clone)]
 pub struct IndexExpr {
-    pub array: Box<Expression>,
+    pub array: IndexedArray,
     pub open_bracket: Delimiter,
-    pub index: Box<Expression>,
+    pub index: ArrayIndex,
     pub close_bracket: Delimiter,
 }
 
 #[derive(Debug, Clone)]
 pub struct MatchExpr {
     pub kw_match: Keyword,
-    pub scrutinee: Box<Expression>,
+    pub scrutinee: Scrutinee,
     pub open_brace: Delimiter,
     pub arms_opt: Option<Vec<MatchArm>>,
     pub final_arm: MatchArm, // default case
@@ -151,7 +185,7 @@ pub struct MatchExpr {
 
 #[derive(Debug, Clone)]
 pub struct MethodCallExpr {
-    pub receiver: Box<Expression>,
+    pub receiver: MethodCallReceiver,
     pub dot: Separator,
     pub method_name: Identifier,
     pub open_paren: Delimiter,
@@ -164,6 +198,7 @@ pub struct NoneExpr {
     pub kw_none: Keyword,
 }
 
+// place expression
 #[derive(Debug, Clone)]
 pub struct PathExpr {
     pub root: PathPrefix,
@@ -196,6 +231,8 @@ pub struct SomeExpr {
     pub expression: Box<Expression>,
 }
 
+// expression is assignee expression, must have assignee expression elements
+// assignee = place or value
 #[derive(Debug, Clone)]
 pub struct StructExpr {
     pub path: PathExpr,
@@ -207,22 +244,24 @@ pub struct StructExpr {
 #[derive(Debug, Clone)]
 pub struct TupleExpr {
     pub open_paren: Delimiter,
-    pub elements: Vec<Expression>,
+    pub elements: Vec<Scrutinee>,
     pub close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone)]
 pub struct TupleIndexExpr {
-    pub operand: Box<Expression>,
+    pub operand: TupleIndexOperand, // place expression
     pub dot: Separator,
     pub index: UInt,
 }
 
+// expression is assignee expression, must have assignee expression elements
+// assignee = place or value
 #[derive(Debug, Clone)]
 pub struct TupleStructExpr {
     pub path: PathExpr,
     pub open_paren: Delimiter,
-    pub elements_opt: Option<Vec<Expression>>,
+    pub elements_opt: Option<Vec<Scrutinee>>,
     pub close_paren: Delimiter,
 }
 
@@ -233,6 +272,7 @@ pub struct TypeCastExpr {
     pub new_type: Type,
 }
 
+// operand of dereference expression is place expression
 #[derive(Debug, Clone)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
@@ -241,7 +281,7 @@ pub struct UnaryExpr {
 
 #[derive(Debug, Clone)]
 pub struct UnderscoreExpr {
-    pub underscore: Separator,
+    pub underscore: Separator, // assignee expression
 }
 
 #[derive(Debug, Clone)]

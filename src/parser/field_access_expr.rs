@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, FieldAccessExpr, Identifier, Separator},
+    ast::{Expression, FieldAccessExpr, FieldAccessObject, Identifier, Separator},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -15,7 +15,7 @@ impl FieldAccessExpr {
 
         if let Some(Token::Identifier { name, .. }) = token {
             Ok(FieldAccessExpr {
-                object: Box::new(object),
+                object: FieldAccessObject(Box::new(object)),
                 dot: Separator::Dot,
                 field: Identifier(name),
             })

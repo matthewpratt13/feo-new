@@ -222,6 +222,28 @@ pub enum Expression {
     ResultExpr(ResultExpr),
 }
 
+#[derive(Debug, Clone)]
+pub enum AssigneeExpr {
+    ArrayIndex(ArrayIndex),
+    CompoundAssignmentOperand(CompoundAssignmentOperand),
+    DereferencedOperand(DereferencedOperand),
+    FieldAccessObject(FieldAccessObject),
+    FunctionCallCallee(FunctionCallCallee),
+    IndexedArray(IndexedArray),
+    LetStatementInitializer(LetStatementInitializer),
+    MethodCallReceiver(MethodCallReceiver),
+    Scrutinee(Scrutinee),
+    StaticVariable(StaticVariable),
+    TupleIndexOperand(TupleIndexOperand),
+    Array(ArrayExpr),
+    GroupedExpr(GroupedExpr),
+    Tuple(TupleExpr),
+    PathExpr(PathExpr),
+    Struct(StructExpr),
+    TupleStruct(TupleStructExpr),
+    UnderscoreExpr(UnderscoreExpr),
+}
+
 /// Enum representing the different statement AST nodes, which are built up of expressions.
 /// A `Statement` is a component of a block, which is a component of an outer expression
 /// or function.

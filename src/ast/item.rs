@@ -215,7 +215,7 @@ pub struct StaticItemDecl {
     pub kw_mut_opt: Option<Keyword>,
     pub item_name: Identifier,
     pub item_type: Type,
-    pub value_opt: Option<Box<Expression>>,
+    pub value_opt: Option<Box<Expression>>, // place expression
 }
 
 #[derive(Debug, Clone)]

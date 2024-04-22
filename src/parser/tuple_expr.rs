@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Expression, Separator, TupleExpr, TupleIndexExpr},
+    ast::{Delimiter, Expression, Separator, TupleExpr, TupleIndexExpr, TupleIndexOperand},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -81,7 +81,7 @@ impl TupleIndexExpr {
         }?;
 
         Ok(TupleIndexExpr {
-            operand: Box::new(operand),
+            operand: TupleIndexOperand(Box::new(operand)),
             dot: Separator::Dot,
             index,
         })

@@ -50,3 +50,5 @@ pub enum Hash {
 /// Struct that wraps a `Vec<u8>` into a dynamic byte array (string literal).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Str(pub Vec<u8>);
+
+

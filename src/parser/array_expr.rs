@@ -1,5 +1,5 @@
 use crate::{
-    ast::{ArrayExpr, Delimiter, Expression},
+    ast::{ArrayExpr, AssigneeExpr, Delimiter, Expression},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -15,7 +15,7 @@ impl ArrayExpr {
             Err(ErrorsEmitted(()))
         }?;
 
-        let mut elements: Vec<Expression> = Vec::new();
+        let mut elements: Vec<AssigneeExpr> = Vec::new();
 
         loop {
             if let Some(Token::RBracket { .. }) = parser.peek_current() {

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Expression, IndexExpr},
+    ast::{ArrayIndex, Delimiter, Expression, IndexExpr, IndexedArray},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -22,9 +22,9 @@ impl IndexExpr {
         }?;
 
         Ok(IndexExpr {
-            array: Box::new(array),
+            array: IndexedArray(Box::new(array)),
             open_bracket: Delimiter::LBracket,
-            index: Box::new(index),
+            index: ArrayIndex(Box::new(index)),
             close_bracket,
         })
     }

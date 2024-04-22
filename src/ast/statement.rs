@@ -14,7 +14,7 @@ pub struct ExpressionStmt {
 pub struct LetStmt {
     pub kw_let: Keyword,
     pub kw_mut_opt: Option<Keyword>,
-    pub assignee: Expression,
+    pub assignee: Expression, // assignee expression
     pub type_ann_opt: Option<(Separator, Type)>, // `: Type`
     pub value_opt: Option<(BinaryOp, Expression)>, // `= value`
 }
