@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, FunctionDef, Identifier, InherentImplDef, InherentImplItem,
-        OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem, Visibility,
+        AliasDecl, ConstantDecl, Delimiter, FunctionDef, Identifier, InherentImplDef,
+        InherentImplItem, OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -24,10 +24,12 @@ impl ParseDefinition for InherentImplDef {
 
         let nominal_type = parser.get_type()?;
 
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
@@ -68,14 +70,13 @@ impl ParseDefinition for InherentImplDef {
             associated_items.push(associated_item);
         }
 
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        })?;
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
 
         Ok(InherentImplDef {
             attributes_opt: {
@@ -133,10 +134,12 @@ impl ParseDefinition for TraitImplDef {
 
         let mut associated_items: Vec<TraitImplItem> = Vec::new();
 
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
@@ -183,14 +186,13 @@ impl ParseDefinition for TraitImplDef {
             associated_items.push(associated_item);
         }
 
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        })?;
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
 
         Ok(TraitImplDef {
             attributes_opt: {
@@ -231,8 +233,8 @@ mod tests {
             #[constructor]
             pub func new(param1: char, param2: bool) -> Foo {
                 Foo {
-                    param1,
-                    param2
+                    param1: param1,
+                    param2: param2
                 }
             }
 

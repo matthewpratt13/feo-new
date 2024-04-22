@@ -24,6 +24,9 @@ mod module_def;
 mod path_expr;
 mod precedence;
 mod range_expr;
+mod result_expr;
+mod return_expr;
+mod some_expr;
 mod statement;
 mod static_item_decl;
 mod struct_def;
@@ -116,10 +119,6 @@ impl Parser {
             }
         }
 
-        if let Some(Token::Semicolon { .. }) = self.peek_current() {
-            self.consume_token();
-        }
-
         println!("RETURNED EXPRESSION: {:?}", left_expr);
         println!("EXIT `parse_expression()`");
         println!("CURRENT TOKEN: {:?}\n", self.peek_current());
@@ -132,7 +131,7 @@ impl Parser {
         println!("ENTER `parse_primary()`");
         println!("CURRENT TOKEN: {:?}\n", self.peek_current());
 
-        let token = self.consume_token();
+        let token = self.peek_current();
 
         match token {
             Some(Token::Identifier { name, .. }) => Ok(Expression::Path(PathExpr {
@@ -153,7 +152,10 @@ impl Parser {
             Some(Token::StrLiteral { value, .. }) => Ok(Expression::Literal(Literal::Str(value))),
             Some(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
             Some(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
-            Some(Token::LParen { .. }) => Ok(Expression::Grouped(GroupedExpr::parse(self)?)),
+            Some(Token::LParen { .. }) => {
+                self.consume_token();
+                Ok(Expression::Grouped(GroupedExpr::parse(self)?))
+            }
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier, `_`, literal or `(`".to_string(),
@@ -177,20 +179,42 @@ impl Parser {
                 Token::IntLiteral { .. }
                 | Token::UIntLiteral { .. }
                 | Token::BigUIntLiteral { .. }
-                | Token::HashLiteral { .. },
-            ) => self.parse_primary(),
-            Some(
-                Token::ByteLiteral { .. }
+                | Token::HashLiteral { .. }
+                | Token::ByteLiteral { .. }
                 | Token::BytesLiteral { .. }
                 | Token::StrLiteral { .. }
                 | Token::CharLiteral { .. }
                 | Token::BoolLiteral { .. },
-            ) => self.parse_primary(),
+            ) => {
+                let lit = self.parse_primary();
+                self.consume_token();
+                lit
+            }
+
             Some(Token::Identifier { name, .. }) => {
                 if &name == "_" {
+                    self.consume_token();
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Separator::Underscore,
                     }))
+                } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
+                    self.consume_token();
+
+                    match self.peek_ahead_by(2) {
+                        Some(Token::Colon { .. }) => {
+                            let path = PathExpr {
+                                root: PathPrefix::Identifier(Identifier(name)),
+                                tree_opt: None,
+                                wildcard_opt: None,
+                            };
+
+                            Ok(Expression::Struct(StructExpr::parse(self, path)?))
+                        }
+                        _ => Ok(Expression::Path(PathExpr::parse(
+                            self,
+                            PathPrefix::Identifier(Identifier(name)),
+                        )?)),
+                    }
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_current()
                 {
@@ -199,24 +223,32 @@ impl Parser {
                         PathPrefix::Identifier(Identifier(name)),
                     )?))
                 } else {
-                    self.parse_primary()
+                    let id = self.parse_primary();
+                    self.consume_token();
+                    id
                 }
             }
             Some(Token::SelfType { .. }) => {
-                self.consume_token();
-                Ok(Expression::Path(PathExpr {
-                    root: PathPrefix::SelfType,
-                    tree_opt: None,
-                    wildcard_opt: None,
-                }))
+                if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
+                    self.consume_token();
+
+                    let path = PathExpr::parse(self, PathPrefix::SelfType)?;
+
+                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
+                } else {
+                    Ok(Expression::Path(PathExpr {
+                        root: PathPrefix::SelfType,
+                        tree_opt: None,
+                        wildcard_opt: None,
+                    }))
+                }
             }
             Some(Token::SelfKeyword { .. }) => {
                 self.consume_token();
-                Ok(Expression::Path(PathExpr {
-                    root: PathPrefix::SelfKeyword,
-                    tree_opt: None,
-                    wildcard_opt: None,
-                }))
+                Ok(Expression::Path(PathExpr::parse(
+                    self,
+                    PathPrefix::SelfKeyword,
+                )?))
             }
             Some(Token::Package { .. }) => {
                 self.consume_token();
@@ -251,30 +283,10 @@ impl Parser {
                     self.parse_primary()
                 }
             }
+            Some(Token::LBrace { .. }) => Ok(Expression::Block(BlockExpr::parse(self)?)),
+
             Some(Token::LBracket { .. }) => Ok(Expression::Array(ArrayExpr::parse(self)?)),
-            Some(Token::LBrace { .. }) => match self.peek_behind_by(1) {
-                Some(Token::Identifier { name, .. }) => {
-                    let path = PathExpr {
-                        root: PathPrefix::Identifier(Identifier(name)),
-                        tree_opt: None,
-                        wildcard_opt: None,
-                    };
 
-                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
-                }
-
-                Some(Token::SelfType { .. }) => {
-                    let path = PathExpr {
-                        root: PathPrefix::SelfType,
-                        tree_opt: None,
-                        wildcard_opt: None,
-                    };
-
-                    Ok(Expression::Struct(StructExpr::parse(self, path)?))
-                }
-
-                _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
-            },
             Some(Token::Pipe { .. } | Token::DblPipe { .. }) => {
                 Ok(Expression::Closure(ClosureExpr::parse(self)?))
             }
@@ -287,8 +299,10 @@ impl Parser {
                         Err(ErrorsEmitted(()))
                     }
                     _ => {
+                        let token = self.peek_ahead_by(1);
+
                         self.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "identifier or tuple index after `.`".to_string(),
+                            expected: "identifier or unsigned integer after `.`".to_string(),
                             found: token,
                         });
                         Err(ErrorsEmitted(()))
@@ -351,19 +365,20 @@ impl Parser {
 
             Some(Token::While { .. }) => Ok(Expression::While(WhileExpr::parse(self)?)),
 
-            Some(Token::Return { .. }) => {
-                self.consume_token();
-                let expression_opt = if let Some(t) = self.peek_current() {
-                    Some(Box::new(self.parse_expression(Precedence::Lowest)?))
-                } else {
-                    None
-                };
+            Some(Token::Some { .. }) => Ok(Expression::SomeExpr(SomeExpr::parse(self)?)),
 
-                Ok(Expression::Return(ReturnExpr {
-                    kw_return: Keyword::Return,
-                    expression_opt,
+            Some(Token::None { .. }) => {
+                self.consume_token();
+
+                Ok(Expression::NoneExpr(NoneExpr {
+                    kw_none: Keyword::None,
                 }))
             }
+
+            Some(Token::Ok { .. } | Token::Err { .. }) => {
+                Ok(Expression::ResultExpr(ResultExpr::parse(self)?))
+            }
+
             Some(Token::Break { name, .. }) => {
                 self.consume_token();
                 Ok(Expression::Break(BreakExpr {
@@ -376,85 +391,8 @@ impl Parser {
                     kw_continue: Keyword::Continue,
                 }))
             }
-            Some(Token::Some { .. }) => {
-                self.consume_token();
-                let token = self.consume_token();
-                let expression = if let Some(Token::LParen { .. }) = token {
-                    self.parse_expression(Precedence::Lowest)
-                } else {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`(`".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted(()))
-                }?;
 
-                let _ = self.expect_delimiter(Token::RParen {
-                    delim: ')',
-                    span: self.stream.span(),
-                })?;
-
-                Ok(Expression::SomeExpr(SomeExpr {
-                    kw_some: Keyword::Some,
-                    expression: Box::new(expression),
-                }))
-            }
-
-            Some(Token::None { .. }) => {
-                self.consume_token();
-
-                Ok(Expression::NoneExpr(NoneExpr {
-                    kw_none: Keyword::None,
-                }))
-            }
-
-            Some(Token::Ok { .. }) => {
-                self.consume_token();
-                let token = self.consume_token();
-                let expression = if let Some(Token::LParen { .. }) = token {
-                    self.parse_expression(Precedence::Lowest)
-                } else {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`(`".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted(()))
-                }?;
-
-                let _ = self.expect_delimiter(Token::RParen {
-                    delim: ')',
-                    span: self.stream.span(),
-                })?;
-
-                Ok(Expression::ResultExpr(ResultExpr {
-                    kw_ok_or_err: Keyword::Ok,
-                    expression: Box::new(expression),
-                }))
-            }
-
-            Some(Token::Err { .. }) => {
-                self.consume_token();
-                let token = self.consume_token();
-                let expression = if let Some(Token::LParen { .. }) = token {
-                    self.parse_expression(Precedence::Lowest)
-                } else {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`(`".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted(()))
-                }?;
-
-                let _ = self.expect_delimiter(Token::RParen {
-                    delim: ')',
-                    span: self.stream.span(),
-                })?;
-
-                Ok(Expression::ResultExpr(ResultExpr {
-                    kw_ok_or_err: Keyword::Err,
-                    expression: Box::new(expression),
-                }))
-            }
+            Some(Token::Return { .. }) => Ok(Expression::Return(ReturnExpr::parse(self)?)),
 
             Some(t) => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
@@ -463,7 +401,7 @@ impl Parser {
                 });
                 Err(ErrorsEmitted(()))
             }
-            None => {
+            _ => {
                 self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
@@ -612,6 +550,7 @@ impl Parser {
                 let expr = IndexExpr::parse(self, left_expr)?;
                 Ok(Expression::Index(expr))
             }
+
             Some(Token::As { .. }) => {
                 let new_type = self.get_type()?;
 
@@ -759,25 +698,6 @@ impl Parser {
         self.peek_current()
     }
 
-    /// Consume and check tokens, to ensure that the expected tokens are encountered
-    /// during parsing. Return the relevant `ParserErrorKind` where applicable.
-    fn expect_token(&mut self, expected: Token) -> Result<Token, ErrorsEmitted> {
-        let token = self.consume_token().ok_or({
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
-
-        if token == expected {
-            Ok(token)
-        } else {
-            self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: format!("`{:#?}`", expected),
-                found: Some(token),
-            });
-            Err(ErrorsEmitted(()))
-        }
-    }
-
     fn expect_keyword(&mut self, expected: Token) -> Result<Keyword, ErrorsEmitted> {
         let token = self.consume_token();
 
@@ -810,35 +730,15 @@ impl Parser {
             Some(Token::Return { .. }) => Ok(Keyword::Return),
             Some(Token::Let { .. }) => Ok(Keyword::Let),
             Some(Token::Mut { .. }) => Ok(Keyword::Mut),
+            Some(Token::Some { .. }) => Ok(Keyword::Some),
+            Some(Token::None { .. }) => Ok(Keyword::None),
+            Some(Token::Ok { .. }) => Ok(Keyword::Ok),
+            Some(Token::Err { .. }) => Ok(Keyword::Err),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
-            }
-        }
-    }
-
-    fn expect_delimiter(&mut self, expected: Token) -> Result<Delimiter, ErrorsEmitted> {
-        let token = self.consume_token();
-
-        match token {
-            Some(Token::LParen { .. }) => Ok(Delimiter::LParen),
-            Some(Token::RParen { .. }) => Ok(Delimiter::RParen),
-            Some(Token::LBracket { .. }) => Ok(Delimiter::LBracket),
-            Some(Token::RBracket { .. }) => Ok(Delimiter::RBracket),
-            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
-            Some(Token::RBrace { .. }) => Ok(Delimiter::RBrace),
-            Some(_) => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: format!("`{:#?}`", expected),
-                    found: token,
-                });
-                Err(ErrorsEmitted(()))
-            }
-            None => {
-                self.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
                 Err(ErrorsEmitted(()))
             }
         }
@@ -943,6 +843,10 @@ impl Parser {
                     Precedence::Unary
                 }
             }
+
+            Token::Some { .. } | Token::None { .. } | Token::Ok { .. } | Token::Err { .. } => {
+                Precedence::Unary
+            }
             Token::Slash { .. } => Precedence::Quotient,
             Token::LessThan { .. } => Precedence::LessThan,
             Token::Equals { .. } => Precedence::Assignment,
@@ -991,6 +895,26 @@ impl Parser {
             self.stream.tokens()[self.current - 1].span().start(),
         );
         self.errors.push(error);
+    }
+
+    fn log_unexpected_token(&mut self, expected: String) {
+        self.log_error(ParserErrorKind::UnexpectedToken {
+            expected,
+            found: self.peek_current(),
+        });
+
+        self.consume_token();
+    }
+
+    fn log_missing_delimiter(&mut self, delim: char) {
+        match delim {
+            '(' | ')' | '[' | ']' | '{' | '}' => {
+                self.consume_token();
+                self.log_error(ParserErrorKind::MissingDelimiter { delim });
+            }
+
+            _ => self.log_unexpected_token(format!("`{}`", delim)),
+        }
     }
 
     pub fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
@@ -1059,15 +983,16 @@ impl Parser {
                                 found: Some(t),
                             }),
                             None => {
-                                self.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                                self.log_missing_delimiter(')');
                             }
                         }
                     }
 
-                    let _ = self.expect_delimiter(Token::RParen {
-                        delim: ')',
-                        span: self.stream.span(),
-                    })?;
+                    if let Some(Token::RParen { .. }) = self.peek_current() {
+                        self.consume_token();
+                    } else {
+                        self.log_missing_delimiter(')');
+                    }
 
                     Ok(Type::Tuple(types))
                 }
@@ -1075,26 +1000,31 @@ impl Parser {
             Some(Token::LBracket { .. }) => {
                 let ty = self.get_type()?;
 
-                let _ = self.expect_separator(Token::Semicolon {
-                    punc: ';',
-                    span: self.stream.span(),
-                })?;
+                // if let Some(Token::LBracket { .. }) = self.peek_current() {
+                //     self.consume_token();
+                // } else {
+                //     self.log_unexpected_token("`[`".to_string());
+                // }
+
+                if let Some(Token::Semicolon { .. }) = self.peek_current() {
+                    self.consume_token();
+                } else {
+                    self.log_unexpected_token("`;`".to_string());
+                }
 
                 let num_elements =
                     if let Some(Token::UIntLiteral { value, .. }) = self.consume_token() {
                         Ok(value)
                     } else {
-                        self.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "uint literal".to_string(),
-                            found: token,
-                        });
+                        self.log_unexpected_token("uint literal".to_string());
                         Err(ErrorsEmitted(()))
                     }?;
 
-                let _ = self.expect_delimiter(Token::RBracket {
-                    delim: '}',
-                    span: self.stream.span(),
-                })?;
+                if let Some(Token::RBracket { .. }) = self.peek_current() {
+                    self.consume_token();
+                } else {
+                    self.log_missing_delimiter(']');
+                }
 
                 Ok(Type::Array {
                     element_type: Box::new(ty),
@@ -1107,17 +1037,21 @@ impl Parser {
                 let function_name = if let Some(Token::Identifier { name, .. }) = token {
                     Ok(Identifier(name))
                 } else {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "identifier".to_string(),
-                        found: token,
-                    });
+                    self.log_unexpected_token("identifier".to_string());
                     Err(ErrorsEmitted(()))
                 }?;
 
-                let _ = self.expect_delimiter(Token::LParen {
-                    delim: '(',
-                    span: self.stream.span(),
-                })?;
+                if let Some(Token::LBrace { .. }) = self.peek_current() {
+                    self.consume_token();
+                } else {
+                    self.log_unexpected_token("`{`".to_string());
+                };
+
+                if let Some(Token::LParen { .. }) = self.peek_current() {
+                    self.consume_token();
+                } else {
+                    self.log_unexpected_token("`(`".to_string());
+                }
 
                 // `&self` and `&mut self` can only occur as the first parameter in a method
                 if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
@@ -1147,20 +1081,18 @@ impl Parser {
                             continue;
                         }
                         Some(Token::RParen { .. }) => break,
-                        Some(t) => self.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "`,` or `)`".to_string(),
-                            found: Some(t),
-                        }),
+                        Some(t) => self.log_unexpected_token("`,` or `)`".to_string()),
                         None => {
-                            self.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                            self.log_missing_delimiter(')');
                         }
                     }
                 }
 
-                let _ = self.expect_delimiter(Token::RParen {
-                    delim: ')',
-                    span: self.stream.span(),
-                })?;
+                if let Some(Token::RParen { .. }) = self.peek_current() {
+                    self.consume_token();
+                } else {
+                    self.log_missing_delimiter(')');
+                }
 
                 let return_type_opt = if let Some(Token::ThinArrow { .. }) = self.peek_current() {
                     self.consume_token();
@@ -1319,10 +1251,12 @@ impl Parser {
                             span: self.stream.span(),
                         })?;
 
-                        let close_paren = self.expect_delimiter(Token::RParen {
-                            delim: ')',
-                            span: self.stream.span(),
-                        })?;
+                        let close_paren = if let Some(Token::RParen { .. }) = self.consume_token() {
+                            Ok(Delimiter::RParen)
+                        } else {
+                            self.log_missing_delimiter(')');
+                            Err(ErrorsEmitted(()))
+                        }?;
 
                         let pub_package = PubPackageVis {
                             kw_pub: Keyword::Pub,
@@ -1445,21 +1379,7 @@ mod tests {
 
     #[test]
     fn parse_type_cast_expr() -> Result<(), ()> {
-        let input = r#"x as u32"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn parse_return_expr() -> Result<(), ()> {
-        let input = r#"return (x + 2)"#;
+        let input = r#"x as u64"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
@@ -1500,36 +1420,8 @@ mod tests {
     }
 
     #[test]
-    fn parse_some_expr() -> Result<(), ()> {
-        let input = r#"Some(foo)"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn parse_none_expr() -> Result<(), ()> {
-        let input = r#"None"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn parse_result_expr() -> Result<(), ()> {
-        let input = r#"Ok(x + 2)"#;
+    fn parse_underscore_expr() -> Result<(), ()> {
+        let input = r#"_"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

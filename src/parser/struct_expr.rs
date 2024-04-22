@@ -8,85 +8,73 @@ use super::{Parser, Precedence};
 
 impl StructExpr {
     pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<StructExpr, ErrorsEmitted> {
-        println!("ENTER `StructExpr::parse()`");
-        println!("CURRENT TOKEN: {:?}", parser.peek_current());
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         let mut fields: Vec<StructField> = Vec::new();
 
-        // TODO: add logic to allow for variable attributes (`VariableAttr` node type)
-        // TODO i.e., `#[unsafe]`, `#[storage]` and `#[calldata] and `#[topic]`
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
-                parser.consume_token();
                 break;
             }
 
-            let token = parser.consume_token();
-
-            let name = match token {
+            let name = match parser.consume_token() {
                 Some(Token::Identifier { name, .. }) => Ok(name),
                 Some(Token::RBrace { .. }) => break,
                 _ => {
-                    parser.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "identifier or `}`".to_string(),
-                        found: token,
-                    });
+                    parser.log_missing_delimiter('}');
                     Err(ErrorsEmitted(()))
                 }
-            };
+            }?;
 
             let _ = parser.expect_separator(Token::Colon {
                 punc: ':',
                 span: parser.stream.span(),
             });
 
-            let value = parser.parse_expression(Precedence::Lowest);
+            let value = parser.parse_expression(Precedence::Lowest)?;
 
             let field = StructField {
-                name: Identifier(name?),
-                value: value?,
+                name: Identifier(name),
+                value,
             };
 
             fields.push(field);
 
-            let token = parser.consume_token();
-
-            match token {
-                Some(Token::Comma { .. }) => continue,
-                Some(Token::RBrace { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `}`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
+            match parser.peek_current() {
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
                 }
+                Some(Token::RBrace { .. }) => break,
+                _ => break,
             }
         }
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
-        if fields.is_empty() {
-            Ok(StructExpr {
-                path,
-                open_brace: Delimiter::LBrace,
-                fields_opt: None,
-                close_brace: Delimiter::RBrace,
-            })
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
         } else {
-            Ok(StructExpr {
-                path,
-                open_brace: Delimiter::LBrace,
-                fields_opt: Some(fields),
-                close_brace: Delimiter::RBrace,
-            })
-        }
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
+
+        Ok(StructExpr {
+            path,
+            open_brace: Delimiter::LBrace,
+            fields_opt: {
+                if fields.is_empty() {
+                    None
+                } else {
+                    Some(fields)
+                }
+            },
+            close_brace,
+        })
     }
 }
 
@@ -94,10 +82,12 @@ impl TupleStructExpr {
     fn parse(parser: &mut Parser, path: PathExpr) -> Result<Self, ErrorsEmitted> {
         let mut elements: Vec<Expression> = Vec::new();
 
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
@@ -108,23 +98,20 @@ impl TupleStructExpr {
             let element = parser.parse_expression(Precedence::Lowest)?;
             elements.push(element);
 
-            let token = parser.consume_token();
+            let token = parser.peek_current();
 
             match token {
-                Some(Token::Comma { .. }) => continue,
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
+                }
                 Some(Token::RParen { .. }) => break,
                 Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`,` or `)`".to_string(),
                     found: Some(t),
                 }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
-                }
+                None => break,
             }
-        }
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
         }
 
         if elements.is_empty() {
@@ -154,7 +141,7 @@ mod tests {
         let input = r#"
         SomeStruct {
             foo: "bar",
-            baz: 10,
+            baz: -10,
         }"#;
 
         let mut parser = test_utils::get_parser(input, false);

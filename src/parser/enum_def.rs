@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTuple, EnumVariantType, Identifier,
-        OuterAttr, Type, Visibility,
+        Delimiter, EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTuple, EnumVariantType,
+        Identifier, OuterAttr, Type, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -22,22 +22,19 @@ impl ParseDefinition for EnumDef {
 
         let mut variants: Vec<EnumVariant> = Vec::new();
 
-        let token = parser.consume_token();
-
-        let enum_name = if let Some(Token::Identifier { name, .. }) = token {
+        let enum_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier".to_string(),
-                found: token,
-            });
+            parser.log_unexpected_token("identifier".to_string());
             Err(ErrorsEmitted(()))
         }?;
 
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
@@ -54,51 +51,38 @@ impl ParseDefinition for EnumDef {
             let variant = EnumVariant::parse(parser, attributes)?;
             variants.push(variant);
 
-            let token = parser.consume_token();
-
-            match token {
+            match parser.consume_token() {
                 Some(Token::Comma { .. }) => continue,
                 Some(Token::RBrace { .. }) => break,
                 Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`,` or `}`".to_string(),
                     found: Some(t),
                 }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
-                }
+                None => break,
             }
         }
 
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        })?;
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
-        if attributes.is_empty() {
-            Ok(EnumDef {
-                attributes_opt: None,
-                visibility,
-                kw_enum,
-                enum_name,
-                open_brace,
-                variants,
-                close_brace,
-            })
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
         } else {
-            Ok(EnumDef {
-                attributes_opt: Some(attributes),
-                visibility,
-                kw_enum,
-                enum_name,
-                open_brace,
-                variants,
-                close_brace,
-            })
-        }
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
+
+        Ok(EnumDef {
+            attributes_opt: if attributes.is_empty() {
+                None
+            } else {
+                Some(attributes)
+            },
+            visibility,
+            kw_enum,
+            enum_name,
+            open_brace,
+            variants,
+            close_brace,
+        })
     }
 }
 
@@ -153,10 +137,12 @@ impl EnumVariant {
 
 impl EnumVariantStruct {
     pub(crate) fn parse(parser: &mut Parser) -> Result<EnumVariantStruct, ErrorsEmitted> {
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         let mut fields: Vec<(Identifier, Type)> = Vec::new();
 
@@ -203,10 +189,13 @@ impl EnumVariantStruct {
             }
         }
 
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        })?;
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
 
         if fields.is_empty() {
             Ok(EnumVariantStruct {
@@ -226,10 +215,12 @@ impl EnumVariantStruct {
 
 impl EnumVariantTuple {
     pub(crate) fn parse(parser: &mut Parser) -> Result<EnumVariantTuple, ErrorsEmitted> {
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         let mut element_types: Vec<Type> = Vec::new();
 
@@ -259,10 +250,13 @@ impl EnumVariantTuple {
             }
         }
 
-        let close_paren = parser.expect_delimiter(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        })?;
+        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
 
         Ok(EnumVariantTuple {
             open_paren,

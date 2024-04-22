@@ -8,56 +8,57 @@ use super::{Parser, Precedence};
 
 impl TupleExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         let mut elements: Vec<Expression> = Vec::new();
 
         loop {
-            if let Some(Token::RBracket { .. }) = parser.peek_current() {
-                parser.consume_token();
+            if let Some(Token::RParen { .. }) = parser.peek_current() {
                 break;
             }
 
-            let element = parser.parse_expression(Precedence::Lowest)?;
+            let element = match parser.parse_expression(Precedence::Lowest) {
+                Ok(e) => Ok(e),
+                Err(_) => {
+                    parser.log_unexpected_token("tuple element".to_string());
+                    Err(ErrorsEmitted(()))
+                }
+            }?;
+
             elements.push(element);
 
-            let token = parser.consume_token();
-
-            match token {
-                Some(Token::Comma { .. }) => continue,
-                Some(Token::RParen { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `)`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+            match parser.peek_current() {
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
                 }
+                Some(Token::RParen { .. }) => break,
+
+                Some(_) => {
+                    parser.log_unexpected_token("`,` or `)`".to_string());
+                }
+
+                None => break,
             }
         }
 
-        // let close_paren = parser.expect_delimiter(Token::RParen {
-        //     delim: ')',
-        //     span: parser.stream.span(),
-        // });
-
-        if elements.is_empty() {
-            parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "tuple element or `,`".to_string(),
-            });
-        }
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
+        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
 
         Ok(TupleExpr {
             open_paren,
             elements,
-            close_paren: Delimiter::RParen,
+            close_paren,
         })
     }
 }
@@ -77,16 +78,12 @@ impl TupleIndexExpr {
                 found: token,
             });
             Err(ErrorsEmitted(()))
-        };
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
+        }?;
 
         Ok(TupleIndexExpr {
             operand: Box::new(operand),
             dot: Separator::Dot,
-            index: index?,
+            index,
         })
     }
 }
@@ -97,7 +94,7 @@ mod tests {
 
     #[test]
     fn parse_tuple_expr() -> Result<(), ()> {
-        let input = r#"(true, "foo", 10)"#;
+        let input = r#"(true, "foo", 10, x)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

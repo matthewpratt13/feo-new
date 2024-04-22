@@ -23,60 +23,67 @@ impl MethodCallExpr {
                 found: token,
             });
             Err(ErrorsEmitted(()))
-        };
+        }?;
 
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        });
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
-                parser.consume_token();
                 break;
             }
 
-            let arg_expr = parser.parse_expression(Precedence::Lowest)?;
+            let arg_expr = match parser.parse_expression(Precedence::Lowest) {
+                Ok(e) => Ok(e),
+                Err(_) => {
+                    parser.log_unexpected_token("method argument".to_string());
+                    Err(ErrorsEmitted(()))
+                }
+            }?;
+
             args.push(arg_expr);
 
-            let curr_token = parser.consume_token();
+            let curr_token = parser.peek_current();
 
             match curr_token {
-                Some(Token::Comma { .. }) => continue,
-                Some(Token::RParen { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `)`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
                 }
+                Some(Token::RParen { .. }) => break,
+                Some(_) => {
+                    parser.log_unexpected_token("`,` or `)`".to_string());
+                }
+                None => break,
             }
         }
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
-        if args.is_empty() {
-            Ok(MethodCallExpr {
-                receiver: Box::new(receiver),
-                dot: Separator::Dot,
-                method_name: method_name?,
-                open_paren: open_paren?,
-                args_opt: None,
-                close_paren: Delimiter::RParen,
-            })
+        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
         } else {
-            Ok(MethodCallExpr {
-                receiver: Box::new(receiver),
-                dot: Separator::Dot,
-                method_name: method_name?,
-                open_paren: open_paren?,
-                args_opt: Some(args),
-                close_paren: Delimiter::RParen,
-            })
-        }
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
+
+        Ok(MethodCallExpr {
+            receiver: Box::new(receiver),
+            dot: Separator::Dot,
+            method_name,
+            open_paren,
+            args_opt: {
+                if args.is_empty() {
+                    None
+                } else {
+                    Some(args)
+                }
+            },
+            close_paren,
+        })
     }
 }
 
@@ -85,8 +92,22 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn parse_method_call_expr() -> Result<(), ()> {
-        let input = r#"receiver.method(foo, bar)"#;
+    fn parse_method_call_expr_with_args() -> Result<(), ()> {
+        let input = r#"receiver.method(x, "foo", -10)"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_method_call_expr_without_args() -> Result<(), ()> {
+        let input = r#"receiver.method()"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

@@ -87,7 +87,6 @@ pub struct MethodSig {
     pub params_opt: Option<Vec<FunctionOrMethodParam>>,
     pub close_paren: Delimiter,
     pub return_type_opt: Option<Box<Type>>,
-    pub semicolon: Separator,
 }
 
 #[derive(Debug, Clone)]

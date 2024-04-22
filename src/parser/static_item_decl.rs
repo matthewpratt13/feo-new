@@ -1,6 +1,6 @@
 use crate::{
     ast::{Identifier, Keyword, OuterAttr, StaticItemDecl, Visibility},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -27,10 +27,7 @@ impl ParseDeclaration for StaticItemDecl {
         let item_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier".to_string(),
-                found: parser.peek_current(),
-            });
+            parser.log_unexpected_token("identifier".to_string());
             Err(ErrorsEmitted(()))
         }?;
 
@@ -48,40 +45,26 @@ impl ParseDeclaration for StaticItemDecl {
             None
         };
 
-        if let Some(Token::Semicolon { .. }) = parser.peek_behind_by(1) {
-            ()
-        } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`;`".to_string(),
-                found: parser.peek_current(),
-            })
-        }
+        let _ = parser.expect_separator(Token::Semicolon {
+            punc: ';',
+            span: parser.stream.span(),
+        })?;
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
-        if attributes.is_empty() {
-            Ok(StaticItemDecl {
-                attributes_opt: None,
-                visibility,
-                kw_static,
-                kw_mut_opt,
-                item_name,
-                item_type,
-                value_opt,
-            })
-        } else {
-            Ok(StaticItemDecl {
-                attributes_opt: Some(attributes),
-                visibility,
-                kw_static,
-                kw_mut_opt,
-                item_name,
-                item_type,
-                value_opt,
-            })
-        }
+        Ok(StaticItemDecl {
+            attributes_opt: {
+                if attributes.is_empty() {
+                    None
+                } else {
+                    Some(attributes)
+                }
+            },
+            visibility,
+            kw_static,
+            kw_mut_opt,
+            item_name,
+            item_type,
+            value_opt,
+        })
     }
 }
 

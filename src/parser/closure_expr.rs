@@ -3,7 +3,7 @@ use crate::{
         BinaryOp, BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Identifier,
         Separator,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -18,29 +18,18 @@ impl ClosureExpr {
                 let mut vec: Vec<ClosureParam> = Vec::new();
 
                 loop {
-                    println!("ENTER CLOSURE PARAM LOOP");
-
                     if let Some(Token::Pipe { .. }) = parser.peek_current() {
                         parser.consume_token();
                         break;
                     }
 
-                    let curr_token = parser.peek_current();
-
-                    let id = match curr_token {
+                    let id = match parser.peek_current() {
                         Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
                         _ => {
-                            parser.log_error(ParserErrorKind::UnexpectedToken {
-                                expected: "identifier".to_string(),
-                                found: curr_token,
-                            });
-
+                            parser.log_unexpected_token("identifier".to_string());
                             Err(ErrorsEmitted(()))
                         }
-                    };
-
-                    println!("CLOSURE PARAM NAME: {:?}", id);
-                    println!("CURRENT TOKEN: {:?}", parser.peek_current());
+                    }?;
 
                     parser.consume_token();
 
@@ -51,7 +40,7 @@ impl ClosureExpr {
                         None
                     };
 
-                    let param = ClosureParam { id: id?, ty };
+                    let param = ClosureParam { id, ty };
                     vec.push(param);
 
                     if let Some(Token::Comma { .. }) = parser.peek_current() {
@@ -67,26 +56,17 @@ impl ClosureExpr {
             }
             Some(Token::DblPipe { .. }) => Ok(ClosureParams::None(BinaryOp::LogicalOr)),
             _ => {
-                parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`|` or `||`".to_string(),
-                    found: token,
-                });
+                parser.log_unexpected_token("`|` or `||`".to_string());
                 Err(ErrorsEmitted(()))
             }
-        };
-
-        println!("CLOSURE PARAMS: {:?}\n", params);
+        }?;
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
             parser.consume_token();
-            let ty = parser.get_type();
-            Some((Separator::ThinArrow, ty?))
+            Some((Separator::ThinArrow, parser.get_type()?))
         } else {
             None
         };
-
-        println!("RETURN TYPE (OPTIONAL): {:?}\n", return_type_opt);
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
         let expression = if return_type_opt.is_some() {
             Expression::Block(BlockExpr::parse(parser)?)
@@ -94,12 +74,8 @@ impl ClosureExpr {
             parser.parse_expression(Precedence::Lowest)?
         };
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
         Ok(ClosureExpr {
-            params: params?,
+            params,
             return_type_opt,
             expression: Box::new(expression),
         })

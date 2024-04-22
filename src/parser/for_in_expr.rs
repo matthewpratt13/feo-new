@@ -13,7 +13,7 @@ impl ForInExpr {
             span: parser.stream.span(),
         })?;
 
-        let assignee = parser.parse_expression(Precedence::Path)?;
+        let assignee = parser.parse_expression(Precedence::Lowest)?;
 
         let kw_in = parser.expect_keyword(Token::In {
             name: "in".to_string(),
@@ -33,7 +33,6 @@ impl ForInExpr {
         })
     }
 }
-
 
 #[cfg(test)]
 mod tests {

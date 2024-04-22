@@ -13,10 +13,11 @@ impl WhileExpr {
             span: parser.stream.span(),
         })?;
 
-        let _ = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        });
+        if let Some(Token::LParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+        }
 
         let condition = GroupedExpr::parse(parser)?;
 
@@ -38,7 +39,7 @@ mod tests {
     fn parse_while_expr() -> Result<(), ()> {
         let input = r#"
         while (x < 5) {
-            x += 1
+            x += 1;
         }"#;
 
         let mut parser = test_utils::get_parser(input, false);

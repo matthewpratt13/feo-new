@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, FunctionOrMethodParam, Identifier, MethodSig, OuterAttr, TraitDef,
-        TraitDefItem, Visibility,
+        AliasDecl, ConstantDecl, Delimiter, FunctionOrMethodParam, Identifier, MethodSig,
+        OuterAttr, TraitDef, TraitDefItem, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -30,17 +30,16 @@ impl ParseDefinition for TraitDef {
         let trait_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier".to_string(),
-                found: token,
-            });
+            parser.log_unexpected_token("identifier".to_string());
             Err(ErrorsEmitted(()))
         }?;
 
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
@@ -86,15 +85,13 @@ impl ParseDefinition for TraitDef {
 
             associated_items.push(associated_item);
         }
-
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        })?;
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
 
         Ok(TraitDef {
             attributes_opt: {
@@ -145,10 +142,12 @@ impl MethodSig {
             Err(ErrorsEmitted(()))
         }?;
 
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         // `&self` and `&mut self` can only occur as the first parameter in a method
         if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = parser.peek_current() {
@@ -168,28 +167,24 @@ impl MethodSig {
             let param = FunctionOrMethodParam::parse(parser)?;
             params.push(param);
 
-            let token = parser.peek_current();
-
-            match token {
+            match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     parser.consume_token();
                     continue;
                 }
                 Some(Token::RParen { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `)`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
-                }
+                Some(_) => parser.log_unexpected_token("`,` or `)`".to_string()),
+                None => break,
             }
         }
 
-        let close_paren = parser.expect_delimiter(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        })?;
+        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
             parser.consume_token();
@@ -198,14 +193,10 @@ impl MethodSig {
             None
         };
 
-        let semicolon = parser.expect_separator(Token::Semicolon {
+        let _ = parser.expect_separator(Token::Semicolon {
             punc: ';',
             span: parser.stream.span(),
         })?;
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
 
         Ok(MethodSig {
             attributes_opt: {
@@ -228,7 +219,6 @@ impl MethodSig {
             },
             close_paren,
             return_type_opt,
-            semicolon,
         })
     }
 }

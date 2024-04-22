@@ -1,6 +1,6 @@
 use crate::{
     ast::{AliasDecl, Identifier, OuterAttr, Visibility},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -22,10 +22,7 @@ impl ParseDeclaration for AliasDecl {
         let alias_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier".to_string(),
-                found: parser.peek_current(),
-            });
+            parser.log_unexpected_token("identifier".to_string());
             Err(ErrorsEmitted(()))
         }?;
 
@@ -41,29 +38,20 @@ impl ParseDeclaration for AliasDecl {
             span: parser.stream.span(),
         })?;
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
-        if attributes.is_empty() {
-            Ok(AliasDecl {
-                attributes_opt: None,
-                visibility,
-                kw_alias,
-                alias_name,
-                original_type_opt,
-                semicolon,
-            })
-        } else {
-            Ok(AliasDecl {
-                attributes_opt: Some(attributes),
-                visibility,
-                kw_alias,
-                alias_name,
-                original_type_opt,
-                semicolon,
-            })
-        }
+        Ok(AliasDecl {
+            attributes_opt: {
+                if attributes.is_empty() {
+                    None
+                } else {
+                    Some(attributes)
+                }
+            },
+            visibility,
+            kw_alias,
+            alias_name,
+            original_type_opt,
+            semicolon,
+        })
     }
 }
 

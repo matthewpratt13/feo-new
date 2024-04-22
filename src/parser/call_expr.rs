@@ -1,6 +1,6 @@
 use crate::{
     ast::{CallExpr, Delimiter, Expression},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -15,47 +15,52 @@ impl CallExpr {
 
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
-                parser.consume_token();
                 break;
             }
 
-            let arg_expr = parser.parse_expression(Precedence::Lowest)?;
+            let arg_expr = match parser.parse_expression(Precedence::Lowest) {
+                Ok(e) => Ok(e),
+                Err(_) => {
+                    parser.log_unexpected_token("function argument".to_string());
+                    Err(ErrorsEmitted(()))
+                }
+            }?;
+
             args.push(arg_expr);
 
-            let token = parser.consume_token();
-
-            match token {
-                Some(Token::Comma { .. }) => continue,
-                Some(Token::RParen { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `)`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+            match parser.peek_current() {
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
                 }
+                Some(Token::RParen { .. }) => break,
+                Some(_) => {
+                    parser.log_unexpected_token("`,` or `)`".to_string());
+                }
+                None => break,
             }
         }
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
-        if args.is_empty() {
-            Ok(CallExpr {
-                callee: Box::new(callee),
-                open_paren: Delimiter::LParen,
-                args_opt: None,
-                close_paren: Delimiter::RParen,
-            })
+        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
         } else {
-            Ok(CallExpr {
-                callee: Box::new(callee),
-                open_paren: Delimiter::LParen,
-                args_opt: Some(args),
-                close_paren: Delimiter::RParen,
-            })
-        }
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
+
+        Ok(CallExpr {
+            callee: Box::new(callee),
+            open_paren: Delimiter::LParen,
+            args_opt: {
+                if args.is_empty() {
+                    None
+                } else {
+                    Some(args)
+                }
+            },
+            close_paren,
+        })
     }
 }
 
@@ -65,7 +70,7 @@ mod tests {
 
     #[test]
     fn parse_call_expr() -> Result<(), ()> {
-        let input = r#"foo(bar)"#;
+        let input = r#"foo(b"bar", -10, x)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

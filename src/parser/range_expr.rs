@@ -22,8 +22,15 @@ impl RangeExpr {
         } else {
             Ok(RangeExpr {
                 from_opt: Some(Box::new(from)),
-                op,
-                to_opt: None,
+                op: op.clone(),
+                to_opt: {
+                    if op == RangeOp::RangeInclusive {
+                        parser.log_unexpected_token("`..`".to_string());
+                        return Err(ErrorsEmitted(()));
+                    } else {
+                        None
+                    }
+                },
             })
         }
     }
@@ -49,7 +56,7 @@ mod tests {
 
     #[test]
     fn parse_range_expr_incl() -> Result<(), ()> {
-        let input = r#"..=10"#;
+        let input = r#"..=20"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
