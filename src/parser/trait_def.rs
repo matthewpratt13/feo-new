@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, FunctionOrMethodParam, Identifier, MethodSig, OuterAttr, TraitDef,
-        TraitDefItem, Visibility,
+        AliasDecl, ConstantDecl, Delimiter, FunctionOrMethodParam, Identifier, MethodSig,
+        OuterAttr, TraitDef, TraitDefItem, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -37,10 +37,12 @@ impl ParseDefinition for TraitDef {
             Err(ErrorsEmitted(()))
         }?;
 
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
@@ -86,11 +88,13 @@ impl ParseDefinition for TraitDef {
 
             associated_items.push(associated_item);
         }
-
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        })?;
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
 
         Ok(TraitDef {
             attributes_opt: {
@@ -141,10 +145,12 @@ impl MethodSig {
             Err(ErrorsEmitted(()))
         }?;
 
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         // `&self` and `&mut self` can only occur as the first parameter in a method
         if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = parser.peek_current() {
@@ -182,10 +188,13 @@ impl MethodSig {
             }
         }
 
-        let close_paren = parser.expect_delimiter(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        })?;
+        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
             parser.consume_token();

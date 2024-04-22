@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, GroupedExpr, IfExpr, Keyword},
+    ast::{BlockExpr, Delimiter, GroupedExpr, IfExpr, Keyword},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -22,10 +22,18 @@ impl IfExpr {
 
         println!("CURRENT TOKEN AFTER `if`: {:?}\n", parser.peek_current());
 
-        let _ = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        });
+        // let _ = parser.expect_delimiter(Token::LParen {
+        //     delim: '(',
+        //     span: parser.stream.span(),
+        // });
+
+
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         let condition = Box::new(GroupedExpr::parse(parser)?);
 

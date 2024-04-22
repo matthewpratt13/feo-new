@@ -18,10 +18,13 @@ impl GroupedExpr {
             parser.peek_current()
         );
 
-        let close_paren = parser.expect_delimiter(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        })?;
+        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
 
         Ok(GroupedExpr {
             open_paren: Delimiter::LParen,

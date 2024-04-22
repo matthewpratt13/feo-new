@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, Keyword, Statement},
+    ast::{BlockExpr, Delimiter, Keyword, Statement},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -17,51 +17,58 @@ impl BlockExpr {
             None
         };
 
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         println!("CURRENT TOKEN (AFTER `{{`): {:?}\n", parser.peek_current());
 
         let mut statements: Vec<Statement> = Vec::new();
 
-        while let Ok(s) = parser.parse_statement() {
-            statements.push(s);
-
+        loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
                 break;
             }
+
+            let statement = parser.parse_statement()?;
+            statements.push(statement);
         }
+
+        // while let Ok(s) = parser.parse_statement() {
+        //     statements.push(s);
+
+        //     if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //         break;
+        //     }
+        // }
 
         println!("EXIT `parser.parse_statement()` WHILE LOOP");
         println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
         println!("BLOCK EXPRESSION STATEMENTS: {:#?}\n", statements.clone());
 
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        });
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
-        }
-
-        if statements.is_empty() {
-            Ok(BlockExpr {
-                kw_unsafe_opt,
-                open_brace,
-                statements_opt: None,
-                close_brace: close_brace?,
-            })
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
         } else {
-            Ok(BlockExpr {
-                kw_unsafe_opt,
-                open_brace,
-                statements_opt: Some(statements),
-                close_brace: close_brace?,
-            })
-        }
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
+
+        Ok(BlockExpr {
+            kw_unsafe_opt,
+            open_brace,
+            statements_opt: {
+                if statements.is_empty() {
+                    Some(statements)
+                } else {
+                    None
+                }
+            },
+            close_brace,
+        })
     }
 }
 

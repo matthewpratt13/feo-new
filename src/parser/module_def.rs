@@ -1,8 +1,6 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, EnumDef, FunctionDef, Identifier, ImportDecl, InherentImplDef,
-        InnerAttr, Item, ModuleDef, OuterAttr, StaticItemDecl, StructDef, TraitDef, TraitImplDef,
-        Visibility,
+        AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionDef, Identifier, ImportDecl, InherentImplDef, InnerAttr, Item, ModuleDef, OuterAttr, StaticItemDecl, StructDef, TraitDef, TraitImplDef, Visibility
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -39,10 +37,12 @@ impl ModuleDef {
             Err(ErrorsEmitted(()))
         }?;
 
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
@@ -140,10 +140,13 @@ impl ModuleDef {
             items.push(item);
         }
 
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        })?;
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
 
         Ok(ModuleDef {
             attributes_opt: {

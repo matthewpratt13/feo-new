@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        BlockExpr, FunctionDef, FunctionOrMethodParam, FunctionParam, Identifier, Keyword,
-        OuterAttr, SelfParam, UnaryOp, Visibility,
+        BlockExpr, Delimiter, FunctionDef, FunctionOrMethodParam, FunctionParam, Identifier,
+        Keyword, OuterAttr, SelfParam, UnaryOp, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -37,10 +37,12 @@ impl FunctionDef {
             Err(ErrorsEmitted(()))
         }?;
 
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         // `&self` and `&mut self` can only occur as the first parameter in a method
         if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = parser.peek_current() {
@@ -83,10 +85,13 @@ impl FunctionDef {
             }
         }
 
-        let close_paren = parser.expect_delimiter(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        })?;
+        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
             parser.consume_token();

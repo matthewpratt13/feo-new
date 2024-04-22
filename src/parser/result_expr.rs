@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Keyword, ResultExpr},
+    ast::{Delimiter, Keyword, ResultExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -22,17 +22,22 @@ impl ResultExpr {
             Err(ErrorsEmitted(()))
         }?;
 
-        let _ = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
+        if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        let _ = parser.expect_delimiter(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        })?;
+        if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
 
         Ok(ResultExpr {
             kw_ok_or_err,

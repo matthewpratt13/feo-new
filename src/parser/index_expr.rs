@@ -14,10 +14,14 @@ impl IndexExpr {
         let index = parser.parse_primary()?;
         parser.consume_token();
 
-        let close_bracket = parser.expect_delimiter(Token::RBracket {
-            delim: ']',
-            span: parser.stream.span(),
-        })?;
+        let close_bracket = if let Some(Token::RBracket { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBracket)
+        } else {
+            parser.log_missing_delimiter(']');
+            Err(ErrorsEmitted(()))
+        }?;
+
 
         Ok(IndexExpr {
             array: Box::new(array),

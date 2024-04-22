@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        ImportDecl, ImportTree, OuterAttr, PathExpr, PathPrefix, PathSegment, PathSubset,
-        Visibility,
+        Delimiter, ImportDecl, ImportTree, OuterAttr, PathExpr, PathPrefix, PathSegment,
+        PathSubset, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -97,11 +97,12 @@ impl PathSubset {
     fn parse(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
         let mut trees: Vec<ImportTree> = Vec::new();
 
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
-
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
                 break;
@@ -128,10 +129,13 @@ impl PathSubset {
             }
         }
 
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        })?;
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
 
         if !parser.errors().is_empty() {
             return Err(ErrorsEmitted(()));

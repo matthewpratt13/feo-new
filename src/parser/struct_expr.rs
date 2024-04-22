@@ -8,12 +8,14 @@ use super::{Parser, Precedence};
 
 impl StructExpr {
     pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<StructExpr, ErrorsEmitted> {
-
         println!("ENTER `StructExpr::parse()`");
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
+
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         let mut fields: Vec<StructField> = Vec::new();
 
@@ -22,13 +24,11 @@ impl StructExpr {
                 break;
             }
 
-            let token = parser.consume_token();
-
-            let name = match token {
+            let name = match parser.consume_token() {
                 Some(Token::Identifier { name, .. }) => Ok(name),
                 Some(Token::RBrace { .. }) => break,
                 _ => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
+                    parser.log_missing_delimiter('}');
                     Err(ErrorsEmitted(()))
                 }
             }?;
@@ -54,15 +54,18 @@ impl StructExpr {
                 }
                 Some(Token::RBrace { .. }) => break,
                 _ => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
+                    parser.log_missing_delimiter('}');
                 }
             }
         }
 
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        })?;
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
 
         // if !parser.errors().is_empty() {
         //     return Err(ErrorsEmitted(()));
@@ -101,10 +104,13 @@ impl TupleStructExpr {
             let element = parser.parse_expression(Precedence::Lowest)?;
             elements.push(element);
 
-            let token = parser.consume_token();
+            let token = parser.peek_current();
 
             match token {
-                Some(Token::Comma { .. }) => continue,
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
+                }
                 Some(Token::RParen { .. }) => break,
                 Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`,` or `)`".to_string(),
@@ -114,10 +120,6 @@ impl TupleStructExpr {
                     parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
                 }
             }
-        }
-
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
         }
 
         if elements.is_empty() {

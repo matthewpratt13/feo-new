@@ -1,4 +1,4 @@
-use crate::{ast::ReturnExpr, error::ErrorsEmitted, token::Token};
+use crate::{ast::{Expression, ReturnExpr}, error::ErrorsEmitted, token::Token};
 
 use super::{Parser, Precedence};
 
@@ -9,7 +9,7 @@ impl ReturnExpr {
             span: parser.stream.span(),
         })?;
 
-        let expression_opt: Option<Box<crate::ast::Expression>> =
+        let expression_opt: Option<Box<Expression>> =
             if let Some(t) = parser.peek_current() {
                 Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
             } else {

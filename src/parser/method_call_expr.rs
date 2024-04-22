@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Identifier, MethodCallExpr, Separator},
+    ast::{Delimiter, Expression, Identifier, MethodCallExpr, Separator},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -25,10 +25,12 @@ impl MethodCallExpr {
             Err(ErrorsEmitted(()))
         }?;
 
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
@@ -53,10 +55,13 @@ impl MethodCallExpr {
             }
         }
 
-        let close_paren = parser.expect_delimiter(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        })?;
+        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
 
         Ok(MethodCallExpr {
             receiver: Box::new(receiver),

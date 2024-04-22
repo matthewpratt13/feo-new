@@ -22,8 +22,6 @@ impl ForInExpr {
 
         let iterable = parser.parse_expression(Precedence::Lowest)?;
 
-        
-
         let block = BlockExpr::parse(parser)?;
 
         Ok(ForInExpr {
@@ -35,7 +33,6 @@ impl ForInExpr {
         })
     }
 }
-
 
 #[cfg(test)]
 mod tests {

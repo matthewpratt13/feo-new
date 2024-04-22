@@ -401,7 +401,7 @@ impl Parser {
                 });
                 Err(ErrorsEmitted(()))
             }
-            None => {
+            _ => {
                 self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted(()))
             }
@@ -698,25 +698,6 @@ impl Parser {
         self.peek_current()
     }
 
-    /// Consume and check tokens, to ensure that the expected tokens are encountered
-    /// during parsing. Return the relevant `ParserErrorKind` where applicable.
-    fn expect_token(&mut self, expected: Token) -> Result<Token, ErrorsEmitted> {
-        let token = self.consume_token().ok_or({
-            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-            ErrorsEmitted(())
-        })?;
-
-        if token == expected {
-            Ok(token)
-        } else {
-            self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: format!("`{:#?}`", expected),
-                found: Some(token),
-            });
-            Err(ErrorsEmitted(()))
-        }
-    }
-
     fn expect_keyword(&mut self, expected: Token) -> Result<Keyword, ErrorsEmitted> {
         let token = self.consume_token();
 
@@ -766,39 +747,47 @@ impl Parser {
     fn expect_delimiter(&mut self, expected: Token) -> Result<Delimiter, ErrorsEmitted> {
         let token = self.consume_token();
 
-        match token {
-            Some(Token::LParen { .. }) => Ok(Delimiter::LParen),
-            Some(Token::RParen { .. }) => Ok(Delimiter::RParen),
-            Some(Token::LBracket { .. }) => Ok(Delimiter::LBracket),
-            Some(Token::RBracket { .. }) => Ok(Delimiter::RBracket),
-            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
-            Some(Token::RBrace { .. }) => Ok(Delimiter::RBrace),
-            Some(_) => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: format!("`{:#?}`", expected),
-                    found: token,
-                });
-                Err(ErrorsEmitted(()))
+        if token == Some(expected.clone()) {
+            match token {
+                Some(Token::LParen { .. }) => Ok(Delimiter::LParen),
+                Some(Token::RParen { .. }) => Ok(Delimiter::RParen),
+                Some(Token::LBracket { .. }) => Ok(Delimiter::LBracket),
+                Some(Token::RBracket { .. }) => Ok(Delimiter::RBracket),
+                Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+                Some(Token::RBrace { .. }) => Ok(Delimiter::RBrace),
+                Some(_) => {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: format!("`{:#?}`", expected),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted(()))
+                }
+                None => {
+                    let delim = match expected {
+                        Token::LParen { delim, .. } => delim,
+                        Token::RParen { delim, .. } => delim,
+                        Token::LBracket { delim, .. } => delim,
+                        Token::RBracket { delim, .. } => delim,
+                        Token::LBrace { delim, .. } => delim,
+                        Token::RBrace { delim, .. } => delim,
+                        _ => {
+                            self.log_error(ParserErrorKind::UnexpectedToken {
+                                expected: "delimiter".to_string(),
+                                found: Some(expected),
+                            });
+                            return Err(ErrorsEmitted(()));
+                        }
+                    };
+                    self.log_error(ParserErrorKind::MissingDelimiter { delim });
+                    Err(ErrorsEmitted(()))
+                }
             }
-            None => {
-                let delim = match expected {
-                    Token::LParen { delim, .. } => delim,
-                    Token::RParen { delim, .. } => delim,
-                    Token::LBracket { delim, .. } => delim,
-                    Token::RBracket { delim, .. } => delim,
-                    Token::LBrace { delim, .. } => delim,
-                    Token::RBrace { delim, .. } => delim,
-                    _ => {
-                        self.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "delimiter".to_string(),
-                            found: Some(expected),
-                        });
-                        return Err(ErrorsEmitted(()));
-                    }
-                };
-                self.log_error(ParserErrorKind::MissingDelimiter { delim });
-                Err(ErrorsEmitted(()))
-            }
+        } else {
+            self.log_error(ParserErrorKind::UnexpectedToken {
+                expected: format!("`{:#?}`", expected),
+                found: token,
+            });
+            Err(ErrorsEmitted(()))
         }
     }
 
@@ -955,6 +944,26 @@ impl Parser {
         self.errors.push(error);
     }
 
+    fn log_unexpected_token(&mut self, expected: String) {
+        self.log_error(ParserErrorKind::UnexpectedToken {
+            expected,
+            found: self.peek_current(),
+        });
+
+        self.consume_token();
+    }
+
+    fn log_missing_delimiter(&mut self, delim: char) {
+        match delim {
+            '(' | ')' | '[' | ']' | '{' | '}' => {
+                self.consume_token();
+                self.log_error(ParserErrorKind::MissingDelimiter { delim });
+            }
+
+            _ => self.log_unexpected_token(format!("`{}`", delim)),
+        }
+    }
+
     pub fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
         &self.errors
     }
@@ -1021,15 +1030,16 @@ impl Parser {
                                 found: Some(t),
                             }),
                             None => {
-                                self.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                                self.log_missing_delimiter(')');
                             }
                         }
                     }
 
-                    let _ = self.expect_delimiter(Token::RParen {
-                        delim: ')',
-                        span: self.stream.span(),
-                    })?;
+                    if let Some(Token::RParen { .. }) = self.peek_current() {
+                        self.consume_token();
+                    } else {
+                        self.log_missing_delimiter(')');
+                    }
 
                     Ok(Type::Tuple(types))
                 }
@@ -1037,26 +1047,25 @@ impl Parser {
             Some(Token::LBracket { .. }) => {
                 let ty = self.get_type()?;
 
-                let _ = self.expect_separator(Token::Semicolon {
-                    punc: ';',
-                    span: self.stream.span(),
-                })?;
+                if let Some(Token::LBracket { .. }) = self.peek_current() {
+                    self.consume_token();
+                } else {
+                    self.log_unexpected_token("`[`".to_string());
+                }
 
                 let num_elements =
                     if let Some(Token::UIntLiteral { value, .. }) = self.consume_token() {
                         Ok(value)
                     } else {
-                        self.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "uint literal".to_string(),
-                            found: token,
-                        });
+                        self.log_unexpected_token("uint literal".to_string());
                         Err(ErrorsEmitted(()))
                     }?;
 
-                let _ = self.expect_delimiter(Token::RBracket {
-                    delim: '}',
-                    span: self.stream.span(),
-                })?;
+                if let Some(Token::RBracket { .. }) = self.peek_current() {
+                    self.consume_token();
+                } else {
+                    self.log_missing_delimiter(']');
+                }
 
                 Ok(Type::Array {
                     element_type: Box::new(ty),
@@ -1069,10 +1078,7 @@ impl Parser {
                 let function_name = if let Some(Token::Identifier { name, .. }) = token {
                     Ok(Identifier(name))
                 } else {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "identifier".to_string(),
-                        found: token,
-                    });
+                    self.log_unexpected_token("identifier".to_string());
                     Err(ErrorsEmitted(()))
                 }?;
 
@@ -1080,6 +1086,12 @@ impl Parser {
                     delim: '(',
                     span: self.stream.span(),
                 })?;
+
+                if let Some(Token::LParen { .. }) = self.peek_current() {
+                    self.consume_token();
+                } else {
+                    self.log_unexpected_token("`(`".to_string());
+                }
 
                 // `&self` and `&mut self` can only occur as the first parameter in a method
                 if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
@@ -1109,20 +1121,18 @@ impl Parser {
                             continue;
                         }
                         Some(Token::RParen { .. }) => break,
-                        Some(t) => self.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "`,` or `)`".to_string(),
-                            found: Some(t),
-                        }),
+                        Some(t) => self.log_unexpected_token("`,` or `)`".to_string()),
                         None => {
-                            self.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                            self.log_missing_delimiter(')');
                         }
                     }
                 }
 
-                let _ = self.expect_delimiter(Token::RParen {
-                    delim: ')',
-                    span: self.stream.span(),
-                })?;
+                if let Some(Token::RParen { .. }) = self.peek_current() {
+                    self.consume_token();
+                } else {
+                    self.log_missing_delimiter(')');
+                }
 
                 let return_type_opt = if let Some(Token::ThinArrow { .. }) = self.peek_current() {
                     self.consume_token();
@@ -1281,10 +1291,12 @@ impl Parser {
                             span: self.stream.span(),
                         })?;
 
-                        let close_paren = self.expect_delimiter(Token::RParen {
-                            delim: ')',
-                            span: self.stream.span(),
-                        })?;
+                        let close_paren = if let Some(Token::RParen { .. }) = self.consume_token() {
+                            Ok(Delimiter::RParen)
+                        } else {
+                            self.log_missing_delimiter(')');
+                            Err(ErrorsEmitted(()))
+                        }?;
 
                         let pub_package = PubPackageVis {
                             kw_pub: Keyword::Pub,

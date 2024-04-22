@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, GroupedExpr, MatchArm, MatchExpr, UnderscoreExpr},
+    ast::{Delimiter, Expression, GroupedExpr, MatchArm, MatchExpr, UnderscoreExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -25,10 +25,12 @@ impl MatchExpr {
         println!("SCRUTINEE: {:?}", scrutinee.clone());
         println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
-        let open_brace = parser.expect_delimiter(Token::LBrace {
-            delim: '{',
-            span: parser.stream.span(),
-        })?;
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::LBrace)
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         println!(
             "CURRENT TOKEN GOING INTO MATCH ARMS: {:?}\n",
@@ -118,10 +120,13 @@ impl MatchExpr {
         println!("FINAL MATCH ARM: {:#?}", final_arm);
         println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
-        let close_brace = parser.expect_delimiter(Token::RBrace {
-            delim: '}',
-            span: parser.stream.span(),
-        })?;
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_missing_delimiter('}');
+            Err(ErrorsEmitted(()))
+        }?;
 
         if match_arms.is_empty() {
             println!("EXIT `MatchExpr::parse()` WITHOUT OPTIONAL MATCH ARMS");

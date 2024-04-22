@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Separator, TupleExpr, TupleIndexExpr},
+    ast::{Delimiter, Expression, Separator, TupleExpr, TupleIndexExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -8,10 +8,13 @@ use super::{Parser, Precedence};
 
 impl TupleExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
+        let open_paren = if let Some(Token::LParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         let mut elements: Vec<Expression> = Vec::new();
 
@@ -31,15 +34,18 @@ impl TupleExpr {
                 Some(Token::RParen { .. }) => break,
 
                 _ => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                    parser.log_missing_delimiter(')');
                 }
             }
         }
 
-        let close_paren = parser.expect_delimiter(Token::RParen {
-            delim: ')',
-            span: parser.stream.span(),
-        })?;
+        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
 
         Ok(TupleExpr {
             open_paren,
