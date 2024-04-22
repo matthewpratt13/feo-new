@@ -40,7 +40,7 @@ impl ParseStatement for LetStmt {
 
         let value_opt = if let Some(Token::Equals { .. }) = parser.consume_token() {
             let value = parser.parse_expression(Precedence::Lowest)?;
-            Some((AssignmentOp::Assign, value))
+            Some((AssignmentOp(()), value))
         } else {
             None
         };

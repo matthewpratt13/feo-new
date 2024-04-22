@@ -154,14 +154,16 @@ pub enum BinaryOp {
 }
 
 #[derive(Debug, Clone)]
-pub enum AssignmentOp {
-    Assign,
+pub enum CompoundAssignmentOp {
     AddAssign,
     SubtractAssign,
     MultiplyAssign,
     DivideAssign,
     ModulusAssign,
 }
+
+#[derive(Debug, Clone)]
+pub struct AssignmentOp(pub ());
 
 /// Struct representing the unwrap operator `?`.
 #[derive(Debug, Clone)]
@@ -186,6 +188,8 @@ pub enum Separator {
     ThinArrow,
     FatArrow,
     Underscore,
+    LeftAngledBracket,
+    RightAngledBracket,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -212,6 +216,7 @@ pub enum Expression {
     Grouped(GroupedExpr),
     Range(RangeExpr),
     Assignment(AssignmentExpr),
+    CompoundAssignment(CompoundAssignmentExpr),
     Return(ReturnExpr),
     Break(BreakExpr),
     Continue(ContinueExpr),

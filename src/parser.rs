@@ -40,15 +40,15 @@ mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, AssignmentOp, BinaryExpr, BinaryOp, BlockExpr,
-        BreakExpr, CallExpr, ClosureExpr, ConstantDecl, ContinueExpr, Delimiter, EnumDef,
-        Expression, ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam,
-        GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item,
-        Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleDef, NegationExpr, NoneExpr,
-        OuterAttr, PathExpr, PathPrefix, PlaceExpr, PubPackageVis, RangeExpr, RangeOp, ResultExpr,
-        ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr,
-        TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryOp,
-        UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
+        ClosureExpr, CompoundAssignmentExpr, CompoundAssignmentOp, ConstantDecl, ContinueExpr,
+        Delimiter, EnumDef, Expression, ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef,
+        FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr,
+        InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr,
+        ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, PlaceExpr,
+        PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement,
+        StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr,
+        Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -476,37 +476,43 @@ impl Parser {
                 BinaryOp::GreaterEqual,
             )?)),
             Some(Token::Equals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
-                self,
-                PlaceExpr::try_from(left_expr)?,
-                AssignmentOp::Assign,
+                self, left_expr,
             )?)),
-            Some(Token::PlusEquals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
-                self,
-                PlaceExpr::try_from(left_expr)?,
-                AssignmentOp::AddAssign,
-            )?)),
-            Some(Token::MinusEquals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
-                self,
-                PlaceExpr::try_from(left_expr)?,
-                AssignmentOp::SubtractAssign,
-            )?)),
-            Some(Token::AsteriskEquals { .. }) => {
-                Ok(Expression::Assignment(AssignmentExpr::parse(
+            Some(Token::PlusEquals { .. }) => Ok(Expression::CompoundAssignment(
+                CompoundAssignmentExpr::parse(
                     self,
                     PlaceExpr::try_from(left_expr)?,
-                    AssignmentOp::MultiplyAssign,
-                )?))
-            }
-            Some(Token::SlashEquals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
-                self,
-                PlaceExpr::try_from(left_expr)?,
-                AssignmentOp::DivideAssign,
-            )?)),
-            Some(Token::PercentEquals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
-                self,
-                PlaceExpr::try_from(left_expr)?,
-                AssignmentOp::ModulusAssign,
-            )?)),
+                    CompoundAssignmentOp::AddAssign,
+                )?,
+            )),
+            Some(Token::MinusEquals { .. }) => Ok(Expression::CompoundAssignment(
+                CompoundAssignmentExpr::parse(
+                    self,
+                    PlaceExpr::try_from(left_expr)?,
+                    CompoundAssignmentOp::SubtractAssign,
+                )?,
+            )),
+            Some(Token::AsteriskEquals { .. }) => Ok(Expression::CompoundAssignment(
+                CompoundAssignmentExpr::parse(
+                    self,
+                    PlaceExpr::try_from(left_expr)?,
+                    CompoundAssignmentOp::MultiplyAssign,
+                )?,
+            )),
+            Some(Token::SlashEquals { .. }) => Ok(Expression::CompoundAssignment(
+                CompoundAssignmentExpr::parse(
+                    self,
+                    PlaceExpr::try_from(left_expr)?,
+                    CompoundAssignmentOp::DivideAssign,
+                )?,
+            )),
+            Some(Token::PercentEquals { .. }) => Ok(Expression::CompoundAssignment(
+                CompoundAssignmentExpr::parse(
+                    self,
+                    PlaceExpr::try_from(left_expr)?,
+                    CompoundAssignmentOp::ModulusAssign,
+                )?,
+            )),
             Some(Token::DblAmpersand { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
                 left_expr,
@@ -750,38 +756,6 @@ impl Parser {
         }
     }
 
-    fn expect_binary_op(&mut self, expected: Token) -> Result<BinaryOp, ErrorsEmitted> {
-        let token = self.consume_token();
-
-        match token {
-            Some(Token::Plus { .. }) => Ok(BinaryOp::Add),
-            Some(Token::Minus { .. }) => Ok(BinaryOp::Subtract),
-            Some(Token::Asterisk { .. }) => Ok(BinaryOp::Multiply),
-            Some(Token::Slash { .. }) => Ok(BinaryOp::Divide),
-            Some(Token::Percent { .. }) => Ok(BinaryOp::Modulus),
-            Some(Token::DblEquals { .. }) => Ok(BinaryOp::Equal),
-            Some(Token::BangEquals { .. }) => Ok(BinaryOp::NotEqual),
-            Some(Token::LessThan { .. }) => Ok(BinaryOp::LessThan),
-            Some(Token::LessThanEquals { .. }) => Ok(BinaryOp::LessEqual),
-            Some(Token::GreaterThan { .. }) => Ok(BinaryOp::GreaterThan),
-            Some(Token::GreaterThanEquals { .. }) => Ok(BinaryOp::GreaterEqual),
-            Some(Token::DblAmpersand { .. }) => Ok(BinaryOp::LogicalAnd),
-            Some(Token::DblPipe { .. }) => Ok(BinaryOp::LogicalOr),
-            Some(Token::Ampersand { .. }) => Ok(BinaryOp::BitwiseAnd),
-            Some(Token::Pipe { .. }) => Ok(BinaryOp::BitwiseOr),
-            Some(Token::Caret { .. }) => Ok(BinaryOp::BitwiseXor),
-            Some(Token::DblLessThan { .. }) => Ok(BinaryOp::ShiftLeft),
-            Some(Token::DblGreaterThan { .. }) => Ok(BinaryOp::ShiftRight),
-            _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: format!("`{:#?}`", expected),
-                    found: token,
-                });
-                Err(ErrorsEmitted(()))
-            }
-        }
-    }
-
     fn expect_separator(&mut self, expected: Token) -> Result<Separator, ErrorsEmitted> {
         let token = self.consume_token();
 
@@ -794,6 +768,9 @@ impl Parser {
             Some(Token::ColonColonAsterisk { .. }) => Ok(Separator::ColonColonAsterisk),
             Some(Token::ThinArrow { .. }) => Ok(Separator::ThinArrow),
             Some(Token::FatArrow { .. }) => Ok(Separator::FatArrow),
+            Some(Token::LessThan { .. }) => Ok(Separator::LeftAngledBracket),
+            Some(Token::GreaterThan { .. }) => Ok(Separator::RightAngledBracket),
+
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: format!("`{:#?}`", expected),
@@ -1113,14 +1090,14 @@ impl Parser {
             }
 
             Some(Token::VecType { .. }) => {
-                let _ = self.expect_binary_op(Token::LessThan {
+                let _ = self.expect_separator(Token::LessThan {
                     punc: '<',
                     span: self.stream.span(),
                 })?;
 
                 let ty = self.get_type()?;
 
-                let _ = self.expect_binary_op(Token::GreaterThan {
+                let _ = self.expect_separator(Token::GreaterThan {
                     punc: '>',
                     span: self.stream.span(),
                 })?;
@@ -1129,7 +1106,7 @@ impl Parser {
             }
 
             Some(Token::MappingType { .. }) => {
-                let _ = self.expect_binary_op(Token::LessThan {
+                let _ = self.expect_separator(Token::LessThan {
                     punc: '<',
                     span: self.stream.span(),
                 })?;
@@ -1143,7 +1120,7 @@ impl Parser {
 
                 let value_type = Box::new(self.get_type()?);
 
-                let _ = self.expect_binary_op(Token::GreaterThan {
+                let _ = self.expect_separator(Token::GreaterThan {
                     punc: '>',
                     span: self.stream.span(),
                 })?;
@@ -1155,14 +1132,14 @@ impl Parser {
             }
 
             Some(Token::OptionType { .. }) => {
-                let _ = self.expect_binary_op(Token::LessThan {
+                let _ = self.expect_separator(Token::LessThan {
                     punc: '<',
                     span: self.stream.span(),
                 })?;
 
                 let ty = self.get_type()?;
 
-                let _ = self.expect_binary_op(Token::GreaterThan {
+                let _ = self.expect_separator(Token::GreaterThan {
                     punc: '>',
                     span: self.stream.span(),
                 })?;
@@ -1171,7 +1148,7 @@ impl Parser {
             }
 
             Some(Token::ResultType { .. }) => {
-                let _ = self.expect_binary_op(Token::LessThan {
+                let _ = self.expect_separator(Token::LessThan {
                     punc: '<',
                     span: self.stream.span(),
                 })?;
@@ -1185,7 +1162,7 @@ impl Parser {
 
                 let err = Box::new(self.get_type()?);
 
-                let _ = self.expect_binary_op(Token::GreaterThan {
+                let _ = self.expect_separator(Token::GreaterThan {
                     punc: '>',
                     span: self.stream.span(),
                 })?;

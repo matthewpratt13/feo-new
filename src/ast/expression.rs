@@ -1,6 +1,6 @@
 use super::{
-    AssignmentOp, BinaryOp, Delimiter, Expression, Identifier, Keyword, PlaceExpr, RangeOp,
-    Separator, Statement, Type, UInt, UnaryOp, UnwrapOp,
+    AssignmentOp, BinaryOp, CompoundAssignmentOp, Delimiter, Expression, Identifier, Keyword,
+    PlaceExpr, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -60,7 +60,7 @@ pub struct ArrayExpr {
 
 #[derive(Debug, Clone)]
 pub struct AssignmentExpr {
-    pub lhs: PlaceExpr,
+    pub lhs: Box<Expression>,
     pub op: AssignmentOp,
     pub rhs: Box<Expression>,
 }
@@ -104,6 +104,13 @@ pub struct ClosureExpr {
     pub params: ClosureParams,
     pub return_type_opt: Option<(Separator, Type)>, // `-> Type`
     pub expression: Box<Expression>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CompoundAssignmentExpr {
+    pub lhs: PlaceExpr,
+    pub op: CompoundAssignmentOp,
+    pub rhs: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]
