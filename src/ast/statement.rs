@@ -1,4 +1,4 @@
-use super::{BinaryOp, Expression, Keyword, PlaceExpr, Separator, Type};
+use super::{AssignmentOp, Expression, Keyword, PlaceExpr, Separator, Type};
 
 ///////////////////////////////////////////////////////////////////////////
 /// NODES
@@ -16,5 +16,5 @@ pub struct LetStmt {
     pub kw_mut_opt: Option<Keyword>,
     pub assignee: PlaceExpr,
     pub type_ann_opt: Option<(Separator, Type)>, // `: Type`
-    pub value_opt: Option<(BinaryOp, Expression)>, // `= value`
+    pub value_opt: Option<(AssignmentOp, Expression)>, // `= value`
 }

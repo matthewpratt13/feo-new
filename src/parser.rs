@@ -3,6 +3,7 @@
 
 mod alias_decl;
 mod array_expr;
+mod assignment_expr;
 mod binary_expr;
 mod block_expr;
 mod call_expr;
@@ -39,15 +40,15 @@ mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
-        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
-        FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier,
-        IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
-        MatchExpr, MethodCallExpr, ModuleDef, NoneExpr, OuterAttr, PathExpr, PathPrefix, PlaceExpr,
-        PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement,
-        StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr,
-        Type, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility,
-        WhileExpr,
+        AliasDecl, ArrayExpr, AssignmentExpr, AssignmentOp, BinaryExpr, BinaryOp, BlockExpr,
+        BreakExpr, CallExpr, ClosureExpr, ConstantDecl, ContinueExpr, Delimiter, EnumDef,
+        Expression, ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam,
+        GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item,
+        Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleDef, NegationExpr, NoneExpr,
+        OuterAttr, PathExpr, PathPrefix, PlaceExpr, PubPackageVis, RangeExpr, RangeOp, ResultExpr,
+        ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr,
+        TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryOp,
+        UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -261,16 +262,18 @@ impl Parser {
                 self.consume_token();
                 Ok(Expression::Path(PathExpr::parse(self, PathPrefix::Super)?))
             }
-            Some(Token::Minus { .. }) => {
-                Ok(Expression::Unary(UnaryExpr::parse(self, UnaryOp::Negate)?))
-            }
-            Some(Token::Bang { .. }) => {
-                Ok(Expression::Unary(UnaryExpr::parse(self, UnaryOp::Not)?))
-            }
-            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Expression::Unary(
-                UnaryExpr::parse(self, UnaryOp::Reference)?,
+            Some(Token::Minus { .. }) => Ok(Expression::Negation(NegationExpr::parse(
+                self,
+                UnaryOp::Negate,
+            )?)),
+            Some(Token::Bang { .. }) => Ok(Expression::Negation(NegationExpr::parse(
+                self,
+                UnaryOp::Not,
+            )?)),
+            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Expression::Negation(
+                NegationExpr::parse(self, UnaryOp::Reference)?,
             )),
-            Some(Token::Asterisk { .. }) => Ok(Expression::Unary(UnaryExpr::parse(
+            Some(Token::Asterisk { .. }) => Ok(Expression::Negation(NegationExpr::parse(
                 self,
                 UnaryOp::Dereference,
             )?)),
@@ -472,35 +475,37 @@ impl Parser {
                 left_expr,
                 BinaryOp::GreaterEqual,
             )?)),
-            Some(Token::Equals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::Equals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
                 self,
-                left_expr,
-                BinaryOp::Assign,
+                PlaceExpr::try_from(left_expr)?,
+                AssignmentOp::Assign,
             )?)),
-            Some(Token::PlusEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::PlusEquals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
                 self,
-                left_expr,
-                BinaryOp::AddAssign,
+                PlaceExpr::try_from(left_expr)?,
+                AssignmentOp::AddAssign,
             )?)),
-            Some(Token::MinusEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::MinusEquals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
                 self,
-                left_expr,
-                BinaryOp::SubtractAssign,
+                PlaceExpr::try_from(left_expr)?,
+                AssignmentOp::SubtractAssign,
             )?)),
-            Some(Token::AsteriskEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::AsteriskEquals { .. }) => {
+                Ok(Expression::Assignment(AssignmentExpr::parse(
+                    self,
+                    PlaceExpr::try_from(left_expr)?,
+                    AssignmentOp::MultiplyAssign,
+                )?))
+            }
+            Some(Token::SlashEquals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
                 self,
-                left_expr,
-                BinaryOp::MultiplyAssign,
+                PlaceExpr::try_from(left_expr)?,
+                AssignmentOp::DivideAssign,
             )?)),
-            Some(Token::SlashEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::PercentEquals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
                 self,
-                left_expr,
-                BinaryOp::DivideAssign,
-            )?)),
-            Some(Token::PercentEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-                self,
-                left_expr,
-                BinaryOp::ModulusAssign,
+                PlaceExpr::try_from(left_expr)?,
+                AssignmentOp::ModulusAssign,
             )?)),
             Some(Token::DblAmpersand { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
                 self,
@@ -760,11 +765,6 @@ impl Parser {
             Some(Token::LessThanEquals { .. }) => Ok(BinaryOp::LessEqual),
             Some(Token::GreaterThan { .. }) => Ok(BinaryOp::GreaterThan),
             Some(Token::GreaterThanEquals { .. }) => Ok(BinaryOp::GreaterEqual),
-            Some(Token::Equals { .. }) => Ok(BinaryOp::Assign),
-            Some(Token::PlusEquals { .. }) => Ok(BinaryOp::AddAssign),
-            Some(Token::MinusEquals { .. }) => Ok(BinaryOp::SubtractAssign),
-            Some(Token::SlashEquals { .. }) => Ok(BinaryOp::DivideAssign),
-            Some(Token::PercentEquals { .. }) => Ok(BinaryOp::ModulusAssign),
             Some(Token::DblAmpersand { .. }) => Ok(BinaryOp::LogicalAnd),
             Some(Token::DblPipe { .. }) => Ok(BinaryOp::LogicalOr),
             Some(Token::Ampersand { .. }) => Ok(BinaryOp::BitwiseAnd),

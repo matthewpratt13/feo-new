@@ -1,5 +1,5 @@
 use crate::{
-    ast::{ExpressionStmt, Keyword, LetStmt, PlaceExpr, Separator},
+    ast::{AssignmentOp, ExpressionStmt, Keyword, LetStmt, PlaceExpr, Separator},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -38,12 +38,9 @@ impl ParseStatement for LetStmt {
             None
         };
 
-        let value_opt = if let Ok(equals) = parser.expect_binary_op(Token::Equals {
-            punc: '=',
-            span: parser.stream.span(),
-        }) {
+        let value_opt = if let Some(Token::Equals { .. }) = parser.consume_token() {
             let value = parser.parse_expression(Precedence::Lowest)?;
-            Some((equals, value))
+            Some((AssignmentOp::Assign, value))
         } else {
             None
         };

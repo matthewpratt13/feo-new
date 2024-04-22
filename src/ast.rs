@@ -143,12 +143,6 @@ pub enum BinaryOp {
     LessEqual,
     GreaterThan,
     GreaterEqual,
-    Assign,
-    AddAssign,
-    SubtractAssign,
-    MultiplyAssign,
-    DivideAssign,
-    ModulusAssign,
     LogicalAnd,
     LogicalOr,
     BitwiseAnd,
@@ -157,6 +151,16 @@ pub enum BinaryOp {
     ShiftLeft,
     ShiftRight,
     Exponentiation,
+}
+
+#[derive(Debug, Clone)]
+pub enum AssignmentOp {
+    Assign,
+    AddAssign,
+    SubtractAssign,
+    MultiplyAssign,
+    DivideAssign,
+    ModulusAssign,
 }
 
 /// Struct representing the unwrap operator `?`.
@@ -200,11 +204,14 @@ pub enum Expression {
     Index(IndexExpr),
     TupleIndex(TupleIndexExpr),
     Unwrap(UnwrapExpr),
-    Unary(UnaryExpr),
+    Negation(NegationExpr),
+    Borrow(BorrowExpr),
+    Dereference(DereferenceExpr),
     TypeCast(TypeCastExpr),
     Binary(BinaryExpr),
     Grouped(GroupedExpr),
     Range(RangeExpr),
+    Assignment(AssignmentExpr),
     Return(ReturnExpr),
     Break(BreakExpr),
     Continue(ContinueExpr),
@@ -234,7 +241,9 @@ pub enum ValueExpr {
     IndexExpr(IndexExpr),
     TupleIndexExpr(TupleIndexExpr),
     UnwrapExpr(UnwrapExpr),
-    UnaryExpr(UnaryExpr),
+    NegationExpr(NegationExpr),
+    BorrowExpr(BorrowExpr),
+    DereferenceExpr(DereferenceExpr),
     TypeCastExpr(TypeCastExpr),
     BinaryExpr(BinaryExpr),
     GroupedExpr(GroupedExpr),
@@ -268,7 +277,9 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::Index(i) => Ok(ValueExpr::IndexExpr(i)),
             Expression::TupleIndex(ti) => Ok(ValueExpr::TupleIndexExpr(ti)),
             Expression::Unwrap(u) => Ok(ValueExpr::UnwrapExpr(u)),
-            Expression::Unary(u) => Ok(ValueExpr::UnaryExpr(u)),
+            Expression::Negation(u) => Ok(ValueExpr::NegationExpr(u)),
+            Expression::Borrow(b) => Ok(ValueExpr::BorrowExpr(b)),
+            Expression::Dereference(d) => Ok(ValueExpr::DereferenceExpr(d)),
             Expression::TypeCast(tc) => Ok(ValueExpr::TypeCastExpr(tc)),
             Expression::Binary(b) => Ok(ValueExpr::BinaryExpr(b)),
             Expression::Grouped(g) => Ok(ValueExpr::GroupedExpr(g)),
@@ -298,8 +309,7 @@ pub enum PlaceExpr {
     FieldAccessExpr(FieldAccessExpr), // place expression when on the LHS
     IndexExpr(IndexExpr),             // place expression when on the LHS
     TupleIndexExpr(TupleIndexExpr),   // place expression when on the LHS
-    UnaryExpr(UnaryExpr),             // operand of `*`
-    BinaryExpr(BinaryExpr),           // LHS of compound assignment expression
+    BorrowExpr(BorrowExpr),
     UnderscoreExpr(UnderscoreExpr),
 }
 
@@ -312,8 +322,7 @@ impl TryFrom<Expression> for PlaceExpr {
             Expression::FieldAccess(fa) => Ok(PlaceExpr::FieldAccessExpr(fa)),
             Expression::Index(i) => Ok(PlaceExpr::IndexExpr(i)),
             Expression::TupleIndex(ti) => Ok(PlaceExpr::TupleIndexExpr(ti)),
-            Expression::Unary(u) => Ok(PlaceExpr::UnaryExpr(u)),
-            Expression::Binary(b) => Ok(PlaceExpr::BinaryExpr(b)),
+            Expression::Borrow(b) => Ok(PlaceExpr::BorrowExpr(b)),
             Expression::Underscore(u) => Ok(PlaceExpr::UnderscoreExpr(u)),
             _ => Err(ErrorsEmitted(())),
         }

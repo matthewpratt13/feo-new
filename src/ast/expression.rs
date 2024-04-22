@@ -1,6 +1,6 @@
 use super::{
-    BinaryOp, Delimiter, Expression, Identifier, Keyword, PlaceExpr, RangeOp, Separator, Statement,
-    Type, UInt, UnaryOp, UnwrapOp,
+    AssignmentOp, BinaryOp, Delimiter, Expression, Identifier, Keyword, PlaceExpr, RangeOp,
+    Separator, Statement, Type, UInt, UnaryOp, UnwrapOp,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -59,6 +59,13 @@ pub struct ArrayExpr {
 }
 
 #[derive(Debug, Clone)]
+pub struct AssignmentExpr {
+    pub lhs: PlaceExpr,
+    pub op: AssignmentOp,
+    pub rhs: Box<Expression>,
+}
+
+#[derive(Debug, Clone)]
 pub struct BinaryExpr {
     pub lhs: Box<Expression>,
     pub op: BinaryOp,
@@ -71,6 +78,12 @@ pub struct BlockExpr {
     pub open_brace: Delimiter,
     pub statements_opt: Option<Vec<Statement>>,
     pub close_brace: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct BorrowExpr {
+    pub op: UnaryOp,
+    pub expression: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]
@@ -96,6 +109,12 @@ pub struct ClosureExpr {
 #[derive(Debug, Clone)]
 pub struct ContinueExpr {
     pub kw_continue: Keyword,
+}
+
+#[derive(Debug, Clone)]
+pub struct DereferenceExpr {
+    pub op: UnaryOp,
+    pub expression: Box<PlaceExpr>,
 }
 
 #[derive(Debug, Clone)]
@@ -156,6 +175,12 @@ pub struct MethodCallExpr {
     pub open_paren: Delimiter,
     pub args_opt: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
+}
+
+#[derive(Debug, Clone)]
+pub struct NegationExpr {
+    pub op: UnaryOp,
+    pub expression: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]
@@ -230,12 +255,6 @@ pub struct TypeCastExpr {
     pub operand: Box<Expression>,
     pub kw_as: Keyword,
     pub new_type: Type,
-}
-
-#[derive(Debug, Clone)]
-pub struct UnaryExpr {
-    pub op: UnaryOp,
-    pub expression: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]

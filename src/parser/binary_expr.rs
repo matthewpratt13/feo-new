@@ -107,54 +107,7 @@ impl BinaryExpr {
                     rhs: Box::new(right_expr),
                 })
             }
-            BinaryOp::Assign => {
-                let right_expr = parser.parse_expression(Precedence::Assignment)?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(right_expr),
-                })
-            }
-            BinaryOp::AddAssign => {
-                let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(right_expr),
-                })
-            }
-            BinaryOp::SubtractAssign => {
-                let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(right_expr),
-                })
-            }
-            BinaryOp::MultiplyAssign => {
-                let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(right_expr),
-                })
-            }
-            BinaryOp::DivideAssign => {
-                let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(right_expr),
-                })
-            }
-            BinaryOp::ModulusAssign => {
-                let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(right_expr),
-                })
-            }
+
             BinaryOp::LogicalAnd => {
                 let right_expr = parser.parse_expression(Precedence::LogicalAnd)?;
                 Ok(BinaryExpr {
@@ -258,20 +211,6 @@ mod tests {
     #[test]
     fn parse_binary_expr_less_than() -> Result<(), ()> {
         let input = r#"4 < 5"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn parse_binary_expr_assign() -> Result<(), ()> {
-        let input = r#"x = 5"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
