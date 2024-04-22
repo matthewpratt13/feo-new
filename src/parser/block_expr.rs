@@ -37,14 +37,6 @@ impl BlockExpr {
             statements.push(statement);
         }
 
-        // while let Ok(s) = parser.parse_statement() {
-        //     statements.push(s);
-
-        //     if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //         break;
-        //     }
-        // }
-
         println!("EXIT `parser.parse_statement()` WHILE LOOP");
         println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
         println!("BLOCK EXPRESSION STATEMENTS: {:#?}\n", statements.clone());

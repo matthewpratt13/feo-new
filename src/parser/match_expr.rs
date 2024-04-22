@@ -59,10 +59,11 @@ impl MatchExpr {
 
                     println!("TOKEN AFTER `if`: {:?}", parser.peek_current());
 
-                    let _ = parser.expect_delimiter(Token::LParen {
-                        delim: '(',
-                        span: parser.stream.span(),
-                    });
+                    if let Some(Token::LParen { .. }) = parser.peek_current() {
+                        parser.consume_token();
+                    } else {
+                        parser.log_unexpected_token("`(`".to_string());
+                    };
 
                     let expr = GroupedExpr::parse(parser)?;
 

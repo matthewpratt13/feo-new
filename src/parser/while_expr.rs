@@ -13,10 +13,11 @@ impl WhileExpr {
             span: parser.stream.span(),
         })?;
 
-        let _ = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        });
+        if let Some(Token::LBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+        } else {
+            parser.log_unexpected_token("`{`".to_string());
+        }
 
         let condition = GroupedExpr::parse(parser)?;
 

@@ -744,53 +744,6 @@ impl Parser {
         }
     }
 
-    fn expect_delimiter(&mut self, expected: Token) -> Result<Delimiter, ErrorsEmitted> {
-        let token = self.consume_token();
-
-        if token == Some(expected.clone()) {
-            match token {
-                Some(Token::LParen { .. }) => Ok(Delimiter::LParen),
-                Some(Token::RParen { .. }) => Ok(Delimiter::RParen),
-                Some(Token::LBracket { .. }) => Ok(Delimiter::LBracket),
-                Some(Token::RBracket { .. }) => Ok(Delimiter::RBracket),
-                Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
-                Some(Token::RBrace { .. }) => Ok(Delimiter::RBrace),
-                Some(_) => {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: format!("`{:#?}`", expected),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted(()))
-                }
-                None => {
-                    let delim = match expected {
-                        Token::LParen { delim, .. } => delim,
-                        Token::RParen { delim, .. } => delim,
-                        Token::LBracket { delim, .. } => delim,
-                        Token::RBracket { delim, .. } => delim,
-                        Token::LBrace { delim, .. } => delim,
-                        Token::RBrace { delim, .. } => delim,
-                        _ => {
-                            self.log_error(ParserErrorKind::UnexpectedToken {
-                                expected: "delimiter".to_string(),
-                                found: Some(expected),
-                            });
-                            return Err(ErrorsEmitted(()));
-                        }
-                    };
-                    self.log_error(ParserErrorKind::MissingDelimiter { delim });
-                    Err(ErrorsEmitted(()))
-                }
-            }
-        } else {
-            self.log_error(ParserErrorKind::UnexpectedToken {
-                expected: format!("`{:#?}`", expected),
-                found: token,
-            });
-            Err(ErrorsEmitted(()))
-        }
-    }
-
     fn expect_binary_op(&mut self, expected: Token) -> Result<BinaryOp, ErrorsEmitted> {
         let token = self.consume_token();
 
@@ -1082,10 +1035,11 @@ impl Parser {
                     Err(ErrorsEmitted(()))
                 }?;
 
-                let _ = self.expect_delimiter(Token::LParen {
-                    delim: '(',
-                    span: self.stream.span(),
-                })?;
+                if let Some(Token::LBrace { .. }) = self.peek_current() {
+                    self.consume_token();
+                } else {
+                    self.log_unexpected_token("`{`".to_string());
+                };
 
                 if let Some(Token::LParen { .. }) = self.peek_current() {
                     self.consume_token();

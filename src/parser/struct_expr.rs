@@ -90,10 +90,12 @@ impl TupleStructExpr {
     fn parse(parser: &mut Parser, path: PathExpr) -> Result<Self, ErrorsEmitted> {
         let mut elements: Vec<Expression> = Vec::new();
 
-        let open_paren = parser.expect_delimiter(Token::LParen {
-            delim: '(',
-            span: parser.stream.span(),
-        })?;
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token("`(`".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
