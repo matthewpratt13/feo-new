@@ -29,11 +29,11 @@ pub enum PathPrefix {
 #[derive(Debug, Clone)]
 pub struct ArrayIndex(pub Box<Expression>);
 
-#[derive(Debug, Clone)]
-pub struct CompoundAssignmentOperand(pub Box<Expression>);
+// #[derive(Debug, Clone)]
+// pub struct CompoundAssignmentOperand(pub Box<Expression>);
 
-#[derive(Debug, Clone)]
-pub struct DereferencedOperand(pub Box<Expression>);
+// #[derive(Debug, Clone)]
+// pub struct DereferencedOperand(pub Box<Expression>);
 
 #[derive(Debug, Clone)]
 pub struct FieldAccessObject(pub Box<Expression>);
