@@ -39,7 +39,6 @@ impl MatchExpr {
 
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
-                // parser.consume_token();
                 break;
             }
 
@@ -49,8 +48,6 @@ impl MatchExpr {
             println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
             let guard_opt = if let Expression::Underscore(UnderscoreExpr { .. }) = case {
-                // parser.consume_token();
-
                 if let Some(Token::If { .. }) = parser.peek_current() {
                     let kw_if = parser.expect_keyword(Token::If {
                         name: "if".to_string(),
@@ -71,8 +68,6 @@ impl MatchExpr {
                         "CURRENT TOKEN AFTER GROUPED EXPR: {:?}\n",
                         parser.peek_current()
                     );
-
-                    // parser.consume_token();
 
                     Some((kw_if, Box::new(expr)))
                 } else {
