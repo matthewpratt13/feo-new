@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expression, RangeExpr, RangeOp},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
 };
 
 use super::{Parser, Precedence};
@@ -22,8 +22,20 @@ impl RangeExpr {
         } else {
             Ok(RangeExpr {
                 from_opt: Some(Box::new(from)),
-                op,
-                to_opt: None,
+                op: op.clone(),
+                to_opt: {
+                    if op == RangeOp::RangeInclusive {
+                        let token = parser.consume_token();
+
+                        parser.log_error(ParserErrorKind::UnexpectedToken {
+                            expected: "`..`".to_string(),
+                            found: token,
+                        });
+                        return Err(ErrorsEmitted(()));
+                    } else {
+                        None
+                    }
+                },
             })
         }
     }
@@ -49,7 +61,7 @@ mod tests {
 
     #[test]
     fn parse_range_expr_incl() -> Result<(), ()> {
-        let input = r#"..=10"#;
+        let input = r#"..=20"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

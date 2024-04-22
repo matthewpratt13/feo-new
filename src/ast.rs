@@ -162,7 +162,7 @@ pub enum BinaryOp {
 pub struct UnwrapOp(pub ());
 
 /// Enum representing the different range operator AST nodes.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RangeOp {
     RangeExclusive, // `..`
     RangeInclusive, // `..=`
