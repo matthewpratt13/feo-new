@@ -240,7 +240,7 @@ pub enum AssigneeExpr {
     Array(Vec<AssigneeExpr>),
     GroupedExpr(Box<AssigneeExpr>),
     Tuple(Vec<AssigneeExpr>),
-    Path(PathExpr),
+    PathExpr(PathExpr),
     Struct(Vec<HashMap<Identifier, AssigneeExpr>>),
     TupleStruct(Vec<AssigneeExpr>),
     UnderscoreExpr(UnderscoreExpr),
