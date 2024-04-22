@@ -38,7 +38,7 @@ mod tests {
     fn parse_while_expr() -> Result<(), ()> {
         let input = r#"
         while (x < 5) {
-            x += 1
+            x += 1;
         }"#;
 
         let mut parser = test_utils::get_parser(input, false);

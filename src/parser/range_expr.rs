@@ -25,7 +25,7 @@ impl RangeExpr {
                 op: op.clone(),
                 to_opt: {
                     if op == RangeOp::RangeInclusive {
-                        let token = parser.consume_token();
+                        let token = parser.peek_current();
 
                         parser.log_error(ParserErrorKind::UnexpectedToken {
                             expected: "`..`".to_string(),
