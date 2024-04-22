@@ -1,6 +1,6 @@
 use crate::{
     ast::{Identifier, Keyword, OuterAttr, StaticItemDecl, Visibility},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -27,10 +27,7 @@ impl ParseDeclaration for StaticItemDecl {
         let item_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier".to_string(),
-                found: parser.peek_current(),
-            });
+            parser.log_unexpected_token("identifier".to_string());
             Err(ErrorsEmitted(()))
         }?;
 

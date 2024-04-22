@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expression, RangeExpr, RangeOp},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
 };
 
 use super::{Parser, Precedence};
@@ -25,12 +25,7 @@ impl RangeExpr {
                 op: op.clone(),
                 to_opt: {
                     if op == RangeOp::RangeInclusive {
-                        let token = parser.peek_current();
-
-                        parser.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "`..`".to_string(),
-                            found: token,
-                        });
+                        parser.log_unexpected_token("`..`".to_string());
                         return Err(ErrorsEmitted(()));
                     } else {
                         None

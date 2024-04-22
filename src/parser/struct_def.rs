@@ -71,38 +71,29 @@ impl ParseDefinition for StructDef {
 
             let field_type = Box::new(parser.get_type()?);
 
-            let field = if field_attributes.is_empty() {
-                Ok(StructDefField {
-                    attributes_opt: None,
-                    visibility: field_visibility,
-                    field_name,
-                    field_type,
-                })
-            } else {
-                Ok(StructDefField {
-                    attributes_opt: Some(field_attributes),
-                    visibility: field_visibility,
-                    field_name,
-                    field_type,
-                })
-            }?;
+            let field = Ok(StructDefField {
+                attributes_opt: {
+                    if field_attributes.is_empty() {
+                        None
+                    } else {
+                        Some(field_attributes)
+                    }
+                },
+                visibility: field_visibility,
+                field_name,
+                field_type,
+            })?;
 
             fields.push(field);
 
-            let token = parser.consume_token();
-
-            match token {
+            match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
+                    parser.consume_token();
                     continue;
                 }
                 Some(Token::RBrace { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `}`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
-                }
+                Some(_) => parser.log_unexpected_token("`,` or `}`".to_string()),
+                None => break,
             }
         }
 
@@ -114,27 +105,21 @@ impl ParseDefinition for StructDef {
             Err(ErrorsEmitted(()))
         }?;
 
-        if attributes.is_empty() {
-            Ok(StructDef {
-                attributes_opt: None,
-                visibility,
-                kw_struct,
-                struct_name,
-                open_brace,
-                fields,
-                close_brace,
-            })
-        } else {
-            Ok(StructDef {
-                attributes_opt: Some(attributes),
-                visibility,
-                kw_struct,
-                struct_name,
-                open_brace,
-                fields,
-                close_brace,
-            })
-        }
+        Ok(StructDef {
+            attributes_opt: {
+                if attributes.is_empty() {
+                    None
+                } else {
+                    Some(attributes)
+                }
+            },
+            visibility,
+            kw_struct,
+            struct_name,
+            open_brace,
+            fields,
+            close_brace,
+        })
     }
 }
 

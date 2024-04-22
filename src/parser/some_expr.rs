@@ -1,8 +1,4 @@
-use crate::{
-    ast::{Delimiter, SomeExpr},
-    error::ErrorsEmitted,
-    token::Token,
-};
+use crate::{ast::SomeExpr, error::ErrorsEmitted, token::Token};
 
 use super::{Parser, Precedence};
 
@@ -13,22 +9,19 @@ impl SomeExpr {
             span: parser.stream.span(),
         })?;
 
-        if let Some(Token::LParen { .. }) = parser.consume_token() {
-            Ok(Delimiter::LParen)
+        if let Some(Token::LParen { .. }) = parser.peek_current() {
+            parser.consume_token();
         } else {
             parser.log_unexpected_token("`(`".to_string());
-            Err(ErrorsEmitted(()))
-        }?;
+        }
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
         if let Some(Token::RParen { .. }) = parser.peek_current() {
             parser.consume_token();
-            Ok(Delimiter::RParen)
         } else {
             parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
-        }?;
+        }
 
         Ok(SomeExpr {
             kw_some,

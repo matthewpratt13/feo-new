@@ -1000,10 +1000,16 @@ impl Parser {
             Some(Token::LBracket { .. }) => {
                 let ty = self.get_type()?;
 
-                if let Some(Token::LBracket { .. }) = self.peek_current() {
+                // if let Some(Token::LBracket { .. }) = self.peek_current() {
+                //     self.consume_token();
+                // } else {
+                //     self.log_unexpected_token("`[`".to_string());
+                // }
+
+                if let Some(Token::Semicolon { .. }) = self.peek_current() {
                     self.consume_token();
                 } else {
-                    self.log_unexpected_token("`[`".to_string());
+                    self.log_unexpected_token("`;`".to_string());
                 }
 
                 let num_elements =

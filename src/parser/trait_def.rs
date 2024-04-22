@@ -30,10 +30,7 @@ impl ParseDefinition for TraitDef {
         let trait_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier".to_string(),
-                found: token,
-            });
+            parser.log_unexpected_token("identifier".to_string());
             Err(ErrorsEmitted(()))
         }?;
 
@@ -170,21 +167,14 @@ impl MethodSig {
             let param = FunctionOrMethodParam::parse(parser)?;
             params.push(param);
 
-            let token = parser.peek_current();
-
-            match token {
+            match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     parser.consume_token();
                     continue;
                 }
                 Some(Token::RParen { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `)`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
-                }
+                Some(_) => parser.log_unexpected_token("`,` or `)`".to_string()),
+                None => break,
             }
         }
 

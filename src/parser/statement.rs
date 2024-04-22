@@ -1,6 +1,6 @@
 use crate::{
     ast::{ExpressionStmt, Keyword, LetStmt, Separator},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -18,10 +18,7 @@ impl ParseStatement for LetStmt {
         let kw_let = if let Some(Token::Let { .. }) = parser.consume_token() {
             Ok(Keyword::Let)
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`let`".to_string(),
-                found: parser.peek_current(),
-            });
+            parser.log_unexpected_token("`let`".to_string());
             Err(ErrorsEmitted(()))
         }?;
 
@@ -36,8 +33,7 @@ impl ParseStatement for LetStmt {
 
         let type_ann_opt = if let Some(Token::Colon { .. }) = parser.peek_current() {
             parser.consume_token();
-            let ty = parser.get_type()?;
-            Some((Separator::Colon, ty))
+            Some((Separator::Colon, parser.get_type()?))
         } else {
             None
         };

@@ -1,6 +1,6 @@
 use crate::{
     ast::{CallExpr, Delimiter, Expression},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -18,20 +18,26 @@ impl CallExpr {
                 break;
             }
 
-            let arg_expr = parser.parse_expression(Precedence::Lowest)?;
+            let arg_expr = match parser.parse_expression(Precedence::Lowest) {
+                Ok(e) => Ok(e),
+                Err(_) => {
+                    parser.log_unexpected_token("function argument".to_string());
+                    Err(ErrorsEmitted(()))
+                }
+            }?;
+
             args.push(arg_expr);
 
-            let token = parser.peek_current();
-
-            match token {
+            match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     parser.consume_token();
                     continue;
                 }
                 Some(Token::RParen { .. }) => break,
-                _ => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                Some(_) => {
+                    parser.log_unexpected_token("`,` or `)`".to_string());
                 }
+                None => break,
             }
         }
 
@@ -64,7 +70,7 @@ mod tests {
 
     #[test]
     fn parse_call_expr() -> Result<(), ()> {
-        let input = r#"foo(b"bar", x, -10)"#;
+        let input = r#"foo(b"bar", -10, x)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

@@ -33,7 +33,14 @@ impl BlockExpr {
                 break;
             }
 
-            let statement = parser.parse_statement()?;
+            let statement = match parser.parse_statement() {
+                Ok(s) => Ok(s),
+                Err(_) => {
+                    parser.log_unexpected_token("statement".to_string());
+                    Err(ErrorsEmitted(()))
+                }
+            }?;
+
             statements.push(statement);
         }
 
@@ -54,9 +61,9 @@ impl BlockExpr {
             open_brace,
             statements_opt: {
                 if statements.is_empty() {
-                    Some(statements)
-                } else {
                     None
+                } else {
+                    Some(statements)
                 }
             },
             close_brace,

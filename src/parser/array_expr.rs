@@ -8,11 +8,6 @@ use super::{Parser, Precedence};
 
 impl ArrayExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<ArrayExpr, ErrorsEmitted> {
-        // let open_bracket = parser.expect_delimiter(Token::LBracket {
-        //     delim: '[',
-        //     span: parser.stream.span(),
-        // })?;
-
         let open_bracket = if let Some(Token::LBracket { .. }) = parser.consume_token() {
             Ok(Delimiter::LBracket)
         } else {

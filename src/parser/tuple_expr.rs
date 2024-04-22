@@ -8,8 +8,7 @@ use super::{Parser, Precedence};
 
 impl TupleExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
-        let open_paren = if let Some(Token::LParen { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token("`(`".to_string());
@@ -23,7 +22,14 @@ impl TupleExpr {
                 break;
             }
 
-            let element = parser.parse_expression(Precedence::Lowest)?;
+            let element = match parser.parse_expression(Precedence::Lowest) {
+                Ok(e) => Ok(e),
+                Err(_) => {
+                    parser.log_unexpected_token("tuple element".to_string());
+                    Err(ErrorsEmitted(()))
+                }
+            }?;
+
             elements.push(element);
 
             match parser.peek_current() {
@@ -33,9 +39,11 @@ impl TupleExpr {
                 }
                 Some(Token::RParen { .. }) => break,
 
-                _ => {
-                    parser.log_missing_delimiter(')');
+                Some(_) => {
+                    parser.log_unexpected_token("`,` or `)`".to_string());
                 }
+
+                None => break,
             }
         }
 
@@ -86,7 +94,7 @@ mod tests {
 
     #[test]
     fn parse_tuple_expr() -> Result<(), ()> {
-        let input = r#"(true, "foo", 10, x,)"#;
+        let input = r#"(true, "foo", 10, x)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

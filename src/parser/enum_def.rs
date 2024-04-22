@@ -51,18 +51,14 @@ impl ParseDefinition for EnumDef {
             let variant = EnumVariant::parse(parser, attributes)?;
             variants.push(variant);
 
-            let token = parser.consume_token();
-
-            match token {
+            match parser.consume_token() {
                 Some(Token::Comma { .. }) => continue,
                 Some(Token::RBrace { .. }) => break,
                 Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`,` or `}`".to_string(),
                     found: Some(t),
                 }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
-                }
+                None => break,
             }
         }
 
@@ -74,27 +70,19 @@ impl ParseDefinition for EnumDef {
             Err(ErrorsEmitted(()))
         }?;
 
-        if attributes.is_empty() {
-            Ok(EnumDef {
-                attributes_opt: None,
-                visibility,
-                kw_enum,
-                enum_name,
-                open_brace,
-                variants,
-                close_brace,
-            })
-        } else {
-            Ok(EnumDef {
-                attributes_opt: Some(attributes),
-                visibility,
-                kw_enum,
-                enum_name,
-                open_brace,
-                variants,
-                close_brace,
-            })
-        }
+        Ok(EnumDef {
+            attributes_opt: if attributes.is_empty() {
+                None
+            } else {
+                Some(attributes)
+            },
+            visibility,
+            kw_enum,
+            enum_name,
+            open_brace,
+            variants,
+            close_brace,
+        })
     }
 }
 

@@ -4,15 +4,14 @@ use crate::{
     token::Token,
 };
 
-use super::Parser;
+use super::{Parser, Precedence};
 
 impl IndexExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         array: Expression,
     ) -> Result<IndexExpr, ErrorsEmitted> {
-        let index = parser.parse_primary()?;
-        parser.consume_token();
+        let index = parser.parse_expression(Precedence::Lowest)?;
 
         let close_bracket = if let Some(Token::RBracket { .. }) = parser.peek_current() {
             parser.consume_token();
@@ -21,7 +20,6 @@ impl IndexExpr {
             parser.log_missing_delimiter(']');
             Err(ErrorsEmitted(()))
         }?;
-
 
         Ok(IndexExpr {
             array: Box::new(array),

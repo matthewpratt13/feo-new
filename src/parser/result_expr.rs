@@ -1,6 +1,6 @@
 use crate::{
     ast::{Delimiter, Keyword, ResultExpr},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -15,10 +15,7 @@ impl ResultExpr {
         } else if let Some(Token::Err { .. }) = token {
             Ok(Keyword::Err)
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`Ok` or `Err`".to_string(),
-                found: token,
-            });
+            parser.log_unexpected_token("`Ok` or `Err`".to_string());
             Err(ErrorsEmitted(()))
         }?;
 

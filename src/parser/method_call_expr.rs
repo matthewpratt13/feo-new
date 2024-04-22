@@ -37,7 +37,14 @@ impl MethodCallExpr {
                 break;
             }
 
-            let arg_expr = parser.parse_expression(Precedence::Lowest)?;
+            let arg_expr = match parser.parse_expression(Precedence::Lowest) {
+                Ok(e) => Ok(e),
+                Err(_) => {
+                    parser.log_unexpected_token("method argument".to_string());
+                    Err(ErrorsEmitted(()))
+                }
+            }?;
+
             args.push(arg_expr);
 
             let curr_token = parser.peek_current();
@@ -48,10 +55,10 @@ impl MethodCallExpr {
                     continue;
                 }
                 Some(Token::RParen { .. }) => break,
-
-                _ => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                Some(_) => {
+                    parser.log_unexpected_token("`,` or `)`".to_string());
                 }
+                None => break,
             }
         }
 

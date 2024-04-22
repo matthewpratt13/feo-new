@@ -8,8 +8,6 @@ use super::{Parser, Precedence};
 
 impl StructExpr {
     pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<StructExpr, ErrorsEmitted> {
-        println!("ENTER `StructExpr::parse()`");
-
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
@@ -53,9 +51,7 @@ impl StructExpr {
                     continue;
                 }
                 Some(Token::RBrace { .. }) => break,
-                _ => {
-                    parser.log_missing_delimiter('}');
-                }
+                _ => break,
             }
         }
 
@@ -66,10 +62,6 @@ impl StructExpr {
             parser.log_missing_delimiter('}');
             Err(ErrorsEmitted(()))
         }?;
-
-        // if !parser.errors().is_empty() {
-        //     return Err(ErrorsEmitted(()));
-        // }
 
         Ok(StructExpr {
             path,
@@ -118,9 +110,7 @@ impl TupleStructExpr {
                     expected: "`,` or `)`".to_string(),
                     found: Some(t),
                 }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
-                }
+                None => break,
             }
         }
 

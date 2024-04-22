@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, Delimiter, GroupedExpr, IfExpr, Keyword},
+    ast::{BlockExpr, GroupedExpr, IfExpr, Keyword},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -12,44 +12,22 @@ impl IfExpr {
 
         let mut trailing_else_block_opt = None::<(Keyword, BlockExpr)>;
 
-        println!("ENTER `IfExpr::parse()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-
         let kw_if = parser.expect_keyword(Token::If {
             name: "if".to_string(),
             span: parser.stream.span(),
         })?;
 
-        println!("CURRENT TOKEN AFTER `if`: {:?}\n", parser.peek_current());
-
-        // let _ = parser.expect_delimiter(Token::LParen {
-        //     delim: '(',
-        //     span: parser.stream.span(),
-        // });
-
-
-        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
-            Ok(Delimiter::LParen)
+        if let Some(Token::LParen { .. }) = parser.peek_current() {
+            parser.consume_token();
         } else {
             parser.log_unexpected_token("`(`".to_string());
-            Err(ErrorsEmitted(()))
-        }?;
+        };
 
         let condition = Box::new(GroupedExpr::parse(parser)?);
 
         let token = parser.peek_current();
 
-        println!(
-            "CURRENT TOKEN AFTER CONDITION: {:?}\n",
-            parser.peek_current()
-        );
-
         let if_block = if let Some(Token::LBrace { .. }) = token {
-            println!(
-                "CURRENT TOKEN ENTERING AN IF BLOCK: {:?}\n",
-                parser.peek_current()
-            );
-
             Box::new(BlockExpr::parse(parser)?)
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
@@ -60,8 +38,6 @@ impl IfExpr {
         };
 
         while let Some(Token::Else { .. }) = parser.peek_current() {
-            println!("CURRENT TOKEN AFTER `else`: {:?}\n", parser.peek_current());
-
             parser.consume_token();
 
             if let Some(Token::If { .. }) = parser.peek_current() {
@@ -78,30 +54,19 @@ impl IfExpr {
             }
         }
 
-        println!("ELSE-IF BLOCKS: {:#?}\n", else_if_blocks.clone());
-
-        if else_if_blocks.is_empty() {
-            println!("EXIT `IfExpr::parse()` WITHOUT ELSE-IF BLOCKS");
-            println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-
-            Ok(IfExpr {
-                kw_if,
-                condition,
-                if_block,
-                else_if_blocks_opt: None,
-                trailing_else_block_opt,
-            })
-        } else {
-            println!("EXIT `IfExpr::parse()` WITH ELSE-IF BLOCKS");
-            println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-            Ok(IfExpr {
-                kw_if,
-                condition,
-                if_block,
-                else_if_blocks_opt: Some(else_if_blocks),
-                trailing_else_block_opt,
-            })
-        }
+        Ok(IfExpr {
+            kw_if,
+            condition,
+            if_block,
+            else_if_blocks_opt: {
+                if else_if_blocks.is_empty() {
+                    None
+                } else {
+                    Some(else_if_blocks)
+                }
+            },
+            trailing_else_block_opt,
+        })
     }
 }
 

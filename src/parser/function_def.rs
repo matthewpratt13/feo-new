@@ -3,7 +3,7 @@ use crate::{
         BlockExpr, Delimiter, FunctionDef, FunctionOrMethodParam, FunctionParam, Identifier,
         Keyword, OuterAttr, SelfParam, UnaryOp, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -15,9 +15,6 @@ impl FunctionDef {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<FunctionDef, ErrorsEmitted> {
-        println!("ENTER `FunctionDef::parse()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-
         let kw_func = parser.expect_keyword(Token::Func {
             name: "func".to_string(),
             span: parser.stream.span(),
@@ -25,15 +22,10 @@ impl FunctionDef {
 
         let mut params: Vec<FunctionOrMethodParam> = Vec::new();
 
-        let token = parser.consume_token();
-
-        let function_name = if let Some(Token::Identifier { name, .. }) = token {
+        let function_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier".to_string(),
-                found: token,
-            });
+            parser.log_unexpected_token("identifier".to_string());
             Err(ErrorsEmitted(()))
         }?;
 
@@ -50,38 +42,26 @@ impl FunctionDef {
             params.push(param);
         }
 
-        println!("ENTER LOOP");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-
         loop {
             if let Some(Token::Comma { .. }) = parser.peek_current() {
                 parser.consume_token();
             }
+
             if let Some(Token::RParen { .. }) = parser.peek_current() {
                 break;
             }
 
-            println!("LOOP ITERATION");
-            println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-
             let param = FunctionOrMethodParam::parse(parser)?;
             params.push(param);
 
-            let token = parser.peek_current();
-
-            match token {
+            match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     parser.consume_token();
                     continue;
                 }
                 Some(Token::RParen { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `)`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
-                }
+                Some(_) => parser.log_unexpected_token("`,` or `)`".to_string()),
+                None => break,
             }
         }
 
@@ -105,9 +85,6 @@ impl FunctionDef {
         } else {
             None
         };
-
-        println!("EXIT `FunctionDef::parse()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
         Ok(FunctionDef {
             attributes_opt: {
@@ -137,9 +114,6 @@ impl FunctionDef {
 
 impl FunctionOrMethodParam {
     pub(crate) fn parse(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
-        println!("ENTER `FunctionOrMethodParam::parse()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-
         let prefix_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
             parser.peek_current()
         {
@@ -150,9 +124,6 @@ impl FunctionOrMethodParam {
         };
 
         let token = parser.consume_token();
-
-        println!("OPTIONAL PREFIX: {:?}", prefix_opt);
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
         let param = if let Some(Token::SelfKeyword { .. }) = token {
             let self_param = SelfParam {
@@ -176,17 +147,9 @@ impl FunctionOrMethodParam {
 
             Ok(FunctionOrMethodParam::FunctionParam(function_param))
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`self` or identifier".to_string(),
-                found: token,
-            });
+            parser.log_unexpected_token("`self` or identifier".to_string());
             Err(ErrorsEmitted(()))
         };
-
-        println!("PARAM: {:?}", param);
-
-        println!("EXIT `FunctionOrMethodParam::parse()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
         param
     }
