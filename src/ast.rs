@@ -227,8 +227,8 @@ pub enum Expression {
 #[derive(Debug, Clone)]
 pub enum AssigneeExpr {
     ArrayIndex(ArrayIndex),
-    CompoundAssignmentOperand(CompoundAssignmentOperand),
-    DereferencedOperand(DereferencedOperand),
+    // CompoundAssignmentOperand(CompoundAssignmentOperand),
+    // DereferencedOperand(DereferencedOperand),
     FieldAccessObject(FieldAccessObject),
     FunctionCallCallee(FunctionCallCallee),
     IndexedArray(IndexedArray),
@@ -245,6 +245,12 @@ pub enum AssigneeExpr {
     TupleStruct(Vec<AssigneeExpr>),
     UnderscoreExpr(UnderscoreExpr),
 }
+
+// impl From<IndexExpr> for AssigneeExpr {
+//     fn from(value: IndexExpr) -> Self {
+//         AssigneeExpr::ArrayIndex(value.index)
+//     }
+// }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
 /// A `Statement` is a component of a block, which is a component of an outer expression

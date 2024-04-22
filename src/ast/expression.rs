@@ -24,6 +24,8 @@ pub enum PathPrefix {
     Identifier(Identifier),
 }
 
+/// Assignee expressions. 
+/// These generally appear in the left operand of an assignment expression.
 #[derive(Debug, Clone)]
 pub struct ArrayIndex(pub Box<Expression>);
 
@@ -68,7 +70,7 @@ pub struct ClosureParam {
 #[derive(Debug, Clone)]
 pub struct StructField {
     pub name: Identifier,
-    pub value: Box<Expression>,
+    pub value: Box<Expression>, 
 }
 
 /// Struct representing a single arm in a match statement.
@@ -84,6 +86,8 @@ pub struct MatchArm {
 /// NODES
 ///////////////////////////////////////////////////////////////////////////
 
+// expression is assignee expression if it has assignee expression elements
+// assignee = place or value expression
 #[derive(Debug, Clone)]
 pub struct ArrayExpr {
     pub open_bracket: Delimiter,
@@ -91,7 +95,7 @@ pub struct ArrayExpr {
     pub close_bracket: Delimiter,
 }
 
-// LHS of compound assignment expression is place expression
+// LHS of compound assignment expression is place / assignee expression
 #[derive(Debug, Clone)]
 pub struct BinaryExpr {
     pub lhs: Box<Expression>,
@@ -230,8 +234,8 @@ pub struct SomeExpr {
     pub expression: Box<Expression>,
 }
 
-// expression is assignee expression, must have assignee expression elements
-// assignee = place or value
+// expression is assignee expression if it has assignee expression fields
+// assignee = place or value expression
 #[derive(Debug, Clone)]
 pub struct StructExpr {
     pub path: PathExpr,
@@ -240,6 +244,8 @@ pub struct StructExpr {
     pub close_brace: Delimiter,
 }
 
+// expression is assignee expression if it has assignee expression elements
+// assignee = place or value expression
 #[derive(Debug, Clone)]
 pub struct TupleExpr {
     pub open_paren: Delimiter,
@@ -249,13 +255,13 @@ pub struct TupleExpr {
 
 #[derive(Debug, Clone)]
 pub struct TupleIndexExpr {
-    pub operand: TupleIndexOperand, // place expression
+    pub operand: TupleIndexOperand,
     pub dot: Separator,
     pub index: UInt,
 }
 
-// expression is assignee expression, must have assignee expression elements
-// assignee = place or value
+// expression is assignee expression if it has assignee expression elements
+// assignee = place or value expression
 #[derive(Debug, Clone)]
 pub struct TupleStructExpr {
     pub path: PathExpr,
@@ -271,7 +277,7 @@ pub struct TypeCastExpr {
     pub new_type: Type,
 }
 
-// operand of dereference expression is place expression
+// operand of dereference expression is place / assignee expression
 #[derive(Debug, Clone)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
