@@ -1,5 +1,5 @@
 use crate::{
-    ast::{CallExpr, Delimiter, Expression, FunctionCallCallee},
+    ast::{AssigneeExpr, CallExpr, Delimiter, Expression},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -50,7 +50,7 @@ impl CallExpr {
         }?;
 
         Ok(CallExpr {
-            callee: FunctionCallCallee(Box::new(callee)),
+            callee: AssigneeExpr(Box::new(callee)),
             open_paren: Delimiter::LParen,
             args_opt: {
                 if args.is_empty() {

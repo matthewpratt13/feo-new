@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Expression, Identifier, MethodCallExpr, MethodCallReceiver, Separator},
+    ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr, Separator},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -71,7 +71,7 @@ impl MethodCallExpr {
         }?;
 
         Ok(MethodCallExpr {
-            receiver: MethodCallReceiver(Box::new(receiver)),
+            receiver: AssigneeExpr(Box::new(receiver)),
             dot: Separator::Dot,
             method_name,
             open_paren,

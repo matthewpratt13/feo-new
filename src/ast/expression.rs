@@ -1,6 +1,6 @@
 use super::{
-    BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator, Statement, Type,
-    UInt, UnaryOp, UnwrapOp,
+    AssigneeExpr, BinaryOp, Delimiter, Expression, Identifier, Keyword, RangeOp, Separator,
+    Statement, Type, UInt, UnaryOp, UnwrapOp,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -24,40 +24,6 @@ pub enum PathPrefix {
     Identifier(Identifier),
 }
 
-/// Assignee expressions. 
-/// These generally appear in the left operand of an assignment expression.
-#[derive(Debug, Clone)]
-pub struct ArrayIndex(pub Box<Expression>);
-
-// #[derive(Debug, Clone)]
-// pub struct CompoundAssignmentOperand(pub Box<Expression>);
-
-// #[derive(Debug, Clone)]
-// pub struct DereferencedOperand(pub Box<Expression>);
-
-#[derive(Debug, Clone)]
-pub struct FieldAccessObject(pub Box<Expression>);
-
-#[derive(Debug, Clone)]
-pub struct FunctionCallCallee(pub Box<Expression>);
-
-#[derive(Debug, Clone)]
-pub struct IndexedArray(pub Box<Expression>);
-
-#[derive(Debug, Clone)]
-pub struct LetStatementInitializer(pub Box<Expression>);
-
-#[derive(Debug, Clone)]
-pub struct MethodCallReceiver(pub Box<Expression>);
-
-#[derive(Debug, Clone)]
-pub struct Scrutinee(pub Box<Expression>);
-
-#[derive(Debug, Clone)]
-pub struct StaticVariable(pub Box<Expression>);
-
-#[derive(Debug, Clone)]
-pub struct TupleIndexOperand(pub Box<Expression>);
 
 /// Struct representing a closure parameter.
 #[derive(Debug, Clone)]
@@ -70,7 +36,7 @@ pub struct ClosureParam {
 #[derive(Debug, Clone)]
 pub struct StructField {
     pub name: Identifier,
-    pub value: Box<Expression>, 
+    pub value: Box<Expression>,
 }
 
 /// Struct representing a single arm in a match statement.
@@ -118,7 +84,7 @@ pub struct BreakExpr {
 
 #[derive(Debug, Clone)]
 pub struct CallExpr {
-    pub callee: FunctionCallCallee,
+    pub callee: AssigneeExpr,
     pub open_paren: Delimiter,
     pub args_opt: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
@@ -138,7 +104,7 @@ pub struct ContinueExpr {
 
 #[derive(Debug, Clone)]
 pub struct FieldAccessExpr {
-    pub object: FieldAccessObject,
+    pub object: AssigneeExpr,
     pub dot: Separator,
     pub field: Identifier,
 }
@@ -170,16 +136,16 @@ pub struct IfExpr {
 
 #[derive(Debug, Clone)]
 pub struct IndexExpr {
-    pub array: IndexedArray,
+    pub array: AssigneeExpr,
     pub open_bracket: Delimiter,
-    pub index: ArrayIndex,
+    pub index: AssigneeExpr,
     pub close_bracket: Delimiter,
 }
 
 #[derive(Debug, Clone)]
 pub struct MatchExpr {
     pub kw_match: Keyword,
-    pub scrutinee: Scrutinee,
+    pub scrutinee: AssigneeExpr,
     pub open_brace: Delimiter,
     pub arms_opt: Option<Vec<MatchArm>>,
     pub final_arm: MatchArm, // default case
@@ -188,7 +154,7 @@ pub struct MatchExpr {
 
 #[derive(Debug, Clone)]
 pub struct MethodCallExpr {
-    pub receiver: MethodCallReceiver,
+    pub receiver: AssigneeExpr,
     pub dot: Separator,
     pub method_name: Identifier,
     pub open_paren: Delimiter,
@@ -255,7 +221,7 @@ pub struct TupleExpr {
 
 #[derive(Debug, Clone)]
 pub struct TupleIndexExpr {
-    pub operand: TupleIndexOperand,
+    pub operand: AssigneeExpr,
     pub dot: Separator,
     pub index: UInt,
 }
@@ -286,7 +252,7 @@ pub struct UnaryExpr {
 
 #[derive(Debug, Clone)]
 pub struct UnderscoreExpr {
-    pub underscore: Separator, // assignee expression
+    pub underscore: Separator, // also assignee expression
 }
 
 #[derive(Debug, Clone)]

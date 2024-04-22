@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Expression, GroupedExpr, MatchArm, MatchExpr, Scrutinee, UnderscoreExpr},
+    ast::{AssigneeExpr, Delimiter, Expression, GroupedExpr, MatchArm, MatchExpr, UnderscoreExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -102,7 +102,7 @@ impl MatchExpr {
 
         Ok(MatchExpr {
             kw_match,
-            scrutinee: Scrutinee(Box::new(scrutinee)),
+            scrutinee: AssigneeExpr(Box::new(scrutinee)),
             open_brace,
             arms_opt: {
                 if match_arms.is_empty() {

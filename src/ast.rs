@@ -5,8 +5,6 @@ mod item;
 mod statement;
 mod types;
 
-use std::collections::HashMap;
-
 pub use self::{expression::*, item::*, statement::*, types::*};
 
 ///////////////////////////////////////////////////////////////////////////
@@ -225,32 +223,7 @@ pub enum Expression {
 }
 
 #[derive(Debug, Clone)]
-pub enum AssigneeExpr {
-    ArrayIndex(ArrayIndex),
-    // CompoundAssignmentOperand(CompoundAssignmentOperand),
-    // DereferencedOperand(DereferencedOperand),
-    FieldAccessObject(FieldAccessObject),
-    FunctionCallCallee(FunctionCallCallee),
-    IndexedArray(IndexedArray),
-    LetStatementInitializer(LetStatementInitializer),
-    MethodCallReceiver(MethodCallReceiver),
-    Scrutinee(Scrutinee),
-    StaticVariable(StaticVariable),
-    TupleIndexOperand(TupleIndexOperand),
-    Array(Vec<AssigneeExpr>),
-    GroupedExpr(Box<AssigneeExpr>),
-    Tuple(Vec<AssigneeExpr>),
-    PathExpr(PathExpr),
-    Struct(Vec<HashMap<Identifier, AssigneeExpr>>),
-    TupleStruct(Vec<AssigneeExpr>),
-    UnderscoreExpr(UnderscoreExpr),
-}
-
-// impl From<IndexExpr> for AssigneeExpr {
-//     fn from(value: IndexExpr) -> Self {
-//         AssigneeExpr::ArrayIndex(value.index)
-//     }
-// }
+pub struct AssigneeExpr(pub Box<Expression>);
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
 /// A `Statement` is a component of a block, which is a component of an outer expression
