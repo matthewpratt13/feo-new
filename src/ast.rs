@@ -322,10 +322,10 @@ impl TryFrom<Expression> for ValueExpr {
 pub enum AssigneeExpr {
     Literal(Literal),
     PathExpr(PathExpr),
-    MethodCallExpr(MethodCallExpr),       // e.g., getter in a comparison expression
+    MethodCallExpr(MethodCallExpr), // e.g., getter in a comparison expression
     FieldAccessExpr(FieldAccessExpr), // when on the LHS
-    IndexExpr(IndexExpr),             // when on the LHS
-    TupleIndexExpr(TupleIndexExpr),   // when on the LHS
+    IndexExpr(IndexExpr),           // when on the LHS
+    TupleIndexExpr(TupleIndexExpr), // when on the LHS
     BorrowExpr(BorrowExpr),
     GroupedExpr(Box<AssigneeExpr>),
     UnderscoreExpr(UnderscoreExpr),

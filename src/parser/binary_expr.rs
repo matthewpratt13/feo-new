@@ -224,9 +224,9 @@ impl ComparisonExpr {
                     ErrorsEmitted(())
                 })?;
                 Ok(ComparisonExpr {
-                    lhs: Box::new(left_expr),
+                    lhs: left_expr,
                     op,
-                    rhs: Box::new(value_expr),
+                    rhs: value_expr,
                 })
             }
             ComparisonOp::NotEqual => {
@@ -237,9 +237,9 @@ impl ComparisonExpr {
                     ErrorsEmitted(())
                 })?;
                 Ok(ComparisonExpr {
-                    lhs: Box::new(left_expr),
+                    lhs: left_expr,
                     op,
-                    rhs: Box::new(value_expr),
+                    rhs: value_expr,
                 })
             }
             ComparisonOp::LessThan => {
@@ -250,9 +250,9 @@ impl ComparisonExpr {
                     ErrorsEmitted(())
                 })?;
                 Ok(ComparisonExpr {
-                    lhs: Box::new(left_expr),
+                    lhs: left_expr,
                     op,
-                    rhs: Box::new(value_expr),
+                    rhs: value_expr,
                 })
             }
             ComparisonOp::LessEqual => {
@@ -263,9 +263,9 @@ impl ComparisonExpr {
                     ErrorsEmitted(())
                 })?;
                 Ok(ComparisonExpr {
-                    lhs: Box::new(left_expr),
+                    lhs: left_expr,
                     op,
-                    rhs: Box::new(value_expr),
+                    rhs: value_expr,
                 })
             }
             ComparisonOp::GreaterThan => {
@@ -276,9 +276,9 @@ impl ComparisonExpr {
                     ErrorsEmitted(())
                 })?;
                 Ok(ComparisonExpr {
-                    lhs: Box::new(left_expr),
+                    lhs: left_expr,
                     op,
-                    rhs: Box::new(value_expr),
+                    rhs: value_expr,
                 })
             }
             ComparisonOp::GreaterEqual => {
@@ -289,9 +289,9 @@ impl ComparisonExpr {
                     ErrorsEmitted(())
                 })?;
                 Ok(ComparisonExpr {
-                    lhs: Box::new(left_expr),
+                    lhs: left_expr,
                     op,
-                    rhs: Box::new(value_expr),
+                    rhs: value_expr,
                 })
             }
         }
@@ -319,20 +319,6 @@ mod tests {
     #[test]
     fn parse_binary_expr_multiply() -> Result<(), ()> {
         let input = r#"x * 2"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn parse_binary_expr_less_than() -> Result<(), ()> {
-        let input = r#"4 < 5"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
@@ -389,6 +375,20 @@ mod tests {
     #[test]
     fn parse_binary_expr_exponent() -> Result<(), ()> {
         let input = r#"x**2"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_comparison_less_than() -> Result<(), ()> {
+        let input = r#"4 < 5"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

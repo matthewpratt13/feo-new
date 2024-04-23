@@ -69,7 +69,7 @@ pub struct ArrayExpr {
 pub struct AssignmentExpr {
     pub lhs: AssigneeExpr,
     pub op: AssignmentOp,
-    pub rhs: Box<Expression>,
+    pub rhs: ValueExpr,
 }
 
 #[derive(Debug, Clone)]
@@ -81,9 +81,9 @@ pub struct BinaryExpr {
 
 #[derive(Debug, Clone)]
 pub struct ComparisonExpr {
-    pub lhs: Box<AssigneeExpr>,
+    pub lhs: AssigneeExpr,
     pub op: ComparisonOp,
-    pub rhs: Box<AssigneeExpr>,
+    pub rhs: AssigneeExpr,
 }
 
 #[derive(Debug, Clone)]
@@ -124,7 +124,7 @@ pub struct ClosureExpr {
 pub struct CompoundAssignmentExpr {
     pub lhs: AssigneeExpr,
     pub op: CompoundAssignmentOp,
-    pub rhs: Box<Expression>,
+    pub rhs: ValueExpr,
 }
 
 #[derive(Debug, Clone)]
