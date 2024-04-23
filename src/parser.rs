@@ -40,15 +40,16 @@ mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
-        ClosureExpr, CompoundAssignmentExpr, CompoundAssignmentOp, ConstantDecl, ContinueExpr,
-        Delimiter, EnumDef, Expression, ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef,
-        FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr,
-        InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr,
-        ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, PlaceExpr,
-        PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement,
-        StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr,
-        Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
+        AliasDecl, ArrayExpr, AssigneeExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr,
+        BreakExpr, CallExpr, ClosureExpr, CompoundAssignmentExpr, CompoundAssignmentOp,
+        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
+        FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier,
+        IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
+        MatchExpr, MethodCallExpr, ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr,
+        PathPrefix, PlaceExpr, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr,
+        Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef,
+        TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr,
+        UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -476,7 +477,8 @@ impl Parser {
                 BinaryOp::GreaterEqual,
             )?)),
             Some(Token::Equals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
-                self, left_expr,
+                self,
+                AssigneeExpr::try_from(left_expr)?,
             )?)),
             Some(Token::PlusEquals { .. }) => Ok(Expression::CompoundAssignment(
                 CompoundAssignmentExpr::parse(

@@ -1,6 +1,6 @@
 use super::{
-    AssignmentOp, BinaryOp, CompoundAssignmentOp, Delimiter, Expression, Identifier, Keyword,
-    PlaceExpr, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp,
+    AssigneeExpr, AssignmentOp, BinaryOp, CompoundAssignmentOp, Delimiter, Expression, Identifier,
+    Keyword, PlaceExpr, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -35,7 +35,7 @@ pub struct ClosureParam {
 #[derive(Debug, Clone)]
 pub struct StructField {
     pub name: Identifier,
-    pub value: Box<Expression>,
+    pub value: Expression,
 }
 
 pub struct TupleElements {
@@ -65,16 +65,16 @@ pub struct ArrayExpr {
 
 #[derive(Debug, Clone)]
 pub struct AssignmentExpr {
-    pub lhs: Box<Expression>,
+    pub lhs: AssigneeExpr, // actually assignee expression
     pub op: AssignmentOp,
     pub rhs: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]
 pub struct BinaryExpr {
-    pub lhs: Box<Expression>,
+    pub lhs: Box<Expression>, // `ValueExpr`?
     pub op: BinaryOp,
-    pub rhs: Box<Expression>,
+    pub rhs: Box<Expression>, // `ValueExpr`?
 }
 
 #[derive(Debug, Clone)]

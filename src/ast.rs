@@ -317,7 +317,7 @@ pub enum PlaceExpr {
     IndexExpr(IndexExpr),             // place expression when on the LHS
     TupleIndexExpr(TupleIndexExpr),   // place expression when on the LHS
     BorrowExpr(BorrowExpr),
-    UnderscoreExpr(UnderscoreExpr),
+    GroupedExpr(Box<PlaceExpr>),
 }
 
 impl TryFrom<Expression> for PlaceExpr {
@@ -330,7 +330,97 @@ impl TryFrom<Expression> for PlaceExpr {
             Expression::Index(i) => Ok(PlaceExpr::IndexExpr(i)),
             Expression::TupleIndex(ti) => Ok(PlaceExpr::TupleIndexExpr(ti)),
             Expression::Borrow(b) => Ok(PlaceExpr::BorrowExpr(b)),
-            Expression::Underscore(u) => Ok(PlaceExpr::UnderscoreExpr(u)),
+            _ => Err(ErrorsEmitted(())),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum AssigneeExpr {
+    PlaceExpr(PlaceExpr),
+    UnderscoreExpr(UnderscoreExpr),
+    SliceExpr(Vec<AssigneeExpr>),
+    TupleExpr(Vec<AssigneeExpr>),
+    StructExpr(Vec<(Identifier, AssigneeExpr)>),
+    TupleStructExpr(Vec<AssigneeExpr>),
+}
+
+impl TryFrom<Expression> for AssigneeExpr {
+    type Error = ErrorsEmitted;
+
+    fn try_from(value: Expression) -> Result<Self, Self::Error> {
+        match value {
+            Expression::Path(p) => Ok(AssigneeExpr::PlaceExpr(PlaceExpr::PathExpr(p))),
+            Expression::FieldAccess(fa) => {
+                Ok(AssigneeExpr::PlaceExpr(PlaceExpr::FieldAccessExpr(fa)))
+            }
+            Expression::Index(i) => Ok(AssigneeExpr::PlaceExpr(PlaceExpr::IndexExpr(i))),
+            Expression::TupleIndex(ti) => {
+                Ok(AssigneeExpr::PlaceExpr(PlaceExpr::TupleIndexExpr(ti)))
+            }
+            Expression::Borrow(b) => Ok(AssigneeExpr::PlaceExpr(PlaceExpr::BorrowExpr(b))),
+            Expression::Grouped(g) => {
+                let place_expression = PlaceExpr::try_from(*g.expression)?;
+                Ok(AssigneeExpr::PlaceExpr(PlaceExpr::GroupedExpr(Box::new(
+                    place_expression,
+                ))))
+            }
+            Expression::Underscore(u) => Ok(AssigneeExpr::UnderscoreExpr(u)),
+            Expression::Array(a) => {
+                let mut assignee_expressions: Vec<AssigneeExpr> = Vec::new();
+                a.elements_opt.map(|v| {
+                    v.into_iter().for_each(|e| {
+                        assignee_expressions.push(
+                            AssigneeExpr::try_from(e)
+                                .expect("error converting `Expression` to `AssigneeExpr`"),
+                        )
+                    })
+                });
+
+                Ok(AssigneeExpr::SliceExpr(assignee_expressions))
+            }
+
+            Expression::Tuple(t) => {
+                let assignee_expressions = t
+                    .elements
+                    .into_iter()
+                    .map(|e| {
+                        AssigneeExpr::try_from(e)
+                            .expect("error converting `Expression` to `AssigneeExpr`")
+                    })
+                    .collect::<Vec<AssigneeExpr>>();
+
+                Ok(AssigneeExpr::TupleExpr(assignee_expressions))
+            }
+
+            Expression::Struct(s) => {
+                let mut assignee_expressions: Vec<(Identifier, AssigneeExpr)> = Vec::new();
+
+                s.fields_opt.map(|v| {
+                    v.into_iter().for_each(|s| {
+                        let value = AssigneeExpr::try_from(s.value)
+                            .expect("error converting `Expression` to `AssigneeExpr`");
+                        assignee_expressions.push((s.name, value));
+                    })
+                });
+
+                Ok(AssigneeExpr::StructExpr(assignee_expressions))
+            }
+
+            Expression::TupleStruct(ts) => {
+                let mut assignee_expressions: Vec<AssigneeExpr> = Vec::new();
+                ts.elements_opt.map(|v| {
+                    v.into_iter().for_each(|e| {
+                        assignee_expressions.push(
+                            AssigneeExpr::try_from(e)
+                                .expect("error converting `Expression` to `AssigneeExpr`"),
+                        )
+                    })
+                });
+
+                Ok(AssigneeExpr::TupleStructExpr(assignee_expressions))
+            }
+
             _ => Err(ErrorsEmitted(())),
         }
     }

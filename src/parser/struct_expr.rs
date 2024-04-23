@@ -40,7 +40,7 @@ impl StructExpr {
 
             let field = StructField {
                 name: Identifier(name),
-                value: Box::new(value),
+                value,
             };
 
             fields.push(field);

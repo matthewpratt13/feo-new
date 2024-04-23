@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp, Expression, PlaceExpr},
+    ast::{AssigneeExpr, AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp, PlaceExpr},
     error::ErrorsEmitted,
 };
 
@@ -8,12 +8,12 @@ use super::{Parser, Precedence};
 impl AssignmentExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
-        left_expr: Expression,
+        left_expr: AssigneeExpr,
     ) -> Result<AssignmentExpr, ErrorsEmitted> {
         {
             let right_expr = parser.parse_expression(Precedence::Assignment)?;
             Ok(AssignmentExpr {
-                lhs: Box::new(left_expr),
+                lhs: left_expr,
                 op: AssignmentOp(()),
                 rhs: Box::new(right_expr),
             })
