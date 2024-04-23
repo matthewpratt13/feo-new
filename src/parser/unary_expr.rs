@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BorrowExpr, DereferenceExpr, NegationExpr, PlaceExpr, UnaryOp},
+    ast::{AssigneeExpr, BorrowExpr, DereferenceExpr, NegationExpr, UnaryOp},
     error::ErrorsEmitted,
 };
 
@@ -36,16 +36,20 @@ impl BorrowExpr {
 }
 
 impl DereferenceExpr {
-    pub(crate) fn parse(parser: &mut Parser, op: UnaryOp) -> Result<DereferenceExpr, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        op: UnaryOp,
+    ) -> Result<DereferenceExpr, ErrorsEmitted> {
         parser.consume_token();
 
-        let expression = PlaceExpr::try_from(parser.parse_expression(Precedence::Unary)?)?;
+        let expression = AssigneeExpr::try_from(parser.parse_expression(Precedence::Unary)?)
+            .map_err(|e| {
+                parser.log_error(e);
+                ErrorsEmitted(())
+            })?;
 
         match op {
-            _ => Ok(DereferenceExpr {
-                expression,
-                op,
-            }),
+            _ => Ok(DereferenceExpr { expression, op }),
         }
     }
 }

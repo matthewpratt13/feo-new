@@ -40,16 +40,15 @@ mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssigneeExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr,
-        BreakExpr, CallExpr, ClosureExpr, CompoundAssignmentExpr, CompoundAssignmentOp,
-        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
-        FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier,
-        IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
-        MatchExpr, MethodCallExpr, ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr,
-        PathPrefix, PlaceExpr, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr,
-        Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef,
-        TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr,
-        UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
+        ClosureExpr, CompoundAssignmentExpr, CompoundAssignmentOp, ConstantDecl, ContinueExpr,
+        Delimiter, EnumDef, Expression, ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef,
+        FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr,
+        InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr,
+        ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, PubPackageVis,
+        RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl,
+        StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type,
+        TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -477,41 +476,32 @@ impl Parser {
                 BinaryOp::GreaterEqual,
             )?)),
             Some(Token::Equals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
-                self,
-                AssigneeExpr::try_from(left_expr)?,
+                self, left_expr,
             )?)),
             Some(Token::PlusEquals { .. }) => Ok(Expression::CompoundAssignment(
-                CompoundAssignmentExpr::parse(
-                    self,
-                    PlaceExpr::try_from(left_expr)?,
-                    CompoundAssignmentOp::AddAssign,
-                )?,
+                CompoundAssignmentExpr::parse(self, left_expr, CompoundAssignmentOp::AddAssign)?,
             )),
             Some(Token::MinusEquals { .. }) => Ok(Expression::CompoundAssignment(
                 CompoundAssignmentExpr::parse(
                     self,
-                    PlaceExpr::try_from(left_expr)?,
+                    left_expr,
                     CompoundAssignmentOp::SubtractAssign,
                 )?,
             )),
             Some(Token::AsteriskEquals { .. }) => Ok(Expression::CompoundAssignment(
                 CompoundAssignmentExpr::parse(
                     self,
-                    PlaceExpr::try_from(left_expr)?,
+                    left_expr,
                     CompoundAssignmentOp::MultiplyAssign,
                 )?,
             )),
             Some(Token::SlashEquals { .. }) => Ok(Expression::CompoundAssignment(
-                CompoundAssignmentExpr::parse(
-                    self,
-                    PlaceExpr::try_from(left_expr)?,
-                    CompoundAssignmentOp::DivideAssign,
-                )?,
+                CompoundAssignmentExpr::parse(self, left_expr, CompoundAssignmentOp::DivideAssign)?,
             )),
             Some(Token::PercentEquals { .. }) => Ok(Expression::CompoundAssignment(
                 CompoundAssignmentExpr::parse(
                     self,
-                    PlaceExpr::try_from(left_expr)?,
+                    left_expr,
                     CompoundAssignmentOp::ModulusAssign,
                 )?,
             )),
@@ -556,11 +546,11 @@ impl Parser {
                 BinaryOp::Exponentiation,
             )?)),
             Some(Token::LParen { .. }) => {
-                let expr = CallExpr::parse(self, PlaceExpr::try_from(left_expr)?)?;
+                let expr = CallExpr::parse(self, left_expr)?;
                 Ok(Expression::Call(expr))
             }
             Some(Token::LBracket { .. }) => {
-                let expr = IndexExpr::parse(self, PlaceExpr::try_from(left_expr)?)?;
+                let expr = IndexExpr::parse(self, left_expr)?;
                 Ok(Expression::Index(expr))
             }
 
@@ -582,15 +572,14 @@ impl Parser {
             Some(Token::Dot { .. }) => match self.peek_current() {
                 Some(Token::Identifier { .. }) => match self.peek_ahead_by(1) {
                     Some(Token::LParen { .. }) => Ok(Expression::MethodCall(
-                        MethodCallExpr::parse(self, PlaceExpr::try_from(left_expr)?)?,
+                        MethodCallExpr::parse(self, left_expr)?,
                     )),
                     _ => Ok(Expression::FieldAccess(FieldAccessExpr::parse(
-                        self,
-                        PlaceExpr::try_from(left_expr)?,
+                        self, left_expr,
                     )?)),
                 },
                 Some(Token::UIntLiteral { .. }) => Ok(Expression::TupleIndex(
-                    TupleIndexExpr::parse(self, PlaceExpr::try_from(left_expr)?)?,
+                    TupleIndexExpr::parse(self, left_expr)?,
                 )),
                 _ => {
                     self.log_error(ParserErrorKind::UnexpectedToken {

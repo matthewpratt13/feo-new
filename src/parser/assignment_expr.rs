@@ -1,5 +1,8 @@
 use crate::{
-    ast::{AssigneeExpr, AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp, PlaceExpr},
+    ast::{
+        AssigneeExpr, AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp,
+        Expression,
+    },
     error::ErrorsEmitted,
 };
 
@@ -8,12 +11,15 @@ use super::{Parser, Precedence};
 impl AssignmentExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
-        left_expr: AssigneeExpr,
+        left_expr: Expression,
     ) -> Result<AssignmentExpr, ErrorsEmitted> {
         {
             let right_expr = parser.parse_expression(Precedence::Assignment)?;
             Ok(AssignmentExpr {
-                lhs: left_expr,
+                lhs: AssigneeExpr::try_from(left_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?,
                 op: AssignmentOp(()),
                 rhs: Box::new(right_expr),
             })
@@ -24,14 +30,18 @@ impl AssignmentExpr {
 impl CompoundAssignmentExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
-        left_expr: PlaceExpr,
+        left_expr: Expression,
         op: CompoundAssignmentOp,
     ) -> Result<CompoundAssignmentExpr, ErrorsEmitted> {
+        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted(())
+        })?;
         match op {
             CompoundAssignmentOp::AddAssign => {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
                 Ok(CompoundAssignmentExpr {
-                    lhs: left_expr,
+                    lhs,
                     op,
                     rhs: Box::new(right_expr),
                 })
@@ -39,7 +49,7 @@ impl CompoundAssignmentExpr {
             CompoundAssignmentOp::SubtractAssign => {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
                 Ok(CompoundAssignmentExpr {
-                    lhs: left_expr,
+                    lhs,
                     op,
                     rhs: Box::new(right_expr),
                 })
@@ -47,7 +57,7 @@ impl CompoundAssignmentExpr {
             CompoundAssignmentOp::MultiplyAssign => {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
                 Ok(CompoundAssignmentExpr {
-                    lhs: left_expr,
+                    lhs,
                     op,
                     rhs: Box::new(right_expr),
                 })
@@ -55,7 +65,7 @@ impl CompoundAssignmentExpr {
             CompoundAssignmentOp::DivideAssign => {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
                 Ok(CompoundAssignmentExpr {
-                    lhs: left_expr,
+                    lhs,
                     op,
                     rhs: Box::new(right_expr),
                 })
@@ -63,7 +73,7 @@ impl CompoundAssignmentExpr {
             CompoundAssignmentOp::ModulusAssign => {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
                 Ok(CompoundAssignmentExpr {
-                    lhs: left_expr,
+                    lhs,
                     op,
                     rhs: Box::new(right_expr),
                 })

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssignmentOp, ExpressionStmt, Keyword, LetStmt, PlaceExpr, Separator},
+    ast::{AssigneeExpr, AssignmentOp, ExpressionStmt, Keyword, LetStmt, Separator},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -29,7 +29,11 @@ impl ParseStatement for LetStmt {
             None
         };
 
-        let assignee = PlaceExpr::try_from(parser.parse_expression(Precedence::Path)?)?;
+        let assignee =
+            AssigneeExpr::try_from(parser.parse_expression(Precedence::Path)?).map_err(|e| {
+                parser.log_error(e);
+                ErrorsEmitted(())
+            })?;
 
         let type_ann_opt = if let Some(Token::Colon { .. }) = parser.peek_current() {
             parser.consume_token();
