@@ -137,12 +137,6 @@ pub enum BinaryOp {
     Multiply,
     Divide,
     Modulus,
-    Equal,
-    NotEqual,
-    LessThan,
-    LessEqual,
-    GreaterThan,
-    GreaterEqual,
     LogicalAnd,
     LogicalOr,
     BitwiseAnd,
@@ -151,6 +145,16 @@ pub enum BinaryOp {
     ShiftLeft,
     ShiftRight,
     Exponentiation,
+}
+
+#[derive(Debug, Clone)]
+pub enum ComparisonOp {
+    Equal,
+    NotEqual,
+    LessThan,
+    LessEqual,
+    GreaterThan,
+    GreaterEqual,
 }
 
 #[derive(Debug, Clone)]
@@ -215,6 +219,7 @@ pub enum Expression {
     Dereference(DereferenceExpr),
     TypeCast(TypeCastExpr),
     Binary(BinaryExpr),
+    Comparison(ComparisonExpr),
     Grouped(GroupedExpr),
     Range(RangeExpr),
     Assignment(AssignmentExpr),
@@ -315,7 +320,9 @@ impl TryFrom<Expression> for ValueExpr {
 
 #[derive(Debug, Clone)]
 pub enum AssigneeExpr {
+    Literal(Literal),
     PathExpr(PathExpr),
+    MethodCallExpr(MethodCallExpr),       // e.g., getter in a comparison expression
     FieldAccessExpr(FieldAccessExpr), // when on the LHS
     IndexExpr(IndexExpr),             // when on the LHS
     TupleIndexExpr(TupleIndexExpr),   // when on the LHS
@@ -333,7 +340,9 @@ impl TryFrom<Expression> for AssigneeExpr {
 
     fn try_from(value: Expression) -> Result<Self, Self::Error> {
         match value {
+            Expression::Literal(l) => Ok(AssigneeExpr::Literal(l)),
             Expression::Path(p) => Ok(AssigneeExpr::PathExpr(p)),
+            Expression::MethodCall(mc) => Ok(AssigneeExpr::MethodCallExpr(mc)),
             Expression::FieldAccess(fa) => Ok(AssigneeExpr::FieldAccessExpr(fa)),
             Expression::Index(i) => Ok(AssigneeExpr::IndexExpr(i)),
             Expression::TupleIndex(ti) => Ok(AssigneeExpr::TupleIndexExpr(ti)),

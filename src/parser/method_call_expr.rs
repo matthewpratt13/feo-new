@@ -76,7 +76,7 @@ impl MethodCallExpr {
         }?;
 
         Ok(MethodCallExpr {
-            receiver,
+            receiver: Box::new(receiver),
             dot: Separator::Dot,
             method_name,
             open_paren,

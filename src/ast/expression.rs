@@ -1,6 +1,7 @@
 use super::{
-    AssigneeExpr, AssignmentOp, BinaryOp, CompoundAssignmentOp, Delimiter, Expression, Identifier,
-    Keyword, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr,
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter,
+    Expression, Identifier, Keyword, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp,
+    ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -76,6 +77,13 @@ pub struct BinaryExpr {
     pub lhs: Box<ValueExpr>,
     pub op: BinaryOp,
     pub rhs: Box<ValueExpr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ComparisonExpr {
+    pub lhs: Box<AssigneeExpr>,
+    pub op: ComparisonOp,
+    pub rhs: Box<AssigneeExpr>,
 }
 
 #[derive(Debug, Clone)]
@@ -182,7 +190,7 @@ pub struct MatchExpr {
 
 #[derive(Debug, Clone)]
 pub struct MethodCallExpr {
-    pub receiver: AssigneeExpr,
+    pub receiver: Box<AssigneeExpr>,
     pub dot: Separator,
     pub method_name: Identifier,
     pub open_paren: Delimiter,

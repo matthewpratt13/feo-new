@@ -1,5 +1,7 @@
 use crate::{
-    ast::{BinaryExpr, BinaryOp, Expression, ValueExpr},
+    ast::{
+        AssigneeExpr, BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression, ValueExpr,
+    },
     error::ErrorsEmitted,
 };
 
@@ -79,84 +81,6 @@ impl BinaryExpr {
             }
             BinaryOp::Modulus => {
                 let right_expr = parser.parse_expression(Precedence::Remainder)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted(())
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::Equal => {
-                let right_expr = parser.parse_expression(Precedence::Equal)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted(())
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::NotEqual => {
-                let right_expr = parser.parse_expression(Precedence::NotEqual)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted(())
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::LessThan => {
-                let right_expr = parser.parse_expression(Precedence::LessThan)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted(())
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::LessEqual => {
-                let right_expr = parser.parse_expression(Precedence::LessThanOrEqual)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted(())
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::GreaterThan => {
-                let right_expr = parser.parse_expression(Precedence::GreaterThan)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted(())
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::GreaterEqual => {
-                let right_expr = parser.parse_expression(Precedence::GreaterThanOrEqual)?;
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
@@ -268,6 +192,103 @@ impl BinaryExpr {
                     ErrorsEmitted(())
                 })?;
                 Ok(BinaryExpr {
+                    lhs: Box::new(left_expr),
+                    op,
+                    rhs: Box::new(value_expr),
+                })
+            }
+        }
+    }
+}
+
+impl ComparisonExpr {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        left_expr: Expression,
+        op: ComparisonOp,
+    ) -> Result<ComparisonExpr, ErrorsEmitted> {
+        println!("ENTER `parse_binary_expr()`");
+        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+
+        let left_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted(())
+        })?;
+
+        match op {
+            ComparisonOp::Equal => {
+                let right_expr = parser.parse_expression(Precedence::Equal)?;
+
+                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?;
+                Ok(ComparisonExpr {
+                    lhs: Box::new(left_expr),
+                    op,
+                    rhs: Box::new(value_expr),
+                })
+            }
+            ComparisonOp::NotEqual => {
+                let right_expr = parser.parse_expression(Precedence::NotEqual)?;
+
+                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?;
+                Ok(ComparisonExpr {
+                    lhs: Box::new(left_expr),
+                    op,
+                    rhs: Box::new(value_expr),
+                })
+            }
+            ComparisonOp::LessThan => {
+                let right_expr = parser.parse_expression(Precedence::LessThan)?;
+
+                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?;
+                Ok(ComparisonExpr {
+                    lhs: Box::new(left_expr),
+                    op,
+                    rhs: Box::new(value_expr),
+                })
+            }
+            ComparisonOp::LessEqual => {
+                let right_expr = parser.parse_expression(Precedence::LessThanOrEqual)?;
+
+                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?;
+                Ok(ComparisonExpr {
+                    lhs: Box::new(left_expr),
+                    op,
+                    rhs: Box::new(value_expr),
+                })
+            }
+            ComparisonOp::GreaterThan => {
+                let right_expr = parser.parse_expression(Precedence::GreaterThan)?;
+
+                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?;
+                Ok(ComparisonExpr {
+                    lhs: Box::new(left_expr),
+                    op,
+                    rhs: Box::new(value_expr),
+                })
+            }
+            ComparisonOp::GreaterEqual => {
+                let right_expr = parser.parse_expression(Precedence::GreaterThanOrEqual)?;
+
+                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?;
+                Ok(ComparisonExpr {
                     lhs: Box::new(left_expr),
                     op,
                     rhs: Box::new(value_expr),

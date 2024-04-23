@@ -40,16 +40,7 @@ mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
-        ClosureExpr, CompoundAssignmentExpr, CompoundAssignmentOp, ConstantDecl, ContinueExpr,
-        Delimiter, EnumDef, Expression, ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef,
-        FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr,
-        InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr,
-        ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, PubPackageVis,
-        RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl,
-        StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type,
-        TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility,
-        WhileExpr,
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr, CompoundAssignmentOp, ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility, WhileExpr
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -446,35 +437,35 @@ impl Parser {
                 left_expr,
                 BinaryOp::Modulus,
             )?)),
-            Some(Token::DblEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::DblEquals { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
                 self,
                 left_expr,
-                BinaryOp::Equal,
+                ComparisonOp::Equal,
             )?)),
-            Some(Token::BangEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::BangEquals { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
                 self,
                 left_expr,
-                BinaryOp::NotEqual,
+                ComparisonOp::NotEqual,
             )?)),
-            Some(Token::LessThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::LessThan { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
                 self,
                 left_expr,
-                BinaryOp::LessThan,
+                ComparisonOp::LessThan,
             )?)),
-            Some(Token::LessThanEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::LessThanEquals { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
                 self,
                 left_expr,
-                BinaryOp::LessEqual,
+                ComparisonOp::LessEqual,
             )?)),
-            Some(Token::GreaterThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::GreaterThan { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
                 self,
                 left_expr,
-                BinaryOp::GreaterThan,
+                ComparisonOp::GreaterThan,
             )?)),
-            Some(Token::GreaterThanEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::GreaterThanEquals { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
                 self,
                 left_expr,
-                BinaryOp::GreaterEqual,
+                ComparisonOp::GreaterEqual,
             )?)),
             Some(Token::Equals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
                 self, left_expr,
