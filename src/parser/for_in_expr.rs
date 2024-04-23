@@ -43,6 +43,12 @@ mod tests {
         let input = r#"
         for x in 0..=5 {
             x += 1;
+
+            let y = 15;
+
+            for z in y {
+                print("foo");
+            }
         }
         "#;
 
