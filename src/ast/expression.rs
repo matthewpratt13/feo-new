@@ -73,9 +73,9 @@ pub struct AssignmentExpr {
 
 #[derive(Debug, Clone)]
 pub struct BinaryExpr {
-    pub lhs: Box<Expression>, // `ValueExpr`?
+    pub lhs: Box<ValueExpr>,
     pub op: BinaryOp,
-    pub rhs: Box<Expression>, // `ValueExpr`?
+    pub rhs: Box<ValueExpr>,
 }
 
 #[derive(Debug, Clone)]
