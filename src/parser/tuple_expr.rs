@@ -1,5 +1,7 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, Separator, TupleExpr, TupleIndexExpr},
+    ast::{
+        AssigneeExpr, Delimiter, Expression, Separator, TupleElements, TupleExpr, TupleIndexExpr,
+    },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -15,7 +17,9 @@ impl TupleExpr {
             Err(ErrorsEmitted(()))
         }?;
 
-        let mut elements: Vec<Expression> = Vec::new();
+        let mut elements: Vec<(Expression, Separator)> = Vec::new();
+
+        let mut final_element_opt = None::<Box<Expression>>;
 
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
@@ -30,14 +34,16 @@ impl TupleExpr {
                 }
             }?;
 
-            elements.push(element);
-
             match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
+                    elements.push((element, Separator::Comma));
                     parser.consume_token();
                     continue;
                 }
-                Some(Token::RParen { .. }) => break,
+                Some(Token::RParen { .. }) => {
+                    final_element_opt = Some(Box::new(element));
+                    break;
+                }
 
                 Some(_) => {
                     parser.log_unexpected_token("`,` or `)`".to_string());
@@ -46,6 +52,11 @@ impl TupleExpr {
                 None => break,
             }
         }
+
+        let tuple_elements = TupleElements {
+            elements: elements.clone(),
+            final_element_opt: final_element_opt.clone(),
+        };
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
             parser.consume_token();
@@ -57,7 +68,17 @@ impl TupleExpr {
 
         Ok(TupleExpr {
             open_paren,
-            elements,
+            elements_opt: {
+                if elements.is_empty() {
+                    if final_element_opt.is_none() {
+                        None
+                    } else {
+                        Some(tuple_elements)
+                    }
+                } else {
+                    Some(tuple_elements)
+                }
+            },
             close_paren,
         })
     }

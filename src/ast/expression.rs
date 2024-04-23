@@ -38,6 +38,7 @@ pub struct StructField {
     pub value: Expression,
 }
 
+#[derive(Debug, Clone)]
 pub struct TupleElements {
     pub elements: Vec<(Expression, Separator)>, // single-element tuple must have trailing comma
     pub final_element_opt: Option<Box<Expression>>,
@@ -65,7 +66,7 @@ pub struct ArrayExpr {
 
 #[derive(Debug, Clone)]
 pub struct AssignmentExpr {
-    pub lhs: AssigneeExpr, // actually assignee expression
+    pub lhs: AssigneeExpr,
     pub op: AssignmentOp,
     pub rhs: Box<Expression>,
 }
@@ -243,8 +244,7 @@ pub struct StructExpr {
 #[derive(Debug, Clone)]
 pub struct TupleExpr {
     pub open_paren: Delimiter,
-    pub elements: Vec<Expression>,
-    // pub elements_opt: Option<TupleElements>, // TODO
+    pub elements_opt: Option<TupleElements>,
     pub close_paren: Delimiter,
 }
 
