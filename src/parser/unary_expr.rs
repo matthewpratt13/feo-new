@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, BorrowExpr, DereferenceExpr, NegationExpr, UnaryOp},
+    ast::{AssigneeExpr, BorrowExpr, DereferenceExpr, NegationExpr, UnaryOp, ValueExpr},
     error::ErrorsEmitted,
 };
 
@@ -10,10 +10,14 @@ impl NegationExpr {
         parser.consume_token();
 
         let expression = parser.parse_expression(Precedence::Unary)?;
+        let value_expr = ValueExpr::try_from(expression).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted(())
+        })?;
 
         match op {
             _ => Ok(NegationExpr {
-                expression: Box::new(expression),
+                expression: Box::new(value_expr),
                 op,
             }),
         }

@@ -193,7 +193,7 @@ pub struct MethodCallExpr {
 #[derive(Debug, Clone)]
 pub struct NegationExpr {
     pub op: UnaryOp,
-    pub expression: Box<Expression>,
+    pub expression: Box<ValueExpr>,
 }
 
 #[derive(Debug, Clone)]
