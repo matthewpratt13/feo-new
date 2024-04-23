@@ -40,7 +40,16 @@ mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr, CompoundAssignmentOp, ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility, WhileExpr
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
+        ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr, CompoundAssignmentOp,
+        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
+        FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier,
+        IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
+        MatchExpr, MethodCallExpr, ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr,
+        PathPrefix, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr,
+        Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr,
+        TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp,
+        ValueExpr, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -452,21 +461,17 @@ impl Parser {
                 left_expr,
                 ComparisonOp::LessThan,
             )?)),
-            Some(Token::LessThanEquals { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
-                self,
-                left_expr,
-                ComparisonOp::LessEqual,
-            )?)),
+            Some(Token::LessThanEquals { .. }) => Ok(Expression::Comparison(
+                ComparisonExpr::parse(self, left_expr, ComparisonOp::LessEqual)?,
+            )),
             Some(Token::GreaterThan { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
                 self,
                 left_expr,
                 ComparisonOp::GreaterThan,
             )?)),
-            Some(Token::GreaterThanEquals { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
-                self,
-                left_expr,
-                ComparisonOp::GreaterEqual,
-            )?)),
+            Some(Token::GreaterThanEquals { .. }) => Ok(Expression::Comparison(
+                ComparisonExpr::parse(self, left_expr, ComparisonOp::GreaterEqual)?,
+            )),
             Some(Token::Equals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
                 self, left_expr,
             )?)),
@@ -548,9 +553,13 @@ impl Parser {
 
             Some(Token::As { .. }) => {
                 let new_type = self.get_type()?;
+                let operand = ValueExpr::try_from(left_expr).map_err(|e| {
+                    self.log_error(e);
+                    ErrorsEmitted(())
+                })?;
 
                 let expr = TypeCastExpr {
-                    operand: Box::new(left_expr),
+                    operand: Box::new(operand),
                     kw_as: Keyword::As,
                     new_type,
                 };

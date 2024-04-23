@@ -273,7 +273,7 @@ pub struct TupleStructExpr {
 
 #[derive(Debug, Clone)]
 pub struct TypeCastExpr {
-    pub operand: Box<Expression>,
+    pub operand: Box<ValueExpr>,
     pub kw_as: Keyword,
     pub new_type: Type,
 }
