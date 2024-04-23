@@ -48,7 +48,8 @@ use crate::{
         ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, PubPackageVis,
         RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl,
         StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type,
-        TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
+        TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility,
+        WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -566,7 +567,10 @@ impl Parser {
                 Ok(Expression::TypeCast(expr))
             }
             Some(Token::QuestionMark { .. }) => Ok(Expression::Unwrap(UnwrapExpr {
-                expression: Box::new(left_expr),
+                expression: Box::new(ValueExpr::try_from(left_expr).map_err(|e| {
+                    self.log_error(e);
+                    ErrorsEmitted(())
+                })?),
                 op: UnwrapOp(()),
             })),
             Some(Token::Dot { .. }) => match self.peek_current() {

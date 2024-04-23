@@ -1,6 +1,6 @@
 use super::{
     AssigneeExpr, AssignmentOp, BinaryOp, CompoundAssignmentOp, Delimiter, Expression, Identifier,
-    Keyword, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp,
+    Keyword, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -277,7 +277,7 @@ pub struct UnderscoreExpr {
 
 #[derive(Debug, Clone)]
 pub struct UnwrapExpr {
-    pub expression: Box<Expression>,
+    pub expression: Box<ValueExpr>,
     pub op: UnwrapOp,
 }
 

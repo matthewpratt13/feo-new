@@ -5,7 +5,7 @@ mod item;
 mod statement;
 mod types;
 
-use crate::error::{ErrorsEmitted, ParserErrorKind};
+use crate::error::ParserErrorKind;
 
 pub use self::{expression::*, item::*, statement::*, types::*};
 
@@ -272,7 +272,7 @@ pub enum ValueExpr {
 }
 
 impl TryFrom<Expression> for ValueExpr {
-    type Error = ErrorsEmitted;
+    type Error = ParserErrorKind;
 
     fn try_from(value: Expression) -> Result<Self, Self::Error> {
         match value {
@@ -305,7 +305,10 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::SomeExpr(s) => Ok(ValueExpr::SomeExpr(s)),
             Expression::NoneExpr(n) => Ok(ValueExpr::NoneExpr(n)),
             Expression::ResultExpr(r) => Ok(ValueExpr::ResultExpr(r)),
-            _ => Err(ErrorsEmitted(())),
+            _ => Err(ParserErrorKind::TypeConversionError {
+                type_a: "`Expression`".to_string(),
+                type_b: "`AssigneeExpr`".to_string(),
+            }),
         }
     }
 }
