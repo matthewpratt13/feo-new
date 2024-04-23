@@ -38,6 +38,11 @@ pub struct StructField {
     pub value: Box<Expression>,
 }
 
+pub struct TupleElements {
+    pub elements: Vec<(Expression, Separator)>, // single-element tuple must have trailing comma
+    pub final_element_opt: Option<Box<Expression>>,
+}
+
 /// Struct representing a single arm in a match statement.
 #[derive(Debug, Clone)]
 pub struct MatchArm {
@@ -239,6 +244,7 @@ pub struct StructExpr {
 pub struct TupleExpr {
     pub open_paren: Delimiter,
     pub elements: Vec<Expression>,
+    // pub elements_opt: Option<TupleElements>, // TODO
     pub close_paren: Delimiter,
 }
 
