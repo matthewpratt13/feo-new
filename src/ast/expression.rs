@@ -26,7 +26,7 @@ pub enum PathPrefix {
 /// Struct representing a closure parameter.
 #[derive(Debug, Clone)]
 pub struct ClosureParam {
-    pub id: Identifier,
+    pub id: Pattern,
     pub type_ann_opt: Option<Type>,
 }
 
@@ -147,7 +147,7 @@ pub struct FieldAccessExpr {
 #[derive(Debug, Clone)]
 pub struct ForInExpr {
     pub kw_for: Keyword,
-    pub assignee: Box<Expression>,
+    pub assignee: Pattern,
     pub kw_in: Keyword,
     pub iterable: Box<Expression>,
     pub block: BlockExpr,

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, AssignmentOp, Keyword, LetStmt, Separator},
+    ast::{AssignmentOp, Keyword, LetStmt, Pattern, Separator},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -23,7 +23,7 @@ impl LetStmt {
         };
 
         let assignee =
-            AssigneeExpr::try_from(parser.parse_expression(Precedence::Path)?).map_err(|e| {
+            Pattern::try_from(parser.parse_expression(Precedence::Path)?).map_err(|e| {
                 parser.log_error(e);
                 ErrorsEmitted(())
             })?;

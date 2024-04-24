@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Identifier, Separator},
+    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Separator},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -21,14 +21,14 @@ impl ClosureExpr {
                     }
 
                     let id = match parser.peek_current() {
-                        Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+                        Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
+                            parser.get_identifier_patt()
+                        }
                         _ => {
                             parser.log_unexpected_token("identifier".to_string());
                             Err(ErrorsEmitted(()))
                         }
                     }?;
-
-                    parser.consume_token();
 
                     let ty = if let Some(Token::Colon { .. }) = parser.peek_current() {
                         parser.consume_token();

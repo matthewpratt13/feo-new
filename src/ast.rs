@@ -313,7 +313,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::ResultExpr(r) => Ok(ValueExpr::ResultExpr(r)),
             _ => Err(ParserErrorKind::TypeConversionError {
                 type_a: "`Expression`".to_string(),
-                type_b: "`AssigneeExpr`".to_string(),
+                type_b: "`ValueExpr`".to_string(),
             }),
         }
     }

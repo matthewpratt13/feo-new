@@ -3,7 +3,7 @@
 ///////////////////////////////////////////////////////////////////////////
 use super::{
     BlockExpr, Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathExpr,
-    Type, UnaryOp, ValueExpr,
+    Pattern, Type, UnaryOp, ValueExpr,
 };
 
 #[derive(Debug, Clone)]
@@ -69,7 +69,7 @@ pub struct EnumVariant {
 
 #[derive(Debug, Clone)]
 pub struct FunctionParam {
-    pub param: Identifier,
+    pub param_name: Pattern,
     pub param_type: Box<Type>,
 }
 

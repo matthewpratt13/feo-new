@@ -126,7 +126,7 @@ impl FunctionOrMethodParam {
             None
         };
 
-        let token = parser.consume_token();
+        let token = parser.peek_current();
 
         let param = if let Some(Token::SelfKeyword { .. }) = token {
             let self_param = SelfParam {
@@ -134,8 +134,13 @@ impl FunctionOrMethodParam {
                 kw_self: Keyword::SelfKeyword,
             };
 
+            parser.consume_token();
+
             Ok(FunctionOrMethodParam::MethodParam(self_param))
-        } else if let Some(Token::Identifier { name, .. }) = token {
+        } else if let Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) = token
+        {
+            let param_name = parser.get_identifier_patt()?;
+
             let _ = parser.expect_separator(Token::Colon {
                 punc: ':',
                 span: parser.stream.span(),
@@ -144,7 +149,7 @@ impl FunctionOrMethodParam {
             let param_type = Box::new(parser.get_type()?);
 
             let function_param = FunctionParam {
-                param: Identifier(name),
+                param_name,
                 param_type,
             };
 
@@ -166,7 +171,7 @@ mod tests {
     fn parse_function_def_without_block() -> Result<(), ()> {
         let input = r#"
         #[modifier]
-        pub func only_owner(&mut self, caller: h160, balances: Mapping<u160, u256>)"#;
+        pub func only_owner(&mut self, mut caller: h160, ref balances: Mapping<u160, u256>)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

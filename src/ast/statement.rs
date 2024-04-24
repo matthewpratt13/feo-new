@@ -1,4 +1,4 @@
-use super::{AssigneeExpr, AssignmentOp, Expression, Keyword, Separator, Type};
+use super::{AssignmentOp, Expression, Keyword, Pattern, Separator, Type};
 
 ///////////////////////////////////////////////////////////////////////////
 /// NODES
@@ -8,7 +8,7 @@ use super::{AssigneeExpr, AssignmentOp, Expression, Keyword, Separator, Type};
 pub struct LetStmt {
     pub kw_let: Keyword,
     pub kw_mut_opt: Option<Keyword>,
-    pub assignee: AssigneeExpr,
+    pub assignee: Pattern,
     pub type_ann_opt: Option<(Separator, Type)>, // `: Type`
     pub value_opt: Option<(AssignmentOp, Expression)>, // `= value`
 }
