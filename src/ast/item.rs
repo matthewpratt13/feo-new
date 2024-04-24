@@ -186,11 +186,12 @@ pub struct InherentImplDef {
 
 #[derive(Debug, Clone)]
 pub struct ModuleDef {
-    pub attributes_opt: Option<Vec<InnerAttr>>,
+    pub outer_attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub kw_mod: Keyword,
     pub module_name: Identifier,
     pub open_brace: Delimiter,
+    pub inner_attributes_opt: Option<Vec<InnerAttr>>,
     pub items_opt: Option<Vec<Item>>,
     pub close_brace: Delimiter,
 }

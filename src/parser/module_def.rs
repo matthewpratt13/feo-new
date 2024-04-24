@@ -1,8 +1,10 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionDef, Identifier, ImportDecl, InherentImplDef, InnerAttr, Item, ModuleDef, OuterAttr, StaticItemDecl, StructDef, TraitDef, TraitImplDef, Visibility
+        AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionDef, Identifier, ImportDecl,
+        InherentImplDef, InnerAttr, Item, ModuleDef, OuterAttr, StaticItemDecl, StructDef,
+        TraitDef, TraitImplDef, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -14,7 +16,7 @@ use super::{
 impl ModuleDef {
     pub(crate) fn parse(
         parser: &mut Parser,
-        attributes: Vec<InnerAttr>,
+        outer_attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<ModuleDef, ErrorsEmitted> {
         let kw_mod = parser.expect_keyword(Token::Mod {
@@ -23,17 +25,14 @@ impl ModuleDef {
         })?;
 
         let mut items: Vec<Item> = Vec::new();
+        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
 
         let token = parser.consume_token();
 
         let module_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier".to_string(),
-                found: token,
-            });
-
+            parser.log_unexpected_token("identifier".to_string());
             Err(ErrorsEmitted(()))
         }?;
 
@@ -44,6 +43,11 @@ impl ModuleDef {
             Err(ErrorsEmitted(()))
         }?;
 
+        while let Some(ia) = parser.get_inner_attr() {
+            inner_attributes.push(ia);
+            parser.consume_token();
+        }
+
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
                 break;
@@ -51,15 +55,8 @@ impl ModuleDef {
 
             let mut item_attributes: Vec<OuterAttr> = Vec::new();
 
-            let mut module_attributes: Vec<InnerAttr> = Vec::new();
-
             while let Some(oa) = parser.get_outer_attr() {
                 item_attributes.push(oa);
-                parser.consume_token();
-            }
-
-            while let Some(ia) = parser.get_inner_attr() {
-                module_attributes.push(ia);
                 parser.consume_token();
             }
 
@@ -90,7 +87,7 @@ impl ModuleDef {
                 )?)),
                 Some(Token::Mod { .. }) => Ok(Item::ModuleDef(Box::new(ModuleDef::parse(
                     parser,
-                    module_attributes,
+                    item_attributes,
                     item_visibility,
                 )?))),
                 Some(Token::Trait { .. }) => Ok(Item::TraitDef(TraitDef::parse(
@@ -129,10 +126,7 @@ impl ModuleDef {
                     item_visibility,
                 )?)),
                 _ => {
-                    parser.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "declaration or definition".to_string(),
-                        found: token,
-                    });
+                    parser.log_unexpected_token("declaration or definition".to_string());
                     Err(ErrorsEmitted(()))
                 }
             }?;
@@ -149,17 +143,24 @@ impl ModuleDef {
         }?;
 
         Ok(ModuleDef {
-            attributes_opt: {
-                if attributes.is_empty() {
+            outer_attributes_opt: {
+                if outer_attributes.is_empty() {
                     None
                 } else {
-                    Some(attributes)
+                    Some(outer_attributes)
                 }
             },
             visibility,
             kw_mod,
             module_name,
             open_brace,
+            inner_attributes_opt: {
+                if inner_attributes.is_empty() {
+                    None
+                } else {
+                    Some(inner_attributes)
+                }
+            },
             items_opt: {
                 if items.is_empty() {
                     None
@@ -179,12 +180,13 @@ mod tests {
     #[test]
     fn parse_module_def() -> Result<(), ()> {
         let input = r#"
-        #![contract]
-        mod foo {
+        pub mod foo {
+            #![contract]
+
             import package::module::Object;
             
             #[storage]
-            static mut OWNER: h160 = 0x12345123451234512345;
+            static mut OWNER: h160 = $0x12345123451234512345;
 
             #[interface]
             pub trait Bar {
@@ -218,6 +220,7 @@ mod tests {
             }
 
             impl Bar for Foo {
+                #[extern]
                 func transfer(&mut self, to: h160, amount: u256) -> Result<Baz, Error> {
                     self.balance -= amount;
                     to.balance += amount;

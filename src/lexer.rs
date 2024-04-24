@@ -347,7 +347,7 @@ impl<'a> Lexer<'a> {
                 "import" => Ok(Token::Import { name, span }),
                 "interface" => {
                     if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_inner_attribute(name, span);
+                        let token = self.tokenize_outer_attribute(name, span);
                         self.advance();
                         token
                     } else {
@@ -456,7 +456,17 @@ impl<'a> Lexer<'a> {
 
                     span,
                 }),
-                "unsafe" => Ok(Token::Unsafe { name, span }),
+
+                "unsafe" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted(()))
+                    }
+                }
                 "view" => {
                     if let Some(']') = self.peek_current() {
                         let token = self.tokenize_outer_attribute(name, span);
@@ -517,6 +527,7 @@ impl<'a> Lexer<'a> {
             "error" => Ok(Token::Error { name, span }),
             "event" => Ok(Token::Event { name, span }),
             "extern" => Ok(Token::Extern { name, span }),
+            "interface" => Ok(Token::Interface { name, span }),
             "modifier" => Ok(Token::Modifier { name, span }),
             "payable" => Ok(Token::Payable { name, span }),
             "storage" => Ok(Token::Storage { name, span }),
@@ -539,9 +550,9 @@ impl<'a> Lexer<'a> {
     ) -> Result<Token, ErrorsEmitted> {
         match name.as_str() {
             "contract" => Ok(Token::Contract { name, span }),
-            "interface" => Ok(Token::Interface { name, span }),
             "library" => Ok(Token::Library { name, span }),
             "script" => Ok(Token::Script { name, span }),
+            "unsafe" => Ok(Token::Unsafe { name, span }),
 
             _ => {
                 self.log_error(LexErrorKind::UnrecognizedInnerAttribute { name });

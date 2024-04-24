@@ -1,7 +1,5 @@
 use super::{
-    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter,
-    Expression, Identifier, Keyword, OuterAttr, Pattern, RangeOp, Separator, Statement, Type, UInt,
-    UnaryOp, UnwrapOp, ValueExpr,
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter, Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -89,7 +87,7 @@ pub struct ComparisonExpr {
 
 #[derive(Debug, Clone)]
 pub struct BlockExpr {
-    pub kw_unsafe_opt: Option<Keyword>,
+    pub attributes_opt: Option<Vec<InnerAttr>>,
     pub open_brace: Delimiter,
     pub statements_opt: Option<Vec<Statement>>,
     pub close_brace: Delimiter,

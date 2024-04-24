@@ -40,7 +40,16 @@ mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr, CompoundAssignmentOp, ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility, WhileExpr
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
+        ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr, CompoundAssignmentOp,
+        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, FieldAccessExpr, ForInExpr,
+        FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr,
+        InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr,
+        ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis,
+        RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl,
+        StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type,
+        TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility,
+        WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -1217,6 +1226,7 @@ impl Parser {
             Some(Token::Error { .. }) => Some(OuterAttr::Error),
             Some(Token::Event { .. }) => Some(OuterAttr::Event),
             Some(Token::Extern { .. }) => Some(OuterAttr::Extern),
+            Some(Token::Interface { .. }) => Some(OuterAttr::Interface),
             Some(Token::Modifier { .. }) => Some(OuterAttr::Modifier),
             Some(Token::Payable { .. }) => Some(OuterAttr::Payable),
             Some(Token::Storage { .. }) => Some(OuterAttr::Storage),
@@ -1232,9 +1242,9 @@ impl Parser {
 
         match token {
             Some(Token::Contract { .. }) => Some(InnerAttr::Contract),
-            Some(Token::Interface { .. }) => Some(InnerAttr::Interface),
             Some(Token::Library { .. }) => Some(InnerAttr::Library),
             Some(Token::Script { .. }) => Some(InnerAttr::Script),
+            Some(Token::Unsafe { .. }) => Some(InnerAttr::Unsafe),
             _ => None,
         }
     }
@@ -1280,15 +1290,9 @@ impl Parser {
 
     fn get_item(&mut self) -> Result<Statement, ErrorsEmitted> {
         let mut outer_attributes: Vec<OuterAttr> = Vec::new();
-        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
 
         while let Some(oa) = self.get_outer_attr() {
             outer_attributes.push(oa);
-            self.consume_token();
-        }
-
-        while let Some(ia) = self.get_inner_attr() {
-            inner_attributes.push(ia);
             self.consume_token();
         }
 
@@ -1314,7 +1318,7 @@ impl Parser {
                 StaticItemDecl::parse(self, outer_attributes, visibility)?,
             ))),
             Some(Token::Mod { .. }) => Ok(Statement::Item(Item::ModuleDef(Box::new(
-                ModuleDef::parse(self, inner_attributes, visibility)?,
+                ModuleDef::parse(self, outer_attributes, visibility)?,
             )))),
             Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
                 self,

@@ -32,7 +32,7 @@ pub enum Token {
     Contract { name: String, span: Span }, // type of module, notated `#![contract]`
     Library { name: String, span: Span },  // type of module, notated `#![library]`
     Script { name: String, span: Span },   // type of module, notated `#![script]`
-    Interface { name: String, span: Span }, // type of module, notated `#![interface]`
+    Interface { name: String, span: Span }, // type of trait, notated `#[interface]`
     Constructor { name: String, span: Span }, // type of function notated `#[constructor]`
     Modifier { name: String, span: Span }, // type of function, notated `#[modifier]`
     Test { name: String, span: Span },     // type of function, notated `#[test]`
@@ -56,7 +56,7 @@ pub enum Token {
     SelfKeyword { name: String, span: Span },
     Const { name: String, span: Span },
     Static { name: String, span: Span },
-    Unsafe { name: String, span: Span },
+    Unsafe { name: String, span: Span }, // inner attribute, notated #![unsafe]
     Alias { name: String, span: Span },
     As { name: String, span: Span },
     If { name: String, span: Span },

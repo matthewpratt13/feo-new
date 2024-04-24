@@ -81,9 +81,9 @@ pub enum Keyword {
 #[derive(Debug, Clone)]
 pub enum InnerAttr {
     Contract,
-    Interface,
     Library,
     Script,
+    Unsafe,
 }
 
 #[derive(Debug, Clone)]
@@ -93,6 +93,7 @@ pub enum OuterAttr {
     Error,
     Event,
     Extern,
+    Interface,
     Modifier,
     Payable,
     Storage,
