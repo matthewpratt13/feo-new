@@ -8,8 +8,12 @@ pub enum LexErrorKind {
     ParseIntError,
     ParseUIntError,
     ParseBigUIntError,
-    ParseHashError,
     ParseBoolError,
+    ParseHashError,
+
+    InvalidHashLength {
+        len: usize,
+    },
 
     EmptyCharLiteral,
 
@@ -69,8 +73,11 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::ParseIntError => writeln!(f, "error parsing signed integer"),
             LexErrorKind::ParseUIntError => writeln!(f, "error parsing unsigned integer"),
             LexErrorKind::ParseBigUIntError => writeln!(f, "error parsing big unsigned integer"),
-            LexErrorKind::ParseHashError => writeln!(f, "error parsing hash"),
             LexErrorKind::ParseBoolError => writeln!(f, "error parsing boolean"),
+            LexErrorKind::ParseHashError => writeln!(f, "error parsing hash"),
+            LexErrorKind::InvalidHashLength { len } => {
+                writeln!(f, "syntax error: invalid hash length – {len}")
+            }
             LexErrorKind::UnrecognizedChar { value } => {
                 writeln!(f, "syntax error: unrecognized character – `{value}`")
             }
@@ -170,7 +177,10 @@ impl fmt::Display for ParserErrorKind {
             }
             ParserErrorKind::UnknownError => writeln!(f, "unknown parser error"),
 
-            ParserErrorKind::TypeConversionError { type_a, type_b } => writeln!(f, "conversion error: unable to convert {type_a} to {type_b}"),
+            ParserErrorKind::TypeConversionError { type_a, type_b } => writeln!(
+                f,
+                "conversion error: unable to convert {type_a} to {type_b}"
+            ),
         }
     }
 }

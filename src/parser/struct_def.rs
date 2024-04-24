@@ -54,37 +54,31 @@ impl ParseDefinition for StructDef {
 
             let token = parser.consume_token();
 
-            let field_name = if let Some(Token::Identifier { name, .. }) = token {
-                Ok(Identifier(name))
-            } else {
-                parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "identifier".to_string(),
-                    found: token,
-                });
-                Err(ErrorsEmitted(()))
-            }?;
+            if let Some(Token::Identifier { name, .. }) = token {
+                let field_name = Identifier(name);
 
-            let _ = parser.expect_separator(Token::Colon {
-                punc: ':',
-                span: parser.stream.span(),
-            })?;
+                let _ = parser.expect_separator(Token::Colon {
+                    punc: ':',
+                    span: parser.stream.span(),
+                })?;
 
-            let field_type = Box::new(parser.get_type()?);
+                let field_type = Box::new(parser.get_type()?);
 
-            let field = Ok(StructDefField {
-                attributes_opt: {
-                    if field_attributes.is_empty() {
-                        None
-                    } else {
-                        Some(field_attributes)
-                    }
-                },
-                visibility: field_visibility,
-                field_name,
-                field_type,
-            })?;
+                let field = StructDefField {
+                    attributes_opt: {
+                        if field_attributes.is_empty() {
+                            None
+                        } else {
+                            Some(field_attributes)
+                        }
+                    },
+                    visibility: field_visibility,
+                    field_name,
+                    field_type,
+                };
 
-            fields.push(field);
+                fields.push(field);
+            }
 
             match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
@@ -117,7 +111,13 @@ impl ParseDefinition for StructDef {
             kw_struct,
             struct_name,
             open_brace,
-            fields,
+            fields_opt: {
+                if fields.is_empty() {
+                    None
+                } else {
+                    Some(fields)
+                }
+            },
             close_brace,
         })
     }

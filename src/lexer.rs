@@ -7,7 +7,7 @@ use crate::{
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{Token, TokenStream},
-    H256, U256,
+    H160, H256, H512, U256,
 };
 
 /// Struct that stores an input string and contains methods to render tokens (tokenize)
@@ -887,20 +887,46 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        let value = H256::from_slice(
-            &self.input[hash_start_pos..self.pos]
-                .split('_')
-                .collect::<Vec<&str>>()
-                .concat()
-                .as_bytes(),
-        );
+        let hash = self.input[hash_start_pos..self.pos]
+            .split('_')
+            .collect::<Vec<&str>>()
+            .concat();
 
         let span = Span::new(self.input, start_pos, self.pos);
 
-        Ok(Token::HashLiteral {
-            value: Hash::H256(value),
-            span,
-        })
+        match hash.len() {
+            20 => {
+                let value = H160::from_slice(hash.as_bytes());
+
+                Ok(Token::HashLiteral {
+                    value: Hash::H160(value),
+                    span,
+                })
+            }
+
+            32 => {
+                let value = H256::from_slice(hash.as_bytes());
+
+                Ok(Token::HashLiteral {
+                    value: Hash::H256(value),
+                    span,
+                })
+            }
+
+            64 => {
+                let value = H512::from_slice(hash.as_bytes());
+
+                Ok(Token::HashLiteral {
+                    value: Hash::H512(value),
+                    span,
+                })
+            }
+
+            _ => {
+                self.log_error(LexErrorKind::InvalidHashLength { len: hash.len() });
+                Err(ErrorsEmitted(()))
+            }
+        }
     }
 
     /// Tokenize a numeric value (i.e., `i64` or `u64`).
