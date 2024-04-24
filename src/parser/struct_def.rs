@@ -166,7 +166,6 @@ impl ParseDefinition for TupleStructDef {
 
             let field_visibility = parser.get_visibility()?;
 
-            parser.consume_token();
 
             let field_type = Box::new(parser.get_type()?);
 
@@ -239,6 +238,26 @@ mod tests {
             to: h160,
             amount: u256,
         }"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_tuple_struct_def() -> Result<(), ()> {
+        let input = r#"
+        #[event]
+        pub struct Foo(
+            h160,
+            h160,
+            u256,
+        );"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

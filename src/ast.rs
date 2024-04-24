@@ -502,6 +502,7 @@ pub enum Item {
     TraitDef(TraitDef),
     EnumDef(EnumDef),
     StructDef(StructDef),
+    TupleStructDef(TupleStructDef),
     InherentImplDef(InherentImplDef),
     TraitImplDef(TraitImplDef),
     FunctionDef(FunctionItem),

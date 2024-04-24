@@ -48,8 +48,8 @@ use crate::{
         MethodCallExpr, ModuleItem, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix,
         Pattern, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr,
         Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr,
-        TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp,
-        ValueExpr, Visibility, WhileExpr,
+        TupleIndexExpr, TupleStructDef, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr,
+        UnwrapOp, ValueExpr, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -1330,11 +1330,26 @@ impl Parser {
                 outer_attributes,
                 visibility,
             )?))),
-            Some(Token::Struct { .. }) => Ok(Statement::Item(Item::StructDef(StructDef::parse(
-                self,
-                outer_attributes,
-                visibility,
-            )?))),
+            Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
+                Some(Token::LBrace { .. }) => {
+                    Ok(Statement::Item(Item::StructDef(StructDef::parse(
+                        self,
+                        outer_attributes,
+                        visibility,
+                    )?)))
+                }
+
+                Some(Token::LParen { .. }) => {
+                    Ok(Statement::Item(Item::TupleStructDef(
+                        TupleStructDef::parse(self, outer_attributes, visibility)?,
+                    )))
+                }
+
+                _ => {
+                    self.log_unexpected_token("`{` or `(`".to_string());
+                    Err(ErrorsEmitted(()))
+                }
+            },
 
             Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionDef(
                 FunctionItem::parse(self, outer_attributes, visibility)?,
