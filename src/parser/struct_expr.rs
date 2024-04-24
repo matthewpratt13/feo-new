@@ -1,5 +1,8 @@
 use crate::{
-    ast::{Delimiter, Expression, Identifier, PathExpr, StructExpr, StructField, TupleStructExpr},
+    ast::{
+        Delimiter, Expression, Identifier, OuterAttr, PathExpr, StructExpr, StructField,
+        TupleStructExpr,
+    },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -22,6 +25,13 @@ impl StructExpr {
                 break;
             }
 
+            let mut attributes: Vec<OuterAttr> = Vec::new();
+
+            while let Some(oa) = parser.get_outer_attr() {
+                attributes.push(oa);
+                parser.consume_token();
+            }
+
             let name = match parser.consume_token() {
                 Some(Token::Identifier { name, .. }) => Ok(name),
                 Some(Token::RBrace { .. }) => break,
@@ -39,6 +49,13 @@ impl StructExpr {
             let value = parser.parse_expression(Precedence::Lowest)?;
 
             let field = StructField {
+                attributes_opt: {
+                    if attributes.is_empty() {
+                        None
+                    } else {
+                        Some(attributes)
+                    }
+                },
                 name: Identifier(name),
                 value,
             };

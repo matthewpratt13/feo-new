@@ -1,7 +1,5 @@
 use super::{
-    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter,
-    Expression, Identifier, Keyword, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp,
-    ValueExpr,
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter, Expression, Identifier, Keyword, OuterAttr, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -29,12 +27,13 @@ pub enum PathPrefix {
 #[derive(Debug, Clone)]
 pub struct ClosureParam {
     pub id: Identifier,
-    pub ty: Option<Type>,
+    pub type_ann_opt: Option<Type>,
 }
 
 /// Struct representing a single field in a struct expression, with a name and value.
 #[derive(Debug, Clone)]
 pub struct StructField {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
     pub name: Identifier,
     pub value: Expression,
 }
@@ -218,9 +217,9 @@ pub struct PathExpr {
 
 #[derive(Debug, Clone)]
 pub struct RangeExpr {
-    pub from_opt: Option<Box<Expression>>,
+    pub from_opt: Option<Box<ValueExpr>>,
     pub op: RangeOp, // `..` or `..=`
-    pub to_opt: Option<Box<Expression>>,
+    pub to_opt: Option<Box<ValueExpr>>,
 }
 
 #[derive(Debug, Clone)]

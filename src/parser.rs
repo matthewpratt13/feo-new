@@ -333,11 +333,15 @@ impl Parser {
                 ) = self.consume_token()
                 {
                     let expr = self.parse_expression(Precedence::Range)?;
+                    let value_expr = ValueExpr::try_from(expr).map_err(|e| {
+                        self.log_error(e);
+                        ErrorsEmitted(())
+                    })?;
 
                     Ok(Expression::Range(RangeExpr {
                         from_opt: None,
                         op: RangeOp::RangeExclusive,
-                        to_opt: Some(Box::new(expr)),
+                        to_opt: Some(Box::new(value_expr)),
                     }))
                 } else {
                     Ok(Expression::Range(RangeExpr {
@@ -350,16 +354,19 @@ impl Parser {
             Some(Token::DotDotEquals { .. }) => {
                 self.consume_token();
                 let expr = self.parse_expression(Precedence::Range)?;
+                let value_expr = ValueExpr::try_from(expr).map_err(|e| {
+                    self.log_error(e);
+                    ErrorsEmitted(())
+                })?;
 
                 Ok(Expression::Range(RangeExpr {
                     from_opt: None,
                     op: RangeOp::RangeInclusive,
-                    to_opt: Some(Box::new(expr)),
+                    to_opt: Some(Box::new(value_expr)),
                 }))
             }
             Some(Token::If { .. }) => Ok(Expression::If(IfExpr::parse(self)?)),
 
-            // TODO: distinguish from `StructExpr` (i.e., after the `match` keyword)
             Some(Token::Match { .. }) => Ok(Expression::Match(MatchExpr::parse(self)?)),
 
             Some(Token::For { .. }) => Ok(Expression::ForIn(ForInExpr::parse(self)?)),

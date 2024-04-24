@@ -37,7 +37,10 @@ impl ClosureExpr {
                         None
                     };
 
-                    let param = ClosureParam { id, ty };
+                    let param = ClosureParam {
+                        id,
+                        type_ann_opt: ty,
+                    };
                     vec.push(param);
 
                     if let Some(Token::Comma { .. }) = parser.peek_current() {
