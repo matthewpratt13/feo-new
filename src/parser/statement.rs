@@ -1,20 +1,13 @@
 use crate::{
-    ast::{AssigneeExpr, AssignmentOp, ExpressionStmt, Keyword, LetStmt, Separator},
+    ast::{AssigneeExpr, AssignmentOp, Keyword, LetStmt, Separator},
     error::ErrorsEmitted,
     token::Token,
 };
 
 use super::{Parser, Precedence};
 
-pub(crate) trait ParseStatement
-where
-    Self: Sized,
-{
-    fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
-}
-
-impl ParseStatement for LetStmt {
-    fn parse(parser: &mut Parser) -> Result<LetStmt, ErrorsEmitted> {
+impl LetStmt {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<LetStmt, ErrorsEmitted> {
         let kw_let = if let Some(Token::Let { .. }) = parser.consume_token() {
             Ok(Keyword::Let)
         } else {
@@ -64,35 +57,6 @@ impl ParseStatement for LetStmt {
     }
 }
 
-impl ParseStatement for ExpressionStmt {
-    fn parse(parser: &mut Parser) -> Result<ExpressionStmt, ErrorsEmitted> {
-        println!("ENTER `ExpressionStmt::parse()`\n");
-
-        let expression = parser.parse_expression(Precedence::Lowest)?;
-
-        let semicolon_opt = if let Some(Token::Semicolon { .. }) = parser.peek_current() {
-            println!("ENCOUNTER `;`");
-
-            parser.consume_token();
-
-            println!("SKIP `;`");
-            println!("CURRENT TOKEN: {:?}", parser.peek_current());
-
-            Some(Separator::Semicolon)
-        } else {
-            None
-        };
-
-        println!("EXIT `ExpressionStmt::parse()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-
-        Ok(ExpressionStmt {
-            expression,
-            semicolon_opt,
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::parser::test_utils;
@@ -100,20 +64,6 @@ mod tests {
     #[test]
     fn parse_let_stmt() -> Result<(), ()> {
         let input = r#"let x: str = "hello world";"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn parse_expression_stmt() -> Result<(), ()> {
-        let input = r#"x + 2;"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

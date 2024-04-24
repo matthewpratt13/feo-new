@@ -5,12 +5,6 @@ use super::{AssigneeExpr, AssignmentOp, Expression, Keyword, Separator, Type};
 ///////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
-pub struct ExpressionStmt {
-    pub expression: Expression,
-    pub semicolon_opt: Option<Separator>,
-}
-
-#[derive(Debug, Clone)]
 pub struct LetStmt {
     pub kw_let: Keyword,
     pub kw_mut_opt: Option<Keyword>,

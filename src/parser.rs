@@ -42,24 +42,21 @@ use crate::{
     ast::{
         AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
         ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr, CompoundAssignmentOp,
-        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, ExpressionStmt,
-        FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier,
-        IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
-        MatchExpr, MethodCallExpr, ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr,
-        PathPrefix, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr,
-        Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr,
-        TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp,
-        ValueExpr, Visibility, WhileExpr,
+        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, FieldAccessExpr, ForInExpr,
+        FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr,
+        InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr,
+        ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, PubPackageVis,
+        RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl,
+        StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type,
+        TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility,
+        WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
 };
 
+use self::item::{ParseDeclaration, ParseDefinition};
 pub use self::precedence::Precedence;
-use self::{
-    item::{ParseDeclaration, ParseDefinition},
-    statement::ParseStatement,
-};
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
@@ -653,7 +650,17 @@ impl Parser {
 
             Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
 
-            _ => Ok(Statement::Expression(ExpressionStmt::parse(self)?)),
+            _ => {
+                let statement = Ok(Statement::Expression(
+                    self.parse_expression(Precedence::Lowest)?,
+                ));
+
+                if let Some(Token::Semicolon { .. }) = self.peek_current() {
+                    self.consume_token();
+                }
+
+                statement
+            }
         }
     }
 

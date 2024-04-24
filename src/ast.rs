@@ -433,7 +433,7 @@ impl TryFrom<Expression> for AssigneeExpr {
 pub enum Statement {
     Let(LetStmt),
     Item(Item),
-    Expression(ExpressionStmt),
+    Expression(Expression),
 }
 
 /// Enum representing the different item nodes in the AST.
