@@ -1,7 +1,5 @@
 use super::{
-    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter,
-    Expression, Identifier, Keyword, OuterAttr, RangeOp, Separator, Statement, Type, UInt, UnaryOp,
-    UnwrapOp, ValueExpr,
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter, Expression, Identifier, Keyword, OuterAttr, Pattern, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -35,7 +33,7 @@ pub struct ClosureParam {
 /// Struct representing a single arm in a match statement.
 #[derive(Debug, Clone)]
 pub struct MatchArm {
-    pub case: Box<Expression>,
+    pub case: Pattern,
     pub guard_opt: Option<(Keyword, Box<GroupedExpr>)>, // `if (..)`
     pub fat_arrow: Separator,
     pub logic: Box<Expression>,

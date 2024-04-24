@@ -71,6 +71,7 @@ pub enum Keyword {
     Unsafe,
     Let,
     Mut,
+    Ref,
     Some,
     None,
     Ok,
@@ -429,7 +430,7 @@ impl TryFrom<Expression> for AssigneeExpr {
 #[derive(Debug, Clone)]
 pub enum Pattern {
     Literal(Literal),
-    Identifier {
+    IdentifierPatt {
         kw_ref_opt: Option<Keyword>,
         kw_mut_opt: Option<Keyword>,
         name: Identifier,
@@ -443,10 +444,40 @@ pub enum Pattern {
     TupleStructPatt(TupleStructExpr),
     WildcardPatt(UnderscoreExpr),
     RestPatt {
-        dbl_dot: Separator,
+        dbl_dot: RangeOp,
     },
 }
 
+impl TryFrom<Expression> for Pattern {
+    type Error = ParserErrorKind;
+
+    fn try_from(value: Expression) -> Result<Self, Self::Error> {
+        match value {
+            Expression::Literal(l) => Ok(Pattern::Literal(l)),
+            Expression::Path(p) => Ok(Pattern::PathPatt(p)),
+            Expression::Grouped(g) => Ok(Pattern::GroupedPatt(Box::new(Pattern::try_from(
+                *g.expression,
+            )?))),
+            Expression::Range(r) => {
+                if r.from_opt.is_none() && r.to_opt.is_none() {
+                    Ok(Pattern::RestPatt { dbl_dot: r.op })
+                } else {
+                    Ok(Pattern::RangePatt(r))
+                }
+            }
+            Expression::Array(a) => Ok(Pattern::ArrayPatt(a)),
+            Expression::Tuple(t) => Ok(Pattern::TuplePatt(t)),
+            Expression::Struct(s) => Ok(Pattern::StructPatt(s)),
+            Expression::TupleStruct(ts) => Ok(Pattern::TupleStructPatt(ts)),
+            Expression::Underscore(u) => Ok(Pattern::WildcardPatt(u)),
+
+            _ => Err(ParserErrorKind::TypeConversionError {
+                type_a: "`Expression`".to_string(),
+                type_b: "`Pattern`".to_string(),
+            }),
+        }
+    }
+}
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
 /// A `Statement` is a component of a block, which is a component of an outer expression

@@ -40,16 +40,7 @@ mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
-        ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr, CompoundAssignmentOp,
-        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, FieldAccessExpr, ForInExpr,
-        FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr,
-        InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr,
-        ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, PubPackageVis,
-        RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl,
-        StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type,
-        TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility,
-        WhileExpr,
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr, CompoundAssignmentOp, ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility, WhileExpr
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -908,6 +899,35 @@ impl Parser {
 
     pub fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
         &self.errors
+    }
+
+    fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
+        let kw_ref_opt = if let Some(Token::Ref { .. }) = self.peek_current() {
+            self.consume_token();
+            Some(Keyword::Ref)
+        } else {
+            None
+        };
+
+        let kw_mut_opt = if let Some(Token::Mut { .. }) = self.peek_current() {
+            self.consume_token();
+            Some(Keyword::Mut)
+        } else {
+            None
+        };
+
+        let name = if let Some(Token::Identifier { name, .. }) = self.consume_token() {
+            Ok(Identifier(name))
+        } else {
+            self.log_unexpected_token("identifier".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
+
+        Ok(Pattern::IdentifierPatt {
+            kw_ref_opt,
+            kw_mut_opt,
+            name,
+        })
     }
 
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
