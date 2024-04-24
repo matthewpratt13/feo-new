@@ -139,7 +139,7 @@ pub struct ConstantDecl {
     pub kw_const: Keyword,
     pub item_name: Identifier,
     pub item_type: Box<Type>,
-    pub value_opt: ValueExpr,
+    pub value: ValueExpr,
 }
 
 #[derive(Debug, Clone)]

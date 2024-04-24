@@ -1,5 +1,7 @@
 use super::{
-    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter, Expression, Identifier, Keyword, OuterAttr, Pattern, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter,
+    Expression, Identifier, Keyword, OuterAttr, Pattern, RangeOp, Separator, Statement, Type, UInt,
+    UnaryOp, UnwrapOp, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -26,7 +28,7 @@ pub enum PathPrefix {
 /// Struct representing a closure parameter.
 #[derive(Debug, Clone)]
 pub struct ClosureParam {
-    pub id: Pattern,
+    pub name: Pattern,
     pub type_ann_opt: Option<Type>,
 }
 

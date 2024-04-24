@@ -20,7 +20,7 @@ impl ClosureExpr {
                         break;
                     }
 
-                    let id = match parser.peek_current() {
+                    let name = match parser.peek_current() {
                         Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
                             parser.get_identifier_patt()
                         }
@@ -38,7 +38,7 @@ impl ClosureExpr {
                     };
 
                     let param = ClosureParam {
-                        id,
+                        name,
                         type_ann_opt: ty,
                     };
                     vec.push(param);
