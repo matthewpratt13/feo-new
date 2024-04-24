@@ -181,6 +181,8 @@ mod tests {
         let input = r#"
         #![contract]
         mod foo {
+            import package::module::Object;
+            
             #[storage]
             static mut OWNER: h160 = 0x12345123451234512345;
 
