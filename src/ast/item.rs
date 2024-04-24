@@ -231,11 +231,12 @@ pub struct TupleStructDef {
 
 #[derive(Debug, Clone)]
 pub struct TraitDef {
-    pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub outer_attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub kw_trait: Keyword,
     pub trait_name: Identifier,
     pub open_brace: Delimiter,
+    pub inner_attributes_opt: Option<Vec<InnerAttr>>,
     pub associated_items_opt: Option<Vec<TraitDefItem>>,
     pub close_brace: Delimiter,
 }

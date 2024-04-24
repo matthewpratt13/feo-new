@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, OuterAttr, TraitDef,
-        TraitDefItem, Visibility,
+        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, OuterAttr,
+        TraitDef, TraitDefItem, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -15,7 +15,7 @@ use super::{
 impl ParseDefinition for TraitDef {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        outer_attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<TraitDef, ErrorsEmitted> {
         let kw_trait = parser.expect_keyword(Token::Trait {
@@ -24,6 +24,7 @@ impl ParseDefinition for TraitDef {
         })?;
 
         let mut associated_items: Vec<TraitDefItem> = Vec::new();
+        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
 
         let token = parser.consume_token();
 
@@ -40,6 +41,11 @@ impl ParseDefinition for TraitDef {
             parser.log_unexpected_token("`{`".to_string());
             Err(ErrorsEmitted(()))
         }?;
+
+        while let Some(ia) = parser.get_inner_attr() {
+            inner_attributes.push(ia);
+            parser.consume_token();
+        }
 
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
@@ -85,6 +91,7 @@ impl ParseDefinition for TraitDef {
 
             associated_items.push(associated_item);
         }
+
         let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
             parser.consume_token();
             Ok(Delimiter::RBrace)
@@ -94,17 +101,24 @@ impl ParseDefinition for TraitDef {
         }?;
 
         Ok(TraitDef {
-            attributes_opt: {
-                if attributes.is_empty() {
+            outer_attributes_opt: {
+                if outer_attributes.is_empty() {
                     None
                 } else {
-                    Some(attributes)
+                    Some(outer_attributes)
                 }
             },
             visibility,
             kw_trait,
             trait_name,
             open_brace,
+            inner_attributes_opt: {
+                if inner_attributes.is_empty() {
+                    None
+                } else {
+                    Some(inner_attributes)
+                }
+            },
             associated_items_opt: {
                 if associated_items.is_empty() {
                     None
@@ -124,8 +138,9 @@ mod tests {
     #[test]
     fn parse_trait_def() -> Result<(), ()> {
         let input = r#"
-        #[interface]
         pub trait Foo {
+            #![interface]
+            
             #[storage]
             pub const OWNER: h160 = 0x12345123451234512345;
             pub alias NewType;

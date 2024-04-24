@@ -188,8 +188,9 @@ mod tests {
             #[storage]
             static mut OWNER: h160 = $0x12345123451234512345;
 
-            #[interface]
             pub trait Bar {
+                #![interface]
+
                 func transfer(&mut self, to: h160, amount: u256) -> Baz;
             }
 

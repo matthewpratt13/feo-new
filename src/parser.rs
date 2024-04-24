@@ -1226,7 +1226,6 @@ impl Parser {
             Some(Token::Error { .. }) => Some(OuterAttr::Error),
             Some(Token::Event { .. }) => Some(OuterAttr::Event),
             Some(Token::Extern { .. }) => Some(OuterAttr::Extern),
-            Some(Token::Interface { .. }) => Some(OuterAttr::Interface),
             Some(Token::Modifier { .. }) => Some(OuterAttr::Modifier),
             Some(Token::Payable { .. }) => Some(OuterAttr::Payable),
             Some(Token::Storage { .. }) => Some(OuterAttr::Storage),
@@ -1243,6 +1242,7 @@ impl Parser {
         match token {
             Some(Token::Contract { .. }) => Some(InnerAttr::Contract),
             Some(Token::Library { .. }) => Some(InnerAttr::Library),
+            Some(Token::Interface { .. }) => Some(InnerAttr::Interface),
             Some(Token::Script { .. }) => Some(InnerAttr::Script),
             Some(Token::Unsafe { .. }) => Some(InnerAttr::Unsafe),
             _ => None,
