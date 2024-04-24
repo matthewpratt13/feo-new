@@ -538,6 +538,7 @@ impl Parser {
                 BinaryOp::Exponentiation,
             )?)),
             Some(Token::LParen { .. }) => {
+                // TODO: resolve similarity between `CallExpr` and `TupleStructExpr` (symbol table)
                 let expr = CallExpr::parse(self, left_expr)?;
                 Ok(Expression::Call(expr))
             }

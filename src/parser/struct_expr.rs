@@ -3,7 +3,7 @@ use crate::{
         Delimiter, Expression, Identifier, OuterAttr, PathExpr, StructExpr, StructField,
         TupleStructExpr,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -82,7 +82,7 @@ impl StructExpr {
 
         Ok(StructExpr {
             path,
-            open_brace: Delimiter::LBrace,
+            open_brace,
             fields_opt: {
                 if fields.is_empty() {
                     None
@@ -95,10 +95,12 @@ impl StructExpr {
     }
 }
 
+// TODO: test when issue regarding similarity between `TupleStructExpr` and `CallExpr` is resolved
 impl TupleStructExpr {
-    fn parse(parser: &mut Parser, path: PathExpr) -> Result<Self, ErrorsEmitted> {
-        let mut elements: Vec<Expression> = Vec::new();
-
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        path: PathExpr,
+    ) -> Result<TupleStructExpr, ErrorsEmitted> {
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
@@ -106,46 +108,46 @@ impl TupleStructExpr {
             Err(ErrorsEmitted(()))
         }?;
 
+        let mut elements: Vec<Expression> = Vec::new();
+
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
-                parser.consume_token();
                 break;
             }
 
             let element = parser.parse_expression(Precedence::Lowest)?;
             elements.push(element);
 
-            let token = parser.peek_current();
-
-            match token {
+            match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     parser.consume_token();
                     continue;
                 }
                 Some(Token::RParen { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `)`".to_string(),
-                    found: Some(t),
-                }),
-                None => break,
+                _ => break,
             }
         }
 
-        if elements.is_empty() {
-            Ok(TupleStructExpr {
-                path,
-                open_paren,
-                elements_opt: None,
-                close_paren: Delimiter::RParen,
-            })
+        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RParen)
         } else {
-            Ok(TupleStructExpr {
-                path,
-                open_paren,
-                elements_opt: Some(elements),
-                close_paren: Delimiter::RParen,
-            })
-        }
+            parser.log_missing_delimiter(')');
+            Err(ErrorsEmitted(()))
+        }?;
+
+        Ok(TupleStructExpr {
+            path,
+            open_paren,
+            elements_opt: {
+                if elements.is_empty() {
+                    None
+                } else {
+                    Some(elements)
+                }
+            },
+            close_paren,
+        })
     }
 }
 
