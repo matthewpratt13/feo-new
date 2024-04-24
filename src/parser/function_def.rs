@@ -82,6 +82,9 @@ impl FunctionDef {
 
         let block_opt = if let Some(Token::LBrace { .. }) = parser.peek_current() {
             Some(BlockExpr::parse(parser)?)
+        } else if let Some(Token::Semicolon { .. }) = parser.peek_current() {
+            parser.consume_token();
+            None
         } else {
             None
         };

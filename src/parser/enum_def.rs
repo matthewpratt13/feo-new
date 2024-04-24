@@ -93,6 +93,8 @@ impl EnumVariant {
     ) -> Result<EnumVariant, ErrorsEmitted> {
         let token = parser.consume_token();
 
+        let visibility = parser.get_visibility()?;
+
         let variant_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
         } else {
@@ -119,19 +121,18 @@ impl EnumVariant {
             return Err(ErrorsEmitted(()));
         }
 
-        if attributes.is_empty() {
-            Ok(EnumVariant {
-                attributes_opt: None,
-                variant_name,
-                variant_type_opt,
-            })
-        } else {
-            Ok(EnumVariant {
-                attributes_opt: Some(attributes),
-                variant_name,
-                variant_type_opt,
-            })
-        }
+        Ok(EnumVariant {
+            attributes_opt: {
+                if attributes.is_empty() {
+                    None
+                } else {
+                    Some(attributes)
+                }
+            },
+            visibility,
+            variant_name,
+            variant_type_opt,
+        })
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{ConstantDecl, Identifier, OuterAttr, Visibility},
+    ast::{ConstantDecl, Identifier, OuterAttr, ValueExpr, Visibility},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -33,10 +33,15 @@ impl ParseDeclaration for ConstantDecl {
 
         let value_opt = if let Some(Token::Equals { .. }) = parser.peek_current() {
             parser.consume_token();
-            Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
+            let expr = parser.parse_expression(Precedence::Lowest)?;
+            Ok(ValueExpr::try_from(expr).map_err(|e| {
+                parser.log_error(e);
+                ErrorsEmitted(())
+            })?)
         } else {
-            None
-        };
+            parser.log_unexpected_token("value expression".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
 
         let _ = parser.expect_separator(Token::Semicolon {
             punc: ';',
