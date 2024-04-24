@@ -6,60 +6,60 @@ use super::{
     Pattern, Type, UnaryOp, ValueExpr,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum EnumVariantType {
     Struct(EnumVariantStruct),
     Tuple(EnumVariantTuple),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FunctionOrMethodParam {
     FunctionParam(FunctionParam),
     MethodParam(SelfParam),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum InherentImplItem {
     ConstantDecl(ConstantDecl),
     FunctionDef(FunctionItem),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TraitDefItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     FunctionDef(FunctionItem),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TraitImplItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     FunctionDef(FunctionItem),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Visibility {
     Private,                   // default
     PubPackage(PubPackageVis), // `pub(package)`
     Pub,                       // `pub`
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EnumVariantStruct {
     pub open_brace: Delimiter,
     pub fields_opt: Option<Vec<(Identifier, Type)>>,
     pub close_brace: Delimiter,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EnumVariantTuple {
     pub open_paren: Delimiter,
     pub element_types: Vec<Type>,
     pub close_paren: Delimiter,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EnumVariant {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -67,31 +67,31 @@ pub struct EnumVariant {
     pub variant_type_opt: Option<EnumVariantType>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionParam {
     pub param_name: Pattern,
     pub param_type: Box<Type>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ImportTree {
     pub segments: Vec<PathSegment>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PathSegment {
     pub root: PathExpr,
     pub subset_opt: Option<PathSubset>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PathSubset {
     pub open_brace: Delimiter,
     pub trees: Vec<ImportTree>,
     pub close_brace: Delimiter,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PubPackageVis {
     pub kw_pub: Keyword,
     pub open_paren: Delimiter,
@@ -99,13 +99,13 @@ pub struct PubPackageVis {
     pub close_paren: Delimiter,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SelfParam {
     pub prefix_opt: Option<UnaryOp>,
     pub kw_self: Keyword,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StructDefField {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -113,7 +113,7 @@ pub struct StructDefField {
     pub field_type: Box<Type>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TupleStructDefField {
     pub visibility: Visibility,
     pub field_type: Box<Type>,
@@ -123,7 +123,7 @@ pub struct TupleStructDefField {
 /// NODES
 ///////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AliasDecl {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -132,7 +132,7 @@ pub struct AliasDecl {
     pub original_type_opt: Option<Type>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ConstantDecl {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -142,7 +142,7 @@ pub struct ConstantDecl {
     pub value: ValueExpr,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EnumDef {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -153,7 +153,7 @@ pub struct EnumDef {
     pub close_brace: Delimiter,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionItem {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -166,7 +166,7 @@ pub struct FunctionItem {
     pub block_opt: Option<BlockExpr>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ImportDecl {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -174,7 +174,7 @@ pub struct ImportDecl {
     pub tree: ImportTree,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct InherentImplDef {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub kw_impl: Keyword,
@@ -184,7 +184,7 @@ pub struct InherentImplDef {
     pub close_brace: Delimiter,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ModuleItem {
     pub outer_attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -196,7 +196,7 @@ pub struct ModuleItem {
     pub close_brace: Delimiter,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StaticItemDecl {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -207,7 +207,7 @@ pub struct StaticItemDecl {
     pub value_opt: Option<Box<Expression>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StructDef {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -218,7 +218,7 @@ pub struct StructDef {
     pub close_brace: Delimiter,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TupleStructDef {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -229,7 +229,7 @@ pub struct TupleStructDef {
     pub close_paren: Delimiter,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TraitDef {
     pub outer_attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
@@ -241,7 +241,7 @@ pub struct TraitDef {
     pub close_brace: Delimiter,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TraitImplDef {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub kw_impl: Keyword,

@@ -1116,6 +1116,13 @@ impl Parser {
 
                 Ok(Type::Function {
                     function_name,
+                    params_opt: {
+                        if params.is_empty() {
+                            None
+                        } else {
+                            Some(params)
+                        }
+                    },
                     return_type_opt,
                 })
             }
@@ -1331,19 +1338,13 @@ impl Parser {
                 visibility,
             )?))),
             Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
-                Some(Token::LBrace { .. }) => {
-                    Ok(Statement::Item(Item::StructDef(StructDef::parse(
-                        self,
-                        outer_attributes,
-                        visibility,
-                    )?)))
-                }
+                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::StructDef(
+                    StructDef::parse(self, outer_attributes, visibility)?,
+                ))),
 
-                Some(Token::LParen { .. }) => {
-                    Ok(Statement::Item(Item::TupleStructDef(
-                        TupleStructDef::parse(self, outer_attributes, visibility)?,
-                    )))
-                }
+                Some(Token::LParen { .. }) => Ok(Statement::Item(Item::TupleStructDef(
+                    TupleStructDef::parse(self, outer_attributes, visibility)?,
+                ))),
 
                 _ => {
                     self.log_unexpected_token("`{` or `(`".to_string());

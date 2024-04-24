@@ -4,7 +4,7 @@ use super::{AssignmentOp, Expression, Keyword, Pattern, Separator, Type};
 /// NODES
 ///////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LetStmt {
     pub kw_let: Keyword,
     pub kw_mut_opt: Option<Keyword>,

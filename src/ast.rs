@@ -14,7 +14,7 @@ pub use self::{expression::*, item::*, statement::*, types::*};
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different literal AST nodes.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Int(Int),
     UInt(UInt),
@@ -40,7 +40,7 @@ pub struct Identifier(pub String);
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different keyword AST nodes.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
     Import,
     Mod,
@@ -78,7 +78,7 @@ pub enum Keyword {
     Err,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum InnerAttr {
     Contract,
     Interface,
@@ -87,7 +87,7 @@ pub enum InnerAttr {
     Unsafe,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum OuterAttr {
     Calldata,
     Constructor,
@@ -107,7 +107,7 @@ pub enum OuterAttr {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different delimiter AST nodes.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Delimiter {
     LParen,
     RParen,
@@ -122,7 +122,7 @@ pub enum Delimiter {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different unary operator AST nodes.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
     Negate,       // `-`
     Not,          // `!`
@@ -132,7 +132,7 @@ pub enum UnaryOp {
 }
 
 /// Enum representing the different binary operator AST nodes.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinaryOp {
     Add,
     Subtract,
@@ -149,7 +149,7 @@ pub enum BinaryOp {
     Exponentiation,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ComparisonOp {
     Equal,
     NotEqual,
@@ -159,7 +159,7 @@ pub enum ComparisonOp {
     GreaterEqual,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CompoundAssignmentOp {
     AddAssign,
     SubtractAssign,
@@ -168,11 +168,11 @@ pub enum CompoundAssignmentOp {
     ModulusAssign,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AssignmentOp(pub ());
 
 /// Struct representing the unwrap operator `?`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct UnwrapOp(pub ());
 
 /// Enum representing the different range operator AST nodes.
@@ -183,7 +183,7 @@ pub enum RangeOp {
 }
 
 /// Enum representing the different separator (punctuation) AST nodes.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Separator {
     Colon,
     Semicolon,
@@ -206,7 +206,7 @@ pub enum Separator {
 
 /// Enum representing the different expression AST nodes.
 /// `Expression` nodes always produce or evaluate to a value and may have (side) effects.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Literal(Literal),
     Path(PathExpr),
@@ -245,7 +245,7 @@ pub enum Expression {
     ResultExpr(ResultExpr),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ValueExpr {
     Literal(Literal),
     PathExpr(PathExpr),
@@ -320,7 +320,7 @@ impl TryFrom<Expression> for ValueExpr {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum AssigneeExpr {
     Literal(Literal),
     PathExpr(PathExpr),
@@ -428,7 +428,7 @@ impl TryFrom<Expression> for AssigneeExpr {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Literal(Literal),
     IdentifierPatt {
@@ -483,7 +483,7 @@ impl TryFrom<Expression> for Pattern {
 /// Enum representing the different statement AST nodes, which are built up of expressions.
 /// A `Statement` is a component of a block, which is a component of an outer expression
 /// or function.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Let(LetStmt),
     Item(Item),
@@ -492,7 +492,7 @@ pub enum Statement {
 
 /// Enum representing the different item nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Item {
     ImportDecl(ImportDecl),
     AliasDecl(AliasDecl),
@@ -549,6 +549,7 @@ pub enum Type {
 
     Function {
         function_name: Identifier,
+        params_opt: Option<Vec<FunctionOrMethodParam>>,
         return_type_opt: Option<Box<Type>>,
     },
     Reference(Box<Type>), //  `&Type` / `&mut Type`
