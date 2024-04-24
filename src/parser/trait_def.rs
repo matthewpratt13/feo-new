@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionDef, Identifier, OuterAttr, TraitDef,
+        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, OuterAttr, TraitDef,
         TraitDefItem, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
@@ -70,7 +70,7 @@ impl ParseDefinition for TraitDef {
                     item_visibility,
                 )?))
             } else if let Some(Token::Func { .. }) = token {
-                Ok(TraitDefItem::FunctionDef(FunctionDef::parse(
+                Ok(TraitDefItem::FunctionDef(FunctionItem::parse(
                     parser,
                     item_attributes,
                     item_visibility,

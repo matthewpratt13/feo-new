@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionDef, Identifier, ImportDecl,
-        InherentImplDef, InnerAttr, Item, ModuleDef, OuterAttr, StaticItemDecl, StructDef,
+        AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionItem, Identifier, ImportDecl,
+        InherentImplDef, InnerAttr, Item, ModuleItem, OuterAttr, StaticItemDecl, StructDef,
         TraitDef, TraitImplDef, Visibility,
     },
     error::ErrorsEmitted,
@@ -13,12 +13,12 @@ use super::{
     Parser,
 };
 
-impl ModuleDef {
+impl ModuleItem {
     pub(crate) fn parse(
         parser: &mut Parser,
         outer_attributes: Vec<OuterAttr>,
         visibility: Visibility,
-    ) -> Result<ModuleDef, ErrorsEmitted> {
+    ) -> Result<ModuleItem, ErrorsEmitted> {
         let kw_mod = parser.expect_keyword(Token::Mod {
             name: "mod".to_string(),
             span: parser.stream.span(),
@@ -85,7 +85,7 @@ impl ModuleDef {
                     item_attributes,
                     item_visibility,
                 )?)),
-                Some(Token::Mod { .. }) => Ok(Item::ModuleDef(Box::new(ModuleDef::parse(
+                Some(Token::Mod { .. }) => Ok(Item::ModuleDef(Box::new(ModuleItem::parse(
                     parser,
                     item_attributes,
                     item_visibility,
@@ -120,7 +120,7 @@ impl ModuleDef {
                         )?))
                     }
                 }
-                Some(Token::Func { .. }) => Ok(Item::FunctionDef(FunctionDef::parse(
+                Some(Token::Func { .. }) => Ok(Item::FunctionDef(FunctionItem::parse(
                     parser,
                     item_attributes,
                     item_visibility,
@@ -142,7 +142,7 @@ impl ModuleDef {
             Err(ErrorsEmitted(()))
         }?;
 
-        Ok(ModuleDef {
+        Ok(ModuleItem {
             outer_attributes_opt: {
                 if outer_attributes.is_empty() {
                     None

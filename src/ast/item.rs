@@ -21,21 +21,21 @@ pub enum FunctionOrMethodParam {
 #[derive(Debug, Clone)]
 pub enum InherentImplItem {
     ConstantDecl(ConstantDecl),
-    FunctionDef(FunctionDef),
+    FunctionDef(FunctionItem),
 }
 
 #[derive(Debug, Clone)]
 pub enum TraitDefItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
-    FunctionDef(FunctionDef),
+    FunctionDef(FunctionItem),
 }
 
 #[derive(Debug, Clone)]
 pub enum TraitImplItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
-    FunctionDef(FunctionDef),
+    FunctionDef(FunctionItem),
 }
 
 #[derive(Debug, Clone)]
@@ -154,7 +154,7 @@ pub struct EnumDef {
 }
 
 #[derive(Debug, Clone)]
-pub struct FunctionDef {
+pub struct FunctionItem {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub kw_func: Keyword,
@@ -185,7 +185,7 @@ pub struct InherentImplDef {
 }
 
 #[derive(Debug, Clone)]
-pub struct ModuleDef {
+pub struct ModuleItem {
     pub outer_attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub kw_mod: Keyword,

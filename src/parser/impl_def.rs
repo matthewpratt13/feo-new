@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionDef, Identifier, InherentImplDef,
+        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InherentImplDef,
         InherentImplItem, OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
@@ -54,7 +54,7 @@ impl ParseDefinition for InherentImplDef {
                     item_visibility,
                 )?))
             } else if let Some(Token::Func { .. }) = token {
-                Ok(InherentImplItem::FunctionDef(FunctionDef::parse(
+                Ok(InherentImplItem::FunctionDef(FunctionItem::parse(
                     parser,
                     item_attributes,
                     item_visibility,
@@ -170,7 +170,7 @@ impl ParseDefinition for TraitImplDef {
                     item_visibility,
                 )?))
             } else if let Some(Token::Func { .. }) = token {
-                Ok(TraitImplItem::FunctionDef(FunctionDef::parse(
+                Ok(TraitImplItem::FunctionDef(FunctionItem::parse(
                     parser,
                     item_attributes,
                     item_visibility,

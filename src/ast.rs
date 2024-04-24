@@ -498,13 +498,13 @@ pub enum Item {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     StaticItemDecl(StaticItemDecl),
-    ModuleDef(Box<ModuleDef>),
+    ModuleDef(Box<ModuleItem>),
     TraitDef(TraitDef),
     EnumDef(EnumDef),
     StructDef(StructDef),
     InherentImplDef(InherentImplDef),
     TraitImplDef(TraitImplDef),
-    FunctionDef(FunctionDef),
+    FunctionDef(FunctionItem),
 }
 
 /// Enum representing the language's different types, which help to define a value's

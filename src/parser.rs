@@ -12,7 +12,7 @@ mod constant_decl;
 mod enum_def;
 mod field_access_expr;
 mod for_in_expr;
-mod function_def;
+mod function_item;
 mod grouped_expr;
 mod if_expr;
 mod impl_def;
@@ -21,7 +21,7 @@ mod index_expr;
 mod item;
 mod match_expr;
 mod method_call_expr;
-mod module_def;
+mod module_item;
 mod path_expr;
 mod precedence;
 mod range_expr;
@@ -43,13 +43,13 @@ use crate::{
         AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
         ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr, CompoundAssignmentOp,
         ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, FieldAccessExpr, ForInExpr,
-        FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr,
-        InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr,
-        ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis,
-        RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl,
-        StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type,
-        TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility,
-        WhileExpr,
+        FunctionItem, FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl,
+        IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr,
+        MethodCallExpr, ModuleItem, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix,
+        Pattern, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr,
+        Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr,
+        TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp,
+        ValueExpr, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
@@ -1318,7 +1318,7 @@ impl Parser {
                 StaticItemDecl::parse(self, outer_attributes, visibility)?,
             ))),
             Some(Token::Mod { .. }) => Ok(Statement::Item(Item::ModuleDef(Box::new(
-                ModuleDef::parse(self, outer_attributes, visibility)?,
+                ModuleItem::parse(self, outer_attributes, visibility)?,
             )))),
             Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
                 self,
@@ -1336,11 +1336,9 @@ impl Parser {
                 visibility,
             )?))),
 
-            Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionDef(FunctionDef::parse(
-                self,
-                outer_attributes,
-                visibility,
-            )?))),
+            Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionDef(
+                FunctionItem::parse(self, outer_attributes, visibility)?,
+            ))),
             Some(Token::Impl { .. }) => match self.peek_ahead_by(2) {
                 Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
                     TraitImplDef::parse(self, outer_attributes, visibility)?,
