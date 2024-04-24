@@ -1,6 +1,5 @@
 use super::{
-    AssignmentOp, BinaryOp, CompoundAssignmentOp, Delimiter, Expression, Identifier, Keyword,
-    PlaceExpr, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp,
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter, Expression, Identifier, Keyword, OuterAttr, Pattern, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -10,8 +9,8 @@ use super::{
 /// Enum representing whether or not a closure has parameters in its definition.
 #[derive(Debug, Clone)]
 pub enum ClosureParams {
-    Some(BinaryOp, Vec<ClosureParam>, BinaryOp),
-    None(BinaryOp),
+    Some(Separator, Vec<ClosureParam>, Separator),
+    None(Separator),
 }
 
 /// Enum representing the different path root options.
@@ -27,24 +26,31 @@ pub enum PathPrefix {
 /// Struct representing a closure parameter.
 #[derive(Debug, Clone)]
 pub struct ClosureParam {
-    pub id: Identifier,
-    pub ty: Option<Type>,
-}
-
-/// Struct representing a single field in a struct expression, with a name and value.
-#[derive(Debug, Clone)]
-pub struct StructField {
-    pub name: Identifier,
-    pub value: Box<Expression>,
+    pub id: Pattern,
+    pub type_ann_opt: Option<Type>,
 }
 
 /// Struct representing a single arm in a match statement.
 #[derive(Debug, Clone)]
 pub struct MatchArm {
-    pub case: Box<Expression>,
+    pub case: Pattern,
     pub guard_opt: Option<(Keyword, Box<GroupedExpr>)>, // `if (..)`
     pub fat_arrow: Separator,
     pub logic: Box<Expression>,
+}
+
+/// Struct representing a single field in a struct expression, with a name and value.
+#[derive(Debug, Clone)]
+pub struct StructField {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub name: Identifier,
+    pub value: Expression,
+}
+
+#[derive(Debug, Clone)]
+pub struct TupleElements {
+    pub elements: Vec<(Expression, Separator)>, // single-element tuple must have trailing comma
+    pub final_element_opt: Option<Box<Expression>>,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -60,16 +66,23 @@ pub struct ArrayExpr {
 
 #[derive(Debug, Clone)]
 pub struct AssignmentExpr {
-    pub lhs: Box<Expression>,
+    pub lhs: AssigneeExpr,
     pub op: AssignmentOp,
-    pub rhs: Box<Expression>,
+    pub rhs: ValueExpr,
 }
 
 #[derive(Debug, Clone)]
 pub struct BinaryExpr {
-    pub lhs: Box<Expression>,
+    pub lhs: Box<ValueExpr>,
     pub op: BinaryOp,
-    pub rhs: Box<Expression>,
+    pub rhs: Box<ValueExpr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ComparisonExpr {
+    pub lhs: AssigneeExpr,
+    pub op: ComparisonOp,
+    pub rhs: AssigneeExpr,
 }
 
 #[derive(Debug, Clone)]
@@ -93,7 +106,7 @@ pub struct BreakExpr {
 
 #[derive(Debug, Clone)]
 pub struct CallExpr {
-    pub callee: PlaceExpr,
+    pub callee: AssigneeExpr,
     pub open_paren: Delimiter,
     pub args_opt: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
@@ -108,9 +121,9 @@ pub struct ClosureExpr {
 
 #[derive(Debug, Clone)]
 pub struct CompoundAssignmentExpr {
-    pub lhs: PlaceExpr,
+    pub lhs: AssigneeExpr,
     pub op: CompoundAssignmentOp,
-    pub rhs: Box<Expression>,
+    pub rhs: ValueExpr,
 }
 
 #[derive(Debug, Clone)]
@@ -121,12 +134,12 @@ pub struct ContinueExpr {
 #[derive(Debug, Clone)]
 pub struct DereferenceExpr {
     pub op: UnaryOp,
-    pub expression: Box<PlaceExpr>,
+    pub expression: AssigneeExpr,
 }
 
 #[derive(Debug, Clone)]
 pub struct FieldAccessExpr {
-    pub object: Box<PlaceExpr>,
+    pub object: Box<AssigneeExpr>,
     pub dot: Separator,
     pub field: Identifier,
 }
@@ -134,7 +147,7 @@ pub struct FieldAccessExpr {
 #[derive(Debug, Clone)]
 pub struct ForInExpr {
     pub kw_for: Keyword,
-    pub assignee: Box<Expression>,
+    pub assignee: Pattern,
     pub kw_in: Keyword,
     pub iterable: Box<Expression>,
     pub block: BlockExpr,
@@ -158,7 +171,7 @@ pub struct IfExpr {
 
 #[derive(Debug, Clone)]
 pub struct IndexExpr {
-    pub array: Box<PlaceExpr>,
+    pub array: Box<AssigneeExpr>,
     pub open_bracket: Delimiter,
     pub index: Box<Expression>,
     pub close_bracket: Delimiter,
@@ -167,7 +180,7 @@ pub struct IndexExpr {
 #[derive(Debug, Clone)]
 pub struct MatchExpr {
     pub kw_match: Keyword,
-    pub scrutinee: PlaceExpr,
+    pub scrutinee: AssigneeExpr,
     pub open_brace: Delimiter,
     pub arms_opt: Option<Vec<MatchArm>>,
     pub final_arm: MatchArm, // default case
@@ -176,7 +189,7 @@ pub struct MatchExpr {
 
 #[derive(Debug, Clone)]
 pub struct MethodCallExpr {
-    pub receiver: Box<PlaceExpr>,
+    pub receiver: Box<AssigneeExpr>,
     pub dot: Separator,
     pub method_name: Identifier,
     pub open_paren: Delimiter,
@@ -187,7 +200,7 @@ pub struct MethodCallExpr {
 #[derive(Debug, Clone)]
 pub struct NegationExpr {
     pub op: UnaryOp,
-    pub expression: Box<Expression>,
+    pub expression: Box<ValueExpr>,
 }
 
 #[derive(Debug, Clone)]
@@ -204,9 +217,9 @@ pub struct PathExpr {
 
 #[derive(Debug, Clone)]
 pub struct RangeExpr {
-    pub from_opt: Option<Box<Expression>>,
+    pub from_opt: Option<Box<ValueExpr>>,
     pub op: RangeOp, // `..` or `..=`
-    pub to_opt: Option<Box<Expression>>,
+    pub to_opt: Option<Box<ValueExpr>>,
 }
 
 #[derive(Debug, Clone)]
@@ -238,13 +251,13 @@ pub struct StructExpr {
 #[derive(Debug, Clone)]
 pub struct TupleExpr {
     pub open_paren: Delimiter,
-    pub elements: Vec<Expression>,
+    pub elements_opt: Option<TupleElements>,
     pub close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone)]
 pub struct TupleIndexExpr {
-    pub operand: Box<PlaceExpr>,
+    pub operand: Box<AssigneeExpr>,
     pub dot: Separator,
     pub index: UInt,
 }
@@ -259,7 +272,7 @@ pub struct TupleStructExpr {
 
 #[derive(Debug, Clone)]
 pub struct TypeCastExpr {
-    pub operand: Box<Expression>,
+    pub operand: Box<ValueExpr>,
     pub kw_as: Keyword,
     pub new_type: Type,
 }
@@ -271,7 +284,7 @@ pub struct UnderscoreExpr {
 
 #[derive(Debug, Clone)]
 pub struct UnwrapExpr {
-    pub expression: Box<Expression>,
+    pub expression: Box<ValueExpr>,
     pub op: UnwrapOp,
 }
 

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, RangeExpr, RangeOp},
+    ast::{Expression, RangeExpr, RangeOp, ValueExpr},
     error::ErrorsEmitted,
 };
 
@@ -11,13 +11,22 @@ impl RangeExpr {
         from: Expression,
         op: RangeOp,
     ) -> Result<RangeExpr, ErrorsEmitted> {
-        let to = parser.parse_expression(Precedence::Range);
+        let from = ValueExpr::try_from(from).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted(())
+        })?;
 
-        if to.is_ok() {
+        let to = parser.parse_expression(Precedence::Range)?;
+        let value_expr = ValueExpr::try_from(to).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted(())
+        });
+
+        if value_expr.is_ok() {
             Ok(RangeExpr {
                 from_opt: Some(Box::new(from)),
                 op,
-                to_opt: Some(Box::new(to?)),
+                to_opt: Some(Box::new(value_expr?)),
             })
         } else {
             Ok(RangeExpr {

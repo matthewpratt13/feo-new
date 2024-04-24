@@ -5,7 +5,7 @@ mod item;
 mod statement;
 mod types;
 
-use crate::error::ErrorsEmitted;
+use crate::error::ParserErrorKind;
 
 pub use self::{expression::*, item::*, statement::*, types::*};
 
@@ -71,6 +71,7 @@ pub enum Keyword {
     Unsafe,
     Let,
     Mut,
+    Ref,
     Some,
     None,
     Ok,
@@ -137,12 +138,6 @@ pub enum BinaryOp {
     Multiply,
     Divide,
     Modulus,
-    Equal,
-    NotEqual,
-    LessThan,
-    LessEqual,
-    GreaterThan,
-    GreaterEqual,
     LogicalAnd,
     LogicalOr,
     BitwiseAnd,
@@ -151,6 +146,16 @@ pub enum BinaryOp {
     ShiftLeft,
     ShiftRight,
     Exponentiation,
+}
+
+#[derive(Debug, Clone)]
+pub enum ComparisonOp {
+    Equal,
+    NotEqual,
+    LessThan,
+    LessEqual,
+    GreaterThan,
+    GreaterEqual,
 }
 
 #[derive(Debug, Clone)]
@@ -190,6 +195,8 @@ pub enum Separator {
     Underscore,
     LeftAngledBracket,
     RightAngledBracket,
+    Pipe,
+    DblPipe,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -213,6 +220,7 @@ pub enum Expression {
     Dereference(DereferenceExpr),
     TypeCast(TypeCastExpr),
     Binary(BinaryExpr),
+    Comparison(ComparisonExpr),
     Grouped(GroupedExpr),
     Range(RangeExpr),
     Assignment(AssignmentExpr),
@@ -270,7 +278,7 @@ pub enum ValueExpr {
 }
 
 impl TryFrom<Expression> for ValueExpr {
-    type Error = ErrorsEmitted;
+    type Error = ParserErrorKind;
 
     fn try_from(value: Expression) -> Result<Self, Self::Error> {
         match value {
@@ -303,33 +311,170 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::SomeExpr(s) => Ok(ValueExpr::SomeExpr(s)),
             Expression::NoneExpr(n) => Ok(ValueExpr::NoneExpr(n)),
             Expression::ResultExpr(r) => Ok(ValueExpr::ResultExpr(r)),
-            _ => Err(ErrorsEmitted(())),
+            _ => Err(ParserErrorKind::TypeConversionError {
+                type_a: "`Expression`".to_string(),
+                type_b: "`ValueExpr`".to_string(),
+            }),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum PlaceExpr {
+pub enum AssigneeExpr {
+    Literal(Literal),
     PathExpr(PathExpr),
-    FieldAccessExpr(FieldAccessExpr), // place expression when on the LHS
-    IndexExpr(IndexExpr),             // place expression when on the LHS
-    TupleIndexExpr(TupleIndexExpr),   // place expression when on the LHS
+    MethodCallExpr(MethodCallExpr), // e.g., getter in a comparison expression
+    FieldAccessExpr(FieldAccessExpr), // when on the LHS
+    IndexExpr(IndexExpr),           // when on the LHS
+    TupleIndexExpr(TupleIndexExpr), // when on the LHS
     BorrowExpr(BorrowExpr),
+    GroupedExpr(Box<AssigneeExpr>),
     UnderscoreExpr(UnderscoreExpr),
+    SliceExpr(Vec<AssigneeExpr>),
+    TupleExpr(Option<Vec<AssigneeExpr>>),
+    StructExpr(Vec<(Identifier, AssigneeExpr)>),
+    TupleStructExpr(Vec<AssigneeExpr>),
 }
 
-impl TryFrom<Expression> for PlaceExpr {
-    type Error = ErrorsEmitted;
+impl TryFrom<Expression> for AssigneeExpr {
+    type Error = ParserErrorKind;
 
     fn try_from(value: Expression) -> Result<Self, Self::Error> {
         match value {
-            Expression::Path(p) => Ok(PlaceExpr::PathExpr(p)),
-            Expression::FieldAccess(fa) => Ok(PlaceExpr::FieldAccessExpr(fa)),
-            Expression::Index(i) => Ok(PlaceExpr::IndexExpr(i)),
-            Expression::TupleIndex(ti) => Ok(PlaceExpr::TupleIndexExpr(ti)),
-            Expression::Borrow(b) => Ok(PlaceExpr::BorrowExpr(b)),
-            Expression::Underscore(u) => Ok(PlaceExpr::UnderscoreExpr(u)),
-            _ => Err(ErrorsEmitted(())),
+            Expression::Literal(l) => Ok(AssigneeExpr::Literal(l)),
+            Expression::Path(p) => Ok(AssigneeExpr::PathExpr(p)),
+            Expression::MethodCall(mc) => Ok(AssigneeExpr::MethodCallExpr(mc)),
+            Expression::FieldAccess(fa) => Ok(AssigneeExpr::FieldAccessExpr(fa)),
+            Expression::Index(i) => Ok(AssigneeExpr::IndexExpr(i)),
+            Expression::TupleIndex(ti) => Ok(AssigneeExpr::TupleIndexExpr(ti)),
+            Expression::Borrow(b) => Ok(AssigneeExpr::BorrowExpr(b)),
+            Expression::Grouped(g) => {
+                let assignee_expression = AssigneeExpr::try_from(*g.expression)?;
+                Ok(AssigneeExpr::GroupedExpr(Box::new(assignee_expression)))
+            }
+            Expression::Underscore(u) => Ok(AssigneeExpr::UnderscoreExpr(u)),
+            Expression::Array(a) => {
+                let mut assignee_expressions: Vec<AssigneeExpr> = Vec::new();
+                a.elements_opt.map(|v| {
+                    v.into_iter().for_each(|e| {
+                        assignee_expressions.push(AssigneeExpr::try_from(e).expect(
+                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                        ))
+                    })
+                });
+
+                Ok(AssigneeExpr::SliceExpr(assignee_expressions))
+            }
+
+            Expression::Tuple(t) => {
+                let assignee_expressions = t.elements_opt.map(|te| {
+                    let mut elements: Vec<Expression> = Vec::new();
+
+                    te.elements.into_iter().for_each(|e| {
+                        elements.push(e.0);
+                    });
+
+                    if let Some(e) = te.final_element_opt {
+                        elements.push(*e)
+                    }
+
+                    elements
+                        .into_iter()
+                        .map(|e| {
+                            AssigneeExpr::try_from(e).expect(
+                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                        )
+                        })
+                        .collect::<Vec<AssigneeExpr>>()
+                });
+
+                Ok(AssigneeExpr::TupleExpr(assignee_expressions))
+            }
+
+            Expression::Struct(s) => {
+                let mut assignee_expressions: Vec<(Identifier, AssigneeExpr)> = Vec::new();
+
+                s.fields_opt.map(|v| {
+                    v.into_iter().for_each(|s| {
+                        let value = AssigneeExpr::try_from(s.value).expect(
+                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                        );
+                        assignee_expressions.push((s.name, value));
+                    })
+                });
+
+                Ok(AssigneeExpr::StructExpr(assignee_expressions))
+            }
+
+            Expression::TupleStruct(ts) => {
+                let mut assignee_expressions: Vec<AssigneeExpr> = Vec::new();
+                ts.elements_opt.map(|v| {
+                    v.into_iter().for_each(|e| {
+                        assignee_expressions.push(AssigneeExpr::try_from(e).expect(
+                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                        ))
+                    })
+                });
+
+                Ok(AssigneeExpr::TupleStructExpr(assignee_expressions))
+            }
+
+            _ => Err(ParserErrorKind::TypeConversionError {
+                type_a: "`Expression`".to_string(),
+                type_b: "`AssigneeExpr`".to_string(),
+            }),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Pattern {
+    Literal(Literal),
+    IdentifierPatt {
+        kw_ref_opt: Option<Keyword>,
+        kw_mut_opt: Option<Keyword>,
+        name: Identifier,
+    },
+    PathPatt(PathExpr),
+    GroupedPatt(Box<Pattern>),
+    RangePatt(RangeExpr),
+    ArrayPatt(ArrayExpr),
+    TuplePatt(TupleExpr),
+    StructPatt(StructExpr),
+    TupleStructPatt(TupleStructExpr),
+    WildcardPatt(UnderscoreExpr),
+    RestPatt {
+        dbl_dot: RangeOp,
+    },
+}
+
+impl TryFrom<Expression> for Pattern {
+    type Error = ParserErrorKind;
+
+    fn try_from(value: Expression) -> Result<Self, Self::Error> {
+        match value {
+            Expression::Literal(l) => Ok(Pattern::Literal(l)),
+            Expression::Path(p) => Ok(Pattern::PathPatt(p)),
+            Expression::Grouped(g) => Ok(Pattern::GroupedPatt(Box::new(Pattern::try_from(
+                *g.expression,
+            )?))),
+            Expression::Range(r) => {
+                if r.from_opt.is_none() && r.to_opt.is_none() {
+                    Ok(Pattern::RestPatt { dbl_dot: r.op })
+                } else {
+                    Ok(Pattern::RangePatt(r))
+                }
+            }
+            Expression::Array(a) => Ok(Pattern::ArrayPatt(a)),
+            Expression::Tuple(t) => Ok(Pattern::TuplePatt(t)),
+            Expression::Struct(s) => Ok(Pattern::StructPatt(s)),
+            Expression::TupleStruct(ts) => Ok(Pattern::TupleStructPatt(ts)),
+            Expression::Underscore(u) => Ok(Pattern::WildcardPatt(u)),
+
+            _ => Err(ParserErrorKind::TypeConversionError {
+                type_a: "`Expression`".to_string(),
+                type_b: "`Pattern`".to_string(),
+            }),
         }
     }
 }
@@ -341,7 +486,7 @@ impl TryFrom<Expression> for PlaceExpr {
 pub enum Statement {
     Let(LetStmt),
     Item(Item),
-    Expression(ExpressionStmt),
+    Expression(Expression),
 }
 
 /// Enum representing the different item nodes in the AST.

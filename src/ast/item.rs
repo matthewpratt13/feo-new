@@ -3,7 +3,7 @@
 ///////////////////////////////////////////////////////////////////////////
 use super::{
     BlockExpr, Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathExpr,
-    Separator, Type, UnaryOp,
+    Pattern, Type, UnaryOp, ValueExpr,
 };
 
 #[derive(Debug, Clone)]
@@ -28,7 +28,7 @@ pub enum InherentImplItem {
 pub enum TraitDefItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
-    MethodSig(MethodSig),
+    FunctionDef(FunctionDef),
 }
 
 #[derive(Debug, Clone)]
@@ -62,31 +62,20 @@ pub struct EnumVariantTuple {
 #[derive(Debug, Clone)]
 pub struct EnumVariant {
     pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub visibility: Visibility,
     pub variant_name: Identifier,
     pub variant_type_opt: Option<EnumVariantType>,
 }
 
 #[derive(Debug, Clone)]
 pub struct FunctionParam {
-    pub param: Identifier,
+    pub param_name: Pattern,
     pub param_type: Box<Type>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ImportTree {
     pub segments: Vec<PathSegment>,
-}
-
-#[derive(Debug, Clone)]
-pub struct MethodSig {
-    pub attributes_opt: Option<Vec<OuterAttr>>,
-    pub visibility: Visibility,
-    pub kw_func: Keyword,
-    pub function_name: Identifier,
-    pub open_paren: Delimiter,
-    pub params_opt: Option<Vec<FunctionOrMethodParam>>,
-    pub close_paren: Delimiter,
-    pub return_type_opt: Option<Box<Type>>,
 }
 
 #[derive(Debug, Clone)]
@@ -141,7 +130,6 @@ pub struct AliasDecl {
     pub kw_alias: Keyword,
     pub alias_name: Identifier,
     pub original_type_opt: Option<Type>,
-    pub semicolon: Separator,
 }
 
 #[derive(Debug, Clone)]
@@ -151,7 +139,7 @@ pub struct ConstantDecl {
     pub kw_const: Keyword,
     pub item_name: Identifier,
     pub item_type: Box<Type>,
-    pub value_opt: Option<Box<Expression>>,
+    pub value_opt: ValueExpr,
 }
 
 #[derive(Debug, Clone)]
@@ -238,7 +226,6 @@ pub struct TupleStructDef {
     pub open_paren: Delimiter,
     pub fields_opt: Option<Vec<TupleStructDefField>>,
     pub close_paren: Delimiter,
-    pub semicolon: Separator,
 }
 
 #[derive(Debug, Clone)]

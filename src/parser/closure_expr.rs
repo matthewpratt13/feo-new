@@ -1,8 +1,5 @@
 use crate::{
-    ast::{
-        BinaryOp, BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Identifier,
-        Separator,
-    },
+    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Separator},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -24,14 +21,14 @@ impl ClosureExpr {
                     }
 
                     let id = match parser.peek_current() {
-                        Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+                        Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
+                            parser.get_identifier_patt()
+                        }
                         _ => {
                             parser.log_unexpected_token("identifier".to_string());
                             Err(ErrorsEmitted(()))
                         }
                     }?;
-
-                    parser.consume_token();
 
                     let ty = if let Some(Token::Colon { .. }) = parser.peek_current() {
                         parser.consume_token();
@@ -40,7 +37,10 @@ impl ClosureExpr {
                         None
                     };
 
-                    let param = ClosureParam { id, ty };
+                    let param = ClosureParam {
+                        id,
+                        type_ann_opt: ty,
+                    };
                     vec.push(param);
 
                     if let Some(Token::Comma { .. }) = parser.peek_current() {
@@ -48,13 +48,9 @@ impl ClosureExpr {
                     }
                 }
 
-                Ok(ClosureParams::Some(
-                    BinaryOp::BitwiseOr,
-                    vec,
-                    BinaryOp::BitwiseOr,
-                ))
+                Ok(ClosureParams::Some(Separator::Pipe, vec, Separator::Pipe))
             }
-            Some(Token::DblPipe { .. }) => Ok(ClosureParams::None(BinaryOp::LogicalOr)),
+            Some(Token::DblPipe { .. }) => Ok(ClosureParams::None(Separator::DblPipe)),
             _ => {
                 parser.log_unexpected_token("`|` or `||`".to_string());
                 Err(ErrorsEmitted(()))

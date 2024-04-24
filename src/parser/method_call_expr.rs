@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Expression, Identifier, MethodCallExpr, PlaceExpr, Separator},
+    ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr, Separator},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -9,9 +9,14 @@ use super::{Parser, Precedence};
 impl MethodCallExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
-        receiver: PlaceExpr,
+        receiver: Expression,
     ) -> Result<MethodCallExpr, ErrorsEmitted> {
         let mut args: Vec<Expression> = Vec::new();
+
+        let receiver = AssigneeExpr::try_from(receiver).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted(())
+        })?;
 
         let token = parser.consume_token();
 

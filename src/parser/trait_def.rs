@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionOrMethodParam, Identifier, MethodSig,
-        OuterAttr, TraitDef, TraitDefItem, Visibility,
+        AliasDecl, ConstantDecl, Delimiter, FunctionDef, Identifier, OuterAttr, TraitDef,
+        TraitDefItem, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -70,7 +70,7 @@ impl ParseDefinition for TraitDef {
                     item_visibility,
                 )?))
             } else if let Some(Token::Func { .. }) = token {
-                Ok(TraitDefItem::MethodSig(MethodSig::parse(
+                Ok(TraitDefItem::FunctionDef(FunctionDef::parse(
                     parser,
                     item_attributes,
                     item_visibility,
@@ -113,112 +113,6 @@ impl ParseDefinition for TraitDef {
                 }
             },
             close_brace,
-        })
-    }
-}
-
-impl MethodSig {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
-        visibility: Visibility,
-    ) -> Result<MethodSig, ErrorsEmitted> {
-        let kw_func = parser.expect_keyword(Token::Func {
-            name: "func".to_string(),
-            span: parser.stream.span(),
-        })?;
-
-        let mut params: Vec<FunctionOrMethodParam> = Vec::new();
-
-        let token = parser.consume_token();
-
-        let function_name = if let Some(Token::Identifier { name, .. }) = token {
-            Ok(Identifier(name))
-        } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier".to_string(),
-                found: token,
-            });
-            Err(ErrorsEmitted(()))
-        }?;
-
-        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
-            Ok(Delimiter::LParen)
-        } else {
-            parser.log_unexpected_token("`(`".to_string());
-            Err(ErrorsEmitted(()))
-        }?;
-
-        // `&self` and `&mut self` can only occur as the first parameter in a method
-        if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = parser.peek_current() {
-            let param = FunctionOrMethodParam::parse(parser)?;
-            params.push(param);
-        }
-
-        loop {
-            if let Some(Token::Comma { .. }) = parser.peek_current() {
-                parser.consume_token();
-            }
-
-            if let Some(Token::RParen { .. }) = parser.peek_current() {
-                break;
-            }
-
-            let param = FunctionOrMethodParam::parse(parser)?;
-            params.push(param);
-
-            match parser.peek_current() {
-                Some(Token::Comma { .. }) => {
-                    parser.consume_token();
-                    continue;
-                }
-                Some(Token::RParen { .. }) => break,
-                Some(_) => parser.log_unexpected_token("`,` or `)`".to_string()),
-                None => break,
-            }
-        }
-
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
-        }?;
-
-        let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Some(Box::new(parser.get_type()?))
-        } else {
-            None
-        };
-
-        let _ = parser.expect_separator(Token::Semicolon {
-            punc: ';',
-            span: parser.stream.span(),
-        })?;
-
-        Ok(MethodSig {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
-            visibility,
-            kw_func,
-            function_name,
-            open_paren,
-            params_opt: {
-                if params.is_empty() {
-                    None
-                } else {
-                    Some(params)
-                }
-            },
-            close_paren,
-            return_type_opt,
         })
     }
 }

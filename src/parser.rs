@@ -40,25 +40,14 @@ mod while_expr;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
-        ClosureExpr, CompoundAssignmentExpr, CompoundAssignmentOp, ConstantDecl, ContinueExpr,
-        Delimiter, EnumDef, Expression, ExpressionStmt, FieldAccessExpr, ForInExpr, FunctionDef,
-        FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr,
-        InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr,
-        ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, PlaceExpr,
-        PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement,
-        StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr,
-        Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, Visibility, WhileExpr,
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr, ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr, CompoundAssignmentOp, ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionDef, FunctionOrMethodParam, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleDef, NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, Type, TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility, WhileExpr
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream},
 };
 
+use self::item::{ParseDeclaration, ParseDefinition};
 pub use self::precedence::Precedence;
-use self::{
-    item::{ParseDeclaration, ParseDefinition},
-    statement::ParseStatement,
-};
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling capabilities.
@@ -335,11 +324,15 @@ impl Parser {
                 ) = self.consume_token()
                 {
                     let expr = self.parse_expression(Precedence::Range)?;
+                    let value_expr = ValueExpr::try_from(expr).map_err(|e| {
+                        self.log_error(e);
+                        ErrorsEmitted(())
+                    })?;
 
                     Ok(Expression::Range(RangeExpr {
                         from_opt: None,
                         op: RangeOp::RangeExclusive,
-                        to_opt: Some(Box::new(expr)),
+                        to_opt: Some(Box::new(value_expr)),
                     }))
                 } else {
                     Ok(Expression::Range(RangeExpr {
@@ -352,16 +345,19 @@ impl Parser {
             Some(Token::DotDotEquals { .. }) => {
                 self.consume_token();
                 let expr = self.parse_expression(Precedence::Range)?;
+                let value_expr = ValueExpr::try_from(expr).map_err(|e| {
+                    self.log_error(e);
+                    ErrorsEmitted(())
+                })?;
 
                 Ok(Expression::Range(RangeExpr {
                     from_opt: None,
                     op: RangeOp::RangeInclusive,
-                    to_opt: Some(Box::new(expr)),
+                    to_opt: Some(Box::new(value_expr)),
                 }))
             }
             Some(Token::If { .. }) => Ok(Expression::If(IfExpr::parse(self)?)),
 
-            // TODO: distinguish from `StructExpr` (i.e., after the `match` keyword)
             Some(Token::Match { .. }) => Ok(Expression::Match(MatchExpr::parse(self)?)),
 
             Some(Token::For { .. }) => Ok(Expression::ForIn(ForInExpr::parse(self)?)),
@@ -445,71 +441,59 @@ impl Parser {
                 left_expr,
                 BinaryOp::Modulus,
             )?)),
-            Some(Token::DblEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::DblEquals { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
                 self,
                 left_expr,
-                BinaryOp::Equal,
+                ComparisonOp::Equal,
             )?)),
-            Some(Token::BangEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::BangEquals { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
                 self,
                 left_expr,
-                BinaryOp::NotEqual,
+                ComparisonOp::NotEqual,
             )?)),
-            Some(Token::LessThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::LessThan { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
                 self,
                 left_expr,
-                BinaryOp::LessThan,
+                ComparisonOp::LessThan,
             )?)),
-            Some(Token::LessThanEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
+            Some(Token::LessThanEquals { .. }) => Ok(Expression::Comparison(
+                ComparisonExpr::parse(self, left_expr, ComparisonOp::LessEqual)?,
+            )),
+            Some(Token::GreaterThan { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
                 self,
                 left_expr,
-                BinaryOp::LessEqual,
+                ComparisonOp::GreaterThan,
             )?)),
-            Some(Token::GreaterThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-                self,
-                left_expr,
-                BinaryOp::GreaterThan,
-            )?)),
-            Some(Token::GreaterThanEquals { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-                self,
-                left_expr,
-                BinaryOp::GreaterEqual,
-            )?)),
+            Some(Token::GreaterThanEquals { .. }) => Ok(Expression::Comparison(
+                ComparisonExpr::parse(self, left_expr, ComparisonOp::GreaterEqual)?,
+            )),
             Some(Token::Equals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
                 self, left_expr,
             )?)),
             Some(Token::PlusEquals { .. }) => Ok(Expression::CompoundAssignment(
-                CompoundAssignmentExpr::parse(
-                    self,
-                    PlaceExpr::try_from(left_expr)?,
-                    CompoundAssignmentOp::AddAssign,
-                )?,
+                CompoundAssignmentExpr::parse(self, left_expr, CompoundAssignmentOp::AddAssign)?,
             )),
             Some(Token::MinusEquals { .. }) => Ok(Expression::CompoundAssignment(
                 CompoundAssignmentExpr::parse(
                     self,
-                    PlaceExpr::try_from(left_expr)?,
+                    left_expr,
                     CompoundAssignmentOp::SubtractAssign,
                 )?,
             )),
             Some(Token::AsteriskEquals { .. }) => Ok(Expression::CompoundAssignment(
                 CompoundAssignmentExpr::parse(
                     self,
-                    PlaceExpr::try_from(left_expr)?,
+                    left_expr,
                     CompoundAssignmentOp::MultiplyAssign,
                 )?,
             )),
             Some(Token::SlashEquals { .. }) => Ok(Expression::CompoundAssignment(
-                CompoundAssignmentExpr::parse(
-                    self,
-                    PlaceExpr::try_from(left_expr)?,
-                    CompoundAssignmentOp::DivideAssign,
-                )?,
+                CompoundAssignmentExpr::parse(self, left_expr, CompoundAssignmentOp::DivideAssign)?,
             )),
             Some(Token::PercentEquals { .. }) => Ok(Expression::CompoundAssignment(
                 CompoundAssignmentExpr::parse(
                     self,
-                    PlaceExpr::try_from(left_expr)?,
+                    left_expr,
                     CompoundAssignmentOp::ModulusAssign,
                 )?,
             )),
@@ -554,19 +538,24 @@ impl Parser {
                 BinaryOp::Exponentiation,
             )?)),
             Some(Token::LParen { .. }) => {
-                let expr = CallExpr::parse(self, PlaceExpr::try_from(left_expr)?)?;
+                // TODO: resolve similarity between `CallExpr` and `TupleStructExpr` (symbol table)
+                let expr = CallExpr::parse(self, left_expr)?;
                 Ok(Expression::Call(expr))
             }
             Some(Token::LBracket { .. }) => {
-                let expr = IndexExpr::parse(self, PlaceExpr::try_from(left_expr)?)?;
+                let expr = IndexExpr::parse(self, left_expr)?;
                 Ok(Expression::Index(expr))
             }
 
             Some(Token::As { .. }) => {
                 let new_type = self.get_type()?;
+                let operand = ValueExpr::try_from(left_expr).map_err(|e| {
+                    self.log_error(e);
+                    ErrorsEmitted(())
+                })?;
 
                 let expr = TypeCastExpr {
-                    operand: Box::new(left_expr),
+                    operand: Box::new(operand),
                     kw_as: Keyword::As,
                     new_type,
                 };
@@ -574,21 +563,23 @@ impl Parser {
                 Ok(Expression::TypeCast(expr))
             }
             Some(Token::QuestionMark { .. }) => Ok(Expression::Unwrap(UnwrapExpr {
-                expression: Box::new(left_expr),
+                expression: Box::new(ValueExpr::try_from(left_expr).map_err(|e| {
+                    self.log_error(e);
+                    ErrorsEmitted(())
+                })?),
                 op: UnwrapOp(()),
             })),
             Some(Token::Dot { .. }) => match self.peek_current() {
                 Some(Token::Identifier { .. }) => match self.peek_ahead_by(1) {
                     Some(Token::LParen { .. }) => Ok(Expression::MethodCall(
-                        MethodCallExpr::parse(self, PlaceExpr::try_from(left_expr)?)?,
+                        MethodCallExpr::parse(self, left_expr)?,
                     )),
                     _ => Ok(Expression::FieldAccess(FieldAccessExpr::parse(
-                        self,
-                        PlaceExpr::try_from(left_expr)?,
+                        self, left_expr,
                     )?)),
                 },
                 Some(Token::UIntLiteral { .. }) => Ok(Expression::TupleIndex(
-                    TupleIndexExpr::parse(self, PlaceExpr::try_from(left_expr)?)?,
+                    TupleIndexExpr::parse(self, left_expr)?,
                 )),
                 _ => {
                     self.log_error(ParserErrorKind::UnexpectedToken {
@@ -658,7 +649,17 @@ impl Parser {
 
             Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
 
-            _ => Ok(Statement::Expression(ExpressionStmt::parse(self)?)),
+            _ => {
+                let statement = Ok(Statement::Expression(
+                    self.parse_expression(Precedence::Lowest)?,
+                ));
+
+                if let Some(Token::Semicolon { .. }) = self.peek_current() {
+                    self.consume_token();
+                }
+
+                statement
+            }
         }
     }
 
@@ -770,6 +771,8 @@ impl Parser {
             Some(Token::FatArrow { .. }) => Ok(Separator::FatArrow),
             Some(Token::LessThan { .. }) => Ok(Separator::LeftAngledBracket),
             Some(Token::GreaterThan { .. }) => Ok(Separator::RightAngledBracket),
+            Some(Token::Pipe { .. }) => Ok(Separator::Pipe),
+            Some(Token::DblPipe { .. }) => Ok(Separator::DblPipe),
 
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
@@ -899,6 +902,35 @@ impl Parser {
         &self.errors
     }
 
+    fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
+        let kw_ref_opt = if let Some(Token::Ref { .. }) = self.peek_current() {
+            self.consume_token();
+            Some(Keyword::Ref)
+        } else {
+            None
+        };
+
+        let kw_mut_opt = if let Some(Token::Mut { .. }) = self.peek_current() {
+            self.consume_token();
+            Some(Keyword::Mut)
+        } else {
+            None
+        };
+
+        let name = if let Some(Token::Identifier { name, .. }) = self.consume_token() {
+            Ok(Identifier(name))
+        } else {
+            self.log_unexpected_token("identifier".to_string());
+            Err(ErrorsEmitted(()))
+        }?;
+
+        Ok(Pattern::IdentifierPatt {
+            kw_ref_opt,
+            kw_mut_opt,
+            name,
+        })
+    }
+
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     fn get_type(&mut self) -> Result<Type, ErrorsEmitted> {
         println!("ENTER `get_type()`");
@@ -978,12 +1010,6 @@ impl Parser {
             Some(Token::LBracket { .. }) => {
                 let ty = self.get_type()?;
 
-                // if let Some(Token::LBracket { .. }) = self.peek_current() {
-                //     self.consume_token();
-                // } else {
-                //     self.log_unexpected_token("`[`".to_string());
-                // }
-
                 if let Some(Token::Semicolon { .. }) = self.peek_current() {
                     self.consume_token();
                 } else {
@@ -994,7 +1020,7 @@ impl Parser {
                     if let Some(Token::UIntLiteral { value, .. }) = self.consume_token() {
                         Ok(value)
                     } else {
-                        self.log_unexpected_token("uint literal".to_string());
+                        self.log_unexpected_token("unsigned integer".to_string());
                         Err(ErrorsEmitted(()))
                     }?;
 

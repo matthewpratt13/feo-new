@@ -34,8 +34,8 @@ pub enum LexErrorKind {
 
     UnrecognizedInnerAttribute {
         name: String,
-    },    
-    
+    },
+
     UnrecognizedOuterAttribute {
         name: String,
     },
@@ -82,7 +82,7 @@ impl fmt::Display for LexErrorKind {
             }
             LexErrorKind::UnrecognizedInnerAttribute { name } => {
                 writeln!(f, "syntax error: unrecognized inner attribute – `{name}`")
-            }      
+            }
             LexErrorKind::UnrecognizedOuterAttribute { name } => {
                 writeln!(f, "syntax error: unrecognized outer attribute – `{name}`")
             }
@@ -142,6 +142,11 @@ pub enum ParserErrorKind {
         delim: char,
     },
 
+    TypeConversionError {
+        type_a: String,
+        type_b: String,
+    },
+
     #[default]
     UnknownError,
 }
@@ -164,6 +169,8 @@ impl fmt::Display for ParserErrorKind {
                 writeln!(f, "missing delimiter: expected `{delim}`, found none")
             }
             ParserErrorKind::UnknownError => writeln!(f, "unknown parser error"),
+
+            ParserErrorKind::TypeConversionError { type_a, type_b } => writeln!(f, "conversion error: unable to convert {type_a} to {type_b}"),
         }
     }
 }

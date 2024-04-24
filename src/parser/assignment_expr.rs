@@ -1,5 +1,8 @@
 use crate::{
-    ast::{AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp, Expression, PlaceExpr},
+    ast::{
+        AssigneeExpr, AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp,
+        Expression, ValueExpr,
+    },
     error::ErrorsEmitted,
 };
 
@@ -12,10 +15,18 @@ impl AssignmentExpr {
     ) -> Result<AssignmentExpr, ErrorsEmitted> {
         {
             let right_expr = parser.parse_expression(Precedence::Assignment)?;
+            let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
+                parser.log_error(e);
+                ErrorsEmitted(())
+            })?;
+
             Ok(AssignmentExpr {
-                lhs: Box::new(left_expr),
+                lhs: AssigneeExpr::try_from(left_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?,
                 op: AssignmentOp(()),
-                rhs: Box::new(right_expr),
+                rhs,
             })
         }
     }
@@ -24,48 +35,77 @@ impl AssignmentExpr {
 impl CompoundAssignmentExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
-        left_expr: PlaceExpr,
+        left_expr: Expression,
         op: CompoundAssignmentOp,
     ) -> Result<CompoundAssignmentExpr, ErrorsEmitted> {
+        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted(())
+        })?;
         match op {
             CompoundAssignmentOp::AddAssign => {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
+                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?;
+
                 Ok(CompoundAssignmentExpr {
-                    lhs: left_expr,
+                    lhs,
                     op,
-                    rhs: Box::new(right_expr),
+                    rhs: value_expr,
                 })
             }
             CompoundAssignmentOp::SubtractAssign => {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
+                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?;
+
                 Ok(CompoundAssignmentExpr {
-                    lhs: left_expr,
+                    lhs,
                     op,
-                    rhs: Box::new(right_expr),
+                    rhs: value_expr,
                 })
             }
             CompoundAssignmentOp::MultiplyAssign => {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
+                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?;
+
                 Ok(CompoundAssignmentExpr {
-                    lhs: left_expr,
+                    lhs,
                     op,
-                    rhs: Box::new(right_expr),
+                    rhs: value_expr,
                 })
             }
             CompoundAssignmentOp::DivideAssign => {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
+                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?;
+
                 Ok(CompoundAssignmentExpr {
-                    lhs: left_expr,
+                    lhs,
                     op,
-                    rhs: Box::new(right_expr),
+                    rhs: value_expr,
                 })
             }
             CompoundAssignmentOp::ModulusAssign => {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
+                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })?;
+
                 Ok(CompoundAssignmentExpr {
-                    lhs: left_expr,
+                    lhs,
                     op,
-                    rhs: Box::new(right_expr),
+                    rhs: value_expr,
                 })
             }
         }

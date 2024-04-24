@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, IndexExpr, PlaceExpr},
+    ast::{AssigneeExpr, Delimiter, Expression, IndexExpr},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -7,7 +7,15 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl IndexExpr {
-    pub(crate) fn parse(parser: &mut Parser, array: PlaceExpr) -> Result<IndexExpr, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        array: Expression,
+    ) -> Result<IndexExpr, ErrorsEmitted> {
+        let array = AssigneeExpr::try_from(array).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted(())
+        })?;
+
         let index = parser.parse_expression(Precedence::Lowest)?;
 
         let close_bracket = if let Some(Token::RBracket { .. }) = parser.peek_current() {

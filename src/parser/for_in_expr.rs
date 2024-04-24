@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, ForInExpr},
+    ast::{BlockExpr, ForInExpr, Pattern},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -13,8 +13,18 @@ impl ForInExpr {
             span: parser.stream.span(),
         })?;
 
-        let assignee = parser.parse_expression(Precedence::Lowest)?;
-
+        let assignee =
+            if let Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) =
+                parser.peek_current()
+            {
+                parser.get_identifier_patt()
+            } else {
+                let expression = parser.parse_expression(Precedence::Lowest)?;
+                Pattern::try_from(expression).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted(())
+                })
+            }?;
         let kw_in = parser.expect_keyword(Token::In {
             name: "in".to_string(),
             span: parser.stream.span(),
@@ -26,7 +36,7 @@ impl ForInExpr {
 
         Ok(ForInExpr {
             kw_for,
-            assignee: Box::new(assignee),
+            assignee,
             kw_in,
             iterable: Box::new(iterable),
             block,
@@ -43,6 +53,12 @@ mod tests {
         let input = r#"
         for x in 0..=5 {
             x += 1;
+
+            let y = 15;
+
+            for z in y {
+                print("foo");
+            }
         }
         "#;
 

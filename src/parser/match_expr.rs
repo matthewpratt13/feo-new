@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Expression, GroupedExpr, MatchArm, MatchExpr, PlaceExpr, UnderscoreExpr},
+    ast::{AssigneeExpr, Delimiter, GroupedExpr, MatchArm, MatchExpr, Pattern, UnderscoreExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -15,7 +15,11 @@ impl MatchExpr {
 
         let mut match_arms: Vec<MatchArm> = Vec::new();
 
-        let scrutinee = PlaceExpr::try_from(parser.parse_expression(Precedence::Lowest)?)?;
+        let scrutinee = AssigneeExpr::try_from(parser.parse_expression(Precedence::Lowest)?)
+            .map_err(|e| {
+                parser.log_error(e);
+                ErrorsEmitted(())
+            })?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
@@ -29,9 +33,13 @@ impl MatchExpr {
                 break;
             }
 
-            let case = parser.parse_expression(Precedence::Lowest)?;
+            let expression = parser.parse_expression(Precedence::Lowest)?;
+            let case = Pattern::try_from(expression).map_err(|e| {
+                parser.log_error(e);
+                ErrorsEmitted(())
+            })?;
 
-            let guard_opt = if let Expression::Underscore(UnderscoreExpr { .. }) = case {
+            let guard_opt = if let Pattern::WildcardPatt(UnderscoreExpr { .. }) = case {
                 if let Some(Token::If { .. }) = parser.peek_current() {
                     let kw_if = parser.expect_keyword(Token::If {
                         name: "if".to_string(),
@@ -62,7 +70,7 @@ impl MatchExpr {
             let logic = parser.parse_expression(Precedence::Lowest)?;
 
             let arm = MatchArm {
-                case: Box::new(case),
+                case,
                 guard_opt,
                 fat_arrow,
                 logic: Box::new(logic),

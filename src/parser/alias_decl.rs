@@ -33,7 +33,7 @@ impl ParseDeclaration for AliasDecl {
             None
         };
 
-        let semicolon = parser.expect_separator(Token::Semicolon {
+        let _ = parser.expect_separator(Token::Semicolon {
             punc: ';',
             span: parser.stream.span(),
         })?;
@@ -50,7 +50,6 @@ impl ParseDeclaration for AliasDecl {
             kw_alias,
             alias_name,
             original_type_opt,
-            semicolon,
         })
     }
 }
