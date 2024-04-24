@@ -989,12 +989,6 @@ impl Parser {
             Some(Token::LBracket { .. }) => {
                 let ty = self.get_type()?;
 
-                // if let Some(Token::LBracket { .. }) = self.peek_current() {
-                //     self.consume_token();
-                // } else {
-                //     self.log_unexpected_token("`[`".to_string());
-                // }
-
                 if let Some(Token::Semicolon { .. }) = self.peek_current() {
                     self.consume_token();
                 } else {
@@ -1005,7 +999,7 @@ impl Parser {
                     if let Some(Token::UIntLiteral { value, .. }) = self.consume_token() {
                         Ok(value)
                     } else {
-                        self.log_unexpected_token("uint literal".to_string());
+                        self.log_unexpected_token("unsigned integer".to_string());
                         Err(ErrorsEmitted(()))
                     }?;
 

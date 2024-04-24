@@ -54,6 +54,8 @@ impl ImportTree {
 
             let next_segment = PathSegment::parse(parser)?;
             segments.push(next_segment);
+
+     
         }
 
         Ok(ImportTree { segments })
@@ -119,6 +121,7 @@ impl PathSubset {
                     continue;
                 }
                 Some(Token::RBrace { .. }) => break,
+                Some(Token::ColonColonAsterisk { .. }) => break,
                 Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`,` or `}`".to_string(),
                     found: Some(t),

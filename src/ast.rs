@@ -426,6 +426,28 @@ impl TryFrom<Expression> for AssigneeExpr {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum Pattern {
+    Literal(Literal),
+    Identifier {
+        kw_ref_opt: Option<Keyword>,
+        kw_mut_opt: Option<Keyword>,
+        name: Identifier,
+    },
+    PathPatt(PathExpr),
+    GroupedPatt(Box<Pattern>),
+    RangePatt(RangeExpr),
+    ArrayPatt(ArrayExpr),
+    TuplePatt(TupleExpr),
+    StructPatt(StructExpr),
+    TupleStructPatt(TupleStructExpr),
+    WildcardPatt(UnderscoreExpr),
+    RestPatt {
+        dbl_dot: Separator,
+    },
+}
+
+
 /// Enum representing the different statement AST nodes, which are built up of expressions.
 /// A `Statement` is a component of a block, which is a component of an outer expression
 /// or function.
