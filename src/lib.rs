@@ -34,7 +34,7 @@ construct_fixed_hash! {
     pub struct H512(64);
 }
 
-// fixed size byte array literals (2–32 elements)
+// fixed-size byte array literals (2–32 elements)
 construct_fixed_hash! {
     pub struct B2(2);
 }

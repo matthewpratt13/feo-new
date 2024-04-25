@@ -820,7 +820,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize a big unsigned integer literal (i.e., `u256` and `u512`).
+    /// Tokenize a large unsigned integer literal (i.e., `u256` and `u512`).
     fn tokenize_big_uint(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 

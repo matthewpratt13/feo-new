@@ -20,7 +20,7 @@ pub enum UInt {
     U128(u128),
 }
 
-/// Wrappers for the different big unsigned integer types.
+/// Wrappers for the different large unsigned integer types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum BigUInt {
     U256(U256),

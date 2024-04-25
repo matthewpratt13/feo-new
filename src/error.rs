@@ -71,7 +71,7 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::LexIntError => writeln!(f, "error tokenizing signed integer literal"),
             LexErrorKind::LexUIntError => writeln!(f, "error tokenizing unsigned integer literal"),
             LexErrorKind::LexBigUIntError => {
-                writeln!(f, "error tokenizing big unsigned integer literal")
+                writeln!(f, "error tokenizing large unsigned integer literal")
             }
             LexErrorKind::LexBoolError => writeln!(f, "error tokenizing boolean literal"),
             LexErrorKind::LexHashError => writeln!(f, "error tokenizing hash literal"),
