@@ -27,14 +27,14 @@ impl ParseDefinition for StructDef {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         loop {
@@ -95,7 +95,7 @@ impl ParseDefinition for StructDef {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(StructDef {
@@ -141,14 +141,14 @@ impl ParseDefinition for TupleStructDef {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token("`(`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         loop {
@@ -191,7 +191,7 @@ impl ParseDefinition for TupleStructDef {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let _ = parser.expect_separator(Token::Semicolon {

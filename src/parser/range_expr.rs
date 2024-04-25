@@ -16,16 +16,16 @@ impl RangeExpr {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(from),
                 _ => {
                     parser.log_unexpected_token("numeric literal".to_string());
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             },
             Expression::Path(_) => {
                 parser.log_unexpected_token("path expression".to_string());
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
             _ => {
                 parser.log_unexpected_token("numeric literal or path expression".to_string());
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }?;
 
@@ -36,16 +36,16 @@ impl RangeExpr {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
                 _ => {
                     parser.log_unexpected_token("numeric literal".to_string());
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             },
             Expression::Path(_) => {
                 parser.log_unexpected_token("path expression".to_string());
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
             _ => {
                 parser.log_unexpected_token("numeric literal or path expression".to_string());
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         };
 
@@ -62,7 +62,7 @@ impl RangeExpr {
                 to_opt: {
                     if op == RangeOp::RangeInclusive {
                         parser.log_unexpected_token("`..`".to_string());
-                        return Err(ErrorsEmitted(()));
+                        return Err(ErrorsEmitted);
                     } else {
                         None
                     }

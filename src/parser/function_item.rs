@@ -25,14 +25,14 @@ impl FunctionItem {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token("`(`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         // `&self` and `&mut self` can only occur as the first parameter in a method
@@ -69,7 +69,7 @@ impl FunctionItem {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
@@ -155,7 +155,7 @@ impl FunctionOrMethodParam {
             Ok(FunctionOrMethodParam::FunctionParam(function_param))
         } else {
             parser.log_unexpected_token("`self` or identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         };
 
         param

@@ -1,5 +1,7 @@
 pub use crate::{B16, B2, B32, B4, B8, H160, H256, H512, U256, U512};
 
+use super::PathExpr;
+
 /// Wrappers for the different signed integer types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Int {
@@ -47,8 +49,11 @@ pub enum Hash {
     H512(H512),
 }
 
+pub type PathType = PathExpr;
+
 /// Struct that wraps a `Vec<u8>` into a dynamic byte array (string literal).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Str(pub Vec<u8>);
 
-
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct SelfType;

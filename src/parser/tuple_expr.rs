@@ -14,7 +14,7 @@ impl TupleExpr {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token("`(`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let mut elements: Vec<(Expression, Separator)> = Vec::new();
@@ -30,7 +30,7 @@ impl TupleExpr {
                 Ok(e) => Ok(e),
                 Err(_) => {
                     parser.log_unexpected_token("tuple element".to_string());
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             }?;
 
@@ -63,7 +63,7 @@ impl TupleExpr {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(TupleExpr {
@@ -91,7 +91,7 @@ impl TupleIndexExpr {
     ) -> Result<TupleIndexExpr, ErrorsEmitted> {
         let operand = AssigneeExpr::try_from(operand).map_err(|e| {
             parser.log_error(e);
-            ErrorsEmitted(())
+            ErrorsEmitted
         })?;
 
         let token = parser.consume_token();
@@ -103,7 +103,7 @@ impl TupleIndexExpr {
                 expected: "unsigned integer".to_string(),
                 found: token,
             });
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(TupleIndexExpr {

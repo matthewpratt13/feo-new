@@ -23,7 +23,7 @@ impl ParseDeclaration for AliasDecl {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let original_type_opt = if let Some(Token::Equals { .. }) = parser.peek_current() {

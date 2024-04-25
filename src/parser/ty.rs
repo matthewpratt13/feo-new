@@ -1,5 +1,5 @@
 use crate::{
-    ast::{FunctionOrMethodParam, Identifier, Type},
+    ast::{FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType, Type},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -14,29 +14,28 @@ impl Type {
         let token = parser.consume_token();
 
         match token {
-            Some(Token::I32Type { name, .. }) => Ok(Type::I32(name)),
-            Some(Token::I64Type { name, .. }) => Ok(Type::I64(name)),
-            Some(Token::I128Type { name, .. }) => Ok(Type::I128(name)),
-            Some(Token::U8Type { name, .. }) => Ok(Type::U8(name)),
-            Some(Token::U16Type { name, .. }) => Ok(Type::U16(name)),
-            Some(Token::U32Type { name, .. }) => Ok(Type::U32(name)),
-            Some(Token::U64Type { name, .. }) => Ok(Type::U64(name)),
-            Some(Token::U128Type { name, .. }) => Ok(Type::U128(name)),
-            Some(Token::U256Type { name, .. }) => Ok(Type::U256(name)),
-            Some(Token::U512Type { name, .. }) => Ok(Type::U512(name)),
-            Some(Token::ByteType { name, .. }) => Ok(Type::Byte(name)),
-            Some(Token::B2Type { name, .. }) => Ok(Type::B2(name)),
-            Some(Token::B4Type { name, .. }) => Ok(Type::B4(name)),
-            Some(Token::B8Type { name, .. }) => Ok(Type::B8(name)),
-            Some(Token::B16Type { name, .. }) => Ok(Type::B16(name)),
-            Some(Token::B32Type { name, .. }) => Ok(Type::B32(name)),
-            Some(Token::H160Type { name, .. }) => Ok(Type::H160(name)),
-            Some(Token::H256Type { name, .. }) => Ok(Type::H256(name)),
-            Some(Token::H512Type { name, .. }) => Ok(Type::H512(name)),
-            Some(Token::StrType { name, .. }) => Ok(Type::Str(name)),
-            Some(Token::CharType { name, .. }) => Ok(Type::Char(name)),
-            Some(Token::BoolType { name, .. }) => Ok(Type::Bool(name)),
-            Some(Token::SelfType { name, .. }) => Ok(Type::SelfType(name)),
+            Some(Token::I32Type { .. }) => Ok(Type::I32(PrimitiveType::I32)),
+            Some(Token::I64Type { .. }) => Ok(Type::I64(PrimitiveType::I64)),
+            Some(Token::I128Type { .. }) => Ok(Type::I128(PrimitiveType::I128)),
+            Some(Token::U8Type { .. }) => Ok(Type::U8(PrimitiveType::U8)),
+            Some(Token::U16Type { .. }) => Ok(Type::U16(PrimitiveType::U16)),
+            Some(Token::U32Type { .. }) => Ok(Type::U32(PrimitiveType::U32)),
+            Some(Token::U64Type { .. }) => Ok(Type::U64(PrimitiveType::U64)),
+            Some(Token::U128Type { .. }) => Ok(Type::U128(PrimitiveType::U128)),
+            Some(Token::U256Type { .. }) => Ok(Type::U256(PrimitiveType::U256)),
+            Some(Token::U512Type { .. }) => Ok(Type::U512(PrimitiveType::U512)),
+            Some(Token::ByteType { .. }) => Ok(Type::Byte(PrimitiveType::Byte)),
+            Some(Token::B2Type { .. }) => Ok(Type::B2(PrimitiveType::B2)),
+            Some(Token::B4Type { .. }) => Ok(Type::B4(PrimitiveType::B4)),
+            Some(Token::B8Type { .. }) => Ok(Type::B8(PrimitiveType::B8)),
+            Some(Token::B16Type { .. }) => Ok(Type::B16(PrimitiveType::B16)),
+            Some(Token::B32Type { .. }) => Ok(Type::B32(PrimitiveType::B32)),
+            Some(Token::H160Type { .. }) => Ok(Type::H160(PrimitiveType::H160)),
+            Some(Token::H256Type { .. }) => Ok(Type::H256(PrimitiveType::H256)),
+            Some(Token::H512Type { .. }) => Ok(Type::H512(PrimitiveType::H512)),
+            Some(Token::StrType { .. }) => Ok(Type::Str(PrimitiveType::Str)),
+            Some(Token::CharType { .. }) => Ok(Type::Char(PrimitiveType::Char)),
+            Some(Token::BoolType { .. }) => Ok(Type::Bool(PrimitiveType::Bool)),
             Some(Token::LParen { .. }) => {
                 if let Some(Token::RParen { .. }) = parser.peek_current() {
                     parser.consume_token();
@@ -97,7 +96,7 @@ impl Type {
                         Ok(value)
                     } else {
                         parser.log_unexpected_token("unsigned integer".to_string());
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }?;
 
                 if let Some(Token::RBracket { .. }) = parser.peek_current() {
@@ -118,7 +117,7 @@ impl Type {
                     Ok(Identifier(name))
                 } else {
                     parser.log_unexpected_token("identifier".to_string());
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }?;
 
                 if let Some(Token::LBrace { .. }) = parser.peek_current() {
@@ -279,14 +278,37 @@ impl Type {
                 Ok(Type::Result { ok, err })
             }
 
-            Some(Token::Identifier { name, .. }) => Ok(Type::UserDefined(name)),
+            Some(Token::Identifier { name, .. }) => {
+                let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)))?;
+                Ok(Type::UserDefined(path))
+            }
+
+            Some(Token::Package { .. }) => {
+                let path = PathExpr::parse(parser, PathPrefix::Package)?;
+                Ok(Type::UserDefined(path))
+            }
+
+            Some(Token::Super { .. }) => {
+                let path = PathExpr::parse(parser, PathPrefix::Super)?;
+                Ok(Type::UserDefined(path))
+            }
+
+            Some(Token::SelfKeyword { .. }) => {
+                let path = PathExpr::parse(parser, PathPrefix::SelfKeyword)?;
+                Ok(Type::UserDefined(path))
+            }
+
+            Some(Token::SelfType { .. }) => {
+                let path = PathExpr::parse(parser, PathPrefix::SelfType)?;
+                Ok(Type::UserDefined(path))
+            }
 
             _ => {
                 parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "type annotation".to_string(),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }

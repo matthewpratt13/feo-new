@@ -12,7 +12,7 @@ impl LetStmt {
             Ok(Keyword::Let)
         } else {
             parser.log_unexpected_token("`let`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let assignee = parser.get_identifier_patt()?;
@@ -26,7 +26,7 @@ impl LetStmt {
 
         let assignment_opt = if let Some(Token::Equals { .. }) = parser.consume_token() {
             let value = parser.parse_expression(Precedence::Lowest)?;
-            Some((AssignmentOp(()), value))
+            Some((AssignmentOp, value))
         } else {
             None
         };

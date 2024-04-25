@@ -12,7 +12,7 @@ impl ArrayExpr {
             Ok(Delimiter::LBracket)
         } else {
             parser.log_unexpected_token("`[`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let mut elements: Vec<Expression> = Vec::new();
@@ -26,7 +26,7 @@ impl ArrayExpr {
                 Ok(e) => Ok(e),
                 Err(_) => {
                     parser.log_unexpected_token("array element".to_string());
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             }?;
 
@@ -51,7 +51,7 @@ impl ArrayExpr {
             Ok(Delimiter::RBracket)
         } else {
             parser.log_missing_delimiter(']');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(ArrayExpr {

@@ -5,11 +5,11 @@ use crate::token::Token;
 /// Enum representing the different types of lexer errors.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexErrorKind {
-    ParseIntError,
-    ParseUIntError,
-    ParseBigUIntError,
-    ParseBoolError,
-    ParseHashError,
+    LexIntError,
+    LexUIntError,
+    LexBigUIntError,
+    LexBoolError,
+    LexHashError,
 
     InvalidHashLength {
         len: usize,
@@ -70,11 +70,13 @@ pub enum LexErrorKind {
 impl fmt::Display for LexErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexErrorKind::ParseIntError => writeln!(f, "error parsing signed integer"),
-            LexErrorKind::ParseUIntError => writeln!(f, "error parsing unsigned integer"),
-            LexErrorKind::ParseBigUIntError => writeln!(f, "error parsing big unsigned integer"),
-            LexErrorKind::ParseBoolError => writeln!(f, "error parsing boolean"),
-            LexErrorKind::ParseHashError => writeln!(f, "error parsing hash"),
+            LexErrorKind::LexIntError => writeln!(f, "error tokenizing signed integer literal"),
+            LexErrorKind::LexUIntError => writeln!(f, "error tokenizing unsigned integer literal"),
+            LexErrorKind::LexBigUIntError => {
+                writeln!(f, "error tokenizing big unsigned integer literal")
+            }
+            LexErrorKind::LexBoolError => writeln!(f, "error tokenizing boolean literal"),
+            LexErrorKind::LexHashError => writeln!(f, "error tokenizing hash literal"),
             LexErrorKind::InvalidHashLength { len } => {
                 writeln!(f, "syntax error: invalid hash length – {len}")
             }
@@ -237,4 +239,4 @@ impl<T> Error for CompilerError<T> where T: Clone + fmt::Display + fmt::Debug {}
 /// that an error has occurred without returning the actual error, instead allowing the error
 /// to be logged in the respective struct for later use.
 #[derive(Debug, Clone, PartialEq)]
-pub struct ErrorsEmitted(pub ());
+pub struct ErrorsEmitted;

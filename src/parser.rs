@@ -161,7 +161,7 @@ impl Parser {
                     expected: "identifier, `_`, literal or `(`".to_string(),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -298,7 +298,7 @@ impl Parser {
                 match next_token {
                     Some(Token::Identifier { .. } | Token::UIntLiteral { .. }) => {
                         self.consume_token();
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                     _ => {
                         let token = self.peek_ahead_by(1);
@@ -307,21 +307,21 @@ impl Parser {
                             expected: "identifier or unsigned integer after `.`".to_string(),
                             found: token,
                         });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
             }
             Some(Token::QuestionMark { .. }) => match self.peek_behind_by(1) {
                 Some(Token::Identifier { .. }) => {
                     self.consume_token();
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
                 _ => {
                     self.log_error(ParserErrorKind::UnexpectedToken {
                         expected: "expression before `?`".to_string(),
                         found: token,
                     });
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             },
             Some(Token::DblDot { .. }) => {
@@ -342,18 +342,18 @@ impl Parser {
                             }
                             _ => {
                                 self.log_unexpected_token("numeric literal".to_string());
-                                Err(ErrorsEmitted(()))
+                                Err(ErrorsEmitted)
                             }
                         },
                         Expression::Path(_) => {
                             self.log_unexpected_token("path expression".to_string());
-                            Err(ErrorsEmitted(()))
+                            Err(ErrorsEmitted)
                         }
                         _ => {
                             self.log_unexpected_token(
                                 "numeric literal or path expression".to_string(),
                             );
-                            Err(ErrorsEmitted(()))
+                            Err(ErrorsEmitted)
                         }
                     }?;
 
@@ -379,16 +379,16 @@ impl Parser {
                         Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
                         _ => {
                             self.log_unexpected_token("numeric literal".to_string());
-                            Err(ErrorsEmitted(()))
+                            Err(ErrorsEmitted)
                         }
                     },
                     Expression::Path(_) => {
                         self.log_unexpected_token("path expression".to_string());
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                     _ => {
                         self.log_unexpected_token("numeric literal or path expression".to_string());
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }?;
 
@@ -440,11 +440,11 @@ impl Parser {
                     expected: "expression prefix".to_string(),
                     found: Some(t),
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -593,7 +593,7 @@ impl Parser {
                 let new_type = Type::parse(self)?;
                 let operand = ValueExpr::try_from(left_expr).map_err(|e| {
                     self.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
 
                 let expr = TypeCastExpr {
@@ -607,9 +607,9 @@ impl Parser {
             Some(Token::QuestionMark { .. }) => Ok(Expression::Unwrap(UnwrapExpr {
                 expression: Box::new(ValueExpr::try_from(left_expr).map_err(|e| {
                     self.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?),
-                op: UnwrapOp(()),
+                op: UnwrapOp,
             })),
             Some(Token::Dot { .. }) => match self.peek_current() {
                 Some(Token::Identifier { .. }) => match self.peek_ahead_by(1) {
@@ -628,7 +628,7 @@ impl Parser {
                         expected: "identifier or index".to_string(),
                         found: token,
                     });
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             },
             Some(Token::DblDot { .. }) => {
@@ -644,11 +644,11 @@ impl Parser {
                     expected: "expression infix".to_string(),
                     found: Some(t),
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
             None => {
                 self.log_error(ParserErrorKind::UnexpectedEndOfInput);
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -794,7 +794,7 @@ impl Parser {
                     expected: format!("`{:#?}`", expected),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -821,7 +821,7 @@ impl Parser {
                     expected: format!("`{:#?}`", expected),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -963,7 +963,7 @@ impl Parser {
             Ok(Identifier(name))
         } else {
             self.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(Pattern::IdentifierPatt {
@@ -1025,7 +1025,7 @@ impl Parser {
                             Ok(Delimiter::RParen)
                         } else {
                             self.log_missing_delimiter(')');
-                            Err(ErrorsEmitted(()))
+                            Err(ErrorsEmitted)
                         }?;
 
                         let pub_package = PubPackageVis {
@@ -1097,7 +1097,7 @@ impl Parser {
 
                 _ => {
                     self.log_unexpected_token("`{` or `(`".to_string());
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             },
 
@@ -1116,7 +1116,7 @@ impl Parser {
                         expected: "`for` or `{`".to_string(),
                         found: token,
                     });
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             },
             _ => {
@@ -1124,7 +1124,7 @@ impl Parser {
                     expected: "declaration or definition item".to_string(),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }

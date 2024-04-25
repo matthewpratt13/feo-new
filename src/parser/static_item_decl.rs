@@ -28,7 +28,7 @@ impl ParseDeclaration for StaticItemDecl {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let _ = parser.expect_separator(Token::Colon {

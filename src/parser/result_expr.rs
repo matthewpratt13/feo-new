@@ -16,14 +16,14 @@ impl ResultExpr {
             Ok(Keyword::Err)
         } else {
             parser.log_unexpected_token("`Ok` or `Err`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token("`(`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
@@ -33,7 +33,7 @@ impl ResultExpr {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(ResultExpr {

@@ -76,7 +76,7 @@ impl PathSegment {
                     expected: "path prefix".to_string(),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }?;
 
@@ -88,7 +88,7 @@ impl PathSegment {
         };
 
         if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
+            return Err(ErrorsEmitted);
         }
 
         Ok(PathSegment { root, subset_opt })
@@ -103,7 +103,7 @@ impl PathSubset {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
@@ -137,11 +137,11 @@ impl PathSubset {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
+            return Err(ErrorsEmitted);
         }
 
         Ok(PathSubset {

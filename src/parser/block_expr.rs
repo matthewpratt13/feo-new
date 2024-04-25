@@ -21,7 +21,7 @@ impl BlockExpr {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         println!("CURRENT TOKEN (AFTER `{{`): {:?}\n", parser.peek_current());
@@ -37,7 +37,7 @@ impl BlockExpr {
                 Ok(s) => Ok(s),
                 Err(_) => {
                     parser.log_unexpected_token("statement".to_string());
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             }?;
 
@@ -60,7 +60,7 @@ impl BlockExpr {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(BlockExpr {

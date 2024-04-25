@@ -21,7 +21,7 @@ impl ParseDeclaration for ConstantDecl {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let _ = parser.expect_separator(Token::Colon {
@@ -36,11 +36,11 @@ impl ParseDeclaration for ConstantDecl {
             let expr = parser.parse_expression(Precedence::Lowest)?;
             Ok(ValueExpr::try_from(expr).map_err(|e| {
                 parser.log_error(e);
-                ErrorsEmitted(())
+                ErrorsEmitted
             })?)
         } else {
             parser.log_unexpected_token("value expression".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let _ = parser.expect_separator(Token::Semicolon {

@@ -33,14 +33,14 @@ impl ModuleItem {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         while let Some(ia) = parser.get_inner_attr() {
@@ -127,7 +127,7 @@ impl ModuleItem {
                 )?)),
                 _ => {
                     parser.log_unexpected_token("declaration or definition".to_string());
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             }?;
 
@@ -139,7 +139,7 @@ impl ModuleItem {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(ModuleItem {

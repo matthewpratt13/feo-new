@@ -34,7 +34,7 @@ impl IfExpr {
                 expected: "block expression".to_string(),
                 found: token,
             });
-            return Err(ErrorsEmitted(()));
+            return Err(ErrorsEmitted);
         };
 
         while let Some(Token::Else { .. }) = parser.peek_current() {

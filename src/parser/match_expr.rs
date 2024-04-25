@@ -18,14 +18,14 @@ impl MatchExpr {
         let scrutinee = AssigneeExpr::try_from(parser.parse_expression(Precedence::Lowest)?)
             .map_err(|e| {
                 parser.log_error(e);
-                ErrorsEmitted(())
+                ErrorsEmitted
             })?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         loop {
@@ -36,7 +36,7 @@ impl MatchExpr {
             let expression = parser.parse_expression(Precedence::Lowest)?;
             let case = Pattern::try_from(expression).map_err(|e| {
                 parser.log_error(e);
-                ErrorsEmitted(())
+                ErrorsEmitted
             })?;
 
             let guard_opt = if let Pattern::WildcardPatt(UnderscoreExpr { .. }) = case {
@@ -97,7 +97,7 @@ impl MatchExpr {
             parser.log_error(ParserErrorKind::TokenNotFound {
                 expected: "match arm".to_string(),
             });
-            return Err(ErrorsEmitted(()));
+            return Err(ErrorsEmitted);
         };
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
@@ -105,7 +105,7 @@ impl MatchExpr {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(MatchExpr {

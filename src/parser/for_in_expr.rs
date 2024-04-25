@@ -22,7 +22,7 @@ impl ForInExpr {
                 let expression = parser.parse_expression(Precedence::Lowest)?;
                 Pattern::try_from(expression).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })
             }?;
         let kw_in = parser.expect_keyword(Token::In {

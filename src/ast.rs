@@ -27,6 +27,32 @@ pub enum Literal {
     Bool(bool),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum PrimitiveType {
+    I32,
+    I64,
+    I128,
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+    U256,
+    U512,
+    Byte,
+    B2,
+    B4,
+    B8,
+    B16,
+    B32,
+    H160,
+    H256,
+    H512,
+    Str,
+    Char,
+    Bool,
+}
+
 ///////////////////////////////////////////////////////////////////////////
 /// IDENTIFIER
 ///////////////////////////////////////////////////////////////////////////
@@ -169,11 +195,11 @@ pub enum CompoundAssignmentOp {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct AssignmentOp(pub ());
+pub struct AssignmentOp;
 
 /// Struct representing the unwrap operator `?`.
 #[derive(Debug, Clone, PartialEq)]
-pub struct UnwrapOp(pub ());
+pub struct UnwrapOp;
 
 /// Enum representing the different range operator AST nodes.
 #[derive(Debug, Clone, PartialEq)]
@@ -586,28 +612,28 @@ pub enum Item {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     // primitives
-    I32(String),
-    I64(String),
-    I128(String),
-    U8(String),
-    U16(String),
-    U32(String),
-    U64(String),
-    U128(String),
-    U256(String),
-    U512(String),
-    Byte(String), // `u8`
-    B2(String),
-    B4(String),
-    B8(String),
-    B16(String),
-    B32(String),
-    H160(String),
-    H256(String),
-    H512(String),
-    Str(String), // `Vec<u8>`
-    Char(String),
-    Bool(String),
+    I32(PrimitiveType),
+    I64(PrimitiveType),
+    I128(PrimitiveType),
+    U8(PrimitiveType),
+    U16(PrimitiveType),
+    U32(PrimitiveType),
+    U64(PrimitiveType),
+    U128(PrimitiveType),
+    U256(PrimitiveType),
+    U512(PrimitiveType),
+    Byte(PrimitiveType),
+    B2(PrimitiveType),
+    B4(PrimitiveType),
+    B8(PrimitiveType),
+    B16(PrimitiveType),
+    B32(PrimitiveType),
+    H160(PrimitiveType),
+    H256(PrimitiveType),
+    H512(PrimitiveType),
+    Str(PrimitiveType),
+    Char(PrimitiveType),
+    Bool(PrimitiveType),
 
     UnitType, // ()
 
@@ -618,7 +644,7 @@ pub enum Type {
     },
     Tuple(Vec<Type>),
 
-    UserDefined(String), // struct, enum, trait, alias, constant (paths / items)
+    UserDefined(PathType), // struct, enum, trait, alias, constant (paths / items)
 
     Function {
         function_name: Identifier,
@@ -626,7 +652,7 @@ pub enum Type {
         return_type_opt: Option<Box<Type>>,
     },
     Reference(Box<Type>), //  `&Type` / `&mut Type`
-    SelfType(String),
+    SelfType(SelfType),
 
     Vec(Box<Type>),
     Mapping {

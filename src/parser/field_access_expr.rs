@@ -13,7 +13,7 @@ impl FieldAccessExpr {
     ) -> Result<FieldAccessExpr, ErrorsEmitted> {
         let object = AssigneeExpr::try_from(object).map_err(|e| {
             parser.log_error(e);
-            ErrorsEmitted(())
+            ErrorsEmitted
         })?;
         
         let token = parser.consume_token();
@@ -29,7 +29,7 @@ impl FieldAccessExpr {
                 expected: "identifier after `.`".to_string(),
                 found: token,
             });
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }
     }
 }

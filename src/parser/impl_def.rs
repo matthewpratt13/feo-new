@@ -29,7 +29,7 @@ impl ParseDefinition for InherentImplDef {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         loop {
@@ -65,7 +65,7 @@ impl ParseDefinition for InherentImplDef {
                     expected: "`const`,`func`".to_string(),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }?;
 
             associated_items.push(associated_item);
@@ -76,7 +76,7 @@ impl ParseDefinition for InherentImplDef {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(InherentImplDef {
@@ -123,7 +123,7 @@ impl ParseDefinition for TraitImplDef {
                 found: token,
             });
 
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let kw_for = parser.expect_keyword(Token::For {
@@ -139,7 +139,7 @@ impl ParseDefinition for TraitImplDef {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         loop {
@@ -181,7 +181,7 @@ impl ParseDefinition for TraitImplDef {
                     expected: "`const`,`func`".to_string(),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }?;
 
             associated_items.push(associated_item);
@@ -192,7 +192,7 @@ impl ParseDefinition for TraitImplDef {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(TraitImplDef {

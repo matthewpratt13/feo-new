@@ -83,10 +83,10 @@ impl<'a> Lexer<'a> {
 
                         self.log_error(LexErrorKind::UnexpectedChar {
                             expected: "`[` or `!`".to_string(),
-                            found: current_char.map_err(|_| ErrorsEmitted(()))?,
+                            found: current_char.map_err(|_| ErrorsEmitted)?,
                         });
 
-                        return Err(ErrorsEmitted(()));
+                        return Err(ErrorsEmitted);
                     }
                 }
 
@@ -166,7 +166,7 @@ impl<'a> Lexer<'a> {
         }
 
         if !self.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
+            return Err(ErrorsEmitted);
         }
 
         let stream = TokenStream::new(&tokens, self.input, 0, self.pos);
@@ -271,7 +271,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "constructor" => {
@@ -281,7 +281,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "const" => Ok(Token::Const { name, span }),
@@ -293,7 +293,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "else" => Ok(Token::Else { name, span }),
@@ -305,7 +305,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "Err" => Ok(Token::Err { name, span }),
@@ -316,7 +316,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "extern" => {
@@ -326,7 +326,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "false" => Ok(Token::BoolLiteral {
@@ -334,8 +334,8 @@ impl<'a> Lexer<'a> {
                         if let Ok(n) = name.parse::<bool>() {
                             n
                         } else {
-                            self.log_error(LexErrorKind::ParseBoolError);
-                            return Err(ErrorsEmitted(()));
+                            self.log_error(LexErrorKind::LexBoolError);
+                            return Err(ErrorsEmitted);
                         }
                     },
                     span,
@@ -352,7 +352,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "in" => Ok(Token::In { name, span }),
@@ -364,7 +364,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "loop" => Ok(Token::Loop { name, span }),
@@ -376,7 +376,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "mod" => Ok(Token::Mod { name, span }),
@@ -391,7 +391,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "pub" => Ok(Token::Pub { name, span }),
@@ -404,7 +404,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "self" => Ok(Token::SelfKeyword { name, span }),
@@ -418,7 +418,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "struct" => Ok(Token::Struct { name, span }),
@@ -430,7 +430,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "topic" => {
@@ -440,7 +440,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "trait" => Ok(Token::Trait { name, span }),
@@ -449,8 +449,8 @@ impl<'a> Lexer<'a> {
                         if let Ok(n) = name.parse::<bool>() {
                             n
                         } else {
-                            self.log_error(LexErrorKind::ParseBoolError);
-                            return Err(ErrorsEmitted(()));
+                            self.log_error(LexErrorKind::LexBoolError);
+                            return Err(ErrorsEmitted);
                         }
                     },
 
@@ -464,7 +464,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "view" => {
@@ -474,7 +474,7 @@ impl<'a> Lexer<'a> {
                         token
                     } else {
                         self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
                 "while" => Ok(Token::While { name, span }),
@@ -507,7 +507,7 @@ impl<'a> Lexer<'a> {
                 "Mapping" => Ok(Token::MappingType { name, span }),
                 _ => {
                     self.log_error(LexErrorKind::UnrecognizedKeyword { name });
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             }
         } else {
@@ -536,7 +536,7 @@ impl<'a> Lexer<'a> {
 
             _ => {
                 self.log_error(LexErrorKind::UnrecognizedOuterAttribute { name });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -556,7 +556,7 @@ impl<'a> Lexer<'a> {
 
             _ => {
                 self.log_error(LexErrorKind::UnrecognizedInnerAttribute { name });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -597,14 +597,14 @@ impl<'a> Lexer<'a> {
                     expected: "delimiter".to_string(),
                     found: d,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
 
             None => {
                 self.log_error(LexErrorKind::CharNotFound {
                     expected: "delimiter".to_string(),
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -618,7 +618,7 @@ impl<'a> Lexer<'a> {
             c
         } else {
             self.log_error(LexErrorKind::MissingDelimiter { delim: expected });
-            return Err(ErrorsEmitted(()));
+            return Err(ErrorsEmitted);
         };
 
         // check if the current character is a delimiter
@@ -627,7 +627,7 @@ impl<'a> Lexer<'a> {
                 expected: "delimiter".to_string(),
                 found: curr,
             });
-            return Err(ErrorsEmitted(()));
+            return Err(ErrorsEmitted);
         }
 
         if curr == expected {
@@ -655,7 +655,7 @@ impl<'a> Lexer<'a> {
                         found: curr,
                     });
 
-                    return Err(ErrorsEmitted(()));
+                    return Err(ErrorsEmitted);
                 }
             }
         } else {
@@ -663,7 +663,7 @@ impl<'a> Lexer<'a> {
                 expected,
                 found: curr,
             });
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }
     }
 
@@ -706,7 +706,7 @@ impl<'a> Lexer<'a> {
         }
 
         self.log_error(LexErrorKind::MissingQuote { quote: '\"' });
-        Err(ErrorsEmitted(()))
+        Err(ErrorsEmitted)
     }
 
     /// Tokenize a static byte array literal, handling escape sequences where applicable.
@@ -729,7 +729,7 @@ impl<'a> Lexer<'a> {
                             expected: "escape sequence".to_string(),
                         });
 
-                        return Err(ErrorsEmitted(()));
+                        return Err(ErrorsEmitted);
                     }
                 }
                 '"' => {
@@ -756,7 +756,7 @@ impl<'a> Lexer<'a> {
         }
 
         self.log_error(LexErrorKind::MissingQuote { quote: '\"' });
-        Err(ErrorsEmitted(()))
+        Err(ErrorsEmitted)
     }
 
     /// Tokenize a `char` literal, handling escape sequences where applicable.
@@ -782,13 +782,13 @@ impl<'a> Lexer<'a> {
                         self.log_error(LexErrorKind::CharNotFound {
                             expected: "escape sequence".to_string(),
                         });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
 
                 _ if value == '\'' || value == ' ' => {
                     self.log_error(LexErrorKind::EmptyCharLiteral);
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
 
                 _ => {
@@ -802,7 +802,7 @@ impl<'a> Lexer<'a> {
                         Ok(Token::CharLiteral { value, span })
                     } else {
                         self.log_error(LexErrorKind::MissingQuote { quote: '\'' });
-                        Err(ErrorsEmitted(()))
+                        Err(ErrorsEmitted)
                     }
                 }
             }
@@ -810,7 +810,7 @@ impl<'a> Lexer<'a> {
             self.log_error(LexErrorKind::CharNotFound {
                 expected: "character literal".to_string(),
             });
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }
     }
 
@@ -854,8 +854,8 @@ impl<'a> Lexer<'a> {
                 span,
             })
         } else {
-            self.log_error(LexErrorKind::ParseBigUIntError);
-            Err(ErrorsEmitted(()))
+            self.log_error(LexErrorKind::LexBigUIntError);
+            Err(ErrorsEmitted)
         }
     }
 
@@ -873,8 +873,8 @@ impl<'a> Lexer<'a> {
             // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
             ()
         } else {
-            self.log_error(LexErrorKind::ParseHashError);
-            return Err(ErrorsEmitted(()));
+            self.log_error(LexErrorKind::LexHashError);
+            return Err(ErrorsEmitted);
         }
 
         let hash_start_pos = self.pos;
@@ -924,7 +924,7 @@ impl<'a> Lexer<'a> {
 
             _ => {
                 self.log_error(LexErrorKind::InvalidHashLength { len: hash.len() });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -969,8 +969,8 @@ impl<'a> Lexer<'a> {
                     span,
                 })
             } else {
-                self.log_error(LexErrorKind::ParseIntError);
-                Err(ErrorsEmitted(()))
+                self.log_error(LexErrorKind::LexIntError);
+                Err(ErrorsEmitted)
             }
         } else {
             // remove the `_` separators before parsing (if they exist)
@@ -988,8 +988,8 @@ impl<'a> Lexer<'a> {
                     span,
                 })
             } else {
-                self.log_error(LexErrorKind::ParseUIntError);
-                Err(ErrorsEmitted(()))
+                self.log_error(LexErrorKind::LexUIntError);
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -1020,7 +1020,7 @@ impl<'a> Lexer<'a> {
             "#!" => Ok(Token::HashBang { punc, span }),
             "$" => {
                 self.log_error(LexErrorKind::ReservedChar);
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
             "%" => Ok(Token::Percent { punc: '%', span }),
             "%=" => Ok(Token::PercentEquals { punc, span }),
@@ -1057,7 +1057,7 @@ impl<'a> Lexer<'a> {
             "||" => Ok(Token::DblPipe { punc, span }),
             _ => {
                 self.log_error(LexErrorKind::UnrecognizedChar { value: punc });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -1077,7 +1077,7 @@ impl<'a> Lexer<'a> {
                 '\"' => '\"',
                 _ => {
                     self.log_error(LexErrorKind::UnrecognizedEscapeSequence { sequence: c });
-                    return Err(ErrorsEmitted(()));
+                    return Err(ErrorsEmitted);
                 }
             };
 
@@ -1087,7 +1087,7 @@ impl<'a> Lexer<'a> {
         } else {
             // incomplete escape sequence
             self.log_error(LexErrorKind::UnexpectedEndOfInput);
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }
     }
 

@@ -12,7 +12,7 @@ impl NegationExpr {
         let expression = parser.parse_expression(Precedence::Unary)?;
         let value_expr = ValueExpr::try_from(expression).map_err(|e| {
             parser.log_error(e);
-            ErrorsEmitted(())
+            ErrorsEmitted
         })?;
 
         match op {
@@ -49,7 +49,7 @@ impl DereferenceExpr {
         let expression = AssigneeExpr::try_from(parser.parse_expression(Precedence::Unary)?)
             .map_err(|e| {
                 parser.log_error(e);
-                ErrorsEmitted(())
+                ErrorsEmitted
             })?;
 
         match op {
