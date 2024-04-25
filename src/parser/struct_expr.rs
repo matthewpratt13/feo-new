@@ -56,8 +56,8 @@ impl StructExpr {
                         Some(attributes)
                     }
                 },
-                name: Identifier(name),
-                value,
+                field_name: Identifier(name),
+                field_value: value,
             };
 
             fields.push(field);

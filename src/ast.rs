@@ -423,10 +423,10 @@ impl TryFrom<Expression> for AssigneeExpr {
 
                 s.fields_opt.map(|v| {
                     v.into_iter().for_each(|s| {
-                        let value = AssigneeExpr::try_from(s.value).expect(
+                        let value = AssigneeExpr::try_from(s.field_value).expect(
                             "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         );
-                        assignee_expressions.push((s.name, value));
+                        assignee_expressions.push((s.field_name, value));
                     })
                 });
 
@@ -467,7 +467,7 @@ pub enum Pattern {
     RangePatt(RangeExpr),
     TuplePatt(Option<Vec<Pattern>>),
     StructPatt {
-        name: Identifier,
+        struct_name: Identifier,
         fields_opt: Option<Vec<(Identifier, Pattern)>>,
     },
     TupleStructPatt {
@@ -523,7 +523,7 @@ impl TryFrom<Expression> for Pattern {
             Expression::Struct(StructExpr {
                 path, fields_opt, ..
             }) => {
-                let name = path
+                let struct_name = path
                     .tree_opt
                     .unwrap_or([].to_vec())
                     .pop()
@@ -533,16 +533,16 @@ impl TryFrom<Expression> for Pattern {
 
                 let fields_opt = fields_opt.map(|v| {
                     v.into_iter().for_each(|f| {
-                        let pattern = Pattern::try_from(f.value).expect(
+                        let pattern = Pattern::try_from(f.field_value).expect(
                             "conversion error: unable to convert `Expression` into `Pattern`",
                         );
-                        fields.push((f.name, pattern));
+                        fields.push((f.field_name, pattern));
                     });
 
                     fields
                 });
 
-                Ok(Pattern::StructPatt { name, fields_opt })
+                Ok(Pattern::StructPatt { struct_name, fields_opt })
             }
 
             Expression::TupleStruct(TupleStructExpr {

@@ -38,7 +38,7 @@ impl ClosureExpr {
                     };
 
                     let param = ClosureParam {
-                        name,
+                        param_name: name,
                         type_ann_opt: ty,
                     };
                     vec.push(param);

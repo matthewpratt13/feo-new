@@ -1,5 +1,7 @@
 use super::{
-    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter, Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter,
+    Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, Separator, Statement,
+    Type, UInt, UnaryOp, UnwrapOp, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -26,7 +28,7 @@ pub enum PathPrefix {
 /// Struct representing a closure parameter.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClosureParam {
-    pub name: Pattern,
+    pub param_name: Pattern,
     pub type_ann_opt: Option<Type>,
 }
 
@@ -43,8 +45,8 @@ pub struct MatchArm {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
     pub attributes_opt: Option<Vec<OuterAttr>>,
-    pub name: Identifier,
-    pub value: Expression,
+    pub field_name: Identifier,
+    pub field_value: Expression,
 }
 
 #[derive(Debug, Clone, PartialEq)]
