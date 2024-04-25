@@ -204,9 +204,9 @@ impl<'a> Lexer<'a> {
 
                 let comment = self.input[comment_start_pos..self.pos].trim().to_string();
 
-                self.advance();
-
                 let span = Span::new(self.input, start_pos, self.pos);
+
+                self.advance();
 
                 Ok(Token::DocComment {
                     comment,
