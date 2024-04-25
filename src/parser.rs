@@ -332,16 +332,34 @@ impl Parser {
                     | Token::HashLiteral { .. },
                 ) = self.consume_token()
                 {
-                    let expr = self.parse_expression(Precedence::Range)?;
-                    let value_expr = ValueExpr::try_from(expr).map_err(|e| {
-                        self.log_error(e);
-                        ErrorsEmitted(())
-                    })?;
+                    let expression = self.parse_expression(Precedence::Range)?;
+
+                    let to = match expression.clone() {
+                        Expression::Literal(l) => match l {
+                            Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => {
+                                Ok(expression)
+                            }
+                            _ => {
+                                self.log_unexpected_token("numeric literal".to_string());
+                                Err(ErrorsEmitted(()))
+                            }
+                        },
+                        Expression::Path(_) => {
+                            self.log_unexpected_token("path expression".to_string());
+                            Err(ErrorsEmitted(()))
+                        }
+                        _ => {
+                            self.log_unexpected_token(
+                                "numeric literal or path expression".to_string(),
+                            );
+                            Err(ErrorsEmitted(()))
+                        }
+                    }?;
 
                     Ok(Expression::Range(RangeExpr {
                         from_opt: None,
                         op: RangeOp::RangeExclusive,
-                        to_opt: Some(Box::new(value_expr)),
+                        to_opt: Some(Box::new(to)),
                     }))
                 } else {
                     Ok(Expression::Range(RangeExpr {
@@ -353,16 +371,30 @@ impl Parser {
             }
             Some(Token::DotDotEquals { .. }) => {
                 self.consume_token();
-                let expr = self.parse_expression(Precedence::Range)?;
-                let value_expr = ValueExpr::try_from(expr).map_err(|e| {
-                    self.log_error(e);
-                    ErrorsEmitted(())
-                })?;
+                let expression = self.parse_expression(Precedence::Range)?;
+
+                let to = match expression.clone() {
+                    Expression::Literal(l) => match l {
+                        Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
+                        _ => {
+                            self.log_unexpected_token("numeric literal".to_string());
+                            Err(ErrorsEmitted(()))
+                        }
+                    },
+                    Expression::Path(_) => {
+                        self.log_unexpected_token("path expression".to_string());
+                        Err(ErrorsEmitted(()))
+                    }
+                    _ => {
+                        self.log_unexpected_token("numeric literal or path expression".to_string());
+                        Err(ErrorsEmitted(()))
+                    }
+                }?;
 
                 Ok(Expression::Range(RangeExpr {
                     from_opt: None,
                     op: RangeOp::RangeInclusive,
-                    to_opt: Some(Box::new(value_expr)),
+                    to_opt: Some(Box::new(to)),
                 }))
             }
             Some(Token::If { .. }) => Ok(Expression::If(IfExpr::parse(self)?)),

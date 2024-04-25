@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, RangeExpr, RangeOp, ValueExpr},
+    ast::{Expression, Literal, RangeExpr, RangeOp},
     error::ErrorsEmitted,
 };
 
@@ -11,22 +11,49 @@ impl RangeExpr {
         from: Expression,
         op: RangeOp,
     ) -> Result<RangeExpr, ErrorsEmitted> {
-        let from = ValueExpr::try_from(from).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted(())
-        })?;
+        let from = match from.clone() {
+            Expression::Literal(l) => match l {
+                Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(from),
+                _ => {
+                    parser.log_unexpected_token("numeric literal".to_string());
+                    Err(ErrorsEmitted(()))
+                }
+            },
+            Expression::Path(_) => {
+                parser.log_unexpected_token("path expression".to_string());
+                Err(ErrorsEmitted(()))
+            }
+            _ => {
+                parser.log_unexpected_token("numeric literal or path expression".to_string());
+                Err(ErrorsEmitted(()))
+            }
+        }?;
 
-        let to = parser.parse_expression(Precedence::Range)?;
-        let value_expr = ValueExpr::try_from(to).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted(())
-        });
+        let expression = parser.parse_expression(Precedence::Range)?;
 
-        if value_expr.is_ok() {
+        let to = match expression.clone() {
+            Expression::Literal(l) => match l {
+                Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
+                _ => {
+                    parser.log_unexpected_token("numeric literal".to_string());
+                    Err(ErrorsEmitted(()))
+                }
+            },
+            Expression::Path(_) => {
+                parser.log_unexpected_token("path expression".to_string());
+                Err(ErrorsEmitted(()))
+            }
+            _ => {
+                parser.log_unexpected_token("numeric literal or path expression".to_string());
+                Err(ErrorsEmitted(()))
+            }
+        };
+
+        if to.is_ok() {
             Ok(RangeExpr {
                 from_opt: Some(Box::new(from)),
                 op,
-                to_opt: Some(Box::new(value_expr?)),
+                to_opt: Some(Box::new(to?)),
             })
         } else {
             Ok(RangeExpr {

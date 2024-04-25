@@ -217,9 +217,9 @@ pub struct PathExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RangeExpr {
-    pub from_opt: Option<Box<ValueExpr>>,
+    pub from_opt: Option<Box<Expression>>,
     pub op: RangeOp, // `..` or `..=`
-    pub to_opt: Option<Box<ValueExpr>>,
+    pub to_opt: Option<Box<Expression>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
