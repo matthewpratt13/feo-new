@@ -439,7 +439,6 @@ pub enum Pattern {
     PathPatt(PathExpr),
     GroupedPatt(Box<Pattern>),
     RangePatt(RangeExpr),
-    ArrayPatt(ArrayExpr),
     TuplePatt(Option<Vec<Pattern>>),
     StructPatt {
         name: Identifier,
@@ -472,7 +471,6 @@ impl TryFrom<Expression> for Pattern {
                     Ok(Pattern::RangePatt(r))
                 }
             }
-            Expression::Array(a) => Ok(Pattern::ArrayPatt(a)),
             Expression::Tuple(TupleExpr { elements_opt, .. }) => {
                 let mut elements: Vec<Pattern> = Vec::new();
 
