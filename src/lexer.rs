@@ -7,7 +7,7 @@ use crate::{
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{DocCommentType, Token, TokenStream},
-    H160, H256, H512, U256,
+    H160, H256, H512, U512,
 };
 
 /// Struct that stores an input string and contains methods to render tokens (tokenize)
@@ -854,13 +854,13 @@ impl<'a> Lexer<'a> {
             .split('_')
             .collect::<Vec<&str>>()
             .concat()
-            .parse::<U256>();
+            .parse::<U512>();
 
         let span = Span::new(self.input, start_pos, self.pos);
 
         if let Ok(v) = value {
             Ok(Token::BigUIntLiteral {
-                value: BigUInt::U256(v),
+                value: BigUInt::U512(v),
                 span,
             })
         } else {
@@ -870,7 +870,6 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a hash literal (i.e., `H160`, `H256` and `H512`).
-    /// The default hash type is `H256`.
     fn tokenize_hash(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
@@ -939,8 +938,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize a numeric value (i.e., `i64` or `u64`).
-    /// Parse to `u64` unless a `-` is encountered, in which case parse to `i64`.
+    /// Tokenize a numeric value (i.e., `i128` or `u128`).
+    /// Parse to `u128` unless a `-` is encountered, in which case parse to `i128`.
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut is_negative = false;
 
@@ -969,13 +968,13 @@ impl<'a> Lexer<'a> {
                 .split('_')
                 .collect::<Vec<&str>>()
                 .concat()
-                .parse::<i64>();
+                .parse::<i128>();
 
             let span = Span::new(self.input, start_pos, self.pos);
 
             if let Ok(v) = value {
                 Ok(Token::IntLiteral {
-                    value: Int::I64(v),
+                    value: Int::I128(v),
                     span,
                 })
             } else {
@@ -988,13 +987,13 @@ impl<'a> Lexer<'a> {
                 .split('_')
                 .collect::<Vec<&str>>()
                 .concat()
-                .parse::<u64>();
+                .parse::<u128>();
 
             let span = Span::new(self.input, start_pos, self.pos);
 
             if let Ok(v) = value {
                 Ok(Token::UIntLiteral {
-                    value: UInt::U64(v),
+                    value: UInt::U128(v),
                     span,
                 })
             } else {
