@@ -155,7 +155,7 @@ pub enum Token {
         name: String,
         span: Span,
     },
-    Mod {
+    Module {
         name: String,
         span: Span,
     },
@@ -621,7 +621,7 @@ impl Token {
             Token::Enum { span, .. } => span,
             Token::Trait { span, .. } => span,
             Token::Impl { span, .. } => span,
-            Token::Mod { span, .. } => span,
+            Token::Module { span, .. } => span,
             Token::Import { span, .. } => span,
             Token::Package { span, .. } => span,
             Token::Super { span, .. } => span,

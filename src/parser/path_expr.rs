@@ -62,7 +62,7 @@ mod tests {
 
     #[test]
     fn parse_path_expr() -> Result<(), ()> {
-        let input = r#"package::module::Object"#;
+        let input = r#"package::some_module::SomeObject"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn parse_path_expr_wildcard() -> Result<(), ()> {
-        let input = r#"self::module::*"#;
+        let input = r#"self::some_module::*"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

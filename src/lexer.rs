@@ -297,7 +297,7 @@ impl<'a> Lexer<'a> {
                 "let" => Ok(Token::Let { name, span }),
                 "loop" => Ok(Token::Loop { name, span }),
                 "match" => Ok(Token::Match { name, span }),
-                "mod" => Ok(Token::Mod { name, span }),
+                "module" => Ok(Token::Module { name, span }),
                 "mut" => Ok(Token::Mut { name, span }),
                 "Ok" => Ok(Token::Ok { name, span }),
                 "None" => Ok(Token::None { name, span }),
@@ -1129,68 +1129,12 @@ impl<'a> Lexer<'a> {
 /// List of reserved keywords to match against some input string.
 fn is_keyword(value: &str) -> bool {
     [
-        "alias",
-        "as",
-        "break",
-        "bytes",
-        "const",
-        "continue",
-        "else",
-        "enum",
-        "Err",
-        "false",
-        "for",
-        "func",
-        "if",
-        "impl",
-        "import",
-        "in",
-        "let",
-        "loop",
-        "match",
-        "mod",
-        "mut",
-        "None",
-        "Ok",
-        "package",
-        "pub",
-        "ref",
-        "return",
-        "self",
-        "Some",
-        "static",
-        "struct",
-        "super",
-        "trait",
-        "true",
-        "while",
-        "i32",
-        "i64",
-        "i128",
-        "u8",
-        "u16",
-        "u32",
-        "u64",
-        "u128",
-        "u256",
-        "u512",
-        "byte",
-        "b2",
-        "b4",
-        "b8",
-        "b16",
-        "b32",
-        "h160",
-        "h256",
-        "h512",
-        "String",
-        "str",
-        "char",
-        "bool",
-        "Option",
-        "Result",
-        "Vec",
-        "Mapping",
+        "alias", "as", "break", "bytes", "const", "continue", "else", "enum", "Err", "false",
+        "for", "func", "if", "impl", "import", "in", "let", "loop", "match", "module", "mut", "None",
+        "Ok", "package", "pub", "ref", "return", "self", "Some", "static", "struct", "super",
+        "trait", "true", "while", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "u256",
+        "u512", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256", "h512", "String", "str",
+        "char", "bool", "Option", "Result", "Vec", "Mapping",
     ]
     .contains(&value)
 }
@@ -1264,7 +1208,7 @@ mod tests {
     #[test]
     fn tokenize_attributes() {
         let input = r#"
-        pub mod foo {
+        pub module foo {
             #![contract]
 
             #[storage]
@@ -1359,7 +1303,7 @@ mod tests {
 
     #[test]
     fn tokenize_import_decl() {
-        let input = r#"import package::module::Object as Foo;"#;
+        let input = r#"import package::some_module::SomeObject as Foo;"#;
 
         let mut lexer = Lexer::new(input);
 

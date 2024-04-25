@@ -19,8 +19,8 @@ impl ModuleItem {
         outer_attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<ModuleItem, ErrorsEmitted> {
-        let kw_mod = parser.expect_keyword(Token::Mod {
-            name: "mod".to_string(),
+        let kw_mod = parser.expect_keyword(Token::Module {
+            name: "module".to_string(),
             span: parser.stream.span(),
         })?;
 
@@ -64,72 +64,71 @@ impl ModuleItem {
 
             let token = parser.peek_current();
 
-            let item = match token {
-                Some(Token::Import { .. }) => Ok(Item::ImportDecl(ImportDecl::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?)),
-                Some(Token::Alias { .. }) => Ok(Item::AliasDecl(AliasDecl::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?)),
-                Some(Token::Const { .. }) => Ok(Item::ConstantDecl(ConstantDecl::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?)),
-                Some(Token::Static { .. }) => Ok(Item::StaticItemDecl(StaticItemDecl::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?)),
-                Some(Token::Mod { .. }) => Ok(Item::ModuleDef(Box::new(ModuleItem::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?))),
-                Some(Token::Trait { .. }) => Ok(Item::TraitDef(TraitDef::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?)),
-                Some(Token::Enum { .. }) => Ok(Item::EnumDef(EnumDef::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?)),
-                Some(Token::Struct { .. }) => Ok(Item::StructDef(StructDef::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?)),
-                Some(Token::Impl { .. }) => {
-                    if let Some(Token::For { .. }) = parser.peek_ahead_by(2) {
-                        Ok(Item::TraitImplDef(TraitImplDef::parse(
-                            parser,
-                            item_attributes,
-                            item_visibility,
-                        )?))
-                    } else {
-                        Ok(Item::InherentImplDef(InherentImplDef::parse(
-                            parser,
-                            item_attributes,
-                            item_visibility,
-                        )?))
+            let item =
+                match token {
+                    Some(Token::Import { .. }) => Ok(Item::ImportDecl(ImportDecl::parse(
+                        parser,
+                        item_attributes,
+                        item_visibility,
+                    )?)),
+                    Some(Token::Alias { .. }) => Ok(Item::AliasDecl(AliasDecl::parse(
+                        parser,
+                        item_attributes,
+                        item_visibility,
+                    )?)),
+                    Some(Token::Const { .. }) => Ok(Item::ConstantDecl(ConstantDecl::parse(
+                        parser,
+                        item_attributes,
+                        item_visibility,
+                    )?)),
+                    Some(Token::Static { .. }) => Ok(Item::StaticItemDecl(StaticItemDecl::parse(
+                        parser,
+                        item_attributes,
+                        item_visibility,
+                    )?)),
+                    Some(Token::Module { .. }) => Ok(Item::ModuleItem(Box::new(
+                        ModuleItem::parse(parser, item_attributes, item_visibility)?,
+                    ))),
+                    Some(Token::Trait { .. }) => Ok(Item::TraitDef(TraitDef::parse(
+                        parser,
+                        item_attributes,
+                        item_visibility,
+                    )?)),
+                    Some(Token::Enum { .. }) => Ok(Item::EnumDef(EnumDef::parse(
+                        parser,
+                        item_attributes,
+                        item_visibility,
+                    )?)),
+                    Some(Token::Struct { .. }) => Ok(Item::StructDef(StructDef::parse(
+                        parser,
+                        item_attributes,
+                        item_visibility,
+                    )?)),
+                    Some(Token::Impl { .. }) => {
+                        if let Some(Token::For { .. }) = parser.peek_ahead_by(2) {
+                            Ok(Item::TraitImplDef(TraitImplDef::parse(
+                                parser,
+                                item_attributes,
+                                item_visibility,
+                            )?))
+                        } else {
+                            Ok(Item::InherentImplDef(InherentImplDef::parse(
+                                parser,
+                                item_attributes,
+                                item_visibility,
+                            )?))
+                        }
                     }
-                }
-                Some(Token::Func { .. }) => Ok(Item::FunctionDef(FunctionItem::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?)),
-                _ => {
-                    parser.log_unexpected_token("declaration or definition".to_string());
-                    Err(ErrorsEmitted)
-                }
-            }?;
+                    Some(Token::Func { .. }) => Ok(Item::FunctionItem(FunctionItem::parse(
+                        parser,
+                        item_attributes,
+                        item_visibility,
+                    )?)),
+                    _ => {
+                        parser.log_unexpected_token("declaration or definition".to_string());
+                        Err(ErrorsEmitted)
+                    }
+                }?;
 
             items.push(item);
         }
@@ -151,7 +150,7 @@ impl ModuleItem {
                 }
             },
             visibility,
-            kw_mod,
+            kw_module: kw_mod,
             module_name,
             open_brace,
             inner_attributes_opt: {
@@ -180,10 +179,10 @@ mod tests {
     #[test]
     fn parse_module_def() -> Result<(), ()> {
         let input = r#"
-        pub mod foo {
+        pub module foo {
             #![contract]
 
-            import package::module::Object;
+            import package::some_module::SomeObject;
             
             #[storage]
             static mut OWNER: h160 = $0x12345123451234512345;

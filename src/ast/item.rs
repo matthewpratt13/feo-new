@@ -188,7 +188,7 @@ pub struct InherentImplDef {
 pub struct ModuleItem {
     pub outer_attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
-    pub kw_mod: Keyword,
+    pub kw_module: Keyword,
     pub module_name: Identifier,
     pub open_brace: Delimiter,
     pub inner_attributes_opt: Option<Vec<InnerAttr>>,

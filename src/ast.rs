@@ -69,7 +69,7 @@ pub struct Identifier(pub String);
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
     Import,
-    Mod,
+    Module,
     Package,
     SelfKeyword,
     SelfType,
@@ -597,14 +597,14 @@ pub enum Item {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     StaticItemDecl(StaticItemDecl),
-    ModuleDef(Box<ModuleItem>),
+    ModuleItem(Box<ModuleItem>),
     TraitDef(TraitDef),
     EnumDef(EnumDef),
     StructDef(StructDef),
     TupleStructDef(TupleStructDef),
     InherentImplDef(InherentImplDef),
     TraitImplDef(TraitImplDef),
-    FunctionDef(FunctionItem),
+    FunctionItem(FunctionItem),
 }
 
 /// Enum representing the language's different types, which help to define a value's

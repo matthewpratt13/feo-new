@@ -666,7 +666,7 @@ impl Parser {
                 | Token::Alias { .. }
                 | Token::Const { .. }
                 | Token::Static { .. }
-                | Token::Mod { .. }
+                | Token::Module { .. }
                 | Token::Trait { .. }
                 | Token::Enum { .. }
                 | Token::Struct { .. }
@@ -758,7 +758,7 @@ impl Parser {
 
         match token {
             Some(Token::Import { .. }) => Ok(Keyword::Import),
-            Some(Token::Mod { .. }) => Ok(Keyword::Mod),
+            Some(Token::Module { .. }) => Ok(Keyword::Module),
             Some(Token::Package { .. }) => Ok(Keyword::Package),
             Some(Token::SelfKeyword { .. }) => Ok(Keyword::SelfKeyword),
             Some(Token::SelfType { .. }) => Ok(Keyword::SelfType),
@@ -1073,7 +1073,7 @@ impl Parser {
             Some(Token::Static { .. }) => Ok(Statement::Item(Item::StaticItemDecl(
                 StaticItemDecl::parse(self, outer_attributes, visibility)?,
             ))),
-            Some(Token::Mod { .. }) => Ok(Statement::Item(Item::ModuleDef(Box::new(
+            Some(Token::Module { .. }) => Ok(Statement::Item(Item::ModuleItem(Box::new(
                 ModuleItem::parse(self, outer_attributes, visibility)?,
             )))),
             Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
@@ -1101,7 +1101,7 @@ impl Parser {
                 }
             },
 
-            Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionDef(
+            Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionItem(
                 FunctionItem::parse(self, outer_attributes, visibility)?,
             ))),
             Some(Token::Impl { .. }) => match self.peek_ahead_by(2) {
