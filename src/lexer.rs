@@ -222,7 +222,7 @@ impl<'a> Lexer<'a> {
                     self.advance();
                 }
 
-                // replace actual source code with `""` as ordinary comments are discarded
+                // replace actual source code with `""`, as ordinary comments are discarded
                 Ok(Token::LineComment {
                     span: Span::new("", start_pos, self.pos),
                 })
@@ -267,78 +267,16 @@ impl<'a> Lexer<'a> {
         let name = self.input[start_pos..self.pos].trim().to_string();
         let span = Span::new(self.input, start_pos, self.pos);
 
-        // check if the input is a reserved keyword (including booleans and type annotations)
-        // or return a `Token::Identifier`
-        if is_keyword(&name) {
+        if is_keyword(&name) | is_attribute(&name) {
             match name.as_str() {
                 "alias" => Ok(Token::Alias { name, span }),
                 "as" => Ok(Token::As { name, span }),
                 "break" => Ok(Token::Break { name, span }),
-                "calldata" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
-                "constructor" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "const" => Ok(Token::Const { name, span }),
                 "continue" => Ok(Token::Continue { name, span }),
-                "contract" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_inner_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "else" => Ok(Token::Else { name, span }),
                 "enum" => Ok(Token::Enum { name, span }),
-                "error" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "Err" => Ok(Token::Err { name, span }),
-                "event" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
-                "extern" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "false" => Ok(Token::BoolLiteral {
                     value: {
                         if let Ok(n) = name.parse::<bool>() {
@@ -355,104 +293,23 @@ impl<'a> Lexer<'a> {
                 "if" => Ok(Token::If { name, span }),
                 "impl" => Ok(Token::Impl { name, span }),
                 "import" => Ok(Token::Import { name, span }),
-                "interface" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_inner_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "in" => Ok(Token::In { name, span }),
                 "let" => Ok(Token::Let { name, span }),
-                "library" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_inner_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "loop" => Ok(Token::Loop { name, span }),
                 "match" => Ok(Token::Match { name, span }),
-                "modifier" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "mod" => Ok(Token::Mod { name, span }),
                 "mut" => Ok(Token::Mut { name, span }),
                 "Ok" => Ok(Token::Ok { name, span }),
                 "None" => Ok(Token::None { name, span }),
                 "package" => Ok(Token::Package { name, span }),
-                "payable" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "pub" => Ok(Token::Pub { name, span }),
                 "ref" => Ok(Token::Ref { name, span }),
                 "return" => Ok(Token::Return { name, span }),
-                "script" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_inner_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "self" => Ok(Token::SelfKeyword { name, span }),
                 "Some" => Ok(Token::Some { name, span }),
-
                 "static" => Ok(Token::Static { name, span }),
-                "storage" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "struct" => Ok(Token::Struct { name, span }),
                 "super" => Ok(Token::Super { name, span }),
-                "test" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
-                "topic" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "trait" => Ok(Token::Trait { name, span }),
                 "true" => Ok(Token::BoolLiteral {
                     value: {
@@ -466,27 +323,6 @@ impl<'a> Lexer<'a> {
 
                     span,
                 }),
-
-                "unsafe" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_inner_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
-                "view" => {
-                    if let Some(']') = self.peek_current() {
-                        let token = self.tokenize_outer_attribute(name, span);
-                        self.advance();
-                        token
-                    } else {
-                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
-                        Err(ErrorsEmitted)
-                    }
-                }
                 "while" => Ok(Token::While { name, span }),
                 "i32" => Ok(Token::I32Type { name, span }),
                 "i64" => Ok(Token::I64Type { name, span }),
@@ -515,6 +351,166 @@ impl<'a> Lexer<'a> {
                 "Result" => Ok(Token::ResultType { name, span }),
                 "Vec" => Ok(Token::VecType { name, span }),
                 "Mapping" => Ok(Token::MappingType { name, span }),
+                "calldata" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "constructor" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "contract" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "error" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "event" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "extern" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "interface" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "library" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "modifier" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "payable" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "script" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "storage" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "test" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "topic" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "unsafe" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
+                "view" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_outer_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
                 _ => {
                     self.log_error(LexErrorKind::UnrecognizedKeyword { name });
                     Err(ErrorsEmitted)
@@ -824,8 +820,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize a big unsigned integer literal (i.e., `U256` and `U512`).
-    /// The default big uint type is `U256`.
+    /// Tokenize a big unsigned integer literal (i.e., `u256` and `u512`).
     fn tokenize_big_uint(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
@@ -869,7 +864,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize a hash literal (i.e., `H160`, `H256` and `H512`).
+    /// Tokenize a hash literal (i.e., `h160`, `h256` and `h512`).
     fn tokenize_hash(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
@@ -1138,52 +1133,36 @@ fn is_keyword(value: &str) -> bool {
         "as",
         "break",
         "bytes",
-        "calldata",
-        "constructor",
         "const",
         "continue",
-        "contract",
         "else",
         "enum",
-        "error",
         "Err",
-        "event",
-        "extern",
         "false",
         "for",
         "func",
         "if",
         "impl",
         "import",
-        "interface",
         "in",
         "let",
-        "library",
         "loop",
         "match",
-        "modifier",
         "mod",
         "mut",
         "None",
         "Ok",
         "package",
-        "payable",
         "pub",
         "ref",
         "return",
-        "script",
         "self",
         "Some",
         "static",
-        "storage",
         "struct",
         "super",
-        "test",
-        "topic",
         "trait",
         "true",
-        "unsafe",
-        "view",
         "while",
         "i32",
         "i64",
@@ -1212,6 +1191,29 @@ fn is_keyword(value: &str) -> bool {
         "Result",
         "Vec",
         "Mapping",
+    ]
+    .contains(&value)
+}
+
+/// List of reserved keywords to match against some input string.
+fn is_attribute(value: &str) -> bool {
+    [
+        "calldata",
+        "constructor",
+        "contract",
+        "error",
+        "event",
+        "extern",
+        "interface",
+        "library",
+        "modifier",
+        "payable",
+        "script",
+        "storage",
+        "test",
+        "topic",
+        "unsafe",
+        "view",
     ]
     .contains(&value)
 }
@@ -1262,12 +1264,13 @@ mod tests {
     #[test]
     fn tokenize_attributes() {
         let input = r#"
-        #![contract]
         pub mod foo {
+            #![contract]
+
             #[storage]
-            const balances: [u256] = [0x1234, 0x5678, 0x90AB, 0xCDEF];
+            const balances: [u256; 4] = [0x1234, 0x5678, 0x90AB, 0xCDEF];
             
-            #[interface]
+            #![interface]
             trait Bar
 
             #[constructor]
@@ -1324,7 +1327,7 @@ mod tests {
 
             return Ok(ReturnType {
                 baz: "hello world"
-            })
+            });
         }
         "#;
 
