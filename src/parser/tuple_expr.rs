@@ -108,7 +108,6 @@ impl TupleIndexExpr {
 
         Ok(TupleIndexExpr {
             operand: Box::new(operand),
-            dot: Separator::Dot,
             index,
         })
     }

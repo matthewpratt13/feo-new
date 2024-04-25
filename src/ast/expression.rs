@@ -11,8 +11,8 @@ use super::{
 /// Enum representing whether or not a closure has parameters in its definition.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ClosureParams {
-    Some(Separator, Vec<ClosureParam>, Separator),
-    None(Separator),
+    Some(Vec<ClosureParam>), // `| params |`
+    None, // `||`
 }
 
 /// Enum representing the different path root options.
@@ -37,7 +37,6 @@ pub struct ClosureParam {
 pub struct MatchArm {
     pub case: Pattern,
     pub guard_opt: Option<(Keyword, Box<GroupedExpr>)>, // `if (..)`
-    pub fat_arrow: Separator,
     pub logic: Box<Expression>,
 }
 
@@ -117,7 +116,7 @@ pub struct CallExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClosureExpr {
     pub params: ClosureParams,
-    pub return_type_opt: Option<(Separator, Type)>, // `-> Type`
+    pub return_type_opt: Option<Type>,
     pub expression: Box<Expression>,
 }
 
@@ -142,7 +141,6 @@ pub struct DereferenceExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldAccessExpr {
     pub object: Box<AssigneeExpr>,
-    pub dot: Separator,
     pub field: Identifier,
 }
 
@@ -192,7 +190,6 @@ pub struct MatchExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MethodCallExpr {
     pub receiver: Box<AssigneeExpr>,
-    pub dot: Separator,
     pub method_name: Identifier,
     pub open_paren: Delimiter,
     pub args_opt: Option<Vec<Expression>>,
@@ -260,7 +257,6 @@ pub struct TupleExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleIndexExpr {
     pub operand: Box<AssigneeExpr>,
-    pub dot: Separator,
     pub index: UInt,
 }
 

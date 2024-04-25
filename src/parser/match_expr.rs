@@ -62,7 +62,7 @@ impl MatchExpr {
                 None
             };
 
-            let fat_arrow = parser.expect_separator(Token::FatArrow {
+            let _ = parser.expect_separator(Token::FatArrow {
                 punc: "=>".to_string(),
                 span: parser.stream.span(),
             })?;
@@ -72,7 +72,6 @@ impl MatchExpr {
             let arm = MatchArm {
                 case,
                 guard_opt,
-                fat_arrow,
                 logic: Box::new(logic),
             };
 

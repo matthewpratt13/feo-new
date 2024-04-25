@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Separator, Type},
+    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Type},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -48,9 +48,9 @@ impl ClosureExpr {
                     }
                 }
 
-                Ok(ClosureParams::Some(Separator::Pipe, vec, Separator::Pipe))
+                Ok(ClosureParams::Some(vec))
             }
-            Some(Token::DblPipe { .. }) => Ok(ClosureParams::None(Separator::DblPipe)),
+            Some(Token::DblPipe { .. }) => Ok(ClosureParams::None),
             _ => {
                 parser.log_unexpected_token("`|` or `||`".to_string());
                 Err(ErrorsEmitted)
@@ -59,7 +59,7 @@ impl ClosureExpr {
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
             parser.consume_token();
-            Some((Separator::ThinArrow, Type::parse(parser)?))
+            Some(Type::parse(parser)?)
         } else {
             None
         };
