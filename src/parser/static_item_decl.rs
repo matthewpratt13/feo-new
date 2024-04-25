@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Identifier, Keyword, OuterAttr, StaticItemDecl, Visibility},
+    ast::{Identifier, Keyword, OuterAttr, StaticItemDecl, Type, Visibility},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -36,7 +36,7 @@ impl ParseDeclaration for StaticItemDecl {
             span: parser.stream.span(),
         })?;
 
-        let item_type = parser.get_type()?;
+        let item_type = Type::parse(parser)?;
 
         let value_opt = if let Some(Token::Equals { .. }) = parser.peek_current() {
             parser.consume_token();

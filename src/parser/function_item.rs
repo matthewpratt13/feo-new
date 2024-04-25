@@ -1,7 +1,6 @@
 use crate::{
     ast::{
-        BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier,
-        Keyword, OuterAttr, SelfParam, UnaryOp, Visibility,
+        BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier, Keyword, OuterAttr, SelfParam, Type, UnaryOp, Visibility
     },
     error::ErrorsEmitted,
     token::Token,
@@ -75,7 +74,7 @@ impl FunctionItem {
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
             parser.consume_token();
-            Some(Box::new(parser.get_type()?))
+            Some(Box::new(Type::parse(parser)?))
         } else {
             None
         };
@@ -146,7 +145,7 @@ impl FunctionOrMethodParam {
                 span: parser.stream.span(),
             })?;
 
-            let param_type = Box::new(parser.get_type()?);
+            let param_type = Box::new(Type::parse(parser)?);
 
             let function_param = FunctionParam {
                 param_name,

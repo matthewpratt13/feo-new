@@ -1,5 +1,5 @@
 use crate::{
-    ast::{ConstantDecl, Identifier, OuterAttr, ValueExpr, Visibility},
+    ast::{ConstantDecl, Identifier, OuterAttr, Type, ValueExpr, Visibility},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -29,7 +29,7 @@ impl ParseDeclaration for ConstantDecl {
             span: parser.stream.span(),
         })?;
 
-        let item_type = Box::new(parser.get_type()?);
+        let item_type = Box::new(Type::parse(parser)?);
 
         let value = if let Some(Token::Equals { .. }) = parser.peek_current() {
             parser.consume_token();

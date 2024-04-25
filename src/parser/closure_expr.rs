@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Separator},
+    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Separator, Type},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -32,7 +32,7 @@ impl ClosureExpr {
 
                     let ty = if let Some(Token::Colon { .. }) = parser.peek_current() {
                         parser.consume_token();
-                        Some(parser.get_type()?)
+                        Some(Type::parse(parser)?)
                     } else {
                         None
                     };
@@ -59,7 +59,7 @@ impl ClosureExpr {
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
             parser.consume_token();
-            Some((Separator::ThinArrow, parser.get_type()?))
+            Some((Separator::ThinArrow, Type::parse(parser)?))
         } else {
             None
         };

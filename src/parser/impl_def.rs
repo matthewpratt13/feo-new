@@ -1,7 +1,8 @@
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InherentImplDef,
-        InherentImplItem, OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem, Visibility,
+        InherentImplItem, OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem, Type,
+        Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -22,7 +23,7 @@ impl ParseDefinition for InherentImplDef {
 
         let mut associated_items: Vec<InherentImplItem> = Vec::new();
 
-        let nominal_type = parser.get_type()?;
+        let nominal_type = Type::parse(parser)?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
@@ -130,7 +131,7 @@ impl ParseDefinition for TraitImplDef {
             span: parser.stream.span(),
         })?;
 
-        let implementing_type = parser.get_type()?;
+        let implementing_type = Type::parse(parser)?;
 
         let mut associated_items: Vec<TraitImplItem> = Vec::new();
 

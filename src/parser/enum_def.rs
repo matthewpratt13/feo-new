@@ -169,7 +169,7 @@ impl EnumVariantStruct {
                 span: parser.stream.span(),
             })?;
 
-            let field_type = parser.get_type()?;
+            let field_type = Type::parse(parser)?;
             fields.push((field_name, field_type));
 
             let token = parser.peek_current();
@@ -230,7 +230,7 @@ impl EnumVariantTuple {
                 break;
             }
 
-            let element_type = parser.get_type()?;
+            let element_type = Type::parse(parser)?;
             element_types.push(element_type);
 
             let token = parser.peek_current();

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssignmentOp, Keyword, LetStmt, Pattern, Separator},
+    ast::{AssignmentOp, Keyword, LetStmt, Pattern, Separator, Type},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -30,7 +30,7 @@ impl LetStmt {
 
         let type_ann_opt = if let Some(Token::Colon { .. }) = parser.peek_current() {
             parser.consume_token();
-            Some((Separator::Colon, parser.get_type()?))
+            Some((Separator::Colon, Type::parse(parser)?))
         } else {
             None
         };

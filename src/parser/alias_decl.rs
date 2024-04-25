@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AliasDecl, Identifier, OuterAttr, Visibility},
+    ast::{AliasDecl, Identifier, OuterAttr, Type, Visibility},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -28,7 +28,7 @@ impl ParseDeclaration for AliasDecl {
 
         let original_type_opt = if let Some(Token::Equals { .. }) = parser.peek_current() {
             parser.consume_token();
-            Some(parser.get_type()?)
+            Some(Type::parse(parser)?)
         } else {
             None
         };

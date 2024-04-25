@@ -1,7 +1,6 @@
 use crate::{
     ast::{
-        Delimiter, Identifier, OuterAttr, StructDef, StructDefField, TupleStructDef,
-        TupleStructDefField, Visibility,
+        Delimiter, Identifier, OuterAttr, StructDef, StructDefField, TupleStructDef, TupleStructDefField, Type, Visibility
     },
     error::ErrorsEmitted,
     token::Token,
@@ -62,7 +61,7 @@ impl ParseDefinition for StructDef {
                     span: parser.stream.span(),
                 })?;
 
-                let field_type = Box::new(parser.get_type()?);
+                let field_type = Box::new(Type::parse(parser)?);
 
                 let field = StructDefField {
                     attributes_opt: {
@@ -167,7 +166,7 @@ impl ParseDefinition for TupleStructDef {
             let field_visibility = parser.get_visibility()?;
 
 
-            let field_type = Box::new(parser.get_type()?);
+            let field_type = Box::new(Type::parse(parser)?);
 
             let field = TupleStructDefField {
                 visibility: field_visibility,
