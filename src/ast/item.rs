@@ -2,8 +2,7 @@
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 use super::{
-    BlockExpr, Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathExpr,
-    Pattern, Type, UnaryOp, ValueExpr,
+    BlockExpr, Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathExpr, Pattern, Separator, Type, UnaryOp, ValueExpr
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -76,6 +75,7 @@ pub struct FunctionParam {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImportTree {
     pub path_segments: Vec<PathSegment>,
+    pub wildcard_opt: Option<Separator>,
     pub as_clause_opt: Option<(Keyword, Identifier)>,
 }
 

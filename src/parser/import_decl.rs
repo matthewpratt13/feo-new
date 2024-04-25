@@ -1,7 +1,6 @@
 use crate::{
     ast::{
-        Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathExpr, PathPrefix,
-        PathSegment, PathSubset, Visibility,
+        Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathExpr, PathPrefix, PathSegment, PathSubset, Separator, Visibility
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -56,6 +55,13 @@ impl ImportTree {
             path_segments.push(next_segment);
         }
 
+        let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Some(Separator::ColonColonAsterisk)
+        } else {
+            None
+        };
+
         let as_clause_opt = if let Some(Token::As { .. }) = parser.peek_current() {
             let kw_as = Keyword::As;
             parser.consume_token();
@@ -75,6 +81,7 @@ impl ImportTree {
 
         Ok(ImportTree {
             path_segments,
+            wildcard_opt,
             as_clause_opt,
         })
     }
