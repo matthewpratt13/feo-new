@@ -1352,4 +1352,134 @@ mod tests {
 
         println!("{:#?}", stream);
     }
+
+    #[test]
+    fn tokenize_comprehensive() {
+        let input = r#"
+        ////////////////////////////////////////////////////////////////////////////////
+        // `src/lib.feo`
+        ////////////////////////////////////////////////////////////////////////////////
+        //! package contents
+    
+        pub module some_library {}
+        pub import package::Contract;
+
+        ////////////////////////////////////////////////////////////////////////////////
+        // `src/lib/some_library.feo`
+        ////////////////////////////////////////////////////////////////////////////////
+        #![library]
+        
+        #[extern]
+        pub trait SomeTrait {
+            func bar() -> str; 
+        }
+
+        func hello_world() {
+            print!("hello world");
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////
+        // `src/main.feo`
+        ////////////////////////////////////////////////////////////////////////////////
+        #![script]
+
+        import package::some_library;
+        import package::some_contract::{Contract, OWNER};
+
+        func main() {
+            greater_than(1, 2);
+
+            let world: b8 = b"world";
+
+            print!("hello {}", Str::from(world));
+
+            some_library::hello_world();
+
+            let some_contract = Contract::new(OWNER, u256::ZERO);
+            let foo = some_contract.foo();
+
+            print!("{}", foo);
+        }
+
+        func greater_than(arg1: u256, arg2: u256) {
+            if arg1 > arg2 {
+                print!("{} is greater than {}", arg1, arg2);
+            } else if arg1 == arg2 {
+                print!("{} is equal to {}", arg1, arg2);
+            } else {
+                print!("{} is less than {}", arg1, arg2);
+            }
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////
+        // `src/some_contract.feo`
+        ////////////////////////////////////////////////////////////////////////////////
+        #![contract]
+
+        import package::some_library::SomeTrait;
+
+        struct Foo {
+            field1: str,
+            field2: h160,
+            field3: u256,
+            field4: Vec<u256>,
+            field5: b4,
+            field6: bool
+        }
+
+        #[storage]
+        #[extern]
+        pub const OWNER: h160 = $0x12345123451234512345;
+
+        const STR: str = "foo";
+        const BYTES: b4 = Bytes::from(STR);
+
+        trait Bar {
+            #![interface]
+            func foo(&mut self) -> Foo;
+        }
+
+        impl Contract {
+            #[constructor]
+            pub func new(owner: h160, balance: u256) -> Contract {
+                Contract {
+                    owner: owner,
+                    balance: balance
+      
+                }
+            }
+        }
+
+        impl Bar for Contract {
+            func foo(&mut self) -> Foo {
+                let array: [u8; 4] = [1, 2, 3, 4];
+                let mut vec: Vec<u256> = Vec::new();
+
+                for num in array {
+                    vec.push(num as u256);
+                }
+
+                vec.push(0x12345);
+
+                Foo {
+                    field1: "foo",
+                    field2: OWNER,
+                    field3: 0x0123_4567_89AB_CDEF,
+                    field4: vec,
+                    field5: b"bar",
+                    field6: true
+                }
+            }
+        }"#;
+
+        let mut lexer = Lexer::new(input);
+
+        let stream = lexer.lex().expect(&format!(
+            "unable to tokenize input. current char: `{:?}`\n{:#?}",
+            lexer.peek_current(),
+            lexer.errors(),
+        ));
+
+        println!("{:#?}", stream);
+    }
 }
