@@ -359,7 +359,7 @@ impl TryFrom<Expression> for AssigneeExpr {
                 a.elements_opt.map(|v| {
                     v.into_iter().for_each(|e| {
                         assignee_expressions.push(AssigneeExpr::try_from(e).expect(
-                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                            "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         ))
                     })
                 });
@@ -383,7 +383,7 @@ impl TryFrom<Expression> for AssigneeExpr {
                         .into_iter()
                         .map(|e| {
                             AssigneeExpr::try_from(e).expect(
-                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                            "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         )
                         })
                         .collect::<Vec<AssigneeExpr>>()
@@ -398,7 +398,7 @@ impl TryFrom<Expression> for AssigneeExpr {
                 s.fields_opt.map(|v| {
                     v.into_iter().for_each(|s| {
                         let value = AssigneeExpr::try_from(s.value).expect(
-                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                            "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         );
                         assignee_expressions.push((s.name, value));
                     })
@@ -412,7 +412,7 @@ impl TryFrom<Expression> for AssigneeExpr {
                 ts.elements_opt.map(|v| {
                     v.into_iter().for_each(|e| {
                         assignee_expressions.push(AssigneeExpr::try_from(e).expect(
-                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                            "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         ))
                     })
                 });
@@ -445,7 +445,10 @@ pub enum Pattern {
         name: Identifier,
         fields_opt: Option<Vec<(Identifier, Pattern)>>,
     },
-    TupleStructPatt(TupleStructExpr),
+    TupleStructPatt {
+        name: Identifier,
+        elements_opt: Option<Vec<Pattern>>,
+    },
     WildcardPatt(UnderscoreExpr),
     RestPatt {
         dbl_dot: RangeOp,
@@ -485,7 +488,7 @@ impl TryFrom<Expression> for Pattern {
                 let fields_opt = fields_opt.map(|v| {
                     v.into_iter().for_each(|f| {
                         let pattern = Pattern::try_from(f.value).expect(
-                            "conversion error: unable to convert `Expression` to `Pattern`",
+                            "conversion error: unable to convert `Expression` into `Pattern`",
                         );
                         fields.push((f.name, pattern));
                     });
@@ -495,8 +498,31 @@ impl TryFrom<Expression> for Pattern {
 
                 Ok(Pattern::StructPatt { name, fields_opt })
             }
-            
-            Expression::TupleStruct(ts) => Ok(Pattern::TupleStructPatt(ts)),
+
+            Expression::TupleStruct(TupleStructExpr {
+                path, elements_opt, ..
+            }) => {
+                let name = path
+                    .tree_opt
+                    .unwrap_or([].to_vec())
+                    .pop()
+                    .unwrap_or(Identifier("".to_string()));
+
+                let mut elements: Vec<Pattern> = Vec::new();
+
+                let elements_opt = elements_opt.map(|v| {
+                    v.into_iter().for_each(|e| {
+                        let pattern = Pattern::try_from(e).expect(
+                            "conversion error: unable to convert `Expression` into `Pattern`",
+                        );
+                        elements.push(pattern);
+                    });
+
+                    elements
+                });
+
+                Ok(Pattern::TupleStructPatt { name, elements_opt })
+            }
             Expression::Underscore(u) => Ok(Pattern::WildcardPatt(u)),
 
             _ => Err(ParserErrorKind::TypeConversionError {

@@ -179,7 +179,7 @@ impl fmt::Display for ParserErrorKind {
 
             ParserErrorKind::TypeConversionError { type_a, type_b } => writeln!(
                 f,
-                "conversion error: unable to convert {type_a} to {type_b}"
+                "conversion error: unable to convert {type_a} into {type_b}"
             ),
         }
     }
