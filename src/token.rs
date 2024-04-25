@@ -10,6 +10,7 @@ use crate::{
 /// Enum representing the different types of tokens.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Token {
+    // includes `_`
     Identifier {
         name: String,
         span: Span,
@@ -89,7 +90,7 @@ pub enum Token {
     Interface {
         name: String,
         span: Span,
-    }, // type of trait, notated `#[interface]`
+    }, // type of trait, notated `#![interface]`
     Constructor {
         name: String,
         span: Span,
@@ -327,7 +328,7 @@ pub enum Token {
     StringType {
         name: String,
         span: Span,
-    }, // reserved as a token, but not used
+    }, // reserved as a token, but not used (yet)
     StrType {
         name: String,
         span: Span,
@@ -428,7 +429,6 @@ pub enum Token {
         punc: String,
         span: Span,
     },
-    // Underscore { name: String, span: Span },
 
     // operators
     Bang {
@@ -479,19 +479,11 @@ pub enum Token {
         punc: char,
         span: Span,
     },
-    AtSign {
-        punc: char,
-        span: Span,
-    },
     Backslash {
         punc: char,
         span: Span,
     },
     Caret {
-        punc: char,
-        span: Span,
-    },
-    Backtick {
         punc: char,
         span: Span,
     },
@@ -707,10 +699,8 @@ impl Token {
             Token::Equals { span, .. } => span,
             Token::GreaterThan { span, .. } => span,
             Token::QuestionMark { span, .. } => span,
-            Token::AtSign { span, .. } => span,
             Token::Backslash { span, .. } => span,
             Token::Caret { span, .. } => span,
-            Token::Backtick { span, .. } => span,
             Token::Pipe { span, .. } => span,
             Token::DblDot { span, .. } => span,
             Token::DotDotEquals { span, .. } => span,

@@ -149,8 +149,8 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
-                '!' | '#' | '%' | '&' | '*' | '+' | '/' | '-' | ':' | '<' | '=' | '>' | '?'
-                | '@' | '\\' | '^' | '`' | '|' => tokens.push(self.tokenize_punctuation()?),
+                '!' | '%' | '&' | '*' | '+' | '/' | '-' | ':' | '<' | '=' | '>' | '?' | '\\'
+                | '^' | '|' => tokens.push(self.tokenize_punctuation()?),
 
                 _ => {
                     let span = Span::new(self.input, start_pos, self.pos);
@@ -679,7 +679,7 @@ impl<'a> Lexer<'a> {
 
     /// Tokenize a string literal, handling escape sequences where applicable.
     fn tokenize_string(&mut self) -> Result<Token, ErrorsEmitted> {
-        let mut value = String::new();
+        let mut buf = String::new();
 
         let start_pos = self.pos;
 
@@ -690,7 +690,7 @@ impl<'a> Lexer<'a> {
                 '\\' => {
                     // handle escape sequences
                     if let Some(escaped_char) = self.parse_escape_sequence()? {
-                        value.push(escaped_char);
+                        buf.push(escaped_char);
                         self.advance();
                     } else {
                         self.log_error(LexErrorKind::CharNotFound {
@@ -704,12 +704,12 @@ impl<'a> Lexer<'a> {
                     let span = Span::new(self.input, start_pos, self.pos);
 
                     return Ok(Token::StrLiteral {
-                        value: Str(value.as_bytes().to_vec()),
+                        value: Str(buf.as_bytes().to_vec()),
                         span,
                     });
                 }
                 _ => {
-                    value.push(c);
+                    buf.push(c);
                     self.advance();
                 }
             }
@@ -1025,12 +1025,6 @@ impl<'a> Lexer<'a> {
             "..=" => Ok(Token::DotDotEquals { punc, span }),
             "!" => Ok(Token::Bang { punc: '!', span }),
             "!=" => Ok(Token::BangEquals { punc, span }),
-            "#" => Ok(Token::HashSign { punc: '#', span }),
-            "#!" => Ok(Token::HashBang { punc, span }),
-            "$" => {
-                self.log_error(LexErrorKind::ReservedChar);
-                Err(ErrorsEmitted)
-            }
             "%" => Ok(Token::Percent { punc: '%', span }),
             "%=" => Ok(Token::PercentEquals { punc, span }),
             "&" => Ok(Token::Ampersand { punc: '&', span }),
@@ -1057,11 +1051,9 @@ impl<'a> Lexer<'a> {
             ">" => Ok(Token::GreaterThan { punc: '>', span }),
             ">>" => Ok(Token::DblGreaterThan { punc, span }),
             ">=" => Ok(Token::GreaterThanEquals { punc, span }),
-            "@" => Ok(Token::AtSign { punc: '@', span }),
             "?" => Ok(Token::QuestionMark { punc: '?', span }),
             "\\" => Ok(Token::Backslash { punc: '\\', span }),
             "^" => Ok(Token::Caret { punc: '^', span }),
-            "`" => Ok(Token::Backtick { punc: '`', span }),
             "|" => Ok(Token::Pipe { punc: '|', span }),
             "||" => Ok(Token::DblPipe { punc, span }),
             _ => {

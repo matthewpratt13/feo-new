@@ -30,8 +30,6 @@ pub enum LexErrorKind {
         expected: String,
     },
 
-    ReservedChar,
-
     UnrecognizedKeyword {
         name: String,
     },
@@ -95,11 +93,6 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::UnrecognizedOuterAttribute { name } => {
                 writeln!(f, "syntax error: unrecognized outer attribute – `{name}`")
             }
-
-            LexErrorKind::ReservedChar => {
-                writeln!(f, "syntax error\n`$` is reserved for hash literals")
-            }
-
             LexErrorKind::UnexpectedChar { expected, found } => writeln!(
                 f,
                 "unexpected character: expected {expected}, found `{found}`",
