@@ -68,7 +68,7 @@ pub enum LexErrorKind {
 impl fmt::Display for LexErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexErrorKind::LexIntError => writeln!(f, "error tokenizing signed integer literal"),
+            LexErrorKind::LexIntError => writeln!(f, "failed to signed integer literal"),
             LexErrorKind::LexUIntError => writeln!(f, "error tokenizing unsigned integer literal"),
             LexErrorKind::LexBigUIntError => {
                 writeln!(f, "error tokenizing big unsigned integer literal")

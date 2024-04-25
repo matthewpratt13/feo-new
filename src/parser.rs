@@ -95,7 +95,7 @@ impl Parser {
     /// EXPRESSIONS
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Recursively parse an expression based on operator precedence.
+    /// Recursively parse an expression based on the next token's operator precedence.
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
         println!("ENTER `parse_expression()`");
         println!("INPUT PRECEDENCE: {:?}\n", precedence);
@@ -166,7 +166,7 @@ impl Parser {
         }
     }
 
-    /// Parse prefix expressions (e.g., integer literals, identifiers and parentheses),
+    /// Parse prefix expressions (e.g., unary operators, literals, identifiers and parentheses),
     /// where the respective token type appears at the beginning of an expression.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
         println!("ENTER `parse_prefix()`");
@@ -692,7 +692,6 @@ impl Parser {
                 | Token::Pub { .. },
             ) => self.get_item(),
 
-
             _ => {
                 let statement = Ok(Statement::Expression(
                     self.parse_expression(Precedence::Lowest)?,
@@ -713,7 +712,11 @@ impl Parser {
 
     /// Peek at the token at the current index in the `TokenStream`.
     fn peek_current(&self) -> Option<Token> {
-        self.stream.tokens().get(self.current).cloned()
+        if self.current < self.stream.tokens().len() {
+            self.stream.tokens().get(self.current).cloned()
+        } else {
+            None
+        }
     }
 
     /// Peek at the token `num_tokens` ahead of the token at the current index in the `TokenStream`.
