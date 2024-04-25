@@ -76,6 +76,7 @@ pub struct FunctionParam {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImportTree {
     pub segments: Vec<PathSegment>,
+    pub as_clause_opt: Option<(Keyword, Identifier)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

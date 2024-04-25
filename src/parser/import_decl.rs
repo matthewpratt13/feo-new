@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Delimiter, ImportDecl, ImportTree, OuterAttr, PathExpr, PathPrefix, PathSegment,
-        PathSubset, Visibility,
+        Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathExpr, PathPrefix,
+        PathSegment, PathSubset, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -54,11 +54,29 @@ impl ImportTree {
 
             let next_segment = PathSegment::parse(parser)?;
             segments.push(next_segment);
-
-     
         }
 
-        Ok(ImportTree { segments })
+        let as_clause_opt = if let Some(Token::As { .. }) = parser.peek_current() {
+            let kw_as = Keyword::As;
+            parser.consume_token();
+
+            let id = if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
+                parser.consume_token();
+                Ok(Identifier(name))
+            } else {
+                parser.log_unexpected_token("identifier".to_string());
+                Err(ErrorsEmitted)
+            }?;
+
+            Some((kw_as, id))
+        } else {
+            None
+        };
+
+        Ok(ImportTree {
+            segments,
+            as_clause_opt,
+        })
     }
 }
 
@@ -182,6 +200,20 @@ mod tests {
             another_inner_module::*,
             SOME_CONSTANT,
         };"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_import_decl_with_as_clause() -> Result<(), ()> {
+        let input = r#"pub import package::some_module::SomeObject as AnotherObject;"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
