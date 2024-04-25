@@ -7,8 +7,7 @@ use super::{AssignmentOp, Expression, Keyword, Pattern, Separator, Type};
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetStmt {
     pub kw_let: Keyword,
-    pub kw_mut_opt: Option<Keyword>,
     pub assignee: Pattern,
     pub type_ann_opt: Option<(Separator, Type)>, // `: Type`
-    pub value_opt: Option<(AssignmentOp, Expression)>, // `= value`
+    pub assignment_opt: Option<(AssignmentOp, Expression)>, // `= value`
 }
