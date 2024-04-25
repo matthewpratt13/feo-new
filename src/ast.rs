@@ -441,7 +441,10 @@ pub enum Pattern {
     RangePatt(RangeExpr),
     ArrayPatt(ArrayExpr),
     TuplePatt(TupleExpr),
-    StructPatt(StructExpr),
+    StructPatt {
+        name: Identifier,
+        fields_opt: Option<Vec<(Identifier, Pattern)>>,
+    },
     TupleStructPatt(TupleStructExpr),
     WildcardPatt(UnderscoreExpr),
     RestPatt {
@@ -468,7 +471,31 @@ impl TryFrom<Expression> for Pattern {
             }
             Expression::Array(a) => Ok(Pattern::ArrayPatt(a)),
             Expression::Tuple(t) => Ok(Pattern::TuplePatt(t)),
-            Expression::Struct(s) => Ok(Pattern::StructPatt(s)),
+            Expression::Struct(StructExpr {
+                path, fields_opt, ..
+            }) => {
+                let name = path
+                    .tree_opt
+                    .unwrap_or([].to_vec())
+                    .pop()
+                    .unwrap_or(Identifier("".to_string()));
+
+                let mut fields: Vec<(Identifier, Pattern)> = Vec::new();
+
+                let fields_opt = fields_opt.map(|v| {
+                    v.into_iter().for_each(|f| {
+                        let pattern = Pattern::try_from(f.value).expect(
+                            "conversion error: unable to convert `Expression` to `Pattern`",
+                        );
+                        fields.push((f.name, pattern));
+                    });
+
+                    fields
+                });
+
+                Ok(Pattern::StructPatt { name, fields_opt })
+            }
+            
             Expression::TupleStruct(ts) => Ok(Pattern::TupleStructPatt(ts)),
             Expression::Underscore(u) => Ok(Pattern::WildcardPatt(u)),
 
