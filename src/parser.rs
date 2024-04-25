@@ -106,11 +106,11 @@ impl Parser {
         println!("CURRENT TOKEN: {:?}\n", self.peek_current());
 
         while let Some(t) = self.peek_current() {
-            let curr_precedence = self.precedence(&t);
+            let token_precedence = self.precedence(&t);
 
-            println!("CURRENT PRECEDENCE: {:?}", curr_precedence);
+            println!("CURRENT PRECEDENCE: {:?}", token_precedence);
 
-            if precedence < curr_precedence {
+            if token_precedence > precedence {
                 left_expr = self.parse_infix(left_expr)?;
                 println!("INFIX EXPRESSION: {:?}", left_expr.clone());
                 println!("CURRENT TOKEN: {:?}\n", self.peek_current());
