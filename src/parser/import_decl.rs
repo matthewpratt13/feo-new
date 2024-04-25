@@ -44,16 +44,16 @@ impl ParseDeclaration for ImportDecl {
 
 impl ImportTree {
     fn parse(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
-        let mut segments: Vec<PathSegment> = Vec::new();
+        let mut path_segments: Vec<PathSegment> = Vec::new();
 
         let first_segment = PathSegment::parse(parser)?;
-        segments.push(first_segment);
+        path_segments.push(first_segment);
 
         while let Some(Token::DblColon { .. }) = parser.peek_current() {
             parser.consume_token();
 
             let next_segment = PathSegment::parse(parser)?;
-            segments.push(next_segment);
+            path_segments.push(next_segment);
         }
 
         let as_clause_opt = if let Some(Token::As { .. }) = parser.peek_current() {
@@ -74,7 +74,7 @@ impl ImportTree {
         };
 
         Ok(ImportTree {
-            segments,
+            path_segments,
             as_clause_opt,
         })
     }

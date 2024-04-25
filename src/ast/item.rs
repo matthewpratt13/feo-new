@@ -75,7 +75,7 @@ pub struct FunctionParam {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImportTree {
-    pub segments: Vec<PathSegment>,
+    pub path_segments: Vec<PathSegment>,
     pub as_clause_opt: Option<(Keyword, Identifier)>,
 }
 
@@ -238,7 +238,7 @@ pub struct TraitDef {
     pub trait_name: Identifier,
     pub open_brace: Delimiter,
     pub inner_attributes_opt: Option<Vec<InnerAttr>>,
-    pub associated_items_opt: Option<Vec<TraitDefItem>>,
+    pub trait_items_opt: Option<Vec<TraitDefItem>>,
     pub close_brace: Delimiter,
 }
 

@@ -23,7 +23,7 @@ impl ParseDefinition for TraitDef {
             span: parser.stream.span(),
         })?;
 
-        let mut associated_items: Vec<TraitDefItem> = Vec::new();
+        let mut trait_items: Vec<TraitDefItem> = Vec::new();
         let mut inner_attributes: Vec<InnerAttr> = Vec::new();
 
         let token = parser.consume_token();
@@ -63,7 +63,7 @@ impl ParseDefinition for TraitDef {
 
             let token = parser.peek_current();
 
-            let associated_item = if let Some(Token::Const { .. }) = token {
+            let trait_item = if let Some(Token::Const { .. }) = token {
                 Ok(TraitDefItem::ConstantDecl(ConstantDecl::parse(
                     parser,
                     item_attributes,
@@ -89,7 +89,7 @@ impl ParseDefinition for TraitDef {
                 Err(ErrorsEmitted)
             }?;
 
-            associated_items.push(associated_item);
+            trait_items.push(trait_item);
         }
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
@@ -119,11 +119,11 @@ impl ParseDefinition for TraitDef {
                     Some(inner_attributes)
                 }
             },
-            associated_items_opt: {
-                if associated_items.is_empty() {
+            trait_items_opt: {
+                if trait_items.is_empty() {
                     None
                 } else {
-                    Some(associated_items)
+                    Some(trait_items)
                 }
             },
             close_brace,
