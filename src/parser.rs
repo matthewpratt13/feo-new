@@ -435,15 +435,11 @@ impl Parser {
 
             Some(Token::Return { .. }) => Ok(Expression::Return(ReturnExpr::parse(self)?)),
 
-            Some(t) => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "expression prefix".to_string(),
-                    found: Some(t),
-                });
-                Err(ErrorsEmitted)
-            }
             _ => {
-                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "prefix expression".to_string(),
+                    found: self.peek_current(),
+                });
                 Err(ErrorsEmitted)
             }
         }
@@ -639,15 +635,11 @@ impl Parser {
                 let expr = RangeExpr::parse(self, left_expr, RangeOp::RangeInclusive)?;
                 Ok(Expression::Range(expr))
             }
-            Some(t) => {
+            _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "expression infix".to_string(),
-                    found: Some(t),
+                    expected: "infix expression".to_string(),
+                    found: self.peek_current(),
                 });
-                Err(ErrorsEmitted)
-            }
-            None => {
-                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted)
             }
         }
@@ -745,6 +737,7 @@ impl Parser {
             self.current += 1;
             Some(t)
         } else {
+            self.log_error(ParserErrorKind::UnexpectedEndOfInput);
             None
         }
     }
@@ -918,7 +911,7 @@ impl Parser {
     /// Log information about an error that occurred during parsing, including where
     /// the error occurred.
     fn log_error(&mut self, error_kind: ParserErrorKind) {
-        let i = if self.current < self.stream.tokens().len() && self.current > 0 {
+        let i = if self.current <= self.stream.tokens().len() && self.current > 0 {
             self.current - 1 // one index behind, as the parser should have already advanced
         } else {
             0

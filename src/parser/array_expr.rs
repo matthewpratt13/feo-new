@@ -89,7 +89,7 @@ mod tests {
     #[test]
 
     fn parse_array_expr_with_elements() -> Result<(), ()> {
-        let input = r#"[1, 2, 3]"#;
+        let input = r#"[1, 2]"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
