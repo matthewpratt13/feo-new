@@ -830,7 +830,7 @@ impl Parser {
     fn precedence(&mut self, token: &Token) -> Precedence {
         match token {
             Token::As { .. } => Precedence::TypeCast,
-            Token::LParen { .. } => Precedence::Call,
+            Token::LParen { .. } => Precedence::Call, // TODO: what about tuple structs?
             Token::LBracket { .. } => Precedence::Index,
             Token::Dot { .. } => match self.peek_ahead_by(1) {
                 Some(Token::Identifier { .. }) => match self.peek_ahead_by(2) {
