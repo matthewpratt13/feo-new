@@ -10,162 +10,581 @@ use crate::{
 /// Enum representing the different types of tokens.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Token {
-    Identifier { name: String, span: Span },
+    Identifier {
+        name: String,
+        span: Span,
+    },
 
     // literals
-    IntLiteral { value: Int, span: Span },
-    UIntLiteral { value: UInt, span: Span },
-    BigUIntLiteral { value: BigUInt, span: Span },
-    ByteLiteral { value: Byte, span: Span },
-    BytesLiteral { value: Bytes, span: Span },
-    HashLiteral { value: Hash, span: Span },
-    StrLiteral { value: Str, span: Span },
-    CharLiteral { value: char, span: Span },
-    BoolLiteral { value: bool, span: Span },
+    IntLiteral {
+        value: Int,
+        span: Span,
+    },
+    UIntLiteral {
+        value: UInt,
+        span: Span,
+    },
+    BigUIntLiteral {
+        value: BigUInt,
+        span: Span,
+    },
+    ByteLiteral {
+        value: Byte,
+        span: Span,
+    },
+    BytesLiteral {
+        value: Bytes,
+        span: Span,
+    },
+    HashLiteral {
+        value: Hash,
+        span: Span,
+    },
+    StrLiteral {
+        value: Str,
+        span: Span,
+    },
+    CharLiteral {
+        value: char,
+        span: Span,
+    },
+    BoolLiteral {
+        value: bool,
+        span: Span,
+    },
 
     // keywords
-    Let { name: String, span: Span },
-    Mut { name: String, span: Span },
-    Ref { name: String, span: Span },
-    Pub { name: String, span: Span },
-    Func { name: String, span: Span },
-    Contract { name: String, span: Span }, // type of module, notated `#![contract]`
-    Library { name: String, span: Span },  // type of module, notated `#![library]`
-    Script { name: String, span: Span },   // type of module, notated `#![script]`
-    Interface { name: String, span: Span }, // type of trait, notated `#[interface]`
-    Constructor { name: String, span: Span }, // type of function notated `#[constructor]`
-    Modifier { name: String, span: Span }, // type of function, notated `#[modifier]`
-    Test { name: String, span: Span },     // type of function, notated `#[test]`
-    View { name: String, span: Span },     // function attribute, notated` #[view]`
-    Extern { name: String, span: Span },   // function attribute, notated `#[extern]`
-    Payable { name: String, span: Span },  // function attribute, notated `#[payable]`
-    Event { name: String, span: Span },    // type of struct, notated `#[event]`
-    Error { name: String, span: Span },    // type of struct, notated `#[error]`
-    Storage { name: String, span: Span },  // variable attribute, notated `#[storage]
-    Topic { name: String, span: Span },    // variable attribute, notated `#[topic]`
-    Calldata { name: String, span: Span }, // variable attribute, notated `#[calldata]`
-    Return { name: String, span: Span },
-    Struct { name: String, span: Span },
-    Enum { name: String, span: Span },
-    Trait { name: String, span: Span },
-    Impl { name: String, span: Span },
-    Mod { name: String, span: Span },
-    Import { name: String, span: Span },
-    Package { name: String, span: Span },
-    Super { name: String, span: Span },
-    SelfKeyword { name: String, span: Span },
-    Const { name: String, span: Span },
-    Static { name: String, span: Span },
-    Unsafe { name: String, span: Span }, // inner attribute, notated #![unsafe]
-    Alias { name: String, span: Span },
-    As { name: String, span: Span },
-    If { name: String, span: Span },
-    Else { name: String, span: Span },
-    Match { name: String, span: Span },
-    For { name: String, span: Span },
-    In { name: String, span: Span },
-    Loop { name: String, span: Span },
-    While { name: String, span: Span },
-    Break { name: String, span: Span },
-    Continue { name: String, span: Span },
-    Some { name: String, span: Span },
-    None { name: String, span: Span },
-    Ok { name: String, span: Span },
-    Err { name: String, span: Span },
+    Let {
+        name: String,
+        span: Span,
+    },
+    Mut {
+        name: String,
+        span: Span,
+    },
+    Ref {
+        name: String,
+        span: Span,
+    },
+    Pub {
+        name: String,
+        span: Span,
+    },
+    Func {
+        name: String,
+        span: Span,
+    },
+    Contract {
+        name: String,
+        span: Span,
+    }, // type of module, notated `#![contract]`
+    Library {
+        name: String,
+        span: Span,
+    }, // type of module, notated `#![library]`
+    Script {
+        name: String,
+        span: Span,
+    }, // type of module, notated `#![script]`
+    Interface {
+        name: String,
+        span: Span,
+    }, // type of trait, notated `#[interface]`
+    Constructor {
+        name: String,
+        span: Span,
+    }, // type of function notated `#[constructor]`
+    Modifier {
+        name: String,
+        span: Span,
+    }, // type of function, notated `#[modifier]`
+    Test {
+        name: String,
+        span: Span,
+    }, // type of function, notated `#[test]`
+    View {
+        name: String,
+        span: Span,
+    }, // function attribute, notated` #[view]`
+    Extern {
+        name: String,
+        span: Span,
+    }, // function attribute, notated `#[extern]`
+    Payable {
+        name: String,
+        span: Span,
+    }, // function attribute, notated `#[payable]`
+    Event {
+        name: String,
+        span: Span,
+    }, // type of struct, notated `#[event]`
+    Error {
+        name: String,
+        span: Span,
+    }, // type of struct, notated `#[error]`
+    Storage {
+        name: String,
+        span: Span,
+    }, // variable attribute, notated `#[storage]
+    Topic {
+        name: String,
+        span: Span,
+    }, // variable attribute, notated `#[topic]`
+    Calldata {
+        name: String,
+        span: Span,
+    }, // variable attribute, notated `#[calldata]`
+    Return {
+        name: String,
+        span: Span,
+    },
+    Struct {
+        name: String,
+        span: Span,
+    },
+    Enum {
+        name: String,
+        span: Span,
+    },
+    Trait {
+        name: String,
+        span: Span,
+    },
+    Impl {
+        name: String,
+        span: Span,
+    },
+    Mod {
+        name: String,
+        span: Span,
+    },
+    Import {
+        name: String,
+        span: Span,
+    },
+    Package {
+        name: String,
+        span: Span,
+    },
+    Super {
+        name: String,
+        span: Span,
+    },
+    SelfKeyword {
+        name: String,
+        span: Span,
+    },
+    Const {
+        name: String,
+        span: Span,
+    },
+    Static {
+        name: String,
+        span: Span,
+    },
+    Unsafe {
+        name: String,
+        span: Span,
+    }, // inner attribute, notated #![unsafe]
+    Alias {
+        name: String,
+        span: Span,
+    },
+    As {
+        name: String,
+        span: Span,
+    },
+    If {
+        name: String,
+        span: Span,
+    },
+    Else {
+        name: String,
+        span: Span,
+    },
+    Match {
+        name: String,
+        span: Span,
+    },
+    For {
+        name: String,
+        span: Span,
+    },
+    In {
+        name: String,
+        span: Span,
+    },
+    Loop {
+        name: String,
+        span: Span,
+    },
+    While {
+        name: String,
+        span: Span,
+    },
+    Break {
+        name: String,
+        span: Span,
+    },
+    Continue {
+        name: String,
+        span: Span,
+    },
+    Some {
+        name: String,
+        span: Span,
+    },
+    None {
+        name: String,
+        span: Span,
+    },
+    Ok {
+        name: String,
+        span: Span,
+    },
+    Err {
+        name: String,
+        span: Span,
+    },
 
     // types
-    I32Type { name: String, span: Span },
-    I64Type { name: String, span: Span },
-    I128Type { name: String, span: Span },
-    U8Type { name: String, span: Span },
-    U16Type { name: String, span: Span },
-    U32Type { name: String, span: Span },
-    U64Type { name: String, span: Span },
-    U128Type { name: String, span: Span },
-    U256Type { name: String, span: Span },
-    U512Type { name: String, span: Span },
-    ByteType { name: String, span: Span },
-    B2Type { name: String, span: Span },
-    B4Type { name: String, span: Span },
-    B8Type { name: String, span: Span },
-    B16Type { name: String, span: Span },
-    B32Type { name: String, span: Span },
-    H160Type { name: String, span: Span },
-    H256Type { name: String, span: Span },
-    H512Type { name: String, span: Span },
-    StringType { name: String, span: Span }, // reserved as a token, but not used
-    StrType { name: String, span: Span },
-    CharType { name: String, span: Span },
-    BoolType { name: String, span: Span },
-    SelfType { name: String, span: Span },
-    VecType { name: String, span: Span },
-    MappingType { name: String, span: Span },
-    OptionType { name: String, span: Span },
-    ResultType { name: String, span: Span },
+    I32Type {
+        name: String,
+        span: Span,
+    },
+    I64Type {
+        name: String,
+        span: Span,
+    },
+    I128Type {
+        name: String,
+        span: Span,
+    },
+    U8Type {
+        name: String,
+        span: Span,
+    },
+    U16Type {
+        name: String,
+        span: Span,
+    },
+    U32Type {
+        name: String,
+        span: Span,
+    },
+    U64Type {
+        name: String,
+        span: Span,
+    },
+    U128Type {
+        name: String,
+        span: Span,
+    },
+    U256Type {
+        name: String,
+        span: Span,
+    },
+    U512Type {
+        name: String,
+        span: Span,
+    },
+    ByteType {
+        name: String,
+        span: Span,
+    },
+    B2Type {
+        name: String,
+        span: Span,
+    },
+    B4Type {
+        name: String,
+        span: Span,
+    },
+    B8Type {
+        name: String,
+        span: Span,
+    },
+    B16Type {
+        name: String,
+        span: Span,
+    },
+    B32Type {
+        name: String,
+        span: Span,
+    },
+    H160Type {
+        name: String,
+        span: Span,
+    },
+    H256Type {
+        name: String,
+        span: Span,
+    },
+    H512Type {
+        name: String,
+        span: Span,
+    },
+    StringType {
+        name: String,
+        span: Span,
+    }, // reserved as a token, but not used
+    StrType {
+        name: String,
+        span: Span,
+    },
+    CharType {
+        name: String,
+        span: Span,
+    },
+    BoolType {
+        name: String,
+        span: Span,
+    },
+    SelfType {
+        name: String,
+        span: Span,
+    },
+    VecType {
+        name: String,
+        span: Span,
+    },
+    MappingType {
+        name: String,
+        span: Span,
+    },
+    OptionType {
+        name: String,
+        span: Span,
+    },
+    ResultType {
+        name: String,
+        span: Span,
+    },
 
     // delimiters
-    LParen { delim: char, span: Span },
-    RParen { delim: char, span: Span },
-    LBrace { delim: char, span: Span },
-    RBrace { delim: char, span: Span },
-    LBracket { delim: char, span: Span },
-    RBracket { delim: char, span: Span },
+    LParen {
+        delim: char,
+        span: Span,
+    },
+    RParen {
+        delim: char,
+        span: Span,
+    },
+    LBrace {
+        delim: char,
+        span: Span,
+    },
+    RBrace {
+        delim: char,
+        span: Span,
+    },
+    LBracket {
+        delim: char,
+        span: Span,
+    },
+    RBracket {
+        delim: char,
+        span: Span,
+    },
 
     // separators
-    Colon { punc: char, span: Span },
-    Semicolon { punc: char, span: Span },
-    Comma { punc: char, span: Span },
-    Dot { punc: char, span: Span },
-    DblColon { punc: String, span: Span },
-    ColonColonAsterisk { punc: String, span: Span },
-    HashSign { punc: char, span: Span },
-    HashBang { punc: String, span: Span },
-    ThinArrow { punc: String, span: Span },
-    FatArrow { punc: String, span: Span },
+    Colon {
+        punc: char,
+        span: Span,
+    },
+    Semicolon {
+        punc: char,
+        span: Span,
+    },
+    Comma {
+        punc: char,
+        span: Span,
+    },
+    Dot {
+        punc: char,
+        span: Span,
+    },
+    DblColon {
+        punc: String,
+        span: Span,
+    },
+    ColonColonAsterisk {
+        punc: String,
+        span: Span,
+    },
+    HashSign {
+        punc: char,
+        span: Span,
+    },
+    HashBang {
+        punc: String,
+        span: Span,
+    },
+    ThinArrow {
+        punc: String,
+        span: Span,
+    },
+    FatArrow {
+        punc: String,
+        span: Span,
+    },
     // Underscore { name: String, span: Span },
 
     // operators
-    Bang { punc: char, span: Span },
-    DollarSign { punc: char, span: Span },
-    Percent { punc: char, span: Span },
-    Ampersand { punc: char, span: Span },
-    Asterisk { punc: char, span: Span },
-    Plus { punc: char, span: Span },
-    Minus { punc: char, span: Span },
-    Slash { punc: char, span: Span },
-    LessThan { punc: char, span: Span },
-    Equals { punc: char, span: Span },
-    GreaterThan { punc: char, span: Span },
-    QuestionMark { punc: char, span: Span },
-    AtSign { punc: char, span: Span },
-    Backslash { punc: char, span: Span },
-    Caret { punc: char, span: Span },
-    Backtick { punc: char, span: Span },
-    Pipe { punc: char, span: Span },
-    DblDot { punc: String, span: Span },
-    DotDotEquals { punc: String, span: Span },
-    BangEquals { punc: String, span: Span },
-    PercentEquals { punc: String, span: Span },
-    DblAsterisk { punc: String, span: Span },
-    AsteriskEquals { punc: String, span: Span },
-    DblAmpersand { punc: String, span: Span },
-    AmpersandMut { punc: String, span: Span },
-    PlusEquals { punc: String, span: Span },
-    MinusEquals { punc: String, span: Span },
-    SlashEquals { punc: String, span: Span },
-    DblLessThan { punc: String, span: Span },
-    LessThanEquals { punc: String, span: Span },
-    DblEquals { punc: String, span: Span },
-    DblGreaterThan { punc: String, span: Span },
-    GreaterThanEquals { punc: String, span: Span },
-    DblPipe { punc: String, span: Span },
+    Bang {
+        punc: char,
+        span: Span,
+    },
+    DollarSign {
+        punc: char,
+        span: Span,
+    },
+    Percent {
+        punc: char,
+        span: Span,
+    },
+    Ampersand {
+        punc: char,
+        span: Span,
+    },
+    Asterisk {
+        punc: char,
+        span: Span,
+    },
+    Plus {
+        punc: char,
+        span: Span,
+    },
+    Minus {
+        punc: char,
+        span: Span,
+    },
+    Slash {
+        punc: char,
+        span: Span,
+    },
+    LessThan {
+        punc: char,
+        span: Span,
+    },
+    Equals {
+        punc: char,
+        span: Span,
+    },
+    GreaterThan {
+        punc: char,
+        span: Span,
+    },
+    QuestionMark {
+        punc: char,
+        span: Span,
+    },
+    AtSign {
+        punc: char,
+        span: Span,
+    },
+    Backslash {
+        punc: char,
+        span: Span,
+    },
+    Caret {
+        punc: char,
+        span: Span,
+    },
+    Backtick {
+        punc: char,
+        span: Span,
+    },
+    Pipe {
+        punc: char,
+        span: Span,
+    },
+    DblDot {
+        punc: String,
+        span: Span,
+    },
+    DotDotEquals {
+        punc: String,
+        span: Span,
+    },
+    BangEquals {
+        punc: String,
+        span: Span,
+    },
+    PercentEquals {
+        punc: String,
+        span: Span,
+    },
+    DblAsterisk {
+        punc: String,
+        span: Span,
+    },
+    AsteriskEquals {
+        punc: String,
+        span: Span,
+    },
+    DblAmpersand {
+        punc: String,
+        span: Span,
+    },
+    AmpersandMut {
+        punc: String,
+        span: Span,
+    },
+    PlusEquals {
+        punc: String,
+        span: Span,
+    },
+    MinusEquals {
+        punc: String,
+        span: Span,
+    },
+    SlashEquals {
+        punc: String,
+        span: Span,
+    },
+    DblLessThan {
+        punc: String,
+        span: Span,
+    },
+    LessThanEquals {
+        punc: String,
+        span: Span,
+    },
+    DblEquals {
+        punc: String,
+        span: Span,
+    },
+    DblGreaterThan {
+        punc: String,
+        span: Span,
+    },
+    GreaterThanEquals {
+        punc: String,
+        span: Span,
+    },
+    DblPipe {
+        punc: String,
+        span: Span,
+    },
 
-    LineComment { span: Span },
-    BlockComment { span: Span },
+    LineComment {
+        span: Span,
+    },
+    BlockComment {
+        span: Span,
+    },
 
-    DocComment { comment: String, span: Span },
+    DocComment {
+        comment: String,
+        span: Span,
+        comment_type: DocCommentType,
+    },
 
-    UnrecognizedChar { punc: char, span: Span },
+    UnrecognizedChar {
+        punc: char,
+        span: Span,
+    },
 
     EOF,
 }
@@ -317,6 +736,12 @@ impl Token {
             Token::EOF => Span::new("", 0, 0),
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum DocCommentType {
+    InnerDocComment,
+    OuterDocComment,
 }
 
 /// Collection of `Token` as a result of the lexing process.

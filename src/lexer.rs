@@ -6,7 +6,7 @@ use crate::{
     ast::{self, BigUInt, Byte, Hash, Int, Str, UInt},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
-    token::{Token, TokenStream},
+    token::{DocCommentType, Token, TokenStream},
     H160, H256, H512, U256,
 };
 
@@ -183,6 +183,12 @@ impl<'a> Lexer<'a> {
             self.advance(); // skip second `/`
 
             if self.peek_current() == Some('/') || self.peek_current() == Some('!') {
+                let comment_type = if self.peek_current() == Some('/') {
+                    DocCommentType::OuterDocComment
+                } else {
+                    DocCommentType::InnerDocComment
+                };
+
                 self.advance(); // skip third `/` or `!`
                 self.skip_whitespace();
 
@@ -202,7 +208,11 @@ impl<'a> Lexer<'a> {
 
                 let span = Span::new(self.input, start_pos, self.pos);
 
-                Ok(Token::DocComment { comment, span })
+                Ok(Token::DocComment {
+                    comment,
+                    span,
+                    comment_type,
+                })
             } else {
                 // consume ordinary newline or trailing comment (`//`)
                 while let Some(c) = self.peek_current() {
@@ -231,7 +241,7 @@ impl<'a> Lexer<'a> {
                 self.advance();
             }
 
-            // replace actual source code with `""` as ordinary comments are discarded
+            // replace actual source code with `""`, as ordinary comments are discarded
             Ok(Token::BlockComment {
                 span: Span::new("", start_pos, self.pos),
             })
