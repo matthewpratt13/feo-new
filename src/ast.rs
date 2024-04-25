@@ -440,7 +440,7 @@ pub enum Pattern {
     GroupedPatt(Box<Pattern>),
     RangePatt(RangeExpr),
     ArrayPatt(ArrayExpr),
-    TuplePatt(TupleExpr),
+    TuplePatt(Option<Vec<Pattern>>),
     StructPatt {
         name: Identifier,
         fields_opt: Option<Vec<(Identifier, Pattern)>>,
@@ -473,7 +473,29 @@ impl TryFrom<Expression> for Pattern {
                 }
             }
             Expression::Array(a) => Ok(Pattern::ArrayPatt(a)),
-            Expression::Tuple(t) => Ok(Pattern::TuplePatt(t)),
+            Expression::Tuple(TupleExpr { elements_opt, .. }) => {
+                let mut elements: Vec<Pattern> = Vec::new();
+
+                let elements_opt = elements_opt.map(|te| {
+                    te.elements.into_iter().for_each(|e| {
+                        let pattern = Pattern::try_from(e.0).expect(
+                            "conversion error: unable to convert `Expression` into `Pattern`",
+                        );
+                        elements.push(pattern);
+                    });
+
+                    if let Some(e) = te.final_element_opt {
+                        let pattern = Pattern::try_from(*e).expect(
+                            "conversion error: unable to convert `Expression` into `Pattern`",
+                        );
+                        elements.push(pattern);
+                    }
+
+                    elements
+                });
+
+                Ok(Pattern::TuplePatt(elements_opt))
+            }
             Expression::Struct(StructExpr {
                 path, fields_opt, ..
             }) => {
