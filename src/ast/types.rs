@@ -27,11 +27,11 @@ pub enum BigUInt {
     U512(U512),
 }
 
-/// Struct that wraps a `u8` into a new type that is usually treated as a single text character.
+/// Struct that wraps a `u8` into a `Byte` type that is usually treated as a single text character.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Byte(pub u8);
 
-/// Wrappers for the different byte array types.
+/// Wrappers for the different static byte array (`Bytes`) types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Bytes {
     B2(B2),
@@ -76,11 +76,13 @@ pub enum PrimitiveType {
     Bool,
 }
 
+/// Type alias representing a path to an `Item` or local variable.
 pub type PathType = PathExpr;
 
 /// Struct that wraps a `Vec<u8>` into a dynamic byte array (string literal).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Str(pub Vec<u8>);
 
+/// Unit struct that represents the `Self` type.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SelfType;

@@ -48,6 +48,7 @@ pub struct StructField {
     pub field_value: Expression,
 }
 
+/// Struct representing a collection of elements in a tuple expression.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleElements {
     pub elements: Vec<(Expression, Separator)>, // single-element tuple must have trailing comma

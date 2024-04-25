@@ -1,4 +1,5 @@
-/// Enum representing the different precedence levels of operators, respectively.
+/// Enum representing the different precedence levels of operators, from lowest to highest.
+/// Operations with higher precedences get evaluated first, and vice versa.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {
     Lowest,             // `break`, `return`, closure

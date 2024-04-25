@@ -5,6 +5,8 @@ use crate::{
 
 use super::Parser;
 
+/// Trait that defines a shared interface for declaration type `Item`.
+/// E.g., `ConstantDecl` and `ImportDecl`.
 pub(crate) trait ParseDeclaration
 where
     Self: Sized,
@@ -16,6 +18,8 @@ where
     ) -> Result<Self, ErrorsEmitted>;
 }
 
+/// Trait that defines a shared interface for definition type `Item`.
+/// E.g., `StructDef` and `TraitDef`.
 pub(crate) trait ParseDefinition
 where
     Self: Sized,

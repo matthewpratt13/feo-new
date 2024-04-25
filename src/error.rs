@@ -2,7 +2,7 @@ use std::{error::Error, fmt, sync::Arc};
 
 use crate::token::Token;
 
-/// Enum representing the different types of lexer errors.
+/// Enum representing the different types of lexer (scanner) errors.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexErrorKind {
     LexIntError,
@@ -196,7 +196,7 @@ impl<T> CompilerError<T>
 where
     T: Clone,
 {
-    /// Create a new `CompilerError` with precise locations in the sources.
+    /// Create a new `CompilerError` that provides details at a precise location in the source code.
     pub fn new(error_kind: T, source: &str, pos: usize) -> Self {
         let slice = &source[..pos];
         let lines: Vec<&str> = slice.split('\n').collect();
