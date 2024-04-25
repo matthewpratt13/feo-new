@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssignmentOp, Keyword, LetStmt, Separator, Type},
+    ast::{Keyword, LetStmt, Type},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -19,14 +19,14 @@ impl LetStmt {
 
         let type_ann_opt = if let Some(Token::Colon { .. }) = parser.peek_current() {
             parser.consume_token();
-            Some((Separator::Colon, Type::parse(parser)?))
+            Some(Type::parse(parser)?)
         } else {
             None
         };
 
-        let assignment_opt = if let Some(Token::Equals { .. }) = parser.consume_token() {
+        let value_opt = if let Some(Token::Equals { .. }) = parser.consume_token() {
             let value = parser.parse_expression(Precedence::Lowest)?;
-            Some((AssignmentOp, value))
+            Some(value)
         } else {
             None
         };
@@ -40,7 +40,7 @@ impl LetStmt {
             kw_let,
             assignee,
             type_ann_opt,
-            assignment_opt,
+            value_opt,
         })
     }
 }
