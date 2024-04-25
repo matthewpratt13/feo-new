@@ -60,7 +60,7 @@ use self::item::{ParseDeclaration, ParseDefinition};
 pub use self::precedence::Precedence;
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
-/// statements and items, as well as helper methods and error handling capabilities.
+/// statements and items, as well as helper methods and error handling functionality.
 #[derive(Debug)]
 pub(crate) struct Parser {
     stream: TokenStream,
@@ -70,7 +70,7 @@ pub(crate) struct Parser {
 
 impl Parser {
     /// Create a new `Parser` instance.
-    /// Initialize an empty `Vec` to store parser errors.
+    /// Initialize an empty `Vec` to store potentials errors that occur during parsing.
     pub(crate) fn new(stream: TokenStream) -> Self {
         Parser {
             stream,
@@ -657,10 +657,13 @@ impl Parser {
     /// STATEMENT
     ///////////////////////////////////////////////////////////////////////////
 
+    /// Parse a statement (i.e., let statement, item or expression).
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         let token = self.peek_current();
 
         match token {
+            Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
+
             Some(
                 Token::Import { .. }
                 | Token::Alias { .. }
@@ -689,7 +692,6 @@ impl Parser {
                 | Token::Pub { .. },
             ) => self.get_item(),
 
-            Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
 
             _ => {
                 let statement = Ok(Statement::Expression(
@@ -709,12 +711,12 @@ impl Parser {
     /// HELPERS
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Peek at the token at the current position.
+    /// Peek at the token at the current index in the `TokenStream`.
     fn peek_current(&self) -> Option<Token> {
         self.stream.tokens().get(self.current).cloned()
     }
 
-    /// Peek at the token `num_tokens` ahead of the token at the current position.
+    /// Peek at the token `num_tokens` ahead of the token at the current index in the `TokenStream`.
     fn peek_ahead_by(&mut self, num_tokens: usize) -> Option<Token> {
         let i = self.current + num_tokens;
 
@@ -725,7 +727,7 @@ impl Parser {
         }
     }
 
-    /// Peek at the token `num_tokens` behind the token at the current position.
+    /// Peek at the token `num_tokens` behind the token at the current index in the `TokenStream`.
     fn peek_behind_by(&mut self, num_tokens: usize) -> Option<Token> {
         if self.current >= num_tokens {
             self.stream.tokens().get(self.current - num_tokens).cloned()
@@ -826,7 +828,7 @@ impl Parser {
         }
     }
 
-    /// Retrieve the respective precedence level for an operator.
+    /// Retrieve the respective precedence level of a given operator.
     fn precedence(&mut self, token: &Token) -> Precedence {
         match token {
             Token::As { .. } => Precedence::TypeCast,
@@ -940,6 +942,7 @@ impl Parser {
         }
     }
 
+    /// Retrieve any errors that occurred during parsing.
     pub fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
         &self.errors
     }

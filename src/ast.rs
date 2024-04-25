@@ -13,7 +13,7 @@ pub use self::{expression::*, item::*, statement::*, types::*};
 /// LITERAL
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different literal AST nodes.
+/// Enum representing the different literals used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Int(Int),
@@ -27,37 +27,11 @@ pub enum Literal {
     Bool(bool),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum PrimitiveType {
-    I32,
-    I64,
-    I128,
-    U8,
-    U16,
-    U32,
-    U64,
-    U128,
-    U256,
-    U512,
-    Byte,
-    B2,
-    B4,
-    B8,
-    B16,
-    B32,
-    H160,
-    H256,
-    H512,
-    Str,
-    Char,
-    Bool,
-}
-
 ///////////////////////////////////////////////////////////////////////////
 /// IDENTIFIER
 ///////////////////////////////////////////////////////////////////////////
 
-/// Wrapper type, turning a `String` into an `Identifier` AST node.
+/// Wrapper type, turning a `String` into an `Identifier`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Identifier(pub String);
 
@@ -65,7 +39,7 @@ pub struct Identifier(pub String);
 /// KEYWORDS
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different keyword AST nodes.
+/// Enum representing the different keywords used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
     Import,
@@ -104,6 +78,7 @@ pub enum Keyword {
     Err,
 }
 
+/// Enum representing the different inner attributes used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum InnerAttr {
     Contract,
@@ -113,6 +88,7 @@ pub enum InnerAttr {
     Unsafe,
 }
 
+/// Enum representing the different outer attributes used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum OuterAttr {
     Calldata,
@@ -132,7 +108,7 @@ pub enum OuterAttr {
 /// DELIMITERS
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different delimiter AST nodes.
+/// Enum representing the different delimiters used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Delimiter {
     LParen,
@@ -147,7 +123,7 @@ pub enum Delimiter {
 /// PUNCTUATION
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different unary operator AST nodes.
+/// Enum representing the different unary operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
     Negate,       // `-`
@@ -157,7 +133,7 @@ pub enum UnaryOp {
     Dereference,  // `*`
 }
 
-/// Enum representing the different binary operator AST nodes.
+/// Enum representing the different binary operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinaryOp {
     Add,
@@ -175,6 +151,7 @@ pub enum BinaryOp {
     Exponentiation,
 }
 
+/// Enum representing the different comparison operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ComparisonOp {
     Equal,
@@ -185,6 +162,7 @@ pub enum ComparisonOp {
     GreaterEqual,
 }
 
+/// Enum representing the different compound comparison operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CompoundAssignmentOp {
     AddAssign,
@@ -194,21 +172,22 @@ pub enum CompoundAssignmentOp {
     ModulusAssign,
 }
 
+/// Unit struct representing the assignment operator (`=`) used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssignmentOp;
 
-/// Struct representing the unwrap operator `?`.
+/// Unit struct representing the unwrap operator `?` used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnwrapOp;
 
-/// Enum representing the different range operator AST nodes.
+/// Enum representing the different range operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum RangeOp {
     RangeExclusive, // `..`
     RangeInclusive, // `..=`
 }
 
-/// Enum representing the different separator (punctuation) AST nodes.
+/// Enum representing the different separators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Separator {
     Colon,
@@ -231,7 +210,7 @@ pub enum Separator {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different expression AST nodes.
-/// `Expression` nodes always produce or evaluate to a value and may have (side) effects.
+/// `Expression` nodes always produce or evaluate to a value and may have side effects.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Literal(Literal),
@@ -271,6 +250,7 @@ pub enum Expression {
     ResultExpr(ResultExpr),
 }
 
+/// Enum representing value type expressions.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValueExpr {
     Literal(Literal),
@@ -346,6 +326,8 @@ impl TryFrom<Expression> for ValueExpr {
     }
 }
 
+
+/// Enum representing assignee type expressions.
 #[derive(Debug, Clone, PartialEq)]
 pub enum AssigneeExpr {
     Literal(Literal),
@@ -454,6 +436,9 @@ impl TryFrom<Expression> for AssigneeExpr {
     }
 }
 
+/// Enum representing patterns, which are syntactically similar to `Expression`.
+/// Patterns are used to match values against structures, as well as within 
+/// variable declarations and as function parameters.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Literal(Literal),
@@ -542,7 +527,10 @@ impl TryFrom<Expression> for Pattern {
                     fields
                 });
 
-                Ok(Pattern::StructPatt { struct_name, fields_opt })
+                Ok(Pattern::StructPatt {
+                    struct_name,
+                    fields_opt,
+                })
             }
 
             Expression::TupleStruct(TupleStructExpr {
@@ -671,7 +659,7 @@ pub enum Type {
 /// HELPER FUNCTIONS
 ///////////////////////////////////////////////////////////////////////////
 
-/// Helper function to turn a slice into a `Bytes`.
+/// Helper function to turn a byte slice (`&[u8]`) into a `Bytes`.
 pub fn get_bytes(value: &[u8]) -> Bytes {
     let bytes = match value.len() {
         0 => panic!("empty slice"),
@@ -713,7 +701,7 @@ pub fn get_bytes(value: &[u8]) -> Bytes {
     bytes
 }
 
-/// Pad an input byte slice with zeroes to turn it into a fixed size array.
+/// Pads an input byte slice with zeroes to turn it into a fixed size array.
 /// Useful when converting a byte string literal into a `Bytes` literal.
 #[track_caller]
 fn pad_zeroes<const A: usize, const B: usize>(slice: &[u8]) -> [u8; B] {

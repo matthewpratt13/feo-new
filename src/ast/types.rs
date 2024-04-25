@@ -49,6 +49,33 @@ pub enum Hash {
     H512(H512),
 }
 
+/// Enum representing the different primitive types.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PrimitiveType {
+    I32,
+    I64,
+    I128,
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+    U256,
+    U512,
+    Byte,
+    B2,
+    B4,
+    B8,
+    B16,
+    B32,
+    H160,
+    H256,
+    H512,
+    Str,
+    Char,
+    Bool,
+}
+
 pub type PathType = PathExpr;
 
 /// Struct that wraps a `Vec<u8>` into a dynamic byte array (string literal).

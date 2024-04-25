@@ -10,8 +10,8 @@ use crate::{
     H160, H256, H512, U512,
 };
 
-/// Struct that stores an input string and contains methods to render tokens (tokenize)
-/// from characters in that string.
+/// Struct that stores an input string (source code) and contains methods to render tokens
+/// from characters in that string (i.e., tokenization).
 pub struct Lexer<'a> {
     input: &'a str,
     pos: usize,
@@ -22,8 +22,8 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     /// Create a new `Lexer` instance.
     /// Initialize an empty `Vec` to store potential errors, and create an `Iterator`
-    /// from the characters in the source string to traverse the input string
-    /// and look ahead in the source code without moving forward.
+    /// from the characters in the input string to traverse the contents  and look ahead
+    /// without advancing the lexer.
     pub(crate) fn new(input: &'a str) -> Self {
         Lexer {
             input,
@@ -33,7 +33,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Get a list of the lexer's `CompilerError`.
+    /// Retrieve the lexer's `CompilerError`.
     pub(crate) fn errors(&self) -> &[CompilerError<LexErrorKind>] {
         &self.errors
     }
@@ -192,7 +192,7 @@ impl<'a> Lexer<'a> {
                 self.advance(); // skip third `/` or `!`
                 self.skip_whitespace();
 
-                let comment_start_pos = self.pos; // only store data after `///` and any whitespace
+                let comment_start_pos = self.pos; // only store data after `///`
 
                 // advance until the end of the line
                 while let Some(c) = self.peek_current() {
@@ -252,7 +252,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize an identifier or reserved keyword.
+    /// Tokenize an identifier, or reserved keyword or attribute.
     fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
@@ -521,7 +521,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Match an input string against an outer attribute keyword.
+    /// Match an input string against an outer attribute (prefix `#`) keyword.
     fn tokenize_outer_attribute(
         &mut self,
         name: String,
@@ -547,7 +547,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Match an input string against an inner attribute keyword.
+    /// Match an input string against an inner attribute (prefix `#!`) keyword.
     fn tokenize_inner_attribute(
         &mut self,
         name: String,
@@ -715,7 +715,7 @@ impl<'a> Lexer<'a> {
         Err(ErrorsEmitted)
     }
 
-    /// Tokenize a static byte array literal, handling escape sequences where applicable.
+    /// Tokenize a static byte array literal (`Bytes`), handling escape sequences where applicable.
     fn tokenize_bytes(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut value = String::new();
 
@@ -864,7 +864,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize a hash literal (i.e., `h160`, `h256` and `h512`).
+    /// Tokenize a hash literal (i.e., `h160`, `h256` and `h512`), starting with `$`.
     fn tokenize_hash(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
@@ -944,7 +944,7 @@ impl<'a> Lexer<'a> {
             self.advance(); // skip `-`
         }
 
-        // go back and read from previous character (`-``) if negative,
+        // go back and read from previous character (`-`) if negative,
         // else read from current position
         let start_pos = if is_negative { self.pos - 1 } else { self.pos };
 
@@ -998,7 +998,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize punctuation.
+    /// Tokenize punctuation (i.e., operators and separators).
     fn tokenize_punctuation(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
@@ -1087,7 +1087,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Advance the scanner (and iterator) by one character.
+    /// Advance the lexer / scanner (and iterator) by one character.
     fn advance(&mut self) {
         self.pos += 1; // update lexer's position
         self.peekable_chars.next(); // move to next character in the iterator (discard output)
@@ -1109,7 +1109,7 @@ impl<'a> Lexer<'a> {
     fn skip_whitespace(&mut self) {
         while let Some(c) = self.peek_current() {
             if c.is_whitespace() {
-                // if the current character is whitespace, advance to the next
+                // if the current character is whitespace, advance to the next one
                 self.advance();
             } else {
                 // if the current character is not whitespace, break out of the loop
@@ -1139,7 +1139,7 @@ fn is_keyword(value: &str) -> bool {
     .contains(&value)
 }
 
-/// List of reserved keywords to match against some input string.
+/// List of reserved attribute keywords to match against some input string.
 fn is_attribute(value: &str) -> bool {
     [
         "calldata",
@@ -1180,7 +1180,6 @@ fn is_quote(value: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]

@@ -582,7 +582,7 @@ pub enum Token {
 }
 
 impl Token {
-    /// Retrieve the `Span` of a given `Token`.
+    /// Retrieve the span of a given token.
     pub fn span(&self) -> Span {
         match self.clone() {
             Token::Identifier { span, .. } => span,
@@ -728,13 +728,15 @@ impl Token {
     }
 }
 
+
+/// Enum representing the different doc comment types.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum DocCommentType {
-    InnerDocComment,
-    OuterDocComment,
+    InnerDocComment, // `//!`
+    OuterDocComment, // `///`
 }
 
-/// Collection of `Token` as a result of the lexing process.
+/// Collection of `Token` resulting from the tokenization process.
 #[derive(Debug, Clone)]
 pub struct TokenStream {
     tokens: Vec<Token>,
