@@ -134,6 +134,12 @@ pub enum ParserErrorKind {
         found: Option<Token>,
     },
 
+    UnexpectedTokenFoo {
+        expected: Token,
+        found: Option<Token>,
+    },
+
+
     UnexpectedEndOfInput,
 
     TokenNotFound {
@@ -159,6 +165,12 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::UnexpectedToken { expected, found } => writeln!(
                 f,
                 "unexpected token: expected {}, found `{:#?}`",
+                expected, found
+            ),   
+            
+             ParserErrorKind::UnexpectedTokenFoo { expected, found } => writeln!(
+                f,
+                "unexpected token: expected {}, found `{:?}`",
                 expected, found
             ),
             ParserErrorKind::UnexpectedEndOfInput => {
