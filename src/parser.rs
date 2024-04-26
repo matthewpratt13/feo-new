@@ -61,19 +61,19 @@ use crate::{
 use self::item::{ParseDeclaration, ParseDefinition};
 pub use self::precedence::Precedence;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ParserContext {
     Default,
-    Closure,
-    LogicalOr,
-    BitwiseOr,
-    BitwiseAnd,
-    Difference,
-    Product,
-    Unary, // `&` `*`, `-`
-    TupleIndex,
-    FieldAccess,
-    MethodCall,
+    Closure,     // `|` or `||`
+    LogicalOr,   // `||`
+    BitwiseOr,   // `|`
+    BitwiseAnd,  // `&`
+    Difference,  // `-`
+    Product,     // `*`
+    Unary,       // `&` `*`, `-`
+    TupleIndex,  // `.`
+    FieldAccess, // `.`
+    MethodCall,  // `.`
 }
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
@@ -104,6 +104,7 @@ impl Parser {
         parser
     }
 
+    // Initialize operator precedences
     fn init_precedences(&mut self, tokens: Vec<Token>) {
         for t in tokens {
             match t.token_type() {
@@ -159,6 +160,89 @@ impl Parser {
                 _ => self.precedences.insert(t, Precedence::Lowest),
             };
         }
+    }
+
+    // Get the precedence for a given token, considering context
+    fn get_precedence(&self, token: &Token) -> Precedence {
+        match token {
+            Token::Ampersand { .. } => {
+                if self.context == ParserContext::Unary {
+                    Precedence::Unary
+                } else {
+                    Precedence::BitwiseAnd
+                }
+            }
+            Token::Asterisk { .. } => {
+                if self.context == ParserContext::Unary {
+                    Precedence::Unary
+                } else {
+                    Precedence::Product
+                }
+            }
+            Token::Minus { .. } => {
+                if self.context == ParserContext::Unary {
+                    Precedence::Unary
+                } else {
+                    Precedence::Difference
+                }
+            }
+            Token::Pipe { .. } => {
+                if self.context == ParserContext::Closure {
+                    Precedence::Lowest
+                } else {
+                    Precedence::BitwiseOr
+                }
+            }
+            Token::DblPipe { .. } => {
+                if self.context == ParserContext::Closure {
+                    Precedence::Lowest
+                } else {
+                    Precedence::LogicalOr
+                }
+            }
+            Token::Dot { .. } => match self.context {
+                ParserContext::FieldAccess => Precedence::FieldAccess,
+                ParserContext::MethodCall => Precedence::MethodCall,
+                ParserContext::TupleIndex => Precedence::TupleIndex,
+                _ => Precedence::Lowest,
+            },
+            Token::As { .. } => Precedence::TypeCast,
+            Token::LParen { .. } => Precedence::Call, // TODO: what about tuple structs?
+            Token::LBracket { .. } => Precedence::Index,
+            Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => Precedence::Path,
+            Token::Bang { .. } => Precedence::Unary,
+            Token::Percent { .. } => Precedence::Remainder,
+            Token::Plus { .. } => Precedence::Sum,
+            Token::Some { .. } | Token::None { .. } | Token::Ok { .. } | Token::Err { .. } => {
+                Precedence::Unary
+            }
+            Token::Slash { .. } => Precedence::Quotient,
+            Token::LessThan { .. } => Precedence::LessThan,
+            Token::Equals { .. } => Precedence::Assignment,
+            Token::GreaterThan { .. } => Precedence::GreaterThan,
+            Token::QuestionMark { .. } => Precedence::Unwrap,
+            Token::Caret { .. } => Precedence::BitwiseXor,
+            Token::DblDot { .. } | Token::DotDotEquals { .. } => Precedence::Range,
+            Token::BangEquals { .. } => Precedence::NotEqual,
+            Token::PlusEquals { .. }
+            | Token::MinusEquals { .. }
+            | Token::AsteriskEquals { .. }
+            | Token::SlashEquals { .. }
+            | Token::PercentEquals { .. } => Precedence::CompoundAssignment,
+            Token::DblAsterisk { .. } => Precedence::Exponentiation,
+            Token::DblAmpersand { .. } => Precedence::LogicalAnd,
+            Token::AmpersandMut { .. } => Precedence::Unary,
+            Token::DblLessThan { .. } | Token::DblGreaterThan { .. } => Precedence::Shift,
+            Token::LessThanEquals { .. } => Precedence::LessThanOrEqual,
+            Token::DblEquals { .. } => Precedence::Equal,
+            Token::GreaterThanEquals { .. } => Precedence::GreaterThanOrEqual,
+            _ => Precedence::Lowest, // Default precedence for other tokens
+        }
+    }
+
+    // Set the context
+    fn set_context(&mut self, context: ParserContext) {
+        self.context = context;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -792,7 +876,7 @@ impl Parser {
     }
 
     /// Peek at the token `num_tokens` ahead of the token at the current index in the `TokenStream`.
-    fn peek_ahead_by(&mut self, num_tokens: usize) -> Option<Token> {
+    fn peek_ahead_by(&self, num_tokens: usize) -> Option<Token> {
         let i = self.current + num_tokens;
 
         if i < self.stream.tokens().len() {
@@ -803,12 +887,18 @@ impl Parser {
     }
 
     /// Peek at the token `num_tokens` behind the token at the current index in the `TokenStream`.
-    fn peek_behind_by(&mut self, num_tokens: usize) -> Option<Token> {
+    fn peek_behind_by(&self, num_tokens: usize) -> Option<Token> {
         if self.current >= num_tokens {
             self.stream.tokens().get(self.current - num_tokens).cloned()
         } else {
             None
         }
+    }
+
+    // Get the precedence of the next token
+    fn peek_precedence(&self) -> Precedence {
+        let default = self.peek_current().unwrap_or(Token::EOF);
+        self.get_precedence(&self.peek_ahead_by(1).unwrap_or(default))
     }
 
     /// Advance the parser and return the current token.
