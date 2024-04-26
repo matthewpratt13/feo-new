@@ -1,7 +1,7 @@
 use crate::{
     ast::{BlockExpr, GroupedExpr, IfExpr, Keyword},
     error::{ErrorsEmitted, ParserErrorKind},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::Parser;
@@ -12,15 +12,12 @@ impl IfExpr {
 
         let mut trailing_else_block_opt = None::<(Keyword, BlockExpr)>;
 
-        let kw_if = parser.expect_keyword(Token::If {
-            name: "if".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_if = parser.expect_keyword(TokenType::If)?;
 
         if let Some(Token::LParen { .. }) = parser.peek_current() {
             parser.consume_token();
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
         };
 
         let condition = Box::new(GroupedExpr::parse(parser)?);

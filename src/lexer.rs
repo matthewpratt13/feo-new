@@ -1130,11 +1130,11 @@ impl<'a> Lexer<'a> {
 fn is_keyword(value: &str) -> bool {
     [
         "alias", "as", "break", "bytes", "const", "continue", "else", "enum", "Err", "false",
-        "for", "func", "if", "impl", "import", "in", "let", "loop", "match", "module", "mut", "None",
-        "Ok", "package", "pub", "ref", "return", "self", "Some", "static", "struct", "super",
-        "trait", "true", "while", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "u256",
-        "u512", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256", "h512", "String", "str",
-        "char", "bool", "Option", "Result", "Vec", "Mapping",
+        "for", "func", "if", "impl", "import", "in", "let", "loop", "match", "module", "mut",
+        "None", "Ok", "package", "pub", "ref", "return", "self", "Some", "static", "struct",
+        "super", "trait", "true", "while", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128",
+        "u256", "u512", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256", "h512", "String",
+        "str", "char", "bool", "Option", "Result", "Vec", "Mapping",
     ]
     .contains(&value)
 }

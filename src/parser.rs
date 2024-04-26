@@ -39,6 +39,8 @@ mod ty;
 mod unary_expr;
 mod while_expr;
 
+use std::collections::HashMap;
+
 use crate::{
     ast::{
         AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
@@ -53,7 +55,7 @@ use crate::{
         WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenStream},
+    token::{Token, TokenStream, TokenType},
 };
 
 use self::item::{ParseDeclaration, ParseDefinition};
@@ -66,18 +68,28 @@ pub(crate) struct Parser {
     stream: TokenStream,
     current: usize,
     errors: Vec<CompilerError<ParserErrorKind>>,
+    precedences: HashMap<Token, Precedence>,
 }
 
 impl Parser {
     /// Create a new `Parser` instance.
     /// Initialize an empty `Vec` to store potentials errors that occur during parsing.
     pub(crate) fn new(stream: TokenStream) -> Self {
-        Parser {
+        let mut parser = Parser {
             stream,
             current: 0,
             errors: Vec::new(),
-        }
+            precedences: HashMap::new(),
+        };
+
+        // parser.init_precedences();
+        parser
     }
+
+    // fn init_precedences(&mut self) {
+    //     let span = self.stream.span();
+
+    // }
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -341,18 +353,16 @@ impl Parser {
                                 Ok(expression)
                             }
                             _ => {
-                                self.log_unexpected_token("numeric literal".to_string());
+                                self.log_unexpected_str("numeric literal");
                                 Err(ErrorsEmitted)
                             }
                         },
                         Expression::Path(_) => {
-                            self.log_unexpected_token("path expression".to_string());
+                            self.log_unexpected_str("path expression");
                             Err(ErrorsEmitted)
                         }
                         _ => {
-                            self.log_unexpected_token(
-                                "numeric literal or path expression".to_string(),
-                            );
+                            self.log_unexpected_str("numeric literal or path expression");
                             Err(ErrorsEmitted)
                         }
                     }?;
@@ -378,16 +388,16 @@ impl Parser {
                     Expression::Literal(l) => match l {
                         Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
                         _ => {
-                            self.log_unexpected_token("numeric literal".to_string());
+                            self.log_unexpected_str("numeric literal");
                             Err(ErrorsEmitted)
                         }
                     },
                     Expression::Path(_) => {
-                        self.log_unexpected_token("path expression".to_string());
+                        self.log_unexpected_str("path expression");
                         Err(ErrorsEmitted)
                     }
                     _ => {
-                        self.log_unexpected_token("numeric literal or path expression".to_string());
+                        self.log_unexpected_str("numeric literal or path expression");
                         Err(ErrorsEmitted)
                     }
                 }?;
@@ -751,74 +761,87 @@ impl Parser {
         self.peek_current()
     }
 
-    fn expect_keyword(&mut self, expected: Token) -> Result<Keyword, ErrorsEmitted> {
-        let token = self.consume_token();
+    fn expect_keyword(&mut self, expected: TokenType) -> Result<Keyword, ErrorsEmitted> {
+        let token = self.consume_token().unwrap_or(Token::EOF);
 
-        match token {
-            Some(Token::Import { .. }) => Ok(Keyword::Import),
-            Some(Token::Module { .. }) => Ok(Keyword::Module),
-            Some(Token::Package { .. }) => Ok(Keyword::Package),
-            Some(Token::SelfKeyword { .. }) => Ok(Keyword::SelfKeyword),
-            Some(Token::SelfType { .. }) => Ok(Keyword::SelfType),
-            Some(Token::Super { .. }) => Ok(Keyword::Super),
-            Some(Token::Pub { .. }) => Ok(Keyword::Pub),
-            Some(Token::As { .. }) => Ok(Keyword::As),
-            Some(Token::Const { .. }) => Ok(Keyword::Const),
-            Some(Token::Static { .. }) => Ok(Keyword::Static),
-            Some(Token::Alias { .. }) => Ok(Keyword::Alias),
-            Some(Token::Func { .. }) => Ok(Keyword::Func),
-            Some(Token::Struct { .. }) => Ok(Keyword::Struct),
-            Some(Token::Enum { .. }) => Ok(Keyword::Enum),
-            Some(Token::Trait { .. }) => Ok(Keyword::Trait),
-            Some(Token::Impl { .. }) => Ok(Keyword::Impl),
-            Some(Token::If { .. }) => Ok(Keyword::If),
-            Some(Token::Else { .. }) => Ok(Keyword::Else),
-            Some(Token::Match { .. }) => Ok(Keyword::Match),
-            Some(Token::Loop { .. }) => Ok(Keyword::Loop),
-            Some(Token::For { .. }) => Ok(Keyword::For),
-            Some(Token::In { .. }) => Ok(Keyword::In),
-            Some(Token::While { .. }) => Ok(Keyword::While),
-            Some(Token::Break { .. }) => Ok(Keyword::Break),
-            Some(Token::Continue { .. }) => Ok(Keyword::Continue),
-            Some(Token::Return { .. }) => Ok(Keyword::Return),
-            Some(Token::Let { .. }) => Ok(Keyword::Let),
-            Some(Token::Mut { .. }) => Ok(Keyword::Mut),
-            Some(Token::Some { .. }) => Ok(Keyword::Some),
-            Some(Token::None { .. }) => Ok(Keyword::None),
-            Some(Token::Ok { .. }) => Ok(Keyword::Ok),
-            Some(Token::Err { .. }) => Ok(Keyword::Err),
+        match token.token_type() {
+            TokenType::Import { .. } => Ok(Keyword::Import),
+            TokenType::Module { .. } => Ok(Keyword::Module),
+            TokenType::Package { .. } => Ok(Keyword::Package),
+            TokenType::SelfKeyword { .. } => Ok(Keyword::SelfKeyword),
+            TokenType::SelfType { .. } => Ok(Keyword::SelfType),
+            TokenType::Super { .. } => Ok(Keyword::Super),
+            TokenType::Pub { .. } => Ok(Keyword::Pub),
+            TokenType::As { .. } => Ok(Keyword::As),
+            TokenType::Const { .. } => Ok(Keyword::Const),
+            TokenType::Static { .. } => Ok(Keyword::Static),
+            TokenType::Alias { .. } => Ok(Keyword::Alias),
+            TokenType::Func { .. } => Ok(Keyword::Func),
+            TokenType::Struct { .. } => Ok(Keyword::Struct),
+            TokenType::Enum { .. } => Ok(Keyword::Enum),
+            TokenType::Trait { .. } => Ok(Keyword::Trait),
+            TokenType::Impl { .. } => Ok(Keyword::Impl),
+            TokenType::If { .. } => Ok(Keyword::If),
+            TokenType::Else { .. } => Ok(Keyword::Else),
+            TokenType::Match { .. } => Ok(Keyword::Match),
+            TokenType::Loop { .. } => Ok(Keyword::Loop),
+            TokenType::For { .. } => Ok(Keyword::For),
+            TokenType::In { .. } => Ok(Keyword::In),
+            TokenType::While { .. } => Ok(Keyword::While),
+            TokenType::Break { .. } => Ok(Keyword::Break),
+            TokenType::Continue { .. } => Ok(Keyword::Continue),
+            TokenType::Return { .. } => Ok(Keyword::Return),
+            TokenType::Let { .. } => Ok(Keyword::Let),
+            TokenType::Mut { .. } => Ok(Keyword::Mut),
+            TokenType::Some { .. } => Ok(Keyword::Some),
+            TokenType::None { .. } => Ok(Keyword::None),
+            TokenType::Ok { .. } => Ok(Keyword::Ok),
+            TokenType::Err { .. } => Ok(Keyword::Err),
             _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: format!("`{:#?}`", expected),
-                    found: token,
-                });
+                self.log_unexpected_token(expected);
                 Err(ErrorsEmitted)
             }
         }
     }
 
-    fn expect_separator(&mut self, expected: Token) -> Result<Separator, ErrorsEmitted> {
-        let token = self.consume_token();
+    fn expect_delimiter(&mut self, expected: TokenType) -> Result<Delimiter, ErrorsEmitted> {
+        let token = self.consume_token().ok_or({
+            self.log_error(ParserErrorKind::MissingDelimiter {
+                delim: expected.clone(),
+            });
 
-        match token {
-            Some(Token::Colon { .. }) => Ok(Separator::Colon),
-            Some(Token::Semicolon { .. }) => Ok(Separator::Semicolon),
-            Some(Token::Comma { .. }) => Ok(Separator::Comma),
-            Some(Token::Dot { .. }) => Ok(Separator::Dot),
-            Some(Token::DblColon { .. }) => Ok(Separator::DblColon),
-            Some(Token::ColonColonAsterisk { .. }) => Ok(Separator::ColonColonAsterisk),
-            Some(Token::ThinArrow { .. }) => Ok(Separator::ThinArrow),
-            Some(Token::FatArrow { .. }) => Ok(Separator::FatArrow),
-            Some(Token::LessThan { .. }) => Ok(Separator::LeftAngledBracket),
-            Some(Token::GreaterThan { .. }) => Ok(Separator::RightAngledBracket),
-            Some(Token::Pipe { .. }) => Ok(Separator::Pipe),
-            Some(Token::DblPipe { .. }) => Ok(Separator::DblPipe),
+            ErrorsEmitted
+        })?;
 
+        match token.token_type() {
+            TokenType::LParen => Ok(Delimiter::LParen),
+            TokenType::RParen => Ok(Delimiter::RParen),
+            TokenType::LBrace => Ok(Delimiter::LBrace),
+            TokenType::RBrace => Ok(Delimiter::RBrace),
+            TokenType::LBracket => Ok(Delimiter::LBracket),
+            TokenType::RBracket => Ok(Delimiter::RBracket),
             _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: format!("`{:#?}`", expected),
-                    found: token,
-                });
+                self.log_unexpected_token(expected);
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
+    fn expect_separator(&mut self, expected: TokenType) -> Result<Separator, ErrorsEmitted> {
+        let token = self.consume_token().unwrap_or(Token::EOF);
+
+        match token.token_type() {
+            TokenType::Colon => Ok(Separator::Colon),
+            TokenType::Semicolon => Ok(Separator::Semicolon),
+            TokenType::Comma => Ok(Separator::Comma),
+            TokenType::ThinArrow => Ok(Separator::ThinArrow),
+            TokenType::FatArrow => Ok(Separator::FatArrow),
+            TokenType::LessThan => Ok(Separator::LeftAngledBracket),
+            TokenType::GreaterThan => Ok(Separator::RightAngledBracket),
+            TokenType::Pipe => Ok(Separator::Pipe),
+            TokenType::DblPipe => Ok(Separator::DblPipe),
+            _ => {
+                self.log_unexpected_token(expected);
                 Err(ErrorsEmitted)
             }
         }
@@ -925,26 +948,22 @@ impl Parser {
         self.errors.push(error);
     }
 
-    fn log_unexpected_token(&mut self, expected: String) {
+    fn log_unexpected_str(&mut self, expected: &str) {
         self.log_error(ParserErrorKind::UnexpectedToken {
-            expected,
+            expected: expected.to_string(),
             found: self.peek_current(),
         });
 
         self.consume_token();
     }
 
+    fn log_unexpected_token(&mut self, expected: TokenType) {
+        self.log_error(ParserErrorKind::UnexpectedToken {
+            expected: expected.to_string(),
+            found: self.peek_current(),
+        });
 
-
-    fn log_missing_delimiter(&mut self, delim: char) {
-        match delim {
-            '(' | ')' | '[' | ']' | '{' | '}' => {
-                self.consume_token();
-                self.log_error(ParserErrorKind::MissingDelimiter { delim });
-            }
-
-            _ => self.log_unexpected_token(format!("`{}`", delim)),
-        }
+        self.consume_token();
     }
 
     /// Retrieve any errors that occurred during parsing.
@@ -970,7 +989,7 @@ impl Parser {
         let name = if let Some(Token::Identifier { name, .. }) = self.consume_token() {
             Ok(Identifier(name))
         } else {
-            self.log_unexpected_token("identifier".to_string());
+            self.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
@@ -1024,15 +1043,12 @@ impl Parser {
                     Some(Token::LParen { .. }) => {
                         self.consume_token();
 
-                        let kw_package = self.expect_keyword(Token::Package {
-                            name: "package".to_string(),
-                            span: self.stream.span(),
-                        })?;
+                        let kw_package = self.expect_keyword(TokenType::Package)?;
 
                         let close_paren = if let Some(Token::RParen { .. }) = self.consume_token() {
                             Ok(Delimiter::RParen)
                         } else {
-                            self.log_missing_delimiter(')');
+                            self.expect_delimiter(TokenType::RParen)?;
                             Err(ErrorsEmitted)
                         }?;
 
@@ -1104,7 +1120,7 @@ impl Parser {
                 ))),
 
                 _ => {
-                    self.log_unexpected_token("`{` or `(`".to_string());
+                    self.log_unexpected_str("`{` or `(`");
                     Err(ErrorsEmitted)
                 }
             },

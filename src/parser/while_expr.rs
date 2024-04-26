@@ -1,22 +1,19 @@
 use crate::{
     ast::{BlockExpr, GroupedExpr, WhileExpr},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::Parser;
 
 impl WhileExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<WhileExpr, ErrorsEmitted> {
-        let kw_while = parser.expect_keyword(Token::While {
-            name: "while".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_while = parser.expect_keyword(TokenType::While)?;
 
         if let Some(Token::LParen { .. }) = parser.peek_current() {
             parser.consume_token();
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
         }
 
         let condition = GroupedExpr::parse(parser)?;

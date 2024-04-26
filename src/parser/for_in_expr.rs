@@ -1,17 +1,14 @@
 use crate::{
     ast::{BlockExpr, ForInExpr, Pattern},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
 
 impl ForInExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<ForInExpr, ErrorsEmitted> {
-        let kw_for = parser.expect_keyword(Token::For {
-            name: "for".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_for = parser.expect_keyword(TokenType::For)?;
 
         let assignee =
             if let Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) =
@@ -25,10 +22,7 @@ impl ForInExpr {
                     ErrorsEmitted
                 })
             }?;
-        let kw_in = parser.expect_keyword(Token::In {
-            name: "in".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_in = parser.expect_keyword(TokenType::In)?;
 
         let iterable = parser.parse_expression(Precedence::Lowest)?;
 

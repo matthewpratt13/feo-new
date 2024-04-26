@@ -1,7 +1,7 @@
 use crate::{
     ast::{BlockExpr, Delimiter, InnerAttr, Statement},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::Parser;
@@ -20,7 +20,7 @@ impl BlockExpr {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
@@ -36,7 +36,7 @@ impl BlockExpr {
             let statement = match parser.parse_statement() {
                 Ok(s) => Ok(s),
                 Err(_) => {
-                    parser.log_unexpected_token("statement".to_string());
+                    parser.log_unexpected_str("statement");
                     Err(ErrorsEmitted)
                 }
             }?;
@@ -55,13 +55,15 @@ impl BlockExpr {
         println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
         println!("BLOCK EXPRESSION STATEMENTS: {:#?}\n", statements.clone());
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+
+        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RBrace)
+        // } else {
+        //     parser.log_missing_delimiter('}');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(BlockExpr {
             attributes_opt: {

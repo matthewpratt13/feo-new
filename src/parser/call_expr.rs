@@ -1,7 +1,7 @@
 use crate::{
     ast::{AssigneeExpr, CallExpr, Delimiter, Expression},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
@@ -26,7 +26,7 @@ impl CallExpr {
             let arg_expr = match parser.parse_expression(Precedence::Lowest) {
                 Ok(e) => Ok(e),
                 Err(_) => {
-                    parser.log_unexpected_token("function argument".to_string());
+                    parser.log_unexpected_str("function argument");
                     Err(ErrorsEmitted)
                 }
             }?;
@@ -40,19 +40,21 @@ impl CallExpr {
                 }
                 Some(Token::RParen { .. }) => break,
                 Some(_) => {
-                    parser.log_unexpected_token("`,` or `)`".to_string());
+                    parser.log_unexpected_str("`,` or `)`");
                 }
                 None => break,
             }
         }
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted)
-        }?;
+        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+
+        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RParen)
+        // } else {
+        //     parser.log_missing_delimiter(')');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(CallExpr {
             callee,

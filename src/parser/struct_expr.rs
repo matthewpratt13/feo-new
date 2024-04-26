@@ -4,7 +4,7 @@ use crate::{
         TupleStructExpr,
     },
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
@@ -14,7 +14,7 @@ impl StructExpr {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
@@ -36,15 +36,12 @@ impl StructExpr {
                 Some(Token::Identifier { name, .. }) => Ok(name),
                 Some(Token::RBrace { .. }) => break,
                 _ => {
-                    parser.log_missing_delimiter('}');
+                    parser.expect_delimiter(TokenType::RBrace)?;
                     Err(ErrorsEmitted)
                 }
             }?;
 
-            let _ = parser.expect_separator(Token::Colon {
-                punc: ':',
-                span: parser.stream.span(),
-            });
+            let _ = parser.expect_separator(TokenType::Colon);
 
             let value = parser.parse_expression(Precedence::Lowest)?;
 
@@ -72,13 +69,15 @@ impl StructExpr {
             }
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+
+        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RBrace)
+        // } else {
+        //     parser.log_missing_delimiter('}');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(StructExpr {
             path,
@@ -104,7 +103,7 @@ impl TupleStructExpr {
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
@@ -128,13 +127,15 @@ impl TupleStructExpr {
             }
         }
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted)
-        }?;
+        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+
+        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RParen)
+        // } else {
+        //     parser.log_missing_delimiter(')');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(TupleStructExpr {
             path,

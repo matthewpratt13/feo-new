@@ -1,27 +1,30 @@
-use crate::{ast::SomeExpr, error::ErrorsEmitted, token::Token};
+use crate::{
+    ast::SomeExpr,
+    error::ErrorsEmitted,
+    token::{Token, TokenType},
+};
 
 use super::{Parser, Precedence};
 
 impl SomeExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<SomeExpr, ErrorsEmitted> {
-        let kw_some = parser.expect_keyword(Token::Some {
-            name: "Some".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_some = parser.expect_keyword(TokenType::Some)?;
 
         if let Some(Token::LParen { .. }) = parser.peek_current() {
             parser.consume_token();
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
         }
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-        } else {
-            parser.log_missing_delimiter(')');
-        }
+        parser.expect_delimiter(TokenType::RBrace)?;
+
+        // if let Some(Token::RParen { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        // } else {
+        //     parser.log_missing_delimiter(')');
+        // }
 
         Ok(SomeExpr {
             kw_some,

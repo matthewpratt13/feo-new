@@ -5,7 +5,7 @@ use crate::{
         Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{item::ParseDeclaration, ParseDefinition, Parser};
@@ -16,10 +16,7 @@ impl ParseDefinition for InherentImplDef {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<InherentImplDef, ErrorsEmitted> {
-        let kw_impl = parser.expect_keyword(Token::Impl {
-            name: "impl".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_impl = parser.expect_keyword(TokenType::Impl)?;
 
         let mut associated_items: Vec<InherentImplItem> = Vec::new();
 
@@ -28,7 +25,7 @@ impl ParseDefinition for InherentImplDef {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
@@ -71,13 +68,15 @@ impl ParseDefinition for InherentImplDef {
             associated_items.push(associated_item);
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+
+        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RBrace)
+        // } else {
+        //     parser.log_missing_delimiter('}');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(InherentImplDef {
             attributes_opt: {
@@ -108,10 +107,7 @@ impl ParseDefinition for TraitImplDef {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<TraitImplDef, ErrorsEmitted> {
-        let kw_impl = parser.expect_keyword(Token::Impl {
-            name: "impl".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_impl = parser.expect_keyword(TokenType::Impl)?;
 
         let token = parser.consume_token();
 
@@ -126,10 +122,7 @@ impl ParseDefinition for TraitImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let kw_for = parser.expect_keyword(Token::For {
-            name: "for".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_for = parser.expect_keyword(TokenType::For)?;
 
         let implementing_type = Type::parse(parser)?;
 
@@ -138,7 +131,7 @@ impl ParseDefinition for TraitImplDef {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
@@ -187,13 +180,15 @@ impl ParseDefinition for TraitImplDef {
             associated_items.push(associated_item);
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+
+        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RBrace)
+        // } else {
+        //     parser.log_missing_delimiter('}');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(TraitImplDef {
             attributes_opt: {

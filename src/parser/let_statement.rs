@@ -1,7 +1,7 @@
 use crate::{
     ast::{Keyword, LetStmt, Type},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
@@ -11,7 +11,7 @@ impl LetStmt {
         let kw_let = if let Some(Token::Let { .. }) = parser.consume_token() {
             Ok(Keyword::Let)
         } else {
-            parser.log_unexpected_token("`let`".to_string());
+            parser.log_unexpected_str("`let`");
             Err(ErrorsEmitted)
         }?;
 
@@ -31,10 +31,7 @@ impl LetStmt {
             None
         };
 
-        let _ = parser.expect_separator(Token::Semicolon {
-            punc: ';',
-            span: parser.stream.span(),
-        })?;
+        parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(LetStmt {
             kw_let,

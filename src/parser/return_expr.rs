@@ -1,20 +1,20 @@
-use crate::{ast::{Expression, ReturnExpr}, error::ErrorsEmitted, token::Token};
+use crate::{
+    ast::{Expression, ReturnExpr},
+    error::ErrorsEmitted,
+    token::TokenType,
+};
 
 use super::{Parser, Precedence};
 
 impl ReturnExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<ReturnExpr, ErrorsEmitted> {
-        let kw_return = parser.expect_keyword(Token::Return {
-            name: "return".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_return = parser.expect_keyword(TokenType::Return)?;
 
-        let expression_opt: Option<Box<Expression>> =
-            if let Some(t) = parser.peek_current() {
-                Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
-            } else {
-                None
-            };
+        let expression_opt: Option<Box<Expression>> = if let Some(t) = parser.peek_current() {
+            Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
+        } else {
+            None
+        };
 
         Ok(ReturnExpr {
             kw_return,

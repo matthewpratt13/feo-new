@@ -1,7 +1,7 @@
 use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr},
     error::{ErrorsEmitted, ParserErrorKind},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
@@ -33,7 +33,7 @@ impl MethodCallExpr {
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
@@ -45,7 +45,7 @@ impl MethodCallExpr {
             let arg_expr = match parser.parse_expression(Precedence::Lowest) {
                 Ok(e) => Ok(e),
                 Err(_) => {
-                    parser.log_unexpected_token("method argument".to_string());
+                    parser.log_unexpected_str("method argument");
                     Err(ErrorsEmitted)
                 }
             }?;
@@ -61,19 +61,21 @@ impl MethodCallExpr {
                 }
                 Some(Token::RParen { .. }) => break,
                 Some(_) => {
-                    parser.log_unexpected_token("`,` or `)`".to_string());
+                    parser.log_unexpected_str("`,` or `)`");
                 }
                 None => break,
             }
         }
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted)
-        }?;
+        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+
+        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RParen)
+        // } else {
+        //     parser.log_missing_delimiter(')');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(MethodCallExpr {
             receiver: Box::new(receiver),

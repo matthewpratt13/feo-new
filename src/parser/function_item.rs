@@ -1,9 +1,10 @@
 use crate::{
     ast::{
-        BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier, Keyword, OuterAttr, SelfParam, Type, UnaryOp, Visibility
+        BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier,
+        Keyword, OuterAttr, SelfParam, Type, UnaryOp, Visibility,
     },
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::Parser;
@@ -14,24 +15,21 @@ impl FunctionItem {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<FunctionItem, ErrorsEmitted> {
-        let kw_func = parser.expect_keyword(Token::Func {
-            name: "func".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_func = parser.expect_keyword(TokenType::Func)?;
 
         let mut params: Vec<FunctionOrMethodParam> = Vec::new();
 
         let function_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_token("identifier".to_string());
+            parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
@@ -59,18 +57,20 @@ impl FunctionItem {
                     continue;
                 }
                 Some(Token::RParen { .. }) => break,
-                Some(_) => parser.log_unexpected_token("`,` or `)`".to_string()),
+                Some(_) => parser.log_unexpected_str("`,` or `)`"),
                 None => break,
             }
         }
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted)
-        }?;
+        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+
+        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RParen)
+        // } else {
+        //     parser.log_missing_delimiter(')');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
             parser.consume_token();
@@ -140,10 +140,7 @@ impl FunctionOrMethodParam {
         {
             let param_name = parser.get_identifier_patt()?;
 
-            let _ = parser.expect_separator(Token::Colon {
-                punc: ':',
-                span: parser.stream.span(),
-            })?;
+            parser.expect_separator(TokenType::Colon)?;
 
             let param_type = Box::new(Type::parse(parser)?);
 
@@ -154,7 +151,7 @@ impl FunctionOrMethodParam {
 
             Ok(FunctionOrMethodParam::FunctionParam(function_param))
         } else {
-            parser.log_unexpected_token("`self` or identifier".to_string());
+            parser.log_unexpected_str("`self` or identifier");
             Err(ErrorsEmitted)
         };
 

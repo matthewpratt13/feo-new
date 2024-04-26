@@ -2,8 +2,8 @@ use crate::{
     ast::{
         AssigneeExpr, Delimiter, Expression, Separator, TupleElements, TupleExpr, TupleIndexExpr,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::Token,
+    error::ErrorsEmitted,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
@@ -13,7 +13,7 @@ impl TupleExpr {
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
@@ -29,7 +29,7 @@ impl TupleExpr {
             let element = match parser.parse_expression(Precedence::Lowest) {
                 Ok(e) => Ok(e),
                 Err(_) => {
-                    parser.log_unexpected_token("tuple element".to_string());
+                    parser.log_unexpected_str("tuple element");
                     Err(ErrorsEmitted)
                 }
             }?;
@@ -46,7 +46,7 @@ impl TupleExpr {
                 }
 
                 Some(_) => {
-                    parser.log_unexpected_token("`,` or `)`".to_string());
+                    parser.log_unexpected_str("`,` or `)`");
                 }
 
                 None => break,
@@ -58,13 +58,15 @@ impl TupleExpr {
             final_element_opt: final_element_opt.clone(),
         };
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted)
-        }?;
+        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+
+        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RParen)
+        // } else {
+        //     parser.log_missing_delimiter(')');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(TupleExpr {
             open_paren,
@@ -99,10 +101,7 @@ impl TupleIndexExpr {
         let index = if let Some(Token::UIntLiteral { value, .. }) = token {
             Ok(value)
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "unsigned integer".to_string(),
-                found: token,
-            });
+            parser.log_unexpected_str("unsigned integer");
             Err(ErrorsEmitted)
         }?;
 

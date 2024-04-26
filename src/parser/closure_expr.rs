@@ -25,7 +25,7 @@ impl ClosureExpr {
                             parser.get_identifier_patt()
                         }
                         _ => {
-                            parser.log_unexpected_token("identifier".to_string());
+                            parser.log_unexpected_str("identifier");
                             Err(ErrorsEmitted)
                         }
                     }?;
@@ -52,7 +52,7 @@ impl ClosureExpr {
             }
             Some(Token::DblPipe { .. }) => Ok(ClosureParams::None),
             _ => {
-                parser.log_unexpected_token("`|` or `||`".to_string());
+                parser.log_unexpected_str("`|` or `||`");
                 Err(ErrorsEmitted)
             }
         }?;

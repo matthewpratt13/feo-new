@@ -1,17 +1,14 @@
 use crate::{
     ast::{AssigneeExpr, Delimiter, GroupedExpr, MatchArm, MatchExpr, Pattern, UnderscoreExpr},
     error::{ErrorsEmitted, ParserErrorKind},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
 
 impl MatchExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<MatchExpr, ErrorsEmitted> {
-        let kw_match = parser.expect_keyword(Token::Match {
-            name: "match".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_match = parser.expect_keyword(TokenType::Match)?;
 
         let mut match_arms: Vec<MatchArm> = Vec::new();
 
@@ -24,7 +21,7 @@ impl MatchExpr {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
@@ -41,15 +38,12 @@ impl MatchExpr {
 
             let guard_opt = if let Pattern::WildcardPatt(UnderscoreExpr { .. }) = case {
                 if let Some(Token::If { .. }) = parser.peek_current() {
-                    let kw_if = parser.expect_keyword(Token::If {
-                        name: "if".to_string(),
-                        span: parser.stream.span(),
-                    })?;
+                    let kw_if = parser.expect_keyword(TokenType::If)?;
 
                     if let Some(Token::LParen { .. }) = parser.peek_current() {
                         parser.consume_token();
                     } else {
-                        parser.log_unexpected_token("`(`".to_string());
+                        parser.log_unexpected_token(TokenType::LParen);
                     };
 
                     let expr = GroupedExpr::parse(parser)?;
@@ -62,10 +56,7 @@ impl MatchExpr {
                 None
             };
 
-            let _ = parser.expect_separator(Token::FatArrow {
-                punc: "=>".to_string(),
-                span: parser.stream.span(),
-            })?;
+            parser.expect_separator(TokenType::FatArrow)?;
 
             let logic = parser.parse_expression(Precedence::Lowest)?;
 
@@ -84,7 +75,7 @@ impl MatchExpr {
                 }
                 Some(Token::RBrace { .. }) => break,
                 Some(_) => {
-                    parser.log_unexpected_token("`,` or `}`".to_string());
+                    parser.log_unexpected_str("`,` or `}`");
                 }
                 None => break,
             }
@@ -99,13 +90,15 @@ impl MatchExpr {
             return Err(ErrorsEmitted);
         };
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+
+        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RBrace)
+        // } else {
+        //     parser.log_missing_delimiter('}');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(MatchExpr {
             kw_match,

@@ -4,7 +4,7 @@ use crate::{
         Identifier, OuterAttr, Type, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{item::ParseDefinition, Parser};
@@ -15,24 +15,21 @@ impl ParseDefinition for EnumDef {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<EnumDef, ErrorsEmitted> {
-        let kw_enum = parser.expect_keyword(Token::Enum {
-            name: "enum".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_enum = parser.expect_keyword(TokenType::Enum)?;
 
         let mut variants: Vec<EnumVariant> = Vec::new();
 
         let enum_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_token("identifier".to_string());
+            parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
@@ -51,8 +48,11 @@ impl ParseDefinition for EnumDef {
             let variant = EnumVariant::parse(parser, attributes)?;
             variants.push(variant);
 
-            match parser.consume_token() {
-                Some(Token::Comma { .. }) => continue,
+            match parser.peek_current() {
+                Some(Token::Comma { .. }) => {
+                    parser.consume_token();
+                    continue;
+                }
                 Some(Token::RBrace { .. }) => break,
                 Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "`,` or `}`".to_string(),
@@ -62,13 +62,15 @@ impl ParseDefinition for EnumDef {
             }
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+
+        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RBrace)
+        // } else {
+        //     parser.log_missing_delimiter('}');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(EnumDef {
             attributes_opt: if attributes.is_empty() {
@@ -117,10 +119,6 @@ impl EnumVariant {
             None
         };
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted);
-        }
-
         Ok(EnumVariant {
             attributes_opt: {
                 if attributes.is_empty() {
@@ -141,7 +139,7 @@ impl EnumVariantStruct {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
@@ -164,10 +162,7 @@ impl EnumVariantStruct {
                 Err(ErrorsEmitted)
             }?;
 
-            let _ = parser.expect_separator(Token::Colon {
-                punc: ':',
-                span: parser.stream.span(),
-            })?;
+            parser.expect_separator(TokenType::Colon)?;
 
             let field_type = Type::parse(parser)?;
             fields.push((field_name, field_type));
@@ -185,18 +180,20 @@ impl EnumVariantStruct {
                     found: Some(t),
                 }),
                 None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
+                    parser.expect_delimiter(TokenType::RBrace)?;
                 }
             }
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+
+        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RBrace)
+        // } else {
+        //     parser.log_missing_delimiter('}');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         if fields.is_empty() {
             Ok(EnumVariantStruct {
@@ -219,7 +216,7 @@ impl EnumVariantTuple {
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
@@ -246,18 +243,20 @@ impl EnumVariantTuple {
                     found: Some(t),
                 }),
                 None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: ')' });
+                    parser.expect_delimiter(TokenType::RParen)?;
                 }
             }
         }
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted)
-        }?;
+        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+
+        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RParen)
+        // } else {
+        //     parser.log_missing_delimiter(')');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(EnumVariantTuple {
             open_paren,

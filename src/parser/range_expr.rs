@@ -1,6 +1,7 @@
 use crate::{
     ast::{Expression, Literal, RangeExpr, RangeOp},
     error::ErrorsEmitted,
+    token::TokenType,
 };
 
 use super::{Parser, Precedence};
@@ -15,16 +16,16 @@ impl RangeExpr {
             Expression::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(from),
                 _ => {
-                    parser.log_unexpected_token("numeric literal".to_string());
+                    parser.log_unexpected_str("numeric literal");
                     Err(ErrorsEmitted)
                 }
             },
             Expression::Path(_) => {
-                parser.log_unexpected_token("path expression".to_string());
+                parser.log_unexpected_str("path expression");
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("numeric literal or path expression".to_string());
+                parser.log_unexpected_str("numeric literal or path expression");
                 Err(ErrorsEmitted)
             }
         }?;
@@ -35,16 +36,16 @@ impl RangeExpr {
             Expression::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
                 _ => {
-                    parser.log_unexpected_token("numeric literal".to_string());
+                    parser.log_unexpected_str("numeric literal");
                     Err(ErrorsEmitted)
                 }
             },
             Expression::Path(_) => {
-                parser.log_unexpected_token("path expression".to_string());
+                parser.log_unexpected_str("path expression");
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("numeric literal or path expression".to_string());
+                parser.log_unexpected_str("numeric literal or path expression");
                 Err(ErrorsEmitted)
             }
         };
@@ -61,7 +62,7 @@ impl RangeExpr {
                 op: op.clone(),
                 to_opt: {
                     if op == RangeOp::RangeInclusive {
-                        parser.log_unexpected_token("`..`".to_string());
+                        parser.log_unexpected_token(TokenType::DblDot);
                         return Err(ErrorsEmitted);
                     } else {
                         None
