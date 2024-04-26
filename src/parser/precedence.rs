@@ -27,9 +27,10 @@ pub enum Precedence {
     TypeCast,           // "as"
     Unary,              // `-`, `*` `!`, `&`,`&mut`
     Unwrap,             // `?`
-    Index,              // `x[0]`
-    Call,               // `foo(bar)`
-    FieldAccess,        // foo.bar
-    MethodCall,         // foo.bar()
+    Index,              // `array[0]`
+    Call,               // `callee(foo)`
+    FieldAccess,        // object.field
+    MethodCall,         // receive.method()
+    TupleIndex,         // tuple.0
     Path,               // `package::module::Item`
 }

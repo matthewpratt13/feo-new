@@ -61,6 +61,21 @@ use crate::{
 use self::item::{ParseDeclaration, ParseDefinition};
 pub use self::precedence::Precedence;
 
+#[derive(Debug)]
+enum ParserContext {
+    Default,
+    Closure,
+    LogicalOr,
+    BitwiseOr,
+    BitwiseAnd,
+    Difference,
+    Product,
+    Unary, // `&` `*`, `-`
+    TupleIndex,
+    FieldAccess,
+    MethodCall,
+}
+
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling functionality.
 #[derive(Debug)]
@@ -69,27 +84,82 @@ pub(crate) struct Parser {
     current: usize,
     errors: Vec<CompilerError<ParserErrorKind>>,
     precedences: HashMap<Token, Precedence>,
+    context: ParserContext,
 }
 
 impl Parser {
     /// Create a new `Parser` instance.
     /// Initialize an empty `Vec` to store potentials errors that occur during parsing.
     pub(crate) fn new(stream: TokenStream) -> Self {
+        let tokens = stream.tokens();
         let mut parser = Parser {
             stream,
             current: 0,
             errors: Vec::new(),
             precedences: HashMap::new(),
+            context: ParserContext::Default,
         };
 
-        // parser.init_precedences();
+        parser.init_precedences(tokens);
         parser
     }
 
-    // fn init_precedences(&mut self) {
-    //     let span = self.stream.span();
+    fn init_precedences(&mut self, tokens: Vec<Token>) {
+        for t in tokens {
+            match t.token_type() {
+                TokenType::As => self.precedences.insert(t, Precedence::TypeCast),
+                TokenType::LParen => self.precedences.insert(t, Precedence::Call),
+                TokenType::LBracket => self.precedences.insert(t, Precedence::Index),
+                TokenType::Dot => self.precedences.insert(t, Precedence::FieldAccess), // default
+                TokenType::DblColon | TokenType::ColonColonAsterisk => {
+                    self.precedences.insert(t, Precedence::Path)
+                }
+                TokenType::QuestionMark => self.precedences.insert(t, Precedence::Unwrap),
+                TokenType::Some | TokenType::None | TokenType::Ok | TokenType::Err => {
+                    self.precedences.insert(t, Precedence::Unary)
+                }
+                TokenType::Bang => self.precedences.insert(t, Precedence::Unary),
+                TokenType::Percent => self.precedences.insert(t, Precedence::Remainder),
+                TokenType::Ampersand => self.precedences.insert(t, Precedence::BitwiseAnd), // default,
+                TokenType::Asterisk => self.precedences.insert(t, Precedence::Product), // default
+                TokenType::Plus => self.precedences.insert(t, Precedence::Sum),
+                TokenType::Minus => self.precedences.insert(t, Precedence::Difference), // default
+                TokenType::Slash => self.precedences.insert(t, Precedence::Quotient),
+                TokenType::LessThan => self.precedences.insert(t, Precedence::LessThan),
+                TokenType::Equals => self.precedences.insert(t, Precedence::Assignment),
+                TokenType::GreaterThan => self.precedences.insert(t, Precedence::GreaterThan),
+                TokenType::Caret => self.precedences.insert(t, Precedence::BitwiseXor),
+                TokenType::Pipe => self.precedences.insert(t, Precedence::BitwiseOr),
+                TokenType::DblDot | TokenType::DotDotEquals => {
+                    self.precedences.insert(t, Precedence::Range)
+                }
+                TokenType::BangEquals => self.precedences.insert(t, Precedence::NotEqual),
+                TokenType::PlusEquals
+                | TokenType::MinusEquals
+                | TokenType::AsteriskEquals
+                | TokenType::SlashEquals
+                | TokenType::PercentEquals => {
+                    self.precedences.insert(t, Precedence::CompoundAssignment)
+                }
+                TokenType::DblAsterisk => self.precedences.insert(t, Precedence::Exponentiation),
+                TokenType::DblAmpersand => self.precedences.insert(t, Precedence::LogicalAnd),
+                TokenType::AmpersandMut => self.precedences.insert(t, Precedence::Unary),
+                TokenType::DblLessThan | TokenType::DblGreaterThan => {
+                    self.precedences.insert(t, Precedence::Shift)
+                }
+                TokenType::LessThanEquals => {
+                    self.precedences.insert(t, Precedence::LessThanOrEqual)
+                }
+                TokenType::DblEquals => self.precedences.insert(t, Precedence::Equal),
 
-    // }
+                TokenType::GreaterThanEquals => {
+                    self.precedences.insert(t, Precedence::GreaterThanOrEqual)
+                }
+                TokenType::DblPipe => self.precedences.insert(t, Precedence::LogicalOr),
+                _ => self.precedences.insert(t, Precedence::Lowest),
+            };
+        }
+    }
 
     ///////////////////////////////////////////////////////////////////////////
 
