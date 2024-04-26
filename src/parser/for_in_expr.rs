@@ -59,8 +59,7 @@ mod tests {
             for z in y {
                 print("foo");
             }
-        }
-        "#;
+        }"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

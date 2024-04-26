@@ -279,8 +279,7 @@ mod tests {
             OrdinaryVariant,
             StructVariant { param1: SomeType, param2: AnotherType },
             TupleVariant(SomeType, AnotherType),
-        }
-        "#;
+        }"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
