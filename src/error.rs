@@ -134,12 +134,6 @@ pub enum ParserErrorKind {
         found: Option<Token>,
     },
 
-    UnexpectedTokenFoo {
-        expected: Token,
-        found: Option<Token>,
-    },
-
-
     UnexpectedEndOfInput,
 
     TokenNotFound {
@@ -166,13 +160,8 @@ impl fmt::Display for ParserErrorKind {
                 f,
                 "unexpected token: expected {}, found `{:#?}`",
                 expected, found
-            ),   
-            
-             ParserErrorKind::UnexpectedTokenFoo { expected, found } => writeln!(
-                f,
-                "unexpected token: expected {}, found `{:?}`",
-                expected, found
             ),
+
             ParserErrorKind::UnexpectedEndOfInput => {
                 writeln!(f, "parsing error: unexpected end of input")
             }
@@ -215,11 +204,17 @@ where
         let line_count = lines.len();
         let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
 
+        let start_pos = if pos > 80 {
+            pos - 80
+        } else {
+            0
+        };
+
         Self {
             error_kind,
             line: line_count,
             col: last_line_len,
-            _source: Arc::new(source[0..pos].to_string()),
+            _source: Arc::new(source[start_pos..pos].trim().to_string()),
         }
     }
 }

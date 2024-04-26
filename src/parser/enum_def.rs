@@ -275,11 +275,12 @@ mod tests {
     fn parse_enum_def() -> Result<(), ()> {
         let input = r#"
         #[error]
-        pub enum Foo 
+        pub enum Foo {
             OrdinaryVariant,
             StructVariant { param1: SomeType, param2: AnotherType },
             TupleVariant(SomeType, AnotherType),
-        }"#;
+        }
+        "#;
 
         let mut parser = test_utils::get_parser(input, false);
 
