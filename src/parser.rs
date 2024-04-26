@@ -43,16 +43,16 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BreakExpr, CallExpr,
-        ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr, CompoundAssignmentOp,
-        ConstantDecl, ContinueExpr, Delimiter, EnumDef, Expression, FieldAccessExpr, ForInExpr,
-        FunctionItem, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef,
-        InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleItem,
-        NegationExpr, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr,
-        RangeOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef,
-        StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef, Type,
-        TypeCastExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, UnwrapOp, ValueExpr, Visibility,
-        WhileExpr,
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BinaryOp, BlockExpr, BorrowExpr,
+        BreakExpr, CallExpr, ClosureExpr, ComparisonExpr, ComparisonOp, CompoundAssignmentExpr,
+        CompoundAssignmentOp, ConstantDecl, ContinueExpr, Delimiter, DereferenceExpr, EnumDef,
+        Expression, FieldAccessExpr, ForInExpr, FunctionItem, GroupedExpr, Identifier, IfExpr,
+        ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
+        MatchExpr, MethodCallExpr, ModuleItem, NegationExpr, NoneExpr, OuterAttr, PathExpr,
+        PathPrefix, Pattern, PubPackageVis, RangeExpr, RangeOp, ResultExpr, ReturnExpr, Separator,
+        SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef,
+        TupleExpr, TupleIndexExpr, TupleStructDef, Type, TypeCastExpr, UnaryOp, UnderscoreExpr,
+        UnwrapExpr, UnwrapOp, ValueExpr, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream, TokenType},
@@ -263,40 +263,37 @@ impl Parser {
 
     /// Recursively parse an expression based on the next token's operator precedence.
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
-        println!("ENTER `parse_expression()`");
-        println!("INPUT PRECEDENCE: {:?}\n", precedence);
-
         let mut left_expr = self.parse_prefix()?;
 
-        println!("PREFIX EXPRESSION: {:?}", left_expr.clone());
-        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
-
         while let Some(t) = self.peek_current() {
-            let token_precedence = self.precedence(&t);
-
-            println!("CURRENT PRECEDENCE: {:?}", token_precedence);
-
-            if token_precedence > precedence {
+            if precedence < self.peek_precedence() {
                 left_expr = self.parse_infix(left_expr)?;
-                println!("INFIX EXPRESSION: {:?}", left_expr.clone());
-                println!("CURRENT TOKEN: {:?}\n", self.peek_current());
             } else {
                 break;
             }
+
+            // self.consume_token();
         }
 
-        println!("RETURNED EXPRESSION: {:?}", left_expr);
-        println!("EXIT `parse_expression()`");
-        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
+        // while let Some(t) = self.peek_current() {
+        //     let token_precedence = self.precedence(&t);
+
+        //     println!("CURRENT PRECEDENCE: {:?}", token_precedence);
+
+        //     if token_precedence > precedence {
+        //         left_expr = self.parse_infix(left_expr)?;
+        //         println!("INFIX EXPRESSION: {:?}", left_expr.clone());
+        //         println!("CURRENT TOKEN: {:?}\n", self.peek_current());
+        //     } else {
+        //         break;
+        //     }
+        // }
 
         Ok(left_expr)
     }
 
     /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
-        println!("ENTER `parse_primary()`");
-        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
-
         let token = self.peek_current();
 
         match token {
@@ -335,9 +332,6 @@ impl Parser {
     /// Parse prefix expressions (e.g., unary operators, literals, identifiers and parentheses),
     /// where the respective token type appears at the beginning of an expression.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
-        println!("ENTER `parse_prefix()`");
-        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
-
         let token = self.peek_current();
 
         match token {
@@ -435,10 +429,11 @@ impl Parser {
                 self,
                 UnaryOp::Not,
             )?)),
-            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Expression::Negation(
-                NegationExpr::parse(self, UnaryOp::Reference)?,
+            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => Ok(Expression::Borrow(
+                BorrowExpr::parse(self, UnaryOp::Reference)?,
             )),
-            Some(Token::Asterisk { .. }) => Ok(Expression::Negation(NegationExpr::parse(
+
+            Some(Token::Asterisk { .. }) => Ok(Expression::Dereference(DereferenceExpr::parse(
                 self,
                 UnaryOp::Dereference,
             )?)),
@@ -612,9 +607,6 @@ impl Parser {
     /// Parse infix expressions (e.g., binary operators), where the respective token type
     /// appears in the middle of an expression.
     fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        println!("ENTER `parse_infix()`");
-        println!("CURRENT TOKEN: {:?}\n", self.peek_current());
-
         let token = self.consume_token();
 
         match token {
