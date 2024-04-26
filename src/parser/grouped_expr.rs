@@ -23,7 +23,7 @@ impl GroupedExpr {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(GroupedExpr {

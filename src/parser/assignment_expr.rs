@@ -17,15 +17,15 @@ impl AssignmentExpr {
             let right_expr = parser.parse_expression(Precedence::Assignment)?;
             let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
                 parser.log_error(e);
-                ErrorsEmitted(())
+                ErrorsEmitted
             })?;
 
             Ok(AssignmentExpr {
                 lhs: AssigneeExpr::try_from(left_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?,
-                op: AssignmentOp(()),
+                op: AssignmentOp,
                 rhs,
             })
         }
@@ -40,14 +40,14 @@ impl CompoundAssignmentExpr {
     ) -> Result<CompoundAssignmentExpr, ErrorsEmitted> {
         let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
-            ErrorsEmitted(())
+            ErrorsEmitted
         })?;
         match op {
             CompoundAssignmentOp::AddAssign => {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
 
                 Ok(CompoundAssignmentExpr {
@@ -60,7 +60,7 @@ impl CompoundAssignmentExpr {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
 
                 Ok(CompoundAssignmentExpr {
@@ -73,7 +73,7 @@ impl CompoundAssignmentExpr {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
 
                 Ok(CompoundAssignmentExpr {
@@ -86,7 +86,7 @@ impl CompoundAssignmentExpr {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
 
                 Ok(CompoundAssignmentExpr {
@@ -99,7 +99,7 @@ impl CompoundAssignmentExpr {
                 let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
 
                 Ok(CompoundAssignmentExpr {

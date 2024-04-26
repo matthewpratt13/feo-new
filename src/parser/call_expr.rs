@@ -15,7 +15,7 @@ impl CallExpr {
 
         let callee = AssigneeExpr::try_from(callee).map_err(|e| {
             parser.log_error(e);
-            ErrorsEmitted(())
+            ErrorsEmitted
         })?;
 
         loop {
@@ -27,7 +27,7 @@ impl CallExpr {
                 Ok(e) => Ok(e),
                 Err(_) => {
                     parser.log_unexpected_token("function argument".to_string());
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             }?;
 
@@ -51,7 +51,7 @@ impl CallExpr {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(CallExpr {

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr, Separator},
+    ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -15,7 +15,7 @@ impl MethodCallExpr {
 
         let receiver = AssigneeExpr::try_from(receiver).map_err(|e| {
             parser.log_error(e);
-            ErrorsEmitted(())
+            ErrorsEmitted
         })?;
 
         let token = parser.consume_token();
@@ -27,14 +27,14 @@ impl MethodCallExpr {
                 expected: "identifier after `.`".to_string(),
                 found: token,
             });
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token("`(`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         loop {
@@ -46,7 +46,7 @@ impl MethodCallExpr {
                 Ok(e) => Ok(e),
                 Err(_) => {
                     parser.log_unexpected_token("method argument".to_string());
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             }?;
 
@@ -72,12 +72,11 @@ impl MethodCallExpr {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(MethodCallExpr {
             receiver: Box::new(receiver),
-            dot: Separator::Dot,
             method_name,
             open_paren,
             args_opt: {

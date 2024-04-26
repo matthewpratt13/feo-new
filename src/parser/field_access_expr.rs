@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, Expression, FieldAccessExpr, Identifier, Separator},
+    ast::{AssigneeExpr, Expression, FieldAccessExpr, Identifier},
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
@@ -13,15 +13,14 @@ impl FieldAccessExpr {
     ) -> Result<FieldAccessExpr, ErrorsEmitted> {
         let object = AssigneeExpr::try_from(object).map_err(|e| {
             parser.log_error(e);
-            ErrorsEmitted(())
+            ErrorsEmitted
         })?;
-        
+
         let token = parser.consume_token();
 
         if let Some(Token::Identifier { name, .. }) = token {
             Ok(FieldAccessExpr {
                 object: Box::new(object),
-                dot: Separator::Dot,
                 field: Identifier(name),
             })
         } else {
@@ -29,7 +28,7 @@ impl FieldAccessExpr {
                 expected: "identifier after `.`".to_string(),
                 found: token,
             });
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }
     }
 }

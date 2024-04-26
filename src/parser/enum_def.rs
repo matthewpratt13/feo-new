@@ -26,14 +26,14 @@ impl ParseDefinition for EnumDef {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         loop {
@@ -67,7 +67,7 @@ impl ParseDefinition for EnumDef {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(EnumDef {
@@ -102,7 +102,7 @@ impl EnumVariant {
                 expected: "identifier".to_string(),
                 found: token,
             });
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let token = parser.peek_current();
@@ -118,7 +118,7 @@ impl EnumVariant {
         };
 
         if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted(()));
+            return Err(ErrorsEmitted);
         }
 
         Ok(EnumVariant {
@@ -142,7 +142,7 @@ impl EnumVariantStruct {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let mut fields: Vec<(Identifier, Type)> = Vec::new();
@@ -161,7 +161,7 @@ impl EnumVariantStruct {
                     expected: "identifier".to_string(),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }?;
 
             let _ = parser.expect_separator(Token::Colon {
@@ -169,7 +169,7 @@ impl EnumVariantStruct {
                 span: parser.stream.span(),
             })?;
 
-            let field_type = parser.get_type()?;
+            let field_type = Type::parse(parser)?;
             fields.push((field_name, field_type));
 
             let token = parser.peek_current();
@@ -195,7 +195,7 @@ impl EnumVariantStruct {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         if fields.is_empty() {
@@ -220,7 +220,7 @@ impl EnumVariantTuple {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token("`(`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let mut element_types: Vec<Type> = Vec::new();
@@ -230,7 +230,7 @@ impl EnumVariantTuple {
                 break;
             }
 
-            let element_type = parser.get_type()?;
+            let element_type = Type::parse(parser)?;
             element_types.push(element_type);
 
             let token = parser.peek_current();
@@ -256,7 +256,7 @@ impl EnumVariantTuple {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(EnumVariantTuple {

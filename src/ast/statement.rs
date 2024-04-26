@@ -1,14 +1,13 @@
-use super::{AssignmentOp, Expression, Keyword, Pattern, Separator, Type};
+use super::{Expression, Keyword, Pattern, Type};
 
 ///////////////////////////////////////////////////////////////////////////
 /// NODES
 ///////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LetStmt {
     pub kw_let: Keyword,
-    pub kw_mut_opt: Option<Keyword>,
     pub assignee: Pattern,
-    pub type_ann_opt: Option<(Separator, Type)>, // `: Type`
-    pub value_opt: Option<(AssignmentOp, Expression)>, // `= value`
+    pub type_ann_opt: Option<Type>,    
+    pub value_opt: Option<Expression>, 
 }

@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionDef, Identifier, OuterAttr, TraitDef,
-        TraitDefItem, Visibility,
+        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, OuterAttr,
+        TraitDef, TraitDefItem, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -15,7 +15,7 @@ use super::{
 impl ParseDefinition for TraitDef {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        outer_attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<TraitDef, ErrorsEmitted> {
         let kw_trait = parser.expect_keyword(Token::Trait {
@@ -23,7 +23,8 @@ impl ParseDefinition for TraitDef {
             span: parser.stream.span(),
         })?;
 
-        let mut associated_items: Vec<TraitDefItem> = Vec::new();
+        let mut trait_items: Vec<TraitDefItem> = Vec::new();
+        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
 
         let token = parser.consume_token();
 
@@ -31,15 +32,20 @@ impl ParseDefinition for TraitDef {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
+
+        while let Some(ia) = parser.get_inner_attr() {
+            inner_attributes.push(ia);
+            parser.consume_token();
+        }
 
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
@@ -57,7 +63,7 @@ impl ParseDefinition for TraitDef {
 
             let token = parser.peek_current();
 
-            let associated_item = if let Some(Token::Const { .. }) = token {
+            let trait_item = if let Some(Token::Const { .. }) = token {
                 Ok(TraitDefItem::ConstantDecl(ConstantDecl::parse(
                     parser,
                     item_attributes,
@@ -70,7 +76,7 @@ impl ParseDefinition for TraitDef {
                     item_visibility,
                 )?))
             } else if let Some(Token::Func { .. }) = token {
-                Ok(TraitDefItem::FunctionDef(FunctionDef::parse(
+                Ok(TraitDefItem::FunctionDef(FunctionItem::parse(
                     parser,
                     item_attributes,
                     item_visibility,
@@ -80,36 +86,44 @@ impl ParseDefinition for TraitDef {
                     expected: "`const`, `alias` or `func`".to_string(),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }?;
 
-            associated_items.push(associated_item);
+            trait_items.push(trait_item);
         }
+
         let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
             parser.consume_token();
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(TraitDef {
-            attributes_opt: {
-                if attributes.is_empty() {
+            outer_attributes_opt: {
+                if outer_attributes.is_empty() {
                     None
                 } else {
-                    Some(attributes)
+                    Some(outer_attributes)
                 }
             },
             visibility,
             kw_trait,
             trait_name,
             open_brace,
-            associated_items_opt: {
-                if associated_items.is_empty() {
+            inner_attributes_opt: {
+                if inner_attributes.is_empty() {
                     None
                 } else {
-                    Some(associated_items)
+                    Some(inner_attributes)
+                }
+            },
+            trait_items_opt: {
+                if trait_items.is_empty() {
+                    None
+                } else {
+                    Some(trait_items)
                 }
             },
             close_brace,
@@ -124,8 +138,9 @@ mod tests {
     #[test]
     fn parse_trait_def() -> Result<(), ()> {
         let input = r#"
-        #[interface]
         pub trait Foo {
+            #![interface]
+            
             #[storage]
             pub const OWNER: h160 = 0x12345123451234512345;
             pub alias NewType;

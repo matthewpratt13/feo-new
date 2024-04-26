@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Separator},
+    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Type},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -20,25 +20,25 @@ impl ClosureExpr {
                         break;
                     }
 
-                    let id = match parser.peek_current() {
+                    let name = match parser.peek_current() {
                         Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
                             parser.get_identifier_patt()
                         }
                         _ => {
                             parser.log_unexpected_token("identifier".to_string());
-                            Err(ErrorsEmitted(()))
+                            Err(ErrorsEmitted)
                         }
                     }?;
 
                     let ty = if let Some(Token::Colon { .. }) = parser.peek_current() {
                         parser.consume_token();
-                        Some(parser.get_type()?)
+                        Some(Type::parse(parser)?)
                     } else {
                         None
                     };
 
                     let param = ClosureParam {
-                        id,
+                        param_name: name,
                         type_ann_opt: ty,
                     };
                     vec.push(param);
@@ -48,18 +48,18 @@ impl ClosureExpr {
                     }
                 }
 
-                Ok(ClosureParams::Some(Separator::Pipe, vec, Separator::Pipe))
+                Ok(ClosureParams::Some(vec))
             }
-            Some(Token::DblPipe { .. }) => Ok(ClosureParams::None(Separator::DblPipe)),
+            Some(Token::DblPipe { .. }) => Ok(ClosureParams::None),
             _ => {
                 parser.log_unexpected_token("`|` or `||`".to_string());
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }
         }?;
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
             parser.consume_token();
-            Some((Separator::ThinArrow, parser.get_type()?))
+            Some(Type::parse(parser)?)
         } else {
             None
         };

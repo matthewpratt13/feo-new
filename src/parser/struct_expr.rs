@@ -15,7 +15,7 @@ impl StructExpr {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let mut fields: Vec<StructField> = Vec::new();
@@ -37,7 +37,7 @@ impl StructExpr {
                 Some(Token::RBrace { .. }) => break,
                 _ => {
                     parser.log_missing_delimiter('}');
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             }?;
 
@@ -56,8 +56,8 @@ impl StructExpr {
                         Some(attributes)
                     }
                 },
-                name: Identifier(name),
-                value,
+                field_name: Identifier(name),
+                field_value: value,
             };
 
             fields.push(field);
@@ -77,7 +77,7 @@ impl StructExpr {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(StructExpr {
@@ -105,7 +105,7 @@ impl TupleStructExpr {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token("`(`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let mut elements: Vec<Expression> = Vec::new();
@@ -133,7 +133,7 @@ impl TupleStructExpr {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(TupleStructExpr {

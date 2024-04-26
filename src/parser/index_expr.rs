@@ -13,7 +13,7 @@ impl IndexExpr {
     ) -> Result<IndexExpr, ErrorsEmitted> {
         let array = AssigneeExpr::try_from(array).map_err(|e| {
             parser.log_error(e);
-            ErrorsEmitted(())
+            ErrorsEmitted
         })?;
 
         let index = parser.parse_expression(Precedence::Lowest)?;
@@ -23,7 +23,7 @@ impl IndexExpr {
             Ok(Delimiter::RBracket)
         } else {
             parser.log_missing_delimiter(']');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(IndexExpr {

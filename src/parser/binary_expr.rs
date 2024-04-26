@@ -21,7 +21,7 @@ impl BinaryExpr {
 
         let left_expr = ValueExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
-            ErrorsEmitted(())
+            ErrorsEmitted
         })?;
 
         match op {
@@ -30,7 +30,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
 
                 Ok(BinaryExpr {
@@ -44,7 +44,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
 
                 Ok(BinaryExpr {
@@ -58,7 +58,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(BinaryExpr {
                     lhs: Box::new(left_expr),
@@ -71,7 +71,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(BinaryExpr {
                     lhs: Box::new(left_expr),
@@ -84,7 +84,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(BinaryExpr {
                     lhs: Box::new(left_expr),
@@ -98,7 +98,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(BinaryExpr {
                     lhs: Box::new(left_expr),
@@ -111,7 +111,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(BinaryExpr {
                     lhs: Box::new(left_expr),
@@ -124,7 +124,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(BinaryExpr {
                     lhs: Box::new(left_expr),
@@ -137,7 +137,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(BinaryExpr {
                     lhs: Box::new(left_expr),
@@ -150,7 +150,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(BinaryExpr {
                     lhs: Box::new(left_expr),
@@ -163,7 +163,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(BinaryExpr {
                     lhs: Box::new(left_expr),
@@ -176,7 +176,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(BinaryExpr {
                     lhs: Box::new(left_expr),
@@ -189,7 +189,7 @@ impl BinaryExpr {
 
                 let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(BinaryExpr {
                     lhs: Box::new(left_expr),
@@ -212,7 +212,7 @@ impl ComparisonExpr {
 
         let left_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
-            ErrorsEmitted(())
+            ErrorsEmitted
         })?;
 
         match op {
@@ -221,7 +221,7 @@ impl ComparisonExpr {
 
                 let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(ComparisonExpr {
                     lhs: left_expr,
@@ -234,7 +234,7 @@ impl ComparisonExpr {
 
                 let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(ComparisonExpr {
                     lhs: left_expr,
@@ -247,7 +247,7 @@ impl ComparisonExpr {
 
                 let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(ComparisonExpr {
                     lhs: left_expr,
@@ -260,7 +260,7 @@ impl ComparisonExpr {
 
                 let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(ComparisonExpr {
                     lhs: left_expr,
@@ -273,7 +273,7 @@ impl ComparisonExpr {
 
                 let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(ComparisonExpr {
                     lhs: left_expr,
@@ -286,7 +286,7 @@ impl ComparisonExpr {
 
                 let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })?;
                 Ok(ComparisonExpr {
                     lhs: left_expr,

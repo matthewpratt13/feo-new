@@ -1,7 +1,8 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionDef, Identifier, InherentImplDef,
-        InherentImplItem, OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem, Visibility,
+        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InherentImplDef,
+        InherentImplItem, OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem, Type,
+        Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
@@ -22,13 +23,13 @@ impl ParseDefinition for InherentImplDef {
 
         let mut associated_items: Vec<InherentImplItem> = Vec::new();
 
-        let nominal_type = parser.get_type()?;
+        let nominal_type = Type::parse(parser)?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         loop {
@@ -54,7 +55,7 @@ impl ParseDefinition for InherentImplDef {
                     item_visibility,
                 )?))
             } else if let Some(Token::Func { .. }) = token {
-                Ok(InherentImplItem::FunctionDef(FunctionDef::parse(
+                Ok(InherentImplItem::FunctionDef(FunctionItem::parse(
                     parser,
                     item_attributes,
                     item_visibility,
@@ -64,7 +65,7 @@ impl ParseDefinition for InherentImplDef {
                     expected: "`const`,`func`".to_string(),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }?;
 
             associated_items.push(associated_item);
@@ -75,7 +76,7 @@ impl ParseDefinition for InherentImplDef {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(InherentImplDef {
@@ -122,7 +123,7 @@ impl ParseDefinition for TraitImplDef {
                 found: token,
             });
 
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let kw_for = parser.expect_keyword(Token::For {
@@ -130,7 +131,7 @@ impl ParseDefinition for TraitImplDef {
             span: parser.stream.span(),
         })?;
 
-        let implementing_type = parser.get_type()?;
+        let implementing_type = Type::parse(parser)?;
 
         let mut associated_items: Vec<TraitImplItem> = Vec::new();
 
@@ -138,7 +139,7 @@ impl ParseDefinition for TraitImplDef {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         loop {
@@ -170,7 +171,7 @@ impl ParseDefinition for TraitImplDef {
                     item_visibility,
                 )?))
             } else if let Some(Token::Func { .. }) = token {
-                Ok(TraitImplItem::FunctionDef(FunctionDef::parse(
+                Ok(TraitImplItem::FunctionDef(FunctionItem::parse(
                     parser,
                     item_attributes,
                     item_visibility,
@@ -180,7 +181,7 @@ impl ParseDefinition for TraitImplDef {
                     expected: "`const`,`func`".to_string(),
                     found: token,
                 });
-                Err(ErrorsEmitted(()))
+                Err(ErrorsEmitted)
             }?;
 
             associated_items.push(associated_item);
@@ -191,7 +192,7 @@ impl ParseDefinition for TraitImplDef {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(TraitImplDef {

@@ -1,7 +1,6 @@
 use crate::{
     ast::{
-        BlockExpr, Delimiter, FunctionDef, FunctionOrMethodParam, FunctionParam, Identifier,
-        Keyword, OuterAttr, SelfParam, UnaryOp, Visibility,
+        BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier, Keyword, OuterAttr, SelfParam, Type, UnaryOp, Visibility
     },
     error::ErrorsEmitted,
     token::Token,
@@ -9,12 +8,12 @@ use crate::{
 
 use super::Parser;
 
-impl FunctionDef {
+impl FunctionItem {
     pub(crate) fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
-    ) -> Result<FunctionDef, ErrorsEmitted> {
+    ) -> Result<FunctionItem, ErrorsEmitted> {
         let kw_func = parser.expect_keyword(Token::Func {
             name: "func".to_string(),
             span: parser.stream.span(),
@@ -26,14 +25,14 @@ impl FunctionDef {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token("`(`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         // `&self` and `&mut self` can only occur as the first parameter in a method
@@ -70,12 +69,12 @@ impl FunctionDef {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
             parser.consume_token();
-            Some(Box::new(parser.get_type()?))
+            Some(Box::new(Type::parse(parser)?))
         } else {
             None
         };
@@ -89,7 +88,7 @@ impl FunctionDef {
             None
         };
 
-        Ok(FunctionDef {
+        Ok(FunctionItem {
             attributes_opt: {
                 if attributes.is_empty() {
                     None
@@ -146,7 +145,7 @@ impl FunctionOrMethodParam {
                 span: parser.stream.span(),
             })?;
 
-            let param_type = Box::new(parser.get_type()?);
+            let param_type = Box::new(Type::parse(parser)?);
 
             let function_param = FunctionParam {
                 param_name,
@@ -156,7 +155,7 @@ impl FunctionOrMethodParam {
             Ok(FunctionOrMethodParam::FunctionParam(function_param))
         } else {
             parser.log_unexpected_token("`self` or identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         };
 
         param

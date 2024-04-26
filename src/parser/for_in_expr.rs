@@ -22,7 +22,7 @@ impl ForInExpr {
                 let expression = parser.parse_expression(Precedence::Lowest)?;
                 Pattern::try_from(expression).map_err(|e| {
                     parser.log_error(e);
-                    ErrorsEmitted(())
+                    ErrorsEmitted
                 })
             }?;
         let kw_in = parser.expect_keyword(Token::In {
@@ -59,8 +59,7 @@ mod tests {
             for z in y {
                 print("foo");
             }
-        }
-        "#;
+        }"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

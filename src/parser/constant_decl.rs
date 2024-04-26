@@ -1,5 +1,5 @@
 use crate::{
-    ast::{ConstantDecl, Identifier, OuterAttr, ValueExpr, Visibility},
+    ast::{ConstantDecl, Identifier, OuterAttr, Type, ValueExpr, Visibility},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -21,7 +21,7 @@ impl ParseDeclaration for ConstantDecl {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let _ = parser.expect_separator(Token::Colon {
@@ -29,18 +29,18 @@ impl ParseDeclaration for ConstantDecl {
             span: parser.stream.span(),
         })?;
 
-        let item_type = Box::new(parser.get_type()?);
+        let item_type = Box::new(Type::parse(parser)?);
 
-        let value_opt = if let Some(Token::Equals { .. }) = parser.peek_current() {
+        let value = if let Some(Token::Equals { .. }) = parser.peek_current() {
             parser.consume_token();
             let expr = parser.parse_expression(Precedence::Lowest)?;
             Ok(ValueExpr::try_from(expr).map_err(|e| {
                 parser.log_error(e);
-                ErrorsEmitted(())
+                ErrorsEmitted
             })?)
         } else {
             parser.log_unexpected_token("value expression".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         let _ = parser.expect_separator(Token::Semicolon {
@@ -61,7 +61,7 @@ impl ParseDeclaration for ConstantDecl {
             kw_const,
             item_name,
             item_type,
-            value_opt,
+            value,
         })
     }
 }

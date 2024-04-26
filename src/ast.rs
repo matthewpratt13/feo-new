@@ -13,8 +13,8 @@ pub use self::{expression::*, item::*, statement::*, types::*};
 /// LITERAL
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different literal AST nodes.
-#[derive(Debug, Clone)]
+/// Enum representing the different literals used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Int(Int),
     UInt(UInt),
@@ -31,7 +31,7 @@ pub enum Literal {
 /// IDENTIFIER
 ///////////////////////////////////////////////////////////////////////////
 
-/// Wrapper type, turning a `String` into an `Identifier` AST node.
+/// Wrapper type, turning a `String` into an `Identifier`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Identifier(pub String);
 
@@ -39,11 +39,11 @@ pub struct Identifier(pub String);
 /// KEYWORDS
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different keyword AST nodes.
-#[derive(Debug, Clone)]
+/// Enum representing the different keywords used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
     Import,
-    Mod,
+    Module,
     Package,
     SelfKeyword,
     SelfType,
@@ -78,15 +78,18 @@ pub enum Keyword {
     Err,
 }
 
-#[derive(Debug, Clone)]
+/// Enum representing the different inner attributes used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
 pub enum InnerAttr {
     Contract,
     Interface,
     Library,
     Script,
+    Unsafe,
 }
 
-#[derive(Debug, Clone)]
+/// Enum representing the different outer attributes used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
 pub enum OuterAttr {
     Calldata,
     Constructor,
@@ -105,8 +108,8 @@ pub enum OuterAttr {
 /// DELIMITERS
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different delimiter AST nodes.
-#[derive(Debug, Clone)]
+/// Enum representing the different delimiters used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
 pub enum Delimiter {
     LParen,
     RParen,
@@ -120,8 +123,8 @@ pub enum Delimiter {
 /// PUNCTUATION
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different unary operator AST nodes.
-#[derive(Debug, Clone)]
+/// Enum representing the different unary operators used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
     Negate,       // `-`
     Not,          // `!`
@@ -130,8 +133,8 @@ pub enum UnaryOp {
     Dereference,  // `*`
 }
 
-/// Enum representing the different binary operator AST nodes.
-#[derive(Debug, Clone)]
+/// Enum representing the different binary operators used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinaryOp {
     Add,
     Subtract,
@@ -148,7 +151,8 @@ pub enum BinaryOp {
     Exponentiation,
 }
 
-#[derive(Debug, Clone)]
+/// Enum representing the different comparison operators used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
 pub enum ComparisonOp {
     Equal,
     NotEqual,
@@ -158,7 +162,8 @@ pub enum ComparisonOp {
     GreaterEqual,
 }
 
-#[derive(Debug, Clone)]
+/// Enum representing the different compound comparison operators used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
 pub enum CompoundAssignmentOp {
     AddAssign,
     SubtractAssign,
@@ -167,22 +172,23 @@ pub enum CompoundAssignmentOp {
     ModulusAssign,
 }
 
-#[derive(Debug, Clone)]
-pub struct AssignmentOp(pub ());
+/// Unit struct representing the assignment operator (`=`) used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssignmentOp;
 
-/// Struct representing the unwrap operator `?`.
-#[derive(Debug, Clone)]
-pub struct UnwrapOp(pub ());
+/// Unit struct representing the unwrap operator `?` used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnwrapOp;
 
-/// Enum representing the different range operator AST nodes.
+/// Enum representing the different range operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum RangeOp {
     RangeExclusive, // `..`
     RangeInclusive, // `..=`
 }
 
-/// Enum representing the different separator (punctuation) AST nodes.
-#[derive(Debug, Clone)]
+/// Enum representing the different separators used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
 pub enum Separator {
     Colon,
     Semicolon,
@@ -204,8 +210,8 @@ pub enum Separator {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different expression AST nodes.
-/// `Expression` nodes always produce or evaluate to a value and may have (side) effects.
-#[derive(Debug, Clone)]
+/// `Expression` nodes always produce or evaluate to a value and may have side effects.
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Literal(Literal),
     Path(PathExpr),
@@ -244,7 +250,8 @@ pub enum Expression {
     ResultExpr(ResultExpr),
 }
 
-#[derive(Debug, Clone)]
+/// Enum representing value type expressions.
+#[derive(Debug, Clone, PartialEq)]
 pub enum ValueExpr {
     Literal(Literal),
     PathExpr(PathExpr),
@@ -319,7 +326,9 @@ impl TryFrom<Expression> for ValueExpr {
     }
 }
 
-#[derive(Debug, Clone)]
+
+/// Enum representing assignee type expressions.
+#[derive(Debug, Clone, PartialEq)]
 pub enum AssigneeExpr {
     Literal(Literal),
     PathExpr(PathExpr),
@@ -358,7 +367,7 @@ impl TryFrom<Expression> for AssigneeExpr {
                 a.elements_opt.map(|v| {
                     v.into_iter().for_each(|e| {
                         assignee_expressions.push(AssigneeExpr::try_from(e).expect(
-                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                            "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         ))
                     })
                 });
@@ -382,7 +391,7 @@ impl TryFrom<Expression> for AssigneeExpr {
                         .into_iter()
                         .map(|e| {
                             AssigneeExpr::try_from(e).expect(
-                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                            "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         )
                         })
                         .collect::<Vec<AssigneeExpr>>()
@@ -396,10 +405,10 @@ impl TryFrom<Expression> for AssigneeExpr {
 
                 s.fields_opt.map(|v| {
                     v.into_iter().for_each(|s| {
-                        let value = AssigneeExpr::try_from(s.value).expect(
-                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                        let value = AssigneeExpr::try_from(s.field_value).expect(
+                            "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         );
-                        assignee_expressions.push((s.name, value));
+                        assignee_expressions.push((s.field_name, value));
                     })
                 });
 
@@ -411,7 +420,7 @@ impl TryFrom<Expression> for AssigneeExpr {
                 ts.elements_opt.map(|v| {
                     v.into_iter().for_each(|e| {
                         assignee_expressions.push(AssigneeExpr::try_from(e).expect(
-                            "conversion error: unable to convert `Expression` to `AssigneeExpr`",
+                            "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         ))
                     })
                 });
@@ -427,7 +436,10 @@ impl TryFrom<Expression> for AssigneeExpr {
     }
 }
 
-#[derive(Debug, Clone)]
+/// Enum representing patterns, which are syntactically similar to `Expression`.
+/// Patterns are used to match values against structures, as well as within 
+/// variable declarations and as function parameters.
+#[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Literal(Literal),
     IdentifierPatt {
@@ -438,10 +450,15 @@ pub enum Pattern {
     PathPatt(PathExpr),
     GroupedPatt(Box<Pattern>),
     RangePatt(RangeExpr),
-    ArrayPatt(ArrayExpr),
-    TuplePatt(TupleExpr),
-    StructPatt(StructExpr),
-    TupleStructPatt(TupleStructExpr),
+    TuplePatt(Option<Vec<Pattern>>),
+    StructPatt {
+        struct_name: Identifier,
+        fields_opt: Option<Vec<(Identifier, Pattern)>>,
+    },
+    TupleStructPatt {
+        name: Identifier,
+        elements_opt: Option<Vec<Pattern>>,
+    },
     WildcardPatt(UnderscoreExpr),
     RestPatt {
         dbl_dot: RangeOp,
@@ -465,10 +482,81 @@ impl TryFrom<Expression> for Pattern {
                     Ok(Pattern::RangePatt(r))
                 }
             }
-            Expression::Array(a) => Ok(Pattern::ArrayPatt(a)),
-            Expression::Tuple(t) => Ok(Pattern::TuplePatt(t)),
-            Expression::Struct(s) => Ok(Pattern::StructPatt(s)),
-            Expression::TupleStruct(ts) => Ok(Pattern::TupleStructPatt(ts)),
+            Expression::Tuple(TupleExpr { elements_opt, .. }) => {
+                let mut elements: Vec<Pattern> = Vec::new();
+
+                let elements_opt = elements_opt.map(|te| {
+                    te.elements.into_iter().for_each(|e| {
+                        let pattern = Pattern::try_from(e.0).expect(
+                            "conversion error: unable to convert `Expression` into `Pattern`",
+                        );
+                        elements.push(pattern);
+                    });
+
+                    if let Some(e) = te.final_element_opt {
+                        let pattern = Pattern::try_from(*e).expect(
+                            "conversion error: unable to convert `Expression` into `Pattern`",
+                        );
+                        elements.push(pattern);
+                    }
+
+                    elements
+                });
+
+                Ok(Pattern::TuplePatt(elements_opt))
+            }
+            Expression::Struct(StructExpr {
+                path, fields_opt, ..
+            }) => {
+                let struct_name = path
+                    .tree_opt
+                    .unwrap_or([].to_vec())
+                    .pop()
+                    .unwrap_or(Identifier("".to_string()));
+
+                let mut fields: Vec<(Identifier, Pattern)> = Vec::new();
+
+                let fields_opt = fields_opt.map(|v| {
+                    v.into_iter().for_each(|f| {
+                        let pattern = Pattern::try_from(f.field_value).expect(
+                            "conversion error: unable to convert `Expression` into `Pattern`",
+                        );
+                        fields.push((f.field_name, pattern));
+                    });
+
+                    fields
+                });
+
+                Ok(Pattern::StructPatt {
+                    struct_name,
+                    fields_opt,
+                })
+            }
+
+            Expression::TupleStruct(TupleStructExpr {
+                path, elements_opt, ..
+            }) => {
+                let name = path
+                    .tree_opt
+                    .unwrap_or([].to_vec())
+                    .pop()
+                    .unwrap_or(Identifier("".to_string()));
+
+                let mut elements: Vec<Pattern> = Vec::new();
+
+                let elements_opt = elements_opt.map(|v| {
+                    v.into_iter().for_each(|e| {
+                        let pattern = Pattern::try_from(e).expect(
+                            "conversion error: unable to convert `Expression` into `Pattern`",
+                        );
+                        elements.push(pattern);
+                    });
+
+                    elements
+                });
+
+                Ok(Pattern::TupleStructPatt { name, elements_opt })
+            }
             Expression::Underscore(u) => Ok(Pattern::WildcardPatt(u)),
 
             _ => Err(ParserErrorKind::TypeConversionError {
@@ -482,7 +570,7 @@ impl TryFrom<Expression> for Pattern {
 /// Enum representing the different statement AST nodes, which are built up of expressions.
 /// A `Statement` is a component of a block, which is a component of an outer expression
 /// or function.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Let(LetStmt),
     Item(Item),
@@ -491,19 +579,20 @@ pub enum Statement {
 
 /// Enum representing the different item nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Item {
     ImportDecl(ImportDecl),
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     StaticItemDecl(StaticItemDecl),
-    ModuleDef(Box<ModuleDef>),
+    ModuleItem(Box<ModuleItem>),
     TraitDef(TraitDef),
     EnumDef(EnumDef),
     StructDef(StructDef),
+    TupleStructDef(TupleStructDef),
     InherentImplDef(InherentImplDef),
     TraitImplDef(TraitImplDef),
-    FunctionDef(FunctionDef),
+    FunctionItem(FunctionItem),
 }
 
 /// Enum representing the language's different types, which help to define a value's
@@ -511,28 +600,28 @@ pub enum Item {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     // primitives
-    I32(String),
-    I64(String),
-    I128(String),
-    U8(String),
-    U16(String),
-    U32(String),
-    U64(String),
-    U128(String),
-    U256(String),
-    U512(String),
-    Byte(String), // `u8`
-    B2(String),
-    B4(String),
-    B8(String),
-    B16(String),
-    B32(String),
-    H160(String),
-    H256(String),
-    H512(String),
-    Str(String), // `Vec<u8>`
-    Char(String),
-    Bool(String),
+    I32(PrimitiveType),
+    I64(PrimitiveType),
+    I128(PrimitiveType),
+    U8(PrimitiveType),
+    U16(PrimitiveType),
+    U32(PrimitiveType),
+    U64(PrimitiveType),
+    U128(PrimitiveType),
+    U256(PrimitiveType),
+    U512(PrimitiveType),
+    Byte(PrimitiveType),
+    B2(PrimitiveType),
+    B4(PrimitiveType),
+    B8(PrimitiveType),
+    B16(PrimitiveType),
+    B32(PrimitiveType),
+    H160(PrimitiveType),
+    H256(PrimitiveType),
+    H512(PrimitiveType),
+    Str(PrimitiveType),
+    Char(PrimitiveType),
+    Bool(PrimitiveType),
 
     UnitType, // ()
 
@@ -543,14 +632,15 @@ pub enum Type {
     },
     Tuple(Vec<Type>),
 
-    UserDefined(String), // struct, enum, trait, alias, constant (paths / items)
+    UserDefined(PathType), // struct, enum, trait, alias, constant (paths / items)
 
     Function {
         function_name: Identifier,
+        params_opt: Option<Vec<FunctionOrMethodParam>>,
         return_type_opt: Option<Box<Type>>,
     },
     Reference(Box<Type>), //  `&Type` / `&mut Type`
-    SelfType(String),
+    SelfType(SelfType),
 
     Vec(Box<Type>),
     Mapping {
@@ -569,7 +659,7 @@ pub enum Type {
 /// HELPER FUNCTIONS
 ///////////////////////////////////////////////////////////////////////////
 
-/// Helper function to turn a slice into a `Bytes`.
+/// Helper function to turn a byte slice (`&[u8]`) into a `Bytes`.
 pub fn get_bytes(value: &[u8]) -> Bytes {
     let bytes = match value.len() {
         0 => panic!("empty slice"),
@@ -611,7 +701,7 @@ pub fn get_bytes(value: &[u8]) -> Bytes {
     bytes
 }
 
-/// Pad an input byte slice with zeroes to turn it into a fixed size array.
+/// Pads an input byte slice with zeroes to turn it into a fixed size array.
 /// Useful when converting a byte string literal into a `Bytes` literal.
 #[track_caller]
 fn pad_zeroes<const A: usize, const B: usize>(slice: &[u8]) -> [u8; B] {

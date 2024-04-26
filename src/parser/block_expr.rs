@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, Delimiter, Keyword, Statement},
+    ast::{BlockExpr, Delimiter, InnerAttr, Statement},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -10,18 +10,18 @@ impl BlockExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
         println!("ENTER `BlockExpr::parse()`");
 
-        let kw_unsafe_opt = if let Some(Token::Unsafe { .. }) = parser.peek_current() {
+        let mut attributes: Vec<InnerAttr> = Vec::new();
+
+        while let Some(ia) = parser.get_inner_attr() {
+            attributes.push(ia);
             parser.consume_token();
-            Some(Keyword::Unsafe)
-        } else {
-            None
-        };
+        }
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`".to_string());
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         println!("CURRENT TOKEN (AFTER `{{`): {:?}\n", parser.peek_current());
@@ -37,7 +37,7 @@ impl BlockExpr {
                 Ok(s) => Ok(s),
                 Err(_) => {
                     parser.log_unexpected_token("statement".to_string());
-                    Err(ErrorsEmitted(()))
+                    Err(ErrorsEmitted)
                 }
             }?;
 
@@ -60,11 +60,17 @@ impl BlockExpr {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted(()))
+            Err(ErrorsEmitted)
         }?;
 
         Ok(BlockExpr {
-            kw_unsafe_opt,
+            attributes_opt: {
+                if attributes.is_empty() {
+                    None
+                } else {
+                    Some(attributes)
+                }
+            },
             open_brace,
             statements_opt: {
                 if statements.is_empty() {
@@ -85,7 +91,8 @@ mod tests {
     #[test]
     fn parse_block_expr() -> Result<(), ()> {
         let input = r#"
-        unsafe {
+        #![unsafe]
+        {
             x + 2;
             y
         }"#;

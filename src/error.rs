@@ -2,14 +2,18 @@ use std::{error::Error, fmt, sync::Arc};
 
 use crate::token::Token;
 
-/// Enum representing the different types of lexer errors.
+/// Enum representing the different types of lexer (scanner) errors.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexErrorKind {
-    ParseIntError,
-    ParseUIntError,
-    ParseBigUIntError,
-    ParseHashError,
-    ParseBoolError,
+    LexIntError,
+    LexUIntError,
+    LexBigUIntError,
+    LexBoolError,
+    LexHashError,
+
+    InvalidHashLength {
+        len: usize,
+    },
 
     EmptyCharLiteral,
 
@@ -25,8 +29,6 @@ pub enum LexErrorKind {
     CharNotFound {
         expected: String,
     },
-
-    ReservedChar,
 
     UnrecognizedKeyword {
         name: String,
@@ -66,11 +68,16 @@ pub enum LexErrorKind {
 impl fmt::Display for LexErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexErrorKind::ParseIntError => writeln!(f, "error parsing signed integer"),
-            LexErrorKind::ParseUIntError => writeln!(f, "error parsing unsigned integer"),
-            LexErrorKind::ParseBigUIntError => writeln!(f, "error parsing big unsigned integer"),
-            LexErrorKind::ParseHashError => writeln!(f, "error parsing hash"),
-            LexErrorKind::ParseBoolError => writeln!(f, "error parsing boolean"),
+            LexErrorKind::LexIntError => writeln!(f, "error tokenizing signed integer literal"),
+            LexErrorKind::LexUIntError => writeln!(f, "error tokenizing unsigned integer literal"),
+            LexErrorKind::LexBigUIntError => {
+                writeln!(f, "error tokenizing large unsigned integer literal")
+            }
+            LexErrorKind::LexBoolError => writeln!(f, "error tokenizing boolean literal"),
+            LexErrorKind::LexHashError => writeln!(f, "error tokenizing hash literal"),
+            LexErrorKind::InvalidHashLength { len } => {
+                writeln!(f, "syntax error: invalid hash length – {len}")
+            }
             LexErrorKind::UnrecognizedChar { value } => {
                 writeln!(f, "syntax error: unrecognized character – `{value}`")
             }
@@ -86,11 +93,6 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::UnrecognizedOuterAttribute { name } => {
                 writeln!(f, "syntax error: unrecognized outer attribute – `{name}`")
             }
-
-            LexErrorKind::ReservedChar => {
-                writeln!(f, "syntax error\n`$` is reserved for hash literals")
-            }
-
             LexErrorKind::UnexpectedChar { expected, found } => writeln!(
                 f,
                 "unexpected character: expected {expected}, found `{found}`",
@@ -159,6 +161,7 @@ impl fmt::Display for ParserErrorKind {
                 "unexpected token: expected {}, found `{:#?}`",
                 expected, found
             ),
+
             ParserErrorKind::UnexpectedEndOfInput => {
                 writeln!(f, "parsing error: unexpected end of input")
             }
@@ -170,7 +173,10 @@ impl fmt::Display for ParserErrorKind {
             }
             ParserErrorKind::UnknownError => writeln!(f, "unknown parser error"),
 
-            ParserErrorKind::TypeConversionError { type_a, type_b } => writeln!(f, "conversion error: unable to convert {type_a} to {type_b}"),
+            ParserErrorKind::TypeConversionError { type_a, type_b } => writeln!(
+                f,
+                "conversion error: unable to convert {type_a} into {type_b}"
+            ),
         }
     }
 }
@@ -191,18 +197,24 @@ impl<T> CompilerError<T>
 where
     T: Clone,
 {
-    /// Create a new `CompilerError` with precise locations in the sources.
+    /// Create a new `CompilerError` that provides details at a precise location in the source code.
     pub fn new(error_kind: T, source: &str, pos: usize) -> Self {
         let slice = &source[..pos];
         let lines: Vec<&str> = slice.split('\n').collect();
         let line_count = lines.len();
         let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
 
+        let start_pos = if pos > 80 {
+            pos - 80
+        } else {
+            0
+        };
+
         Self {
             error_kind,
             line: line_count,
             col: last_line_len,
-            _source: Arc::new(source.to_string()),
+            _source: Arc::new(source[start_pos..pos].trim().to_string()),
         }
     }
 }
@@ -227,4 +239,4 @@ impl<T> Error for CompilerError<T> where T: Clone + fmt::Display + fmt::Debug {}
 /// that an error has occurred without returning the actual error, instead allowing the error
 /// to be logged in the respective struct for later use.
 #[derive(Debug, Clone, PartialEq)]
-pub struct ErrorsEmitted(pub ());
+pub struct ErrorsEmitted;
