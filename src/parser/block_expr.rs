@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, Delimiter, InnerAttr, Statement},
+    ast::{BlockExpr, Delimiter, Expression, InnerAttr, Statement},
     error::ErrorsEmitted,
     token::{Token, TokenType},
 };
@@ -7,9 +7,7 @@ use crate::{
 use super::Parser;
 
 impl BlockExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
-        println!("ENTER `BlockExpr::parse()`");
-
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let mut attributes: Vec<InnerAttr> = Vec::new();
 
         while let Some(ia) = parser.get_inner_attr() {
@@ -23,8 +21,6 @@ impl BlockExpr {
             parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
-
-        println!("CURRENT TOKEN (AFTER `{{`): {:?}\n", parser.peek_current());
 
         let mut statements: Vec<Statement> = Vec::new();
 
@@ -51,21 +47,9 @@ impl BlockExpr {
             }
         }
 
-        println!("EXIT `parser.parse_statement()` WHILE LOOP");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-        println!("BLOCK EXPRESSION STATEMENTS: {:#?}\n", statements.clone());
-
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
-        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RBrace)
-        // } else {
-        //     parser.log_missing_delimiter('}');
-        //     Err(ErrorsEmitted)
-        // }?;
-
-        Ok(BlockExpr {
+        let expr = BlockExpr {
             attributes_opt: {
                 if attributes.is_empty() {
                     None
@@ -82,7 +66,9 @@ impl BlockExpr {
                 }
             },
             close_brace,
-        })
+        };
+
+        Ok(Expression::Block(expr))
     }
 }
 

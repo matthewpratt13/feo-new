@@ -11,7 +11,7 @@ impl RangeExpr {
         parser: &mut Parser,
         from: Expression,
         op: RangeOp,
-    ) -> Result<RangeExpr, ErrorsEmitted> {
+    ) -> Result<Expression, ErrorsEmitted> {
         let from = match from.clone() {
             Expression::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(from),
@@ -50,14 +50,14 @@ impl RangeExpr {
             }
         };
 
-        if to.is_ok() {
-            Ok(RangeExpr {
+        let expr = if to.is_ok() {
+            RangeExpr {
                 from_opt: Some(Box::new(from)),
                 op,
                 to_opt: Some(Box::new(to?)),
-            })
+            }
         } else {
-            Ok(RangeExpr {
+            RangeExpr {
                 from_opt: Some(Box::new(from)),
                 op: op.clone(),
                 to_opt: {
@@ -68,8 +68,10 @@ impl RangeExpr {
                         None
                     }
                 },
-            })
-        }
+            }
+        };
+
+        Ok(Expression::Range(expr))
     }
 }
 

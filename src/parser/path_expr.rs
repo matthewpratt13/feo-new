@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Identifier, PathExpr, PathPrefix, Separator},
+    ast::{Expression, Identifier, PathExpr, PathPrefix, Separator},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -7,7 +7,13 @@ use crate::{
 use super::Parser;
 
 impl PathExpr {
-    pub(crate) fn parse(parser: &mut Parser, root: PathPrefix) -> Result<PathExpr, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        root: PathPrefix,
+    ) -> Result<Expression, ErrorsEmitted> {
+        println!("enter `PathExpr::parse()`");
+        println!("current token: {:?}\n", parser.peek_current());
+
         let mut tree: Vec<Identifier> = Vec::new();
 
         while let Some(Token::DblColon { .. }) = parser.peek_current() {
@@ -28,7 +34,7 @@ impl PathExpr {
             None
         };
 
-        Ok(PathExpr {
+        let expr = PathExpr {
             root,
             tree_opt: {
                 if tree.is_empty() {
@@ -38,7 +44,9 @@ impl PathExpr {
                 }
             },
             wildcard_opt,
-        })
+        };
+
+        Ok(Expression::Path(expr))
     }
 }
 

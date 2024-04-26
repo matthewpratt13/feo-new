@@ -9,7 +9,7 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl TupleExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
@@ -68,7 +68,7 @@ impl TupleExpr {
         //     Err(ErrorsEmitted)
         // }?;
 
-        Ok(TupleExpr {
+        let expr = TupleExpr {
             open_paren,
             elements_opt: {
                 if elements.is_empty() {
@@ -82,7 +82,9 @@ impl TupleExpr {
                 }
             },
             close_paren,
-        })
+        };
+
+        Ok(Expression::Tuple(expr))
     }
 }
 
@@ -90,7 +92,7 @@ impl TupleIndexExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         operand: Expression,
-    ) -> Result<TupleIndexExpr, ErrorsEmitted> {
+    ) -> Result<Expression, ErrorsEmitted> {
         let operand = AssigneeExpr::try_from(operand).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -105,10 +107,12 @@ impl TupleIndexExpr {
             Err(ErrorsEmitted)
         }?;
 
-        Ok(TupleIndexExpr {
+        let expr = TupleIndexExpr {
             operand: Box::new(operand),
             index,
-        })
+        };
+
+        Ok(Expression::TupleIndex(expr))
     }
 }
 

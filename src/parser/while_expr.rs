@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, GroupedExpr, WhileExpr},
+    ast::{BlockExpr, Expression, GroupedExpr, WhileExpr},
     error::ErrorsEmitted,
     token::{Token, TokenType},
 };
@@ -7,7 +7,7 @@ use crate::{
 use super::Parser;
 
 impl WhileExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<WhileExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_while = parser.expect_keyword(TokenType::While)?;
 
         if let Some(Token::LParen { .. }) = parser.peek_current() {
@@ -16,15 +16,17 @@ impl WhileExpr {
             parser.log_unexpected_token(TokenType::LParen);
         }
 
-        let condition = GroupedExpr::parse(parser)?;
+        let condition = Box::new(GroupedExpr::parse(parser)?);
 
-        let block = BlockExpr::parse(parser)?;
+        let block = Box::new(BlockExpr::parse(parser)?);
 
-        Ok(WhileExpr {
+        let expr = WhileExpr {
             kw_while,
-            condition: Box::new(condition),
+            condition,
             block,
-        })
+        };
+
+        Ok(Expression::While(expr))
     }
 }
 

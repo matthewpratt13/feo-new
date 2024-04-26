@@ -1,7 +1,7 @@
 use super::{
     AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter,
-    Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, Separator, Statement,
-    Type, UInt, UnaryOp, UnwrapOp, ValueExpr,
+    DereferenceOp, Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp,
+    ReferenceOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -12,7 +12,7 @@ use super::{
 #[derive(Debug, Clone, PartialEq)]
 pub enum ClosureParams {
     Some(Vec<ClosureParam>), // `| params |`
-    None, // `||`
+    None,                    // `||`
 }
 
 /// Enum representing the different path root options.
@@ -36,7 +36,7 @@ pub struct ClosureParam {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchArm {
     pub case: Pattern,
-    pub guard_opt: Option<(Keyword, Box<GroupedExpr>)>, // `if (..)`
+    pub guard_opt: Option<(Keyword, Box<Expression>)>, // `if (..)`
     pub logic: Box<Expression>,
 }
 
@@ -97,7 +97,7 @@ pub struct BlockExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BorrowExpr {
-    pub op: UnaryOp,
+    pub op: ReferenceOp,
     pub expression: Box<Expression>,
 }
 
@@ -117,7 +117,7 @@ pub struct CallExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClosureExpr {
     pub params: ClosureParams,
-    pub return_type_opt: Option<Type>,
+    pub return_type_opt: Option<Box<Type>>,
     pub expression: Box<Expression>,
 }
 
@@ -135,7 +135,7 @@ pub struct ContinueExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DereferenceExpr {
-    pub op: UnaryOp,
+    pub op: DereferenceOp,
     pub expression: AssigneeExpr,
 }
 
@@ -151,7 +151,7 @@ pub struct ForInExpr {
     pub assignee: Pattern,
     pub kw_in: Keyword,
     pub iterable: Box<Expression>,
-    pub block: BlockExpr,
+    pub block: Box<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -164,10 +164,10 @@ pub struct GroupedExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfExpr {
     pub kw_if: Keyword,
-    pub condition: Box<GroupedExpr>,
-    pub if_block: Box<BlockExpr>,
-    pub else_if_blocks_opt: Option<Vec<(Keyword, Box<IfExpr>)>>, // `else`, `if { .. }`
-    pub trailing_else_block_opt: Option<(Keyword, BlockExpr)>,   // `else { .. }`
+    pub condition: Box<Expression>,
+    pub if_block: Box<Expression>,
+    pub else_if_blocks_opt: Option<Vec<(Keyword, Box<Expression>)>>, // `else`, `if { .. }`
+    pub trailing_else_block_opt: Option<(Keyword, Box<Expression>)>, // `else { .. }`
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -198,7 +198,7 @@ pub struct MethodCallExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct NegationExpr {
+pub struct UnaryExpr {
     pub op: UnaryOp,
     pub expression: Box<ValueExpr>,
 }
@@ -242,7 +242,7 @@ pub struct SomeExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructExpr {
-    pub path: PathExpr,
+    pub path: Box<Expression>,
     pub open_brace: Delimiter,
     pub fields_opt: Option<Vec<StructField>>,
     pub close_brace: Delimiter,
@@ -273,7 +273,7 @@ pub struct TupleStructExpr {
 pub struct TypeCastExpr {
     pub operand: Box<ValueExpr>,
     pub kw_as: Keyword,
-    pub new_type: Type,
+    pub new_type: Box<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -290,6 +290,6 @@ pub struct UnwrapExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct WhileExpr {
     pub kw_while: Keyword,
-    pub condition: Box<GroupedExpr>,
-    pub block: BlockExpr,
+    pub condition: Box<Expression>,
+    pub block: Box<Expression>,
 }

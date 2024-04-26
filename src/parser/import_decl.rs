@@ -107,10 +107,6 @@ impl PathSegment {
             None
         };
 
-        // if !parser.errors().is_empty() {
-        //     return Err(ErrorsEmitted);
-        // }
-
         Ok(PathSegment { root, subset_opt })
     }
 }

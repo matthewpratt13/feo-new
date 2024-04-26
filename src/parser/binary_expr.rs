@@ -3,6 +3,7 @@ use crate::{
         AssigneeExpr, BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression, ValueExpr,
     },
     error::ErrorsEmitted,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
@@ -14,191 +15,252 @@ impl BinaryExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         left_expr: Expression,
-        op: BinaryOp,
-    ) -> Result<BinaryExpr, ErrorsEmitted> {
-        println!("ENTER `parse_binary_expr()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+    ) -> Result<Expression, ErrorsEmitted> {
+        // Parse binary expressions
+        let operator = parser.peek_current().unwrap_or(Token::EOF); // Get the binary operator
+        let precedence = parser.get_precedence(&operator); // Determine the precedence
+        let right_expr = parser.parse_expression(precedence)?; // Parse the right-hand operand
 
-        let left_expr = ValueExpr::try_from(left_expr).map_err(|e| {
+        let op = match operator.token_type() {
+            TokenType::Plus => Ok(BinaryOp::Add),
+            TokenType::Minus => Ok(BinaryOp::Subtract),
+            TokenType::Asterisk => Ok(BinaryOp::Multiply),
+            TokenType::Slash => Ok(BinaryOp::Divide),
+            TokenType::Percent => Ok(BinaryOp::Modulus),
+            TokenType::DblAmpersand => Ok(BinaryOp::LogicalAnd),
+            TokenType::DblPipe => Ok(BinaryOp::LogicalOr),
+            TokenType::Ampersand => Ok(BinaryOp::BitwiseAnd),
+            TokenType::Pipe => Ok(BinaryOp::BitwiseOr),
+            TokenType::Caret => Ok(BinaryOp::BitwiseXor),
+            TokenType::DblLessThan => Ok(BinaryOp::ShiftLeft),
+            TokenType::DblGreaterThan => Ok(BinaryOp::ShiftRight),
+            TokenType::DblAsterisk => Ok(BinaryOp::Exponentiation),
+            _ => {
+                parser.log_unexpected_str("binary operator");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        let lhs = ValueExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        match op {
-            BinaryOp::Add => {
-                let right_expr = parser.parse_expression(Precedence::Sum)?;
+        let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
+        let expr = BinaryExpr {
+            lhs: Box::new(lhs),
+            op,
+            rhs: Box::new(rhs),
+        };
 
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::Subtract => {
-                let right_expr = parser.parse_expression(Precedence::Difference)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::Multiply => {
-                let right_expr = parser.parse_expression(Precedence::Product)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::Divide => {
-                let right_expr = parser.parse_expression(Precedence::Quotient)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::Modulus => {
-                let right_expr = parser.parse_expression(Precedence::Remainder)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-
-            BinaryOp::LogicalAnd => {
-                let right_expr = parser.parse_expression(Precedence::LogicalAnd)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::LogicalOr => {
-                let right_expr = parser.parse_expression(Precedence::LogicalOr)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::BitwiseAnd => {
-                let right_expr = parser.parse_expression(Precedence::BitwiseAnd)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::BitwiseOr => {
-                let right_expr = parser.parse_expression(Precedence::BitwiseOr)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::BitwiseXor => {
-                let right_expr = parser.parse_expression(Precedence::BitwiseXor)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::ShiftLeft => {
-                let right_expr = parser.parse_expression(Precedence::Shift)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::ShiftRight => {
-                let right_expr = parser.parse_expression(Precedence::Shift)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-            BinaryOp::Exponentiation => {
-                let right_expr = parser.parse_expression(Precedence::Exponentiation)?;
-
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(BinaryExpr {
-                    lhs: Box::new(left_expr),
-                    op,
-                    rhs: Box::new(value_expr),
-                })
-            }
-        }
+        Ok(Expression::Binary(expr))
     }
+
+    // pub(crate) fn parse(
+    //     parser: &mut Parser,
+    //     left_expr: Expression,
+    //     op: BinaryOp,
+    // ) -> Result<Expression, ErrorsEmitted> {
+    //     println!("ENTER `parse_binary_expr()`");
+    //     println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+
+    //     let left_expr = ValueExpr::try_from(left_expr).map_err(|e| {
+    //         parser.log_error(e);
+    //         ErrorsEmitted
+    //     })?;
+
+    //     let expr = match op {
+    //         BinaryOp::Add => {
+    //             let right_expr = parser.parse_expression(Precedence::Sum)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //         BinaryOp::Subtract => {
+    //             let right_expr = parser.parse_expression(Precedence::Difference)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //         BinaryOp::Multiply => {
+    //             let right_expr = parser.parse_expression(Precedence::Product)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //         BinaryOp::Divide => {
+    //             let right_expr = parser.parse_expression(Precedence::Quotient)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //         BinaryOp::Modulus => {
+    //             let right_expr = parser.parse_expression(Precedence::Remainder)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+
+    //         BinaryOp::LogicalAnd => {
+    //             let right_expr = parser.parse_expression(Precedence::LogicalAnd)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //         BinaryOp::LogicalOr => {
+    //             let right_expr = parser.parse_expression(Precedence::LogicalOr)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //         BinaryOp::BitwiseAnd => {
+    //             let right_expr = parser.parse_expression(Precedence::BitwiseAnd)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //         BinaryOp::BitwiseOr => {
+    //             let right_expr = parser.parse_expression(Precedence::BitwiseOr)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //         BinaryOp::BitwiseXor => {
+    //             let right_expr = parser.parse_expression(Precedence::BitwiseXor)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //         BinaryOp::ShiftLeft => {
+    //             let right_expr = parser.parse_expression(Precedence::Shift)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //         BinaryOp::ShiftRight => {
+    //             let right_expr = parser.parse_expression(Precedence::Shift)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //         BinaryOp::Exponentiation => {
+    //             let right_expr = parser.parse_expression(Precedence::Exponentiation)?;
+
+    //             let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+
+    //             BinaryExpr {
+    //                 lhs: Box::new(left_expr),
+    //                 op,
+    //                 rhs: Box::new(value_expr),
+    //             }
+    //         }
+    //     };
+
+    //     Ok(Expression::Binary(expr))
+    // }
 }
 
 impl ComparisonExpr {

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Keyword, ResultExpr},
+    ast::{Delimiter, Expression, Keyword, ResultExpr},
     error::ErrorsEmitted,
     token::{Token, TokenType},
 };
@@ -7,7 +7,7 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl ResultExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<ResultExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let token = parser.consume_token();
 
         let kw_ok_or_err = if let Some(Token::Ok { .. }) = token {
@@ -30,18 +30,12 @@ impl ResultExpr {
 
         parser.expect_delimiter(TokenType::RParen)?;
 
-        // if let Some(Token::RParen { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RParen)
-        // } else {
-        //     parser.log_missing_delimiter(')');
-        //     Err(ErrorsEmitted)
-        // }?;
-
-        Ok(ResultExpr {
+        let expr = ResultExpr {
             kw_ok_or_err,
             expression: Box::new(expression),
-        })
+        };
+
+        Ok(Expression::ResultExpr(expr))
     }
 }
 

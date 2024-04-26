@@ -70,14 +70,6 @@ impl ParseDefinition for InherentImplDef {
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
-        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RBrace)
-        // } else {
-        //     parser.log_missing_delimiter('}');
-        //     Err(ErrorsEmitted)
-        // }?;
-
         Ok(InherentImplDef {
             attributes_opt: {
                 if attributes.is_empty() {

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, GroupedExpr},
+    ast::{Delimiter, Expression, GroupedExpr},
     error::ErrorsEmitted,
     token::TokenType,
 };
@@ -7,7 +7,7 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl GroupedExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         println!("ENTER `GroupedExpr::parse()`");
         println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
 
@@ -20,19 +20,13 @@ impl GroupedExpr {
 
         let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 
-        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RParen)
-        // } else {
-        //     parser.log_missing_delimiter(')');
-        //     Err(ErrorsEmitted)
-        // }?;
-
-        Ok(GroupedExpr {
+        let expr = GroupedExpr {
             open_paren: Delimiter::LParen,
             expression: Box::new(expression),
             close_paren,
-        })
+        };
+
+        Ok(Expression::Grouped(expr))
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::{
-    ast::SomeExpr,
+    ast::{Expression, SomeExpr},
     error::ErrorsEmitted,
     token::{Token, TokenType},
 };
@@ -7,7 +7,7 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl SomeExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<SomeExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_some = parser.expect_keyword(TokenType::Some)?;
 
         if let Some(Token::LParen { .. }) = parser.peek_current() {
@@ -20,16 +20,12 @@ impl SomeExpr {
 
         parser.expect_delimiter(TokenType::RBrace)?;
 
-        // if let Some(Token::RParen { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        // } else {
-        //     parser.log_missing_delimiter(')');
-        // }
-
-        Ok(SomeExpr {
+        let expr = SomeExpr {
             kw_some,
             expression: Box::new(expression),
-        })
+        };
+
+        Ok(Expression::SomeExpr(expr))
     }
 }
 

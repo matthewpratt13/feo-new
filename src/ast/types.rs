@@ -1,6 +1,6 @@
 pub use crate::{B16, B2, B32, B4, B8, H160, H256, H512, U256, U512};
 
-use super::PathExpr;
+use super::Expression;
 
 /// Wrappers for the different signed integer types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -77,7 +77,7 @@ pub enum PrimitiveType {
 }
 
 /// Type alias representing a path to an `Item` or local variable.
-pub type PathType = PathExpr;
+pub type PathType = Expression;
 
 /// Struct that wraps a `Vec<u8>` into a dynamic byte array (string literal).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

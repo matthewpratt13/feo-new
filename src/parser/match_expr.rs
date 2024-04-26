@@ -1,5 +1,8 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, GroupedExpr, MatchArm, MatchExpr, Pattern, UnderscoreExpr},
+    ast::{
+        AssigneeExpr, Delimiter, Expression, GroupedExpr, MatchArm, MatchExpr, Pattern,
+        UnderscoreExpr,
+    },
     error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
@@ -7,7 +10,7 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl MatchExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<MatchExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_match = parser.expect_keyword(TokenType::Match)?;
 
         let mut match_arms: Vec<MatchArm> = Vec::new();
@@ -92,15 +95,7 @@ impl MatchExpr {
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
-        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RBrace)
-        // } else {
-        //     parser.log_missing_delimiter('}');
-        //     Err(ErrorsEmitted)
-        // }?;
-
-        Ok(MatchExpr {
+        let expr = MatchExpr {
             kw_match,
             scrutinee,
             open_brace,
@@ -113,7 +108,9 @@ impl MatchExpr {
             },
             final_arm,
             close_brace,
-        })
+        };
+
+        Ok(Expression::Match(expr))
     }
 }
 

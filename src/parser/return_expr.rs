@@ -7,7 +7,7 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl ReturnExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<ReturnExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_return = parser.expect_keyword(TokenType::Return)?;
 
         let expression_opt: Option<Box<Expression>> = if let Some(t) = parser.peek_current() {
@@ -16,10 +16,12 @@ impl ReturnExpr {
             None
         };
 
-        Ok(ReturnExpr {
+        let expr = ReturnExpr {
             kw_return,
             expression_opt,
-        })
+        };
+
+        Ok(Expression::Return(expr))
     }
 }
 

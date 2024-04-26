@@ -1,12 +1,15 @@
 use crate::{
-    ast::{AssigneeExpr, BorrowExpr, DereferenceExpr, NegationExpr, UnaryOp, ValueExpr},
+    ast::{
+        AssigneeExpr, BorrowExpr, DereferenceExpr, DereferenceOp, Expression, ReferenceOp,
+        UnaryExpr, UnaryOp, ValueExpr,
+    },
     error::ErrorsEmitted,
 };
 
 use super::{Parser, Precedence};
 
-impl NegationExpr {
-    pub(crate) fn parse(parser: &mut Parser, op: UnaryOp) -> Result<NegationExpr, ErrorsEmitted> {
+impl UnaryExpr {
+    pub(crate) fn parse(parser: &mut Parser, op: UnaryOp) -> Result<Expression, ErrorsEmitted> {
         parser.consume_token();
 
         let expression = parser.parse_expression(Precedence::Unary)?;
@@ -15,35 +18,32 @@ impl NegationExpr {
             ErrorsEmitted
         })?;
 
-        match op {
-            _ => Ok(NegationExpr {
-                expression: Box::new(value_expr),
-                op,
-            }),
-        }
+        let expr = UnaryExpr {
+            op,
+            expression: Box::new(value_expr),
+        };
+
+        Ok(Expression::Unary(expr))
     }
 }
 
 impl BorrowExpr {
-    pub(crate) fn parse(parser: &mut Parser, op: UnaryOp) -> Result<BorrowExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser, op: ReferenceOp) -> Result<Expression, ErrorsEmitted> {
         parser.consume_token();
 
         let expression = parser.parse_expression(Precedence::Unary)?;
 
-        match op {
-            _ => Ok(BorrowExpr {
-                expression: Box::new(expression),
-                op,
-            }),
-        }
+        let expr = BorrowExpr {
+            op,
+            expression: Box::new(expression),
+        };
+
+        Ok(Expression::Borrow(expr))
     }
 }
 
 impl DereferenceExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        op: UnaryOp,
-    ) -> Result<DereferenceExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         parser.consume_token();
 
         let expression = AssigneeExpr::try_from(parser.parse_expression(Precedence::Unary)?)
@@ -52,9 +52,12 @@ impl DereferenceExpr {
                 ErrorsEmitted
             })?;
 
-        match op {
-            _ => Ok(DereferenceExpr { expression, op }),
-        }
+        let expr = DereferenceExpr {
+            op: DereferenceOp,
+            expression,
+        };
+
+        Ok(Expression::Dereference(expr))
     }
 }
 

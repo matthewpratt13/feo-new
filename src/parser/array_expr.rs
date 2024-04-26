@@ -7,7 +7,7 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl ArrayExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<ArrayExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let open_bracket = if let Some(Token::LBracket { .. }) = parser.consume_token() {
             Ok(Delimiter::LBracket)
         } else {
@@ -56,7 +56,7 @@ impl ArrayExpr {
         //     Err(ErrorsEmitted)
         // }?;
 
-        Ok(ArrayExpr {
+        let expr = ArrayExpr {
             open_bracket,
             elements_opt: {
                 if elements.is_empty() {
@@ -66,7 +66,9 @@ impl ArrayExpr {
                 }
             },
             close_bracket,
-        })
+        };
+
+        Ok(Expression::Array(expr))
     }
 }
 

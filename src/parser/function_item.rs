@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier,
-        Keyword, OuterAttr, SelfParam, Type, UnaryOp, Visibility,
+        Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
     },
     error::ErrorsEmitted,
     token::{Token, TokenType},
@@ -116,11 +116,13 @@ impl FunctionItem {
 
 impl FunctionOrMethodParam {
     pub(crate) fn parse(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
-        let prefix_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
-            parser.peek_current()
-        {
+        let prefix_opt = if let Some(t) = parser.peek_current() {
             parser.consume_token();
-            Some(UnaryOp::Reference)
+            match t {
+                Token::Ampersand { .. } => Some(ReferenceOp::Borrow),
+                Token::AmpersandMut { .. } => Some(ReferenceOp::MutableBorrow),
+                _ => None,
+            }
         } else {
             None
         };

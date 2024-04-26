@@ -10,7 +10,7 @@ impl MethodCallExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         receiver: Expression,
-    ) -> Result<MethodCallExpr, ErrorsEmitted> {
+    ) -> Result<Expression, ErrorsEmitted> {
         let mut args: Vec<Expression> = Vec::new();
 
         let receiver = AssigneeExpr::try_from(receiver).map_err(|e| {
@@ -69,15 +69,7 @@ impl MethodCallExpr {
 
         let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 
-        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RParen)
-        // } else {
-        //     parser.log_missing_delimiter(')');
-        //     Err(ErrorsEmitted)
-        // }?;
-
-        Ok(MethodCallExpr {
+        let expr = MethodCallExpr {
             receiver: Box::new(receiver),
             method_name,
             open_paren,
@@ -89,7 +81,9 @@ impl MethodCallExpr {
                 }
             },
             close_paren,
-        })
+        };
+
+        Ok(Expression::MethodCall(expr))
     }
 }
 

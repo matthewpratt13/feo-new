@@ -10,7 +10,7 @@ impl IndexExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         array: Expression,
-    ) -> Result<IndexExpr, ErrorsEmitted> {
+    ) -> Result<Expression, ErrorsEmitted> {
         let array = AssigneeExpr::try_from(array).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -20,20 +20,14 @@ impl IndexExpr {
 
         let close_bracket = parser.expect_delimiter(TokenType::RBracket)?;
 
-        // let close_bracket = if let Some(Token::RBracket { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RBracket)
-        // } else {
-        //     parser.log_missing_delimiter(']');
-        //     Err(ErrorsEmitted)
-        // }?;
-
-        Ok(IndexExpr {
+        let expr = IndexExpr {
             array: Box::new(array),
             open_bracket: Delimiter::LBracket,
             index: Box::new(index),
             close_bracket,
-        })
+        };
+
+        Ok(Expression::Index(expr))
     }
 }
 
