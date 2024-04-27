@@ -83,7 +83,7 @@ pub struct BinaryExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ComparisonExpr {
     pub lhs: AssigneeExpr,
-    pub op: ComparisonOp,
+    pub comparison_op: ComparisonOp,
     pub rhs: AssigneeExpr,
 }
 

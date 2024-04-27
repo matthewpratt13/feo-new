@@ -6,7 +6,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::Parser;
 
 /// Parse a binary operation (e.g., arithmetic, logical and comparison expressions).
 /// This method parses the operator and calls `parse_expression()` recursively to handle
@@ -68,97 +68,141 @@ impl ComparisonExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         left_expr: Expression,
-        op: ComparisonOp,
-    ) -> Result<ComparisonExpr, ErrorsEmitted> {
-        println!("ENTER `parse_binary_expr()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+    ) -> Result<Expression, ErrorsEmitted> {
+        let operator_token = parser.peek_current().unwrap_or(Token::EOF);
 
-        let left_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
+        let comparison_op = match operator_token.token_type() {
+            TokenType::DblEquals => Ok(ComparisonOp::Equal),
+            TokenType::LessThan => Ok(ComparisonOp::LessThan),
+            TokenType::GreaterThan => Ok(ComparisonOp::GreaterThan),
+            TokenType::LessThanEquals => Ok(ComparisonOp::LessEqual),
+            TokenType::GreaterThanEquals => Ok(ComparisonOp::GreaterEqual),
+
+            _ => {
+                parser.log_unexpected_str("comparison operator");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        parser.consume_token();
+
+        let precedence = parser.get_precedence(&operator_token);
+
+        let right_expr = parser.parse_expression(precedence)?;
+
+        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        match op {
-            ComparisonOp::Equal => {
-                let right_expr = parser.parse_expression(Precedence::Equal)?;
+        let rhs = AssigneeExpr::try_from(right_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
-                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(ComparisonExpr {
-                    lhs: left_expr,
-                    op,
-                    rhs: value_expr,
-                })
-            }
-            ComparisonOp::NotEqual => {
-                let right_expr = parser.parse_expression(Precedence::NotEqual)?;
+        let expr = ComparisonExpr {
+            lhs,
+            comparison_op,
+            rhs,
+        };
 
-                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(ComparisonExpr {
-                    lhs: left_expr,
-                    op,
-                    rhs: value_expr,
-                })
-            }
-            ComparisonOp::LessThan => {
-                let right_expr = parser.parse_expression(Precedence::LessThan)?;
-
-                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(ComparisonExpr {
-                    lhs: left_expr,
-                    op,
-                    rhs: value_expr,
-                })
-            }
-            ComparisonOp::LessEqual => {
-                let right_expr = parser.parse_expression(Precedence::LessThanOrEqual)?;
-
-                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(ComparisonExpr {
-                    lhs: left_expr,
-                    op,
-                    rhs: value_expr,
-                })
-            }
-            ComparisonOp::GreaterThan => {
-                let right_expr = parser.parse_expression(Precedence::GreaterThan)?;
-
-                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(ComparisonExpr {
-                    lhs: left_expr,
-                    op,
-                    rhs: value_expr,
-                })
-            }
-            ComparisonOp::GreaterEqual => {
-                let right_expr = parser.parse_expression(Precedence::GreaterThanOrEqual)?;
-
-                let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-                Ok(ComparisonExpr {
-                    lhs: left_expr,
-                    op,
-                    rhs: value_expr,
-                })
-            }
-        }
+        Ok(Expression::Comparison(expr))
     }
+
+    // pub(crate) fn parse(
+    //     parser: &mut Parser,
+    //     left_expr: Expression,
+    //     op: ComparisonOp,
+    // ) -> Result<ComparisonExpr, ErrorsEmitted> {
+    //     println!("ENTER `parse_binary_expr()`");
+    //     println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
+
+    //     let left_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
+    //         parser.log_error(e);
+    //         ErrorsEmitted
+    //     })?;
+
+    //     match op {
+    //         ComparisonOp::Equal => {
+    //             let right_expr = parser.parse_expression(Precedence::Equal)?;
+
+    //             let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+    //             Ok(ComparisonExpr {
+    //                 lhs: left_expr,
+    //                 op,
+    //                 rhs: value_expr,
+    //             })
+    //         }
+    //         ComparisonOp::NotEqual => {
+    //             let right_expr = parser.parse_expression(Precedence::NotEqual)?;
+
+    //             let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+    //             Ok(ComparisonExpr {
+    //                 lhs: left_expr,
+    //                 op,
+    //                 rhs: value_expr,
+    //             })
+    //         }
+    //         ComparisonOp::LessThan => {
+    //             let right_expr = parser.parse_expression(Precedence::LessThan)?;
+
+    //             let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+    //             Ok(ComparisonExpr {
+    //                 lhs: left_expr,
+    //                 op,
+    //                 rhs: value_expr,
+    //             })
+    //         }
+    //         ComparisonOp::LessEqual => {
+    //             let right_expr = parser.parse_expression(Precedence::LessThanOrEqual)?;
+
+    //             let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+    //             Ok(ComparisonExpr {
+    //                 lhs: left_expr,
+    //                 op,
+    //                 rhs: value_expr,
+    //             })
+    //         }
+    //         ComparisonOp::GreaterThan => {
+    //             let right_expr = parser.parse_expression(Precedence::GreaterThan)?;
+
+    //             let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+    //             Ok(ComparisonExpr {
+    //                 lhs: left_expr,
+    //                 op,
+    //                 rhs: value_expr,
+    //             })
+    //         }
+    //         ComparisonOp::GreaterEqual => {
+    //             let right_expr = parser.parse_expression(Precedence::GreaterThanOrEqual)?;
+
+    //             let value_expr = AssigneeExpr::try_from(right_expr).map_err(|e| {
+    //                 parser.log_error(e);
+    //                 ErrorsEmitted
+    //             })?;
+    //             Ok(ComparisonExpr {
+    //                 lhs: left_expr,
+    //                 op,
+    //                 rhs: value_expr,
+    //             })
+    //         }
+    //     }
+    // }
 }
 
 #[cfg(test)]

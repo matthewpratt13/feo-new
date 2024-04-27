@@ -44,14 +44,14 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BorrowExpr, BreakExpr,
-        CallExpr, ClosureExpr, ConstantDecl, ContinueExpr, Delimiter, DereferenceExpr, EnumDef,
-        Expression, FieldAccessExpr, ForInExpr, FunctionItem, GroupedExpr, Identifier, IfExpr,
-        ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal,
-        MatchExpr, MethodCallExpr, ModuleItem, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern,
-        PubPackageVis, RangeExpr, RangeOp, ReferenceOp, ResultExpr, ReturnExpr, Separator,
-        SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef,
-        TupleExpr, TupleIndexExpr, TupleStructDef, UnaryExpr, UnaryOp, UnderscoreExpr, Visibility,
-        WhileExpr,
+        CallExpr, ClosureExpr, ComparisonExpr, ConstantDecl, ContinueExpr, Delimiter,
+        DereferenceExpr, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionItem,
+        GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item,
+        Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleItem, NoneExpr, OuterAttr,
+        PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, RangeOp, ReferenceOp, ResultExpr,
+        ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr,
+        TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef, UnaryExpr, UnaryOp,
+        UnderscoreExpr, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream, TokenType},
@@ -764,6 +764,14 @@ impl Parser {
             }
 
             Some(Token::LBracket { .. }) => Some(IndexExpr::parse),
+
+            Some(
+                Token::DblEquals { .. }
+                | Token::LessThan { .. }
+                | Token::GreaterThan { .. }
+                | Token::LessThanEquals { .. }
+                | Token::GreaterThanEquals { .. },
+            ) => Some(ComparisonExpr::parse),
 
             Some(Token::Equals { .. }) => Some(AssignmentExpr::parse),
 
