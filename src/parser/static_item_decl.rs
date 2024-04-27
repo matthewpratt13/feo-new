@@ -39,6 +39,8 @@ impl ParseDeclaration for StaticItemDecl {
             None
         };
 
+        parser.consume_token();
+
         parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(StaticItemDecl {

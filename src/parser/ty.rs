@@ -9,6 +9,13 @@ use super::Parser;
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
+        println!("enter `Type::parse()`");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
+
         let token = parser.consume_token();
 
         match token {

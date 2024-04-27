@@ -12,7 +12,11 @@ impl PathExpr {
         root: PathPrefix,
     ) -> Result<Expression, ErrorsEmitted> {
         println!("enter `PathExpr::parse()`");
-        println!("current token: {:?}\n", parser.peek_current());
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
 
         let mut tree: Vec<Identifier> = Vec::new();
 
@@ -45,6 +49,16 @@ impl PathExpr {
             },
             wildcard_opt,
         };
+
+        println!("path expression: {:?}", expr);
+      
+
+        println!("exit `PathExpr::parse()`");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
 
         Ok(Expression::Path(expr))
     }

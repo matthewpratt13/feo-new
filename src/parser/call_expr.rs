@@ -18,6 +18,8 @@ impl CallExpr {
             ErrorsEmitted
         })?;
 
+        parser.consume_token();
+
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
                 break;
@@ -32,6 +34,8 @@ impl CallExpr {
             }?;
 
             args.push(arg_expr);
+
+            parser.consume_token();
 
             match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
@@ -48,7 +52,6 @@ impl CallExpr {
 
         let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 
-    
         let expr = CallExpr {
             callee,
             open_paren: Delimiter::LParen,

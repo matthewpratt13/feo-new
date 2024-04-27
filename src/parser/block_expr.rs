@@ -10,6 +10,13 @@ impl BlockExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let mut attributes: Vec<InnerAttr> = Vec::new();
 
+        println!("enter `BlockExpr::parser()`");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
+
         while let Some(ia) = parser.get_inner_attr() {
             attributes.push(ia);
             parser.consume_token();
@@ -21,6 +28,13 @@ impl BlockExpr {
             parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
+
+        println!("enter block");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
 
         let mut statements: Vec<Statement> = Vec::new();
 
@@ -47,6 +61,15 @@ impl BlockExpr {
             }
         }
 
+        println!("statements: {:?}", statements);
+
+        println!("exit block");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
+
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
         let expr = BlockExpr {
@@ -67,6 +90,13 @@ impl BlockExpr {
             },
             close_brace,
         };
+
+        println!("exit `BlockExpr::parse()`");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
 
         Ok(Expression::Block(expr))
     }

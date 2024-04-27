@@ -362,15 +362,6 @@ impl Parser {
                     self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
                 );
 
-                // self.consume_token();
-
-                // println!("consume token");
-                println!("current token: `{:?}`", self.peek_current());
-                println!(
-                    "token precedence: `{:?}`\n",
-                    self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                );
-
                 Ok(Expression::Path(PathExpr {
                     root: PathPrefix::Identifier(Identifier(name)),
                     tree_opt: None,
@@ -443,15 +434,6 @@ impl Parser {
                     self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
                 );
 
-                // self.consume_token();
-
-                println!("return to `parse_prefix()`");
-                // println!("consume token");
-                println!("current token: `{:?}`", self.peek_current());
-                println!(
-                    "token precedence: `{:?}`\n",
-                    self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                );
                 lit
             }
 
@@ -502,15 +484,6 @@ impl Parser {
                         "token precedence: `{:?}`\n",
                         self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
                     );
-                    // self.consume_token();
-
-                    println!("return to `parse_prefix()` else block");
-                    // println!("consume token");
-                    println!("current token: `{:?}`", self.peek_current());
-                    println!(
-                        "token precedence: `{:?}`\n",
-                        self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                    );
 
                     id
                 }
@@ -551,7 +524,9 @@ impl Parser {
                     self.parse_expression(Precedence::Difference)
                 }
             }
+
             Some(Token::Bang { .. }) => UnaryExpr::parse(self, UnaryOp::Not),
+
             Some(Token::Ampersand { .. }) => {
                 // TODO: this may cause problems
                 if self.context == ParserContext::Unary {
@@ -573,6 +548,7 @@ impl Parser {
                     self.parse_expression(Precedence::Product)
                 }
             }
+
             Some(Token::Unsafe { .. }) => BlockExpr::parse(self),
 
             Some(Token::LParen { .. }) => {
@@ -607,38 +583,6 @@ impl Parser {
                 }
             }
 
-            Some(Token::Dot { .. }) => {
-                let next_token = self.peek_ahead_by(1);
-
-                match next_token {
-                    Some(Token::Identifier { .. } | Token::UIntLiteral { .. }) => {
-                        self.consume_token();
-                        Err(ErrorsEmitted)
-                    }
-                    _ => {
-                        let token = self.peek_ahead_by(1);
-
-                        self.log_error(ParserErrorKind::UnexpectedToken {
-                            expected: "identifier or unsigned integer after `.`".to_string(),
-                            found: token,
-                        });
-                        Err(ErrorsEmitted)
-                    }
-                }
-            }
-            Some(Token::QuestionMark { .. }) => match self.peek_behind_by(1) {
-                Some(Token::Identifier { .. }) => {
-                    self.consume_token();
-                    Err(ErrorsEmitted)
-                }
-                _ => {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "expression before `?`".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted)
-                }
-            },
             Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
                 RangeExpr::parse_prefix(self)
             }
@@ -698,7 +642,7 @@ impl Parser {
     /// Parse infix expressions (e.g., binary operators), where the respective token type
     /// appears in the middle of an expression.
     fn parse_infix(
-        &self,
+        &mut self,
     ) -> Option<fn(&mut Self, Expression) -> Result<Expression, ErrorsEmitted>> {
         println!("enter `parse_infix()`");
         println!("current token: `{:?}`", self.peek_current());
@@ -709,6 +653,14 @@ impl Parser {
 
         match &self.peek_current() {
             Some(Token::Dot { .. }) => {
+                if self.is_tuple_index() {
+                    self.context = ParserContext::TupleIndex;
+                } else if self.is_method_call() {
+                    self.context = ParserContext::MethodCall;
+                } else {
+                    self.context = ParserContext::FieldAccess;
+                }
+
                 match self.context {
                     ParserContext::TupleIndex => Some(TupleIndexExpr::parse),
                     ParserContext::MethodCall => Some(MethodCallExpr::parse),
@@ -1329,6 +1281,48 @@ impl Parser {
                 });
                 Err(ErrorsEmitted)
             }
+        }
+    }
+
+    fn is_tuple_index(&self) -> bool {
+        match self.peek_ahead_by(1) {
+            // If dot is followed by an integer (representing the tuple index)
+            Some(Token::UIntLiteral { .. }) => true,
+            _ => false,
+        }
+    }
+
+    // Determine if the dot token indicates a method call
+    fn is_method_call(&self) -> bool {
+        if self.peek_ahead_by(2).is_some() {
+            // Check if the dot is followed by an identifier and then a parenthesis
+            match (
+                self.peek_current(),
+                self.peek_ahead_by(1),
+                self.peek_ahead_by(2),
+            ) {
+                (
+                    Some(Token::Dot { .. }),
+                    Some(Token::Identifier { .. }),
+                    Some(Token::LParen { .. }),
+                ) => true, // `receiver.method()`
+                _ => false,
+            }
+        } else {
+            false
+        }
+    }
+
+    // Determine if the dot token indicates field access
+    fn is_field_access(&self) -> bool {
+        if self.peek_ahead_by(1).is_some() {
+            // Check if the dot is followed by an identifier without a parenthesis
+            match (self.peek_current(), self.peek_ahead_by(1)) {
+                (Some(Token::Dot { .. }), Some(Token::Identifier { .. })) => true, // `object.field`
+                _ => false,
+            }
+        } else {
+            false
         }
     }
 }

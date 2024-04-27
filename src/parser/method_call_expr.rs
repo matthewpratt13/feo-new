@@ -18,9 +18,12 @@ impl MethodCallExpr {
             ErrorsEmitted
         })?;
 
-        let token = parser.consume_token();
+        parser.consume_token();
+
+        let token = parser.peek_current();
 
         let method_name = if let Some(Token::Identifier { name, .. }) = token {
+            parser.consume_token();
             Ok(Identifier(name))
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
@@ -52,9 +55,9 @@ impl MethodCallExpr {
 
             args.push(arg_expr);
 
-            let curr_token = parser.peek_current();
+            parser.consume_token();
 
-            match curr_token {
+            match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     parser.consume_token();
                     continue;
