@@ -124,7 +124,7 @@ pub struct ClosureExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompoundAssignmentExpr {
     pub lhs: AssigneeExpr,
-    pub op: CompoundAssignmentOp,
+    pub compound_assignment_op: CompoundAssignmentOp,
     pub rhs: ValueExpr,
 }
 

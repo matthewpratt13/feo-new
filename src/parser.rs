@@ -43,15 +43,7 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BorrowExpr, BreakExpr,
-        CallExpr, ClosureExpr, ComparisonExpr, ConstantDecl, ContinueExpr, Delimiter,
-        DereferenceExpr, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionItem,
-        GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item,
-        Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleItem, NoneExpr, OuterAttr,
-        PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, RangeOp, ReferenceOp, ResultExpr,
-        ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr,
-        TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef, UnaryExpr, UnaryOp,
-        UnderscoreExpr, Visibility, WhileExpr,
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BorrowExpr, BreakExpr, CallExpr, ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr, Delimiter, DereferenceExpr, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionItem, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleItem, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, RangeOp, ReferenceOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef, UnaryExpr, UnaryOp, UnderscoreExpr, Visibility, WhileExpr
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream, TokenType},
@@ -737,33 +729,45 @@ impl Parser {
                     _ => None, // Default to no infix parser
                 }
             }
-            Some(Token::Plus { .. }) => Some(BinaryExpr::parse), // Handle binary addition
-            Some(Token::Asterisk { .. }) => {
-                if self.context == ParserContext::Unary {
-                    None // No infix parser for unary dereference
-                } else {
-                    Some(BinaryExpr::parse) // Multiplication
-                }
-            }
-            Some(Token::Minus { .. }) => {
-                if self.context == ParserContext::Unary {
-                    None // No infix parser for unary negation
-                } else {
-                    Some(BinaryExpr::parse) // Binary minus
-                }
-            }
-            Some(
-                Token::Slash { .. }
-                | Token::Percent { .. }
-                | Token::DblAmpersand { .. }
-                | Token::DblAsterisk { .. },
-            ) => Some(BinaryExpr::parse),
+
             Some(Token::LParen { .. }) => {
                 // TODO: resolve similarity between `CallExpr` and `TupleStructExpr` (symbol table)
                 Some(CallExpr::parse)
             }
 
             Some(Token::LBracket { .. }) => Some(IndexExpr::parse),
+
+            Some(Token::Minus { .. }) => {
+                if self.context == ParserContext::Unary {
+                    None
+                } else {
+                    Some(BinaryExpr::parse)
+                }
+            }
+
+            Some(Token::Asterisk { .. }) => {
+                if self.context == ParserContext::Unary {
+                    None
+                } else {
+                    Some(BinaryExpr::parse)
+                }
+            }
+
+            Some(Token::Ampersand { .. }) => {
+                if self.context == ParserContext::Unary {
+                    None
+                } else {
+                    Some(BinaryExpr::parse)
+                }
+            }
+
+            Some(Token::Plus { .. }) => Some(BinaryExpr::parse), // Handle binary addition
+            Some(
+                Token::Slash { .. }
+                | Token::Percent { .. }
+                | Token::DblAmpersand { .. }
+                | Token::DblAsterisk { .. },
+            ) => Some(BinaryExpr::parse),
 
             Some(
                 Token::DblEquals { .. }
@@ -774,6 +778,14 @@ impl Parser {
             ) => Some(ComparisonExpr::parse),
 
             Some(Token::Equals { .. }) => Some(AssignmentExpr::parse),
+
+            Some(
+                Token::PlusEquals { .. }
+                | Token::MinusEquals { .. }
+                | Token::AsteriskEquals { .. }
+                | Token::SlashEquals { .. }
+                | Token::PercentEquals { .. },
+            ) => Some(CompoundAssignmentExpr::parse),
 
             _ => {
                 println!("enter default match arm (unexpected token or none)");
