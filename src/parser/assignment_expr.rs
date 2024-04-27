@@ -17,7 +17,9 @@ impl AssignmentExpr {
             println!("enter `AssignmentExpr::parse()`");
             println!("current token: {:?}\n", parser.peek_current());
 
-            let right_expr = parser.parse_expression(Precedence::Assignment)?;
+            parser.consume_token();
+
+            let right_expr = parser.parse_expression(Precedence::Lowest)?;
             let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
                 parser.log_error(e);
                 ErrorsEmitted
