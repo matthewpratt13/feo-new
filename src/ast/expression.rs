@@ -218,7 +218,7 @@ pub struct PathExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct RangeExpr {
     pub from_opt: Option<Box<Expression>>,
-    pub op: RangeOp, // `..` or `..=`
+    pub range_op: RangeOp, // `..` or `..=`
     pub to_opt: Option<Box<Expression>>,
 }
 
@@ -283,7 +283,7 @@ pub struct UnderscoreExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnwrapExpr {
-    pub expression: Box<ValueExpr>,
+    pub operand: Box<ValueExpr>,
     pub op: UnwrapOp,
 }
 

@@ -36,14 +36,24 @@ mod test_utils;
 mod trait_def;
 mod tuple_expr;
 mod ty;
+mod type_cast_expr;
 mod unary_expr;
+mod unwrap_expr;
 mod while_expr;
 
 use std::collections::HashMap;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BorrowExpr, BreakExpr, CallExpr, ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr, Delimiter, DereferenceExpr, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionItem, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleItem, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, RangeOp, ReferenceOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef, UnaryExpr, UnaryOp, UnderscoreExpr, Visibility, WhileExpr
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BorrowExpr, BreakExpr,
+        CallExpr, ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr,
+        Delimiter, DereferenceExpr, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionItem,
+        GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item,
+        Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleItem, NoneExpr, OuterAttr,
+        PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, RangeOp, ReferenceOp, ResultExpr,
+        ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr,
+        TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef, TypeCastExpr, UnaryExpr,
+        UnaryOp, UnderscoreExpr, UnwrapExpr, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream, TokenType},
@@ -532,13 +542,37 @@ impl Parser {
                 self.consume_token();
                 PathExpr::parse(self, PathPrefix::Super)
             }
-            Some(Token::Minus { .. }) => UnaryExpr::parse(self, UnaryOp::Negate),
+            Some(Token::Minus { .. }) => {
+                // TODO: this may cause problems
+                if self.context == ParserContext::Unary {
+                    UnaryExpr::parse(self, UnaryOp::Negate)
+                } else {
+                    self.set_context(ParserContext::Unary);
+                    self.parse_expression(Precedence::Difference)
+                }
+            }
             Some(Token::Bang { .. }) => UnaryExpr::parse(self, UnaryOp::Not),
-            Some(Token::Ampersand { .. }) => BorrowExpr::parse(self, ReferenceOp::Borrow),
+            Some(Token::Ampersand { .. }) => {
+                // TODO: this may cause problems
+                if self.context == ParserContext::Unary {
+                    BorrowExpr::parse(self, ReferenceOp::Borrow)
+                } else {
+                    self.set_context(ParserContext::Unary);
+                    self.parse_expression(Precedence::BitwiseAnd)
+                }
+            }
 
             Some(Token::AmpersandMut { .. }) => BorrowExpr::parse(self, ReferenceOp::MutableBorrow),
 
-            Some(Token::Asterisk { .. }) => DereferenceExpr::parse(self),
+            Some(Token::Asterisk { .. }) => {
+                // TODO: this may cause problems
+                if self.context == ParserContext::Unary {
+                    DereferenceExpr::parse(self)
+                } else {
+                    self.set_context(ParserContext::Unary);
+                    self.parse_expression(Precedence::Product)
+                }
+            }
             Some(Token::Unsafe { .. }) => BlockExpr::parse(self),
 
             Some(Token::LParen { .. }) => {
@@ -548,11 +582,31 @@ impl Parser {
                     self.parse_primary()
                 }
             }
+
             Some(Token::LBrace { .. }) => BlockExpr::parse(self),
 
             Some(Token::LBracket { .. }) => ArrayExpr::parse(self),
 
-            Some(Token::Pipe { .. } | Token::DblPipe { .. }) => ClosureExpr::parse(self),
+            Some(Token::Pipe { .. }) => {
+                // TODO: this may cause problems
+                if self.context == ParserContext::Closure {
+                    ClosureExpr::parse(self)
+                } else {
+                    self.set_context(ParserContext::Closure);
+                    self.parse_expression(Precedence::BitwiseOr)
+                }
+            }
+
+            Some(Token::DblPipe { .. }) => {
+                // TODO: this may cause problems
+                if self.context == ParserContext::Closure {
+                    ClosureExpr::parse(self)
+                } else {
+                    self.set_context(ParserContext::Closure);
+                    self.parse_expression(Precedence::LogicalOr)
+                }
+            }
+
             Some(Token::Dot { .. }) => {
                 let next_token = self.peek_ahead_by(1);
 
@@ -585,78 +639,10 @@ impl Parser {
                     Err(ErrorsEmitted)
                 }
             },
-            Some(Token::DblDot { .. }) => {
-                if let Some(
-                    Token::Identifier { .. }
-                    | Token::IntLiteral { .. }
-                    | Token::UIntLiteral { .. }
-                    | Token::BigUIntLiteral { .. }
-                    | Token::HashLiteral { .. },
-                ) = self.consume_token()
-                {
-                    let expression = self.parse_expression(Precedence::Range)?;
-
-                    let to = match expression.clone() {
-                        Expression::Literal(l) => match l {
-                            Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => {
-                                Ok(expression)
-                            }
-                            _ => {
-                                self.log_unexpected_str("numeric literal");
-                                Err(ErrorsEmitted)
-                            }
-                        },
-                        Expression::Path(_) => {
-                            self.log_unexpected_str("path expression");
-                            Err(ErrorsEmitted)
-                        }
-                        _ => {
-                            self.log_unexpected_str("numeric literal or path expression");
-                            Err(ErrorsEmitted)
-                        }
-                    }?;
-
-                    Ok(Expression::Range(RangeExpr {
-                        from_opt: None,
-                        op: RangeOp::RangeExclusive,
-                        to_opt: Some(Box::new(to)),
-                    }))
-                } else {
-                    Ok(Expression::Range(RangeExpr {
-                        from_opt: None,
-                        op: RangeOp::RangeExclusive,
-                        to_opt: None,
-                    }))
-                }
+            Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
+                RangeExpr::parse_prefix(self)
             }
-            Some(Token::DotDotEquals { .. }) => {
-                self.consume_token();
-                let expression = self.parse_expression(Precedence::Range)?;
 
-                let to = match expression.clone() {
-                    Expression::Literal(l) => match l {
-                        Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
-                        _ => {
-                            self.log_unexpected_str("numeric literal");
-                            Err(ErrorsEmitted)
-                        }
-                    },
-                    Expression::Path(_) => {
-                        self.log_unexpected_str("path expression");
-                        Err(ErrorsEmitted)
-                    }
-                    _ => {
-                        self.log_unexpected_str("numeric literal or path expression");
-                        Err(ErrorsEmitted)
-                    }
-                }?;
-
-                Ok(Expression::Range(RangeExpr {
-                    from_opt: None,
-                    op: RangeOp::RangeInclusive,
-                    to_opt: Some(Box::new(to)),
-                }))
-            }
             Some(Token::If { .. }) => IfExpr::parse(self),
 
             Some(Token::Match { .. }) => MatchExpr::parse(self),
@@ -723,9 +709,9 @@ impl Parser {
         match &self.peek_current() {
             Some(Token::Dot { .. }) => {
                 match self.context {
-                    ParserContext::FieldAccess => Some(FieldAccessExpr::parse),
-                    ParserContext::MethodCall => Some(MethodCallExpr::parse),
                     ParserContext::TupleIndex => Some(TupleIndexExpr::parse),
+                    ParserContext::MethodCall => Some(MethodCallExpr::parse),
+                    ParserContext::FieldAccess => Some(FieldAccessExpr::parse),
                     _ => None, // Default to no infix parser
                 }
             }
@@ -736,6 +722,16 @@ impl Parser {
             }
 
             Some(Token::LBracket { .. }) => Some(IndexExpr::parse),
+
+            Some(Token::QuestionMark { .. }) => Some(UnwrapExpr::parse),
+
+            Some(Token::Ampersand { .. }) => {
+                if self.context == ParserContext::Unary {
+                    None
+                } else {
+                    Some(BinaryExpr::parse)
+                }
+            }
 
             Some(Token::Minus { .. }) => {
                 if self.context == ParserContext::Unary {
@@ -753,31 +749,49 @@ impl Parser {
                 }
             }
 
-            Some(Token::Ampersand { .. }) => {
-                if self.context == ParserContext::Unary {
+            Some(Token::As { .. }) => Some(TypeCastExpr::parse),
+
+            Some(
+                Token::Plus { .. }
+                | Token::Slash { .. }
+                | Token::Percent { .. }
+                | Token::DblAsterisk { .. },
+            ) => Some(BinaryExpr::parse),
+
+            Some(Token::DblLessThan { .. } | Token::DblGreaterThan { .. }) => {
+                Some(BinaryExpr::parse)
+            }
+
+            Some(Token::Caret { .. }) => Some(BinaryExpr::parse),
+
+            Some(Token::Pipe { .. }) => {
+                if self.context == ParserContext::Closure {
                     None
                 } else {
                     Some(BinaryExpr::parse)
                 }
             }
 
-            Some(Token::Plus { .. }) => Some(BinaryExpr::parse), // Handle binary addition
-            Some(
-                Token::Slash { .. }
-                | Token::Percent { .. }
-                | Token::DblAmpersand { .. }
-                | Token::DblAsterisk { .. },
-            ) => Some(BinaryExpr::parse),
-
             Some(
                 Token::DblEquals { .. }
+                | Token::BangEquals { .. }
                 | Token::LessThan { .. }
                 | Token::GreaterThan { .. }
                 | Token::LessThanEquals { .. }
                 | Token::GreaterThanEquals { .. },
             ) => Some(ComparisonExpr::parse),
 
-            Some(Token::Equals { .. }) => Some(AssignmentExpr::parse),
+            Some(Token::DblAmpersand { .. }) => Some(BinaryExpr::parse),
+
+            Some(Token::DblPipe { .. }) => {
+                if self.context == ParserContext::Closure {
+                    None
+                } else {
+                    Some(BinaryExpr::parse)
+                }
+            }
+
+            Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => Some(RangeExpr::parse),
 
             Some(
                 Token::PlusEquals { .. }
@@ -787,6 +801,8 @@ impl Parser {
                 | Token::PercentEquals { .. },
             ) => Some(CompoundAssignmentExpr::parse),
 
+            Some(Token::Equals { .. }) => Some(AssignmentExpr::parse),
+
             _ => {
                 println!("enter default match arm (unexpected token or none)");
                 println!("current token: `{:?}`", self.peek_current());
@@ -795,8 +811,8 @@ impl Parser {
                     self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
                 );
 
-                None
-            } // Default to no infix parser
+                None // Default to no infix parser
+            }
         }
     }
 
@@ -1516,34 +1532,6 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::test_utils;
-
-    #[test]
-    fn parse_unwrap_expr() -> Result<(), ()> {
-        let input = r#"(x + 2)?"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
-
-    #[test]
-    fn parse_type_cast_expr() -> Result<(), ()> {
-        let input = r#"x as u64"#;
-
-        let mut parser = test_utils::get_parser(input, false);
-
-        let expressions = parser.parse();
-
-        match expressions {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
-        }
-    }
 
     #[test]
     fn parse_break_expr() -> Result<(), ()> {

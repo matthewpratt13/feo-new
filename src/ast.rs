@@ -209,6 +209,8 @@ pub enum Separator {
     RightAngledBracket,
     Pipe,
     DblPipe,
+    DblDot,
+    DotDotEquals,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -482,7 +484,9 @@ impl TryFrom<Expression> for Pattern {
             )?))),
             Expression::Range(r) => {
                 if r.from_opt.is_none() && r.to_opt.is_none() {
-                    Ok(Pattern::RestPatt { dbl_dot: r.op })
+                    Ok(Pattern::RestPatt {
+                        dbl_dot: r.range_op,
+                    })
                 } else {
                     Ok(Pattern::RangePatt(r))
                 }

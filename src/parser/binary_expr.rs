@@ -73,6 +73,7 @@ impl ComparisonExpr {
 
         let comparison_op = match operator_token.token_type() {
             TokenType::DblEquals => Ok(ComparisonOp::Equal),
+            TokenType::BangEquals => Ok(ComparisonOp::NotEqual),
             TokenType::LessThan => Ok(ComparisonOp::LessThan),
             TokenType::GreaterThan => Ok(ComparisonOp::GreaterThan),
             TokenType::LessThanEquals => Ok(ComparisonOp::LessEqual),
