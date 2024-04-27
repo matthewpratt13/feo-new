@@ -32,11 +32,14 @@ impl ArrayExpr {
 
             elements.push(element);
 
+            parser.consume_token();
+
             match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     parser.consume_token();
                     continue;
                 }
+                
                 Some(Token::RBracket { .. }) => break,
 
                 Some(_) => {
@@ -93,7 +96,7 @@ mod tests {
     #[test]
 
     fn parse_array_expr_with_elements() -> Result<(), ()> {
-        let input = r#"[1, 2]"#;
+        let input = r#"[1, 2, 3, 4]"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

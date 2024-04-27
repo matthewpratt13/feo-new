@@ -50,7 +50,7 @@ use crate::{
         Delimiter, DereferenceExpr, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionItem,
         GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item,
         Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleItem, NoneExpr, OuterAttr,
-        PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, RangeOp, ReferenceOp, ResultExpr,
+        PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, ReferenceOp, ResultExpr,
         ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr,
         TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef, TypeCastExpr, UnaryExpr,
         UnaryOp, UnderscoreExpr, UnwrapExpr, Visibility, WhileExpr,
@@ -109,33 +109,46 @@ impl Parser {
     fn init_precedences(&mut self, tokens: Vec<Token>) {
         for t in tokens {
             match t.token_type() {
-                TokenType::As => self.precedences.insert(t, Precedence::TypeCast),
-                TokenType::LParen => self.precedences.insert(t, Precedence::Call),
-                TokenType::LBracket => self.precedences.insert(t, Precedence::Index),
-                TokenType::Dot => self.precedences.insert(t, Precedence::FieldAccess), // default
                 TokenType::DblColon | TokenType::ColonColonAsterisk => {
                     self.precedences.insert(t, Precedence::Path)
                 }
+                TokenType::Dot => self.precedences.insert(t, Precedence::FieldAccess), // default
+                TokenType::LParen => self.precedences.insert(t, Precedence::Call),
+                TokenType::LBracket => self.precedences.insert(t, Precedence::Index),
                 TokenType::QuestionMark => self.precedences.insert(t, Precedence::Unwrap),
+                TokenType::Ampersand => self.precedences.insert(t, Precedence::BitwiseAnd), // default,
+                TokenType::AmpersandMut => self.precedences.insert(t, Precedence::Unary),
+                TokenType::Minus => self.precedences.insert(t, Precedence::Difference), // default
+                TokenType::Asterisk => self.precedences.insert(t, Precedence::Product), // default
+                TokenType::Bang => self.precedences.insert(t, Precedence::Unary),
                 TokenType::Some | TokenType::None | TokenType::Ok | TokenType::Err => {
                     self.precedences.insert(t, Precedence::Unary)
                 }
-                TokenType::Bang => self.precedences.insert(t, Precedence::Unary),
-                TokenType::Percent => self.precedences.insert(t, Precedence::Remainder),
-                TokenType::Ampersand => self.precedences.insert(t, Precedence::BitwiseAnd), // default,
-                TokenType::Asterisk => self.precedences.insert(t, Precedence::Product), // default
+                TokenType::As => self.precedences.insert(t, Precedence::TypeCast),
+                TokenType::DblAsterisk => self.precedences.insert(t, Precedence::Exponentiation),
                 TokenType::Plus => self.precedences.insert(t, Precedence::Sum),
-                TokenType::Minus => self.precedences.insert(t, Precedence::Difference), // default
                 TokenType::Slash => self.precedences.insert(t, Precedence::Quotient),
-                TokenType::LessThan => self.precedences.insert(t, Precedence::LessThan),
-                TokenType::Equals => self.precedences.insert(t, Precedence::Assignment),
-                TokenType::GreaterThan => self.precedences.insert(t, Precedence::GreaterThan),
+                TokenType::Percent => self.precedences.insert(t, Precedence::Remainder),
+                TokenType::DblLessThan | TokenType::DblGreaterThan => {
+                    self.precedences.insert(t, Precedence::Shift)
+                }
                 TokenType::Caret => self.precedences.insert(t, Precedence::BitwiseXor),
-                TokenType::Pipe => self.precedences.insert(t, Precedence::BitwiseOr),
+                TokenType::Pipe => self.precedences.insert(t, Precedence::BitwiseOr), // default
+                TokenType::LessThan => self.precedences.insert(t, Precedence::LessThan),
+                TokenType::GreaterThan => self.precedences.insert(t, Precedence::GreaterThan),
+                TokenType::LessThanEquals => {
+                    self.precedences.insert(t, Precedence::LessThanOrEqual)
+                }
+                TokenType::GreaterThanEquals => {
+                    self.precedences.insert(t, Precedence::GreaterThanOrEqual)
+                }
+                TokenType::DblEquals => self.precedences.insert(t, Precedence::Equal),
+                TokenType::BangEquals => self.precedences.insert(t, Precedence::NotEqual),
+                TokenType::DblAmpersand => self.precedences.insert(t, Precedence::LogicalAnd),
+                TokenType::DblPipe => self.precedences.insert(t, Precedence::LogicalOr), // default
                 TokenType::DblDot | TokenType::DotDotEquals => {
                     self.precedences.insert(t, Precedence::Range)
                 }
-                TokenType::BangEquals => self.precedences.insert(t, Precedence::NotEqual),
                 TokenType::PlusEquals
                 | TokenType::MinusEquals
                 | TokenType::AsteriskEquals
@@ -143,21 +156,8 @@ impl Parser {
                 | TokenType::PercentEquals => {
                     self.precedences.insert(t, Precedence::CompoundAssignment)
                 }
-                TokenType::DblAsterisk => self.precedences.insert(t, Precedence::Exponentiation),
-                TokenType::DblAmpersand => self.precedences.insert(t, Precedence::LogicalAnd),
-                TokenType::AmpersandMut => self.precedences.insert(t, Precedence::Unary),
-                TokenType::DblLessThan | TokenType::DblGreaterThan => {
-                    self.precedences.insert(t, Precedence::Shift)
-                }
-                TokenType::LessThanEquals => {
-                    self.precedences.insert(t, Precedence::LessThanOrEqual)
-                }
-                TokenType::DblEquals => self.precedences.insert(t, Precedence::Equal),
+                TokenType::Equals => self.precedences.insert(t, Precedence::Assignment),
 
-                TokenType::GreaterThanEquals => {
-                    self.precedences.insert(t, Precedence::GreaterThanOrEqual)
-                }
-                TokenType::DblPipe => self.precedences.insert(t, Precedence::LogicalOr),
                 _ => self.precedences.insert(t, Precedence::Lowest),
             };
         }
@@ -166,6 +166,12 @@ impl Parser {
     // Get the precedence for a given token, considering context
     fn get_precedence(&self, token: &Token) -> Precedence {
         match token {
+            Token::Dot { .. } => match self.context {
+                ParserContext::FieldAccess => Precedence::FieldAccess,
+                ParserContext::MethodCall => Precedence::MethodCall,
+                ParserContext::TupleIndex => Precedence::TupleIndex,
+                _ => Precedence::Lowest,
+            },
             Token::Ampersand { .. } => {
                 if self.context == ParserContext::Unary {
                     Precedence::Unary
@@ -201,42 +207,36 @@ impl Parser {
                     Precedence::LogicalOr
                 }
             }
-            Token::Dot { .. } => match self.context {
-                ParserContext::FieldAccess => Precedence::FieldAccess,
-                ParserContext::MethodCall => Precedence::MethodCall,
-                ParserContext::TupleIndex => Precedence::TupleIndex,
-                _ => Precedence::Lowest,
-            },
-            Token::As { .. } => Precedence::TypeCast,
+            Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => Precedence::Path,
             Token::LParen { .. } => Precedence::Call, // TODO: what about tuple structs?
             Token::LBracket { .. } => Precedence::Index,
-            Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => Precedence::Path,
+            Token::QuestionMark { .. } => Precedence::Unwrap,
+            Token::AmpersandMut { .. } => Precedence::Unary,
             Token::Bang { .. } => Precedence::Unary,
-            Token::Percent { .. } => Precedence::Remainder,
-            Token::Plus { .. } => Precedence::Sum,
             Token::Some { .. } | Token::None { .. } | Token::Ok { .. } | Token::Err { .. } => {
                 Precedence::Unary
             }
+            Token::As { .. } => Precedence::TypeCast,
+            Token::DblAsterisk { .. } => Precedence::Exponentiation,
+            Token::Plus { .. } => Precedence::Sum,
             Token::Slash { .. } => Precedence::Quotient,
-            Token::LessThan { .. } => Precedence::LessThan,
-            Token::Equals { .. } => Precedence::Assignment,
-            Token::GreaterThan { .. } => Precedence::GreaterThan,
-            Token::QuestionMark { .. } => Precedence::Unwrap,
+            Token::Percent { .. } => Precedence::Remainder,
+            Token::DblLessThan { .. } | Token::DblGreaterThan { .. } => Precedence::Shift,
             Token::Caret { .. } => Precedence::BitwiseXor,
-            Token::DblDot { .. } | Token::DotDotEquals { .. } => Precedence::Range,
+            Token::LessThan { .. } => Precedence::LessThan,
+            Token::GreaterThan { .. } => Precedence::GreaterThan,
+            Token::LessThanEquals { .. } => Precedence::LessThanOrEqual,
+            Token::GreaterThanEquals { .. } => Precedence::GreaterThanOrEqual,
+            Token::DblEquals { .. } => Precedence::Equal,
             Token::BangEquals { .. } => Precedence::NotEqual,
+            Token::DblAmpersand { .. } => Precedence::LogicalAnd,
+            Token::DblDot { .. } | Token::DotDotEquals { .. } => Precedence::Range,
             Token::PlusEquals { .. }
             | Token::MinusEquals { .. }
             | Token::AsteriskEquals { .. }
             | Token::SlashEquals { .. }
             | Token::PercentEquals { .. } => Precedence::CompoundAssignment,
-            Token::DblAsterisk { .. } => Precedence::Exponentiation,
-            Token::DblAmpersand { .. } => Precedence::LogicalAnd,
-            Token::AmpersandMut { .. } => Precedence::Unary,
-            Token::DblLessThan { .. } | Token::DblGreaterThan { .. } => Precedence::Shift,
-            Token::LessThanEquals { .. } => Precedence::LessThanOrEqual,
-            Token::DblEquals { .. } => Precedence::Equal,
-            Token::GreaterThanEquals { .. } => Precedence::GreaterThanOrEqual,
+            Token::Equals { .. } => Precedence::Assignment,
             _ => Precedence::Lowest, // Default precedence for other tokens
         }
     }
@@ -695,7 +695,8 @@ impl Parser {
         }
     }
 
-    // Parse infix expressions
+    /// Parse infix expressions (e.g., binary operators), where the respective token type
+    /// appears in the middle of an expression.
     fn parse_infix(
         &self,
     ) -> Option<fn(&mut Self, Expression) -> Result<Expression, ErrorsEmitted>> {
@@ -815,203 +816,6 @@ impl Parser {
             }
         }
     }
-
-    // /// Parse infix expressions (e.g., binary operators), where the respective token type
-    // /// appears in the middle of an expression.
-    // fn parse_infix(&mut self, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-    //     let token = self.consume_token();
-
-    //     match token {
-    //         Some(Token::Plus { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::Add,
-    //         )?)),
-    //         Some(Token::Minus { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::Subtract,
-    //         )?)),
-    //         Some(Token::Asterisk { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::Multiply,
-    //         )?)),
-    //         Some(Token::Slash { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::Divide,
-    //         )?)),
-    //         Some(Token::Percent { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::Modulus,
-    //         )?)),
-    //         Some(Token::DblEquals { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
-    //             self,
-    //             left_expr,
-    //             ComparisonOp::Equal,
-    //         )?)),
-    //         Some(Token::BangEquals { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
-    //             self,
-    //             left_expr,
-    //             ComparisonOp::NotEqual,
-    //         )?)),
-    //         Some(Token::LessThan { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
-    //             self,
-    //             left_expr,
-    //             ComparisonOp::LessThan,
-    //         )?)),
-    //         Some(Token::LessThanEquals { .. }) => Ok(Expression::Comparison(
-    //             ComparisonExpr::parse(self, left_expr, ComparisonOp::LessEqual)?,
-    //         )),
-    //         Some(Token::GreaterThan { .. }) => Ok(Expression::Comparison(ComparisonExpr::parse(
-    //             self,
-    //             left_expr,
-    //             ComparisonOp::GreaterThan,
-    //         )?)),
-    //         Some(Token::GreaterThanEquals { .. }) => Ok(Expression::Comparison(
-    //             ComparisonExpr::parse(self, left_expr, ComparisonOp::GreaterEqual)?,
-    //         )),
-    //         Some(Token::Equals { .. }) => Ok(Expression::Assignment(AssignmentExpr::parse(
-    //             self, left_expr,
-    //         )?)),
-    //         Some(Token::PlusEquals { .. }) => Ok(Expression::CompoundAssignment(
-    //             CompoundAssignmentExpr::parse(self, left_expr, CompoundAssignmentOp::AddAssign)?,
-    //         )),
-    //         Some(Token::MinusEquals { .. }) => Ok(Expression::CompoundAssignment(
-    //             CompoundAssignmentExpr::parse(
-    //                 self,
-    //                 left_expr,
-    //                 CompoundAssignmentOp::SubtractAssign,
-    //             )?,
-    //         )),
-    //         Some(Token::AsteriskEquals { .. }) => Ok(Expression::CompoundAssignment(
-    //             CompoundAssignmentExpr::parse(
-    //                 self,
-    //                 left_expr,
-    //                 CompoundAssignmentOp::MultiplyAssign,
-    //             )?,
-    //         )),
-    //         Some(Token::SlashEquals { .. }) => Ok(Expression::CompoundAssignment(
-    //             CompoundAssignmentExpr::parse(self, left_expr, CompoundAssignmentOp::DivideAssign)?,
-    //         )),
-    //         Some(Token::PercentEquals { .. }) => Ok(Expression::CompoundAssignment(
-    //             CompoundAssignmentExpr::parse(
-    //                 self,
-    //                 left_expr,
-    //                 CompoundAssignmentOp::ModulusAssign,
-    //             )?,
-    //         )),
-    //         Some(Token::DblAmpersand { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::LogicalAnd,
-    //         )?)),
-    //         Some(Token::DblPipe { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::LogicalOr,
-    //         )?)),
-    //         Some(Token::Ampersand { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::BitwiseAnd,
-    //         )?)),
-    //         Some(Token::Pipe { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::BitwiseOr,
-    //         )?)),
-    //         Some(Token::Caret { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::BitwiseXor,
-    //         )?)),
-    //         Some(Token::DblLessThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::ShiftLeft,
-    //         )?)),
-    //         Some(Token::DblGreaterThan { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::ShiftRight,
-    //         )?)),
-    //         Some(Token::DblAsterisk { .. }) => Ok(Expression::Binary(BinaryExpr::parse(
-    //             self,
-    //             left_expr,
-    //             BinaryOp::Exponentiation,
-    //         )?)),
-    // Some(Token::LParen { .. }) => {
-    //     // TODO: resolve similarity between `CallExpr` and `TupleStructExpr` (symbol table)
-    //     let expr = CallExpr::parse(self, left_expr)?;
-    //     Ok(Expression::Call(expr))
-    // }
-    // Some(Token::LBracket { .. }) => {
-    //     let expr = IndexExpr::parse(self, left_expr)?;
-    //     Ok(Expression::Index(expr))
-    // }
-
-    // Some(Token::As { .. }) => {
-    //     let new_type = Type::parse(self)?;
-    //     let operand = ValueExpr::try_from(left_expr).map_err(|e| {
-    //         self.log_error(e);
-    //         ErrorsEmitted
-    //     })?;
-
-    //     let expr = TypeCastExpr {
-    //         operand: Box::new(operand),
-    //         kw_as: Keyword::As,
-    //         new_type,
-    //     };
-
-    //     Ok(Expression::TypeCast(expr))
-    // }
-    // Some(Token::QuestionMark { .. }) => Ok(Expression::Unwrap(UnwrapExpr {
-    //     expression: Box::new(ValueExpr::try_from(left_expr).map_err(|e| {
-    //         self.log_error(e);
-    //         ErrorsEmitted
-    //     })?),
-    //     op: UnwrapOp,
-    // })),
-    // Some(Token::Dot { .. }) => match self.peek_current() {
-    //     Some(Token::Identifier { .. }) => match self.peek_ahead_by(1) {
-    //         Some(Token::LParen { .. }) => Ok(Expression::MethodCall(
-    //             MethodCallExpr::parse(self, left_expr)?,
-    //         )),
-    //         _ => Ok(Expression::FieldAccess(FieldAccessExpr::parse(
-    //             self, left_expr,
-    //         )?)),
-    //     },
-    //     Some(Token::UIntLiteral { .. }) => Ok(Expression::TupleIndex(
-    //         TupleIndexExpr::parse(self, left_expr)?,
-    //     )),
-    //     _ => {
-    //         self.log_error(ParserErrorKind::UnexpectedToken {
-    //             expected: "identifier or index".to_string(),
-    //             found: token,
-    //         });
-    //         Err(ErrorsEmitted)
-    //     }
-    // },
-    // Some(Token::DblDot { .. }) => {
-    //     let expr = RangeExpr::parse(self, left_expr, RangeOp::RangeExclusive)?;
-    //     Ok(Expression::Range(expr))
-    // }
-    // Some(Token::DotDotEquals { .. }) => {
-    //     let expr = RangeExpr::parse(self, left_expr, RangeOp::RangeInclusive)?;
-    //     Ok(Expression::Range(expr))
-    // }
-    // _ => {
-    //     self.log_error(ParserErrorKind::UnexpectedToken {
-    //         expected: "infix expression".to_string(),
-    //         found: self.peek_current(),
-    //     });
-    //     Err(ErrorsEmitted)
-    // }
-    //     }
-    // }
 
     ///////////////////////////////////////////////////////////////////////////
     /// STATEMENT
