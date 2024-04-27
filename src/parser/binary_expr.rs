@@ -16,12 +16,9 @@ impl BinaryExpr {
         parser: &mut Parser,
         left_expr: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
-        // Parse binary expressions
-        let operator = parser.peek_current().unwrap_or(Token::EOF); // Get the binary operator
-        let precedence = parser.get_precedence(&operator); // Determine the precedence
-        let right_expr = parser.parse_expression(precedence)?; // Parse the right-hand operand
+        let operator_token = parser.peek_current().unwrap_or(Token::EOF);
 
-        let op = match operator.token_type() {
+        let binary_op = match operator_token.token_type() {
             TokenType::Plus => Ok(BinaryOp::Add),
             TokenType::Minus => Ok(BinaryOp::Subtract),
             TokenType::Asterisk => Ok(BinaryOp::Multiply),
@@ -41,6 +38,12 @@ impl BinaryExpr {
             }
         }?;
 
+        parser.consume_token();
+
+        let precedence = parser.get_precedence(&operator_token);
+
+        let right_expr = parser.parse_expression(precedence)?;
+
         let lhs = ValueExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -53,7 +56,7 @@ impl BinaryExpr {
 
         let expr = BinaryExpr {
             lhs: Box::new(lhs),
-            op,
+            binary_op,
             rhs: Box::new(rhs),
         };
 
@@ -366,7 +369,7 @@ mod tests {
 
     #[test]
     fn parse_binary_expr_add() -> Result<(), ()> {
-        let input = r#"2 + 2"#;
+        let input = r#"1 + 2"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

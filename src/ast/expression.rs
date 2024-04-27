@@ -69,14 +69,14 @@ pub struct ArrayExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssignmentExpr {
     pub lhs: AssigneeExpr,
-    pub op: AssignmentOp,
+    pub assignment_op: AssignmentOp,
     pub rhs: ValueExpr,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BinaryExpr {
     pub lhs: Box<ValueExpr>,
-    pub op: BinaryOp,
+    pub binary_op: BinaryOp,
     pub rhs: Box<ValueExpr>,
 }
 

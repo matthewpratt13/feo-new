@@ -4,6 +4,7 @@ use crate::{
         Expression, ValueExpr,
     },
     error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{Parser, Precedence};
@@ -14,23 +15,34 @@ impl AssignmentExpr {
         left_expr: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
         {
-            println!("enter `AssignmentExpr::parse()`");
-            println!("current token: {:?}\n", parser.peek_current());
+            let operator_token = parser.peek_current().unwrap_or(Token::EOF);
+
+            let assignment_op = if let Token::Equals { .. } = operator_token {
+                Ok(AssignmentOp)
+            } else {
+                parser.log_unexpected_str("assignment operator");
+                Err(ErrorsEmitted)
+            }?;
 
             parser.consume_token();
 
-            let right_expr = parser.parse_expression(Precedence::Lowest)?;
+            let precedence = parser.get_precedence(&operator_token);
+
+            let right_expr = parser.parse_expression(precedence)?;
+
+            let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
+                parser.log_error(e);
+                ErrorsEmitted
+            })?;
+
             let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
                 parser.log_error(e);
                 ErrorsEmitted
             })?;
 
             let expr = AssignmentExpr {
-                lhs: AssigneeExpr::try_from(left_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?,
-                op: AssignmentOp,
+                lhs,
+                assignment_op,
                 rhs,
             };
 
