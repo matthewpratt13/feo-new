@@ -9,7 +9,10 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl UnaryExpr {
-    pub(crate) fn parse(parser: &mut Parser, op: UnaryOp) -> Result<Expression, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        unary_op: UnaryOp,
+    ) -> Result<Expression, ErrorsEmitted> {
         parser.consume_token();
 
         let expression = parser.parse_expression(Precedence::Unary)?;
@@ -22,7 +25,7 @@ impl UnaryExpr {
         parser.consume_token();
 
         let expr = UnaryExpr {
-            op,
+            unary_op,
             value_expr: Box::new(value_expr),
         };
 
@@ -31,7 +34,10 @@ impl UnaryExpr {
 }
 
 impl BorrowExpr {
-    pub(crate) fn parse(parser: &mut Parser, op: ReferenceOp) -> Result<Expression, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        reference_op: ReferenceOp,
+    ) -> Result<Expression, ErrorsEmitted> {
         parser.consume_token();
 
         let expression = parser.parse_expression(Precedence::Unary)?;
@@ -39,7 +45,7 @@ impl BorrowExpr {
         parser.consume_token();
 
         let expr = BorrowExpr {
-            op,
+            reference_op,
             expression: Box::new(expression),
         };
 
@@ -48,7 +54,10 @@ impl BorrowExpr {
 }
 
 impl DereferenceExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        dereference_op: DereferenceOp,
+    ) -> Result<Expression, ErrorsEmitted> {
         parser.consume_token();
 
         let expression = parser.parse_expression(Precedence::Unary)?;
@@ -61,7 +70,7 @@ impl DereferenceExpr {
         parser.consume_token();
 
         let expr = DereferenceExpr {
-            op: DereferenceOp,
+            dereference_op,
             assignee_expr,
         };
 

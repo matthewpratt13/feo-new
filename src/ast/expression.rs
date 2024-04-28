@@ -97,7 +97,7 @@ pub struct BlockExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BorrowExpr {
-    pub op: ReferenceOp,
+    pub reference_op: ReferenceOp,
     pub expression: Box<Expression>,
 }
 
@@ -135,7 +135,7 @@ pub struct ContinueExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DereferenceExpr {
-    pub op: DereferenceOp,
+    pub dereference_op: DereferenceOp,
     pub assignee_expr: AssigneeExpr,
 }
 
@@ -277,7 +277,7 @@ pub struct UnderscoreExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnaryExpr {
-    pub op: UnaryOp,
+    pub unary_op: UnaryOp,
     pub value_expr: Box<ValueExpr>,
 }
 

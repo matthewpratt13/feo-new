@@ -47,13 +47,13 @@ use crate::{
     ast::{
         AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BorrowExpr, BreakExpr,
         CallExpr, ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr,
-        Delimiter, DereferenceExpr, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionItem,
-        GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item,
-        Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleItem, NoneExpr, OuterAttr,
-        PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, ReferenceOp, ResultExpr,
-        ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr,
-        TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef, TypeCastExpr, UnaryExpr,
-        UnaryOp, UnderscoreExpr, UnwrapExpr, Visibility, WhileExpr,
+        Delimiter, DereferenceExpr, DereferenceOp, EnumDef, Expression, FieldAccessExpr, ForInExpr,
+        FunctionItem, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef,
+        InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleItem,
+        NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, ReferenceOp,
+        ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef,
+        StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef,
+        TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream, TokenType},
@@ -542,7 +542,7 @@ impl Parser {
             Some(Token::Asterisk { .. }) => {
                 // TODO: this may cause problems
                 if self.context == ParserContext::Unary {
-                    DereferenceExpr::parse(self)
+                    DereferenceExpr::parse(self, DereferenceOp)
                 } else {
                     self.set_context(ParserContext::Unary);
                     self.parse_expression(Precedence::Product)
