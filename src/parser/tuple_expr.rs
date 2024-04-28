@@ -34,6 +34,8 @@ impl TupleExpr {
                 }
             }?;
 
+            parser.consume_token();
+
             match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     elements.push((element, Separator::Comma));
@@ -59,14 +61,6 @@ impl TupleExpr {
         };
 
         let close_paren = parser.expect_delimiter(TokenType::RParen)?;
-
-        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RParen)
-        // } else {
-        //     parser.log_missing_delimiter(')');
-        //     Err(ErrorsEmitted)
-        // }?;
 
         let expr = TupleExpr {
             open_paren,

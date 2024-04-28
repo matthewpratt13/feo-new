@@ -39,7 +39,7 @@ impl ArrayExpr {
                     parser.consume_token();
                     continue;
                 }
-                
+
                 Some(Token::RBracket { .. }) => break,
 
                 Some(_) => {
@@ -51,13 +51,6 @@ impl ArrayExpr {
         }
 
         let close_bracket = parser.expect_delimiter(TokenType::RBracket)?;
-
-        // let close_bracket = if let Some(Token::RBracket { .. }) = parser.consume_token() {
-        //     Ok(Delimiter::RBracket)
-        // } else {
-        //     parser.log_missing_delimiter_foo(TokenType::RBracket);
-        //     Err(ErrorsEmitted)
-        // }?;
 
         let expr = ArrayExpr {
             open_bracket,
