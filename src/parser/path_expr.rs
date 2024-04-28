@@ -31,12 +31,14 @@ impl PathExpr {
             }
         }
 
+        
         let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.peek_current() {
             parser.consume_token();
             Some(Separator::ColonColonAsterisk)
         } else {
             None
         };
+
 
         let expr = PathExpr {
             root,
@@ -51,7 +53,6 @@ impl PathExpr {
         };
 
         println!("path expression: {:?}", expr);
-      
 
         println!("exit `PathExpr::parse()`");
         println!("current token: `{:?}`", parser.peek_current());
@@ -83,7 +84,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_path_expr() -> Result<(), ()> {
+    fn parse_path_expr_standard() -> Result<(), ()> {
         let input = r#"package::some_module::SomeObject"#;
 
         let mut parser = test_utils::get_parser(input, false);

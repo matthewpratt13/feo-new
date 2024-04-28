@@ -362,11 +362,7 @@ impl Parser {
                     self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
                 );
 
-                Ok(Expression::Path(PathExpr {
-                    root: PathPrefix::Identifier(Identifier(name)),
-                    tree_opt: None,
-                    wildcard_opt: None,
-                }))
+                PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)))
             }
             Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
             Some(Token::UIntLiteral { value, .. }) => Ok(Expression::Literal(Literal::UInt(value))),
@@ -478,6 +474,7 @@ impl Parser {
                     );
 
                     let id = self.parse_primary();
+
                     println!("exit `parse_primary()`");
                     println!("current token: `{:?}`", self.peek_current());
                     println!(

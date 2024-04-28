@@ -92,9 +92,9 @@ impl TupleIndexExpr {
             ErrorsEmitted
         })?;
 
-        let token = parser.consume_token();
+        parser.consume_token();
 
-        let index = if let Some(Token::UIntLiteral { value, .. }) = token {
+        let index = if let Some(Token::UIntLiteral { value, .. }) = parser.peek_current() {
             Ok(value)
         } else {
             parser.log_unexpected_str("unsigned integer");
