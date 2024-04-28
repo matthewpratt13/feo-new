@@ -16,6 +16,13 @@ impl BinaryExpr {
         parser: &mut Parser,
         left_expr: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
+        println!("enter `BinaryExpr::parse()`");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
+
         let operator_token = parser.peek_current().unwrap_or(Token::EOF);
 
         let binary_op = match operator_token.token_type() {
@@ -38,9 +45,9 @@ impl BinaryExpr {
             }
         }?;
 
-        parser.consume_token();
-
         let precedence = parser.get_precedence(&operator_token);
+
+        parser.consume_token();
 
         let right_expr = parser.parse_expression(precedence)?;
 
@@ -59,6 +66,13 @@ impl BinaryExpr {
             binary_op,
             rhs: Box::new(rhs),
         };
+
+        println!("exit `BinaryExpr::parse()`");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
 
         Ok(Expression::Binary(expr))
     }

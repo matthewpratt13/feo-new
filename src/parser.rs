@@ -332,7 +332,7 @@ impl Parser {
         //     }
         // }
 
-        println!("current precedence >= input precedence");
+        println!("current precedence <= input precedence");
         println!("current token: `{:?}`", self.peek_current());
         println!(
             "token precedence: `{:?}`\n",
@@ -355,13 +355,6 @@ impl Parser {
 
         match token {
             Some(Token::Identifier { name, .. }) => {
-                println!("enter `Some(Token::Identifier)` match arm");
-                println!("current token: `{:?}`", self.peek_current());
-                println!(
-                    "token precedence: `{:?}`\n",
-                    self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                );
-
                 PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)))
             }
             Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
@@ -382,13 +375,6 @@ impl Parser {
                 GroupedExpr::parse(self)
             }
             _ => {
-                println!("enter default match arm (unexpected token or none)");
-                println!("current token: `{:?}`", self.peek_current());
-                println!(
-                    "token precedence: `{:?}`\n",
-                    self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                );
-
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier, `_`, literal or `(`".to_string(),
                     found: token,
@@ -421,18 +407,11 @@ impl Parser {
                 | Token::BoolLiteral { .. },
             ) => {
                 let expr = self.parse_primary();
-                self.consume_token();
+                // self.consume_token();
                 expr
             }
 
             Some(Token::Identifier { name, .. }) => {
-                println!("enter `Some(Token::Identifier {{ name, ..}})` match arm");
-                println!("current token: `{:?}`", self.peek_current());
-                println!(
-                    "token precedence: `{:?}`\n",
-                    self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                );
-
                 if &name == "_" {
                     self.consume_token();
                     Ok(Expression::Underscore(UnderscoreExpr {
@@ -459,7 +438,7 @@ impl Parser {
                     PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)))
                 } else {
                     let expr = self.parse_primary();
-                    self.consume_token();
+                    // self.consume_token();
                     expr
                 }
             }
@@ -615,13 +594,6 @@ impl Parser {
             Some(Token::Return { .. }) => ReturnExpr::parse(self),
 
             _ => {
-                println!("enter default match arm (unexpected token or none)");
-                println!("current token: `{:?}`", self.peek_current());
-                println!(
-                    "token precedence: `{:?}`\n",
-                    self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                );
-
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "prefix expression".to_string(),
                     found: self.peek_current(),
@@ -741,13 +713,6 @@ impl Parser {
             Some(Token::Equals { .. }) => Some(AssignmentExpr::parse),
 
             _ => {
-                println!("enter default match arm (unexpected token or none)");
-                println!("current token: `{:?}`", self.peek_current());
-                println!(
-                    "token precedence: `{:?}`\n",
-                    self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                );
-
                 None // Default to no infix parser
             }
         }
@@ -1269,13 +1234,6 @@ impl Parser {
     }
 
     fn is_tuple_index(&self) -> bool {
-        println!("enter `is_tuple_index()`");
-        println!("current token: `{:?}`", self.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-        );
-
         match self.peek_ahead_by(1) {
             // If dot is followed by an integer (representing the tuple index)
             Some(Token::UIntLiteral { .. }) => true,
@@ -1285,13 +1243,6 @@ impl Parser {
 
     // Determine if the dot token indicates a method call
     fn is_method_call(&self) -> bool {
-        println!("enter `is_method_call()`");
-        println!("current token: `{:?}`", self.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-        );
-
         if self.peek_ahead_by(2).is_some() {
             // Check if the dot is followed by an identifier and then a parenthesis
             match (
@@ -1313,13 +1264,6 @@ impl Parser {
 
     // Determine if the dot token indicates field access
     fn is_field_access(&self) -> bool {
-        println!("enter `is_field_access()`");
-        println!("current token: `{:?}`", self.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-        );
-
         if self.peek_ahead_by(1).is_some() {
             // Check if the dot is followed by an identifier without a parenthesis
             match (self.peek_current(), self.peek_ahead_by(1)) {
