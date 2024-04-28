@@ -1,6 +1,6 @@
 use crate::{
     ast::{BlockExpr, Delimiter, Expression, InnerAttr, Statement},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
 
@@ -9,6 +9,8 @@ use super::Parser;
 impl BlockExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let mut attributes: Vec<InnerAttr> = Vec::new();
+
+        let mut delimiter_open = false;
 
         println!("enter `BlockExpr::parser()`");
         println!("current token: `{:?}`", parser.peek_current());
@@ -29,6 +31,8 @@ impl BlockExpr {
             Err(ErrorsEmitted)
         }?;
 
+        delimiter_open = true;
+
         println!("enter block");
         println!("current token: `{:?}`", parser.peek_current());
         println!(
@@ -40,6 +44,7 @@ impl BlockExpr {
 
         loop {
             if let Some(Token::RBrace { .. }) = parser.peek_current() {
+                delimiter_open = false;
                 break;
             }
 
@@ -53,11 +58,21 @@ impl BlockExpr {
 
             statements.push(statement);
 
+            parser.consume_token();
+
             match parser.peek_current() {
-                Some(Token::RBracket { .. }) | None => break,
-                Some(_) => {
+                Some(Token::RBrace { .. }) => {
+                    delimiter_open = false;
+                    break;
+                }
+                Some(Token::Semicolon { .. }) => {
+                    parser.consume_token();
                     continue;
                 }
+                Some(_) => {
+                    parser.log_unexpected_str("`;` or `}`");
+                }
+                None => break,
             }
         }
 
@@ -69,6 +84,12 @@ impl BlockExpr {
             "token precedence: `{:?}`\n",
             parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
         );
+
+        if delimiter_open {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RBrace,
+            });
+        }
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 

@@ -371,7 +371,7 @@ impl Parser {
             Some(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
             Some(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
             Some(Token::LParen { .. }) => {
-                self.consume_token();
+                // self.consume_token();
                 GroupedExpr::parse(self)
             }
             _ => {
@@ -846,86 +846,95 @@ impl Parser {
     fn expect_keyword(&mut self, expected: TokenType) -> Result<Keyword, ErrorsEmitted> {
         let token = self.consume_token().unwrap_or(Token::EOF);
 
-        match token.token_type() {
-            TokenType::Import { .. } => Ok(Keyword::Import),
-            TokenType::Module { .. } => Ok(Keyword::Module),
-            TokenType::Package { .. } => Ok(Keyword::Package),
-            TokenType::SelfKeyword { .. } => Ok(Keyword::SelfKeyword),
-            TokenType::SelfType { .. } => Ok(Keyword::SelfType),
-            TokenType::Super { .. } => Ok(Keyword::Super),
-            TokenType::Pub { .. } => Ok(Keyword::Pub),
-            TokenType::As { .. } => Ok(Keyword::As),
-            TokenType::Const { .. } => Ok(Keyword::Const),
-            TokenType::Static { .. } => Ok(Keyword::Static),
-            TokenType::Alias { .. } => Ok(Keyword::Alias),
-            TokenType::Func { .. } => Ok(Keyword::Func),
-            TokenType::Struct { .. } => Ok(Keyword::Struct),
-            TokenType::Enum { .. } => Ok(Keyword::Enum),
-            TokenType::Trait { .. } => Ok(Keyword::Trait),
-            TokenType::Impl { .. } => Ok(Keyword::Impl),
-            TokenType::If { .. } => Ok(Keyword::If),
-            TokenType::Else { .. } => Ok(Keyword::Else),
-            TokenType::Match { .. } => Ok(Keyword::Match),
-            TokenType::Loop { .. } => Ok(Keyword::Loop),
-            TokenType::For { .. } => Ok(Keyword::For),
-            TokenType::In { .. } => Ok(Keyword::In),
-            TokenType::While { .. } => Ok(Keyword::While),
-            TokenType::Break { .. } => Ok(Keyword::Break),
-            TokenType::Continue { .. } => Ok(Keyword::Continue),
-            TokenType::Return { .. } => Ok(Keyword::Return),
-            TokenType::Let { .. } => Ok(Keyword::Let),
-            TokenType::Mut { .. } => Ok(Keyword::Mut),
-            TokenType::Some { .. } => Ok(Keyword::Some),
-            TokenType::None { .. } => Ok(Keyword::None),
-            TokenType::Ok { .. } => Ok(Keyword::Ok),
-            TokenType::Err { .. } => Ok(Keyword::Err),
-            _ => {
-                self.log_unexpected_token(expected);
-                Err(ErrorsEmitted)
+        if token.token_type() == expected {
+            match token.token_type() {
+                TokenType::Import { .. } => Ok(Keyword::Import),
+                TokenType::Module { .. } => Ok(Keyword::Module),
+                TokenType::Package { .. } => Ok(Keyword::Package),
+                TokenType::SelfKeyword { .. } => Ok(Keyword::SelfKeyword),
+                TokenType::SelfType { .. } => Ok(Keyword::SelfType),
+                TokenType::Super { .. } => Ok(Keyword::Super),
+                TokenType::Pub { .. } => Ok(Keyword::Pub),
+                TokenType::As { .. } => Ok(Keyword::As),
+                TokenType::Const { .. } => Ok(Keyword::Const),
+                TokenType::Static { .. } => Ok(Keyword::Static),
+                TokenType::Alias { .. } => Ok(Keyword::Alias),
+                TokenType::Func { .. } => Ok(Keyword::Func),
+                TokenType::Struct { .. } => Ok(Keyword::Struct),
+                TokenType::Enum { .. } => Ok(Keyword::Enum),
+                TokenType::Trait { .. } => Ok(Keyword::Trait),
+                TokenType::Impl { .. } => Ok(Keyword::Impl),
+                TokenType::If { .. } => Ok(Keyword::If),
+                TokenType::Else { .. } => Ok(Keyword::Else),
+                TokenType::Match { .. } => Ok(Keyword::Match),
+                TokenType::Loop { .. } => Ok(Keyword::Loop),
+                TokenType::For { .. } => Ok(Keyword::For),
+                TokenType::In { .. } => Ok(Keyword::In),
+                TokenType::While { .. } => Ok(Keyword::While),
+                TokenType::Break { .. } => Ok(Keyword::Break),
+                TokenType::Continue { .. } => Ok(Keyword::Continue),
+                TokenType::Return { .. } => Ok(Keyword::Return),
+                TokenType::Let { .. } => Ok(Keyword::Let),
+                TokenType::Mut { .. } => Ok(Keyword::Mut),
+                TokenType::Some { .. } => Ok(Keyword::Some),
+                TokenType::None { .. } => Ok(Keyword::None),
+                TokenType::Ok { .. } => Ok(Keyword::Ok),
+                TokenType::Err { .. } => Ok(Keyword::Err),
+                _ => {
+                    self.log_unexpected_str("keyword");
+                    Err(ErrorsEmitted)
+                }
             }
+        } else {
+            self.log_unexpected_token(expected);
+            Err(ErrorsEmitted)
         }
     }
 
     fn expect_delimiter(&mut self, expected: TokenType) -> Result<Delimiter, ErrorsEmitted> {
-        let token = self.consume_token().ok_or({
-            self.log_error(ParserErrorKind::MissingDelimiter {
-                delim: expected.clone(),
-            });
+        let token = self.consume_token().unwrap_or(Token::EOF);
 
-            ErrorsEmitted
-        })?;
-
-        match token.token_type() {
-            TokenType::LParen => Ok(Delimiter::LParen),
-            TokenType::RParen => Ok(Delimiter::RParen),
-            TokenType::LBrace => Ok(Delimiter::LBrace),
-            TokenType::RBrace => Ok(Delimiter::RBrace),
-            TokenType::LBracket => Ok(Delimiter::LBracket),
-            TokenType::RBracket => Ok(Delimiter::RBracket),
-            _ => {
-                self.log_unexpected_token(expected);
-                Err(ErrorsEmitted)
+        if token.token_type() == expected {
+            match token.token_type() {
+                TokenType::LParen => Ok(Delimiter::LParen),
+                TokenType::RParen => Ok(Delimiter::RParen),
+                TokenType::LBrace => Ok(Delimiter::LBrace),
+                TokenType::RBrace => Ok(Delimiter::RBrace),
+                TokenType::LBracket => Ok(Delimiter::LBracket),
+                TokenType::RBracket => Ok(Delimiter::RBracket),
+                _ => {
+                    self.log_unexpected_str("delimiter");
+                    Err(ErrorsEmitted)
+                }
             }
+        } else {
+            self.log_unexpected_token(expected);
+            Err(ErrorsEmitted)
         }
     }
 
     fn expect_separator(&mut self, expected: TokenType) -> Result<Separator, ErrorsEmitted> {
         let token = self.consume_token().unwrap_or(Token::EOF);
 
-        match token.token_type() {
-            TokenType::Colon => Ok(Separator::Colon),
-            TokenType::Semicolon => Ok(Separator::Semicolon),
-            TokenType::Comma => Ok(Separator::Comma),
-            TokenType::ThinArrow => Ok(Separator::ThinArrow),
-            TokenType::FatArrow => Ok(Separator::FatArrow),
-            TokenType::LessThan => Ok(Separator::LeftAngledBracket),
-            TokenType::GreaterThan => Ok(Separator::RightAngledBracket),
-            TokenType::Pipe => Ok(Separator::Pipe),
-            TokenType::DblPipe => Ok(Separator::DblPipe),
-            _ => {
-                self.log_unexpected_token(expected);
-                Err(ErrorsEmitted)
+        if token.token_type() == expected {
+            match token.token_type() {
+                TokenType::Colon => Ok(Separator::Colon),
+                TokenType::Semicolon => Ok(Separator::Semicolon),
+                TokenType::Comma => Ok(Separator::Comma),
+                TokenType::ThinArrow => Ok(Separator::ThinArrow),
+                TokenType::FatArrow => Ok(Separator::FatArrow),
+                TokenType::LessThan => Ok(Separator::LeftAngledBracket),
+                TokenType::GreaterThan => Ok(Separator::RightAngledBracket),
+                TokenType::Pipe => Ok(Separator::Pipe),
+                TokenType::DblPipe => Ok(Separator::DblPipe),
+                _ => {
+                    self.log_unexpected_str("separator");
+                    Err(ErrorsEmitted)
+                }
             }
+        } else {
+            self.log_unexpected_token(expected);
+            Err(ErrorsEmitted)
         }
     }
 

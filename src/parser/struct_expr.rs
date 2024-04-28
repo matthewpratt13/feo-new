@@ -62,6 +62,8 @@ impl StructExpr {
 
             fields.push(field);
 
+            parser.consume_token();
+
             match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     parser.consume_token();

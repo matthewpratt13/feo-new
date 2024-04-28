@@ -43,11 +43,11 @@ impl MatchExpr {
                 if let Some(Token::If { .. }) = parser.peek_current() {
                     let kw_if = parser.expect_keyword(TokenType::If)?;
 
-                    if let Some(Token::LParen { .. }) = parser.peek_current() {
-                        parser.consume_token();
-                    } else {
-                        parser.log_unexpected_token(TokenType::LParen);
-                    };
+                    // if let Some(Token::LParen { .. }) = parser.peek_current() {
+                    //     parser.consume_token();
+                    // } else {
+                    //     parser.log_unexpected_token(TokenType::LParen);
+                    // };
 
                     let expr = GroupedExpr::parse(parser)?;
 
@@ -70,6 +70,8 @@ impl MatchExpr {
             };
 
             match_arms.push(arm);
+
+            parser.consume_token();
 
             match parser.peek_current() {
                 Some(Token::Comma { .. }) => {

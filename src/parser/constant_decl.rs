@@ -37,6 +37,7 @@ impl ParseDeclaration for ConstantDecl {
             Err(ErrorsEmitted)
         }?;
 
+        parser.consume_token();
 
         parser.expect_separator(TokenType::Semicolon)?;
 

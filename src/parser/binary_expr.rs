@@ -45,9 +45,9 @@ impl BinaryExpr {
             }
         }?;
 
-        let precedence = parser.get_precedence(&operator_token);
-
         parser.consume_token();
+
+        let precedence = parser.get_precedence(&operator_token);
 
         let right_expr = parser.parse_expression(precedence)?;
 
@@ -92,7 +92,6 @@ impl ComparisonExpr {
             TokenType::GreaterThan => Ok(ComparisonOp::GreaterThan),
             TokenType::LessThanEquals => Ok(ComparisonOp::LessEqual),
             TokenType::GreaterThanEquals => Ok(ComparisonOp::GreaterEqual),
-
             _ => {
                 parser.log_unexpected_str("comparison operator");
                 Err(ErrorsEmitted)
@@ -115,6 +114,7 @@ impl ComparisonExpr {
             ErrorsEmitted
         })?;
 
+
         let expr = ComparisonExpr {
             lhs,
             comparison_op,
@@ -131,27 +131,57 @@ mod tests {
 
     #[test]
     fn parse_binary_expr_add() -> Result<(), ()> {
-        let input = r#"1 + 2"#;
+        let input = r#"x + 2"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
     }
 
+    // test for `Precedence::Difference` vs. `Precedence::Unary`
+    #[test]
+    fn parse_binary_expr_subtract() -> Result<(), ()> {
+        let input = r#"x - 2"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    // test for `Precedence::Product` vs. `Precedence::Unary`
     #[test]
     fn parse_binary_expr_multiply() -> Result<(), ()> {
         let input = r#"x * 2"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_binary_expr_modulus() -> Result<(), ()> {
+        let input = r#"x % 2"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let statements = parser.parse();
+
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -163,9 +193,54 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    // test for `Precedence::LogicalOr` vs. `Precedence::Lowest`
+    #[test]
+    fn parse_binary_expr_logical_or() -> Result<(), ()> {
+        let input = r#"x || y"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    // test for `Precedence::BitwiseAnd` vs. `Precedence::Unary`
+    #[test]
+    fn parse_binary_expr_bitwise_and() -> Result<(), ()> {
+        let input = r#"x & y"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    // test for `Precedence::BitwiseOr` vs. `Precedence::Lowest`
+    #[test]
+    fn parse_binary_expr_bitwise_or() -> Result<(), ()> {
+        let input = r#"x | y"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let statements = parser.parse();
+
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -177,9 +252,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -191,9 +266,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -205,23 +280,52 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
     }
 
     #[test]
-    fn parse_comparison_less_than() -> Result<(), ()> {
-        let input = r#"4 < 5"#;
+    fn parse_comparison_expr_less_than() -> Result<(), ()> {
+        let input = r#"x < 2"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_comparison_expr_greater_equal() -> Result<(), ()> {
+        let input = r#"x >= 2"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    // test for `Precedence::NotEqual` vs. `Precedence::Unary`
+    #[test]
+    fn parse_comparison_expr_not_equal() -> Result<(), ()> {
+        let input = r#"x != 2"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let statements = parser.parse();
+
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

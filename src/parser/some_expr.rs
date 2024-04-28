@@ -19,6 +19,7 @@ impl SomeExpr {
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
+        parser.consume_token();
 
         parser.expect_delimiter(TokenType::RBrace)?;
 

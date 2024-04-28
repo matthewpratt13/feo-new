@@ -86,6 +86,7 @@ impl CompoundAssignmentExpr {
             ErrorsEmitted
         })?;
 
+
         let expr = CompoundAssignmentExpr {
             lhs,
             compound_assignment_op,
@@ -114,9 +115,8 @@ mod tests {
         }
     }
 
-
     #[test]
-    fn parse_compound_assign_plus_equals() -> Result<(), ()> {
+    fn parse_compound_assignment_plus_equals() -> Result<(), ()> {
         let input = r#"x += 5"#;
 
         let mut parser = test_utils::get_parser(input, false);

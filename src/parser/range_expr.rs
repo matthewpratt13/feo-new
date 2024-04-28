@@ -139,10 +139,12 @@ impl RangeExpr {
             }
         }?;
 
+        parser.consume_token();
+
         let expr = RangeExpr {
             from_opt: None,
             range_op,
-            to_opt: Some(Box::new(to)), 
+            to_opt: Some(Box::new(to)),
         };
 
         Ok(Expression::Range(expr))
@@ -167,7 +169,6 @@ mod tests {
         }
     }
 
-    #[ignore]
     #[test]
     fn parse_range_expr_incl() -> Result<(), ()> {
         let input = r#"..=20"#;
@@ -182,7 +183,6 @@ mod tests {
         }
     }
 
-    // #[ignore]
     #[test]
     fn parse_range_expr_full() -> Result<(), ()> {
         let input = r#".."#;

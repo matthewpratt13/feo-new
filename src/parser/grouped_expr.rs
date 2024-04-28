@@ -15,6 +15,13 @@ impl GroupedExpr {
             parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
         );
 
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token(TokenType::LParen);
+            Err(ErrorsEmitted)
+        }?;
+
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
         println!("exit `parse_expression()`");
@@ -32,14 +39,12 @@ impl GroupedExpr {
             close_paren,
         };
 
-
         println!("exit `GroupedExpr::parse()`");
         println!("current token: `{:?}`", parser.peek_current());
         println!(
             "token precedence: `{:?}`\n",
             parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
         );
-
 
         Ok(Expression::Grouped(expr))
     }
