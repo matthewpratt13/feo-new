@@ -408,9 +408,7 @@ impl Parser {
             self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
         );
 
-        let token = self.peek_current();
-
-        match token {
+        match self.peek_current() {
             Some(
                 Token::IntLiteral { .. }
                 | Token::UIntLiteral { .. }
@@ -422,15 +420,9 @@ impl Parser {
                 | Token::CharLiteral { .. }
                 | Token::BoolLiteral { .. },
             ) => {
-                let lit = self.parse_primary();
-                println!("exit `parse_primary()`");
-                println!("current token: `{:?}`", self.peek_current());
-                println!(
-                    "token precedence: `{:?}`\n",
-                    self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                );
-
-                lit
+                let expr = self.parse_primary();
+                self.consume_token();
+                expr
             }
 
             Some(Token::Identifier { name, .. }) => {
@@ -466,38 +458,20 @@ impl Parser {
                 {
                     PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)))
                 } else {
-                    println!("enter final `else` block – i.e., `name` is not `_`, next token is not a `{{` and current token is not a `::` or `::*`");
-                    println!("current token: `{:?}`", self.peek_current());
-                    println!(
-                        "token precedence: `{:?}`\n",
-                        self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                    );
-
-                    let id = self.parse_primary();
-
-                    println!("exit `parse_primary()`");
-                    println!("current token: `{:?}`", self.peek_current());
-                    println!(
-                        "token precedence: `{:?}`\n",
-                        self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                    );
-
-                    id
+                    let expr = self.parse_primary();
+                    self.consume_token();
+                    expr
                 }
             }
             Some(Token::SelfType { .. }) => {
                 if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     self.consume_token();
-
                     let path = PathExpr::parse(self, PathPrefix::SelfType)?;
 
                     StructExpr::parse(self, path)
                 } else {
-                    Ok(Expression::Path(PathExpr {
-                        root: PathPrefix::SelfType,
-                        tree_opt: None,
-                        wildcard_opt: None,
-                    }))
+                    self.consume_token();
+                    PathExpr::parse(self, PathPrefix::SelfType)
                 }
             }
             Some(Token::SelfKeyword { .. }) => {
@@ -519,6 +493,27 @@ impl Parser {
                 } else {
                     self.set_context(ParserContext::Unary);
                     self.parse_expression(Precedence::Difference)
+                }
+            }
+
+            Some(Token::Dot { .. }) => {
+                if self.is_tuple_index() {
+                    self.set_context(ParserContext::TupleIndex);
+                    self.consume_token();
+                    self.parse_expression(Precedence::TupleIndex)
+                } else if self.is_method_call() {
+                    self.set_context(ParserContext::MethodCall);
+                    self.consume_token();
+                    self.parse_expression(Precedence::MethodCall)
+                } else if self.is_field_access() {
+                    self.set_context(ParserContext::FieldAccess);
+                    self.consume_token();
+                    self.parse_expression(Precedence::FieldAccess)
+                } else {
+                    self.log_error(ParserErrorKind::InvalidTokenContext {
+                        token: TokenType::Dot,
+                    });
+                    Err(ErrorsEmitted)
                 }
             }
 
@@ -650,14 +645,6 @@ impl Parser {
 
         match &self.peek_current() {
             Some(Token::Dot { .. }) => {
-                if self.is_tuple_index() {
-                    self.context = ParserContext::TupleIndex;
-                } else if self.is_method_call() {
-                    self.context = ParserContext::MethodCall;
-                } else {
-                    self.context = ParserContext::FieldAccess;
-                }
-
                 match self.context {
                     ParserContext::TupleIndex => Some(TupleIndexExpr::parse),
                     ParserContext::MethodCall => Some(MethodCallExpr::parse),
@@ -1282,6 +1269,13 @@ impl Parser {
     }
 
     fn is_tuple_index(&self) -> bool {
+        println!("enter `is_tuple_index()`");
+        println!("current token: `{:?}`", self.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
+        );
+
         match self.peek_ahead_by(1) {
             // If dot is followed by an integer (representing the tuple index)
             Some(Token::UIntLiteral { .. }) => true,
@@ -1291,6 +1285,13 @@ impl Parser {
 
     // Determine if the dot token indicates a method call
     fn is_method_call(&self) -> bool {
+        println!("enter `is_method_call()`");
+        println!("current token: `{:?}`", self.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
+        );
+
         if self.peek_ahead_by(2).is_some() {
             // Check if the dot is followed by an identifier and then a parenthesis
             match (
@@ -1312,6 +1313,13 @@ impl Parser {
 
     // Determine if the dot token indicates field access
     fn is_field_access(&self) -> bool {
+        println!("enter `is_field_access()`");
+        println!("current token: `{:?}`", self.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
+        );
+
         if self.peek_ahead_by(1).is_some() {
             // Check if the dot is followed by an identifier without a parenthesis
             match (self.peek_current(), self.peek_ahead_by(1)) {

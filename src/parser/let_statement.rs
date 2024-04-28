@@ -31,7 +31,6 @@ impl LetStmt {
             None
         };
 
-        parser.consume_token();
 
         parser.expect_separator(TokenType::Semicolon)?;
 

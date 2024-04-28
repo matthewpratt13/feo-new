@@ -34,8 +34,6 @@ impl TupleExpr {
                 }
             }?;
 
-            parser.consume_token();
-
             match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     elements.push((element, Separator::Comma));

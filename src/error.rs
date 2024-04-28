@@ -144,6 +144,10 @@ pub enum ParserErrorKind {
         delim: TokenType,
     },
 
+    InvalidTokenContext {
+        token: TokenType,
+    },
+
     TypeConversionError {
         type_a: String,
         type_b: String,
@@ -170,12 +174,17 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::MissingDelimiter { delim } => {
                 writeln!(f, "missing delimiter: expected `{delim}`, found none")
             }
-            ParserErrorKind::UnknownError => writeln!(f, "unknown parser error"),
+
+            ParserErrorKind::InvalidTokenContext { token } => {
+                writeln!(f, "syntax error: invalid token context – `{token}`")
+            }
 
             ParserErrorKind::TypeConversionError { type_a, type_b } => writeln!(
                 f,
                 "conversion error: unable to convert {type_a} into {type_b}"
             ),
+
+            ParserErrorKind::UnknownError => writeln!(f, "unknown parser error"),
         }
     }
 }

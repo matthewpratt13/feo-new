@@ -31,14 +31,12 @@ impl PathExpr {
             }
         }
 
-        
         let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.peek_current() {
             parser.consume_token();
             Some(Separator::ColonColonAsterisk)
         } else {
             None
         };
-
 
         let expr = PathExpr {
             root,
