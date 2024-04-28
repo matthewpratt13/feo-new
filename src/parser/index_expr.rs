@@ -16,7 +16,11 @@ impl IndexExpr {
             ErrorsEmitted
         })?;
 
+        parser.consume_token();
+
         let index = parser.parse_expression(Precedence::Lowest)?;
+
+        parser.consume_token();
 
         let close_bracket = parser.expect_delimiter(TokenType::RBracket)?;
 
