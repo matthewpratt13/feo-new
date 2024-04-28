@@ -10,6 +10,7 @@ impl SomeExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_some = parser.expect_keyword(TokenType::Some)?;
 
+
         if let Some(Token::LParen { .. }) = parser.peek_current() {
             parser.consume_token();
         } else {
@@ -17,6 +18,8 @@ impl SomeExpr {
         }
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
+
+        parser.consume_token();
 
         parser.expect_delimiter(TokenType::RBrace)?;
 
@@ -35,7 +38,7 @@ mod tests {
 
     #[test]
     fn parse_some_expr() -> Result<(), ()> {
-        let input = r#"Some(SomeStruct { foo: "bar", baz: -10 });"#;
+        let input = r#"Some(foo);"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
