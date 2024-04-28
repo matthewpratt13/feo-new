@@ -136,7 +136,7 @@ pub struct ContinueExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct DereferenceExpr {
     pub op: DereferenceOp,
-    pub expression: AssigneeExpr,
+    pub assignee_expr: AssigneeExpr,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -195,12 +195,6 @@ pub struct MethodCallExpr {
     pub open_paren: Delimiter,
     pub args_opt: Option<Vec<Expression>>,
     pub close_paren: Delimiter,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct UnaryExpr {
-    pub op: UnaryOp,
-    pub expression: Box<ValueExpr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -282,8 +276,14 @@ pub struct UnderscoreExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct UnaryExpr {
+    pub op: UnaryOp,
+    pub value_expr: Box<ValueExpr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct UnwrapExpr {
-    pub operand: Box<ValueExpr>,
+    pub value_expr: Box<ValueExpr>,
     pub op: UnwrapOp,
 }
 

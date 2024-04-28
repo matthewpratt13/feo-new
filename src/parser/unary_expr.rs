@@ -13,14 +13,17 @@ impl UnaryExpr {
         parser.consume_token();
 
         let expression = parser.parse_expression(Precedence::Unary)?;
+
         let value_expr = ValueExpr::try_from(expression).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
+        parser.consume_token();
+
         let expr = UnaryExpr {
             op,
-            expression: Box::new(value_expr),
+            value_expr: Box::new(value_expr),
         };
 
         Ok(Expression::Unary(expr))
@@ -32,6 +35,8 @@ impl BorrowExpr {
         parser.consume_token();
 
         let expression = parser.parse_expression(Precedence::Unary)?;
+
+        parser.consume_token();
 
         let expr = BorrowExpr {
             op,
@@ -46,15 +51,18 @@ impl DereferenceExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         parser.consume_token();
 
-        let expression = AssigneeExpr::try_from(parser.parse_expression(Precedence::Unary)?)
-            .map_err(|e| {
-                parser.log_error(e);
-                ErrorsEmitted
-            })?;
+        let expression = parser.parse_expression(Precedence::Unary)?;
+
+        let assignee_expr = AssigneeExpr::try_from(expression).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
+
+        parser.consume_token();
 
         let expr = DereferenceExpr {
             op: DereferenceOp,
-            expression,
+            assignee_expr,
         };
 
         Ok(Expression::Dereference(expr))
@@ -71,9 +79,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -81,14 +89,29 @@ mod tests {
 
     #[test]
     // #[ignore]
-    fn parse_unary_expr_reference() -> Result<(), ()> {
+    fn parse_borrow_expr() -> Result<(), ()> {
         let input = r#"&x"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    // #[ignore]
+    fn parse_dereference_expr() -> Result<(), ()> {
+        let input = r#"*x"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let statements = parser.parse();
+
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

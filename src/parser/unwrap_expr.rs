@@ -16,7 +16,7 @@ impl UnwrapExpr {
         })?);
 
         let expr = UnwrapExpr {
-            operand,
+            value_expr: operand,
             op: UnwrapOp,
         };
 
