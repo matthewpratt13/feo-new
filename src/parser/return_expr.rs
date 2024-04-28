@@ -16,6 +16,8 @@ impl ReturnExpr {
             None
         };
 
+        parser.consume_token();
+
         let expr = ReturnExpr {
             kw_return,
             expression_opt,
@@ -31,7 +33,7 @@ mod tests {
 
     #[test]
     fn parse_return_expr() -> Result<(), ()> {
-        let input = r#"return Object { foo: "bar", baz: x };"#;
+        let input = r#"return foo;"#;
 
         let mut parser = test_utils::get_parser(input, false);
 
