@@ -16,7 +16,6 @@ impl ReturnExpr {
             None
         };
 
-        parser.consume_token();
 
         let expr = ReturnExpr {
             kw_return,
