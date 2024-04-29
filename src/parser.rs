@@ -170,7 +170,7 @@ impl Parser {
                 ParserContext::FieldAccess => Precedence::FieldAccess,
                 ParserContext::MethodCall => Precedence::MethodCall,
                 ParserContext::TupleIndex => Precedence::TupleIndex,
-                _ => Precedence::Lowest,
+                _ => Precedence::FieldAccess,
             },
             Token::Ampersand { .. } => {
                 if self.context == ParserContext::Unary {
@@ -237,7 +237,7 @@ impl Parser {
             | Token::SlashEquals { .. }
             | Token::PercentEquals { .. } => Precedence::CompoundAssignment,
             Token::Equals { .. } => Precedence::Assignment,
-            _ => Precedence::Lowest, // Default precedence for other tokens
+            _ => *self.precedences.get(token).unwrap_or(&Precedence::Lowest),
         }
     }
 
@@ -281,56 +281,14 @@ impl Parser {
         );
 
         while precedence < self.peek_precedence() {
-            self.consume_token(); // Advance to the next token
-            println!("consume token");
-            println!("current token: `{:?}`", self.peek_current());
-            println!(
-                "token precedence: `{:?}`\n",
-                self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-            );
-
             if let Some(infix_parser) = self.parse_infix() {
                 left_expr = infix_parser(self, left_expr)?; // Parse infix expressions
-
-                println!("exit infix parsing function: `{:?}`", infix_parser);
-                println!("current token: `{:?}`", self.peek_current());
-                println!(
-                    "token precedence: `{:?}`\n",
-                    self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                );
             } else {
-                println!("no infix parsing function found");
-                println!("current token: `{:?}`", self.peek_current());
-                println!(
-                    "token precedence: `{:?}`\n",
-                    self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                );
-
                 break; // Exit if no infix parser is found
             }
 
             self.consume_token(); // Advance to the next token
-            println!("consume token");
-            println!("current token: `{:?}`", self.peek_current());
-            println!(
-                "token precedence: `{:?}`\n",
-                self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-            );
         }
-
-        // while let Some(t) = self.peek_current() {
-        //     let token_precedence = self.precedence(&t);
-
-        //     println!("CURRENT PRECEDENCE: {:?}", token_precedence);
-
-        //     if token_precedence > precedence {
-        //         left_expr = self.parse_infix(left_expr)?;
-        //         println!("INFIX EXPRESSION: {:?}", left_expr.clone());
-        //         println!("CURRENT TOKEN: {:?}\n", self.peek_current());
-        //     } else {
-        //         break;
-        //     }
-        // }
 
         println!("current precedence <= input precedence");
         println!("current token: `{:?}`", self.peek_current());
@@ -355,7 +313,8 @@ impl Parser {
 
         match token {
             Some(Token::Identifier { name, .. }) => {
-                PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)))
+                let expr = PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)));
+                expr
             }
             Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(value))),
             Some(Token::UIntLiteral { value, .. }) => Ok(Expression::Literal(Literal::UInt(value))),
@@ -370,10 +329,7 @@ impl Parser {
             Some(Token::StrLiteral { value, .. }) => Ok(Expression::Literal(Literal::Str(value))),
             Some(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
             Some(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
-            Some(Token::LParen { .. }) => {
-                // self.consume_token();
-                GroupedExpr::parse(self)
-            }
+            Some(Token::LParen { .. }) => GroupedExpr::parse(self),
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier, `_`, literal or `(`".to_string(),
@@ -407,7 +363,7 @@ impl Parser {
                 | Token::BoolLiteral { .. },
             ) => {
                 let expr = self.parse_primary();
-                // self.consume_token();
+                self.consume_token();
                 expr
             }
 
@@ -432,13 +388,15 @@ impl Parser {
                         }
                         _ => PathExpr::parse(self, PathPrefix::Identifier(Identifier(name))),
                     }
-                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_current()
-                {
-                    PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)))
+                // } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                //     self.peek_current()
+                // {
+                //     let expr = PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)));
+                //     self.consume_token();
+                //     expr
                 } else {
                     let expr = self.parse_primary();
-                    // self.consume_token();
+                    self.consume_token();
                     expr
                 }
             }
@@ -472,27 +430,6 @@ impl Parser {
                 } else {
                     self.set_context(ParserContext::Unary);
                     self.parse_expression(Precedence::Difference)
-                }
-            }
-
-            Some(Token::Dot { .. }) => {
-                if self.is_tuple_index() {
-                    self.set_context(ParserContext::TupleIndex);
-                    self.consume_token();
-                    self.parse_expression(Precedence::TupleIndex)
-                } else if self.is_method_call() {
-                    self.set_context(ParserContext::MethodCall);
-                    self.consume_token();
-                    self.parse_expression(Precedence::MethodCall)
-                } else if self.is_field_access() {
-                    self.set_context(ParserContext::FieldAccess);
-                    self.consume_token();
-                    self.parse_expression(Precedence::FieldAccess)
-                } else {
-                    self.log_error(ParserErrorKind::InvalidTokenContext {
-                        token: TokenType::Dot,
-                    });
-                    Err(ErrorsEmitted)
                 }
             }
 
@@ -535,22 +472,36 @@ impl Parser {
             Some(Token::LBracket { .. }) => ArrayExpr::parse(self),
 
             Some(Token::Pipe { .. }) => {
-                // TODO: this may cause problems
-                if self.context == ParserContext::Closure {
-                    ClosureExpr::parse(self)
-                } else {
+                if self.is_closure_with_params() {
                     self.set_context(ParserContext::Closure);
-                    self.parse_expression(Precedence::BitwiseOr)
+                    ClosureExpr::parse(self)
+                } else if self.is_bitwise_or() {
+                    self.set_context(ParserContext::BitwiseOr);
+                    self.consume_token(); // Consume the pipe
+                    let left = self.parse_prefix()?;
+                    BinaryExpr::parse(self, left)
+                } else {
+                    self.log_error(ParserErrorKind::InvalidTokenContext {
+                        token: TokenType::Pipe,
+                    });
+                    Err(ErrorsEmitted)
                 }
             }
 
             Some(Token::DblPipe { .. }) => {
-                // TODO: this may cause problems
-                if self.context == ParserContext::Closure {
-                    ClosureExpr::parse(self)
-                } else {
+                if self.is_closure_without_params() {
                     self.set_context(ParserContext::Closure);
-                    self.parse_expression(Precedence::LogicalOr)
+                    ClosureExpr::parse(self)
+                } else if self.is_logical_or() {
+                    self.set_context(ParserContext::LogicalOr);
+                    self.consume_token(); // Consume the pipe
+                    let left = self.parse_prefix()?;
+                    BinaryExpr::parse(self, left)
+                } else {
+                    self.log_error(ParserErrorKind::InvalidTokenContext {
+                        token: TokenType::Pipe,
+                    });
+                    Err(ErrorsEmitted)
                 }
             }
 
@@ -584,6 +535,7 @@ impl Parser {
                     kw_break: Keyword::Break,
                 }))
             }
+
             Some(Token::Continue { name, .. }) => {
                 self.consume_token();
                 Ok(Expression::Continue(ContinueExpr {
@@ -617,10 +569,22 @@ impl Parser {
 
         match &self.peek_current() {
             Some(Token::Dot { .. }) => {
+                if self.is_tuple_index() {
+                    self.set_context(ParserContext::TupleIndex);
+                } else if self.is_method_call() {
+                    self.set_context(ParserContext::MethodCall);
+                } else if self.is_field_access() {
+                    self.set_context(ParserContext::FieldAccess);
+                } else {
+                    self.set_context(ParserContext::Default);
+                }
+
+                self.consume_token();
+
                 match self.context {
-                    ParserContext::TupleIndex => Some(TupleIndexExpr::parse),
-                    ParserContext::MethodCall => Some(MethodCallExpr::parse),
                     ParserContext::FieldAccess => Some(FieldAccessExpr::parse),
+                    ParserContext::MethodCall => Some(MethodCallExpr::parse),
+                    ParserContext::TupleIndex => Some(TupleIndexExpr::parse),
                     _ => None, // Default to no infix parser
                 }
             }
@@ -813,12 +777,7 @@ impl Parser {
 
     // Get the precedence of the next token
     fn peek_precedence(&self) -> Precedence {
-        println!("enter `peek_precedence()`");
-        println!("current token: `{:?}`", self.peek_current());
-
-        let precedence = self.get_precedence(&self.peek_ahead_by(1).unwrap_or(Token::EOF));
-
-        println!("next_precedence: `{:?}`\n", precedence.clone());
+        let precedence = self.get_precedence(&self.peek_current().unwrap_or(Token::EOF));
 
         precedence
     }
@@ -1281,6 +1240,34 @@ impl Parser {
             }
         } else {
             false
+        }
+    }
+
+    fn is_closure_with_params(&self) -> bool {
+        match (self.peek_current(), self.peek_ahead_by(1)) {
+            (Some(Token::Pipe { .. }), Some(Token::Identifier { .. })) => true,
+            _ => false,
+        }
+    }
+
+    fn is_bitwise_or(&self) -> bool {
+        match (self.peek_current(), self.peek_ahead_by(1)) {
+            (Some(Token::Pipe { .. }), Some(Token::Identifier { .. })) => false,
+            _ => true,
+        }
+    }
+
+    fn is_closure_without_params(&self) -> bool {
+        match (self.peek_current(), self.peek_ahead_by(1)) {
+            (Some(Token::DblPipe { .. }), Some(Token::Identifier { .. })) => true,
+            _ => false,
+        }
+    }
+
+    fn is_logical_or(&self) -> bool {
+        match (self.peek_current(), self.peek_ahead_by(1)) {
+            (Some(Token::DblPipe { .. }), Some(Token::Identifier { .. })) => false,
+            _ => true,
         }
     }
 }

@@ -23,6 +23,11 @@ impl BinaryExpr {
             parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
         );
 
+        let lhs = ValueExpr::try_from(left_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
+
         let operator_token = parser.peek_current().unwrap_or(Token::EOF);
 
         let binary_op = match operator_token.token_type() {
@@ -45,16 +50,11 @@ impl BinaryExpr {
             }
         }?;
 
-        parser.consume_token();
-
         let precedence = parser.get_precedence(&operator_token);
 
-        let right_expr = parser.parse_expression(precedence)?;
+        parser.consume_token();
 
-        let lhs = ValueExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let right_expr = parser.parse_expression(precedence)?;
 
         let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
             parser.log_error(e);
@@ -83,6 +83,11 @@ impl ComparisonExpr {
         parser: &mut Parser,
         left_expr: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
+        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
+
         let operator_token = parser.peek_current().unwrap_or(Token::EOF);
 
         let comparison_op = match operator_token.token_type() {
@@ -98,22 +103,16 @@ impl ComparisonExpr {
             }
         }?;
 
-        parser.consume_token();
-
         let precedence = parser.get_precedence(&operator_token);
 
-        let right_expr = parser.parse_expression(precedence)?;
+        parser.consume_token();
 
-        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let right_expr = parser.parse_expression(precedence)?;
 
         let rhs = AssigneeExpr::try_from(right_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
-
 
         let expr = ComparisonExpr {
             lhs,

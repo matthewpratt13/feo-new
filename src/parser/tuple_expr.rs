@@ -83,18 +83,14 @@ impl TupleExpr {
 }
 
 impl TupleIndexExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        operand: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
-        let operand = AssigneeExpr::try_from(operand).map_err(|e| {
+    pub(crate) fn parse(parser: &mut Parser, lhs: Expression) -> Result<Expression, ErrorsEmitted> {
+        let assignee_expr = AssigneeExpr::try_from(lhs).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        parser.consume_token();
-
         let index = if let Some(Token::UIntLiteral { value, .. }) = parser.peek_current() {
+            parser.consume_token();
             Ok(value)
         } else {
             parser.log_unexpected_str("unsigned integer");
@@ -102,7 +98,7 @@ impl TupleIndexExpr {
         }?;
 
         let expr = TupleIndexExpr {
-            operand: Box::new(operand),
+            operand: Box::new(assignee_expr),
             index,
         };
 
