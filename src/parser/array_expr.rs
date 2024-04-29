@@ -1,6 +1,6 @@
 use crate::{
     ast::{ArrayExpr, Delimiter, Expression},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
 
@@ -9,13 +9,12 @@ use super::{Parser, Precedence};
 impl ArrayExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let open_bracket = if let Some(Token::LBracket { .. }) = parser.peek_current() {
+            parser.consume_token();
             Ok(Delimiter::LBracket)
         } else {
             parser.log_unexpected_token(TokenType::LBracket);
             Err(ErrorsEmitted)
         }?;
-
-        parser.consume_token();
 
         let mut elements: Vec<Expression> = Vec::new();
 
@@ -37,7 +36,15 @@ impl ArrayExpr {
             }
         }
 
-        let close_bracket = parser.expect_delimiter(TokenType::RBracket)?;
+        let close_bracket = if let Some(Token::RBracket { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBracket)
+        } else {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RBracket,
+            });
+            Err(ErrorsEmitted)
+        }?;
 
         let expr = ArrayExpr {
             open_bracket,

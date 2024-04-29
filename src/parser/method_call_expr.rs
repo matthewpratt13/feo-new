@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, Expression, Identifier, MethodCallExpr},
+    ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
@@ -24,14 +24,21 @@ impl MethodCallExpr {
             });
             Err(ErrorsEmitted)
         }?;
-        
+
         parser.consume_token();
-        
+
         let open_paren = parser.expect_delimiter(TokenType::LParen)?;
 
         let args = MethodCallExpr::parse_arguments(parser)?;
 
-        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+        let close_paren = if let Some(Token::RParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RParen,
+            });
+            Err(ErrorsEmitted)
+        }?;
 
         let expr = MethodCallExpr {
             receiver: Box::new(receiver),

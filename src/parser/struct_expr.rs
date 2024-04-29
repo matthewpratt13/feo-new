@@ -91,7 +91,6 @@ impl StructExpr {
 
         Ok(Expression::Struct(expr))
     }
-
 }
 
 // TODO: test when issue regarding similarity between `TupleStructExpr` and `CallExpr` is resolved

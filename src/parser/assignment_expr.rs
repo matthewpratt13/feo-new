@@ -86,7 +86,6 @@ impl CompoundAssignmentExpr {
             ErrorsEmitted
         })?;
 
-
         let expr = CompoundAssignmentExpr {
             lhs,
             compound_assignment_op,

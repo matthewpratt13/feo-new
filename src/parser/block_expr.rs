@@ -10,88 +10,42 @@ impl BlockExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let mut attributes: Vec<InnerAttr> = Vec::new();
 
-        let mut delimiter_open = false;
-
-        println!("enter `BlockExpr::parser()`");
-        println!("current token: `{:?}`", parser.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
-        );
-
         while let Some(ia) = parser.get_inner_attr() {
             attributes.push(ia);
             parser.consume_token();
         }
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
-        delimiter_open = true;
-
-        println!("enter block");
-        println!("current token: `{:?}`", parser.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
-        );
-
         let mut statements: Vec<Statement> = Vec::new();
 
-        loop {
-            if let Some(Token::RBrace { .. }) = parser.peek_current() {
-                delimiter_open = false;
-                break;
-            }
-
-            let statement = match parser.parse_statement() {
-                Ok(s) => Ok(s),
-                Err(_) => {
-                    parser.log_unexpected_str("statement");
-                    Err(ErrorsEmitted)
-                }
-            }?;
-
+        while !matches!(
+            parser.peek_current(),
+            Some(Token::RBrace { .. } | Token::EOF)
+        ) {
+            let statement = parser.parse_statement()?;
             statements.push(statement);
 
-            parser.consume_token();
-
-            match parser.peek_current() {
-                Some(Token::RBrace { .. }) => {
-                    delimiter_open = false;
-                    break;
-                }
-                Some(Token::Semicolon { .. }) => {
-                    parser.consume_token();
-                    continue;
-                }
-                Some(_) => {
-                    parser.log_unexpected_str("`;` or `}`");
-                }
-                None => break,
+            if let Some(Token::Semicolon { .. }) = parser.peek_current() {
+                parser.consume_token(); // Consume the semicolon to separate expressions/statements
             }
         }
 
-        println!("statements: {:?}", statements);
-
-        println!("exit block");
-        println!("current token: `{:?}`", parser.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
-        );
-
-        if delimiter_open {
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
+        } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
                 delim: TokenType::RBrace,
             });
-        }
-
-        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+            Err(ErrorsEmitted)
+        }?;
 
         let expr = BlockExpr {
             attributes_opt: {

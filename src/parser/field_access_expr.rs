@@ -8,16 +8,15 @@ use super::Parser;
 
 impl FieldAccessExpr {
     pub(crate) fn parse(parser: &mut Parser, lhs: Expression) -> Result<Expression, ErrorsEmitted> {
+        let assignee_expr = AssigneeExpr::try_from(lhs).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
+
         let token = parser.peek_current();
 
         let expr = if let Some(Token::Identifier { name, .. }) = token {
             parser.consume_token();
-
-            let assignee_expr = AssigneeExpr::try_from(lhs).map_err(|e| {
-                parser.log_error(e);
-                ErrorsEmitted
-            })?;
-
             Ok(FieldAccessExpr {
                 object: Box::new(assignee_expr),
                 field: Identifier(name),

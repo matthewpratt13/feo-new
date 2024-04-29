@@ -10,7 +10,6 @@ impl SomeExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_some = parser.expect_keyword(TokenType::Some)?;
 
-
         if let Some(Token::LParen { .. }) = parser.peek_current() {
             parser.consume_token();
         } else {
