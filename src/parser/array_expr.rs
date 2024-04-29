@@ -8,45 +8,32 @@ use super::{Parser, Precedence};
 
 impl ArrayExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let open_bracket = if let Some(Token::LBracket { .. }) = parser.consume_token() {
+        let open_bracket = if let Some(Token::LBracket { .. }) = parser.peek_current() {
             Ok(Delimiter::LBracket)
         } else {
             parser.log_unexpected_token(TokenType::LBracket);
             Err(ErrorsEmitted)
         }?;
 
+        parser.consume_token();
+
         let mut elements: Vec<Expression> = Vec::new();
 
-        loop {
-            if let Some(Token::RBracket { .. }) = parser.peek_current() {
-                break;
-            }
-
-            let element = match parser.parse_expression(Precedence::Lowest) {
-                Ok(e) => Ok(e),
-                Err(_) => {
-                    parser.log_unexpected_str("array element");
-                    Err(ErrorsEmitted)
-                }
-            }?;
-
+        while !matches!(
+            parser.peek_current(),
+            Some(Token::RBracket { .. } | Token::EOF)
+        ) {
+            let element = parser.parse_expression(Precedence::Lowest)?;
             elements.push(element);
 
-            parser.consume_token();
-
-            match parser.peek_current() {
-                Some(Token::Comma { .. }) => {
-                    parser.consume_token();
-                    continue;
-                }
-
-                Some(Token::RBracket { .. }) => break,
-
-                Some(_) => {
-                    parser.log_unexpected_token(TokenType::Comma);
-                }
-
-                None => break,
+            if let Some(Token::Comma { .. }) = parser.peek_current() {
+                parser.consume_token();
+            } else if !matches!(
+                parser.peek_current(),
+                Some(Token::RBracket { .. } | Token::EOF)
+            ) {
+                parser.log_unexpected_str("`,` or `}`");
+                return Err(ErrorsEmitted);
             }
         }
 
