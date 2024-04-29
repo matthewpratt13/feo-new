@@ -18,7 +18,13 @@ impl CallExpr {
             ErrorsEmitted
         })?;
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen)?;
+        let open_paren = if let Some(Token::LParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token(TokenType::LParen);
+            Err(ErrorsEmitted)
+        }?;
 
         while !matches!(
             parser.peek_current(),

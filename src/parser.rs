@@ -463,6 +463,7 @@ impl Parser {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     TupleExpr::parse(self)
                 } else {
+                    self.consume_token();
                     self.parse_primary()
                 }
             }

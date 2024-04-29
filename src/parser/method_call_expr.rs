@@ -27,7 +27,13 @@ impl MethodCallExpr {
 
         parser.consume_token();
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen)?;
+        let open_paren = if let Some(Token::LParen { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token(TokenType::LParen);
+            Err(ErrorsEmitted)
+        }?;
 
         let args = MethodCallExpr::parse_arguments(parser)?;
 
