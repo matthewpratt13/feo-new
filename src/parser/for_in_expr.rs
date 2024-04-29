@@ -22,6 +22,7 @@ impl ForInExpr {
                     ErrorsEmitted
                 })
             }?;
+            
         let kw_in = parser.expect_keyword(TokenType::In)?;
 
         let iterable = parser.parse_expression(Precedence::Lowest)?;

@@ -35,9 +35,9 @@ pub struct ClosureParam {
 /// Struct representing a single arm in a match statement.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchArm {
-    pub case: Pattern,
+    pub pattern: Pattern,
     pub guard_opt: Option<(Keyword, Box<Expression>)>, // `if (..)`
-    pub logic: Box<Expression>,
+    pub body: Box<Expression>,
 }
 
 /// Struct representing a single field in a struct expression, with a name and value.
