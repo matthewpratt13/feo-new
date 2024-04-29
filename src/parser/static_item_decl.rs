@@ -1,7 +1,7 @@
 use crate::{
     ast::{Identifier, Keyword, OuterAttr, StaticItemDecl, Type, Visibility},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{item::ParseDeclaration, Parser, Precedence};
@@ -12,10 +12,7 @@ impl ParseDeclaration for StaticItemDecl {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<StaticItemDecl, ErrorsEmitted> {
-        let kw_static = parser.expect_keyword(Token::Static {
-            name: "static".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_static = parser.expect_keyword(TokenType::Static)?;
 
         let kw_mut_opt = if let Some(Token::Mut { .. }) = parser.peek_current() {
             parser.consume_token();
@@ -27,14 +24,11 @@ impl ParseDeclaration for StaticItemDecl {
         let item_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_token("identifier".to_string());
+            parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
-        let _ = parser.expect_separator(Token::Colon {
-            punc: ':',
-            span: parser.stream.span(),
-        })?;
+        parser.expect_separator(TokenType::Colon)?;
 
         let item_type = Type::parse(parser)?;
 
@@ -45,10 +39,9 @@ impl ParseDeclaration for StaticItemDecl {
             None
         };
 
-        let _ = parser.expect_separator(Token::Semicolon {
-            punc: ';',
-            span: parser.stream.span(),
-        })?;
+        parser.consume_token();
+
+        parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(StaticItemDecl {
             attributes_opt: {

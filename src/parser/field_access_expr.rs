@@ -10,7 +10,7 @@ impl FieldAccessExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         object: Expression,
-    ) -> Result<FieldAccessExpr, ErrorsEmitted> {
+    ) -> Result<Expression, ErrorsEmitted> {
         let object = AssigneeExpr::try_from(object).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -18,7 +18,7 @@ impl FieldAccessExpr {
 
         let token = parser.consume_token();
 
-        if let Some(Token::Identifier { name, .. }) = token {
+        let expr = if let Some(Token::Identifier { name, .. }) = token {
             Ok(FieldAccessExpr {
                 object: Box::new(object),
                 field: Identifier(name),
@@ -29,7 +29,9 @@ impl FieldAccessExpr {
                 found: token,
             });
             Err(ErrorsEmitted)
-        }
+        }?;
+
+        Ok(Expression::FieldAccess(expr))
     }
 }
 

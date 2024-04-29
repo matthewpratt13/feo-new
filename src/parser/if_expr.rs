@@ -1,26 +1,23 @@
 use crate::{
-    ast::{BlockExpr, GroupedExpr, IfExpr, Keyword},
+    ast::{BlockExpr, Expression, GroupedExpr, IfExpr, Keyword},
     error::{ErrorsEmitted, ParserErrorKind},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::Parser;
 
 impl IfExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<IfExpr, ErrorsEmitted> {
-        let mut else_if_blocks: Vec<(Keyword, Box<IfExpr>)> = Vec::new();
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let mut else_if_blocks: Vec<(Keyword, Box<Expression>)> = Vec::new();
 
-        let mut trailing_else_block_opt = None::<(Keyword, BlockExpr)>;
+        let mut trailing_else_block_opt = None::<(Keyword, Box<Expression>)>;
 
-        let kw_if = parser.expect_keyword(Token::If {
-            name: "if".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_if = parser.expect_keyword(TokenType::If)?;
 
         if let Some(Token::LParen { .. }) = parser.peek_current() {
             parser.consume_token();
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
         };
 
         let condition = Box::new(GroupedExpr::parse(parser)?);
@@ -48,13 +45,13 @@ impl IfExpr {
             }
 
             if let Some(Token::LBrace { .. }) = parser.peek_current() {
-                let block = BlockExpr::parse(parser)?;
+                let block = Box::new(BlockExpr::parse(parser)?);
                 trailing_else_block_opt = Some((Keyword::Else, block));
                 break;
             }
         }
 
-        Ok(IfExpr {
+        let expr = IfExpr {
             kw_if,
             condition,
             if_block,
@@ -66,7 +63,9 @@ impl IfExpr {
                 }
             },
             trailing_else_block_opt,
-        })
+        };
+
+        Ok(Expression::If(expr))
     }
 }
 

@@ -1,9 +1,10 @@
 use crate::{
     ast::{
-        Delimiter, Identifier, OuterAttr, StructDef, StructDefField, TupleStructDef, TupleStructDefField, Type, Visibility
+        Delimiter, Identifier, OuterAttr, StructDef, StructDefField, TupleStructDef,
+        TupleStructDefField, Type, Visibility,
     },
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{item::ParseDefinition, Parser};
@@ -14,10 +15,7 @@ impl ParseDefinition for StructDef {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<StructDef, ErrorsEmitted> {
-        let kw_struct = parser.expect_keyword(Token::Struct {
-            name: "struct".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_struct = parser.expect_keyword(TokenType::Struct)?;
 
         let mut fields: Vec<StructDefField> = Vec::new();
 
@@ -26,14 +24,14 @@ impl ParseDefinition for StructDef {
         let struct_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_token("identifier".to_string());
+            parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
@@ -56,10 +54,7 @@ impl ParseDefinition for StructDef {
             if let Some(Token::Identifier { name, .. }) = token {
                 let field_name = Identifier(name);
 
-                let _ = parser.expect_separator(Token::Colon {
-                    punc: ':',
-                    span: parser.stream.span(),
-                })?;
+                let _ = parser.expect_separator(TokenType::Colon)?;
 
                 let field_type = Box::new(Type::parse(parser)?);
 
@@ -85,18 +80,20 @@ impl ParseDefinition for StructDef {
                     continue;
                 }
                 Some(Token::RBrace { .. }) => break,
-                Some(_) => parser.log_unexpected_token("`,` or `}`".to_string()),
+                Some(_) => parser.log_unexpected_str("`,` or `}`"),
                 None => break,
             }
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+
+        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RBrace)
+        // } else {
+        //     parser.log_missing_delimiter('}');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(StructDef {
             attributes_opt: {
@@ -128,10 +125,7 @@ impl ParseDefinition for TupleStructDef {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<TupleStructDef, ErrorsEmitted> {
-        let kw_struct = parser.expect_keyword(Token::Struct {
-            name: "struct".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_struct = parser.expect_keyword(TokenType::Struct)?;
 
         let mut fields: Vec<TupleStructDefField> = Vec::new();
 
@@ -140,14 +134,15 @@ impl ParseDefinition for TupleStructDef {
         let struct_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_token("identifier".to_string());
+            parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
+
             Err(ErrorsEmitted)
         }?;
 
@@ -165,7 +160,6 @@ impl ParseDefinition for TupleStructDef {
 
             let field_visibility = parser.get_visibility()?;
 
-
             let field_type = Box::new(Type::parse(parser)?);
 
             let field = TupleStructDefField {
@@ -181,23 +175,22 @@ impl ParseDefinition for TupleStructDef {
                     continue;
                 }
                 Some(Token::RParen { .. }) => break,
-                Some(_) => parser.log_unexpected_token("`,` or `)`".to_string()),
+                Some(_) => parser.log_unexpected_str("`,` or `)`"),
                 None => break,
             }
         }
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted)
-        }?;
+        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 
-        let _ = parser.expect_separator(Token::Semicolon {
-            punc: ';',
-            span: parser.stream.span(),
-        })?;
+        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RParen)
+        // } else {
+        //     parser.log_missing_delimiter(')');
+        //     Err(ErrorsEmitted)
+        // }?;
+
+        parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(TupleStructDef {
             attributes_opt: {

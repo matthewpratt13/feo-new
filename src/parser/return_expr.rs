@@ -1,25 +1,29 @@
-use crate::{ast::{Expression, ReturnExpr}, error::ErrorsEmitted, token::Token};
+use crate::{
+    ast::{Expression, ReturnExpr},
+    error::ErrorsEmitted,
+    token::TokenType,
+};
 
 use super::{Parser, Precedence};
 
 impl ReturnExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<ReturnExpr, ErrorsEmitted> {
-        let kw_return = parser.expect_keyword(Token::Return {
-            name: "return".to_string(),
-            span: parser.stream.span(),
-        })?;
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let kw_return = parser.expect_keyword(TokenType::Return)?;
 
-        let expression_opt: Option<Box<Expression>> =
-            if let Some(t) = parser.peek_current() {
-                Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
-            } else {
-                None
-            };
+        let expression_opt: Option<Box<Expression>> = if let Some(t) = parser.peek_current() {
+            Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
+        } else {
+            None
+        };
 
-        Ok(ReturnExpr {
+        parser.consume_token();
+
+        let expr = ReturnExpr {
             kw_return,
             expression_opt,
-        })
+        };
+
+        Ok(Expression::Return(expr))
     }
 }
 
@@ -29,7 +33,7 @@ mod tests {
 
     #[test]
     fn parse_return_expr() -> Result<(), ()> {
-        let input = r#"return Object { foo: "bar", baz: x };"#;
+        let input = r#"return foo;"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

@@ -1,6 +1,6 @@
 use std::{error::Error, fmt, sync::Arc};
 
-use crate::token::Token;
+use crate::token::{Token, TokenType};
 
 /// Enum representing the different types of lexer (scanner) errors.
 #[derive(Default, Debug, Clone, PartialEq)]
@@ -141,7 +141,11 @@ pub enum ParserErrorKind {
     },
 
     MissingDelimiter {
-        delim: char,
+        delim: TokenType,
+    },
+
+    InvalidTokenContext {
+        token: TokenType,
     },
 
     TypeConversionError {
@@ -161,7 +165,6 @@ impl fmt::Display for ParserErrorKind {
                 "unexpected token: expected {}, found `{:#?}`",
                 expected, found
             ),
-
             ParserErrorKind::UnexpectedEndOfInput => {
                 writeln!(f, "parsing error: unexpected end of input")
             }
@@ -171,12 +174,17 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::MissingDelimiter { delim } => {
                 writeln!(f, "missing delimiter: expected `{delim}`, found none")
             }
-            ParserErrorKind::UnknownError => writeln!(f, "unknown parser error"),
+
+            ParserErrorKind::InvalidTokenContext { token } => {
+                writeln!(f, "syntax error: invalid token context – `{token}`")
+            }
 
             ParserErrorKind::TypeConversionError { type_a, type_b } => writeln!(
                 f,
                 "conversion error: unable to convert {type_a} into {type_b}"
             ),
+
+            ParserErrorKind::UnknownError => writeln!(f, "unknown parser error"),
         }
     }
 }
@@ -204,11 +212,7 @@ where
         let line_count = lines.len();
         let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
 
-        let start_pos = if pos > 80 {
-            pos - 80
-        } else {
-            0
-        };
+        let start_pos = if pos > 80 { pos - 80 } else { 0 };
 
         Self {
             error_kind,

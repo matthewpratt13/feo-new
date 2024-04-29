@@ -4,17 +4,20 @@ use crate::{
         TupleStructExpr,
     },
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
 
 impl StructExpr {
-    pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<StructExpr, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        path: Expression,
+    ) -> Result<Expression, ErrorsEmitted> {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
@@ -36,15 +39,12 @@ impl StructExpr {
                 Some(Token::Identifier { name, .. }) => Ok(name),
                 Some(Token::RBrace { .. }) => break,
                 _ => {
-                    parser.log_missing_delimiter('}');
+                    parser.expect_delimiter(TokenType::RBrace)?;
                     Err(ErrorsEmitted)
                 }
             }?;
 
-            let _ = parser.expect_separator(Token::Colon {
-                punc: ':',
-                span: parser.stream.span(),
-            });
+            let _ = parser.expect_separator(TokenType::Colon);
 
             let value = parser.parse_expression(Precedence::Lowest)?;
 
@@ -62,6 +62,8 @@ impl StructExpr {
 
             fields.push(field);
 
+            parser.consume_token();
+
             match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     parser.consume_token();
@@ -72,16 +74,10 @@ impl StructExpr {
             }
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
-        Ok(StructExpr {
-            path,
+        let expr = StructExpr {
+            path: Box::new(path),
             open_brace,
             fields_opt: {
                 if fields.is_empty() {
@@ -91,20 +87,20 @@ impl StructExpr {
                 }
             },
             close_brace,
-        })
+        };
+
+        Ok(Expression::Struct(expr))
     }
+
 }
 
 // TODO: test when issue regarding similarity between `TupleStructExpr` and `CallExpr` is resolved
 impl TupleStructExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        path: PathExpr,
-    ) -> Result<TupleStructExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<Expression, ErrorsEmitted> {
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
@@ -128,15 +124,9 @@ impl TupleStructExpr {
             }
         }
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted)
-        }?;
+        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 
-        Ok(TupleStructExpr {
+        let expr = TupleStructExpr {
             path,
             open_paren,
             elements_opt: {
@@ -147,7 +137,9 @@ impl TupleStructExpr {
                 }
             },
             close_paren,
-        })
+        };
+
+        Ok(Expression::TupleStruct(expr))
     }
 }
 

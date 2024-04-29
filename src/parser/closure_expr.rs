@@ -7,7 +7,7 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl ClosureExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<ClosureExpr, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let token = parser.consume_token();
 
         let params = match token {
@@ -25,7 +25,7 @@ impl ClosureExpr {
                             parser.get_identifier_patt()
                         }
                         _ => {
-                            parser.log_unexpected_token("identifier".to_string());
+                            parser.log_unexpected_str("identifier");
                             Err(ErrorsEmitted)
                         }
                     }?;
@@ -52,29 +52,31 @@ impl ClosureExpr {
             }
             Some(Token::DblPipe { .. }) => Ok(ClosureParams::None),
             _ => {
-                parser.log_unexpected_token("`|` or `||`".to_string());
+                parser.log_unexpected_str("`|` or `||`");
                 Err(ErrorsEmitted)
             }
         }?;
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
             parser.consume_token();
-            Some(Type::parse(parser)?)
+            Some(Box::new(Type::parse(parser)?))
         } else {
             None
         };
 
         let expression = if return_type_opt.is_some() {
-            Expression::Block(BlockExpr::parse(parser)?)
+            BlockExpr::parse(parser)?
         } else {
             parser.parse_expression(Precedence::Lowest)?
         };
 
-        Ok(ClosureExpr {
+        let expr = ClosureExpr {
             params,
             return_type_opt,
             expression: Box::new(expression),
-        })
+        };
+
+        Ok(Expression::Closure(expr))
     }
 }
 

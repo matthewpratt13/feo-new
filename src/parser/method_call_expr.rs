@@ -1,7 +1,7 @@
 use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr},
     error::{ErrorsEmitted, ParserErrorKind},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
@@ -10,7 +10,7 @@ impl MethodCallExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         receiver: Expression,
-    ) -> Result<MethodCallExpr, ErrorsEmitted> {
+    ) -> Result<Expression, ErrorsEmitted> {
         let mut args: Vec<Expression> = Vec::new();
 
         let receiver = AssigneeExpr::try_from(receiver).map_err(|e| {
@@ -18,9 +18,12 @@ impl MethodCallExpr {
             ErrorsEmitted
         })?;
 
-        let token = parser.consume_token();
+        parser.consume_token();
+
+        let token = parser.peek_current();
 
         let method_name = if let Some(Token::Identifier { name, .. }) = token {
+            parser.consume_token();
             Ok(Identifier(name))
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
@@ -33,7 +36,7 @@ impl MethodCallExpr {
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
@@ -45,37 +48,31 @@ impl MethodCallExpr {
             let arg_expr = match parser.parse_expression(Precedence::Lowest) {
                 Ok(e) => Ok(e),
                 Err(_) => {
-                    parser.log_unexpected_token("method argument".to_string());
+                    parser.log_unexpected_str("method argument");
                     Err(ErrorsEmitted)
                 }
             }?;
 
             args.push(arg_expr);
 
-            let curr_token = parser.peek_current();
+            parser.consume_token();
 
-            match curr_token {
+            match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
                     parser.consume_token();
                     continue;
                 }
                 Some(Token::RParen { .. }) => break,
                 Some(_) => {
-                    parser.log_unexpected_token("`,` or `)`".to_string());
+                    parser.log_unexpected_str("`,` or `)`");
                 }
                 None => break,
             }
         }
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted)
-        }?;
+        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 
-        Ok(MethodCallExpr {
+        let expr = MethodCallExpr {
             receiver: Box::new(receiver),
             method_name,
             open_paren,
@@ -87,7 +84,9 @@ impl MethodCallExpr {
                 }
             },
             close_paren,
-        })
+        };
+
+        Ok(Expression::MethodCall(expr))
     }
 }
 

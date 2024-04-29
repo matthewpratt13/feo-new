@@ -1,32 +1,34 @@
-use crate::{ast::SomeExpr, error::ErrorsEmitted, token::Token};
+use crate::{
+    ast::{Expression, SomeExpr},
+    error::ErrorsEmitted,
+    token::{Token, TokenType},
+};
 
 use super::{Parser, Precedence};
 
 impl SomeExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<SomeExpr, ErrorsEmitted> {
-        let kw_some = parser.expect_keyword(Token::Some {
-            name: "Some".to_string(),
-            span: parser.stream.span(),
-        })?;
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let kw_some = parser.expect_keyword(TokenType::Some)?;
+
 
         if let Some(Token::LParen { .. }) = parser.peek_current() {
             parser.consume_token();
         } else {
-            parser.log_unexpected_token("`(`".to_string());
+            parser.log_unexpected_token(TokenType::LParen);
         }
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-        } else {
-            parser.log_missing_delimiter(')');
-        }
+        parser.consume_token();
 
-        Ok(SomeExpr {
+        parser.expect_delimiter(TokenType::RBrace)?;
+
+        let expr = SomeExpr {
             kw_some,
             expression: Box::new(expression),
-        })
+        };
+
+        Ok(Expression::SomeExpr(expr))
     }
 }
 
@@ -36,7 +38,7 @@ mod tests {
 
     #[test]
     fn parse_some_expr() -> Result<(), ()> {
-        let input = r#"Some(SomeStruct { foo: "bar", baz: -10 });"#;
+        let input = r#"Some(foo);"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

@@ -1,7 +1,7 @@
 use crate::{
     ast::{AssigneeExpr, CallExpr, Delimiter, Expression},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
@@ -10,13 +10,15 @@ impl CallExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         callee: Expression,
-    ) -> Result<CallExpr, ErrorsEmitted> {
+    ) -> Result<Expression, ErrorsEmitted> {
         let mut args: Vec<Expression> = Vec::new();
 
         let callee = AssigneeExpr::try_from(callee).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
+
+        parser.consume_token();
 
         loop {
             if let Some(Token::RParen { .. }) = parser.peek_current() {
@@ -26,12 +28,14 @@ impl CallExpr {
             let arg_expr = match parser.parse_expression(Precedence::Lowest) {
                 Ok(e) => Ok(e),
                 Err(_) => {
-                    parser.log_unexpected_token("function argument".to_string());
+                    parser.log_unexpected_str("function argument");
                     Err(ErrorsEmitted)
                 }
             }?;
 
             args.push(arg_expr);
+
+            parser.consume_token();
 
             match parser.peek_current() {
                 Some(Token::Comma { .. }) => {
@@ -40,21 +44,15 @@ impl CallExpr {
                 }
                 Some(Token::RParen { .. }) => break,
                 Some(_) => {
-                    parser.log_unexpected_token("`,` or `)`".to_string());
+                    parser.log_unexpected_str("`,` or `)`");
                 }
                 None => break,
             }
         }
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_missing_delimiter(')');
-            Err(ErrorsEmitted)
-        }?;
+        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 
-        Ok(CallExpr {
+        let expr = CallExpr {
             callee,
             open_paren: Delimiter::LParen,
             args_opt: {
@@ -65,7 +63,9 @@ impl CallExpr {
                 }
             },
             close_paren,
-        })
+        };
+
+        Ok(Expression::Call(expr))
     }
 }
 

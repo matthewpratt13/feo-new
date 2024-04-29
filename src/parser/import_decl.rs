@@ -1,9 +1,10 @@
 use crate::{
     ast::{
-        Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathExpr, PathPrefix, PathSegment, PathSubset, Separator, Visibility
+        Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathExpr, PathPrefix,
+        PathSegment, PathSubset, Separator, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{item::ParseDeclaration, Parser};
@@ -14,17 +15,11 @@ impl ParseDeclaration for ImportDecl {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<ImportDecl, ErrorsEmitted> {
-        let kw_import = parser.expect_keyword(Token::Import {
-            name: "import".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_import = parser.expect_keyword(TokenType::Import)?;
 
         let tree = ImportTree::parse(parser)?;
 
-        let _ = parser.expect_separator(Token::Semicolon {
-            punc: ';',
-            span: parser.stream.span(),
-        })?;
+        parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(ImportDecl {
             attributes_opt: {
@@ -70,7 +65,7 @@ impl ImportTree {
                 parser.consume_token();
                 Ok(Identifier(name))
             } else {
-                parser.log_unexpected_token("identifier".to_string());
+                parser.log_unexpected_str("identifier");
                 Err(ErrorsEmitted)
             }?;
 
@@ -112,10 +107,6 @@ impl PathSegment {
             None
         };
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted);
-        }
-
         Ok(PathSegment { root, subset_opt })
     }
 }
@@ -127,7 +118,7 @@ impl PathSubset {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
         loop {
@@ -152,22 +143,24 @@ impl PathSubset {
                     found: Some(t),
                 }),
                 None => {
-                    parser.log_error(ParserErrorKind::MissingDelimiter { delim: '}' });
+                    parser.expect_delimiter(TokenType::RBrace)?;
                 }
             }
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
-        if !parser.errors().is_empty() {
-            return Err(ErrorsEmitted);
-        }
+        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RBrace)
+        // } else {
+        //     parser.log_missing_delimiter('}');
+        //     Err(ErrorsEmitted)
+        // }?;
+
+        // if !parser.errors().is_empty() {
+        //     return Err(ErrorsEmitted);
+        // }
 
         Ok(PathSubset {
             open_brace,

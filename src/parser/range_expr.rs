@@ -1,74 +1,153 @@
 use crate::{
     ast::{Expression, Literal, RangeExpr, RangeOp},
     error::ErrorsEmitted,
+    token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::Parser;
 
 impl RangeExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
-        from: Expression,
-        op: RangeOp,
-    ) -> Result<RangeExpr, ErrorsEmitted> {
-        let from = match from.clone() {
+        left_expr: Expression,
+    ) -> Result<Expression, ErrorsEmitted> {
+        let from = match left_expr.clone() {
             Expression::Literal(l) => match l {
-                Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(from),
+                Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(left_expr),
                 _ => {
-                    parser.log_unexpected_token("numeric literal".to_string());
+                    parser.log_unexpected_str("numeric literal");
                     Err(ErrorsEmitted)
                 }
             },
             Expression::Path(_) => {
-                parser.log_unexpected_token("path expression".to_string());
+                parser.log_unexpected_str("path expression");
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("numeric literal or path expression".to_string());
+                parser.log_unexpected_str("numeric literal or path expression");
                 Err(ErrorsEmitted)
             }
         }?;
 
-        let expression = parser.parse_expression(Precedence::Range)?;
+        let operator_token = parser.peek_current().unwrap_or(Token::EOF);
+
+        let range_op = match operator_token.token_type() {
+            TokenType::DblDot => Ok(RangeOp::RangeExclusive),
+            TokenType::DotDotEquals => Ok(RangeOp::RangeInclusive),
+            _ => {
+                parser.log_unexpected_str("range operator");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        parser.consume_token();
+
+        let precedence = parser.get_precedence(&operator_token);
+
+        let expression = parser.parse_expression(precedence)?;
 
         let to = match expression.clone() {
             Expression::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
                 _ => {
-                    parser.log_unexpected_token("numeric literal".to_string());
+                    parser.log_unexpected_str("numeric literal");
                     Err(ErrorsEmitted)
                 }
             },
-            Expression::Path(_) => {
-                parser.log_unexpected_token("path expression".to_string());
-                Err(ErrorsEmitted)
-            }
+
+            Expression::Path(_) => Ok(expression),
+
             _ => {
-                parser.log_unexpected_token("numeric literal or path expression".to_string());
+                parser.log_unexpected_str("numeric literal or path expression");
                 Err(ErrorsEmitted)
             }
         };
 
-        if to.is_ok() {
-            Ok(RangeExpr {
+        let expr = if to.is_ok() {
+            RangeExpr {
                 from_opt: Some(Box::new(from)),
-                op,
+                range_op,
                 to_opt: Some(Box::new(to?)),
-            })
+            }
         } else {
-            Ok(RangeExpr {
+            RangeExpr {
                 from_opt: Some(Box::new(from)),
-                op: op.clone(),
+                range_op: range_op.clone(),
                 to_opt: {
-                    if op == RangeOp::RangeInclusive {
-                        parser.log_unexpected_token("`..`".to_string());
+                    if range_op == RangeOp::RangeInclusive {
+                        parser.log_unexpected_token(TokenType::DblDot);
                         return Err(ErrorsEmitted);
                     } else {
                         None
                     }
                 },
-            })
+            }
+        };
+
+        Ok(Expression::Range(expr))
+    }
+
+    pub(crate) fn parse_prefix(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let operator_token = parser.peek_current().unwrap_or(Token::EOF);
+
+        let range_op = match operator_token {
+            Token::DblDot { .. } => Ok(RangeOp::RangeExclusive),
+            Token::DotDotEquals { .. } => Ok(RangeOp::RangeInclusive),
+            _ => {
+                parser.log_unexpected_str("range operator");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        parser.consume_token();
+
+        if parser.peek_current().is_none() {
+            let expr = RangeExpr {
+                from_opt: None,
+                range_op: range_op.clone(),
+                to_opt: {
+                    if range_op == RangeOp::RangeInclusive {
+                        parser.log_unexpected_token(TokenType::DblDot);
+                        return Err(ErrorsEmitted);
+                    } else {
+                        None
+                    }
+                },
+            };
+
+            return Ok(Expression::Range(expr));
         }
+
+        let precedence = parser.get_precedence(&operator_token);
+
+        let expression = parser.parse_expression(precedence)?;
+
+        let to = match expression.clone() {
+            Expression::Literal(l) => match l {
+                Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
+                _ => {
+                    parser.log_unexpected_str("numeric literal");
+                    Err(ErrorsEmitted)
+                }
+            },
+
+            Expression::Path(_) => Ok(expression),
+
+            _ => {
+                parser.log_unexpected_str("numeric literal or path expression");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        parser.consume_token();
+
+        let expr = RangeExpr {
+            from_opt: None,
+            range_op,
+            to_opt: Some(Box::new(to)),
+        };
+
+        Ok(Expression::Range(expr))
     }
 }
 

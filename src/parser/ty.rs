@@ -1,7 +1,7 @@
 use crate::{
     ast::{FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType, Type},
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::Token,
+    error::ErrorsEmitted,
+    token::{Token, TokenType},
 };
 
 use super::Parser;
@@ -9,8 +9,13 @@ use super::Parser;
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
-        println!("ENTER `get_type()`");
-        println!("CURRENT TOKEN: {:?}", parser.peek_current());
+        println!("enter `Type::parse()`");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
+
         let token = parser.consume_token();
 
         match token {
@@ -63,12 +68,9 @@ impl Type {
                                 continue;
                             }
                             Some(Token::RParen { .. }) => break,
-                            Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                                expected: "`,` or `)`".to_string(),
-                                found: Some(t),
-                            }),
+                            Some(t) => parser.log_unexpected_str("`,` or `)`"),
                             None => {
-                                parser.log_missing_delimiter(')');
+                                parser.expect_delimiter(TokenType::RParen)?;
                             }
                         }
                     }
@@ -76,7 +78,7 @@ impl Type {
                     if let Some(Token::RParen { .. }) = parser.peek_current() {
                         parser.consume_token();
                     } else {
-                        parser.log_missing_delimiter(')');
+                        parser.expect_delimiter(TokenType::RParen)?;
                     }
 
                     Ok(Type::Tuple(types))
@@ -88,21 +90,21 @@ impl Type {
                 if let Some(Token::Semicolon { .. }) = parser.peek_current() {
                     parser.consume_token();
                 } else {
-                    parser.log_unexpected_token("`;`".to_string());
+                    parser.log_unexpected_token(TokenType::Semicolon);
                 }
 
                 let num_elements =
                     if let Some(Token::UIntLiteral { value, .. }) = parser.consume_token() {
                         Ok(value)
                     } else {
-                        parser.log_unexpected_token("unsigned integer".to_string());
+                        parser.log_unexpected_str("unsigned integer");
                         Err(ErrorsEmitted)
                     }?;
 
                 if let Some(Token::RBracket { .. }) = parser.peek_current() {
                     parser.consume_token();
                 } else {
-                    parser.log_missing_delimiter(']');
+                    parser.expect_delimiter(TokenType::RBracket)?;
                 }
 
                 Ok(Type::Array {
@@ -116,20 +118,20 @@ impl Type {
                 let function_name = if let Some(Token::Identifier { name, .. }) = token {
                     Ok(Identifier(name))
                 } else {
-                    parser.log_unexpected_token("identifier".to_string());
+                    parser.log_unexpected_str("identifier");
                     Err(ErrorsEmitted)
                 }?;
 
                 if let Some(Token::LBrace { .. }) = parser.peek_current() {
                     parser.consume_token();
                 } else {
-                    parser.log_unexpected_token("`{`".to_string());
+                    parser.log_unexpected_token(TokenType::LBrace);
                 };
 
                 if let Some(Token::LParen { .. }) = parser.peek_current() {
                     parser.consume_token();
                 } else {
-                    parser.log_unexpected_token("`(`".to_string());
+                    parser.log_unexpected_token(TokenType::LParen);
                 }
 
                 // `&parser` and `&mut parser` can only occur as the first parameter in a method
@@ -160,9 +162,9 @@ impl Type {
                             continue;
                         }
                         Some(Token::RParen { .. }) => break,
-                        Some(t) => parser.log_unexpected_token("`,` or `)`".to_string()),
+                        Some(t) => parser.log_unexpected_str("`,` or `)`"),
                         None => {
-                            parser.log_missing_delimiter(')');
+                            parser.expect_delimiter(TokenType::RParen)?;
                         }
                     }
                 }
@@ -170,7 +172,7 @@ impl Type {
                 if let Some(Token::RParen { .. }) = parser.peek_current() {
                     parser.consume_token();
                 } else {
-                    parser.log_missing_delimiter(')');
+                    parser.expect_delimiter(TokenType::RParen)?;
                 }
 
                 let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
@@ -198,40 +200,25 @@ impl Type {
             }
 
             Some(Token::VecType { .. }) => {
-                let _ = parser.expect_separator(Token::LessThan {
-                    punc: '<',
-                    span: parser.stream.span(),
-                })?;
+                parser.expect_separator(TokenType::LessThan)?;
 
                 let ty = Type::parse(parser)?;
 
-                let _ = parser.expect_separator(Token::GreaterThan {
-                    punc: '>',
-                    span: parser.stream.span(),
-                })?;
+                parser.expect_separator(TokenType::GreaterThan)?;
 
                 Ok(Type::Vec(Box::new(ty)))
             }
 
             Some(Token::MappingType { .. }) => {
-                let _ = parser.expect_separator(Token::LessThan {
-                    punc: '<',
-                    span: parser.stream.span(),
-                })?;
+                parser.expect_separator(TokenType::LessThan)?;
 
                 let key_type = Box::new(Type::parse(parser)?);
 
-                let _ = parser.expect_separator(Token::Comma {
-                    punc: '.',
-                    span: parser.stream.span(),
-                })?;
+                parser.expect_separator(TokenType::Comma)?;
 
                 let value_type = Box::new(Type::parse(parser)?);
 
-                let _ = parser.expect_separator(Token::GreaterThan {
-                    punc: '>',
-                    span: parser.stream.span(),
-                })?;
+                parser.expect_separator(TokenType::GreaterThan)?;
 
                 Ok(Type::Mapping {
                     key_type,
@@ -240,40 +227,25 @@ impl Type {
             }
 
             Some(Token::OptionType { .. }) => {
-                let _ = parser.expect_separator(Token::LessThan {
-                    punc: '<',
-                    span: parser.stream.span(),
-                })?;
+                parser.expect_separator(TokenType::LessThan)?;
 
                 let ty = Type::parse(parser)?;
 
-                let _ = parser.expect_separator(Token::GreaterThan {
-                    punc: '>',
-                    span: parser.stream.span(),
-                })?;
+                parser.expect_separator(TokenType::GreaterThan)?;
 
                 Ok(Type::Option(Box::new(ty)))
             }
 
             Some(Token::ResultType { .. }) => {
-                let _ = parser.expect_separator(Token::LessThan {
-                    punc: '<',
-                    span: parser.stream.span(),
-                })?;
+                parser.expect_separator(TokenType::LessThan)?;
 
                 let ok = Box::new(Type::parse(parser)?);
 
-                let _ = parser.expect_separator(Token::Comma {
-                    punc: '.',
-                    span: parser.stream.span(),
-                })?;
+                parser.expect_separator(TokenType::Comma)?;
 
                 let err = Box::new(Type::parse(parser)?);
 
-                let _ = parser.expect_separator(Token::GreaterThan {
-                    punc: '>',
-                    span: parser.stream.span(),
-                })?;
+                parser.expect_separator(TokenType::GreaterThan)?;
 
                 Ok(Type::Result { ok, err })
             }
@@ -304,10 +276,7 @@ impl Type {
             }
 
             _ => {
-                parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "type annotation".to_string(),
-                    found: token,
-                });
+                parser.log_unexpected_str("type annotation");
                 Err(ErrorsEmitted)
             }
         }

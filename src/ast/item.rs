@@ -2,7 +2,8 @@
 /// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 use super::{
-    BlockExpr, Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathExpr, Pattern, Separator, Type, UnaryOp, ValueExpr
+    Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, Pattern, ReferenceOp,
+    Separator, Type, ValueExpr,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -81,7 +82,7 @@ pub struct ImportTree {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathSegment {
-    pub root: PathExpr,
+    pub root: Expression,
     pub subset_opt: Option<PathSubset>,
 }
 
@@ -102,7 +103,7 @@ pub struct PubPackageVis {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SelfParam {
-    pub prefix_opt: Option<UnaryOp>,
+    pub prefix_opt: Option<ReferenceOp>,
     pub kw_self: Keyword,
 }
 
@@ -164,7 +165,7 @@ pub struct FunctionItem {
     pub params_opt: Option<Vec<FunctionOrMethodParam>>,
     pub close_paren: Delimiter,
     pub return_type_opt: Option<Box<Type>>,
-    pub block_opt: Option<BlockExpr>,
+    pub block_opt: Option<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -246,7 +247,7 @@ pub struct TraitDef {
 pub struct TraitImplDef {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub kw_impl: Keyword,
-    pub implemented_trait_path: PathExpr,
+    pub implemented_trait_path: Expression,
     pub kw_for: Keyword,
     pub implementing_type: Type,
     pub open_brace: Delimiter,

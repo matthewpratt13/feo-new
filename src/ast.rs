@@ -126,12 +126,18 @@ pub enum Delimiter {
 /// Enum representing the different unary operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
-    Negate,       // `-`
-    Not,          // `!`
-    Reference,    // `&`
-    MutReference, // `&mut`
-    Dereference,  // `*`
+    Negate, // `-`
+    Not,    // `!`
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ReferenceOp {
+    Borrow,        // `&`
+    MutableBorrow, // `&mut`
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DereferenceOp;
 
 /// Enum representing the different binary operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
@@ -203,6 +209,8 @@ pub enum Separator {
     RightAngledBracket,
     Pipe,
     DblPipe,
+    DblDot,
+    DotDotEquals,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -221,7 +229,7 @@ pub enum Expression {
     Index(IndexExpr),
     TupleIndex(TupleIndexExpr),
     Unwrap(UnwrapExpr),
-    Negation(NegationExpr),
+    Unary(UnaryExpr),
     Borrow(BorrowExpr),
     Dereference(DereferenceExpr),
     TypeCast(TypeCastExpr),
@@ -261,7 +269,7 @@ pub enum ValueExpr {
     IndexExpr(IndexExpr),
     TupleIndexExpr(TupleIndexExpr),
     UnwrapExpr(UnwrapExpr),
-    NegationExpr(NegationExpr),
+    NegationExpr(UnaryExpr),
     BorrowExpr(BorrowExpr),
     DereferenceExpr(DereferenceExpr),
     TypeCastExpr(TypeCastExpr),
@@ -297,7 +305,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::Index(i) => Ok(ValueExpr::IndexExpr(i)),
             Expression::TupleIndex(ti) => Ok(ValueExpr::TupleIndexExpr(ti)),
             Expression::Unwrap(u) => Ok(ValueExpr::UnwrapExpr(u)),
-            Expression::Negation(u) => Ok(ValueExpr::NegationExpr(u)),
+            Expression::Unary(u) => Ok(ValueExpr::NegationExpr(u)),
             Expression::Borrow(b) => Ok(ValueExpr::BorrowExpr(b)),
             Expression::Dereference(d) => Ok(ValueExpr::DereferenceExpr(d)),
             Expression::TypeCast(tc) => Ok(ValueExpr::TypeCastExpr(tc)),
@@ -325,7 +333,6 @@ impl TryFrom<Expression> for ValueExpr {
         }
     }
 }
-
 
 /// Enum representing assignee type expressions.
 #[derive(Debug, Clone, PartialEq)]
@@ -437,7 +444,7 @@ impl TryFrom<Expression> for AssigneeExpr {
 }
 
 /// Enum representing patterns, which are syntactically similar to `Expression`.
-/// Patterns are used to match values against structures, as well as within 
+/// Patterns are used to match values against structures, as well as within
 /// variable declarations and as function parameters.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
@@ -477,7 +484,9 @@ impl TryFrom<Expression> for Pattern {
             )?))),
             Expression::Range(r) => {
                 if r.from_opt.is_none() && r.to_opt.is_none() {
-                    Ok(Pattern::RestPatt { dbl_dot: r.op })
+                    Ok(Pattern::RestPatt {
+                        dbl_dot: r.range_op,
+                    })
                 } else {
                     Ok(Pattern::RangePatt(r))
                 }
@@ -505,14 +514,8 @@ impl TryFrom<Expression> for Pattern {
 
                 Ok(Pattern::TuplePatt(elements_opt))
             }
-            Expression::Struct(StructExpr {
-                path, fields_opt, ..
-            }) => {
-                let struct_name = path
-                    .tree_opt
-                    .unwrap_or([].to_vec())
-                    .pop()
-                    .unwrap_or(Identifier("".to_string()));
+            Expression::Struct(StructExpr { fields_opt, .. }) => {
+                let struct_name = Identifier("".to_string());
 
                 let mut fields: Vec<(Identifier, Pattern)> = Vec::new();
 

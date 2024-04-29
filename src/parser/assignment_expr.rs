@@ -4,30 +4,49 @@ use crate::{
         Expression, ValueExpr,
     },
     error::ErrorsEmitted,
+    token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::Parser;
 
 impl AssignmentExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         left_expr: Expression,
-    ) -> Result<AssignmentExpr, ErrorsEmitted> {
+    ) -> Result<Expression, ErrorsEmitted> {
         {
-            let right_expr = parser.parse_expression(Precedence::Assignment)?;
+            let operator_token = parser.peek_current().unwrap_or(Token::EOF);
+
+            let assignment_op = if let Token::Equals { .. } = operator_token {
+                Ok(AssignmentOp)
+            } else {
+                parser.log_unexpected_str("assignment operator");
+                Err(ErrorsEmitted)
+            }?;
+
+            parser.consume_token();
+
+            let precedence = parser.get_precedence(&operator_token);
+
+            let right_expr = parser.parse_expression(precedence)?;
+
+            let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
+                parser.log_error(e);
+                ErrorsEmitted
+            })?;
+
             let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
                 parser.log_error(e);
                 ErrorsEmitted
             })?;
 
-            Ok(AssignmentExpr {
-                lhs: AssigneeExpr::try_from(left_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?,
-                op: AssignmentOp,
+            let expr = AssignmentExpr {
+                lhs,
+                assignment_op,
                 rhs,
-            })
+            };
+
+            Ok(Expression::Assignment(expr))
         }
     }
 }
@@ -36,79 +55,45 @@ impl CompoundAssignmentExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         left_expr: Expression,
-        op: CompoundAssignmentOp,
-    ) -> Result<CompoundAssignmentExpr, ErrorsEmitted> {
+    ) -> Result<Expression, ErrorsEmitted> {
+        let operator_token = parser.peek_current().unwrap_or(Token::EOF);
+
+        let compound_assignment_op = match operator_token.token_type() {
+            TokenType::PlusEquals => Ok(CompoundAssignmentOp::AddAssign),
+            TokenType::MinusEquals => Ok(CompoundAssignmentOp::SubtractAssign),
+            TokenType::AsteriskEquals => Ok(CompoundAssignmentOp::MultiplyAssign),
+            TokenType::SlashEquals => Ok(CompoundAssignmentOp::DivideAssign),
+            TokenType::PercentEquals => Ok(CompoundAssignmentOp::ModulusAssign),
+            _ => {
+                parser.log_unexpected_str("compound assignment operator");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        parser.consume_token();
+
+        let precedence = parser.get_precedence(&operator_token);
+
+        let right_expr = parser.parse_expression(precedence)?;
+
         let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
-        match op {
-            CompoundAssignmentOp::AddAssign => {
-                let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
 
-                Ok(CompoundAssignmentExpr {
-                    lhs,
-                    op,
-                    rhs: value_expr,
-                })
-            }
-            CompoundAssignmentOp::SubtractAssign => {
-                let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
+        let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
-                Ok(CompoundAssignmentExpr {
-                    lhs,
-                    op,
-                    rhs: value_expr,
-                })
-            }
-            CompoundAssignmentOp::MultiplyAssign => {
-                let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
 
-                Ok(CompoundAssignmentExpr {
-                    lhs,
-                    op,
-                    rhs: value_expr,
-                })
-            }
-            CompoundAssignmentOp::DivideAssign => {
-                let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
+        let expr = CompoundAssignmentExpr {
+            lhs,
+            compound_assignment_op,
+            rhs,
+        };
 
-                Ok(CompoundAssignmentExpr {
-                    lhs,
-                    op,
-                    rhs: value_expr,
-                })
-            }
-            CompoundAssignmentOp::ModulusAssign => {
-                let right_expr = parser.parse_expression(Precedence::CompoundAssignment)?;
-                let value_expr = ValueExpr::try_from(right_expr).map_err(|e| {
-                    parser.log_error(e);
-                    ErrorsEmitted
-                })?;
-
-                Ok(CompoundAssignmentExpr {
-                    lhs,
-                    op,
-                    rhs: value_expr,
-                })
-            }
-        }
+        Ok(Expression::CompoundAssignment(expr))
     }
 }
 
@@ -117,8 +102,22 @@ mod tests {
     use crate::parser::test_utils;
 
     #[test]
-    fn parse_assign_expr() -> Result<(), ()> {
+    fn parse_assignment_expr() -> Result<(), ()> {
         let input = r#"x = 5"#;
+
+        let mut parser = test_utils::get_parser(input, false);
+
+        let expressions = parser.parse();
+
+        match expressions {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
+        }
+    }
+
+    #[test]
+    fn parse_compound_assignment_plus_equals() -> Result<(), ()> {
+        let input = r#"x += 5"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

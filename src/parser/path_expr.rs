@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Identifier, PathExpr, PathPrefix, Separator},
+    ast::{Expression, Identifier, PathExpr, PathPrefix, Separator},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -7,7 +7,17 @@ use crate::{
 use super::Parser;
 
 impl PathExpr {
-    pub(crate) fn parse(parser: &mut Parser, root: PathPrefix) -> Result<PathExpr, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        root: PathPrefix,
+    ) -> Result<Expression, ErrorsEmitted> {
+        println!("enter `PathExpr::parse()`");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
+
         let mut tree: Vec<Identifier> = Vec::new();
 
         while let Some(Token::DblColon { .. }) = parser.peek_current() {
@@ -28,7 +38,7 @@ impl PathExpr {
             None
         };
 
-        Ok(PathExpr {
+        let expr = PathExpr {
             root,
             tree_opt: {
                 if tree.is_empty() {
@@ -38,7 +48,18 @@ impl PathExpr {
                 }
             },
             wildcard_opt,
-        })
+        };
+
+        println!("path expression: {:?}", expr);
+
+        println!("exit `PathExpr::parse()`");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
+
+        Ok(Expression::Path(expr))
     }
 }
 
@@ -61,7 +82,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_path_expr() -> Result<(), ()> {
+    fn parse_path_expr_standard() -> Result<(), ()> {
         let input = r#"package::some_module::SomeObject"#;
 
         let mut parser = test_utils::get_parser(input, false);

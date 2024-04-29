@@ -5,7 +5,7 @@ use crate::{
         TraitDef, TraitImplDef, Visibility,
     },
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{
@@ -19,10 +19,7 @@ impl ModuleItem {
         outer_attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<ModuleItem, ErrorsEmitted> {
-        let kw_mod = parser.expect_keyword(Token::Module {
-            name: "module".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_mod = parser.expect_keyword(TokenType::Module)?;
 
         let mut items: Vec<Item> = Vec::new();
         let mut inner_attributes: Vec<InnerAttr> = Vec::new();
@@ -32,14 +29,14 @@ impl ModuleItem {
         let module_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_token("identifier".to_string());
+            parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
@@ -125,7 +122,7 @@ impl ModuleItem {
                         item_visibility,
                     )?)),
                     _ => {
-                        parser.log_unexpected_token("declaration or definition".to_string());
+                        parser.log_unexpected_str("declaration or definition");
                         Err(ErrorsEmitted)
                     }
                 }?;
@@ -133,13 +130,15 @@ impl ModuleItem {
             items.push(item);
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+
+        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RBrace)
+        // } else {
+        //     parser.log_missing_delimiter('}');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(ModuleItem {
             outer_attributes_opt: {

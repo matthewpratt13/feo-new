@@ -3,8 +3,8 @@ use crate::{
         AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, OuterAttr,
         TraitDef, TraitDefItem, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::Token,
+    error::ErrorsEmitted,
+    token::{Token, TokenType},
 };
 
 use super::{
@@ -18,10 +18,7 @@ impl ParseDefinition for TraitDef {
         outer_attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<TraitDef, ErrorsEmitted> {
-        let kw_trait = parser.expect_keyword(Token::Trait {
-            name: "trait".to_string(),
-            span: parser.stream.span(),
-        })?;
+        let kw_trait = parser.expect_keyword(TokenType::Trait)?;
 
         let mut trait_items: Vec<TraitDefItem> = Vec::new();
         let mut inner_attributes: Vec<InnerAttr> = Vec::new();
@@ -31,14 +28,14 @@ impl ParseDefinition for TraitDef {
         let trait_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_token("identifier".to_string());
+            parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token("`{`".to_string());
+            parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
@@ -82,23 +79,22 @@ impl ParseDefinition for TraitDef {
                     item_visibility,
                 )?))
             } else {
-                parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`const`, `alias` or `func`".to_string(),
-                    found: token,
-                });
+                parser.log_unexpected_str("`const`, `alias` or `func`");
                 Err(ErrorsEmitted)
             }?;
 
             trait_items.push(trait_item);
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_missing_delimiter('}');
-            Err(ErrorsEmitted)
-        }?;
+        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+
+        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+        //     parser.consume_token();
+        //     Ok(Delimiter::RBrace)
+        // } else {
+        //     parser.log_missing_delimiter('}');
+        //     Err(ErrorsEmitted)
+        // }?;
 
         Ok(TraitDef {
             outer_attributes_opt: {

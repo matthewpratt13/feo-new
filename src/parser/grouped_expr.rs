@@ -1,36 +1,52 @@
 use crate::{
-    ast::{Delimiter, GroupedExpr},
+    ast::{Delimiter, Expression, GroupedExpr},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use super::{Parser, Precedence};
 
 impl GroupedExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {
-        println!("ENTER `GroupedExpr::parse()`");
-        println!("CURRENT TOKEN: {:?}\n", parser.peek_current());
-
-        let expression = parser.parse_expression(Precedence::Lowest)?;
-
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        println!("enter `GroupedExpr::parse()`");
+        println!("current token: `{:?}`", parser.peek_current());
         println!(
-            "CURRENT TOKEN AFTER INNER EXPRESSION: {:?}",
-            parser.peek_current()
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
         );
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-            Ok(Delimiter::RParen)
+        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::LParen)
         } else {
-            parser.log_missing_delimiter(')');
+            parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
-        Ok(GroupedExpr {
+        let expression = parser.parse_expression(Precedence::Lowest)?;
+
+        println!("exit `parse_expression()`");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
+
+        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+
+        let expr = GroupedExpr {
             open_paren: Delimiter::LParen,
             expression: Box::new(expression),
             close_paren,
-        })
+        };
+
+        println!("exit `GroupedExpr::parse()`");
+        println!("current token: `{:?}`", parser.peek_current());
+        println!(
+            "token precedence: `{:?}`\n",
+            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
+        );
+
+        Ok(Expression::Grouped(expr))
     }
 }
 
