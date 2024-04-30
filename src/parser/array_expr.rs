@@ -31,7 +31,7 @@ impl ArrayExpr {
                 parser.peek_current(),
                 Some(Token::RBracket { .. } | Token::EOF)
             ) {
-                parser.log_unexpected_str("`,` or `}`");
+                parser.log_unexpected_str("`,` or `]`");
                 return Err(ErrorsEmitted);
             }
         }

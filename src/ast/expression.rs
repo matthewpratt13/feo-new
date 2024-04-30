@@ -236,7 +236,7 @@ pub struct SomeExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructExpr {
-    pub path: Box<Expression>,
+    pub path: PathExpr,
     pub open_brace: Delimiter,
     pub fields_opt: Option<Vec<StructField>>,
     pub close_brace: Delimiter,

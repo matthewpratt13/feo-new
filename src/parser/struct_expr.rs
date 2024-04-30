@@ -3,18 +3,17 @@ use crate::{
         Delimiter, Expression, Identifier, OuterAttr, PathExpr, StructExpr, StructField,
         TupleStructExpr,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::{test_utils::log_token, Parser, Precedence};
 
 impl StructExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        path: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+    pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<Expression, ErrorsEmitted> {
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            log_token(parser, "consume token", true);
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
@@ -23,11 +22,11 @@ impl StructExpr {
 
         let mut fields: Vec<StructField> = Vec::new();
 
-        loop {
-            if let Some(Token::RBrace { .. }) = parser.peek_current() {
-                break;
-            }
-
+        // Parse the field-value pairs
+        while !matches!(
+            parser.peek_current(),
+            Some(Token::RBrace { .. } | Token::EOF)
+        ) {
             let mut attributes: Vec<OuterAttr> = Vec::new();
 
             while let Some(oa) = parser.get_outer_attr() {
@@ -35,18 +34,18 @@ impl StructExpr {
                 parser.consume_token();
             }
 
-            let name = match parser.consume_token() {
-                Some(Token::Identifier { name, .. }) => Ok(name),
-                Some(Token::RBrace { .. }) => break,
-                _ => {
-                    parser.expect_delimiter(TokenType::RBrace)?;
-                    Err(ErrorsEmitted)
-                }
+            // Parse the field name (must be an identifier)
+            let field_name = if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
+                parser.consume_token(); // Consume the field name
+                Ok(Identifier(name))
+            } else {
+                parser.expect_delimiter(TokenType::RBrace)?;
+                Err(ErrorsEmitted)
             }?;
 
-            let _ = parser.expect_separator(TokenType::Colon);
+            parser.expect_separator(TokenType::Colon)?;
 
-            let value = parser.parse_expression(Precedence::Lowest)?;
+            let field_value = parser.parse_expression(Precedence::Lowest)?;
 
             let field = StructField {
                 attributes_opt: {
@@ -56,28 +55,36 @@ impl StructExpr {
                         Some(attributes)
                     }
                 },
-                field_name: Identifier(name),
-                field_value: value,
+                field_name,
+                field_value,
             };
 
+            // Parse the field value
             fields.push(field);
 
-            parser.consume_token();
-
-            match parser.peek_current() {
-                Some(Token::Comma { .. }) => {
-                    parser.consume_token();
-                    continue;
-                }
-                Some(Token::RBrace { .. }) => break,
-                _ => break,
+            if let Some(Token::Comma { .. }) = parser.peek_current() {
+                parser.consume_token(); // Consume the comma to separate field-value pairs
+            } else if !matches!(
+                parser.peek_current(),
+                Some(Token::RBrace { .. } | Token::EOF)
+            ) {
+                parser.log_unexpected_str("`,` or `}`");
+                return Err(ErrorsEmitted);
             }
         }
 
-        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RBrace,
+            });
+            Err(ErrorsEmitted)
+        }?;
 
         let expr = StructExpr {
-            path: Box::new(path),
+            path,
             open_brace,
             fields_opt: {
                 if fields.is_empty() {

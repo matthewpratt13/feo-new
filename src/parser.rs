@@ -365,26 +365,20 @@ impl Parser {
                         underscore: Separator::Underscore,
                     }))
                 } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
+                    let path = PathExpr {
+                        root: PathPrefix::Identifier(Identifier(name)),
+                        tree_opt: None,
+                        wildcard_opt: None,
+                    };
+
                     self.consume_token();
-
-                    match self.peek_ahead_by(2) {
-                        Some(Token::Colon { .. }) => {
-                            let path = PathExpr {
-                                root: PathPrefix::Identifier(Identifier(name)),
-                                tree_opt: None,
-                                wildcard_opt: None,
-                            };
-
-                            StructExpr::parse(self, Expression::Path(path))
-                        }
-                        _ => PathExpr::parse(self, PathPrefix::Identifier(Identifier(name))),
-                    }
-                // } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                //     self.peek_current()
-                // {
-                //     let expr = PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)));
-                //     self.consume_token();
-                //     expr
+                    StructExpr::parse(self, path)
+                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                    self.peek_ahead_by(1)
+                {
+                    let expr = PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)));
+                    self.consume_token();
+                    expr
                 } else {
                     let expr = self.parse_primary();
                     self.consume_token();
@@ -393,9 +387,13 @@ impl Parser {
             }
             Some(Token::SelfType { .. }) => {
                 if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
+                    let path = PathExpr {
+                        root: PathPrefix::SelfType,
+                        tree_opt: None,
+                        wildcard_opt: None,
+                    };
+                    
                     self.consume_token();
-                    let path = PathExpr::parse(self, PathPrefix::SelfType)?;
-
                     StructExpr::parse(self, path)
                 } else {
                     self.consume_token();
