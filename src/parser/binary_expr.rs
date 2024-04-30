@@ -3,6 +3,7 @@ use crate::{
         AssigneeExpr, BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression, ValueExpr,
     },
     error::ErrorsEmitted,
+    parser::test_utils::log_token,
     token::{Token, TokenType},
 };
 
@@ -16,12 +17,7 @@ impl BinaryExpr {
         parser: &mut Parser,
         left_expr: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
-        println!("enter `BinaryExpr::parse()`");
-        println!("current token: `{:?}`", parser.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
-        );
+        log_token(parser, "enter `BinaryExpr::parse()`", true);
 
         let lhs = ValueExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
@@ -67,13 +63,7 @@ impl BinaryExpr {
             rhs: Box::new(rhs),
         };
 
-        println!("exit `BinaryExpr::parse()`");
-        println!("current token: `{:?}`", parser.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
-        );
-
+        log_token(parser, "exit `BinaryExpr::parse()`", true);
         Ok(Expression::Binary(expr))
     }
 }
@@ -83,6 +73,8 @@ impl ComparisonExpr {
         parser: &mut Parser,
         left_expr: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
+        log_token(parser, "enter `ComparisonExpr::parse()`", true);
+
         let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -119,6 +111,8 @@ impl ComparisonExpr {
             comparison_op,
             rhs,
         };
+
+        log_token(parser, "exit `ComparisonExpr::parse()`", true);
 
         Ok(Expression::Comparison(expr))
     }

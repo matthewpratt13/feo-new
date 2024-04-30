@@ -4,19 +4,17 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::Parser;
+use super::{test_utils::log_token, Parser};
 
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
-        println!("enter `Type::parse()`");
-        println!("current token: `{:?}`", parser.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
-        );
+        log_token(parser, "enter `TypeExpr::parse()`", true);
 
         let token = parser.consume_token();
+
+        log_token(parser, "consume token", false);
+
 
         match token {
             Some(Token::I32Type { .. }) => Ok(Type::I32(PrimitiveType::I32)),

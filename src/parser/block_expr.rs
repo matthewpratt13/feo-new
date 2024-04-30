@@ -1,6 +1,7 @@
 use crate::{
     ast::{BlockExpr, Delimiter, Expression, InnerAttr, Statement},
     error::{ErrorsEmitted, ParserErrorKind},
+    parser::test_utils::log_token,
     token::{Token, TokenType},
 };
 
@@ -8,6 +9,8 @@ use super::Parser;
 
 impl BlockExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        log_token(parser, "enter `BlockExpr::parse()`", true);
+
         let mut attributes: Vec<InnerAttr> = Vec::new();
 
         while let Some(ia) = parser.get_inner_attr() {
@@ -17,6 +20,7 @@ impl BlockExpr {
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
             parser.consume_token();
+            log_token(parser, "consume token", true);
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
@@ -55,7 +59,7 @@ impl BlockExpr {
                     Some(attributes)
                 }
             },
-            open_brace,
+            open_brace: Delimiter::LBrace,
             statements_opt: {
                 if statements.is_empty() {
                     None
@@ -66,13 +70,7 @@ impl BlockExpr {
             close_brace,
         };
 
-        println!("exit `BlockExpr::parse()`");
-        println!("current token: `{:?}`", parser.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
-        );
-
+        log_token(parser, "exit `BlockExpr::parser()`", true);
         Ok(Expression::Block(expr))
     }
 }

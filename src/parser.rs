@@ -59,8 +59,11 @@ use crate::{
     token::{Token, TokenStream, TokenType},
 };
 
-use self::item::{ParseDeclaration, ParseDefinition};
 pub use self::precedence::Precedence;
+use self::{
+    item::{ParseDeclaration, ParseDefinition},
+    test_utils::log_token,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ParserContext {
@@ -253,12 +256,11 @@ impl Parser {
         let mut statements: Vec<Statement> = Vec::new();
         while self.current < self.stream.tokens().len() {
             let statement = self.parse_statement()?;
+            log_token(self, "exit `parse_statement()`", true);
             statements.push(statement);
         }
 
-        println!("end of file");
-        println!("current token: {:?}", self.peek_current());
-
+        log_token(self, "end of file", false);
         Ok(statements)
     }
 
@@ -268,46 +270,34 @@ impl Parser {
 
     /// Recursively parse an expression based on the next token's operator precedence.
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
-        println!("enter `parse_expression()`");
-        println!("current token: `{:?}`", self.peek_current());
+        log_token(self, "enter `parse_expression()`", false);
         println!("input precedence: {:?}\n", precedence);
 
         let mut left_expr = self.parse_prefix()?;
-        println!("exit `parse_prefix()`");
-        println!("current token: `{:?}`", self.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-        );
+        log_token(self, "exit `parse_prefix()`", true);
 
         while precedence < self.peek_precedence() {
+            log_token(self, "current precedence > input precedence", true);
+
             if let Some(infix_parser) = self.parse_infix() {
                 left_expr = infix_parser(self, left_expr)?; // Parse infix expressions
+                log_token(self, "exit infix parsing function", true);
             } else {
                 break; // Exit if no infix parser is found
             }
 
-            self.consume_token(); // Advance to the next token
+            // self.consume_token(); // Advance to the next token
+            // log_token(self, "consume token", false);
         }
 
-        println!("current precedence <= input precedence");
-        println!("current token: `{:?}`", self.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-        );
+        log_token(self, "exit `parse_expression()`", true);
 
         Ok(left_expr)
     }
 
     /// Parse primary expressions (e.g., grouped expressions, identifiers and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
-        println!("enter `parse_primary()`");
-        println!("current token: `{:?}`", self.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-        );
+        log_token(self, "enter `parse_primary()`", true);
 
         let token = self.peek_current();
 
@@ -329,7 +319,11 @@ impl Parser {
             Some(Token::StrLiteral { value, .. }) => Ok(Expression::Literal(Literal::Str(value))),
             Some(Token::CharLiteral { value, .. }) => Ok(Expression::Literal(Literal::Char(value))),
             Some(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
-            Some(Token::LParen { .. }) => GroupedExpr::parse(self),
+            Some(Token::LParen { .. }) => {
+                let expr = GroupedExpr::parse(self);
+                self.consume_token();
+                expr
+            }
             _ => {
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "identifier, `_`, literal or `(`".to_string(),
@@ -343,12 +337,7 @@ impl Parser {
     /// Parse prefix expressions (e.g., unary operators, literals, identifiers and parentheses),
     /// where the respective token type appears at the beginning of an expression.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
-        println!("enter `parse_prefix()`");
-        println!("current token: `{:?}`", self.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-        );
+        log_token(self, "enter `parse_prefix()`", true);
 
         match self.peek_current() {
             Some(
@@ -364,6 +353,8 @@ impl Parser {
             ) => {
                 let expr = self.parse_primary();
                 self.consume_token();
+                log_token(self, "consume token", true);
+
                 expr
             }
 
@@ -463,12 +454,16 @@ impl Parser {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     TupleExpr::parse(self)
                 } else {
-                    self.consume_token();
+                    // self.consume_token();
                     self.parse_primary()
                 }
             }
 
-            Some(Token::LBrace { .. }) => BlockExpr::parse(self),
+            Some(Token::LBrace { .. }) => {
+                let expr = BlockExpr::parse(self);
+                self.consume_token();
+                expr
+            }
 
             Some(Token::LBracket { .. }) => ArrayExpr::parse(self),
 
@@ -561,12 +556,7 @@ impl Parser {
     fn parse_infix(
         &mut self,
     ) -> Option<fn(&mut Self, Expression) -> Result<Expression, ErrorsEmitted>> {
-        println!("enter `parse_infix()`");
-        println!("current token: `{:?}`", self.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-        );
+        log_token(self, "enter `parse_infix()`", true);
 
         match &self.peek_current() {
             Some(Token::Dot { .. }) => {
@@ -689,6 +679,8 @@ impl Parser {
 
     /// Parse a statement (i.e., let statement, item or expression).
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+        log_token(self, "enter `parse_statement()`", true);
+
         let token = self.peek_current();
 
         match token {
@@ -729,14 +721,8 @@ impl Parser {
 
                 if let Some(Token::Semicolon { .. }) = self.peek_current() {
                     self.consume_token();
+                    log_token(self, "encounter `;`", false);
                 }
-
-                println!("exit `parse_expression()`");
-                println!("current token: `{:?}`", self.peek_current());
-                println!(
-                    "token precedence: `{:?}`\n",
-                    self.get_precedence(&self.peek_current().unwrap_or(Token::EOF))
-                );
 
                 statement
             }
@@ -804,7 +790,11 @@ impl Parser {
     }
 
     fn expect_keyword(&mut self, expected: TokenType) -> Result<Keyword, ErrorsEmitted> {
+        log_token(self, "enter `expect_keyword()`", false);
+
         let token = self.consume_token().unwrap_or(Token::EOF);
+
+        log_token(self, "consume token", false);
 
         if token.token_type() == expected {
             match token.token_type() {
@@ -852,7 +842,11 @@ impl Parser {
     }
 
     fn expect_delimiter(&mut self, expected: TokenType) -> Result<Delimiter, ErrorsEmitted> {
+        log_token(self, "enter `expect_delimiter()`", false);
+
         let token = self.consume_token().unwrap_or(Token::EOF);
+
+        log_token(self, "consume token", false);
 
         if token.token_type() == expected {
             match token.token_type() {
@@ -874,7 +868,11 @@ impl Parser {
     }
 
     fn expect_separator(&mut self, expected: TokenType) -> Result<Separator, ErrorsEmitted> {
+        log_token(self, "enter `expect_separator()`", false);
+
         let token = self.consume_token().unwrap_or(Token::EOF);
+
+        log_token(self, "consume token", false);
 
         if token.token_type() == expected {
             match token.token_type() {
@@ -920,6 +918,9 @@ impl Parser {
             expected: expected.to_string(),
             found: self.peek_current(),
         });
+
+        self.consume_token();
+        log_token(self, "consume token", false);
     }
 
     fn log_unexpected_token(&mut self, expected: TokenType) {
@@ -929,6 +930,7 @@ impl Parser {
         });
 
         self.consume_token();
+        log_token(self, "consume token", false);
     }
 
     /// Retrieve any errors that occurred during parsing.
@@ -937,6 +939,8 @@ impl Parser {
     }
 
     fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
+        log_token(self, "enter get_identifier_patt()`", true);
+
         let kw_ref_opt = if let Some(Token::Ref { .. }) = self.peek_current() {
             self.consume_token();
             Some(Keyword::Ref)
@@ -957,6 +961,8 @@ impl Parser {
             self.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
+
+        log_token(self, "exit `get_identifier_patt()`", true);
 
         Ok(Pattern::IdentifierPatt {
             kw_ref_opt,
