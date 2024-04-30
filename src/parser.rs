@@ -365,14 +365,20 @@ impl Parser {
                         underscore: Separator::Underscore,
                     }))
                 } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    let path = PathExpr {
-                        root: PathPrefix::Identifier(Identifier(name)),
-                        tree_opt: None,
-                        wildcard_opt: None,
-                    };
-
-                    self.consume_token();
-                    StructExpr::parse(self, path)
+                    {
+                        let expr = self.parse_primary();
+                        self.consume_token();
+                        if let Some(Token::Colon { .. }) = self.peek_ahead_by(2) {
+                            let path = PathExpr {
+                                root: PathPrefix::Identifier(Identifier(name)),
+                                tree_opt: None,
+                                wildcard_opt: None,
+                            };
+                            StructExpr::parse(self, path)
+                        } else {
+                            expr
+                        }
+                    }
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_ahead_by(1)
                 {
@@ -392,7 +398,7 @@ impl Parser {
                         tree_opt: None,
                         wildcard_opt: None,
                     };
-                    
+
                     self.consume_token();
                     StructExpr::parse(self, path)
                 } else {
