@@ -32,7 +32,7 @@ impl GroupedExpr {
         }?;
 
         let expr = GroupedExpr {
-            open_paren: Delimiter::LParen,
+            open_paren,
             expression: Box::new(inner_expression),
             close_paren,
         };

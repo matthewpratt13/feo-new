@@ -1,5 +1,5 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
+// #![allow(dead_code)]
+// #![allow(unused_variables)]
 
 mod alias_decl;
 mod array_expr;
@@ -68,12 +68,12 @@ use self::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ParserContext {
     Default,
-    Closure,     // `|` or `||`
-    LogicalOr,   // `||`
-    BitwiseOr,   // `|`
-    BitwiseAnd,  // `&`
-    Difference,  // `-`
-    Product,     // `*`
+    Closure,   // `|` or `||`
+    LogicalOr, // `||`
+    BitwiseOr, // `|`
+    // BitwiseAnd,  // `&`
+    // Difference,  // `-`
+    // Product,     // `*`
     Unary,       // `&` `*`, `-`
     TupleIndex,  // `.`
     FieldAccess, // `.`
@@ -254,6 +254,7 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Main parsing function that returns a `Vec<Statement>`.
+    #[allow(dead_code)]
     fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
         while self.current < self.stream.tokens().len() {
@@ -378,16 +379,13 @@ impl Parser {
                         } else if let Some(Token::FatArrow { .. } | Token::If { .. }) =
                             self.peek_ahead_by(2)
                         {
-                            let open_brace = if let Some(Token::LBrace { .. }) = self.peek_current()
-                            {
-                                Ok(Delimiter::LBrace)
+                            if let Some(Token::LBrace { .. }) = self.peek_current() {
+                                self.set_context(ParserContext::MatchArm);
+                                expr
                             } else {
                                 self.log_unexpected_token(TokenType::LBrace);
                                 Err(ErrorsEmitted)
-                            }?;
-
-                            self.set_context(ParserContext::MatchArm);
-                            expr
+                            }
                         } else {
                             expr
                         }
@@ -543,14 +541,14 @@ impl Parser {
 
             Some(Token::Ok { .. } | Token::Err { .. }) => ResultExpr::parse(self),
 
-            Some(Token::Break { name, .. }) => {
+            Some(Token::Break { .. }) => {
                 self.consume_token();
                 Ok(Expression::Break(BreakExpr {
                     kw_break: Keyword::Break,
                 }))
             }
 
-            Some(Token::Continue { name, .. }) => {
+            Some(Token::Continue { .. }) => {
                 self.consume_token();
                 Ok(Expression::Continue(ContinueExpr {
                     kw_continue: Keyword::Continue,
@@ -805,15 +803,6 @@ impl Parser {
         }
     }
 
-    /// Step the parser back by one.
-    fn unconsume_token(&mut self) -> Option<Token> {
-        if self.current > 0 {
-            self.current -= 1;
-        }
-
-        self.peek_current()
-    }
-
     fn expect_keyword(&mut self, expected: TokenType) -> Result<Keyword, ErrorsEmitted> {
         log_token(self, "enter `expect_keyword()`", false);
 
@@ -959,6 +948,7 @@ impl Parser {
     }
 
     /// Retrieve any errors that occurred during parsing.
+    #[allow(dead_code)]
     pub fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
         &self.errors
     }

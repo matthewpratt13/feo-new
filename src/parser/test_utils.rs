@@ -1,7 +1,8 @@
 use crate::{lexer::Lexer, parser::Parser, token::Token};
 
 /// Utility function that generates a `Parser` instance given some input string (used in testing).
-pub(crate) fn get_parser(input: &str, print_tokens: bool) -> Parser {
+#[allow(dead_code)]
+pub fn get_parser(input: &str, print_tokens: bool) -> Parser {
     let mut lexer = Lexer::new(input);
 
     let stream = lexer

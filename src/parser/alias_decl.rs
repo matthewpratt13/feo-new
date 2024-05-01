@@ -10,7 +10,7 @@ impl ParseDeclaration for AliasDecl {
     fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
-        visibility: Visibility,
+        _visibility: Visibility,
     ) -> Result<AliasDecl, ErrorsEmitted> {
         let visibility = parser.get_visibility()?;
 

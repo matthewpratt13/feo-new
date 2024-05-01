@@ -65,7 +65,7 @@ impl Type {
                                 continue;
                             }
                             Some(Token::RParen { .. }) => break,
-                            Some(t) => parser.log_unexpected_str("`,` or `)`"),
+                            Some(_) => parser.log_unexpected_str("`,` or `)`"),
                             None => {
                                 parser.expect_delimiter(TokenType::RParen)?;
                             }
@@ -159,7 +159,7 @@ impl Type {
                             continue;
                         }
                         Some(Token::RParen { .. }) => break,
-                        Some(t) => parser.log_unexpected_str("`,` or `)`"),
+                        Some(_) => parser.log_unexpected_str("`,` or `)`"),
                         None => {
                             parser.expect_delimiter(TokenType::RParen)?;
                         }

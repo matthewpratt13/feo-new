@@ -49,7 +49,7 @@ impl CallExpr {
 
         let expr = CallExpr {
             callee,
-            open_paren: Delimiter::LParen,
+            open_paren,
             args_opt: {
                 if args.is_empty() {
                     None

@@ -14,7 +14,7 @@ impl ParseDefinition for InherentImplDef {
     fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
-        visibility: Visibility,
+        _visibility: Visibility,
     ) -> Result<InherentImplDef, ErrorsEmitted> {
         let kw_impl = parser.expect_keyword(TokenType::Impl)?;
 
@@ -84,7 +84,7 @@ impl ParseDefinition for TraitImplDef {
     fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
-        visibility: Visibility,
+        _visibility: Visibility,
     ) -> Result<TraitImplDef, ErrorsEmitted> {
         let kw_impl = parser.expect_keyword(TokenType::Impl)?;
 

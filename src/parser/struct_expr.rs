@@ -98,6 +98,7 @@ impl StructExpr {
 }
 
 // TODO: test when issue regarding similarity between `TupleStructExpr` and `CallExpr` is resolved
+#[allow(dead_code)]
 impl TupleStructExpr {
     pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<Expression, ErrorsEmitted> {
         let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {

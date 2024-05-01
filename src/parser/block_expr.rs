@@ -59,7 +59,7 @@ impl BlockExpr {
                     Some(attributes)
                 }
             },
-            open_brace: Delimiter::LBrace,
+            open_brace,
             statements_opt: {
                 if statements.is_empty() {
                     None
