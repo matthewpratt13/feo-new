@@ -66,7 +66,6 @@ impl MethodCallExpr {
     fn parse_arguments(parser: &mut Parser) -> Result<Vec<Expression>, ErrorsEmitted> {
         let mut arguments = Vec::new();
 
-        // Parse comma-separated arguments
         while !matches!(
             parser.peek_current(),
             Some(Token::RParen { .. } | Token::EOF)
@@ -74,7 +73,6 @@ impl MethodCallExpr {
             let argument = parser.parse_expression(Precedence::Lowest)?;
             arguments.push(argument);
 
-            // Optionally consume comma
             if let Some(Token::Comma { .. }) = parser.peek_current() {
                 parser.consume_token(); // Consume the comma
             }

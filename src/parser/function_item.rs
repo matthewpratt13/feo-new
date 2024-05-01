@@ -38,7 +38,6 @@ impl FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        // Parse the function params
         let params_opt = parse_function_params(parser);
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.consume_token() {
@@ -51,22 +50,20 @@ impl FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        // Parse the return type (optional)
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
-            parser.consume_token(); // Consume the arrow '->'
+            parser.consume_token();
             log_token(parser, "consume token", false);
 
             let ty = Type::parse(parser)?;
-            Some(Box::new(ty)) // Parse the return type
+            Some(Box::new(ty))
         } else {
-            None // No return type
+            None
         };
 
-        // Check for the function body (optional)
         let block_opt = if let Some(Token::LBrace { .. }) = parser.peek_current() {
-            Some(BlockExpr::parse(parser)?) // Parse the function body
+            Some(BlockExpr::parse(parser)?)
         } else {
-            None // No function body (function signature)
+            None
         };
 
         log_token(parser, "exit `FunctionItem::parse()`", true);
@@ -109,7 +106,7 @@ impl FunctionOrMethodParam {
         } else {
             None
         };
-        // Parse individual function params
+
         let param = match parser.peek_current() {
             Some(Token::SelfKeyword { .. }) => {
                 parser.consume_token();
@@ -127,7 +124,6 @@ impl FunctionOrMethodParam {
 
                 parser.expect_separator(TokenType::Colon)?;
 
-                // Check for a type annotation
                 let param_type = Box::new(Type::parse(parser)?);
 
                 let function_param = FunctionParam {
@@ -148,116 +144,14 @@ impl FunctionOrMethodParam {
 
         log_token(parser, "exit `FunctionOrMethodParam::parse()`", true);
         param
-
-        // log_token(parser, "enter `FunctionOrMethodParam::parse()`", true);
-
-        // let prefix_opt = if let Some(t) = parser.peek_current() {
-        //     parser.consume_token();
-        //     log_token(parser, "consume token", false);
-
-        //     match t {
-        //         Token::Ampersand { .. } => Some(ReferenceOp::Borrow),
-        //         Token::AmpersandMut { .. } => Some(ReferenceOp::MutableBorrow),
-        //         _ => None,
-        //     }
-        // } else {
-        //     None
-        // };
-
-        // let token = parser.peek_current();
-
-        // let param = if let Some(Token::parserKeyword { .. }) = token {
-        //     let parser_param = parserParam {
-        //         prefix_opt,
-        //         kw_parser: Keyword::parserKeyword,
-        //     };
-
-        //     parser.consume_token();
-        //     log_token(parser, "consume token", false);
-
-        //     Ok(FunctionOrMethodParam::MethodParam(parser_param))
-        // } else if let Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) = token
-        // {
-        //     let param_name = parser.get_identifier_patt()?;
-
-        //     parser.expect_separator(TokenType::Colon)?;
-
-        //     let param_type = Box::new(Type::parse(parser)?);
-
-        //     let function_param = FunctionParam {
-        //         param_name,
-        //         param_type,
-        //     };
-
-        //     Ok(FunctionOrMethodParam::FunctionParam(function_param))
-        // } else {
-        //     parser.log_unexpected_str("`parser` or identifier");
-        //     Err(ErrorsEmitted)
-        // };
-
-        // log_token(parser, "exit `FunctionOrMethodParam::parse()`", true);
-        // param
     }
 }
-
-// fn parse_function_param(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
-// let prefix_opt = if let Some(t) = parser.peek_current() {
-//     parser.consume_token();
-//     log_token(parser, "consume token", false);
-
-//     match t {
-//         Token::Ampersand { .. } => Some(ReferenceOp::Borrow),
-//         Token::AmpersandMut { .. } => Some(ReferenceOp::MutableBorrow),
-//         _ => None,
-//     }
-// } else {
-//     None
-// };
-
-// // Parse individual function params
-// match parser.peek_current() {
-//     Some(
-//         Token::Identifier { name, .. } | Token::Ref { name, .. } | Token::Mut { name, .. },
-//     ) => {
-//         let param_name = parser.get_identifier_patt()?;
-//         // parser.consume_token(); // Consume the identifier
-
-//         parser.expect_separator(TokenType::Colon)?;
-
-//         // Check for a type annotation
-//         let param_type = Box::new(Type::parse(parser)?);
-
-//         let param = FunctionParam {
-//             param_name,
-//             param_type,
-//         };
-
-//         Ok(FunctionOrMethodParam::FunctionParam(param))
-//     }
-
-//     Some(Token::SelfKeyword { .. }) => {
-//         parser.consume_token();
-//         let param = SelfParam {
-//             prefix_opt,
-//             kw_self: Keyword::SelfKeyword,
-//         };
-
-//         Ok(FunctionOrMethodParam::MethodParam(param))
-//     }
-
-//     _ => {
-//         parser.log_unexpected_str("`self` or identifier");
-//         Err(ErrorsEmitted)
-//     }
-// }
-// }
 
 fn parse_function_params(parser: &mut Parser) -> Option<Vec<FunctionOrMethodParam>> {
     log_token(parser, "enter `parse_function_params()`", true);
 
     let mut params = Vec::new();
 
-    // Parse each param
     while !matches!(
         parser.peek_current(),
         Some(Token::RParen { .. } | Token::EOF)
@@ -266,7 +160,7 @@ fn parse_function_params(parser: &mut Parser) -> Option<Vec<FunctionOrMethodPara
             params.push(param);
 
             if let Some(Token::Comma { .. }) = parser.peek_current() {
-                parser.consume_token(); // Consume the comma separating params
+                parser.consume_token();
                 log_token(parser, "consume token", false);
             }
         }

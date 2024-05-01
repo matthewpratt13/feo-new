@@ -22,7 +22,6 @@ impl StructExpr {
 
         let mut fields: Vec<StructField> = Vec::new();
 
-        // Parse the field-value pairs
         while !matches!(
             parser.peek_current(),
             Some(Token::RBrace { .. } | Token::EOF)
@@ -34,9 +33,8 @@ impl StructExpr {
                 parser.consume_token();
             }
 
-            // Parse the field name (must be an identifier)
             let field_name = if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
-                parser.consume_token(); // Consume the field name
+                parser.consume_token();
                 Ok(Identifier(name))
             } else {
                 parser.expect_delimiter(TokenType::RBrace)?;
@@ -59,11 +57,10 @@ impl StructExpr {
                 field_value,
             };
 
-            // Parse the field value
             fields.push(field);
 
             if let Some(Token::Comma { .. }) = parser.peek_current() {
-                parser.consume_token(); // Consume the comma to separate field-value pairs
+                parser.consume_token();
             } else if !matches!(
                 parser.peek_current(),
                 Some(Token::RBrace { .. } | Token::EOF)

@@ -48,45 +48,6 @@ impl ParseDefinition for InherentImplDef {
             associated_items.push(associated_item);
         }
 
-        // loop {
-        //     if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //         break;
-        //     }
-
-        //     let mut item_attributes: Vec<OuterAttr> = Vec::new();
-
-        //     while let Some(oa) = parser.get_outer_attr() {
-        //         item_attributes.push(oa);
-        //         parser.consume_token();
-        //     }
-
-        //     let item_visibility = parser.get_visibility()?;
-
-        //     let token = parser.peek_current();
-
-        //     let associated_item = if let Some(Token::Const { .. }) = token {
-        //         Ok(InherentImplItem::ConstantDecl(ConstantDecl::parse(
-        //             parser,
-        //             item_attributes,
-        //             item_visibility,
-        //         )?))
-        //     } else if let Some(Token::Func { .. }) = token {
-        //         Ok(InherentImplItem::FunctionDef(FunctionItem::parse(
-        //             parser,
-        //             item_attributes,
-        //             item_visibility,
-        //         )?))
-        //     } else {
-        //         parser.log_error(ParserErrorKind::UnexpectedToken {
-        //             expected: "`const`,`func`".to_string(),
-        //             found: token,
-        //         });
-        //         Err(ErrorsEmitted)
-        //     }?;
-
-        //     associated_items.push(associated_item);
-        // }
-
         let close_brace = if let Some(Token::RBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::RBrace)
         } else {
@@ -171,51 +132,6 @@ impl ParseDefinition for TraitImplDef {
             let associated_item = TraitImplItem::parse(parser, item_attributes, item_visibility)?;
             associated_items.push(associated_item);
         }
-
-        // loop {
-        //     if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //         break;
-        //     }
-
-        //     let mut item_attributes: Vec<OuterAttr> = Vec::new();
-
-        //     while let Some(oa) = parser.get_outer_attr() {
-        //         item_attributes.push(oa);
-        //         parser.consume_token();
-        //     }
-
-        //     let item_visibility = parser.get_visibility()?;
-
-        //     let token = parser.peek_current();
-
-        //     let associated_item = if let Some(Token::Const { .. }) = token {
-        //         Ok(TraitImplItem::ConstantDecl(ConstantDecl::parse(
-        //             parser,
-        //             item_attributes,
-        //             item_visibility,
-        //         )?))
-        //     } else if let Some(Token::Alias { .. }) = token {
-        //         Ok(TraitImplItem::AliasDecl(AliasDecl::parse(
-        //             parser,
-        //             item_attributes,
-        //             item_visibility,
-        //         )?))
-        //     } else if let Some(Token::Func { .. }) = token {
-        //         Ok(TraitImplItem::FunctionDef(FunctionItem::parse(
-        //             parser,
-        //             item_attributes,
-        //             item_visibility,
-        //         )?))
-        //     } else {
-        //         parser.log_error(ParserErrorKind::UnexpectedToken {
-        //             expected: "`const`,`func`".to_string(),
-        //             found: token,
-        //         });
-        //         Err(ErrorsEmitted)
-        //     }?;
-
-        //     associated_items.push(associated_item);
-        // }
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.consume_token() {
             Ok(Delimiter::RBrace)

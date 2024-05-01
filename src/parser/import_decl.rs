@@ -150,18 +150,6 @@ impl PathSubset {
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
-        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RBrace)
-        // } else {
-        //     parser.log_missing_delimiter('}');
-        //     Err(ErrorsEmitted)
-        // }?;
-
-        // if !parser.errors().is_empty() {
-        //     return Err(ErrorsEmitted);
-        // }
-
         Ok(PathSubset {
             open_brace,
             trees,

@@ -64,14 +64,6 @@ impl ParseDefinition for EnumDef {
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
-        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RBrace)
-        // } else {
-        //     parser.log_missing_delimiter('}');
-        //     Err(ErrorsEmitted)
-        // }?;
-
         Ok(EnumDef {
             attributes_opt: if attributes.is_empty() {
                 None
@@ -187,14 +179,6 @@ impl EnumVariantStruct {
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
-        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RBrace)
-        // } else {
-        //     parser.log_missing_delimiter('}');
-        //     Err(ErrorsEmitted)
-        // }?;
-
         if fields.is_empty() {
             Ok(EnumVariantStruct {
                 open_brace,
@@ -249,14 +233,6 @@ impl EnumVariantTuple {
         }
 
         let close_paren = parser.expect_delimiter(TokenType::RParen)?;
-
-        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RParen)
-        // } else {
-        //     parser.log_missing_delimiter(')');
-        //     Err(ErrorsEmitted)
-        // }?;
 
         Ok(EnumVariantTuple {
             open_paren,

@@ -37,7 +37,7 @@ impl BlockExpr {
             statements.push(statement);
 
             if let Some(Token::Semicolon { .. }) = parser.peek_current() {
-                parser.consume_token(); // Consume the semicolon to separate expressions/statements
+                parser.consume_token();
             }
         }
 
