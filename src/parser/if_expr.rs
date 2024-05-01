@@ -1,45 +1,31 @@
 use crate::{
     ast::{BlockExpr, Expression, GroupedExpr, IfExpr, Keyword},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::{Token, TokenType},
 };
 
-use super::Parser;
+use super::{test_utils::log_token, Parser};
 
 impl IfExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let mut else_if_blocks: Vec<(Keyword, Box<Expression>)> = Vec::new();
+        log_token(parser, "enter `IfExpr::parse()`", true);
 
-        let mut trailing_else_block_opt = None::<(Keyword, Box<Expression>)>;
 
         let kw_if = parser.expect_keyword(TokenType::If)?;
 
-        if let Some(Token::LParen { .. }) = parser.peek_current() {
-            parser.consume_token();
-        } else {
-            parser.log_unexpected_token(TokenType::LParen);
-        };
+        let mut else_if_blocks: Vec<(Keyword, Box<Expression>)> = Vec::new();
+        let mut trailing_else_block_opt: Option<(Keyword, Box<Expression>)> = None;
 
-        let condition = Box::new(GroupedExpr::parse(parser)?);
+        let condition = GroupedExpr::parse(parser)?;
 
-        let token = parser.peek_current();
-
-        let if_block = if let Some(Token::LBrace { .. }) = token {
-            Box::new(BlockExpr::parse(parser)?)
-        } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "block expression".to_string(),
-                found: token,
-            });
-            return Err(ErrorsEmitted);
-        };
+        let if_block = BlockExpr::parse(parser)?;
 
         while let Some(Token::Else { .. }) = parser.peek_current() {
             parser.consume_token();
 
             if let Some(Token::If { .. }) = parser.peek_current() {
-                let if_expr = IfExpr::parse(parser)?;
-                else_if_blocks.push((Keyword::Else, Box::new(if_expr)));
+                let if_expr = Box::new(IfExpr::parse(parser)?);
+                else_if_blocks.push((Keyword::Else, if_expr));
             } else {
                 continue;
             }
@@ -53,8 +39,8 @@ impl IfExpr {
 
         let expr = IfExpr {
             kw_if,
-            condition,
-            if_block,
+            condition: Box::new(condition),
+            if_block: Box::new(if_block),
             else_if_blocks_opt: {
                 if else_if_blocks.is_empty() {
                     None
@@ -64,6 +50,8 @@ impl IfExpr {
             },
             trailing_else_block_opt,
         };
+
+        log_token(parser, "exit `IfExpr::parse()`", true);
 
         Ok(Expression::If(expr))
     }
@@ -88,9 +76,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

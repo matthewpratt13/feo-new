@@ -7,20 +7,18 @@ use crate::{
 use super::Parser;
 
 impl FieldAccessExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        object: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
-        let object = AssigneeExpr::try_from(object).map_err(|e| {
+    pub(crate) fn parse(parser: &mut Parser, lhs: Expression) -> Result<Expression, ErrorsEmitted> {
+        let assignee_expr = AssigneeExpr::try_from(lhs).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        let token = parser.consume_token();
+        let token = parser.peek_current();
 
         let expr = if let Some(Token::Identifier { name, .. }) = token {
+            parser.consume_token();
             Ok(FieldAccessExpr {
-                object: Box::new(object),
+                object: Box::new(assignee_expr),
                 field: Identifier(name),
             })
         } else {
@@ -45,9 +43,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

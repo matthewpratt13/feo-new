@@ -1,31 +1,27 @@
 use crate::{
-    ast::{Expression, SomeExpr},
+    ast::{Expression, GroupedExpr, SomeExpr},
     error::ErrorsEmitted,
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::Parser;
 
 impl SomeExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_some = parser.expect_keyword(TokenType::Some)?;
 
-
-        if let Some(Token::LParen { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let expression = if let Some(Token::LParen { .. }) = parser.peek_current() {
+            Ok(Box::new(GroupedExpr::parse(parser)?))
         } else {
             parser.log_unexpected_token(TokenType::LParen);
-        }
+            Err(ErrorsEmitted)
+        }?;
 
-        let expression = parser.parse_expression(Precedence::Lowest)?;
-
-        parser.consume_token();
-
-        parser.expect_delimiter(TokenType::RBrace)?;
+        parser.expect_separator(TokenType::Semicolon)?;
 
         let expr = SomeExpr {
             kw_some,
-            expression: Box::new(expression),
+            expression,
         };
 
         Ok(Expression::SomeExpr(expr))
@@ -42,9 +38,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -56,9 +52,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

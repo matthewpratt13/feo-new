@@ -10,15 +10,19 @@ impl WhileExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_while = parser.expect_keyword(TokenType::While)?;
 
-        if let Some(Token::LParen { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let condition = if let Some(Token::LParen { .. }) = parser.peek_current() {
+            Ok(Box::new(GroupedExpr::parse(parser)?))
         } else {
             parser.log_unexpected_token(TokenType::LParen);
-        }
+            Err(ErrorsEmitted)
+        }?;
 
-        let condition = Box::new(GroupedExpr::parse(parser)?);
-
-        let block = Box::new(BlockExpr::parse(parser)?);
+        let block = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+            Ok(Box::new(BlockExpr::parse(parser)?))
+        } else {
+            parser.log_unexpected_token(TokenType::LBrace);
+            Err(ErrorsEmitted)
+        }?;
 
         let expr = WhileExpr {
             kw_while,
@@ -43,9 +47,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

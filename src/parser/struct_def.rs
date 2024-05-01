@@ -87,14 +87,6 @@ impl ParseDefinition for StructDef {
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
-        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RBrace)
-        // } else {
-        //     parser.log_missing_delimiter('}');
-        //     Err(ErrorsEmitted)
-        // }?;
-
         Ok(StructDef {
             attributes_opt: {
                 if attributes.is_empty() {
@@ -182,14 +174,6 @@ impl ParseDefinition for TupleStructDef {
 
         let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 
-        // let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RParen)
-        // } else {
-        //     parser.log_missing_delimiter(')');
-        //     Err(ErrorsEmitted)
-        // }?;
-
         parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(TupleStructDef {
@@ -233,9 +217,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -253,9 +237,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

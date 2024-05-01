@@ -4,10 +4,12 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::{test_utils::log_token, Parser, Precedence};
 
 impl ForInExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        log_token(parser, "enter `ForInExpr::parse()`", true);
+
         let kw_for = parser.expect_keyword(TokenType::For)?;
 
         let assignee =
@@ -22,11 +24,17 @@ impl ForInExpr {
                     ErrorsEmitted
                 })
             }?;
+
         let kw_in = parser.expect_keyword(TokenType::In)?;
 
         let iterable = parser.parse_expression(Precedence::Lowest)?;
 
-        let block = Box::new(BlockExpr::parse(parser)?);
+        let block = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+            Ok(Box::new(BlockExpr::parse(parser)?))
+        } else {
+            parser.log_unexpected_token(TokenType::LBrace);
+            Err(ErrorsEmitted)
+        }?;
 
         let expr = ForInExpr {
             kw_for,
@@ -35,6 +43,8 @@ impl ForInExpr {
             iterable: Box::new(iterable),
             block,
         };
+
+        log_token(parser, "exit `ForInExpr::parse()`", true);
 
         Ok(Expression::ForIn(expr))
     }
@@ -59,9 +69,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

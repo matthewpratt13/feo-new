@@ -1,17 +1,10 @@
 use crate::{
-    ast::{
-        AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionItem, Identifier, ImportDecl,
-        InherentImplDef, InnerAttr, Item, ModuleItem, OuterAttr, StaticItemDecl, StructDef,
-        TraitDef, TraitImplDef, Visibility,
-    },
-    error::ErrorsEmitted,
+    ast::{Delimiter, Identifier, InnerAttr, Item, ModuleItem, OuterAttr, Visibility},
+    error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
 
-use super::{
-    item::{ParseDeclaration, ParseDefinition},
-    Parser,
-};
+use super::Parser;
 
 impl ModuleItem {
     pub(crate) fn parse(
@@ -19,10 +12,7 @@ impl ModuleItem {
         outer_attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<ModuleItem, ErrorsEmitted> {
-        let kw_mod = parser.expect_keyword(TokenType::Module)?;
-
-        let mut items: Vec<Item> = Vec::new();
-        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
+        let kw_module = parser.expect_keyword(TokenType::Module)?;
 
         let token = parser.consume_token();
 
@@ -33,23 +23,27 @@ impl ModuleItem {
             Err(ErrorsEmitted)
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
+        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
+
         while let Some(ia) = parser.get_inner_attr() {
             inner_attributes.push(ia);
             parser.consume_token();
         }
 
-        loop {
-            if let Some(Token::RBrace { .. }) = parser.peek_current() {
-                break;
-            }
+        let mut items: Vec<Item> = Vec::new();
 
+        while !matches!(
+            parser.peek_current(),
+            Some(Token::RBrace { .. } | Token::EOF)
+        ) {
             let mut item_attributes: Vec<OuterAttr> = Vec::new();
 
             while let Some(oa) = parser.get_outer_attr() {
@@ -59,86 +53,18 @@ impl ModuleItem {
 
             let item_visibility = parser.get_visibility()?;
 
-            let token = parser.peek_current();
-
-            let item =
-                match token {
-                    Some(Token::Import { .. }) => Ok(Item::ImportDecl(ImportDecl::parse(
-                        parser,
-                        item_attributes,
-                        item_visibility,
-                    )?)),
-                    Some(Token::Alias { .. }) => Ok(Item::AliasDecl(AliasDecl::parse(
-                        parser,
-                        item_attributes,
-                        item_visibility,
-                    )?)),
-                    Some(Token::Const { .. }) => Ok(Item::ConstantDecl(ConstantDecl::parse(
-                        parser,
-                        item_attributes,
-                        item_visibility,
-                    )?)),
-                    Some(Token::Static { .. }) => Ok(Item::StaticItemDecl(StaticItemDecl::parse(
-                        parser,
-                        item_attributes,
-                        item_visibility,
-                    )?)),
-                    Some(Token::Module { .. }) => Ok(Item::ModuleItem(Box::new(
-                        ModuleItem::parse(parser, item_attributes, item_visibility)?,
-                    ))),
-                    Some(Token::Trait { .. }) => Ok(Item::TraitDef(TraitDef::parse(
-                        parser,
-                        item_attributes,
-                        item_visibility,
-                    )?)),
-                    Some(Token::Enum { .. }) => Ok(Item::EnumDef(EnumDef::parse(
-                        parser,
-                        item_attributes,
-                        item_visibility,
-                    )?)),
-                    Some(Token::Struct { .. }) => Ok(Item::StructDef(StructDef::parse(
-                        parser,
-                        item_attributes,
-                        item_visibility,
-                    )?)),
-                    Some(Token::Impl { .. }) => {
-                        if let Some(Token::For { .. }) = parser.peek_ahead_by(2) {
-                            Ok(Item::TraitImplDef(TraitImplDef::parse(
-                                parser,
-                                item_attributes,
-                                item_visibility,
-                            )?))
-                        } else {
-                            Ok(Item::InherentImplDef(InherentImplDef::parse(
-                                parser,
-                                item_attributes,
-                                item_visibility,
-                            )?))
-                        }
-                    }
-                    Some(Token::Func { .. }) => Ok(Item::FunctionItem(FunctionItem::parse(
-                        parser,
-                        item_attributes,
-                        item_visibility,
-                    )?)),
-                    _ => {
-                        parser.log_unexpected_str("declaration or definition");
-                        Err(ErrorsEmitted)
-                    }
-                }?;
-
+            let item = Item::parse(parser, item_attributes, item_visibility)?;
             items.push(item);
         }
 
-        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
-
-        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RBrace)
-        // } else {
-        //     parser.log_missing_delimiter('}');
-        //     Err(ErrorsEmitted)
-        // }?;
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RBrace,
+            });
+            Err(ErrorsEmitted)
+        }?;
 
         Ok(ModuleItem {
             outer_attributes_opt: {
@@ -149,7 +75,7 @@ impl ModuleItem {
                 }
             },
             visibility,
-            kw_module: kw_mod,
+            kw_module,
             module_name,
             open_brace,
             inner_attributes_opt: {
@@ -231,9 +157,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

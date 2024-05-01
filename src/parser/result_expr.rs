@@ -28,7 +28,6 @@ impl ResultExpr {
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        parser.consume_token();
 
         parser.expect_delimiter(TokenType::RParen)?;
 
@@ -51,9 +50,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

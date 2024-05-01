@@ -3,6 +3,7 @@ use crate::{
         AssigneeExpr, BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression, ValueExpr,
     },
     error::ErrorsEmitted,
+    parser::test_utils::log_token,
     token::{Token, TokenType},
 };
 
@@ -16,12 +17,12 @@ impl BinaryExpr {
         parser: &mut Parser,
         left_expr: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
-        println!("enter `BinaryExpr::parse()`");
-        println!("current token: `{:?}`", parser.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
-        );
+        log_token(parser, "enter `BinaryExpr::parse()`", true);
+
+        let lhs = ValueExpr::try_from(left_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         let operator_token = parser.peek_current().unwrap_or(Token::EOF);
 
@@ -45,16 +46,11 @@ impl BinaryExpr {
             }
         }?;
 
-        parser.consume_token();
-
         let precedence = parser.get_precedence(&operator_token);
 
-        let right_expr = parser.parse_expression(precedence)?;
+        parser.consume_token();
 
-        let lhs = ValueExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let right_expr = parser.parse_expression(precedence)?;
 
         let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
             parser.log_error(e);
@@ -67,13 +63,7 @@ impl BinaryExpr {
             rhs: Box::new(rhs),
         };
 
-        println!("exit `BinaryExpr::parse()`");
-        println!("current token: `{:?}`", parser.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
-        );
-
+        log_token(parser, "exit `BinaryExpr::parse()`", true);
         Ok(Expression::Binary(expr))
     }
 }
@@ -83,6 +73,13 @@ impl ComparisonExpr {
         parser: &mut Parser,
         left_expr: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
+        log_token(parser, "enter `ComparisonExpr::parse()`", true);
+
+        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
+
         let operator_token = parser.peek_current().unwrap_or(Token::EOF);
 
         let comparison_op = match operator_token.token_type() {
@@ -98,28 +95,24 @@ impl ComparisonExpr {
             }
         }?;
 
-        parser.consume_token();
-
         let precedence = parser.get_precedence(&operator_token);
 
-        let right_expr = parser.parse_expression(precedence)?;
+        parser.consume_token();
 
-        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let right_expr = parser.parse_expression(precedence)?;
 
         let rhs = AssigneeExpr::try_from(right_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-
         let expr = ComparisonExpr {
             lhs,
             comparison_op,
             rhs,
         };
+
+        log_token(parser, "exit `ComparisonExpr::parse()`", true);
 
         Ok(Expression::Comparison(expr))
     }

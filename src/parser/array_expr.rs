@@ -1,6 +1,6 @@
 use crate::{
     ast::{ArrayExpr, Delimiter, Expression},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
 
@@ -8,7 +8,8 @@ use super::{Parser, Precedence};
 
 impl ArrayExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let open_bracket = if let Some(Token::LBracket { .. }) = parser.consume_token() {
+        let open_bracket = if let Some(Token::LBracket { .. }) = parser.peek_current() {
+            parser.consume_token();
             Ok(Delimiter::LBracket)
         } else {
             parser.log_unexpected_token(TokenType::LBracket);
@@ -17,40 +18,33 @@ impl ArrayExpr {
 
         let mut elements: Vec<Expression> = Vec::new();
 
-        loop {
-            if let Some(Token::RBracket { .. }) = parser.peek_current() {
-                break;
-            }
-
-            let element = match parser.parse_expression(Precedence::Lowest) {
-                Ok(e) => Ok(e),
-                Err(_) => {
-                    parser.log_unexpected_str("array element");
-                    Err(ErrorsEmitted)
-                }
-            }?;
-
+        while !matches!(
+            parser.peek_current(),
+            Some(Token::RBracket { .. } | Token::EOF)
+        ) {
+            let element = parser.parse_expression(Precedence::Lowest)?;
             elements.push(element);
 
-            parser.consume_token();
-
-            match parser.peek_current() {
-                Some(Token::Comma { .. }) => {
-                    parser.consume_token();
-                    continue;
-                }
-
-                Some(Token::RBracket { .. }) => break,
-
-                Some(_) => {
-                    parser.log_unexpected_token(TokenType::Comma);
-                }
-
-                None => break,
+            if let Some(Token::Comma { .. }) = parser.peek_current() {
+                parser.consume_token();
+            } else if !matches!(
+                parser.peek_current(),
+                Some(Token::RBracket { .. } | Token::EOF)
+            ) {
+                parser.log_unexpected_str("`,` or `]`");
+                return Err(ErrorsEmitted);
             }
         }
 
-        let close_bracket = parser.expect_delimiter(TokenType::RBracket)?;
+        let close_bracket = if let Some(Token::RBracket { .. }) = parser.peek_current() {
+            parser.consume_token();
+            Ok(Delimiter::RBracket)
+        } else {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RBracket,
+            });
+            Err(ErrorsEmitted)
+        }?;
 
         let expr = ArrayExpr {
             open_bracket,
@@ -78,9 +72,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -93,9 +87,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

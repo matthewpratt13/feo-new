@@ -4,13 +4,15 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::Parser;
+use super::{test_utils::log_token, Parser};
 
 impl RangeExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         left_expr: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
+        log_token(parser, "enter `RangeExpr::parse()`", true);
+
         let from = match left_expr.clone() {
             Expression::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(left_expr),
@@ -41,6 +43,8 @@ impl RangeExpr {
         }?;
 
         parser.consume_token();
+
+        log_token(parser, "consume token", false);
 
         let precedence = parser.get_precedence(&operator_token);
 
@@ -84,10 +88,14 @@ impl RangeExpr {
             }
         };
 
+        log_token(parser, "exit `RangeExpr::parse()`", true);
+
         Ok(Expression::Range(expr))
     }
 
     pub(crate) fn parse_prefix(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        log_token(parser, "enter `RangeExpr::parse_prefix()`", true);
+
         let operator_token = parser.peek_current().unwrap_or(Token::EOF);
 
         let range_op = match operator_token {
@@ -147,6 +155,8 @@ impl RangeExpr {
             to_opt: Some(Box::new(to)),
         };
 
+        log_token(parser, "exit `RangeExpr::parse_prefix()`", true);
+
         Ok(Expression::Range(expr))
     }
 }
@@ -161,9 +171,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -175,9 +185,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -189,9 +199,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

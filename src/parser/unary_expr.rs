@@ -15,14 +15,12 @@ impl UnaryExpr {
     ) -> Result<Expression, ErrorsEmitted> {
         parser.consume_token();
 
-        let expression = parser.parse_expression(Precedence::Unary)?;
+        let operand = parser.parse_expression(Precedence::Unary)?;
 
-        let value_expr = ValueExpr::try_from(expression).map_err(|e| {
+        let value_expr = ValueExpr::try_from(operand).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
-
-        parser.consume_token();
 
         let expr = UnaryExpr {
             unary_op,
@@ -40,13 +38,11 @@ impl BorrowExpr {
     ) -> Result<Expression, ErrorsEmitted> {
         parser.consume_token();
 
-        let expression = parser.parse_expression(Precedence::Unary)?;
-
-        parser.consume_token();
+        let operand = parser.parse_expression(Precedence::Unary)?;
 
         let expr = BorrowExpr {
             reference_op,
-            expression: Box::new(expression),
+            expression: Box::new(operand),
         };
 
         Ok(Expression::Borrow(expr))
@@ -60,14 +56,12 @@ impl DereferenceExpr {
     ) -> Result<Expression, ErrorsEmitted> {
         parser.consume_token();
 
-        let expression = parser.parse_expression(Precedence::Unary)?;
+        let operand = parser.parse_expression(Precedence::Unary)?;
 
-        let assignee_expr = AssigneeExpr::try_from(expression).map_err(|e| {
+        let assignee_expr = AssigneeExpr::try_from(operand).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
-
-        parser.consume_token();
 
         let expr = DereferenceExpr {
             dereference_op,

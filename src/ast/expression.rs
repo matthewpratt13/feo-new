@@ -35,9 +35,9 @@ pub struct ClosureParam {
 /// Struct representing a single arm in a match statement.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchArm {
-    pub case: Pattern,
+    pub pattern: Pattern,
     pub guard_opt: Option<(Keyword, Box<Expression>)>, // `if (..)`
-    pub logic: Box<Expression>,
+    pub body: Box<Expression>,
 }
 
 /// Struct representing a single field in a struct expression, with a name and value.
@@ -183,8 +183,8 @@ pub struct MatchExpr {
     pub kw_match: Keyword,
     pub scrutinee: AssigneeExpr,
     pub open_brace: Delimiter,
-    pub arms_opt: Option<Vec<MatchArm>>,
-    pub final_arm: MatchArm, // default case
+    pub arms_opt: Option<Vec<Expression>>,
+    pub final_arm: Box<Expression>, // default case
     pub close_brace: Delimiter,
 }
 
@@ -236,7 +236,7 @@ pub struct SomeExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructExpr {
-    pub path: Box<Expression>,
+    pub path: PathExpr,
     pub open_brace: Delimiter,
     pub fields_opt: Option<Vec<StructField>>,
     pub close_brace: Delimiter,

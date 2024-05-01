@@ -4,19 +4,14 @@ use crate::{
     token::Token,
 };
 
-use super::Parser;
+use super::{test_utils::log_token, Parser};
 
 impl PathExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         root: PathPrefix,
     ) -> Result<Expression, ErrorsEmitted> {
-        println!("enter `PathExpr::parse()`");
-        println!("current token: `{:?}`", parser.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
-        );
+        log_token(parser, "enter `PathExpr::parse()`", true);
 
         let mut tree: Vec<Identifier> = Vec::new();
 
@@ -50,14 +45,7 @@ impl PathExpr {
             wildcard_opt,
         };
 
-        println!("path expression: {:?}", expr);
-
-        println!("exit `PathExpr::parse()`");
-        println!("current token: `{:?}`", parser.peek_current());
-        println!(
-            "token precedence: `{:?}`\n",
-            parser.get_precedence(&parser.peek_current().unwrap_or(Token::EOF))
-        );
+        log_token(parser, "exit `PathExpr::parse()`", true);
 
         Ok(Expression::Path(expr))
     }
@@ -73,9 +61,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -87,9 +75,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -101,9 +89,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

@@ -7,23 +7,15 @@ use crate::{
 use super::{Parser, Precedence};
 
 impl MethodCallExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        receiver: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
-        let mut args: Vec<Expression> = Vec::new();
-
-        let receiver = AssigneeExpr::try_from(receiver).map_err(|e| {
+    pub(crate) fn parse(parser: &mut Parser, lhs: Expression) -> Result<Expression, ErrorsEmitted> {
+        let receiver = AssigneeExpr::try_from(lhs).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        parser.consume_token();
-
         let token = parser.peek_current();
 
         let method_name = if let Some(Token::Identifier { name, .. }) = token {
-            parser.consume_token();
             Ok(Identifier(name))
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
@@ -33,44 +25,26 @@ impl MethodCallExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+        parser.consume_token();
+
+        let open_paren = if let Some(Token::LParen { .. }) = parser.peek_current() {
+            parser.consume_token();
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
-        loop {
-            if let Some(Token::RParen { .. }) = parser.peek_current() {
-                break;
-            }
+        let args = MethodCallExpr::parse_arguments(parser)?;
 
-            let arg_expr = match parser.parse_expression(Precedence::Lowest) {
-                Ok(e) => Ok(e),
-                Err(_) => {
-                    parser.log_unexpected_str("method argument");
-                    Err(ErrorsEmitted)
-                }
-            }?;
-
-            args.push(arg_expr);
-
-            parser.consume_token();
-
-            match parser.peek_current() {
-                Some(Token::Comma { .. }) => {
-                    parser.consume_token();
-                    continue;
-                }
-                Some(Token::RParen { .. }) => break,
-                Some(_) => {
-                    parser.log_unexpected_str("`,` or `)`");
-                }
-                None => break,
-            }
-        }
-
-        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+        let close_paren = if let Some(Token::RParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RParen,
+            });
+            Err(ErrorsEmitted)
+        }?;
 
         let expr = MethodCallExpr {
             receiver: Box::new(receiver),
@@ -88,6 +62,24 @@ impl MethodCallExpr {
 
         Ok(Expression::MethodCall(expr))
     }
+
+    fn parse_arguments(parser: &mut Parser) -> Result<Vec<Expression>, ErrorsEmitted> {
+        let mut arguments = Vec::new();
+
+        while !matches!(
+            parser.peek_current(),
+            Some(Token::RParen { .. } | Token::EOF)
+        ) {
+            let argument = parser.parse_expression(Precedence::Lowest)?;
+            arguments.push(argument);
+
+            if let Some(Token::Comma { .. }) = parser.peek_current() {
+                parser.consume_token();
+            }
+        }
+
+        Ok(arguments)
+    }
 }
 
 #[cfg(test)]
@@ -100,9 +92,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -114,9 +106,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

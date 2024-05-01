@@ -1,6 +1,6 @@
 use crate::{
     ast::{AssigneeExpr, CallExpr, Delimiter, Expression},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
 
@@ -11,46 +11,41 @@ impl CallExpr {
         parser: &mut Parser,
         callee: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
-        let mut args: Vec<Expression> = Vec::new();
+        let mut args = Vec::new();
 
         let callee = AssigneeExpr::try_from(callee).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        parser.consume_token();
-
-        loop {
-            if let Some(Token::RParen { .. }) = parser.peek_current() {
-                break;
-            }
-
-            let arg_expr = match parser.parse_expression(Precedence::Lowest) {
-                Ok(e) => Ok(e),
-                Err(_) => {
-                    parser.log_unexpected_str("function argument");
-                    Err(ErrorsEmitted)
-                }
-            }?;
-
-            args.push(arg_expr);
-
+        let open_paren = if let Some(Token::LParen { .. }) = parser.peek_current() {
             parser.consume_token();
+            Ok(Delimiter::LParen)
+        } else {
+            parser.log_unexpected_token(TokenType::LParen);
+            Err(ErrorsEmitted)
+        }?;
 
-            match parser.peek_current() {
-                Some(Token::Comma { .. }) => {
-                    parser.consume_token();
-                    continue;
-                }
-                Some(Token::RParen { .. }) => break,
-                Some(_) => {
-                    parser.log_unexpected_str("`,` or `)`");
-                }
-                None => break,
+        while !matches!(
+            parser.peek_current(),
+            Some(Token::RParen { .. } | Token::EOF)
+        ) {
+            let arg = parser.parse_expression(Precedence::Lowest)?;
+            args.push(arg);
+
+            if let Some(Token::Comma { .. }) = parser.peek_current() {
+                parser.consume_token();
             }
         }
 
-        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+        let close_paren = if let Some(Token::RParen { .. }) = parser.consume_token() {
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RParen,
+            });
+            Err(ErrorsEmitted)
+        }?;
 
         let expr = CallExpr {
             callee,
@@ -79,9 +74,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

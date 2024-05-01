@@ -1,9 +1,8 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, OuterAttr,
-        TraitDef, TraitDefItem, Visibility,
+        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, OuterAttr, TraitDef, TraitDefItem, Visibility
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
 
@@ -20,35 +19,34 @@ impl ParseDefinition for TraitDef {
     ) -> Result<TraitDef, ErrorsEmitted> {
         let kw_trait = parser.expect_keyword(TokenType::Trait)?;
 
-        let mut trait_items: Vec<TraitDefItem> = Vec::new();
-        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
-
-        let token = parser.consume_token();
-
-        let trait_name = if let Some(Token::Identifier { name, .. }) = token {
+        let trait_name = if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
+            parser.consume_token();
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
+        let mut trait_items = Vec::new();
+        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
+
         while let Some(ia) = parser.get_inner_attr() {
             inner_attributes.push(ia);
             parser.consume_token();
         }
 
-        loop {
-            if let Some(Token::RBrace { .. }) = parser.peek_current() {
-                break;
-            }
-
+        while !matches!(
+            parser.peek_current(),
+            Some(Token::RBrace { .. } | Token::EOF)
+        ) {
             let mut item_attributes: Vec<OuterAttr> = Vec::new();
 
             while let Some(oa) = parser.get_outer_attr() {
@@ -58,43 +56,18 @@ impl ParseDefinition for TraitDef {
 
             let item_visibility = parser.get_visibility()?;
 
-            let token = parser.peek_current();
-
-            let trait_item = if let Some(Token::Const { .. }) = token {
-                Ok(TraitDefItem::ConstantDecl(ConstantDecl::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?))
-            } else if let Some(Token::Alias { .. }) = token {
-                Ok(TraitDefItem::AliasDecl(AliasDecl::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?))
-            } else if let Some(Token::Func { .. }) = token {
-                Ok(TraitDefItem::FunctionDef(FunctionItem::parse(
-                    parser,
-                    item_attributes,
-                    item_visibility,
-                )?))
-            } else {
-                parser.log_unexpected_str("`const`, `alias` or `func`");
-                Err(ErrorsEmitted)
-            }?;
-
+            let trait_item = TraitDefItem::parse(parser, item_attributes, item_visibility)?;
             trait_items.push(trait_item);
         }
 
-        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
-
-        // let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-        //     parser.consume_token();
-        //     Ok(Delimiter::RBrace)
-        // } else {
-        //     parser.log_missing_delimiter('}');
-        //     Err(ErrorsEmitted)
-        // }?;
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.consume_token() {
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RBrace,
+            });
+            Err(ErrorsEmitted)
+        }?;
 
         Ok(TraitDef {
             outer_attributes_opt: {
@@ -127,6 +100,36 @@ impl ParseDefinition for TraitDef {
     }
 }
 
+impl TraitDefItem {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        attributes: Vec<OuterAttr>,
+        visibility: Visibility,
+    ) -> Result<TraitDefItem, ErrorsEmitted> {
+        match parser.peek_current() {
+            Some(Token::Const { .. }) => {
+                let constant_decl = ConstantDecl::parse(parser, attributes, visibility)?;
+                parser.consume_token();
+                Ok(TraitDefItem::ConstantDecl(constant_decl))
+            }
+            Some(Token::Alias { .. }) => {
+                let alias_decl = AliasDecl::parse(parser, attributes, visibility)?;
+                parser.consume_token();
+                Ok(TraitDefItem::AliasDecl(alias_decl))
+            }
+            Some(Token::Func { .. }) => {
+                let function_def = FunctionItem::parse(parser, attributes, visibility)?;
+                parser.consume_token();
+                Ok(TraitDefItem::FunctionDef(function_def))
+            }
+            _ => {
+                parser.log_unexpected_str("`const`, `alias` or `func`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::parser::test_utils;
@@ -150,9 +153,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
