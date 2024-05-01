@@ -15,7 +15,6 @@ impl Type {
 
         log_token(parser, "consume token", false);
 
-
         match token {
             Some(Token::I32Type { .. }) => Ok(Type::I32(PrimitiveType::I32)),
             Some(Token::I64Type { .. }) => Ok(Type::I64(PrimitiveType::I64)),
@@ -280,3 +279,7 @@ impl Type {
         }
     }
 }
+
+// TODO
+#[cfg(test)]
+mod tests {}

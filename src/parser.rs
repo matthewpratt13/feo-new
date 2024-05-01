@@ -109,7 +109,7 @@ impl Parser {
         parser
     }
 
-    // Initialize operator precedences
+    /// Initialize operator precedences.
     fn init_precedences(&mut self, tokens: Vec<Token>) {
         for t in tokens {
             match t.token_type() {
@@ -168,7 +168,7 @@ impl Parser {
         }
     }
 
-    // Get the precedence for a given token, considering context
+    /// Get the precedence for a given token, considering the current context.
     fn get_precedence(&self, token: &Token) -> Precedence {
         match token {
             Token::Dot { .. } => match self.context {
@@ -246,7 +246,7 @@ impl Parser {
         }
     }
 
-    // Set the context
+    /// Set the parser's context.
     fn set_context(&mut self, context: ParserContext) {
         self.context = context;
     }
@@ -285,11 +285,8 @@ impl Parser {
                 left_expr = infix_parser(self, left_expr)?; // Parse infix expressions
                 log_token(self, "exit infix parsing function", true);
             } else {
-                break; // Exit if no infix parser is found
+                break;
             }
-
-            // self.consume_token(); // Advance to the next token
-            // log_token(self, "consume token", false);
         }
 
         log_token(self, "exit `parse_expression()`", true);
@@ -383,8 +380,6 @@ impl Parser {
                         {
                             let open_brace = if let Some(Token::LBrace { .. }) = self.peek_current()
                             {
-                                // self.consume_token();
-                                // log_token(self, "consume token", true);
                                 Ok(Delimiter::LBrace)
                             } else {
                                 self.log_unexpected_token(TokenType::LBrace);
@@ -437,7 +432,6 @@ impl Parser {
                 PathExpr::parse(self, PathPrefix::Super)
             }
             Some(Token::Minus { .. }) => {
-                // TODO: this may cause problems
                 if self.context == ParserContext::Unary {
                     UnaryExpr::parse(self, UnaryOp::Negate)
                 } else {
@@ -449,7 +443,6 @@ impl Parser {
             Some(Token::Bang { .. }) => UnaryExpr::parse(self, UnaryOp::Not),
 
             Some(Token::Ampersand { .. }) => {
-                // TODO: this may cause problems
                 if self.context == ParserContext::Unary {
                     BorrowExpr::parse(self, ReferenceOp::Borrow)
                 } else {
@@ -461,7 +454,6 @@ impl Parser {
             Some(Token::AmpersandMut { .. }) => BorrowExpr::parse(self, ReferenceOp::MutableBorrow),
 
             Some(Token::Asterisk { .. }) => {
-                // TODO: this may cause problems
                 if self.context == ParserContext::Unary {
                     DereferenceExpr::parse(self, DereferenceOp)
                 } else {
@@ -476,7 +468,6 @@ impl Parser {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     TupleExpr::parse(self)
                 } else {
-                    // self.consume_token();
                     self.parse_primary()
                 }
             }
@@ -484,7 +475,6 @@ impl Parser {
             Some(Token::LBrace { .. }) => {
                 if self.is_match_expr() {
                     self.set_context(ParserContext::MatchArm);
-                    // self.consume_token();
                     let expr = self.parse_prefix()?;
                     MatchArm::parse(self, expr)
                 } else {
@@ -703,9 +693,7 @@ impl Parser {
                 }
             }
 
-            _ => {
-                None // Default to no infix parser
-            }
+            _ => None,
         }
     }
 
@@ -799,7 +787,7 @@ impl Parser {
         }
     }
 
-    // Get the precedence of the next token
+    /// Get the precedence of the next token
     fn peek_precedence(&self) -> Precedence {
         let precedence = self.get_precedence(&self.peek_current().unwrap_or(Token::EOF));
 
@@ -1163,18 +1151,17 @@ impl Parser {
         }
     }
 
+    /// Determine if the dot token indicates tuple index
     fn is_tuple_index(&self) -> bool {
         match self.peek_ahead_by(1) {
-            // If dot is followed by an integer (representing the tuple index)
             Some(Token::UIntLiteral { .. }) => true,
             _ => false,
         }
     }
 
-    // Determine if the dot token indicates a method call
+    /// Determine if the dot token indicates a method call
     fn is_method_call(&self) -> bool {
         if self.peek_ahead_by(2).is_some() {
-            // Check if the dot is followed by an identifier and then a parenthesis
             match (
                 self.peek_current(),
                 self.peek_ahead_by(1),
@@ -1192,10 +1179,9 @@ impl Parser {
         }
     }
 
-    // Determine if the dot token indicates field access
+    /// Determine if the dot token indicates field access
     fn is_field_access(&self) -> bool {
         if self.peek_ahead_by(1).is_some() {
-            // Check if the dot is followed by an identifier without a parenthesis
             match (self.peek_current(), self.peek_ahead_by(1)) {
                 (Some(Token::Dot { .. }), Some(Token::Identifier { .. })) => true, // `object.field`
                 _ => false,
@@ -1251,9 +1237,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -1265,9 +1251,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -1279,9 +1265,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

@@ -146,7 +146,7 @@ fn parse_match_arms(parser: &mut Parser) -> Result<Vec<Expression>, ErrorsEmitte
         if let Some(Token::Comma { .. }) = parser.peek_current() {
             log_token(parser, "encounter `,`", false);
 
-            parser.consume_token(); // Consume the comma separating arms
+            parser.consume_token();
             log_token(parser, "consume token", true);
         }
     }
@@ -169,9 +169,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }

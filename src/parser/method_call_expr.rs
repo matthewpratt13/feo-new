@@ -74,7 +74,7 @@ impl MethodCallExpr {
             arguments.push(argument);
 
             if let Some(Token::Comma { .. }) = parser.peek_current() {
-                parser.consume_token(); // Consume the comma
+                parser.consume_token();
             }
         }
 
@@ -92,9 +92,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
@@ -106,9 +106,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, false);
 
-        let expressions = parser.parse();
+        let statements = parser.parse();
 
-        match expressions {
+        match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
             Err(_) => Err(println!("{:#?}", parser.errors())),
         }
