@@ -109,7 +109,6 @@ impl FunctionOrMethodParam {
         } else {
             None
         };
-
         // Parse individual function params
         let param = match parser.peek_current() {
             Some(Token::SelfKeyword { .. }) => {

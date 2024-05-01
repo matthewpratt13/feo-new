@@ -489,7 +489,6 @@ impl Parser {
                     MatchArm::parse(self, expr)
                 } else {
                     let expr = BlockExpr::parse(self);
-                    self.consume_token();
                     expr
                 }
             }
