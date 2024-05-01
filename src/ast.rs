@@ -1,3 +1,7 @@
+//! Feo's Abstract Syntax Tree (AST) definition module, containing the different nodes
+//! that make up the tree, and the tokens within those nodes.
+//! The primary nodes are `Expression`, `Item` and `Statement`.
+
 mod expression;
 mod item;
 mod statement;
@@ -8,7 +12,7 @@ use crate::error::ParserErrorKind;
 pub use self::{expression::*, item::*, statement::*, types::*};
 
 ///////////////////////////////////////////////////////////////////////////
-/// LITERAL
+// LITERAL
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different literals used in AST nodes.
@@ -26,7 +30,7 @@ pub enum Literal {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// IDENTIFIER
+// IDENTIFIER
 ///////////////////////////////////////////////////////////////////////////
 
 /// Wrapper type, turning a `String` into an `Identifier`.
@@ -34,7 +38,7 @@ pub enum Literal {
 pub struct Identifier(pub String);
 
 ///////////////////////////////////////////////////////////////////////////
-/// KEYWORDS
+// KEYWORDS
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different keywords used in AST nodes.
@@ -102,7 +106,7 @@ pub enum OuterAttr {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// DELIMITERS
+// DELIMITERS
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different delimiters used in AST nodes.
@@ -117,7 +121,7 @@ pub enum Delimiter {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// PUNCTUATION
+// PUNCTUATION
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different unary operators used in AST nodes.
@@ -127,12 +131,14 @@ pub enum UnaryOp {
     Not,    // `!`
 }
 
+/// Enum representing the different reference operators used in AST nodes (i.e., `&` and `&mut`).
 #[derive(Debug, Clone, PartialEq)]
 pub enum ReferenceOp {
     Borrow,        // `&`
     MutableBorrow, // `&mut`
 }
 
+/// Unit struct representing the dereference operator (`*`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct DereferenceOp;
 
@@ -165,7 +171,7 @@ pub enum ComparisonOp {
     GreaterEqual,
 }
 
-/// Enum representing the different compound comparison operators used in AST nodes.
+/// Enum representing the different compound assignment operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CompoundAssignmentOp {
     AddAssign,
@@ -179,7 +185,7 @@ pub enum CompoundAssignmentOp {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssignmentOp;
 
-/// Unit struct representing the unwrap operator `?` used in AST nodes.
+/// Unit struct representing the unwrap operator (`?`) used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnwrapOp;
 
@@ -207,10 +213,10 @@ pub enum Separator {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// NODE GROUPS
+// NODE GROUPS
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different expression AST nodes.
+/// Enum representing the different types of expression in the AST.
 /// `Expression` nodes always produce or evaluate to a value and may have side effects.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
@@ -252,7 +258,7 @@ pub enum Expression {
     ResultExpr(ResultExpr),
 }
 
-/// Enum representing value type expressions.
+/// Enum representing value type expressions, which are subsets of `Expression`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValueExpr {
     Literal(Literal),
@@ -328,7 +334,7 @@ impl TryFrom<Expression> for ValueExpr {
     }
 }
 
-/// Enum representing assignee type expressions.
+/// Enum representing assignee type expressions, which are subsets of `Expression`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum AssigneeExpr {
     Literal(Literal),
@@ -565,7 +571,7 @@ impl TryFrom<Expression> for Pattern {
 }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
-/// A `Statement` is a component of a block, which is a component of an outer expression
+/// A statement is a component of a block, which is a component of an outer expression
 /// or function.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
@@ -653,7 +659,7 @@ pub enum Type {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// HELPER FUNCTIONS
+// HELPER FUNCTIONS
 ///////////////////////////////////////////////////////////////////////////
 
 /// Helper function to turn a byte slice (`&[u8]`) into a `Bytes`.

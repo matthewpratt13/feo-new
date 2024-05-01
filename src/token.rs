@@ -547,13 +547,13 @@ pub enum Token {
         span: Span,
     },
 
+    // comments
     LineComment {
         span: Span,
     },
     BlockComment {
         span: Span,
     },
-
     DocComment {
         comment: String,
         span: Span,
@@ -569,6 +569,7 @@ pub enum Token {
 }
 
 impl Token {
+    /// Convert `Token` into `TokenType` for more streamlined parsing, without span information.
     pub fn token_type(&self) -> TokenType {
         match self.clone() {
             Token::Identifier { name, .. } => TokenType::Iden(name),

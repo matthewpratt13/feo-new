@@ -3,7 +3,7 @@ use super::{
 };
 
 ///////////////////////////////////////////////////////////////////////////
-/// HELPER TYPES
+// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing whether or not a closure has parameters in its definition.
@@ -38,7 +38,8 @@ pub struct MatchArm {
     pub body: Box<Expression>,
 }
 
-/// Struct representing a single field in a struct expression, with a name and value.
+/// Struct representing a single field in a struct expression, with a name, value
+/// and optional attributes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
     pub attributes_opt: Option<Vec<OuterAttr>>,
@@ -54,7 +55,7 @@ pub struct TupleElements {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// NODES
+// AST NODE STRUCTURES
 ///////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone, PartialEq)]

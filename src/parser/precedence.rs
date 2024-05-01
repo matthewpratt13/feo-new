@@ -2,7 +2,7 @@
 /// Operations with higher precedences get evaluated first, and vice versa.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {
-    Lowest,             // `break`, `return`, closure
+    Lowest,             // `return`, `break`, closure
     Assignment,         // `=`
     CompoundAssignment, // `+=`, `-=`, `*/`, `/=`, `%=`
     Range,              // `..`, `..=` (requires parentheses)
@@ -25,7 +25,7 @@ pub enum Precedence {
     Remainder,          // `%`
     Exponentiation,     // `**`
     TypeCast,           // "as"
-    Unary,              // `-`, `*` `!`, `&`,`&mut`
+    Unary,              // `-`, `!`, `*`, `&`,`&mut`
     Unwrap,             // `?`
     Index,              // `array[0]`
     Call,               // `callee(foo)`
