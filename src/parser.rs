@@ -383,8 +383,8 @@ impl Parser {
                         {
                             let open_brace = if let Some(Token::LBrace { .. }) = self.peek_current()
                             {
-                                self.consume_token();
-                                log_token(self, "consume token", true);
+                                // self.consume_token();
+                                // log_token(self, "consume token", true);
                                 Ok(Delimiter::LBrace)
                             } else {
                                 self.log_unexpected_token(TokenType::LBrace);
@@ -484,7 +484,7 @@ impl Parser {
             Some(Token::LBrace { .. }) => {
                 if self.is_match_expr() {
                     self.set_context(ParserContext::MatchArm);
-                    self.consume_token();
+                    // self.consume_token();
                     let expr = self.parse_prefix()?;
                     MatchArm::parse(self, expr)
                 } else {

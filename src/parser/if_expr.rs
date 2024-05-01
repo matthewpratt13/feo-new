@@ -4,10 +4,13 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::Parser;
+use super::{test_utils::log_token, Parser};
 
 impl IfExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        log_token(parser, "enter `IfExpr::parse()`", true);
+
+
         let kw_if = parser.expect_keyword(TokenType::If)?;
 
         let mut else_if_blocks: Vec<(Keyword, Box<Expression>)> = Vec::new();
@@ -47,6 +50,8 @@ impl IfExpr {
             },
             trailing_else_block_opt,
         };
+
+        log_token(parser, "exit `IfExpr::parse()`", true);
 
         Ok(Expression::If(expr))
     }
