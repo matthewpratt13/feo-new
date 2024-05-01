@@ -251,6 +251,7 @@ pub enum Expression {
     Block(BlockExpr),
     If(IfExpr),       // condition, true, false
     Match(MatchExpr), // scrutinee, body
+    MatchArm(MatchArm),
     ForIn(ForInExpr), // variable, iterable, body
     While(WhileExpr), // while, condition, body
     SomeExpr(SomeExpr),

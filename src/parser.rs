@@ -49,10 +49,10 @@ use crate::{
         CallExpr, ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr,
         Delimiter, DereferenceExpr, DereferenceOp, EnumDef, Expression, FieldAccessExpr, ForInExpr,
         FunctionItem, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef,
-        InnerAttr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, ModuleItem,
-        NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, ReferenceOp,
-        ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl, StructDef,
-        StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef,
+        InnerAttr, Item, Keyword, LetStmt, Literal, MatchArm, MatchExpr, MethodCallExpr,
+        ModuleItem, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr,
+        ReferenceOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl,
+        StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef,
         TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
@@ -78,6 +78,7 @@ enum ParserContext {
     TupleIndex,  // `.`
     FieldAccess, // `.`
     MethodCall,  // `.`
+    MatchArm,
 }
 
 /// Struct that stores a stream of tokens and contains methods to parse expressions,
@@ -160,6 +161,7 @@ impl Parser {
                     self.precedences.insert(t, Precedence::CompoundAssignment)
                 }
                 TokenType::Equals => self.precedences.insert(t, Precedence::Assignment),
+                TokenType::FatArrow => self.precedences.insert(t, Precedence::Assignment),
 
                 _ => self.precedences.insert(t, Precedence::Lowest),
             };
@@ -368,6 +370,7 @@ impl Parser {
                     {
                         let expr = self.parse_primary();
                         self.consume_token();
+
                         if let Some(Token::Colon { .. }) = self.peek_ahead_by(2) {
                             let path = PathExpr {
                                 root: PathPrefix::Identifier(Identifier(name)),
@@ -375,6 +378,21 @@ impl Parser {
                                 wildcard_opt: None,
                             };
                             StructExpr::parse(self, path)
+                        } else if let Some(Token::FatArrow { .. } | Token::If { .. }) =
+                            self.peek_ahead_by(2)
+                        {
+                            let open_brace = if let Some(Token::LBrace { .. }) = self.peek_current()
+                            {
+                                self.consume_token();
+                                log_token(self, "consume token", true);
+                                Ok(Delimiter::LBrace)
+                            } else {
+                                self.log_unexpected_token(TokenType::LBrace);
+                                Err(ErrorsEmitted)
+                            }?;
+
+                            self.set_context(ParserContext::MatchArm);
+                            expr
                         } else {
                             expr
                         }
@@ -464,9 +482,16 @@ impl Parser {
             }
 
             Some(Token::LBrace { .. }) => {
-                let expr = BlockExpr::parse(self);
-                self.consume_token();
-                expr
+                if self.is_match_expr() {
+                    self.set_context(ParserContext::MatchArm);
+                    self.consume_token();
+                    let expr = self.parse_prefix()?;
+                    MatchArm::parse(self, expr)
+                } else {
+                    let expr = BlockExpr::parse(self);
+                    self.consume_token();
+                    expr
+                }
             }
 
             Some(Token::LBracket { .. }) => ArrayExpr::parse(self),
@@ -671,6 +696,14 @@ impl Parser {
 
             Some(Token::Equals { .. }) => Some(AssignmentExpr::parse),
 
+            Some(Token::FatArrow { .. }) => {
+                if self.context == ParserContext::MatchArm {
+                    Some(MatchArm::parse)
+                } else {
+                    None
+                }
+            }
+
             _ => {
                 None // Default to no infix parser
             }
@@ -724,8 +757,9 @@ impl Parser {
                 ));
 
                 if let Some(Token::Semicolon { .. }) = self.peek_current() {
-                    self.consume_token();
                     log_token(self, "encounter `;`", false);
+                    self.consume_token();
+                    log_token(self, "consume token", true);
                 }
 
                 statement
@@ -1195,6 +1229,13 @@ impl Parser {
         match (self.peek_current(), self.peek_ahead_by(1)) {
             (Some(Token::DblPipe { .. }), Some(Token::Identifier { .. })) => false,
             _ => true,
+        }
+    }
+
+    fn is_match_expr(&self) -> bool {
+        match (self.peek_behind_by(2), self.peek_ahead_by(2)) {
+            (Some(Token::Match { .. }), Some(Token::FatArrow { .. } | Token::If { .. })) => true,
+            _ => false,
         }
     }
 }

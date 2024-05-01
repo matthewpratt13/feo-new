@@ -7,7 +7,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::{test_utils::log_token, Parser, Precedence};
 
 impl MatchExpr {
     // pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
@@ -116,6 +116,8 @@ impl MatchExpr {
     // }
 
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        log_token(parser, "enter `MatchExpr::parse()`", true);
+
         let kw_match = parser.expect_keyword(TokenType::Match)?;
 
         let matched_expression = parser.parse_expression(Precedence::Lowest)?;
@@ -128,20 +130,23 @@ impl MatchExpr {
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
             parser.consume_token();
+            log_token(parser, "consume token", false);
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
-        let mut match_arms: Vec<MatchArm> = Vec::new();
+        let mut match_arms: Vec<Expression> = Vec::new();
 
         // Parse the match arms
         while !matches!(
             parser.peek_current(),
             Some(Token::RBrace { .. } | Token::EOF)
         ) {
-            let arm = Self::parse_match_arm(parser)?;
+            let expression = parser.parse_expression(Precedence::Lowest)?;
+
+            let arm = MatchArm::parse(parser, expression)?;
             match_arms.push(arm);
 
             if let Some(Token::Comma { .. }) = parser.peek_current() {
@@ -150,7 +155,7 @@ impl MatchExpr {
         }
 
         let final_arm = if let Some(a) = match_arms.pop() {
-            a
+            Box::new(a)
         } else {
             parser.log_error(ParserErrorKind::TokenNotFound {
                 expected: "match arm".to_string(),
@@ -158,7 +163,8 @@ impl MatchExpr {
             return Err(ErrorsEmitted);
         };
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.consume_token() {
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            parser.consume_token();
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -182,22 +188,27 @@ impl MatchExpr {
             close_brace,
         };
 
+        log_token(parser, "exit `MatchExpr::parse()`", true);
+
         Ok(Expression::Match(expr))
     }
+}
 
-    fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
-        // Parse the pattern for the match arm
-        let expression = parser.parse_expression(Precedence::Lowest)?;
+impl MatchArm {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        expression: Expression,
+    ) -> Result<Expression, ErrorsEmitted> {
+        log_token(parser, "enter `MatchArm::parse()`", true);
 
         let pattern = Pattern::try_from(expression).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        parser.consume_token();
-
         // Check for an optional guard (an 'if' expression)
         let guard_opt = if let Some(Token::If { .. }) = parser.peek_current() {
+            parser.consume_token();
             let expr = Box::new(IfExpr::parse(parser)?);
             Some((Keyword::If, expr)) // Parse the guard expression
         } else {
@@ -205,7 +216,10 @@ impl MatchExpr {
         };
 
         if let Some(Token::FatArrow { .. }) = parser.peek_current() {
+            log_token(parser, "encounter `=>`", false);
+
             parser.consume_token(); // Consume the arrow
+            log_token(parser, "consume token", true);
         } else {
             parser.log_unexpected_token(TokenType::FatArrow);
             return Err(ErrorsEmitted);
@@ -213,16 +227,24 @@ impl MatchExpr {
 
         // Parse the expression or block for the match arm
         let body = if let Some(Token::LBrace { .. }) = parser.peek_current() {
-            Box::new(BlockExpr::parse(parser)?)
+            let expr = Box::new(BlockExpr::parse(parser)?);
+            parser.consume_token();
+            expr
         } else {
-            Box::new(parser.parse_expression(Precedence::Lowest)?) // If it's a single expression
+            let expr = Box::new(parser.parse_expression(Precedence::Lowest)?); // If it's a single expression
+            parser.consume_token();
+            expr
         };
 
-        Ok(MatchArm {
+        log_token(parser, "exit `MatchArm::parse()`", true);
+
+        let expr = MatchArm {
             pattern,
             guard_opt,
             body,
-        })
+        };
+
+        Ok(Expression::MatchArm(expr))
     }
 }
 
