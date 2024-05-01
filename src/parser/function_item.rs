@@ -253,6 +253,8 @@ impl FunctionOrMethodParam {
 // }
 
 fn parse_function_params(parser: &mut Parser) -> Option<Vec<FunctionOrMethodParam>> {
+    log_token(parser, "enter `parse_function_params()`", true);
+
     let mut params = Vec::new();
 
     // Parse each param
@@ -265,6 +267,7 @@ fn parse_function_params(parser: &mut Parser) -> Option<Vec<FunctionOrMethodPara
 
             if let Some(Token::Comma { .. }) = parser.peek_current() {
                 parser.consume_token(); // Consume the comma separating params
+                log_token(parser, "consume token", false);
             }
         }
 
@@ -272,6 +275,8 @@ fn parse_function_params(parser: &mut Parser) -> Option<Vec<FunctionOrMethodPara
             break;
         }
     }
+
+    log_token(parser, "exit `parse_function_params()`", true);
 
     if params.is_empty() {
         None

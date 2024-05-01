@@ -1,7 +1,6 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, OuterAttr,
-        TraitDef, TraitDefItem, Visibility,
+        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, OuterAttr, TraitDef, TraitDefItem, Visibility
     },
     error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
@@ -102,7 +101,7 @@ impl ParseDefinition for TraitDef {
 }
 
 impl TraitDefItem {
-    fn parse(
+    pub(crate) fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
