@@ -1,8 +1,5 @@
 use crate::{
-    ast::{
-        AssigneeExpr, BlockExpr, Delimiter, Expression, IfExpr, Keyword, MatchArm, MatchExpr,
-        Pattern,
-    },
+    ast::{AssigneeExpr, BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr, Pattern},
     error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
@@ -124,11 +121,10 @@ impl MatchExpr {
 
         log_token(parser, "matched expression (scrutinee)`", true);
 
-        let scrutinee = AssigneeExpr::try_from(matched_expression)
-            .map_err(|e| {
-                parser.log_error(e);
-                ErrorsEmitted
-            })?;
+        let scrutinee = AssigneeExpr::try_from(matched_expression).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
             parser.consume_token();

@@ -981,6 +981,7 @@ impl Parser {
 
         let kw_ref_opt = if let Some(Token::Ref { .. }) = self.peek_current() {
             self.consume_token();
+            log_token(self, "consume token", false);
             Some(Keyword::Ref)
         } else {
             None
@@ -988,6 +989,7 @@ impl Parser {
 
         let kw_mut_opt = if let Some(Token::Mut { .. }) = self.peek_current() {
             self.consume_token();
+            log_token(self, "consume token", false);
             Some(Keyword::Mut)
         } else {
             None
