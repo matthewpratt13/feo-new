@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::sync::Arc;
 
 /// Struct that represents a range of characters in the source code where a token appears.
@@ -31,10 +29,5 @@ impl Span {
     /// Retrieve a thread-safe reference to the source code.
     pub fn input(&self) -> Arc<String> {
         Arc::clone(&self.input)
-    }
-
-    /// Method to get the substring corresponding to the span.
-    pub fn substring(&self) -> &str {
-        &self.input[self.start..self.end]
     }
 }

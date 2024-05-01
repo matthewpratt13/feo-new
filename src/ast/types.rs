@@ -3,6 +3,7 @@ pub use crate::{B16, B2, B32, B4, B8, H160, H256, H512, U256, U512};
 use super::Expression;
 
 /// Wrappers for the different signed integer types.
+#[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Int {
     I32(i32),
@@ -11,6 +12,7 @@ pub enum Int {
 }
 
 /// Wrappers for the different unsigned integer types.
+#[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum UInt {
     U8(u8),
@@ -21,6 +23,7 @@ pub enum UInt {
 }
 
 /// Wrappers for the different large unsigned integer types.
+#[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum BigUInt {
     U256(U256),

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 mod expression;
 mod item;
 mod statement;
@@ -68,7 +66,6 @@ pub enum Keyword {
     Break,
     Continue,
     Return,
-    Unsafe,
     Let,
     Mut,
     Ref,
@@ -199,8 +196,6 @@ pub enum Separator {
     Colon,
     Semicolon,
     Comma,
-    Dot,
-    DblColon,
     ColonColonAsterisk,
     ThinArrow,
     FatArrow,
@@ -209,8 +204,6 @@ pub enum Separator {
     RightAngledBracket,
     Pipe,
     DblPipe,
-    DblDot,
-    DotDotEquals,
 }
 
 ///////////////////////////////////////////////////////////////////////////

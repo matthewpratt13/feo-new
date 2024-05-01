@@ -1,7 +1,5 @@
 use super::{
-    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter,
-    DereferenceOp, Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp,
-    ReferenceOp, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr,
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter, DereferenceOp, Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -21,7 +19,7 @@ pub enum PathPrefix {
     Package,
     Super,
     SelfKeyword,
-    SelfType,
+    SelfType(SelfType),
     Identifier(Identifier),
 }
 

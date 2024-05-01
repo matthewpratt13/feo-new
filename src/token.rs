@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::fmt;
 
 use crate::{
@@ -8,6 +6,7 @@ use crate::{
 };
 
 /// Enum representing the different types of tokens.
+#[allow(dead_code)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Token {
     // includes `_`
@@ -413,14 +412,6 @@ pub enum Token {
         punc: String,
         span: Span,
     },
-    HashSign {
-        punc: char,
-        span: Span,
-    },
-    HashBang {
-        punc: String,
-        span: Span,
-    },
     ThinArrow {
         punc: String,
         span: Span,
@@ -432,10 +423,6 @@ pub enum Token {
 
     // operators
     Bang {
-        punc: char,
-        span: Span,
-    },
-    DollarSign {
         punc: char,
         span: Span,
     },
@@ -682,12 +669,9 @@ impl Token {
             Token::Dot { .. } => TokenType::Dot,
             Token::DblColon { .. } => TokenType::DblColon,
             Token::ColonColonAsterisk { .. } => TokenType::ColonColonAsterisk,
-            Token::HashSign { .. } => TokenType::HashSign,
-            Token::HashBang { .. } => TokenType::HashBang,
             Token::ThinArrow { .. } => TokenType::ThinArrow,
             Token::FatArrow { .. } => TokenType::FatArrow,
             Token::Bang { .. } => TokenType::Bang,
-            Token::DollarSign { .. } => TokenType::DollarSign,
             Token::Percent { .. } => TokenType::Percent,
             Token::Ampersand { .. } => TokenType::Ampersand,
             Token::Asterisk { .. } => TokenType::Asterisk,
@@ -827,12 +811,9 @@ impl Token {
             Token::Dot { span, .. } => span,
             Token::DblColon { span, .. } => span,
             Token::ColonColonAsterisk { span, .. } => span,
-            Token::HashSign { span, .. } => span,
-            Token::HashBang { span, .. } => span,
             Token::ThinArrow { span, .. } => span,
             Token::FatArrow { span, .. } => span,
             Token::Bang { span, .. } => span,
-            Token::DollarSign { span, .. } => span,
             Token::Percent { span, .. } => span,
             Token::Ampersand { span, .. } => span,
             Token::Asterisk { span, .. } => span,
@@ -973,12 +954,9 @@ impl fmt::Display for TokenType {
             TokenType::Dot { .. } => write!(f, "`.`"),
             TokenType::DblColon { .. } => write!(f, "`::`"),
             TokenType::ColonColonAsterisk { .. } => write!(f, "`::*`"),
-            TokenType::HashSign { .. } => write!(f, "`#`"),
-            TokenType::HashBang { .. } => write!(f, "`#!`"),
             TokenType::ThinArrow { .. } => write!(f, "`->`"),
             TokenType::FatArrow { .. } => write!(f, "`=>`"),
             TokenType::Bang { .. } => write!(f, "`!`"),
-            TokenType::DollarSign { .. } => write!(f, "`$`"),
             TokenType::Percent { .. } => write!(f, "`%`"),
             TokenType::Ampersand { .. } => write!(f, "`&`"),
             TokenType::Asterisk { .. } => write!(f, "`*`"),
@@ -1164,16 +1142,11 @@ impl fmt::Debug for Token {
                 .debug_struct("ColonColonAsterisk")
                 .field("punc", punc)
                 .finish(),
-            Self::HashSign { punc, .. } => f.debug_struct("HashSign").field("punc", punc).finish(),
-            Self::HashBang { punc, .. } => f.debug_struct("HashBang").field("punc", punc).finish(),
             Self::ThinArrow { punc, .. } => {
                 f.debug_struct("ThinArrow").field("punc", punc).finish()
             }
             Self::FatArrow { punc, .. } => f.debug_struct("FatArrow").field("punc", punc).finish(),
             Self::Bang { punc, .. } => f.debug_struct("Bang").field("punc", punc).finish(),
-            Self::DollarSign { punc, .. } => {
-                f.debug_struct("DollarSign").field("punc", punc).finish()
-            }
             Self::Percent { punc, .. } => f.debug_struct("Percent").field("punc", punc).finish(),
             Self::Ampersand { punc, .. } => {
                 f.debug_struct("Ampersand").field("punc", punc).finish()
@@ -1368,12 +1341,9 @@ pub enum TokenType {
     Dot,
     DblColon,
     ColonColonAsterisk,
-    HashSign,
-    HashBang,
     ThinArrow,
     FatArrow,
     Bang,
-    DollarSign,
     Percent,
     Ampersand,
     Asterisk,

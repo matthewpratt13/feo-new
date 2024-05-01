@@ -1,5 +1,5 @@
 use crate::{
-    ast::{FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType, Type},
+    ast::{FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType, SelfType, Type},
     error::ErrorsEmitted,
     token::{Token, TokenType},
 };
@@ -268,8 +268,12 @@ impl Type {
             }
 
             Some(Token::SelfType { .. }) => {
-                let path = PathExpr::parse(parser, PathPrefix::SelfType)?;
-                Ok(Type::UserDefined(path))
+                if let Some(Token::DblColon { .. }) = parser.peek_ahead_by(1) {
+                    let path = PathExpr::parse(parser, PathPrefix::SelfType(SelfType))?;
+                    Ok(Type::UserDefined(path))
+                } else {
+                    Ok(Type::SelfType(SelfType))
+                }
             }
 
             _ => {

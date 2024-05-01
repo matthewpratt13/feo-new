@@ -1,6 +1,3 @@
-// #![allow(dead_code)]
-// #![allow(unused_variables)]
-
 mod alias_decl;
 mod array_expr;
 mod assignment_expr;
@@ -45,15 +42,7 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BorrowExpr, BreakExpr,
-        CallExpr, ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr,
-        Delimiter, DereferenceExpr, DereferenceOp, EnumDef, Expression, FieldAccessExpr, ForInExpr,
-        FunctionItem, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef,
-        InnerAttr, Item, Keyword, LetStmt, Literal, MatchArm, MatchExpr, MethodCallExpr,
-        ModuleItem, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr,
-        ReferenceOp, ResultExpr, ReturnExpr, Separator, SomeExpr, Statement, StaticItemDecl,
-        StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef,
-        TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, Visibility, WhileExpr,
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BorrowExpr, BreakExpr, CallExpr, ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr, Delimiter, DereferenceExpr, DereferenceOp, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionItem, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef, InnerAttr, Item, Keyword, LetStmt, Literal, MatchArm, MatchExpr, MethodCallExpr, ModuleItem, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr, ReferenceOp, ResultExpr, ReturnExpr, SelfType, Separator, SomeExpr, Statement, StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, Visibility, WhileExpr
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream, TokenType},
@@ -405,7 +394,7 @@ impl Parser {
             Some(Token::SelfType { .. }) => {
                 if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     let path = PathExpr {
-                        root: PathPrefix::SelfType,
+                        root: PathPrefix::SelfType(SelfType),
                         tree_opt: None,
                         wildcard_opt: None,
                     };
@@ -414,7 +403,7 @@ impl Parser {
                     StructExpr::parse(self, path)
                 } else {
                     self.consume_token();
-                    PathExpr::parse(self, PathPrefix::SelfType)
+                    PathExpr::parse(self, PathPrefix::SelfType(SelfType))
                 }
             }
             Some(Token::SelfKeyword { .. }) => {
