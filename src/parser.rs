@@ -1032,7 +1032,7 @@ impl Parser {
         log_token(self, "consume token", false);
     }
 
-    /// Retrieve any errors that occurred during parsing.
+    /// Retrieve a list of any errors that occurred during parsing.
     #[allow(dead_code)]
     pub fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
         &self.errors
