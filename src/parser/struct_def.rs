@@ -12,7 +12,7 @@ use super::{collection, item::ParseDefinition, Parser};
 impl ParseDefinition for StructDef {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<StructDef, ErrorsEmitted> {
         let kw_struct = parser.expect_keyword(TokenType::Struct)?;
@@ -37,13 +37,7 @@ impl ParseDefinition for StructDef {
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
         Ok(StructDef {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             visibility,
             kw_struct,
             struct_name,
@@ -63,7 +57,7 @@ impl ParseDefinition for StructDef {
 impl ParseDefinition for TupleStructDef {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<TupleStructDef, ErrorsEmitted> {
         let kw_struct = parser.expect_keyword(TokenType::Struct)?;
@@ -90,13 +84,7 @@ impl ParseDefinition for TupleStructDef {
         parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(TupleStructDef {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             visibility,
             kw_struct,
             struct_name,
@@ -115,12 +103,7 @@ impl ParseDefinition for TupleStructDef {
 
 impl StructDefField {
     fn parse(parser: &mut Parser) -> Result<StructDefField, ErrorsEmitted> {
-        let mut field_attributes: Vec<OuterAttr> = Vec::new();
-
-        while let Some(oa) = OuterAttr::outer_attr(parser) {
-            field_attributes.push(oa);
-            parser.next_token();
-        }
+        let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
         let field_visibility = Visibility::visibility(parser)?;
 
@@ -134,13 +117,7 @@ impl StructDefField {
             let field_type = Box::new(Type::parse(parser)?);
 
             StructDefField {
-                attributes_opt: {
-                    if field_attributes.is_empty() {
-                        None
-                    } else {
-                        Some(field_attributes)
-                    }
-                },
+                attributes_opt,
                 visibility: field_visibility,
                 field_name,
                 field_type,
@@ -156,20 +133,6 @@ impl StructDefField {
 
 impl TupleStructDefField {
     fn parse(parser: &mut Parser) -> Result<TupleStructDefField, ErrorsEmitted> {
-        let mut field_attributes: Vec<OuterAttr> = Vec::new();
-
-        while let Some(oa) = OuterAttr::outer_attr(parser) {
-            field_attributes.push(oa);
-            parser.next_token();
-        }
-
-        let mut field_attributes: Vec<OuterAttr> = Vec::new();
-
-        while let Some(oa) = OuterAttr::outer_attr(parser) {
-            field_attributes.push(oa);
-            parser.next_token();
-        }
-
         let field_visibility = Visibility::visibility(parser)?;
 
         let field_type = Box::new(Type::parse(parser)?);

@@ -98,18 +98,30 @@ pub(crate) fn get_associated_items<T: ParseAssociatedItem>(
         parser.current_token(),
         Some(Token::RBrace { .. } | Token::EOF)
     ) {
-        let mut item_attributes: Vec<OuterAttr> = Vec::new();
-
-        while let Some(oa) = OuterAttr::outer_attr(parser) {
-            item_attributes.push(oa);
-            parser.next_token();
-        }
+        let attributes_opt = get_attributes(parser, OuterAttr::outer_attr);
 
         let item_visibility = Visibility::visibility(parser)?;
 
-        let item = T::parse(parser, item_attributes, item_visibility)?;
+        let item = T::parse(parser, attributes_opt, item_visibility)?;
         items.push(item);
     }
 
     Ok(items)
+}
+
+pub(crate) fn get_attributes<T>(
+    parser: &mut Parser,
+    f: fn(&Parser) -> Option<T>,
+) -> Option<Vec<T>> {
+    let mut attributes = Vec::new();
+
+    while let Some(a) = f(parser) {
+        attributes.push(a);
+        parser.next_token();
+    }
+
+    match attributes.is_empty() {
+        true => None,
+        false => Some(attributes),
+    }
 }

@@ -47,12 +47,7 @@ impl StructExpr {
 }
 
 fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted> {
-    let mut attributes: Vec<OuterAttr> = Vec::new();
-
-    while let Some(oa) = OuterAttr::outer_attr(parser) {
-        attributes.push(oa);
-        parser.next_token();
-    }
+    let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
     let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
         parser.next_token();
@@ -67,13 +62,7 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
     let field_value = parser.parse_expression(Precedence::Lowest)?;
 
     let field = StructField {
-        attributes_opt: {
-            if attributes.is_empty() {
-                None
-            } else {
-                Some(attributes)
-            }
-        },
+        attributes_opt,
         field_name,
         field_value,
     };

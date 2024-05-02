@@ -12,7 +12,7 @@ use super::{collection, test_utils::log_token, Parser};
 impl FunctionItem {
     pub(crate) fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<FunctionItem, ErrorsEmitted> {
         log_token(parser, "enter `FunctionItem::parse()`", true);
@@ -70,13 +70,7 @@ impl FunctionItem {
         log_token(parser, "exit `FunctionItem::parse()`", true);
 
         Ok(FunctionItem {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             visibility,
             kw_func,
             function_name,

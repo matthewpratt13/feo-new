@@ -742,12 +742,7 @@ impl Parser {
 
     /// Parse the current token and convert it from an `Item` to a `Statement`.
     fn get_item(&mut self) -> Result<Statement, ErrorsEmitted> {
-        let mut outer_attributes: Vec<OuterAttr> = Vec::new();
-
-        while let Some(oa) = OuterAttr::outer_attr(self) {
-            outer_attributes.push(oa);
-            self.next_token();
-        }
+        let attributes_opt = collection::get_attributes(self, OuterAttr::outer_attr);
 
         let visibility = Visibility::visibility(self)?;
 
@@ -756,40 +751,40 @@ impl Parser {
         match token {
             Some(Token::Import { .. }) => Ok(Statement::Item(Item::ImportDecl(ImportDecl::parse(
                 self,
-                outer_attributes,
+                attributes_opt,
                 visibility,
             )?))),
             Some(Token::Alias { .. }) => Ok(Statement::Item(Item::AliasDecl(AliasDecl::parse(
                 self,
-                outer_attributes,
+                attributes_opt,
                 visibility,
             )?))),
             Some(Token::Const { .. }) => Ok(Statement::Item(Item::ConstantDecl(
-                ConstantDecl::parse(self, outer_attributes, visibility)?,
+                ConstantDecl::parse(self, attributes_opt, visibility)?,
             ))),
             Some(Token::Static { .. }) => Ok(Statement::Item(Item::StaticItemDecl(
-                StaticItemDecl::parse(self, outer_attributes, visibility)?,
+                StaticItemDecl::parse(self, attributes_opt, visibility)?,
             ))),
             Some(Token::Module { .. }) => Ok(Statement::Item(Item::ModuleItem(Box::new(
-                ModuleItem::parse(self, outer_attributes, visibility)?,
+                ModuleItem::parse(self, attributes_opt, visibility)?,
             )))),
             Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
                 self,
-                outer_attributes,
+                attributes_opt,
                 visibility,
             )?))),
             Some(Token::Enum { .. }) => Ok(Statement::Item(Item::EnumDef(EnumDef::parse(
                 self,
-                outer_attributes,
+                attributes_opt,
                 visibility,
             )?))),
             Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
                 Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::StructDef(
-                    StructDef::parse(self, outer_attributes, visibility)?,
+                    StructDef::parse(self, attributes_opt, visibility)?,
                 ))),
 
                 Some(Token::LParen { .. }) => Ok(Statement::Item(Item::TupleStructDef(
-                    TupleStructDef::parse(self, outer_attributes, visibility)?,
+                    TupleStructDef::parse(self, attributes_opt, visibility)?,
                 ))),
 
                 _ => {
@@ -799,14 +794,14 @@ impl Parser {
             },
 
             Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionItem(
-                FunctionItem::parse(self, outer_attributes, visibility)?,
+                FunctionItem::parse(self, attributes_opt, visibility)?,
             ))),
             Some(Token::Impl { .. }) => match self.peek_ahead_by(2) {
                 Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
-                    TraitImplDef::parse(self, outer_attributes, visibility)?,
+                    TraitImplDef::parse(self, attributes_opt, visibility)?,
                 ))),
                 Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
-                    InherentImplDef::parse(self, outer_attributes, visibility)?,
+                    InherentImplDef::parse(self, attributes_opt, visibility)?,
                 ))),
                 _ => {
                     self.log_error(ParserErrorKind::UnexpectedToken {

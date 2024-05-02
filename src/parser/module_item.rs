@@ -9,7 +9,7 @@ use super::{collection, Parser};
 impl ModuleItem {
     pub(crate) fn parse(
         parser: &mut Parser,
-        outer_attributes: Vec<OuterAttr>,
+        outer_attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ModuleItem, ErrorsEmitted> {
         let kw_module = parser.expect_keyword(TokenType::Module)?;
@@ -31,12 +31,7 @@ impl ModuleItem {
             Err(ErrorsEmitted)
         }?;
 
-        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
-
-        while let Some(ia) = InnerAttr::inner_attr(parser) {
-            inner_attributes.push(ia);
-            parser.next_token();
-        }
+        let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
         let items = collection::get_associated_items::<Item>(parser)?;
 
@@ -50,24 +45,12 @@ impl ModuleItem {
         }?;
 
         Ok(ModuleItem {
-            outer_attributes_opt: {
-                if outer_attributes.is_empty() {
-                    None
-                } else {
-                    Some(outer_attributes)
-                }
-            },
+            outer_attributes_opt,
             visibility,
             kw_module,
             module_name,
             open_brace,
-            inner_attributes_opt: {
-                if inner_attributes.is_empty() {
-                    None
-                } else {
-                    Some(inner_attributes)
-                }
-            },
+            inner_attributes_opt,
             items_opt: {
                 if items.is_empty() {
                     None

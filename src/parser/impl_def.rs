@@ -17,7 +17,7 @@ use super::{
 impl ParseDefinition for InherentImplDef {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         _visibility: Visibility,
     ) -> Result<InherentImplDef, ErrorsEmitted> {
         let kw_impl = parser.expect_keyword(TokenType::Impl)?;
@@ -44,13 +44,7 @@ impl ParseDefinition for InherentImplDef {
         }?;
 
         Ok(InherentImplDef {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             kw_impl,
             nominal_type,
             open_brace,
@@ -69,7 +63,7 @@ impl ParseDefinition for InherentImplDef {
 impl ParseDefinition for TraitImplDef {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         _visibility: Visibility,
     ) -> Result<TraitImplDef, ErrorsEmitted> {
         let kw_impl = parser.expect_keyword(TokenType::Impl)?;
@@ -112,13 +106,7 @@ impl ParseDefinition for TraitImplDef {
         }?;
 
         Ok(TraitImplDef {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             kw_impl,
             implemented_trait_path,
             kw_for,
@@ -139,17 +127,17 @@ impl ParseDefinition for TraitImplDef {
 impl ParseAssociatedItem for InherentImplItem {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<InherentImplItem, ErrorsEmitted> {
         match parser.current_token() {
             Some(Token::Const { .. }) => {
-                let constant_decl = ConstantDecl::parse(parser, attributes, visibility)?;
+                let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
                 Ok(InherentImplItem::ConstantDecl(constant_decl))
             }
 
             Some(Token::Func { .. }) => {
-                let function_def = FunctionItem::parse(parser, attributes, visibility)?;
+                let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 Ok(InherentImplItem::FunctionDef(function_def))
             }
             _ => {
@@ -163,20 +151,20 @@ impl ParseAssociatedItem for InherentImplItem {
 impl ParseAssociatedItem for TraitImplItem {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<TraitImplItem, ErrorsEmitted> {
         match parser.current_token() {
             Some(Token::Const { .. }) => {
-                let constant_decl = ConstantDecl::parse(parser, attributes, visibility)?;
+                let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
                 Ok(TraitImplItem::ConstantDecl(constant_decl))
             }
             Some(Token::Alias { .. }) => {
-                let alias_decl = AliasDecl::parse(parser, attributes, visibility)?;
+                let alias_decl = AliasDecl::parse(parser, attributes_opt, visibility)?;
                 Ok(TraitImplItem::AliasDecl(alias_decl))
             }
             Some(Token::Func { .. }) => {
-                let function_def = FunctionItem::parse(parser, attributes, visibility)?;
+                let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 Ok(TraitImplItem::FunctionDef(function_def))
             }
             _ => {

@@ -16,7 +16,7 @@ use super::{
 impl ParseDefinition for TraitDef {
     fn parse(
         parser: &mut Parser,
-        outer_attributes: Vec<OuterAttr>,
+        outer_attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<TraitDef, ErrorsEmitted> {
         let kw_trait = parser.expect_keyword(TokenType::Trait)?;
@@ -37,12 +37,7 @@ impl ParseDefinition for TraitDef {
             Err(ErrorsEmitted)
         }?;
 
-        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
-
-        while let Some(ia) = InnerAttr::inner_attr(parser) {
-            inner_attributes.push(ia);
-            parser.next_token();
-        }
+        let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
         let trait_items = collection::get_associated_items::<TraitDefItem>(parser)?;
 
@@ -56,24 +51,12 @@ impl ParseDefinition for TraitDef {
         }?;
 
         Ok(TraitDef {
-            outer_attributes_opt: {
-                if outer_attributes.is_empty() {
-                    None
-                } else {
-                    Some(outer_attributes)
-                }
-            },
+            outer_attributes_opt,
             visibility,
             kw_trait,
             trait_name,
             open_brace,
-            inner_attributes_opt: {
-                if inner_attributes.is_empty() {
-                    None
-                } else {
-                    Some(inner_attributes)
-                }
-            },
+            inner_attributes_opt,
             trait_items_opt: {
                 if trait_items.is_empty() {
                     None
@@ -89,22 +72,22 @@ impl ParseDefinition for TraitDef {
 impl ParseAssociatedItem for TraitDefItem {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<TraitDefItem, ErrorsEmitted> {
         match parser.current_token() {
             Some(Token::Const { .. }) => {
-                let constant_decl = ConstantDecl::parse(parser, attributes, visibility)?;
+                let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
                 parser.next_token();
                 Ok(TraitDefItem::ConstantDecl(constant_decl))
             }
             Some(Token::Alias { .. }) => {
-                let alias_decl = AliasDecl::parse(parser, attributes, visibility)?;
+                let alias_decl = AliasDecl::parse(parser, attributes_opt, visibility)?;
                 parser.next_token();
                 Ok(TraitDefItem::AliasDecl(alias_decl))
             }
             Some(Token::Func { .. }) => {
-                let function_def = FunctionItem::parse(parser, attributes, visibility)?;
+                let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 parser.next_token();
                 Ok(TraitDefItem::FunctionDef(function_def))
             }

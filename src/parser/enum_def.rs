@@ -12,7 +12,7 @@ use super::{collection, item::ParseDefinition, Parser};
 impl ParseDefinition for EnumDef {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<EnumDef, ErrorsEmitted> {
         let kw_enum = parser.expect_keyword(TokenType::Enum)?;
@@ -38,12 +38,7 @@ impl ParseDefinition for EnumDef {
                 break;
             }
 
-            let mut attributes: Vec<OuterAttr> = Vec::new();
-
-            while let Some(oa) = OuterAttr::outer_attr(parser) {
-                attributes.push(oa);
-                parser.next_token();
-            }
+            let attributes = collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
 
             let variant = EnumVariant::parse(parser, attributes)?;
             variants.push(variant);
@@ -65,11 +60,7 @@ impl ParseDefinition for EnumDef {
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
         Ok(EnumDef {
-            attributes_opt: if attributes.is_empty() {
-                None
-            } else {
-                Some(attributes)
-            },
+            attributes_opt,
             visibility,
             kw_enum,
             enum_name,
@@ -83,7 +74,7 @@ impl ParseDefinition for EnumDef {
 impl EnumVariant {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
     ) -> Result<EnumVariant, ErrorsEmitted> {
         let token = parser.next_token();
 
@@ -112,13 +103,7 @@ impl EnumVariant {
         };
 
         Ok(EnumVariant {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             visibility,
             variant_name,
             variant_type_opt,

@@ -12,7 +12,7 @@ use super::{collection, item::ParseDeclaration, Parser};
 impl ParseDeclaration for ImportDecl {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ImportDecl, ErrorsEmitted> {
         let kw_import = parser.expect_keyword(TokenType::Import)?;
@@ -22,13 +22,7 @@ impl ParseDeclaration for ImportDecl {
         parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(ImportDecl {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             visibility,
             kw_import,
             tree,

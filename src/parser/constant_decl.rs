@@ -9,7 +9,7 @@ use super::{item::ParseDeclaration, Parser, Precedence};
 impl ParseDeclaration for ConstantDecl {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ConstantDecl, ErrorsEmitted> {
         let kw_const = parser.expect_keyword(TokenType::Const)?;
@@ -40,14 +40,7 @@ impl ParseDeclaration for ConstantDecl {
         parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(ConstantDecl {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
-
+            attributes_opt,
             visibility,
             kw_const,
             item_name,
