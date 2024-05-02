@@ -10,12 +10,11 @@ impl ReturnExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_return = parser.expect_keyword(TokenType::Return)?;
 
-        let expression_opt: Option<Box<Expression>> = if parser.peek_current().is_some() {
+        let expression_opt: Option<Box<Expression>> = if parser.current_token().is_some() {
             Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
         } else {
             None
         };
-
 
         let expr = ReturnExpr {
             kw_return,

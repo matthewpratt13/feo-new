@@ -8,7 +8,7 @@ use super::{Parser, Precedence};
 
 impl ResultExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let token = parser.consume_token();
+        let token = parser.next_token();
 
         let kw_ok_or_err = if let Some(Token::Ok { .. }) = token {
             Ok(Keyword::Ok)
@@ -19,7 +19,7 @@ impl ResultExpr {
             Err(ErrorsEmitted)
         }?;
 
-        if let Some(Token::LParen { .. }) = parser.consume_token() {
+        if let Some(Token::LParen { .. }) = parser.next_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token(TokenType::LParen);
@@ -27,7 +27,6 @@ impl ResultExpr {
         }?;
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
-
 
         parser.expect_delimiter(TokenType::RParen)?;
 

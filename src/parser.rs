@@ -348,7 +348,7 @@ impl Parser {
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
         log_token(self, "enter `parse_primary()`", true);
 
-        let token = self.peek_current();
+        let token = self.current_token();
 
         match token {
             Some(Token::Identifier { name, .. }) => {
@@ -370,7 +370,7 @@ impl Parser {
             Some(Token::BoolLiteral { value, .. }) => Ok(Expression::Literal(Literal::Bool(value))),
             Some(Token::LParen { .. }) => {
                 let expr = GroupedExpr::parse(self);
-                self.consume_token();
+                self.next_token();
                 expr
             }
             _ => {
@@ -390,7 +390,7 @@ impl Parser {
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
         log_token(self, "enter `parse_prefix()`", true);
 
-        match self.peek_current() {
+        match self.current_token() {
             Some(
                 Token::IntLiteral { .. }
                 | Token::UIntLiteral { .. }
@@ -403,7 +403,7 @@ impl Parser {
                 | Token::BoolLiteral { .. },
             ) => {
                 let expr = self.parse_primary();
-                self.consume_token();
+                self.next_token();
                 log_token(self, "consume token", true);
 
                 expr
@@ -411,14 +411,14 @@ impl Parser {
 
             Some(Token::Identifier { name, .. }) => {
                 if &name == "_" {
-                    self.consume_token();
+                    self.next_token();
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Separator::Underscore,
                     }))
                 } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     {
                         let expr = self.parse_primary();
-                        self.consume_token();
+                        self.next_token();
 
                         if let Some(Token::Colon { .. }) = self.peek_ahead_by(2) {
                             let path = PathExpr {
@@ -430,7 +430,7 @@ impl Parser {
                         } else if let Some(Token::FatArrow { .. } | Token::If { .. }) =
                             self.peek_ahead_by(2)
                         {
-                            if let Some(Token::LBrace { .. }) = self.peek_current() {
+                            if let Some(Token::LBrace { .. }) = self.current_token() {
                                 self.set_context(ParserContext::MatchArm);
                                 expr
                             } else {
@@ -445,11 +445,11 @@ impl Parser {
                     self.peek_ahead_by(1)
                 {
                     let expr = PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)));
-                    self.consume_token();
+                    self.next_token();
                     expr
                 } else {
                     let expr = self.parse_primary();
-                    self.consume_token();
+                    self.next_token();
                     expr
                 }
             }
@@ -461,23 +461,23 @@ impl Parser {
                         wildcard_opt: None,
                     };
 
-                    self.consume_token();
+                    self.next_token();
                     StructExpr::parse(self, path)
                 } else {
-                    self.consume_token();
+                    self.next_token();
                     PathExpr::parse(self, PathPrefix::SelfType(SelfType))
                 }
             }
             Some(Token::SelfKeyword { .. }) => {
-                self.consume_token();
+                self.next_token();
                 PathExpr::parse(self, PathPrefix::SelfKeyword)
             }
             Some(Token::Package { .. }) => {
-                self.consume_token();
+                self.next_token();
                 PathExpr::parse(self, PathPrefix::Package)
             }
             Some(Token::Super { .. }) => {
-                self.consume_token();
+                self.next_token();
                 PathExpr::parse(self, PathPrefix::Super)
             }
             Some(Token::Minus { .. }) => {
@@ -540,7 +540,7 @@ impl Parser {
                     ClosureExpr::parse(self)
                 } else if self.is_bitwise_or() {
                     self.set_context(ParserContext::BitwiseOr);
-                    self.consume_token(); // Consume the pipe
+                    self.next_token(); // Consume the pipe
                     let left = self.parse_prefix()?;
                     BinaryExpr::parse(self, left)
                 } else {
@@ -557,7 +557,7 @@ impl Parser {
                     ClosureExpr::parse(self)
                 } else if self.is_logical_or() {
                     self.set_context(ParserContext::LogicalOr);
-                    self.consume_token(); // Consume the pipe
+                    self.next_token(); // Consume the pipe
                     let left = self.parse_prefix()?;
                     BinaryExpr::parse(self, left)
                 } else {
@@ -575,7 +575,7 @@ impl Parser {
                         range_op: RangeOp::RangeExclusive,
                         to_opt: None,
                     };
-                    self.consume_token();
+                    self.next_token();
                     Ok(Expression::Range(expr))
                 } else {
                     RangeExpr::parse_prefix(self)
@@ -593,7 +593,7 @@ impl Parser {
             Some(Token::Some { .. }) => SomeExpr::parse(self),
 
             Some(Token::None { .. }) => {
-                self.consume_token();
+                self.next_token();
 
                 Ok(Expression::NoneExpr(NoneExpr {
                     kw_none: Keyword::None,
@@ -603,14 +603,14 @@ impl Parser {
             Some(Token::Ok { .. } | Token::Err { .. }) => ResultExpr::parse(self),
 
             Some(Token::Break { .. }) => {
-                self.consume_token();
+                self.next_token();
                 Ok(Expression::Break(BreakExpr {
                     kw_break: Keyword::Break,
                 }))
             }
 
             Some(Token::Continue { .. }) => {
-                self.consume_token();
+                self.next_token();
                 Ok(Expression::Continue(ContinueExpr {
                     kw_continue: Keyword::Continue,
                 }))
@@ -620,13 +620,13 @@ impl Parser {
 
             _ => {
                 log_token(self, "unexpected token", true);
-                self.consume_token(); // skip token
+                self.next_token(); // skip token
 
                 log_token(self, "consume token", true);
 
                 self.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "prefix expression".to_string(),
-                    found: self.peek_current(),
+                    found: self.current_token(),
                 });
                 Err(ErrorsEmitted)
             }
@@ -642,7 +642,7 @@ impl Parser {
     ) -> Option<fn(&mut Self, Expression) -> Result<Expression, ErrorsEmitted>> {
         log_token(self, "enter `parse_infix()`", true);
 
-        match &self.peek_current() {
+        match &self.current_token() {
             Some(Token::Dot { .. }) => {
                 if self.is_tuple_index() {
                     self.set_context(ParserContext::TupleIndex);
@@ -654,7 +654,7 @@ impl Parser {
                     self.set_context(ParserContext::Default);
                 }
 
-                self.consume_token();
+                self.next_token();
 
                 match self.context {
                     ParserContext::FieldAccess => Some(FieldAccessExpr::parse),
@@ -771,7 +771,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         log_token(self, "enter `parse_statement()`", true);
 
-        let token = self.peek_current();
+        let token = self.current_token();
 
         match token {
             Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
@@ -809,9 +809,9 @@ impl Parser {
                     self.parse_expression(Precedence::Lowest)?,
                 ));
 
-                if let Some(Token::Semicolon { .. }) = self.peek_current() {
+                if let Some(Token::Semicolon { .. }) = self.current_token() {
                     log_token(self, "encounter `;`", false);
-                    self.consume_token();
+                    self.next_token();
                     log_token(self, "consume token", true);
                 }
 
@@ -825,7 +825,7 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Peek at the token at the current index in the `TokenStream`.
-    fn peek_current(&self) -> Option<Token> {
+    fn current_token(&self) -> Option<Token> {
         if self.current < self.stream.tokens().len() {
             self.stream.tokens().get(self.current).cloned()
         } else {
@@ -857,14 +857,14 @@ impl Parser {
     fn peek_precedence(&self) -> Precedence {
         log_token(self, "enter `peek_precedence()`", true);
 
-        let precedence = self.get_precedence(&self.peek_current().unwrap_or(Token::EOF));
+        let precedence = self.get_precedence(&self.current_token().unwrap_or(Token::EOF));
 
         precedence
     }
 
     /// Advance the parser to the next token (returns current token).
-    fn consume_token(&mut self) -> Option<Token> {
-        if let Some(t) = self.peek_current() {
+    fn next_token(&mut self) -> Option<Token> {
+        if let Some(t) = self.current_token() {
             self.current += 1;
             Some(t)
         } else {
@@ -877,7 +877,7 @@ impl Parser {
     fn expect_keyword(&mut self, expected: TokenType) -> Result<Keyword, ErrorsEmitted> {
         log_token(self, "enter `expect_keyword()`", false);
 
-        let token = self.consume_token().unwrap_or(Token::EOF);
+        let token = self.next_token().unwrap_or(Token::EOF);
 
         log_token(self, "consume token", false);
 
@@ -931,7 +931,7 @@ impl Parser {
     fn expect_delimiter(&mut self, expected: TokenType) -> Result<Delimiter, ErrorsEmitted> {
         log_token(self, "enter `expect_delimiter()`", false);
 
-        let token = self.consume_token().unwrap_or(Token::EOF);
+        let token = self.next_token().unwrap_or(Token::EOF);
 
         log_token(self, "consume token", false);
 
@@ -959,7 +959,7 @@ impl Parser {
     fn expect_separator(&mut self, expected: TokenType) -> Result<Separator, ErrorsEmitted> {
         log_token(self, "enter `expect_separator()`", false);
 
-        let token = self.consume_token().unwrap_or(Token::EOF);
+        let token = self.next_token().unwrap_or(Token::EOF);
 
         log_token(self, "consume token", false);
 
@@ -1007,10 +1007,10 @@ impl Parser {
     fn log_unexpected_str(&mut self, expected: &str) {
         self.log_error(ParserErrorKind::UnexpectedToken {
             expected: expected.to_string(),
-            found: self.peek_current(),
+            found: self.current_token(),
         });
 
-        self.consume_token();
+        self.next_token();
         log_token(self, "consume token", false);
     }
 
@@ -1018,10 +1018,10 @@ impl Parser {
     fn log_unexpected_token(&mut self, expected: TokenType) {
         self.log_error(ParserErrorKind::UnexpectedToken {
             expected: expected.to_string(),
-            found: self.peek_current(),
+            found: self.current_token(),
         });
 
-        self.consume_token();
+        self.next_token();
         log_token(self, "consume token", false);
     }
 
@@ -1034,23 +1034,23 @@ impl Parser {
     fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
         log_token(self, "enter get_identifier_patt()`", true);
 
-        let kw_ref_opt = if let Some(Token::Ref { .. }) = self.peek_current() {
-            self.consume_token();
+        let kw_ref_opt = if let Some(Token::Ref { .. }) = self.current_token() {
+            self.next_token();
             log_token(self, "consume token", false);
             Some(Keyword::Ref)
         } else {
             None
         };
 
-        let kw_mut_opt = if let Some(Token::Mut { .. }) = self.peek_current() {
-            self.consume_token();
+        let kw_mut_opt = if let Some(Token::Mut { .. }) = self.current_token() {
+            self.next_token();
             log_token(self, "consume token", false);
             Some(Keyword::Mut)
         } else {
             None
         };
 
-        let name = if let Some(Token::Identifier { name, .. }) = self.consume_token() {
+        let name = if let Some(Token::Identifier { name, .. }) = self.next_token() {
             Ok(Identifier(name))
         } else {
             self.log_unexpected_str("identifier");
@@ -1067,7 +1067,7 @@ impl Parser {
     }
 
     fn get_outer_attr(&self) -> Option<OuterAttr> {
-        let token = self.peek_current();
+        let token = self.current_token();
 
         match token {
             Some(Token::Calldata { .. }) => Some(OuterAttr::Calldata),
@@ -1086,7 +1086,7 @@ impl Parser {
     }
 
     fn get_inner_attr(&self) -> Option<InnerAttr> {
-        let token = self.peek_current();
+        let token = self.current_token();
 
         match token {
             Some(Token::Contract { .. }) => Some(InnerAttr::Contract),
@@ -1099,19 +1099,19 @@ impl Parser {
     }
 
     fn get_visibility(&mut self) -> Result<Visibility, ErrorsEmitted> {
-        let token = self.peek_current();
+        let token = self.current_token();
 
         match token {
             Some(Token::Pub { .. }) => {
-                self.consume_token();
+                self.next_token();
 
-                match self.peek_current() {
+                match self.current_token() {
                     Some(Token::LParen { .. }) => {
-                        self.consume_token();
+                        self.next_token();
 
                         let kw_package = self.expect_keyword(TokenType::Package)?;
 
-                        let close_paren = if let Some(Token::RParen { .. }) = self.consume_token() {
+                        let close_paren = if let Some(Token::RParen { .. }) = self.next_token() {
                             Ok(Delimiter::RParen)
                         } else {
                             self.expect_delimiter(TokenType::RParen)?;
@@ -1139,12 +1139,12 @@ impl Parser {
 
         while let Some(oa) = self.get_outer_attr() {
             outer_attributes.push(oa);
-            self.consume_token();
+            self.next_token();
         }
 
         let visibility = self.get_visibility()?;
 
-        let token = self.peek_current();
+        let token = self.current_token();
 
         match token {
             Some(Token::Import { .. }) => Ok(Statement::Item(Item::ImportDecl(ImportDecl::parse(
@@ -1231,7 +1231,7 @@ impl Parser {
     fn is_method_call(&self) -> bool {
         if self.peek_ahead_by(2).is_some() {
             match (
-                self.peek_current(),
+                self.current_token(),
                 self.peek_ahead_by(1),
                 self.peek_ahead_by(2),
             ) {
@@ -1250,7 +1250,7 @@ impl Parser {
     /// Determine if `Token::Dot` indicates field access.
     fn is_field_access(&self) -> bool {
         if self.peek_ahead_by(1).is_some() {
-            match (self.peek_current(), self.peek_ahead_by(1)) {
+            match (self.current_token(), self.peek_ahead_by(1)) {
                 (Some(Token::Dot { .. }), Some(Token::Identifier { .. })) => true, // `object.field`
                 _ => false,
             }
@@ -1261,7 +1261,7 @@ impl Parser {
 
     /// Determine if `Token::Pipe` indicates a closure parameter delimiter.
     fn is_closure_with_params(&self) -> bool {
-        match (self.peek_current(), self.peek_ahead_by(1)) {
+        match (self.current_token(), self.peek_ahead_by(1)) {
             (Some(Token::Pipe { .. }), Some(Token::Identifier { .. })) => true,
             _ => false,
         }
@@ -1269,7 +1269,7 @@ impl Parser {
 
     /// Determine if `Token::Pipe` indicates the bitwise OR operator.
     fn is_bitwise_or(&self) -> bool {
-        match (self.peek_current(), self.peek_ahead_by(1)) {
+        match (self.current_token(), self.peek_ahead_by(1)) {
             (Some(Token::Pipe { .. }), Some(Token::Identifier { .. })) => false,
             _ => true,
         }
@@ -1277,7 +1277,7 @@ impl Parser {
 
     /// Determine if `Token::DblPipe` indicates an empty closure parameter list.
     fn is_closure_without_params(&self) -> bool {
-        match (self.peek_current(), self.peek_ahead_by(1)) {
+        match (self.current_token(), self.peek_ahead_by(1)) {
             (Some(Token::DblPipe { .. }), Some(Token::Identifier { .. })) => true,
             _ => false,
         }
@@ -1285,7 +1285,7 @@ impl Parser {
 
     /// Determine if `Token::DblPipe` indicates the logical OR operator.
     fn is_logical_or(&self) -> bool {
-        match (self.peek_current(), self.peek_ahead_by(1)) {
+        match (self.current_token(), self.peek_ahead_by(1)) {
             (Some(Token::DblPipe { .. }), Some(Token::Identifier { .. })) => false,
             _ => true,
         }

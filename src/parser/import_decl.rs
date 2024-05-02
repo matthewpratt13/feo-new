@@ -43,26 +43,26 @@ impl ImportTree {
         let first_segment = PathSegment::parse(parser)?;
         path_segments.push(first_segment);
 
-        while let Some(Token::DblColon { .. }) = parser.peek_current() {
-            parser.consume_token();
+        while let Some(Token::DblColon { .. }) = parser.current_token() {
+            parser.next_token();
 
             let next_segment = PathSegment::parse(parser)?;
             path_segments.push(next_segment);
         }
 
-        let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.current_token() {
+            parser.next_token();
             Some(Separator::ColonColonAsterisk)
         } else {
             None
         };
 
-        let as_clause_opt = if let Some(Token::As { .. }) = parser.peek_current() {
+        let as_clause_opt = if let Some(Token::As { .. }) = parser.current_token() {
             let kw_as = Keyword::As;
-            parser.consume_token();
+            parser.next_token();
 
-            let id = if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
-                parser.consume_token();
+            let id = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
+                parser.next_token();
                 Ok(Identifier(name))
             } else {
                 parser.log_unexpected_str("identifier");
@@ -84,13 +84,13 @@ impl ImportTree {
 
 impl PathSegment {
     fn parse(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted> {
-        let token = parser.consume_token();
+        let token = parser.next_token();
 
         let root = match token {
             Some(Token::Package { .. }) => PathExpr::parse(parser, PathPrefix::Package),
             Some(Token::Super { .. }) => PathExpr::parse(parser, PathPrefix::Super),
             Some(Token::SelfKeyword { .. }) => PathExpr::parse(parser, PathPrefix::SelfKeyword),
-            Some(Token::Identifier {  .. }) => PathExpr::parse(parser, PathPrefix::Package),
+            Some(Token::Identifier { .. }) => PathExpr::parse(parser, PathPrefix::Package),
             _ => {
                 parser.log_error(ParserErrorKind::UnexpectedToken {
                     expected: "path prefix".to_string(),
@@ -101,7 +101,7 @@ impl PathSegment {
         }?;
 
         let subset_opt = if let Some(Token::LBrace { .. }) = parser.peek_ahead_by(1) {
-            parser.consume_token();
+            parser.next_token();
             Some(PathSubset::parse(parser)?)
         } else {
             None
@@ -115,25 +115,25 @@ impl PathSubset {
     fn parse(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
         let mut trees: Vec<ImportTree> = Vec::new();
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
         loop {
-            if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            if let Some(Token::RBrace { .. }) = parser.current_token() {
                 break;
             }
 
             let tree = ImportTree::parse(parser)?;
             trees.push(tree);
 
-            let token = parser.peek_current();
+            let token = parser.current_token();
 
             match token {
                 Some(Token::Comma { .. }) => {
-                    parser.consume_token();
+                    parser.next_token();
                     continue;
                 }
                 Some(Token::RBrace { .. }) => break,

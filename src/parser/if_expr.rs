@@ -10,7 +10,6 @@ impl IfExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `IfExpr::parse()`", true);
 
-
         let kw_if = parser.expect_keyword(TokenType::If)?;
 
         let mut else_if_blocks: Vec<(Keyword, Box<Expression>)> = Vec::new();
@@ -20,17 +19,17 @@ impl IfExpr {
 
         let if_block = BlockExpr::parse(parser)?;
 
-        while let Some(Token::Else { .. }) = parser.peek_current() {
-            parser.consume_token();
+        while let Some(Token::Else { .. }) = parser.current_token() {
+            parser.next_token();
 
-            if let Some(Token::If { .. }) = parser.peek_current() {
+            if let Some(Token::If { .. }) = parser.current_token() {
                 let if_expr = Box::new(IfExpr::parse(parser)?);
                 else_if_blocks.push((Keyword::Else, if_expr));
             } else {
                 continue;
             }
 
-            if let Some(Token::LBrace { .. }) = parser.peek_current() {
+            if let Some(Token::LBrace { .. }) = parser.current_token() {
                 let block = Box::new(BlockExpr::parse(parser)?);
                 trailing_else_block_opt = Some((Keyword::Else, block));
                 break;

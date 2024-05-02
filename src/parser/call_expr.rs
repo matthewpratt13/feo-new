@@ -18,8 +18,8 @@ impl CallExpr {
             ErrorsEmitted
         })?;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token(TokenType::LParen);
@@ -27,18 +27,18 @@ impl CallExpr {
         }?;
 
         while !matches!(
-            parser.peek_current(),
+            parser.current_token(),
             Some(Token::RParen { .. } | Token::EOF)
         ) {
             let arg = parser.parse_expression(Precedence::Lowest)?;
             args.push(arg);
 
-            if let Some(Token::Comma { .. }) = parser.peek_current() {
-                parser.consume_token();
+            if let Some(Token::Comma { .. }) = parser.current_token() {
+                parser.next_token();
             }
         }
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.consume_token() {
+        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {

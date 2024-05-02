@@ -13,7 +13,7 @@ impl UnaryExpr {
         parser: &mut Parser,
         unary_op: UnaryOp,
     ) -> Result<Expression, ErrorsEmitted> {
-        parser.consume_token();
+        parser.next_token();
 
         let operand = parser.parse_expression(Precedence::Unary)?;
 
@@ -36,7 +36,7 @@ impl BorrowExpr {
         parser: &mut Parser,
         reference_op: ReferenceOp,
     ) -> Result<Expression, ErrorsEmitted> {
-        parser.consume_token();
+        parser.next_token();
 
         let operand = parser.parse_expression(Precedence::Unary)?;
 
@@ -54,7 +54,7 @@ impl DereferenceExpr {
         parser: &mut Parser,
         dereference_op: DereferenceOp,
     ) -> Result<Expression, ErrorsEmitted> {
-        parser.consume_token();
+        parser.next_token();
 
         let operand = parser.parse_expression(Precedence::Unary)?;
 

@@ -14,7 +14,7 @@ impl ForInExpr {
 
         let assignee =
             if let Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) =
-                parser.peek_current()
+                parser.current_token()
             {
                 parser.get_identifier_patt()
             } else {
@@ -29,7 +29,7 @@ impl ForInExpr {
 
         let iterable = parser.parse_expression(Precedence::Lowest)?;
 
-        let block = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+        let block = if let Some(Token::LBrace { .. }) = parser.current_token() {
             Ok(Box::new(BlockExpr::parse(parser)?))
         } else {
             parser.log_unexpected_token(TokenType::LBrace);

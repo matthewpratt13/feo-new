@@ -14,14 +14,14 @@ impl ParseDeclaration for StaticItemDecl {
     ) -> Result<StaticItemDecl, ErrorsEmitted> {
         let kw_static = parser.expect_keyword(TokenType::Static)?;
 
-        let kw_mut_opt = if let Some(Token::Mut { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let kw_mut_opt = if let Some(Token::Mut { .. }) = parser.current_token() {
+            parser.next_token();
             Some(Keyword::Mut)
         } else {
             None
         };
 
-        let item_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
+        let item_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_str("identifier");
@@ -32,8 +32,8 @@ impl ParseDeclaration for StaticItemDecl {
 
         let item_type = Type::parse(parser)?;
 
-        let value_opt = if let Some(Token::Equals { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let value_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
+            parser.next_token();
             Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
         } else {
             None

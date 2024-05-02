@@ -13,7 +13,7 @@ impl MethodCallExpr {
             ErrorsEmitted
         })?;
 
-        let token = parser.peek_current();
+        let token = parser.current_token();
 
         let method_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
@@ -25,10 +25,10 @@ impl MethodCallExpr {
             Err(ErrorsEmitted)
         }?;
 
-        parser.consume_token();
+        parser.next_token();
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token(TokenType::LParen);
@@ -37,7 +37,7 @@ impl MethodCallExpr {
 
         let args = MethodCallExpr::parse_arguments(parser)?;
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.consume_token() {
+        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -67,14 +67,14 @@ impl MethodCallExpr {
         let mut arguments = Vec::new();
 
         while !matches!(
-            parser.peek_current(),
+            parser.current_token(),
             Some(Token::RParen { .. } | Token::EOF)
         ) {
             let argument = parser.parse_expression(Precedence::Lowest)?;
             arguments.push(argument);
 
-            if let Some(Token::Comma { .. }) = parser.peek_current() {
-                parser.consume_token();
+            if let Some(Token::Comma { .. }) = parser.current_token() {
+                parser.next_token();
             }
         }
 

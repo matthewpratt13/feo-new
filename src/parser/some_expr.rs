@@ -10,7 +10,7 @@ impl SomeExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_some = parser.expect_keyword(TokenType::Some)?;
 
-        let expression = if let Some(Token::LParen { .. }) = parser.peek_current() {
+        let expression = if let Some(Token::LParen { .. }) = parser.current_token() {
             Ok(Box::new(GroupedExpr::parse(parser)?))
         } else {
             parser.log_unexpected_token(TokenType::LParen);

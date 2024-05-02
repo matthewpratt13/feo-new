@@ -14,7 +14,7 @@ impl ModuleItem {
     ) -> Result<ModuleItem, ErrorsEmitted> {
         let kw_module = parser.expect_keyword(TokenType::Module)?;
 
-        let token = parser.consume_token();
+        let token = parser.next_token();
 
         let module_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
@@ -23,8 +23,8 @@ impl ModuleItem {
             Err(ErrorsEmitted)
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
@@ -35,20 +35,20 @@ impl ModuleItem {
 
         while let Some(ia) = parser.get_inner_attr() {
             inner_attributes.push(ia);
-            parser.consume_token();
+            parser.next_token();
         }
 
         let mut items: Vec<Item> = Vec::new();
 
         while !matches!(
-            parser.peek_current(),
+            parser.current_token(),
             Some(Token::RBrace { .. } | Token::EOF)
         ) {
             let mut item_attributes: Vec<OuterAttr> = Vec::new();
 
             while let Some(oa) = parser.get_outer_attr() {
                 item_attributes.push(oa);
-                parser.consume_token();
+                parser.next_token();
             }
 
             let item_visibility = parser.get_visibility()?;
@@ -57,7 +57,7 @@ impl ModuleItem {
             items.push(item);
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.consume_token() {
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {

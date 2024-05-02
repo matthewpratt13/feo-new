@@ -15,11 +15,11 @@ impl BlockExpr {
 
         while let Some(ia) = parser.get_inner_attr() {
             attributes.push(ia);
-            parser.consume_token();
+            parser.next_token();
         }
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
+            parser.next_token();
             log_token(parser, "consume token", true);
             Ok(Delimiter::LBrace)
         } else {
@@ -30,19 +30,19 @@ impl BlockExpr {
         let mut statements: Vec<Statement> = Vec::new();
 
         while !matches!(
-            parser.peek_current(),
+            parser.current_token(),
             Some(Token::RBrace { .. } | Token::EOF)
         ) {
             let statement = parser.parse_statement()?;
             statements.push(statement);
 
-            if let Some(Token::Semicolon { .. }) = parser.peek_current() {
-                parser.consume_token();
+            if let Some(Token::Semicolon { .. }) = parser.current_token() {
+                parser.next_token();
             }
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {

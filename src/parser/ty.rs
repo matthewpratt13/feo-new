@@ -11,7 +11,7 @@ impl Type {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         log_token(parser, "enter `TypeExpr::parse()`", true);
 
-        let token = parser.consume_token();
+        let token = parser.next_token();
 
         log_token(parser, "consume token", false);
 
@@ -39,29 +39,29 @@ impl Type {
             Some(Token::CharType { .. }) => Ok(Type::Char(PrimitiveType::Char)),
             Some(Token::BoolType { .. }) => Ok(Type::Bool(PrimitiveType::Bool)),
             Some(Token::LParen { .. }) => {
-                if let Some(Token::RParen { .. }) = parser.peek_current() {
-                    parser.consume_token();
+                if let Some(Token::RParen { .. }) = parser.current_token() {
+                    parser.next_token();
                     Ok(Type::UnitType)
                 } else {
                     let mut types: Vec<Type> = Vec::new();
 
                     loop {
-                        if let Some(Token::Comma { .. }) = parser.peek_current() {
-                            parser.consume_token();
+                        if let Some(Token::Comma { .. }) = parser.current_token() {
+                            parser.next_token();
                         }
 
-                        if let Some(Token::RParen { .. }) = parser.peek_current() {
+                        if let Some(Token::RParen { .. }) = parser.current_token() {
                             break;
                         }
 
                         let ty = Type::parse(parser)?;
                         types.push(ty);
 
-                        let token = parser.peek_current();
+                        let token = parser.current_token();
 
                         match token {
                             Some(Token::Comma { .. }) => {
-                                parser.consume_token();
+                                parser.next_token();
                                 continue;
                             }
                             Some(Token::RParen { .. }) => break,
@@ -72,8 +72,8 @@ impl Type {
                         }
                     }
 
-                    if let Some(Token::RParen { .. }) = parser.peek_current() {
-                        parser.consume_token();
+                    if let Some(Token::RParen { .. }) = parser.current_token() {
+                        parser.next_token();
                     } else {
                         parser.expect_delimiter(TokenType::RParen)?;
                     }
@@ -84,22 +84,22 @@ impl Type {
             Some(Token::LBracket { .. }) => {
                 let ty = Type::parse(parser)?;
 
-                if let Some(Token::Semicolon { .. }) = parser.peek_current() {
-                    parser.consume_token();
+                if let Some(Token::Semicolon { .. }) = parser.current_token() {
+                    parser.next_token();
                 } else {
                     parser.log_unexpected_token(TokenType::Semicolon);
                 }
 
                 let num_elements =
-                    if let Some(Token::UIntLiteral { value, .. }) = parser.consume_token() {
+                    if let Some(Token::UIntLiteral { value, .. }) = parser.next_token() {
                         Ok(value)
                     } else {
                         parser.log_unexpected_str("unsigned integer");
                         Err(ErrorsEmitted)
                     }?;
 
-                if let Some(Token::RBracket { .. }) = parser.peek_current() {
-                    parser.consume_token();
+                if let Some(Token::RBracket { .. }) = parser.current_token() {
+                    parser.next_token();
                 } else {
                     parser.expect_delimiter(TokenType::RBracket)?;
                 }
@@ -119,43 +119,43 @@ impl Type {
                     Err(ErrorsEmitted)
                 }?;
 
-                if let Some(Token::LBrace { .. }) = parser.peek_current() {
-                    parser.consume_token();
+                if let Some(Token::LBrace { .. }) = parser.current_token() {
+                    parser.next_token();
                 } else {
                     parser.log_unexpected_token(TokenType::LBrace);
                 };
 
-                if let Some(Token::LParen { .. }) = parser.peek_current() {
-                    parser.consume_token();
+                if let Some(Token::LParen { .. }) = parser.current_token() {
+                    parser.next_token();
                 } else {
                     parser.log_unexpected_token(TokenType::LParen);
                 }
 
                 // `&parser` and `&mut parser` can only occur as the first parameter in a method
                 if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
-                    parser.peek_current()
+                    parser.current_token()
                 {
                     let param = FunctionOrMethodParam::parse(parser)?;
                     params.push(param);
                 }
 
                 loop {
-                    if let Some(Token::Comma { .. }) = parser.peek_current() {
-                        parser.consume_token();
+                    if let Some(Token::Comma { .. }) = parser.current_token() {
+                        parser.next_token();
                     }
 
-                    if let Some(Token::RParen { .. }) = parser.peek_current() {
+                    if let Some(Token::RParen { .. }) = parser.current_token() {
                         break;
                     }
 
                     let param = FunctionOrMethodParam::parse(parser)?;
                     params.push(param);
 
-                    let token = parser.peek_current();
+                    let token = parser.current_token();
 
                     match token {
                         Some(Token::Comma { .. }) => {
-                            parser.consume_token();
+                            parser.next_token();
                             continue;
                         }
                         Some(Token::RParen { .. }) => break,
@@ -166,14 +166,15 @@ impl Type {
                     }
                 }
 
-                if let Some(Token::RParen { .. }) = parser.peek_current() {
-                    parser.consume_token();
+                if let Some(Token::RParen { .. }) = parser.current_token() {
+                    parser.next_token();
                 } else {
                     parser.expect_delimiter(TokenType::RParen)?;
                 }
 
-                let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
-                    parser.consume_token();
+                let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token()
+                {
+                    parser.next_token();
                     Some(Box::new(Type::parse(parser)?))
                 } else {
                     None

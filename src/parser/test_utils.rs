@@ -17,7 +17,7 @@ pub fn get_parser(input: &str, print_tokens: bool) -> Parser {
 }
 
 pub(crate) fn log_token(parser: &Parser, msg: &str, log_precedence: bool) {
-    let token = parser.peek_current();
+    let token = parser.current_token();
     let precedence = parser.get_precedence(&token.clone().unwrap_or(Token::EOF));
 
     if log_precedence {

@@ -14,7 +14,7 @@ impl ParseDeclaration for ConstantDecl {
     ) -> Result<ConstantDecl, ErrorsEmitted> {
         let kw_const = parser.expect_keyword(TokenType::Const)?;
 
-        let item_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
+        let item_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_str("identifier");
@@ -25,8 +25,8 @@ impl ParseDeclaration for ConstantDecl {
 
         let item_type = Box::new(Type::parse(parser)?);
 
-        let value = if let Some(Token::Equals { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let value = if let Some(Token::Equals { .. }) = parser.current_token() {
+            parser.next_token();
             let expr = parser.parse_expression(Precedence::Lowest)?;
             Ok(ValueExpr::try_from(expr).map_err(|e| {
                 parser.log_error(e);

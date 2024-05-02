@@ -19,7 +19,7 @@ impl ParseDefinition for StructDef {
 
         let mut fields: Vec<StructDefField> = Vec::new();
 
-        let token = parser.consume_token();
+        let token = parser.next_token();
 
         let struct_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
@@ -28,7 +28,7 @@ impl ParseDefinition for StructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
@@ -36,7 +36,7 @@ impl ParseDefinition for StructDef {
         }?;
 
         loop {
-            if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            if let Some(Token::RBrace { .. }) = parser.current_token() {
                 break;
             }
 
@@ -44,12 +44,12 @@ impl ParseDefinition for StructDef {
 
             while let Some(oa) = parser.get_outer_attr() {
                 field_attributes.push(oa);
-                parser.consume_token();
+                parser.next_token();
             }
 
             let field_visibility = parser.get_visibility()?;
 
-            let token = parser.consume_token();
+            let token = parser.next_token();
 
             if let Some(Token::Identifier { name, .. }) = token {
                 let field_name = Identifier(name);
@@ -74,9 +74,9 @@ impl ParseDefinition for StructDef {
                 fields.push(field);
             }
 
-            match parser.peek_current() {
+            match parser.current_token() {
                 Some(Token::Comma { .. }) => {
-                    parser.consume_token();
+                    parser.next_token();
                     continue;
                 }
                 Some(Token::RBrace { .. }) => break,
@@ -121,7 +121,7 @@ impl ParseDefinition for TupleStructDef {
 
         let mut fields: Vec<TupleStructDefField> = Vec::new();
 
-        let token = parser.consume_token();
+        let token = parser.next_token();
 
         let struct_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
@@ -130,7 +130,7 @@ impl ParseDefinition for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+        let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token(TokenType::LParen);
@@ -139,7 +139,7 @@ impl ParseDefinition for TupleStructDef {
         }?;
 
         loop {
-            if let Some(Token::RParen { .. }) = parser.peek_current() {
+            if let Some(Token::RParen { .. }) = parser.current_token() {
                 break;
             }
 
@@ -147,7 +147,7 @@ impl ParseDefinition for TupleStructDef {
 
             while let Some(oa) = parser.get_outer_attr() {
                 field_attributes.push(oa);
-                parser.consume_token();
+                parser.next_token();
             }
 
             let field_visibility = parser.get_visibility()?;
@@ -161,9 +161,9 @@ impl ParseDefinition for TupleStructDef {
 
             fields.push(field);
 
-            match parser.peek_current() {
+            match parser.current_token() {
                 Some(Token::Comma { .. }) => {
-                    parser.consume_token();
+                    parser.next_token();
                     continue;
                 }
                 Some(Token::RParen { .. }) => break,

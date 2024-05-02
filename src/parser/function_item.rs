@@ -19,8 +19,8 @@ impl FunctionItem {
 
         let kw_func = parser.expect_keyword(TokenType::Func)?;
 
-        let function_name = if let Some(Token::Identifier { name, .. }) = parser.peek_current() {
-            parser.consume_token();
+        let function_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
+            parser.next_token();
             log_token(parser, "consume token", false);
 
             Ok(Identifier(name))
@@ -29,8 +29,8 @@ impl FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
+            parser.next_token();
             log_token(parser, "consume token", false);
             Ok(Delimiter::LParen)
         } else {
@@ -40,7 +40,7 @@ impl FunctionItem {
 
         let params_opt = parse_function_params(parser);
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.consume_token() {
+        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             log_token(parser, "consume token", false);
             Ok(Delimiter::RParen)
         } else {
@@ -50,8 +50,8 @@ impl FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
+            parser.next_token();
             log_token(parser, "consume token", false);
 
             let ty = Type::parse(parser)?;
@@ -60,7 +60,7 @@ impl FunctionItem {
             None
         };
 
-        let block_opt = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+        let block_opt = if let Some(Token::LBrace { .. }) = parser.current_token() {
             Some(BlockExpr::parse(parser)?)
         } else {
             None
@@ -92,10 +92,10 @@ impl FunctionOrMethodParam {
     pub(crate) fn parse(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
         log_token(parser, "enter `FunctionOrMethodParam::parse()`", true);
 
-        let token = parser.peek_current();
+        let token = parser.current_token();
 
         let prefix_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = token {
-            parser.consume_token();
+            parser.next_token();
             log_token(parser, "consume token", false);
 
             match token {
@@ -107,9 +107,9 @@ impl FunctionOrMethodParam {
             None
         };
 
-        let param = match parser.peek_current() {
+        let param = match parser.current_token() {
             Some(Token::SelfKeyword { .. }) => {
-                parser.consume_token();
+                parser.next_token();
                 log_token(parser, "consume token", false);
 
                 let self_param = SelfParam {
@@ -153,19 +153,19 @@ fn parse_function_params(parser: &mut Parser) -> Option<Vec<FunctionOrMethodPara
     let mut params = Vec::new();
 
     while !matches!(
-        parser.peek_current(),
+        parser.current_token(),
         Some(Token::RParen { .. } | Token::EOF)
     ) {
         if let Ok(param) = FunctionOrMethodParam::parse(parser) {
             params.push(param);
 
-            if let Some(Token::Comma { .. }) = parser.peek_current() {
-                parser.consume_token();
+            if let Some(Token::Comma { .. }) = parser.current_token() {
+                parser.next_token();
                 log_token(parser, "consume token", false);
             }
         }
 
-        if matches!(parser.peek_current(), Some(Token::RParen { .. })) {
+        if matches!(parser.current_token(), Some(Token::RParen { .. })) {
             break;
         }
     }

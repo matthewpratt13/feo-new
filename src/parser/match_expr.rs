@@ -21,8 +21,8 @@ impl MatchExpr {
             ErrorsEmitted
         })?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
+            parser.next_token();
             log_token(parser, "consume token", false);
             Ok(Delimiter::LBrace)
         } else {
@@ -41,8 +41,8 @@ impl MatchExpr {
             return Err(ErrorsEmitted);
         };
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -84,25 +84,25 @@ impl MatchArm {
             ErrorsEmitted
         })?;
 
-        let guard_opt = if let Some(Token::If { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let guard_opt = if let Some(Token::If { .. }) = parser.current_token() {
+            parser.next_token();
             let expr = Box::new(parser.parse_expression(Precedence::Assignment)?);
             Some((Keyword::If, expr))
         } else {
             None
         };
 
-        if let Some(Token::FatArrow { .. }) = parser.peek_current() {
+        if let Some(Token::FatArrow { .. }) = parser.current_token() {
             log_token(parser, "encounter `=>`", false);
 
-            parser.consume_token();
+            parser.next_token();
             log_token(parser, "consume token", true);
         } else {
             parser.log_unexpected_token(TokenType::FatArrow);
             return Err(ErrorsEmitted);
         }
 
-        let body = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+        let body = if let Some(Token::LBrace { .. }) = parser.current_token() {
             let expr = Box::new(BlockExpr::parse(parser)?);
             expr
         } else {
@@ -110,10 +110,10 @@ impl MatchArm {
             expr
         };
 
-        if let Some(Token::Comma { .. }) = parser.peek_current() {
+        if let Some(Token::Comma { .. }) = parser.current_token() {
             log_token(parser, "encounter `,`", false);
 
-            parser.consume_token();
+            parser.next_token();
             log_token(parser, "consume token", true);
         }
 
@@ -133,7 +133,7 @@ fn parse_match_arms(parser: &mut Parser) -> Result<Vec<Expression>, ErrorsEmitte
     let mut match_arms: Vec<Expression> = Vec::new();
 
     while !matches!(
-        parser.peek_current(),
+        parser.current_token(),
         Some(Token::RBrace { .. } | Token::EOF)
     ) {
         let expression = parser.parse_expression(Precedence::Assignment)?;
@@ -143,10 +143,10 @@ fn parse_match_arms(parser: &mut Parser) -> Result<Vec<Expression>, ErrorsEmitte
 
         log_token(parser, "foo", true);
 
-        if let Some(Token::Comma { .. }) = parser.peek_current() {
+        if let Some(Token::Comma { .. }) = parser.current_token() {
             log_token(parser, "encounter `,`", false);
 
-            parser.consume_token();
+            parser.next_token();
             log_token(parser, "consume token", true);
         }
     }
