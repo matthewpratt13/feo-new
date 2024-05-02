@@ -107,15 +107,12 @@ mod tests {
         pub module foo {
             #![contract]
 
-            import package::some_module::SomeObject;
-            
-            #[storage]
-            static mut OWNER: h160 = $0x12345123451234512345;
-
+            import package::foo_error::Error;
+         
             pub trait Bar {
                 #![interface]
 
-                func transfer(&mut self, to: h160, amount: u256) -> Baz;
+                func transfer(&mut self, to: h160, amount: u256) -> Result<Baz, Error>;
             }
 
             #[event]
@@ -131,6 +128,9 @@ mod tests {
             }
 
             impl Foo {
+                #[storage]
+                const ADDRESS: h160 = $0x12345123451234512345;
+    
                 #[modifier]
                 pub func only_owner(caller: h160) -> bool {
                     if (caller != OWNER) {
@@ -145,12 +145,11 @@ mod tests {
             }
 
             impl Bar for Foo {
-                #[extern]
                 func transfer(&mut self, to: h160, amount: u256) -> Result<Baz, Error> {
                     self.balance -= amount;
                     to.balance += amount;
 
-                    Baz { to: to, amount: amount }
+                    Ok(Baz { to: to, amount: amount })
                 }
             }
         }"#;

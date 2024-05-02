@@ -322,7 +322,7 @@ impl Parser {
         log_token(self, "enter `parse_expression()`", false);
         println!("input precedence: {:?}\n", precedence);
 
-        let mut left_expr = self.parse_prefix()?;
+        let mut left_expr = self.parse_prefix()?; // start with prefix expression
         log_token(self, "exit `parse_prefix()`", true);
 
         // repeatedly call `parse_infix()` while the precedence of the current token is higher
@@ -331,7 +331,7 @@ impl Parser {
             log_token(self, "current precedence > input precedence", true);
 
             if let Some(infix_parser) = self.parse_infix() {
-                left_expr = infix_parser(self, left_expr)?; // Parse infix expressions
+                left_expr = infix_parser(self, left_expr)?; // parse infix expressions
                 log_token(self, "exit infix parsing function", true);
             } else {
                 break;
@@ -343,7 +343,7 @@ impl Parser {
         Ok(left_expr)
     }
 
-    /// Parse the basic build blocks of expressions (e.g., grouped expressions, identifiers
+    /// Parse the basic building blocks of expressions (e.g., grouped expressions, identifiers
     /// and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
         log_token(self, "enter `parse_primary()`", true);
