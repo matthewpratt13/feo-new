@@ -8,7 +8,7 @@ use super::Parser;
 
 impl ModuleItem {
     pub(crate) fn parse(
-        parser: &mut Parser,
+        parser: &mut Parser, 
         outer_attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<ModuleItem, ErrorsEmitted> {
