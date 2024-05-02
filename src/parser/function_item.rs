@@ -38,7 +38,6 @@ impl FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        // let params_opt = parse_function_params(parser);
         let params = collection::get_collection_parens_comma(parser, FunctionOrMethodParam::parse)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {

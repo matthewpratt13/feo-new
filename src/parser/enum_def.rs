@@ -38,9 +38,9 @@ impl ParseDefinition for EnumDef {
                 break;
             }
 
-            let attributes = collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
+            let attributes_opt = collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
 
-            let variant = EnumVariant::parse(parser, attributes)?;
+            let variant = EnumVariant::parse(parser, attributes_opt)?;
             variants.push(variant);
 
             match parser.current_token() {

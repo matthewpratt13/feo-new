@@ -105,7 +105,7 @@ impl StructDefField {
     fn parse(parser: &mut Parser) -> Result<StructDefField, ErrorsEmitted> {
         let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
-        let field_visibility = Visibility::visibility(parser)?;
+        let visibility = Visibility::visibility(parser)?;
 
         let token = parser.next_token();
 
@@ -118,7 +118,7 @@ impl StructDefField {
 
             StructDefField {
                 attributes_opt,
-                visibility: field_visibility,
+                visibility,
                 field_name,
                 field_type,
             }
@@ -133,12 +133,12 @@ impl StructDefField {
 
 impl TupleStructDefField {
     fn parse(parser: &mut Parser) -> Result<TupleStructDefField, ErrorsEmitted> {
-        let field_visibility = Visibility::visibility(parser)?;
+        let visibility = Visibility::visibility(parser)?;
 
         let field_type = Box::new(Type::parse(parser)?);
 
         let field = TupleStructDefField {
-            visibility: field_visibility,
+            visibility,
             field_type,
         };
 

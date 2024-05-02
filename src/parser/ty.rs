@@ -104,7 +104,7 @@ impl Type {
                     parser.log_unexpected_token(TokenType::LParen);
                 }
 
-                // `&parser` and `&mut parser` can only occur as the first parameter in a method
+                // `&self` and `&mut self` can only occur as the first parameter in a method
                 if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
                     parser.current_token()
                 {
