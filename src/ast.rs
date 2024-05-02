@@ -1,6 +1,7 @@
-//! Feo's abstract syntax tree (AST) definition module, containing the different nodes
-//! that make up the tree, and the tokens within those nodes.
-//! The primary nodes are `Expression`, `Item` and `Statement`.
+//! # AST
+//! 
+//! Contains the different nodes that make up the abstract syntax tree, and the tokens
+//! within those nodes. The primary nodes are `Expression`, `Item` and `Statement`.
 
 mod expression;
 mod item;

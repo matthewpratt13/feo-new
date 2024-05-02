@@ -9,27 +9,27 @@ mod parser;
 mod span;
 mod token;
 
-// hexadecimal 256-bit unsigned integer
+// hexadecimal 256-bit (`[u64; 4]`) unsigned integer
 construct_uint! {
     pub struct U256(4);
 }
 
-// hexadecimal 512-bit unsigned integer
+// hexadecimal 512-bit (`[u64; 8]`) unsigned integer
 construct_uint! {
     pub struct U512(8);
 }
 
-// 20-byte fixed-size hash (e.g., EVM address)
+// 20-byte (`[u8; 20]`) fixed-size hash (e.g., EVM address)
 construct_fixed_hash! {
     pub struct H160(20);
 }
 
-// 256-bit (32-byte) fixed-size hash
+// 32-byte (`[u8; 32]`) fixed-size hash
 construct_fixed_hash! {
     pub struct H256(32);
 }
 
-// 512-bit (64-byte) fixed-size hash
+// 64-byte (`[u8; 64]`) fixed-size hash
 construct_fixed_hash! {
     pub struct H512(64);
 }

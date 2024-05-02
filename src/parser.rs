@@ -1,5 +1,6 @@
-//! Feo's parser module.
-//! The parser implements a combination of the recursive descent algorithm and Pratt parsing
+//! # Parser
+//! 
+//! Implements a combination of the recursive descent algorithm and Pratt parsing
 //! (also known as top-down operator precedence parsing), where each operator is associated
 //! with a precedence level, and the parsing functions recursively parse expressions based
 //! on the precedence of the next token.
