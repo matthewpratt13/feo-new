@@ -1,5 +1,5 @@
 //! # AST
-//! 
+//!
 //! Contains the different nodes that make up the abstract syntax tree, and the tokens
 //! within those nodes. The primary nodes are `Expression`, `Item` and `Statement`.
 
@@ -229,7 +229,7 @@ pub enum Expression {
     TupleIndex(TupleIndexExpr),
     Unwrap(UnwrapExpr),
     Unary(UnaryExpr),
-    Borrow(BorrowExpr),
+    Reference(ReferenceExpr),
     Dereference(DereferenceExpr),
     TypeCast(TypeCastExpr),
     Binary(BinaryExpr),
@@ -270,7 +270,7 @@ pub enum ValueExpr {
     TupleIndexExpr(TupleIndexExpr),
     UnwrapExpr(UnwrapExpr),
     NegationExpr(UnaryExpr),
-    BorrowExpr(BorrowExpr),
+    ReferenceExpr(ReferenceExpr),
     DereferenceExpr(DereferenceExpr),
     TypeCastExpr(TypeCastExpr),
     BinaryExpr(BinaryExpr),
@@ -306,7 +306,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::TupleIndex(ti) => Ok(ValueExpr::TupleIndexExpr(ti)),
             Expression::Unwrap(u) => Ok(ValueExpr::UnwrapExpr(u)),
             Expression::Unary(u) => Ok(ValueExpr::NegationExpr(u)),
-            Expression::Borrow(b) => Ok(ValueExpr::BorrowExpr(b)),
+            Expression::Reference(b) => Ok(ValueExpr::ReferenceExpr(b)),
             Expression::Dereference(d) => Ok(ValueExpr::DereferenceExpr(d)),
             Expression::TypeCast(tc) => Ok(ValueExpr::TypeCastExpr(tc)),
             Expression::Binary(b) => Ok(ValueExpr::BinaryExpr(b)),
@@ -343,7 +343,7 @@ pub enum AssigneeExpr {
     FieldAccessExpr(FieldAccessExpr), // when on the LHS
     IndexExpr(IndexExpr),           // when on the LHS
     TupleIndexExpr(TupleIndexExpr), // when on the LHS
-    BorrowExpr(BorrowExpr),
+    ReferenceExpr(ReferenceExpr),
     GroupedExpr(Box<AssigneeExpr>),
     UnderscoreExpr(UnderscoreExpr),
     SliceExpr(Vec<AssigneeExpr>),
@@ -363,7 +363,7 @@ impl TryFrom<Expression> for AssigneeExpr {
             Expression::FieldAccess(fa) => Ok(AssigneeExpr::FieldAccessExpr(fa)),
             Expression::Index(i) => Ok(AssigneeExpr::IndexExpr(i)),
             Expression::TupleIndex(ti) => Ok(AssigneeExpr::TupleIndexExpr(ti)),
-            Expression::Borrow(b) => Ok(AssigneeExpr::BorrowExpr(b)),
+            Expression::Reference(b) => Ok(AssigneeExpr::ReferenceExpr(b)),
             Expression::Grouped(g) => {
                 let assignee_expression = AssigneeExpr::try_from(*g.expression)?;
                 Ok(AssigneeExpr::GroupedExpr(Box::new(assignee_expression)))

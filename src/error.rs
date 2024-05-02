@@ -2,7 +2,7 @@ use std::{error::Error, fmt, sync::Arc};
 
 use crate::token::{Token, TokenType};
 
-/// Enum representing the different types of lexer (scanner) errors.
+/// Enum representing the different types of lexer errors.
 /// Used in conjunction with `CompilerError` to keep track of errors encountered 
 /// during tokenization.
 #[derive(Default, Debug, Clone, PartialEq)]

@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        AssigneeExpr, BorrowExpr, DereferenceExpr, DereferenceOp, Expression, ReferenceOp,
+        AssigneeExpr, DereferenceExpr, DereferenceOp, Expression, ReferenceExpr, ReferenceOp,
         UnaryExpr, UnaryOp, ValueExpr,
     },
     error::ErrorsEmitted,
@@ -8,6 +8,7 @@ use crate::{
 
 use super::{Parser, Precedence};
 
+/// Parse a unary operation, specifically NOT (`!`) and negate (`-`), based on the input operator.
 impl UnaryExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
@@ -31,7 +32,9 @@ impl UnaryExpr {
     }
 }
 
-impl BorrowExpr {
+impl ReferenceExpr {
+    /// Parse a unary reference operation – i.e., borrow (`&`) or mutable reference (`&mut`) –
+    /// based on the input operator.
     pub(crate) fn parse(
         parser: &mut Parser,
         reference_op: ReferenceOp,
@@ -40,16 +43,17 @@ impl BorrowExpr {
 
         let operand = parser.parse_expression(Precedence::Unary)?;
 
-        let expr = BorrowExpr {
+        let expr = ReferenceExpr {
             reference_op,
             expression: Box::new(operand),
         };
 
-        Ok(Expression::Borrow(expr))
+        Ok(Expression::Reference(expr))
     }
 }
 
 impl DereferenceExpr {
+    /// Parse a unary dereference operation with the operator `*`.
     pub(crate) fn parse(
         parser: &mut Parser,
         dereference_op: DereferenceOp,

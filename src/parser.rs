@@ -1,5 +1,5 @@
 //! # Parser
-//! 
+//!
 //! Implements a combination of the recursive descent algorithm and Pratt parsing
 //! (also known as top-down operator precedence parsing), where each operator is associated
 //! with a precedence level, and the parsing functions recursively parse expressions based
@@ -80,14 +80,14 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BorrowExpr, BreakExpr,
-        CallExpr, ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr,
-        Delimiter, DereferenceExpr, DereferenceOp, EnumDef, Expression, FieldAccessExpr, ForInExpr,
+        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr,
+        ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr, Delimiter,
+        DereferenceExpr, DereferenceOp, EnumDef, Expression, FieldAccessExpr, ForInExpr,
         FunctionItem, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef,
         Item, Keyword, LetStmt, Literal, MatchArm, MatchExpr, MethodCallExpr, ModuleItem, NoneExpr,
-        OuterAttr, PathExpr, PathPrefix, Pattern, RangeExpr, RangeOp, ReferenceOp, ResultExpr,
-        ReturnExpr, SelfType, Separator, SomeExpr, Statement, StaticItemDecl, StructDef,
-        StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef,
+        OuterAttr, PathExpr, PathPrefix, Pattern, RangeExpr, RangeOp, ReferenceExpr, ReferenceOp,
+        ResultExpr, ReturnExpr, SelfType, Separator, SomeExpr, Statement, StaticItemDecl,
+        StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef,
         TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
@@ -213,7 +213,7 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Main parsing function that returns the parsed tokens as a `Vec<Statement>`
+    /// Main parsing function that returns the parsed tokens as a `Vec<Statement>`.
     #[allow(dead_code)]
     fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
@@ -413,14 +413,16 @@ impl Parser {
 
             Some(Token::Ampersand { .. }) => {
                 if self.context == ParserContext::Unary {
-                    BorrowExpr::parse(self, ReferenceOp::Borrow)
+                    ReferenceExpr::parse(self, ReferenceOp::Borrow)
                 } else {
                     self.set_context(ParserContext::Unary);
                     self.parse_expression(Precedence::Unary)
                 }
             }
 
-            Some(Token::AmpersandMut { .. }) => BorrowExpr::parse(self, ReferenceOp::MutableBorrow),
+            Some(Token::AmpersandMut { .. }) => {
+                ReferenceExpr::parse(self, ReferenceOp::MutableBorrow)
+            }
 
             Some(Token::Asterisk { .. }) => {
                 if self.context == ParserContext::Unary {
@@ -737,6 +739,7 @@ impl Parser {
         }
     }
 
+    /// Parse the current token and convert it from an `Item` to a `Statement`.
     fn get_item(&mut self) -> Result<Statement, ErrorsEmitted> {
         let mut outer_attributes: Vec<OuterAttr> = Vec::new();
 
@@ -822,6 +825,7 @@ impl Parser {
         }
     }
 
+    /// Helper function to parse an identifier as and `IdentifierPatt`.
     fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
         log_token(self, "enter get_identifier_patt()`", true);
 

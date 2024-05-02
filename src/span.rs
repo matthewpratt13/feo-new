@@ -22,6 +22,7 @@ impl Span {
         }
     }
 
+    /// Retrieve the start index for a given `Span`.
     pub fn start(&self) -> usize {
         self.start
     }

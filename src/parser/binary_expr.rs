@@ -9,10 +9,10 @@ use crate::{
 
 use super::Parser;
 
-/// Parse a binary operation (e.g., arithmetic, logical and comparison expressions).
-/// This method parses the operator and calls `parse_expression()` recursively to handle
-/// the right-hand side of the expression.
 impl BinaryExpr {
+    /// Parse a binary operation (e.g., arithmetic, logical and comparison expressions).
+    /// This method parses the operator and calls `parse_expression()` recursively to handle
+    /// the right-hand side of the expression.
     pub(crate) fn parse(
         parser: &mut Parser,
         left_expr: Expression,
@@ -69,6 +69,8 @@ impl BinaryExpr {
 }
 
 impl ComparisonExpr {
+    /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on 
+    /// the input operator.
     pub(crate) fn parse(
         parser: &mut Parser,
         left_expr: Expression,
