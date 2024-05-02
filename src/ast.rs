@@ -1,4 +1,4 @@
-//! Feo's Abstract Syntax Tree (AST) definition module, containing the different nodes
+//! Feo's abstract syntax tree (AST) definition module, containing the different nodes
 //! that make up the tree, and the tokens within those nodes.
 //! The primary nodes are `Expression`, `Item` and `Statement`.
 
@@ -205,7 +205,6 @@ pub enum Separator {
     ColonColonAsterisk,
     ThinArrow,
     FatArrow,
-    Underscore,
     LeftAngledBracket,
     RightAngledBracket,
     Pipe,
@@ -246,7 +245,7 @@ pub enum Expression {
     Array(ArrayExpr),
     Tuple(TupleExpr),
     Struct(StructExpr),
-    TupleStruct(TupleStructExpr),
+    // TupleStruct(TupleStructExpr),
     Block(BlockExpr),
     If(IfExpr),       // condition, true, false
     Match(MatchExpr), // scrutinee, body
@@ -281,7 +280,7 @@ pub enum ValueExpr {
     UnderscoreExpr(UnderscoreExpr),
     ArrayExpr(ArrayExpr),
     StructExpr(StructExpr),
-    TupleStructExpr(TupleStructExpr),
+    // TupleStructExpr(TupleStructExpr),
     TupleExpr(TupleExpr),
     IfExpr(IfExpr),
     MatchExpr(MatchExpr),
@@ -317,7 +316,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::Array(a) => Ok(ValueExpr::ArrayExpr(a)),
             Expression::Tuple(t) => Ok(ValueExpr::TupleExpr(t)),
             Expression::Struct(s) => Ok(ValueExpr::StructExpr(s)),
-            Expression::TupleStruct(ts) => Ok(ValueExpr::TupleStructExpr(ts)),
+            // Expression::TupleStruct(ts) => Ok(ValueExpr::TupleStructExpr(ts)),
             Expression::Block(b) => Ok(ValueExpr::BlockExpr(b)),
             Expression::If(i) => Ok(ValueExpr::IfExpr(i)),
             Expression::Match(m) => Ok(ValueExpr::MatchExpr(m)),
@@ -349,7 +348,7 @@ pub enum AssigneeExpr {
     SliceExpr(Vec<AssigneeExpr>),
     TupleExpr(Option<Vec<AssigneeExpr>>),
     StructExpr(Vec<(Identifier, AssigneeExpr)>),
-    TupleStructExpr(Vec<AssigneeExpr>),
+    // TupleStructExpr(Vec<AssigneeExpr>),
 }
 
 impl TryFrom<Expression> for AssigneeExpr {
@@ -422,19 +421,18 @@ impl TryFrom<Expression> for AssigneeExpr {
                 Ok(AssigneeExpr::StructExpr(assignee_expressions))
             }
 
-            Expression::TupleStruct(ts) => {
-                let mut assignee_expressions: Vec<AssigneeExpr> = Vec::new();
-                ts.elements_opt.map(|v| {
-                    v.into_iter().for_each(|e| {
-                        assignee_expressions.push(AssigneeExpr::try_from(e).expect(
-                            "conversion error: unable to convert `Expression` into `AssigneeExpr`",
-                        ))
-                    })
-                });
+            // Expression::TupleStruct(ts) => {
+            //     let mut assignee_expressions: Vec<AssigneeExpr> = Vec::new();
+            //     ts.elements_opt.map(|v| {
+            //         v.into_iter().for_each(|e| {
+            //             assignee_expressions.push(AssigneeExpr::try_from(e).expect(
+            //                 "conversion error: unable to convert `Expression` into `AssigneeExpr`",
+            //             ))
+            //         })
+            //     });
 
-                Ok(AssigneeExpr::TupleStructExpr(assignee_expressions))
-            }
-
+            //     Ok(AssigneeExpr::TupleStructExpr(assignee_expressions))
+            // }
             _ => Err(ParserErrorKind::TypeConversionError {
                 type_a: "`Expression`".to_string(),
                 type_b: "`AssigneeExpr`".to_string(),
@@ -462,10 +460,10 @@ pub enum Pattern {
         struct_name: Identifier,
         fields_opt: Option<Vec<(Identifier, Pattern)>>,
     },
-    TupleStructPatt {
-        name: Identifier,
-        elements_opt: Option<Vec<Pattern>>,
-    },
+    // TupleStructPatt {
+    //     name: Identifier,
+    //     elements_opt: Option<Vec<Pattern>>,
+    // },
     WildcardPatt(UnderscoreExpr),
     RestPatt {
         dbl_dot: RangeOp,
@@ -514,8 +512,14 @@ impl TryFrom<Expression> for Pattern {
 
                 Ok(Pattern::TuplePatt(elements_opt))
             }
-            Expression::Struct(StructExpr { fields_opt, .. }) => {
-                let struct_name = Identifier("".to_string());
+            Expression::Struct(StructExpr {
+                path, fields_opt, ..
+            }) => {
+                let struct_name = path
+                    .tree_opt
+                    .unwrap_or([].to_vec())
+                    .pop()
+                    .unwrap_or(Identifier("".to_string()));
 
                 let mut fields: Vec<(Identifier, Pattern)> = Vec::new();
 
@@ -536,30 +540,30 @@ impl TryFrom<Expression> for Pattern {
                 })
             }
 
-            Expression::TupleStruct(TupleStructExpr {
-                path, elements_opt, ..
-            }) => {
-                let name = path
-                    .tree_opt
-                    .unwrap_or([].to_vec())
-                    .pop()
-                    .unwrap_or(Identifier("".to_string()));
+            // Expression::TupleStruct(TupleStructExpr {
+            //     path, elements_opt, ..
+            // }) => {
+            //     let name = path
+            //         .tree_opt
+            //         .unwrap_or([].to_vec())
+            //         .pop()
+            //         .unwrap_or(Identifier("".to_string()));
 
-                let mut elements: Vec<Pattern> = Vec::new();
+            //     let mut elements: Vec<Pattern> = Vec::new();
 
-                let elements_opt = elements_opt.map(|v| {
-                    v.into_iter().for_each(|e| {
-                        let pattern = Pattern::try_from(e).expect(
-                            "conversion error: unable to convert `Expression` into `Pattern`",
-                        );
-                        elements.push(pattern);
-                    });
+            //     let elements_opt = elements_opt.map(|v| {
+            //         v.into_iter().for_each(|e| {
+            //             let pattern = Pattern::try_from(e).expect(
+            //                 "conversion error: unable to convert `Expression` into `Pattern`",
+            //             );
+            //             elements.push(pattern);
+            //         });
 
-                    elements
-                });
+            //         elements
+            //     });
 
-                Ok(Pattern::TupleStructPatt { name, elements_opt })
-            }
+            //     Ok(Pattern::TupleStructPatt { name, elements_opt })
+            // }
             Expression::Underscore(u) => Ok(Pattern::WildcardPatt(u)),
 
             _ => Err(ParserErrorKind::TypeConversionError {

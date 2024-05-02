@@ -271,7 +271,7 @@ pub struct TypeCastExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnderscoreExpr {
-    pub underscore: Separator,
+    pub underscore: Identifier,
 }
 
 #[derive(Debug, Clone, PartialEq)]

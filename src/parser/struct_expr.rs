@@ -1,8 +1,5 @@
 use crate::{
-    ast::{
-        Delimiter, Expression, Identifier, OuterAttr, PathExpr, StructExpr, StructField,
-        TupleStructExpr,
-    },
+    ast::{Delimiter, Expression, Identifier, OuterAttr, PathExpr, StructExpr, StructField},
     error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
@@ -97,55 +94,53 @@ impl StructExpr {
     }
 }
 
-// TODO: test when issue regarding similarity between `TupleStructExpr` and `CallExpr` is resolved
-#[allow(dead_code)]
-impl TupleStructExpr {
-    pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<Expression, ErrorsEmitted> {
-        let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
-            Ok(Delimiter::LParen)
-        } else {
-            parser.log_unexpected_token(TokenType::LParen);
-            Err(ErrorsEmitted)
-        }?;
+// impl TupleStructExpr {
+//     pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<Expression, ErrorsEmitted> {
+//         let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
+//             Ok(Delimiter::LParen)
+//         } else {
+//             parser.log_unexpected_token(TokenType::LParen);
+//             Err(ErrorsEmitted)
+//         }?;
 
-        let mut elements: Vec<Expression> = Vec::new();
+//         let mut elements: Vec<Expression> = Vec::new();
 
-        loop {
-            if let Some(Token::RParen { .. }) = parser.current_token() {
-                break;
-            }
+//         loop {
+//             if let Some(Token::RParen { .. }) = parser.current_token() {
+//                 break;
+//             }
 
-            let element = parser.parse_expression(Precedence::Lowest)?;
-            elements.push(element);
+//             let element = parser.parse_expression(Precedence::Lowest)?;
+//             elements.push(element);
 
-            match parser.current_token() {
-                Some(Token::Comma { .. }) => {
-                    parser.next_token();
-                    continue;
-                }
-                Some(Token::RParen { .. }) => break,
-                _ => break,
-            }
-        }
+//             match parser.current_token() {
+//                 Some(Token::Comma { .. }) => {
+//                     parser.next_token();
+//                     continue;
+//                 }
+//                 Some(Token::RParen { .. }) => break,
+//                 _ => break,
+//             }
+//         }
 
-        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+//         let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 
-        let expr = TupleStructExpr {
-            path,
-            open_paren,
-            elements_opt: {
-                if elements.is_empty() {
-                    None
-                } else {
-                    Some(elements)
-                }
-            },
-            close_paren,
-        };
+//         let expr = TupleStructExpr {
+//             path,
+//             open_paren,
+//             elements_opt: {
+//                 if elements.is_empty() {
+//                     None
+//                 } else {
+//                     Some(elements)
+//                 }
+//             },
+//             close_paren,
+//         };
 
-        Ok(Expression::TupleStruct(expr))
-    }
-}
+//         Ok(Expression::TupleStruct(expr))
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

@@ -332,7 +332,7 @@ impl Parser {
                 if &name == "_" {
                     self.next_token();
                     Ok(Expression::Underscore(UnderscoreExpr {
-                        underscore: Separator::Underscore,
+                        underscore: Identifier(name),
                     }))
                 } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     {
@@ -583,10 +583,7 @@ impl Parser {
                 }
             }
 
-            Some(Token::LParen { .. }) => {
-                // TODO: resolve similarity between `CallExpr` and `TupleStructExpr` (symbol table)
-                Some(CallExpr::parse)
-            }
+            Some(Token::LParen { .. }) => Some(CallExpr::parse),
 
             Some(Token::LBracket { .. }) => Some(IndexExpr::parse),
 
@@ -1098,7 +1095,7 @@ impl Parser {
                 }
             }
             Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => Precedence::Path,
-            Token::LParen { .. } => Precedence::Call, // TODO: what about tuple structs?
+            Token::LParen { .. } => Precedence::Call,
             Token::LBracket { .. } => Precedence::Index,
             Token::QuestionMark { .. } => Precedence::Unwrap,
             Token::AmpersandMut { .. } => Precedence::Unary,
