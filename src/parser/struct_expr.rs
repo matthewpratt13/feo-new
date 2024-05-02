@@ -17,7 +17,7 @@ impl StructExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let fields = collection::get_collection_braces(parser, parse_struct_field)?;
+        let fields = collection::get_collection_braces_comma(parser, parse_struct_field)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
             parser.next_token();

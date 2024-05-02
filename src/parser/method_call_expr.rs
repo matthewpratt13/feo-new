@@ -4,7 +4,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::{collection, Parser, Precedence};
 
 impl MethodCallExpr {
     pub(crate) fn parse(parser: &mut Parser, lhs: Expression) -> Result<Expression, ErrorsEmitted> {
@@ -35,7 +35,7 @@ impl MethodCallExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let args = MethodCallExpr::parse_arguments(parser)?;
+        let args = collection::get_expressions(parser, Precedence::Lowest)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
@@ -61,24 +61,6 @@ impl MethodCallExpr {
         };
 
         Ok(Expression::MethodCall(expr))
-    }
-
-    fn parse_arguments(parser: &mut Parser) -> Result<Vec<Expression>, ErrorsEmitted> {
-        let mut arguments = Vec::new();
-
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RParen { .. } | Token::EOF)
-        ) {
-            let argument = parser.parse_expression(Precedence::Lowest)?;
-            arguments.push(argument);
-
-            if let Some(Token::Comma { .. }) = parser.current_token() {
-                parser.next_token();
-            }
-        }
-
-        Ok(arguments)
     }
 }
 

@@ -4,11 +4,11 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::Parser;
+use super::{collection, Parser};
 
 impl ModuleItem {
     pub(crate) fn parse(
-        parser: &mut Parser, 
+        parser: &mut Parser,
         outer_attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<ModuleItem, ErrorsEmitted> {
@@ -38,24 +38,7 @@ impl ModuleItem {
             parser.next_token();
         }
 
-        let mut items: Vec<Item> = Vec::new();
-
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RBrace { .. } | Token::EOF)
-        ) {
-            let mut item_attributes: Vec<OuterAttr> = Vec::new();
-
-            while let Some(oa) = OuterAttr::outer_attr(parser) {
-                item_attributes.push(oa);
-                parser.next_token();
-            }
-
-            let item_visibility = Visibility::visibility(parser)?;
-
-            let item = Item::parse(parser, item_attributes, item_visibility)?;
-            items.push(item);
-        }
+        let items = collection::get_associated_items::<Item>(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)

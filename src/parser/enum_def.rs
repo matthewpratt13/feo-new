@@ -7,7 +7,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{item::ParseDefinition, Parser};
+use super::{collection, item::ParseDefinition, Parser};
 
 impl ParseDefinition for EnumDef {
     fn parse(
@@ -204,33 +204,7 @@ impl EnumVariantTuple {
             Err(ErrorsEmitted)
         }?;
 
-        let mut element_types: Vec<Type> = Vec::new();
-
-        loop {
-            if let Some(Token::RParen { .. }) = parser.current_token() {
-                break;
-            }
-
-            let element_type = Type::parse(parser)?;
-            element_types.push(element_type);
-
-            let token = parser.current_token();
-
-            match token {
-                Some(Token::Comma { .. }) => {
-                    parser.next_token();
-                    continue;
-                }
-                Some(Token::RParen { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `)`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
-                    parser.expect_delimiter(TokenType::RParen)?;
-                }
-            }
-        }
+        let element_types = collection::get_collection_parens_comma(parser, Type::parse)?;
 
         let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 

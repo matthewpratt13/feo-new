@@ -35,8 +35,19 @@ where
     ) -> Result<Self, ErrorsEmitted>;
 }
 
-impl Item {
-    pub(crate) fn parse(
+pub(crate) trait ParseAssociatedItem
+where
+    Self: Sized,
+{
+    fn parse(
+        parser: &mut Parser,
+        attributes: Vec<OuterAttr>,
+        visibility: Visibility,
+    ) -> Result<Self, ErrorsEmitted>;
+}
+
+impl ParseAssociatedItem for Item {
+    fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
         visibility: Visibility,

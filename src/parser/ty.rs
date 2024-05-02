@@ -4,7 +4,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{test_utils::log_token, Parser};
+use super::{collection, test_utils::log_token, Parser};
 
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
@@ -43,34 +43,7 @@ impl Type {
                     parser.next_token();
                     Ok(Type::UnitType)
                 } else {
-                    let mut types: Vec<Type> = Vec::new();
-
-                    loop {
-                        if let Some(Token::Comma { .. }) = parser.current_token() {
-                            parser.next_token();
-                        }
-
-                        if let Some(Token::RParen { .. }) = parser.current_token() {
-                            break;
-                        }
-
-                        let ty = Type::parse(parser)?;
-                        types.push(ty);
-
-                        let token = parser.current_token();
-
-                        match token {
-                            Some(Token::Comma { .. }) => {
-                                parser.next_token();
-                                continue;
-                            }
-                            Some(Token::RParen { .. }) => break,
-                            Some(_) => parser.log_unexpected_str("`,` or `)`"),
-                            None => {
-                                parser.expect_delimiter(TokenType::RParen)?;
-                            }
-                        }
-                    }
+                    let types = collection::get_collection_parens_comma(parser, Type::parse)?;
 
                     if let Some(Token::RParen { .. }) = parser.current_token() {
                         parser.next_token();
@@ -139,32 +112,12 @@ impl Type {
                     params.push(param);
                 }
 
-                loop {
-                    if let Some(Token::Comma { .. }) = parser.current_token() {
-                        parser.next_token();
-                    }
+                let subsequent_params = &mut collection::get_collection_parens_comma(
+                    parser,
+                    FunctionOrMethodParam::parse,
+                )?;
 
-                    if let Some(Token::RParen { .. }) = parser.current_token() {
-                        break;
-                    }
-
-                    let param = FunctionOrMethodParam::parse(parser)?;
-                    params.push(param);
-
-                    let token = parser.current_token();
-
-                    match token {
-                        Some(Token::Comma { .. }) => {
-                            parser.next_token();
-                            continue;
-                        }
-                        Some(Token::RParen { .. }) => break,
-                        Some(_) => parser.log_unexpected_str("`,` or `)`"),
-                        None => {
-                            parser.expect_delimiter(TokenType::RParen)?;
-                        }
-                    }
-                }
+                params.append(subsequent_params);
 
                 if let Some(Token::RParen { .. }) = parser.current_token() {
                     parser.next_token();

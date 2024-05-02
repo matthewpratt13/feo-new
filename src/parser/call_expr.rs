@@ -4,15 +4,13 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::{collection, Parser, Precedence};
 
 impl CallExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         callee: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
-        let mut args = Vec::new();
-
         let callee = AssigneeExpr::try_from(callee).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -26,17 +24,7 @@ impl CallExpr {
             Err(ErrorsEmitted)
         }?;
 
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RParen { .. } | Token::EOF)
-        ) {
-            let arg = parser.parse_expression(Precedence::Lowest)?;
-            args.push(arg);
-
-            if let Some(Token::Comma { .. }) = parser.current_token() {
-                parser.next_token();
-            }
-        }
+        let args = collection::get_expressions(parser, Precedence::Lowest)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)

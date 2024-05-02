@@ -8,7 +8,8 @@ use crate::{
 };
 
 use super::{
-    item::{ParseDeclaration, ParseDefinition},
+    collection,
+    item::{ParseAssociatedItem, ParseDeclaration, ParseDefinition},
     Parser,
 };
 
@@ -36,7 +37,6 @@ impl ParseDefinition for TraitDef {
             Err(ErrorsEmitted)
         }?;
 
-        let mut trait_items = Vec::new();
         let mut inner_attributes: Vec<InnerAttr> = Vec::new();
 
         while let Some(ia) = InnerAttr::inner_attr(parser) {
@@ -44,22 +44,7 @@ impl ParseDefinition for TraitDef {
             parser.next_token();
         }
 
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RBrace { .. } | Token::EOF)
-        ) {
-            let mut item_attributes: Vec<OuterAttr> = Vec::new();
-
-            while let Some(oa) = OuterAttr::outer_attr(parser) {
-                item_attributes.push(oa);
-                parser.next_token();
-            }
-
-            let item_visibility = Visibility::visibility(parser)?;
-
-            let trait_item = TraitDefItem::parse(parser, item_attributes, item_visibility)?;
-            trait_items.push(trait_item);
-        }
+        let trait_items = collection::get_associated_items::<TraitDefItem>(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -101,8 +86,8 @@ impl ParseDefinition for TraitDef {
     }
 }
 
-impl TraitDefItem {
-    pub(crate) fn parse(
+impl ParseAssociatedItem for TraitDefItem {
+    fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
         visibility: Visibility,

@@ -7,7 +7,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{test_utils::log_token, Parser};
+use super::{collection, test_utils::log_token, Parser};
 
 impl FunctionItem {
     pub(crate) fn parse(
@@ -38,7 +38,8 @@ impl FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        let params_opt = parse_function_params(parser);
+        // let params_opt = parse_function_params(parser);
+        let params = collection::get_collection_parens_comma(parser, FunctionOrMethodParam::parse)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             log_token(parser, "consume token", false);
@@ -80,7 +81,13 @@ impl FunctionItem {
             kw_func,
             function_name,
             open_paren,
-            params_opt,
+            params_opt: {
+                if params.is_empty() {
+                    None
+                } else {
+                    Some(params)
+                }
+            },
             close_paren,
             return_type_opt,
             block_opt,
@@ -147,38 +154,6 @@ impl FunctionOrMethodParam {
     }
 }
 
-fn parse_function_params(parser: &mut Parser) -> Option<Vec<FunctionOrMethodParam>> {
-    log_token(parser, "enter `parse_function_params()`", true);
-
-    let mut params = Vec::new();
-
-    while !matches!(
-        parser.current_token(),
-        Some(Token::RParen { .. } | Token::EOF)
-    ) {
-        if let Ok(param) = FunctionOrMethodParam::parse(parser) {
-            params.push(param);
-
-            if let Some(Token::Comma { .. }) = parser.current_token() {
-                parser.next_token();
-                log_token(parser, "consume token", false);
-            }
-        }
-
-        if matches!(parser.current_token(), Some(Token::RParen { .. })) {
-            break;
-        }
-    }
-
-    log_token(parser, "exit `parse_function_params()`", true);
-
-    if params.is_empty() {
-        None
-    } else {
-        Some(params)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::parser::test_utils;
@@ -187,7 +162,7 @@ mod tests {
     fn parse_function_def_without_block() -> Result<(), ()> {
         let input = r#"
         #[modifier]
-        pub func only_owner(&mut parser, mut caller: h160, ref balances: Mapping<u160, u256>)"#;
+        pub func only_owner(&mut self, mut caller: h160, ref balances: Mapping<u160, u256>)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

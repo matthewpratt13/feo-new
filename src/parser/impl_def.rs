@@ -8,7 +8,11 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{item::ParseDeclaration, ParseDefinition, Parser};
+use super::{
+    collection,
+    item::{ParseAssociatedItem, ParseDeclaration},
+    ParseDefinition, Parser,
+};
 
 impl ParseDefinition for InherentImplDef {
     fn parse(
@@ -28,25 +32,7 @@ impl ParseDefinition for InherentImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let mut associated_items: Vec<InherentImplItem> = Vec::new();
-
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RBrace { .. } | Token::EOF)
-        ) {
-            let mut item_attributes: Vec<OuterAttr> = Vec::new();
-
-            while let Some(oa) = OuterAttr::outer_attr(parser) {
-                item_attributes.push(oa);
-                parser.next_token();
-            }
-
-            let item_visibility = Visibility::visibility(parser)?;
-
-            let associated_item =
-                InherentImplItem::parse(parser, item_attributes, item_visibility)?;
-            associated_items.push(associated_item);
-        }
+        let associated_items = collection::get_associated_items::<InherentImplItem>(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -114,24 +100,7 @@ impl ParseDefinition for TraitImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let mut associated_items: Vec<TraitImplItem> = Vec::new();
-
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RBrace { .. } | Token::EOF)
-        ) {
-            let mut item_attributes: Vec<OuterAttr> = Vec::new();
-
-            while let Some(oa) = OuterAttr::outer_attr(parser) {
-                item_attributes.push(oa);
-                parser.next_token();
-            }
-
-            let item_visibility = Visibility::visibility(parser)?;
-
-            let associated_item = TraitImplItem::parse(parser, item_attributes, item_visibility)?;
-            associated_items.push(associated_item);
-        }
+        let associated_items = collection::get_associated_items::<TraitImplItem>(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -167,7 +136,7 @@ impl ParseDefinition for TraitImplDef {
     }
 }
 
-impl InherentImplItem {
+impl ParseAssociatedItem for InherentImplItem {
     fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
@@ -191,8 +160,8 @@ impl InherentImplItem {
     }
 }
 
-impl TraitImplItem {
-    pub(crate) fn parse(
+impl ParseAssociatedItem for TraitImplItem {
+    fn parse(
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
         visibility: Visibility,

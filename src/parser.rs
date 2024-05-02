@@ -42,7 +42,7 @@ mod binary_expr;
 mod block_expr;
 mod call_expr;
 mod closure_expr;
-pub mod collection;
+pub(crate) mod collection;
 mod constant_decl;
 mod enum_def;
 mod field_access_expr;

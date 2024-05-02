@@ -7,7 +7,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{item::ParseDeclaration, Parser};
+use super::{collection, item::ParseDeclaration, Parser};
 
 impl ParseDeclaration for ImportDecl {
     fn parse(
@@ -113,40 +113,14 @@ impl PathSegment {
 
 impl PathSubset {
     fn parse(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
-        let mut trees: Vec<ImportTree> = Vec::new();
-
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
-        loop {
-            if let Some(Token::RBrace { .. }) = parser.current_token() {
-                break;
-            }
 
-            let tree = ImportTree::parse(parser)?;
-            trees.push(tree);
-
-            let token = parser.current_token();
-
-            match token {
-                Some(Token::Comma { .. }) => {
-                    parser.next_token();
-                    continue;
-                }
-                Some(Token::RBrace { .. }) => break,
-                Some(Token::ColonColonAsterisk { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `}`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
-                    parser.expect_delimiter(TokenType::RBrace)?;
-                }
-            }
-        }
+        let trees = collection::get_collection_braces_comma(parser, ImportTree::parse)?;
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 

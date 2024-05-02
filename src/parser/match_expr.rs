@@ -32,6 +32,8 @@ impl MatchExpr {
 
         let mut match_arms = parse_match_arms(parser)?;
 
+        // let match_arms = collection::get_collection_braces_comma(parser, MatchArm::parse)?;
+
         let final_arm = if let Some(a) = match_arms.pop() {
             Box::new(a)
         } else {
