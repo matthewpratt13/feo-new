@@ -40,7 +40,7 @@ impl ParseDefinition for EnumDef {
 
             let mut attributes: Vec<OuterAttr> = Vec::new();
 
-            while let Some(oa) = parser.get_outer_attr() {
+            while let Some(oa) = OuterAttr::outer_attr(parser) {
                 attributes.push(oa);
                 parser.next_token();
             }
@@ -87,7 +87,7 @@ impl EnumVariant {
     ) -> Result<EnumVariant, ErrorsEmitted> {
         let token = parser.next_token();
 
-        let visibility = parser.get_visibility()?;
+        let visibility = Visibility::visibility(parser)?;
 
         let variant_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))

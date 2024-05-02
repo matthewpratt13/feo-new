@@ -36,6 +36,7 @@
 mod alias_decl;
 mod array_expr;
 mod assignment_expr;
+mod attribute;
 mod binary_expr;
 mod block_expr;
 mod call_expr;
@@ -71,6 +72,7 @@ mod ty;
 mod type_cast_expr;
 mod unary_expr;
 mod unwrap_expr;
+mod visibility;
 mod while_expr;
 
 use std::collections::HashMap;
@@ -81,12 +83,11 @@ use crate::{
         CallExpr, ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr,
         Delimiter, DereferenceExpr, DereferenceOp, EnumDef, Expression, FieldAccessExpr, ForInExpr,
         FunctionItem, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef,
-        InnerAttr, Item, Keyword, LetStmt, Literal, MatchArm, MatchExpr, MethodCallExpr,
-        ModuleItem, NoneExpr, OuterAttr, PathExpr, PathPrefix, Pattern, PubPackageVis, RangeExpr,
-        RangeOp, ReferenceOp, ResultExpr, ReturnExpr, SelfType, Separator, SomeExpr, Statement,
-        StaticItemDecl, StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr,
-        TupleStructDef, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, Visibility,
-        WhileExpr,
+        Item, Keyword, LetStmt, Literal, MatchArm, MatchExpr, MethodCallExpr, ModuleItem, NoneExpr,
+        OuterAttr, PathExpr, PathPrefix, Pattern, RangeExpr, RangeOp, ReferenceOp, ResultExpr,
+        ReturnExpr, SelfType, Separator, SomeExpr, Statement, StaticItemDecl, StructDef,
+        StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef,
+        TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, Visibility, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream, TokenType},
@@ -201,88 +202,6 @@ impl Parser {
         }
     }
 
-    /// Retrieve the precedence for a given token (operator), considering the current context.
-    /// If the current context is `ParserContent::FieldAccess`, the precedence for `Token::Dot`
-    /// is `Precedence::FieldAccess`; if the current context is `ParserContext::MethodCall`,
-    /// the precedence for `Token::Dot` is `Precedence::MethodCall`, etc.
-    /// Return `Precedence::Lowest` if the input token has no assigned precedence.
-    fn get_precedence(&self, token: &Token) -> Precedence {
-        match token {
-            Token::Dot { .. } => match self.context {
-                ParserContext::FieldAccess => Precedence::FieldAccess,
-                ParserContext::MethodCall => Precedence::MethodCall,
-                ParserContext::TupleIndex => Precedence::TupleIndex,
-                _ => Precedence::FieldAccess,
-            },
-            Token::Ampersand { .. } => {
-                if self.context == ParserContext::Unary {
-                    Precedence::Unary
-                } else {
-                    Precedence::BitwiseAnd
-                }
-            }
-            Token::Asterisk { .. } => {
-                if self.context == ParserContext::Unary {
-                    Precedence::Unary
-                } else {
-                    Precedence::Product
-                }
-            }
-            Token::Minus { .. } => {
-                if self.context == ParserContext::Unary {
-                    Precedence::Unary
-                } else {
-                    Precedence::Difference
-                }
-            }
-            Token::Pipe { .. } => {
-                if self.context == ParserContext::Closure {
-                    Precedence::Lowest
-                } else {
-                    Precedence::BitwiseOr
-                }
-            }
-            Token::DblPipe { .. } => {
-                if self.context == ParserContext::Closure {
-                    Precedence::Lowest
-                } else {
-                    Precedence::LogicalOr
-                }
-            }
-            Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => Precedence::Path,
-            Token::LParen { .. } => Precedence::Call, // TODO: what about tuple structs?
-            Token::LBracket { .. } => Precedence::Index,
-            Token::QuestionMark { .. } => Precedence::Unwrap,
-            Token::AmpersandMut { .. } => Precedence::Unary,
-            Token::Bang { .. } => Precedence::Unary,
-            Token::Some { .. } | Token::None { .. } | Token::Ok { .. } | Token::Err { .. } => {
-                Precedence::Unary
-            }
-            Token::As { .. } => Precedence::TypeCast,
-            Token::DblAsterisk { .. } => Precedence::Exponentiation,
-            Token::Plus { .. } => Precedence::Sum,
-            Token::Slash { .. } => Precedence::Quotient,
-            Token::Percent { .. } => Precedence::Remainder,
-            Token::DblLessThan { .. } | Token::DblGreaterThan { .. } => Precedence::Shift,
-            Token::Caret { .. } => Precedence::BitwiseXor,
-            Token::LessThan { .. } => Precedence::LessThan,
-            Token::GreaterThan { .. } => Precedence::GreaterThan,
-            Token::LessThanEquals { .. } => Precedence::LessThanOrEqual,
-            Token::GreaterThanEquals { .. } => Precedence::GreaterThanOrEqual,
-            Token::DblEquals { .. } => Precedence::Equal,
-            Token::BangEquals { .. } => Precedence::NotEqual,
-            Token::DblAmpersand { .. } => Precedence::LogicalAnd,
-            Token::DblDot { .. } | Token::DotDotEquals { .. } => Precedence::Range,
-            Token::PlusEquals { .. }
-            | Token::MinusEquals { .. }
-            | Token::AsteriskEquals { .. }
-            | Token::SlashEquals { .. }
-            | Token::PercentEquals { .. } => Precedence::CompoundAssignment,
-            Token::Equals { .. } => Precedence::Assignment,
-            _ => *self.precedences.get(token).unwrap_or(&Precedence::Lowest),
-        }
-    }
-
     /// Set the parser's context based on the current expression or statement being parsed.
     /// This allows the parser to adjust the precedence of tokens based on the surrounding context.
     /// E.g., setting the context to `ParserContext::FieldAccess` in expressions involving
@@ -308,7 +227,7 @@ impl Parser {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // EXPRESSIONS
+    // EXPRESSION PARSING
     ///////////////////////////////////////////////////////////////////////////
 
     /// Recursively parse an expression based on the next token's operator precedence.
@@ -764,7 +683,7 @@ impl Parser {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // STATEMENT
+    // STATEMENT PARSING
     ///////////////////////////////////////////////////////////////////////////
 
     /// Parse a statement (i.e., let statement, item or expression).
@@ -820,47 +739,129 @@ impl Parser {
         }
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-    // HELPERS
-    ///////////////////////////////////////////////////////////////////////////
+    fn get_item(&mut self) -> Result<Statement, ErrorsEmitted> {
+        let mut outer_attributes: Vec<OuterAttr> = Vec::new();
 
-    /// Peek at the token at the current index in the `TokenStream`.
-    fn current_token(&self) -> Option<Token> {
-        if self.current < self.stream.tokens().len() {
-            self.stream.tokens().get(self.current).cloned()
-        } else {
-            Some(Token::EOF)
+        while let Some(oa) = OuterAttr::outer_attr(self) {
+            outer_attributes.push(oa);
+            self.next_token();
+        }
+
+        let visibility = Visibility::visibility(self)?;
+
+        let token = self.current_token();
+
+        match token {
+            Some(Token::Import { .. }) => Ok(Statement::Item(Item::ImportDecl(ImportDecl::parse(
+                self,
+                outer_attributes,
+                visibility,
+            )?))),
+            Some(Token::Alias { .. }) => Ok(Statement::Item(Item::AliasDecl(AliasDecl::parse(
+                self,
+                outer_attributes,
+                visibility,
+            )?))),
+            Some(Token::Const { .. }) => Ok(Statement::Item(Item::ConstantDecl(
+                ConstantDecl::parse(self, outer_attributes, visibility)?,
+            ))),
+            Some(Token::Static { .. }) => Ok(Statement::Item(Item::StaticItemDecl(
+                StaticItemDecl::parse(self, outer_attributes, visibility)?,
+            ))),
+            Some(Token::Module { .. }) => Ok(Statement::Item(Item::ModuleItem(Box::new(
+                ModuleItem::parse(self, outer_attributes, visibility)?,
+            )))),
+            Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
+                self,
+                outer_attributes,
+                visibility,
+            )?))),
+            Some(Token::Enum { .. }) => Ok(Statement::Item(Item::EnumDef(EnumDef::parse(
+                self,
+                outer_attributes,
+                visibility,
+            )?))),
+            Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
+                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::StructDef(
+                    StructDef::parse(self, outer_attributes, visibility)?,
+                ))),
+
+                Some(Token::LParen { .. }) => Ok(Statement::Item(Item::TupleStructDef(
+                    TupleStructDef::parse(self, outer_attributes, visibility)?,
+                ))),
+
+                _ => {
+                    self.log_unexpected_str("`{` or `(`");
+                    Err(ErrorsEmitted)
+                }
+            },
+
+            Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionItem(
+                FunctionItem::parse(self, outer_attributes, visibility)?,
+            ))),
+            Some(Token::Impl { .. }) => match self.peek_ahead_by(2) {
+                Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
+                    TraitImplDef::parse(self, outer_attributes, visibility)?,
+                ))),
+                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
+                    InherentImplDef::parse(self, outer_attributes, visibility)?,
+                ))),
+                _ => {
+                    self.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`for` or `{`".to_string(),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted)
+                }
+            },
+            _ => {
+                self.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "declaration or definition item".to_string(),
+                    found: token,
+                });
+                Err(ErrorsEmitted)
+            }
         }
     }
 
-    /// Peek at the token `num_tokens` ahead of the token at the current index in the `TokenStream`.
-    fn peek_ahead_by(&self, num_tokens: usize) -> Option<Token> {
-        let i = self.current + num_tokens;
+    fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
+        log_token(self, "enter get_identifier_patt()`", true);
 
-        if i < self.stream.tokens().len() {
-            self.stream.tokens().get(i).cloned()
+        let kw_ref_opt = if let Some(Token::Ref { .. }) = self.current_token() {
+            self.next_token();
+            log_token(self, "consume token", false);
+            Some(Keyword::Ref)
         } else {
             None
-        }
-    }
+        };
 
-    /// Peek at the token `num_tokens` behind the token at the current index in the `TokenStream`.
-    fn peek_behind_by(&self, num_tokens: usize) -> Option<Token> {
-        if self.current >= num_tokens {
-            self.stream.tokens().get(self.current - num_tokens).cloned()
+        let kw_mut_opt = if let Some(Token::Mut { .. }) = self.current_token() {
+            self.next_token();
+            log_token(self, "consume token", false);
+            Some(Keyword::Mut)
         } else {
             None
-        }
+        };
+
+        let name = if let Some(Token::Identifier { name, .. }) = self.next_token() {
+            Ok(Identifier(name))
+        } else {
+            self.log_unexpected_str("identifier");
+            Err(ErrorsEmitted)
+        }?;
+
+        log_token(self, "exit `get_identifier_patt()`", true);
+
+        Ok(Pattern::IdentifierPatt {
+            kw_ref_opt,
+            kw_mut_opt,
+            name,
+        })
     }
 
-    /// Get the precedence of the next token
-    fn peek_precedence(&self) -> Precedence {
-        log_token(self, "enter `peek_precedence()`", true);
-
-        let precedence = self.get_precedence(&self.current_token().unwrap_or(Token::EOF));
-
-        precedence
-    }
+    ///////////////////////////////////////////////////////////////////////////
+    // TOKEN RETRIEVAL
+    ///////////////////////////////////////////////////////////////////////////
 
     /// Advance the parser to the next token (returns current token).
     fn next_token(&mut self) -> Option<Token> {
@@ -985,6 +986,10 @@ impl Parser {
         }
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // ERROR HANDLING
+    ///////////////////////////////////////////////////////////////////////////
+
     /// Log information about an error that occurred during parsing, by pushing the error
     /// to the `errors` vector and providing information about error kind and position.
     fn log_error(&mut self, error_kind: ParserErrorKind) {
@@ -1031,193 +1036,133 @@ impl Parser {
         &self.errors
     }
 
-    fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
-        log_token(self, "enter get_identifier_patt()`", true);
+    ///////////////////////////////////////////////////////////////////////////
+    // GETTERS
+    ///////////////////////////////////////////////////////////////////////////
 
-        let kw_ref_opt = if let Some(Token::Ref { .. }) = self.current_token() {
-            self.next_token();
-            log_token(self, "consume token", false);
-            Some(Keyword::Ref)
+    /// Get the token at the current index in the `TokenStream`.
+    fn current_token(&self) -> Option<Token> {
+        if self.current < self.stream.tokens().len() {
+            self.stream.tokens().get(self.current).cloned()
         } else {
-            None
-        };
-
-        let kw_mut_opt = if let Some(Token::Mut { .. }) = self.current_token() {
-            self.next_token();
-            log_token(self, "consume token", false);
-            Some(Keyword::Mut)
-        } else {
-            None
-        };
-
-        let name = if let Some(Token::Identifier { name, .. }) = self.next_token() {
-            Ok(Identifier(name))
-        } else {
-            self.log_unexpected_str("identifier");
-            Err(ErrorsEmitted)
-        }?;
-
-        log_token(self, "exit `get_identifier_patt()`", true);
-
-        Ok(Pattern::IdentifierPatt {
-            kw_ref_opt,
-            kw_mut_opt,
-            name,
-        })
-    }
-
-    fn get_outer_attr(&self) -> Option<OuterAttr> {
-        let token = self.current_token();
-
-        match token {
-            Some(Token::Calldata { .. }) => Some(OuterAttr::Calldata),
-            Some(Token::Constructor { .. }) => Some(OuterAttr::Constructor),
-            Some(Token::Error { .. }) => Some(OuterAttr::Error),
-            Some(Token::Event { .. }) => Some(OuterAttr::Event),
-            Some(Token::Extern { .. }) => Some(OuterAttr::Extern),
-            Some(Token::Modifier { .. }) => Some(OuterAttr::Modifier),
-            Some(Token::Payable { .. }) => Some(OuterAttr::Payable),
-            Some(Token::Storage { .. }) => Some(OuterAttr::Storage),
-            Some(Token::Test { .. }) => Some(OuterAttr::Test),
-            Some(Token::Topic { .. }) => Some(OuterAttr::Topic),
-            Some(Token::View { .. }) => Some(OuterAttr::View),
-            _ => None,
+            Some(Token::EOF)
         }
     }
 
-    fn get_inner_attr(&self) -> Option<InnerAttr> {
-        let token = self.current_token();
-
+    /// Retrieve the precedence for a given token (operator), considering the current context.
+    /// If the current context is `ParserContent::FieldAccess`, the precedence for `Token::Dot`
+    /// is `Precedence::FieldAccess`; if the current context is `ParserContext::MethodCall`,
+    /// the precedence for `Token::Dot` is `Precedence::MethodCall`, etc.
+    /// Return `Precedence::Lowest` if the input token has no assigned precedence.
+    fn get_precedence(&self, token: &Token) -> Precedence {
         match token {
-            Some(Token::Contract { .. }) => Some(InnerAttr::Contract),
-            Some(Token::Library { .. }) => Some(InnerAttr::Library),
-            Some(Token::Interface { .. }) => Some(InnerAttr::Interface),
-            Some(Token::Script { .. }) => Some(InnerAttr::Script),
-            Some(Token::Unsafe { .. }) => Some(InnerAttr::Unsafe),
-            _ => None,
-        }
-    }
-
-    fn get_visibility(&mut self) -> Result<Visibility, ErrorsEmitted> {
-        let token = self.current_token();
-
-        match token {
-            Some(Token::Pub { .. }) => {
-                self.next_token();
-
-                match self.current_token() {
-                    Some(Token::LParen { .. }) => {
-                        self.next_token();
-
-                        let kw_package = self.expect_keyword(TokenType::Package)?;
-
-                        let close_paren = if let Some(Token::RParen { .. }) = self.next_token() {
-                            Ok(Delimiter::RParen)
-                        } else {
-                            self.expect_delimiter(TokenType::RParen)?;
-                            Err(ErrorsEmitted)
-                        }?;
-
-                        let pub_package = PubPackageVis {
-                            kw_pub: Keyword::Pub,
-                            open_paren: Delimiter::LParen,
-                            kw_package,
-                            close_paren,
-                        };
-
-                        Ok(Visibility::PubPackage(pub_package))
-                    }
-                    _ => Ok(Visibility::Pub),
+            Token::Dot { .. } => match self.context {
+                ParserContext::FieldAccess => Precedence::FieldAccess,
+                ParserContext::MethodCall => Precedence::MethodCall,
+                ParserContext::TupleIndex => Precedence::TupleIndex,
+                _ => Precedence::FieldAccess,
+            },
+            Token::Ampersand { .. } => {
+                if self.context == ParserContext::Unary {
+                    Precedence::Unary
+                } else {
+                    Precedence::BitwiseAnd
                 }
             }
-            _ => Ok(Visibility::Private),
-        }
-    }
-
-    fn get_item(&mut self) -> Result<Statement, ErrorsEmitted> {
-        let mut outer_attributes: Vec<OuterAttr> = Vec::new();
-
-        while let Some(oa) = self.get_outer_attr() {
-            outer_attributes.push(oa);
-            self.next_token();
-        }
-
-        let visibility = self.get_visibility()?;
-
-        let token = self.current_token();
-
-        match token {
-            Some(Token::Import { .. }) => Ok(Statement::Item(Item::ImportDecl(ImportDecl::parse(
-                self,
-                outer_attributes,
-                visibility,
-            )?))),
-            Some(Token::Alias { .. }) => Ok(Statement::Item(Item::AliasDecl(AliasDecl::parse(
-                self,
-                outer_attributes,
-                visibility,
-            )?))),
-            Some(Token::Const { .. }) => Ok(Statement::Item(Item::ConstantDecl(
-                ConstantDecl::parse(self, outer_attributes, visibility)?,
-            ))),
-            Some(Token::Static { .. }) => Ok(Statement::Item(Item::StaticItemDecl(
-                StaticItemDecl::parse(self, outer_attributes, visibility)?,
-            ))),
-            Some(Token::Module { .. }) => Ok(Statement::Item(Item::ModuleItem(Box::new(
-                ModuleItem::parse(self, outer_attributes, visibility)?,
-            )))),
-            Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
-                self,
-                outer_attributes,
-                visibility,
-            )?))),
-            Some(Token::Enum { .. }) => Ok(Statement::Item(Item::EnumDef(EnumDef::parse(
-                self,
-                outer_attributes,
-                visibility,
-            )?))),
-            Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
-                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::StructDef(
-                    StructDef::parse(self, outer_attributes, visibility)?,
-                ))),
-
-                Some(Token::LParen { .. }) => Ok(Statement::Item(Item::TupleStructDef(
-                    TupleStructDef::parse(self, outer_attributes, visibility)?,
-                ))),
-
-                _ => {
-                    self.log_unexpected_str("`{` or `(`");
-                    Err(ErrorsEmitted)
+            Token::Asterisk { .. } => {
+                if self.context == ParserContext::Unary {
+                    Precedence::Unary
+                } else {
+                    Precedence::Product
                 }
-            },
-
-            Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionItem(
-                FunctionItem::parse(self, outer_attributes, visibility)?,
-            ))),
-            Some(Token::Impl { .. }) => match self.peek_ahead_by(2) {
-                Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
-                    TraitImplDef::parse(self, outer_attributes, visibility)?,
-                ))),
-                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
-                    InherentImplDef::parse(self, outer_attributes, visibility)?,
-                ))),
-                _ => {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`for` or `{`".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted)
-                }
-            },
-            _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "declaration or definition item".to_string(),
-                    found: token,
-                });
-                Err(ErrorsEmitted)
             }
+            Token::Minus { .. } => {
+                if self.context == ParserContext::Unary {
+                    Precedence::Unary
+                } else {
+                    Precedence::Difference
+                }
+            }
+            Token::Pipe { .. } => {
+                if self.context == ParserContext::Closure {
+                    Precedence::Lowest
+                } else {
+                    Precedence::BitwiseOr
+                }
+            }
+            Token::DblPipe { .. } => {
+                if self.context == ParserContext::Closure {
+                    Precedence::Lowest
+                } else {
+                    Precedence::LogicalOr
+                }
+            }
+            Token::DblColon { .. } | Token::ColonColonAsterisk { .. } => Precedence::Path,
+            Token::LParen { .. } => Precedence::Call, // TODO: what about tuple structs?
+            Token::LBracket { .. } => Precedence::Index,
+            Token::QuestionMark { .. } => Precedence::Unwrap,
+            Token::AmpersandMut { .. } => Precedence::Unary,
+            Token::Bang { .. } => Precedence::Unary,
+            Token::Some { .. } | Token::None { .. } | Token::Ok { .. } | Token::Err { .. } => {
+                Precedence::Unary
+            }
+            Token::As { .. } => Precedence::TypeCast,
+            Token::DblAsterisk { .. } => Precedence::Exponentiation,
+            Token::Plus { .. } => Precedence::Sum,
+            Token::Slash { .. } => Precedence::Quotient,
+            Token::Percent { .. } => Precedence::Remainder,
+            Token::DblLessThan { .. } | Token::DblGreaterThan { .. } => Precedence::Shift,
+            Token::Caret { .. } => Precedence::BitwiseXor,
+            Token::LessThan { .. } => Precedence::LessThan,
+            Token::GreaterThan { .. } => Precedence::GreaterThan,
+            Token::LessThanEquals { .. } => Precedence::LessThanOrEqual,
+            Token::GreaterThanEquals { .. } => Precedence::GreaterThanOrEqual,
+            Token::DblEquals { .. } => Precedence::Equal,
+            Token::BangEquals { .. } => Precedence::NotEqual,
+            Token::DblAmpersand { .. } => Precedence::LogicalAnd,
+            Token::DblDot { .. } | Token::DotDotEquals { .. } => Precedence::Range,
+            Token::PlusEquals { .. }
+            | Token::MinusEquals { .. }
+            | Token::AsteriskEquals { .. }
+            | Token::SlashEquals { .. }
+            | Token::PercentEquals { .. } => Precedence::CompoundAssignment,
+            Token::Equals { .. } => Precedence::Assignment,
+            _ => *self.precedences.get(token).unwrap_or(&Precedence::Lowest),
         }
     }
+
+    /// Peek at the token `num_tokens` ahead of the token at the current index in the `TokenStream`.
+    fn peek_ahead_by(&self, num_tokens: usize) -> Option<Token> {
+        let i = self.current + num_tokens;
+
+        if i < self.stream.tokens().len() {
+            self.stream.tokens().get(i).cloned()
+        } else {
+            None
+        }
+    }
+
+    /// Peek at the token `num_tokens` behind the token at the current index in the `TokenStream`.
+    fn peek_behind_by(&self, num_tokens: usize) -> Option<Token> {
+        if self.current >= num_tokens {
+            self.stream.tokens().get(self.current - num_tokens).cloned()
+        } else {
+            None
+        }
+    }
+
+    /// Get the precedence of the next token
+    fn peek_precedence(&self) -> Precedence {
+        log_token(self, "enter `peek_precedence()`", true);
+
+        let precedence = self.get_precedence(&self.current_token().unwrap_or(Token::EOF));
+
+        precedence
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // ADDITIONAL HELPERS
+    ///////////////////////////////////////////////////////////////////////////
 
     /// Determine if `Token::Dot` token indicates a tuple index operator (followed by a digit).
     fn is_tuple_index(&self) -> bool {

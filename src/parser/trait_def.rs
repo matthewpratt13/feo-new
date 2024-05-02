@@ -39,7 +39,7 @@ impl ParseDefinition for TraitDef {
         let mut trait_items = Vec::new();
         let mut inner_attributes: Vec<InnerAttr> = Vec::new();
 
-        while let Some(ia) = parser.get_inner_attr() {
+        while let Some(ia) = InnerAttr::inner_attr(parser) {
             inner_attributes.push(ia);
             parser.next_token();
         }
@@ -50,12 +50,12 @@ impl ParseDefinition for TraitDef {
         ) {
             let mut item_attributes: Vec<OuterAttr> = Vec::new();
 
-            while let Some(oa) = parser.get_outer_attr() {
+            while let Some(oa) = OuterAttr::outer_attr(parser) {
                 item_attributes.push(oa);
                 parser.next_token();
             }
 
-            let item_visibility = parser.get_visibility()?;
+            let item_visibility = Visibility::visibility(parser)?;
 
             let trait_item = TraitDefItem::parse(parser, item_attributes, item_visibility)?;
             trait_items.push(trait_item);

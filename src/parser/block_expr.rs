@@ -13,7 +13,7 @@ impl BlockExpr {
 
         let mut attributes: Vec<InnerAttr> = Vec::new();
 
-        while let Some(ia) = parser.get_inner_attr() {
+        while let Some(ia) = InnerAttr::inner_attr(parser) {
             attributes.push(ia);
             parser.next_token();
         }

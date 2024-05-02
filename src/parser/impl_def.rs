@@ -36,12 +36,12 @@ impl ParseDefinition for InherentImplDef {
         ) {
             let mut item_attributes: Vec<OuterAttr> = Vec::new();
 
-            while let Some(oa) = parser.get_outer_attr() {
+            while let Some(oa) = OuterAttr::outer_attr(parser) {
                 item_attributes.push(oa);
                 parser.next_token();
             }
 
-            let item_visibility = parser.get_visibility()?;
+            let item_visibility = Visibility::visibility(parser)?;
 
             let associated_item =
                 InherentImplItem::parse(parser, item_attributes, item_visibility)?;
@@ -122,12 +122,12 @@ impl ParseDefinition for TraitImplDef {
         ) {
             let mut item_attributes: Vec<OuterAttr> = Vec::new();
 
-            while let Some(oa) = parser.get_outer_attr() {
+            while let Some(oa) = OuterAttr::outer_attr(parser) {
                 item_attributes.push(oa);
                 parser.next_token();
             }
 
-            let item_visibility = parser.get_visibility()?;
+            let item_visibility = Visibility::visibility(parser)?;
 
             let associated_item = TraitImplItem::parse(parser, item_attributes, item_visibility)?;
             associated_items.push(associated_item);

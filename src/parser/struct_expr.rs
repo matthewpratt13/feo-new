@@ -28,7 +28,7 @@ impl StructExpr {
         ) {
             let mut attributes: Vec<OuterAttr> = Vec::new();
 
-            while let Some(oa) = parser.get_outer_attr() {
+            while let Some(oa) = OuterAttr::outer_attr(parser) {
                 attributes.push(oa);
                 parser.next_token();
             }

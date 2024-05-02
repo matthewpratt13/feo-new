@@ -12,7 +12,7 @@ impl ParseDeclaration for AliasDecl {
         attributes: Vec<OuterAttr>,
         _visibility: Visibility,
     ) -> Result<AliasDecl, ErrorsEmitted> {
-        let visibility = parser.get_visibility()?;
+        let visibility = Visibility::visibility(parser)?;
 
         let kw_alias = parser.expect_keyword(TokenType::Alias)?;
 

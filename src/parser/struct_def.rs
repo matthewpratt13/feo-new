@@ -42,12 +42,12 @@ impl ParseDefinition for StructDef {
 
             let mut field_attributes: Vec<OuterAttr> = Vec::new();
 
-            while let Some(oa) = parser.get_outer_attr() {
+            while let Some(oa) = OuterAttr::outer_attr(parser) {
                 field_attributes.push(oa);
                 parser.next_token();
             }
 
-            let field_visibility = parser.get_visibility()?;
+            let field_visibility = Visibility::visibility(parser)?;
 
             let token = parser.next_token();
 
@@ -145,12 +145,12 @@ impl ParseDefinition for TupleStructDef {
 
             let mut field_attributes: Vec<OuterAttr> = Vec::new();
 
-            while let Some(oa) = parser.get_outer_attr() {
+            while let Some(oa) = OuterAttr::outer_attr(parser) {
                 field_attributes.push(oa);
                 parser.next_token();
             }
 
-            let field_visibility = parser.get_visibility()?;
+            let field_visibility = Visibility::visibility(parser)?;
 
             let field_type = Box::new(Type::parse(parser)?);
 
