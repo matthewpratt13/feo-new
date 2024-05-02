@@ -14,7 +14,7 @@ impl ModuleItem {
     ) -> Result<ModuleItem, ErrorsEmitted> {
         let kw_module = parser.expect_keyword(TokenType::Module)?;
 
-        let token = parser.consume_token();
+        let token = parser.next_token();
 
         let module_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
@@ -23,8 +23,8 @@ impl ModuleItem {
             Err(ErrorsEmitted)
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
@@ -33,31 +33,31 @@ impl ModuleItem {
 
         let mut inner_attributes: Vec<InnerAttr> = Vec::new();
 
-        while let Some(ia) = parser.get_inner_attr() {
+        while let Some(ia) = InnerAttr::inner_attr(parser) {
             inner_attributes.push(ia);
-            parser.consume_token();
+            parser.next_token();
         }
 
         let mut items: Vec<Item> = Vec::new();
 
         while !matches!(
-            parser.peek_current(),
+            parser.current_token(),
             Some(Token::RBrace { .. } | Token::EOF)
         ) {
             let mut item_attributes: Vec<OuterAttr> = Vec::new();
 
-            while let Some(oa) = parser.get_outer_attr() {
+            while let Some(oa) = OuterAttr::outer_attr(parser) {
                 item_attributes.push(oa);
-                parser.consume_token();
+                parser.next_token();
             }
 
-            let item_visibility = parser.get_visibility()?;
+            let item_visibility = Visibility::visibility(parser)?;
 
             let item = Item::parse(parser, item_attributes, item_visibility)?;
             items.push(item);
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.consume_token() {
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -107,15 +107,12 @@ mod tests {
         pub module foo {
             #![contract]
 
-            import package::some_module::SomeObject;
-            
-            #[storage]
-            static mut OWNER: h160 = $0x12345123451234512345;
-
+            import package::foo_error::Error;
+         
             pub trait Bar {
                 #![interface]
 
-                func transfer(&mut self, to: h160, amount: u256) -> Baz;
+                func transfer(&mut self, to: h160, amount: u256) -> Result<Baz, Error>;
             }
 
             #[event]
@@ -131,6 +128,9 @@ mod tests {
             }
 
             impl Foo {
+                #[storage]
+                const ADDRESS: h160 = $0x12345123451234512345;
+    
                 #[modifier]
                 pub func only_owner(caller: h160) -> bool {
                     if (caller != OWNER) {
@@ -145,12 +145,11 @@ mod tests {
             }
 
             impl Bar for Foo {
-                #[extern]
                 func transfer(&mut self, to: h160, amount: u256) -> Result<Baz, Error> {
                     self.balance -= amount;
                     to.balance += amount;
 
-                    Baz { to: to, amount: amount }
+                    Ok(Baz { to: to, amount: amount })
                 }
             }
         }"#;

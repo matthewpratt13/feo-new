@@ -547,13 +547,13 @@ pub enum Token {
         span: Span,
     },
 
+    // comments
     LineComment {
         span: Span,
     },
     BlockComment {
         span: Span,
     },
-
     DocComment {
         comment: String,
         span: Span,
@@ -569,6 +569,8 @@ pub enum Token {
 }
 
 impl Token {
+    /// Convert a `Token` into a `TokenType` for more streamlined parsing – 
+    /// i.e., excluding span information.
     pub fn token_type(&self) -> TokenType {
         match self.clone() {
             Token::Identifier { name, .. } => TokenType::Iden(name),
@@ -1241,6 +1243,7 @@ pub enum DocCommentType {
     OuterDocComment, // `///`
 }
 
+/// Enum representing the different token types, without extra information (except for literals). 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum TokenType {
     Iden(String),
@@ -1390,6 +1393,7 @@ pub struct TokenStream {
 
 impl TokenStream {
     /// Constructor method.
+    /// Stores the source data used in parsing (i.e., tokens).
     pub fn new(tokens: &[Token], input: &str, start: usize, end: usize) -> Self {
         let span = Span::new(input, start, end);
 

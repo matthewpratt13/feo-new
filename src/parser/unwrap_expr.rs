@@ -15,7 +15,7 @@ impl UnwrapExpr {
             ErrorsEmitted
         })?);
 
-        parser.consume_token();
+        parser.next_token();
 
         let expr = UnwrapExpr {
             value_expr: operand,

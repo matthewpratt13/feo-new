@@ -15,10 +15,10 @@ impl PathExpr {
 
         let mut tree: Vec<Identifier> = Vec::new();
 
-        while let Some(Token::DblColon { .. }) = parser.peek_current() {
+        while let Some(Token::DblColon { .. }) = parser.current_token() {
             if let Some(Token::Identifier { name, .. }) = parser.peek_ahead_by(1) {
-                parser.consume_token();
-                parser.consume_token();
+                parser.next_token();
+                parser.next_token();
 
                 tree.push(Identifier(name));
             } else {
@@ -26,8 +26,8 @@ impl PathExpr {
             }
         }
 
-        let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.current_token() {
+            parser.next_token();
             Some(Separator::ColonColonAsterisk)
         } else {
             None

@@ -20,8 +20,8 @@ impl ParseDefinition for InherentImplDef {
 
         let nominal_type = Type::parse(parser)?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
@@ -31,24 +31,24 @@ impl ParseDefinition for InherentImplDef {
         let mut associated_items: Vec<InherentImplItem> = Vec::new();
 
         while !matches!(
-            parser.peek_current(),
+            parser.current_token(),
             Some(Token::RBrace { .. } | Token::EOF)
         ) {
             let mut item_attributes: Vec<OuterAttr> = Vec::new();
 
-            while let Some(oa) = parser.get_outer_attr() {
+            while let Some(oa) = OuterAttr::outer_attr(parser) {
                 item_attributes.push(oa);
-                parser.consume_token();
+                parser.next_token();
             }
 
-            let item_visibility = parser.get_visibility()?;
+            let item_visibility = Visibility::visibility(parser)?;
 
             let associated_item =
                 InherentImplItem::parse(parser, item_attributes, item_visibility)?;
             associated_items.push(associated_item);
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.consume_token() {
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -88,11 +88,11 @@ impl ParseDefinition for TraitImplDef {
     ) -> Result<TraitImplDef, ErrorsEmitted> {
         let kw_impl = parser.expect_keyword(TokenType::Impl)?;
 
-        let token: Option<Token> = parser.peek_current();
+        let token: Option<Token> = parser.current_token();
 
         let implemented_trait_path = if let Some(Token::Identifier { name, .. }) = token {
             let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)));
-            parser.consume_token();
+            parser.next_token();
             path
         } else {
             parser.log_error(ParserErrorKind::UnexpectedToken {
@@ -107,7 +107,7 @@ impl ParseDefinition for TraitImplDef {
 
         let implementing_type = Type::parse(parser)?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
@@ -117,23 +117,23 @@ impl ParseDefinition for TraitImplDef {
         let mut associated_items: Vec<TraitImplItem> = Vec::new();
 
         while !matches!(
-            parser.peek_current(),
+            parser.current_token(),
             Some(Token::RBrace { .. } | Token::EOF)
         ) {
             let mut item_attributes: Vec<OuterAttr> = Vec::new();
 
-            while let Some(oa) = parser.get_outer_attr() {
+            while let Some(oa) = OuterAttr::outer_attr(parser) {
                 item_attributes.push(oa);
-                parser.consume_token();
+                parser.next_token();
             }
 
-            let item_visibility = parser.get_visibility()?;
+            let item_visibility = Visibility::visibility(parser)?;
 
             let associated_item = TraitImplItem::parse(parser, item_attributes, item_visibility)?;
             associated_items.push(associated_item);
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.consume_token() {
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -173,7 +173,7 @@ impl InherentImplItem {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<InherentImplItem, ErrorsEmitted> {
-        match parser.peek_current() {
+        match parser.current_token() {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes, visibility)?;
                 Ok(InherentImplItem::ConstantDecl(constant_decl))
@@ -197,7 +197,7 @@ impl TraitImplItem {
         attributes: Vec<OuterAttr>,
         visibility: Visibility,
     ) -> Result<TraitImplItem, ErrorsEmitted> {
-        match parser.peek_current() {
+        match parser.current_token() {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes, visibility)?;
                 Ok(TraitImplItem::ConstantDecl(constant_decl))

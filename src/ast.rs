@@ -1,3 +1,8 @@
+//! # AST
+//!
+//! Contains the different nodes that make up the abstract syntax tree, and the tokens
+//! within those nodes. The primary nodes are `Expression`, `Item` and `Statement`.
+
 mod expression;
 mod item;
 mod statement;
@@ -8,7 +13,7 @@ use crate::error::ParserErrorKind;
 pub use self::{expression::*, item::*, statement::*, types::*};
 
 ///////////////////////////////////////////////////////////////////////////
-/// LITERAL
+// LITERAL
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different literals used in AST nodes.
@@ -26,7 +31,7 @@ pub enum Literal {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// IDENTIFIER
+// IDENTIFIER
 ///////////////////////////////////////////////////////////////////////////
 
 /// Wrapper type, turning a `String` into an `Identifier`.
@@ -34,7 +39,7 @@ pub enum Literal {
 pub struct Identifier(pub String);
 
 ///////////////////////////////////////////////////////////////////////////
-/// KEYWORDS
+// KEYWORDS
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different keywords used in AST nodes.
@@ -102,7 +107,7 @@ pub enum OuterAttr {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// DELIMITERS
+// DELIMITERS
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different delimiters used in AST nodes.
@@ -117,7 +122,7 @@ pub enum Delimiter {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// PUNCTUATION
+// PUNCTUATION
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different unary operators used in AST nodes.
@@ -127,12 +132,14 @@ pub enum UnaryOp {
     Not,    // `!`
 }
 
+/// Enum representing the different reference operators used in AST nodes (i.e., `&` and `&mut`).
 #[derive(Debug, Clone, PartialEq)]
 pub enum ReferenceOp {
     Borrow,        // `&`
     MutableBorrow, // `&mut`
 }
 
+/// Unit struct representing the dereference operator (`*`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct DereferenceOp;
 
@@ -165,7 +172,7 @@ pub enum ComparisonOp {
     GreaterEqual,
 }
 
-/// Enum representing the different compound comparison operators used in AST nodes.
+/// Enum representing the different compound assignment operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CompoundAssignmentOp {
     AddAssign,
@@ -179,7 +186,7 @@ pub enum CompoundAssignmentOp {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssignmentOp;
 
-/// Unit struct representing the unwrap operator `?` used in AST nodes.
+/// Unit struct representing the unwrap operator (`?`) used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnwrapOp;
 
@@ -199,7 +206,6 @@ pub enum Separator {
     ColonColonAsterisk,
     ThinArrow,
     FatArrow,
-    Underscore,
     LeftAngledBracket,
     RightAngledBracket,
     Pipe,
@@ -207,10 +213,10 @@ pub enum Separator {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// NODE GROUPS
+// NODE GROUPS
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different expression AST nodes.
+/// Enum representing the different types of expression in the AST.
 /// `Expression` nodes always produce or evaluate to a value and may have side effects.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
@@ -223,7 +229,7 @@ pub enum Expression {
     TupleIndex(TupleIndexExpr),
     Unwrap(UnwrapExpr),
     Unary(UnaryExpr),
-    Borrow(BorrowExpr),
+    Reference(ReferenceExpr),
     Dereference(DereferenceExpr),
     TypeCast(TypeCastExpr),
     Binary(BinaryExpr),
@@ -240,7 +246,7 @@ pub enum Expression {
     Array(ArrayExpr),
     Tuple(TupleExpr),
     Struct(StructExpr),
-    TupleStruct(TupleStructExpr),
+    // TupleStruct(TupleStructExpr),
     Block(BlockExpr),
     If(IfExpr),       // condition, true, false
     Match(MatchExpr), // scrutinee, body
@@ -252,7 +258,7 @@ pub enum Expression {
     ResultExpr(ResultExpr),
 }
 
-/// Enum representing value type expressions.
+/// Enum representing value type expressions, which are subsets of `Expression`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValueExpr {
     Literal(Literal),
@@ -264,7 +270,7 @@ pub enum ValueExpr {
     TupleIndexExpr(TupleIndexExpr),
     UnwrapExpr(UnwrapExpr),
     NegationExpr(UnaryExpr),
-    BorrowExpr(BorrowExpr),
+    ReferenceExpr(ReferenceExpr),
     DereferenceExpr(DereferenceExpr),
     TypeCastExpr(TypeCastExpr),
     BinaryExpr(BinaryExpr),
@@ -275,7 +281,7 @@ pub enum ValueExpr {
     UnderscoreExpr(UnderscoreExpr),
     ArrayExpr(ArrayExpr),
     StructExpr(StructExpr),
-    TupleStructExpr(TupleStructExpr),
+    // TupleStructExpr(TupleStructExpr),
     TupleExpr(TupleExpr),
     IfExpr(IfExpr),
     MatchExpr(MatchExpr),
@@ -300,7 +306,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::TupleIndex(ti) => Ok(ValueExpr::TupleIndexExpr(ti)),
             Expression::Unwrap(u) => Ok(ValueExpr::UnwrapExpr(u)),
             Expression::Unary(u) => Ok(ValueExpr::NegationExpr(u)),
-            Expression::Borrow(b) => Ok(ValueExpr::BorrowExpr(b)),
+            Expression::Reference(b) => Ok(ValueExpr::ReferenceExpr(b)),
             Expression::Dereference(d) => Ok(ValueExpr::DereferenceExpr(d)),
             Expression::TypeCast(tc) => Ok(ValueExpr::TypeCastExpr(tc)),
             Expression::Binary(b) => Ok(ValueExpr::BinaryExpr(b)),
@@ -311,7 +317,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::Array(a) => Ok(ValueExpr::ArrayExpr(a)),
             Expression::Tuple(t) => Ok(ValueExpr::TupleExpr(t)),
             Expression::Struct(s) => Ok(ValueExpr::StructExpr(s)),
-            Expression::TupleStruct(ts) => Ok(ValueExpr::TupleStructExpr(ts)),
+            // Expression::TupleStruct(ts) => Ok(ValueExpr::TupleStructExpr(ts)),
             Expression::Block(b) => Ok(ValueExpr::BlockExpr(b)),
             Expression::If(i) => Ok(ValueExpr::IfExpr(i)),
             Expression::Match(m) => Ok(ValueExpr::MatchExpr(m)),
@@ -328,7 +334,7 @@ impl TryFrom<Expression> for ValueExpr {
     }
 }
 
-/// Enum representing assignee type expressions.
+/// Enum representing assignee type expressions, which are subsets of `Expression`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum AssigneeExpr {
     Literal(Literal),
@@ -337,13 +343,13 @@ pub enum AssigneeExpr {
     FieldAccessExpr(FieldAccessExpr), // when on the LHS
     IndexExpr(IndexExpr),           // when on the LHS
     TupleIndexExpr(TupleIndexExpr), // when on the LHS
-    BorrowExpr(BorrowExpr),
+    ReferenceExpr(ReferenceExpr),
     GroupedExpr(Box<AssigneeExpr>),
     UnderscoreExpr(UnderscoreExpr),
     SliceExpr(Vec<AssigneeExpr>),
     TupleExpr(Option<Vec<AssigneeExpr>>),
     StructExpr(Vec<(Identifier, AssigneeExpr)>),
-    TupleStructExpr(Vec<AssigneeExpr>),
+    // TupleStructExpr(Vec<AssigneeExpr>),
 }
 
 impl TryFrom<Expression> for AssigneeExpr {
@@ -357,7 +363,7 @@ impl TryFrom<Expression> for AssigneeExpr {
             Expression::FieldAccess(fa) => Ok(AssigneeExpr::FieldAccessExpr(fa)),
             Expression::Index(i) => Ok(AssigneeExpr::IndexExpr(i)),
             Expression::TupleIndex(ti) => Ok(AssigneeExpr::TupleIndexExpr(ti)),
-            Expression::Borrow(b) => Ok(AssigneeExpr::BorrowExpr(b)),
+            Expression::Reference(b) => Ok(AssigneeExpr::ReferenceExpr(b)),
             Expression::Grouped(g) => {
                 let assignee_expression = AssigneeExpr::try_from(*g.expression)?;
                 Ok(AssigneeExpr::GroupedExpr(Box::new(assignee_expression)))
@@ -416,19 +422,18 @@ impl TryFrom<Expression> for AssigneeExpr {
                 Ok(AssigneeExpr::StructExpr(assignee_expressions))
             }
 
-            Expression::TupleStruct(ts) => {
-                let mut assignee_expressions: Vec<AssigneeExpr> = Vec::new();
-                ts.elements_opt.map(|v| {
-                    v.into_iter().for_each(|e| {
-                        assignee_expressions.push(AssigneeExpr::try_from(e).expect(
-                            "conversion error: unable to convert `Expression` into `AssigneeExpr`",
-                        ))
-                    })
-                });
+            // Expression::TupleStruct(ts) => {
+            //     let mut assignee_expressions: Vec<AssigneeExpr> = Vec::new();
+            //     ts.elements_opt.map(|v| {
+            //         v.into_iter().for_each(|e| {
+            //             assignee_expressions.push(AssigneeExpr::try_from(e).expect(
+            //                 "conversion error: unable to convert `Expression` into `AssigneeExpr`",
+            //             ))
+            //         })
+            //     });
 
-                Ok(AssigneeExpr::TupleStructExpr(assignee_expressions))
-            }
-
+            //     Ok(AssigneeExpr::TupleStructExpr(assignee_expressions))
+            // }
             _ => Err(ParserErrorKind::TypeConversionError {
                 type_a: "`Expression`".to_string(),
                 type_b: "`AssigneeExpr`".to_string(),
@@ -456,10 +461,10 @@ pub enum Pattern {
         struct_name: Identifier,
         fields_opt: Option<Vec<(Identifier, Pattern)>>,
     },
-    TupleStructPatt {
-        name: Identifier,
-        elements_opt: Option<Vec<Pattern>>,
-    },
+    // TupleStructPatt {
+    //     name: Identifier,
+    //     elements_opt: Option<Vec<Pattern>>,
+    // },
     WildcardPatt(UnderscoreExpr),
     RestPatt {
         dbl_dot: RangeOp,
@@ -508,8 +513,14 @@ impl TryFrom<Expression> for Pattern {
 
                 Ok(Pattern::TuplePatt(elements_opt))
             }
-            Expression::Struct(StructExpr { fields_opt, .. }) => {
-                let struct_name = Identifier("".to_string());
+            Expression::Struct(StructExpr {
+                path, fields_opt, ..
+            }) => {
+                let struct_name = path
+                    .tree_opt
+                    .unwrap_or([].to_vec())
+                    .pop()
+                    .unwrap_or(Identifier("".to_string()));
 
                 let mut fields: Vec<(Identifier, Pattern)> = Vec::new();
 
@@ -530,30 +541,30 @@ impl TryFrom<Expression> for Pattern {
                 })
             }
 
-            Expression::TupleStruct(TupleStructExpr {
-                path, elements_opt, ..
-            }) => {
-                let name = path
-                    .tree_opt
-                    .unwrap_or([].to_vec())
-                    .pop()
-                    .unwrap_or(Identifier("".to_string()));
+            // Expression::TupleStruct(TupleStructExpr {
+            //     path, elements_opt, ..
+            // }) => {
+            //     let name = path
+            //         .tree_opt
+            //         .unwrap_or([].to_vec())
+            //         .pop()
+            //         .unwrap_or(Identifier("".to_string()));
 
-                let mut elements: Vec<Pattern> = Vec::new();
+            //     let mut elements: Vec<Pattern> = Vec::new();
 
-                let elements_opt = elements_opt.map(|v| {
-                    v.into_iter().for_each(|e| {
-                        let pattern = Pattern::try_from(e).expect(
-                            "conversion error: unable to convert `Expression` into `Pattern`",
-                        );
-                        elements.push(pattern);
-                    });
+            //     let elements_opt = elements_opt.map(|v| {
+            //         v.into_iter().for_each(|e| {
+            //             let pattern = Pattern::try_from(e).expect(
+            //                 "conversion error: unable to convert `Expression` into `Pattern`",
+            //             );
+            //             elements.push(pattern);
+            //         });
 
-                    elements
-                });
+            //         elements
+            //     });
 
-                Ok(Pattern::TupleStructPatt { name, elements_opt })
-            }
+            //     Ok(Pattern::TupleStructPatt { name, elements_opt })
+            // }
             Expression::Underscore(u) => Ok(Pattern::WildcardPatt(u)),
 
             _ => Err(ParserErrorKind::TypeConversionError {
@@ -565,7 +576,7 @@ impl TryFrom<Expression> for Pattern {
 }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
-/// A `Statement` is a component of a block, which is a component of an outer expression
+/// A statement is a component of a block, which is a component of an outer expression
 /// or function.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
@@ -653,7 +664,7 @@ pub enum Type {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// HELPER FUNCTIONS
+// HELPER FUNCTIONS
 ///////////////////////////////////////////////////////////////////////////
 
 /// Helper function to turn a byte slice (`&[u8]`) into a `Bytes`.

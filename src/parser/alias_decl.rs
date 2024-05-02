@@ -12,19 +12,19 @@ impl ParseDeclaration for AliasDecl {
         attributes: Vec<OuterAttr>,
         _visibility: Visibility,
     ) -> Result<AliasDecl, ErrorsEmitted> {
-        let visibility = parser.get_visibility()?;
+        let visibility = Visibility::visibility(parser)?;
 
         let kw_alias = parser.expect_keyword(TokenType::Alias)?;
 
-        let alias_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
+        let alias_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
-        let original_type_opt = if let Some(Token::Equals { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let original_type_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
+            parser.next_token();
             Some(Type::parse(parser)?)
         } else {
             None

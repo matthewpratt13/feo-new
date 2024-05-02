@@ -10,8 +10,8 @@ impl GroupedExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `GroupedExpr::parse()`", true);
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
+            parser.next_token();
             log_token(parser, "consume token", false);
             Ok(Delimiter::LParen)
         } else {
@@ -21,8 +21,8 @@ impl GroupedExpr {
 
         let inner_expression = parser.parse_expression(Precedence::Lowest)?;
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let close_paren = if let Some(Token::RParen { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::RParen)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {

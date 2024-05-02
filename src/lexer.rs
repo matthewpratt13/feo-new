@@ -1,3 +1,11 @@
+//! # Lexer
+//!
+//! Feo's lexer.
+//! This lexer tokenizes identifiers (sequences of alphabetic characters), keywords numbers,
+//! hash literals, static byte arrays, character and string literals, delimiters, doc comments
+//! and punctuation. It ignores ordinary comments, and it stops tokenizing when it reaches
+//! the end of the input string.
+
 use std::{iter::Peekable, str::Chars};
 
 use crate::{
@@ -14,13 +22,13 @@ pub struct Lexer<'a> {
     input: &'a str,
     pos: usize,
     peekable_chars: Peekable<Chars<'a>>,
-    errors: Vec<CompilerError<LexErrorKind>>,
+    errors: Vec<CompilerError<LexErrorKind>>, // store lexer errors
 }
 
 impl<'a> Lexer<'a> {
     /// Create a new `Lexer` instance.
     /// Initialize an empty `Vec` to store potential errors, and create an `Iterator`
-    /// from the characters in the input string to traverse the contents  and look ahead
+    /// from the characters in the input string to traverse the contents and look ahead
     /// without advancing the lexer.
     pub(crate) fn new(input: &'a str) -> Self {
         Lexer {
@@ -29,11 +37,6 @@ impl<'a> Lexer<'a> {
             peekable_chars: input.chars().peekable(),
             errors: Vec::new(),
         }
-    }
-
-    /// Retrieve the lexer's `CompilerError`.
-    pub(crate) fn errors(&self) -> &[CompilerError<LexErrorKind>] {
-        &self.errors
     }
 
     /// Main tokenizing function.
@@ -171,7 +174,8 @@ impl<'a> Lexer<'a> {
         Ok(stream)
     }
 
-    /// Tokenize a doc comment, ignoring ordinary line and block comments.
+    /// Tokenize a doc comment by advancing the lexer position until the end of line, ignoring
+    /// ordinary line and block comments.
     fn tokenize_doc_comment(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
@@ -250,7 +254,10 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize an identifier, or reserved keyword or attribute.
+    /// Tokenize an identifier, keyword or attribute by advancing the lexer position until
+    /// a non-alphanumeric character (excluding underscores) is encountered, and then checking
+    /// if the extracted value is a keyword or attribute. Keywords and attributes are reserved
+    /// words in Feo, whereas identifiers are user-defined names for variables, functions, etc.
     fn tokenize_identifier_or_keyword(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
@@ -565,7 +572,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize a delimiter (i.e., `(`, `)`, `[`, `]`, `{` and `}`).
+    /// Tokenize a delimiter (i.e., `(`, `)`, `[`, `]`, `{` and `}`) and advance the lexer past it.
     fn tokenize_delimiter(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
@@ -1056,7 +1063,9 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Parse an escape sequence found in a string or character literal.
+    /// Handle escape sequences found in a string or character literal.
+    /// Escape sequences are special sequences of characters that represent certain characters,
+    /// such as newline (`\n`), tab (`\t`), or quotes (`\'`) within strings and character literals.
     fn parse_escape_sequence(&mut self) -> Result<Option<char>, ErrorsEmitted> {
         self.advance(); // skip backslash
 
@@ -1085,7 +1094,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Advance the lexer / scanner (and iterator) by one character.
+    /// Advance the lexer (and iterator) by one character.
     fn advance(&mut self) {
         self.pos += 1; // update lexer's position
         self.peekable_chars.next(); // move to next character in the iterator (discard output)
@@ -1116,15 +1125,21 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Log information about an error that occurred during tokenization.
+    /// Log information about an error that occurred during tokenization by pushing the error
+    /// to the `errors` vector and providing information about error kind and position.
     fn log_error(&mut self, error_kind: LexErrorKind) {
         let error = CompilerError::new(error_kind, self.input, self.pos);
 
         self.errors.push(error);
     }
+
+    /// Retrieve a list of any errors that occurred during tokenization.
+    pub(crate) fn errors(&self) -> &[CompilerError<LexErrorKind>] {
+        &self.errors
+    }
 }
 
-/// List of reserved keywords to match against some input string.
+/// List of reserved keywords to match against some input `&str`.
 fn is_keyword(value: &str) -> bool {
     [
         "alias", "as", "break", "bytes", "const", "continue", "else", "enum", "Err", "false",
@@ -1137,7 +1152,7 @@ fn is_keyword(value: &str) -> bool {
     .contains(&value)
 }
 
-/// List of reserved attribute keywords to match against some input string.
+/// List of reserved attribute keywords to match against some input `&str`.
 fn is_attribute(value: &str) -> bool {
     [
         "calldata",

@@ -31,7 +31,7 @@ impl RangeExpr {
             }
         }?;
 
-        let operator_token = parser.peek_current().unwrap_or(Token::EOF);
+        let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let range_op = match operator_token.token_type() {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
@@ -42,7 +42,7 @@ impl RangeExpr {
             }
         }?;
 
-        parser.consume_token();
+        parser.next_token();
 
         log_token(parser, "consume token", false);
 
@@ -96,7 +96,7 @@ impl RangeExpr {
     pub(crate) fn parse_prefix(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `RangeExpr::parse_prefix()`", true);
 
-        let operator_token = parser.peek_current().unwrap_or(Token::EOF);
+        let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let range_op = match operator_token {
             Token::DblDot { .. } => Ok(RangeOp::RangeExclusive),
@@ -107,9 +107,9 @@ impl RangeExpr {
             }
         }?;
 
-        parser.consume_token();
+        parser.next_token();
 
-        if parser.peek_current().is_none() {
+        if parser.current_token().is_none() {
             let expr = RangeExpr {
                 from_opt: None,
                 range_op: range_op.clone(),
@@ -147,7 +147,7 @@ impl RangeExpr {
             }
         }?;
 
-        parser.consume_token();
+        parser.next_token();
 
         let expr = RangeExpr {
             from_opt: None,

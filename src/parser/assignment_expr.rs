@@ -15,7 +15,7 @@ impl AssignmentExpr {
         left_expr: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
         {
-            let operator_token = parser.peek_current().unwrap_or(Token::EOF);
+            let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
             let assignment_op = if let Token::Equals { .. } = operator_token {
                 Ok(AssignmentOp)
@@ -24,7 +24,7 @@ impl AssignmentExpr {
                 Err(ErrorsEmitted)
             }?;
 
-            parser.consume_token();
+            parser.next_token();
 
             let precedence = parser.get_precedence(&operator_token);
 
@@ -56,7 +56,7 @@ impl CompoundAssignmentExpr {
         parser: &mut Parser,
         left_expr: Expression,
     ) -> Result<Expression, ErrorsEmitted> {
-        let operator_token = parser.peek_current().unwrap_or(Token::EOF);
+        let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let compound_assignment_op = match operator_token.token_type() {
             TokenType::PlusEquals => Ok(CompoundAssignmentOp::AddAssign),
@@ -70,7 +70,7 @@ impl CompoundAssignmentExpr {
             }
         }?;
 
-        parser.consume_token();
+        parser.next_token();
 
         let precedence = parser.get_precedence(&operator_token);
 

@@ -19,14 +19,14 @@ impl ParseDefinition for EnumDef {
 
         let mut variants: Vec<EnumVariant> = Vec::new();
 
-        let enum_name = if let Some(Token::Identifier { name, .. }) = parser.consume_token() {
+        let enum_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
@@ -34,23 +34,23 @@ impl ParseDefinition for EnumDef {
         }?;
 
         loop {
-            if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            if let Some(Token::RBrace { .. }) = parser.current_token() {
                 break;
             }
 
             let mut attributes: Vec<OuterAttr> = Vec::new();
 
-            while let Some(oa) = parser.get_outer_attr() {
+            while let Some(oa) = OuterAttr::outer_attr(parser) {
                 attributes.push(oa);
-                parser.consume_token();
+                parser.next_token();
             }
 
             let variant = EnumVariant::parse(parser, attributes)?;
             variants.push(variant);
 
-            match parser.peek_current() {
+            match parser.current_token() {
                 Some(Token::Comma { .. }) => {
-                    parser.consume_token();
+                    parser.next_token();
                     continue;
                 }
                 Some(Token::RBrace { .. }) => break,
@@ -85,9 +85,9 @@ impl EnumVariant {
         parser: &mut Parser,
         attributes: Vec<OuterAttr>,
     ) -> Result<EnumVariant, ErrorsEmitted> {
-        let token = parser.consume_token();
+        let token = parser.next_token();
 
-        let visibility = parser.get_visibility()?;
+        let visibility = Visibility::visibility(parser)?;
 
         let variant_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
@@ -99,7 +99,7 @@ impl EnumVariant {
             Err(ErrorsEmitted)
         }?;
 
-        let token = parser.peek_current();
+        let token = parser.current_token();
 
         let variant_type_opt = if let Some(Token::LBrace { .. }) = token {
             let variant_struct = EnumVariantStruct::parse(parser)?;
@@ -128,7 +128,7 @@ impl EnumVariant {
 
 impl EnumVariantStruct {
     pub(crate) fn parse(parser: &mut Parser) -> Result<EnumVariantStruct, ErrorsEmitted> {
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.consume_token() {
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
@@ -138,11 +138,11 @@ impl EnumVariantStruct {
         let mut fields: Vec<(Identifier, Type)> = Vec::new();
 
         loop {
-            if let Some(Token::RBrace { .. }) = parser.peek_current() {
+            if let Some(Token::RBrace { .. }) = parser.current_token() {
                 break;
             }
 
-            let token = parser.consume_token();
+            let token = parser.next_token();
 
             let field_name = if let Some(Token::Identifier { name, .. }) = token {
                 Ok(Identifier(name))
@@ -159,11 +159,11 @@ impl EnumVariantStruct {
             let field_type = Type::parse(parser)?;
             fields.push((field_name, field_type));
 
-            let token = parser.peek_current();
+            let token = parser.current_token();
 
             match token {
                 Some(Token::Comma { .. }) => {
-                    parser.consume_token();
+                    parser.next_token();
                     continue;
                 }
                 Some(Token::RBrace { .. }) => break,
@@ -197,7 +197,7 @@ impl EnumVariantStruct {
 
 impl EnumVariantTuple {
     pub(crate) fn parse(parser: &mut Parser) -> Result<EnumVariantTuple, ErrorsEmitted> {
-        let open_paren = if let Some(Token::LParen { .. }) = parser.consume_token() {
+        let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token(TokenType::LParen);
@@ -207,18 +207,18 @@ impl EnumVariantTuple {
         let mut element_types: Vec<Type> = Vec::new();
 
         loop {
-            if let Some(Token::RParen { .. }) = parser.peek_current() {
+            if let Some(Token::RParen { .. }) = parser.current_token() {
                 break;
             }
 
             let element_type = Type::parse(parser)?;
             element_types.push(element_type);
 
-            let token = parser.peek_current();
+            let token = parser.current_token();
 
             match token {
                 Some(Token::Comma { .. }) => {
-                    parser.consume_token();
+                    parser.next_token();
                     continue;
                 }
                 Some(Token::RParen { .. }) => break,

@@ -1,9 +1,11 @@
 use super::{
-    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter, DereferenceOp, Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter,
+    DereferenceOp, Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp,
+    ReferenceOp, SelfType, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
-/// HELPER TYPES
+// HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing whether or not a closure has parameters in its definition.
@@ -38,7 +40,8 @@ pub struct MatchArm {
     pub body: Box<Expression>,
 }
 
-/// Struct representing a single field in a struct expression, with a name and value.
+/// Struct representing a single field in a struct expression, with a name, value
+/// and optional attributes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructField {
     pub attributes_opt: Option<Vec<OuterAttr>>,
@@ -54,7 +57,7 @@ pub struct TupleElements {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// NODES
+// AST NODE STRUCTURES
 ///////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone, PartialEq)]
@@ -94,7 +97,7 @@ pub struct BlockExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct BorrowExpr {
+pub struct ReferenceExpr {
     pub reference_op: ReferenceOp,
     pub expression: Box<Expression>,
 }
@@ -270,7 +273,7 @@ pub struct TypeCastExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnderscoreExpr {
-    pub underscore: Separator,
+    pub underscore: Identifier,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -2,7 +2,9 @@ use std::{error::Error, fmt, sync::Arc};
 
 use crate::token::{Token, TokenType};
 
-/// Enum representing the different types of lexer (scanner) errors.
+/// Enum representing the different types of lexer errors.
+/// Used in conjunction with `CompilerError` to keep track of errors encountered 
+/// during tokenization.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexErrorKind {
     LexIntError,
@@ -127,6 +129,8 @@ impl fmt::Display for LexErrorKind {
 impl Error for LexErrorKind {}
 
 /// Enum representing the different types of parsing errors.
+/// Used in conjunction with `CompilerError` to keep track of errors encountered 
+/// during parsing.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum ParserErrorKind {
     UnexpectedToken {
@@ -191,8 +195,8 @@ impl fmt::Display for ParserErrorKind {
 
 impl Error for ParserErrorKind {}
 
-/// Generic error struct that allows for custom error kinds, and provides the precise location
-/// of an error in the source code.
+/// Generic error struct that encapsulates custom error kinds, and provides the precise location
+/// of the error in the source code.
 #[derive(Debug, Clone)]
 pub struct CompilerError<T: Clone> {
     error_kind: T,

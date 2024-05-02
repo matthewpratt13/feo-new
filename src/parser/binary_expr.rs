@@ -9,10 +9,10 @@ use crate::{
 
 use super::Parser;
 
-/// Parse a binary operation (e.g., arithmetic, logical and comparison expressions).
-/// This method parses the operator and calls `parse_expression()` recursively to handle
-/// the right-hand side of the expression.
 impl BinaryExpr {
+    /// Parse a binary operation (e.g., arithmetic, logical and comparison expressions).
+    /// This method parses the operator and calls `parse_expression()` recursively to handle
+    /// the right-hand side of the expression.
     pub(crate) fn parse(
         parser: &mut Parser,
         left_expr: Expression,
@@ -24,7 +24,7 @@ impl BinaryExpr {
             ErrorsEmitted
         })?;
 
-        let operator_token = parser.peek_current().unwrap_or(Token::EOF);
+        let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let binary_op = match operator_token.token_type() {
             TokenType::Plus => Ok(BinaryOp::Add),
@@ -48,7 +48,7 @@ impl BinaryExpr {
 
         let precedence = parser.get_precedence(&operator_token);
 
-        parser.consume_token();
+        parser.next_token();
 
         let right_expr = parser.parse_expression(precedence)?;
 
@@ -69,6 +69,8 @@ impl BinaryExpr {
 }
 
 impl ComparisonExpr {
+    /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on 
+    /// the input operator.
     pub(crate) fn parse(
         parser: &mut Parser,
         left_expr: Expression,
@@ -80,7 +82,7 @@ impl ComparisonExpr {
             ErrorsEmitted
         })?;
 
-        let operator_token = parser.peek_current().unwrap_or(Token::EOF);
+        let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let comparison_op = match operator_token.token_type() {
             TokenType::DblEquals => Ok(ComparisonOp::Equal),
@@ -97,7 +99,7 @@ impl ComparisonExpr {
 
         let precedence = parser.get_precedence(&operator_token);
 
-        parser.consume_token();
+        parser.next_token();
 
         let right_expr = parser.parse_expression(precedence)?;
 

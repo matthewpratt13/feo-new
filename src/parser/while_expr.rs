@@ -10,14 +10,14 @@ impl WhileExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_while = parser.expect_keyword(TokenType::While)?;
 
-        let condition = if let Some(Token::LParen { .. }) = parser.peek_current() {
+        let condition = if let Some(Token::LParen { .. }) = parser.current_token() {
             Ok(Box::new(GroupedExpr::parse(parser)?))
         } else {
             parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
-        let block = if let Some(Token::LBrace { .. }) = parser.peek_current() {
+        let block = if let Some(Token::LBrace { .. }) = parser.current_token() {
             Ok(Box::new(BlockExpr::parse(parser)?))
         } else {
             parser.log_unexpected_token(TokenType::LBrace);

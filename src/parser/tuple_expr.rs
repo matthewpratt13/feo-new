@@ -14,8 +14,8 @@ impl TupleExpr {
 
         let mut final_element_opt = None::<Box<Expression>>;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token(TokenType::LParen);
@@ -23,17 +23,17 @@ impl TupleExpr {
         }?;
 
         while !matches!(
-            parser.peek_current(),
+            parser.current_token(),
             Some(Token::RParen { .. } | Token::EOF)
         ) {
             let element = parser.parse_expression(Precedence::Lowest)?;
 
-            if let Some(Token::Comma { .. }) = parser.peek_current() {
+            if let Some(Token::Comma { .. }) = parser.current_token() {
                 elements.push((element, Separator::Comma));
-                parser.consume_token();
-            } else if !matches!(parser.peek_current(), Some(Token::RParen { .. })) {
+                parser.next_token();
+            } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
                 parser.log_unexpected_str("`,` or `)`");
-            } else if matches!(parser.peek_current(), Some(Token::RParen { .. })) {
+            } else if matches!(parser.current_token(), Some(Token::RParen { .. })) {
                 final_element_opt = Some(Box::new(element));
                 break;
             }
@@ -44,7 +44,7 @@ impl TupleExpr {
             final_element_opt: final_element_opt.clone(),
         };
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.consume_token() {
+        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -80,8 +80,8 @@ impl TupleIndexExpr {
             ErrorsEmitted
         })?;
 
-        let index = if let Some(Token::UIntLiteral { value, .. }) = parser.peek_current() {
-            parser.consume_token();
+        let index = if let Some(Token::UIntLiteral { value, .. }) = parser.current_token() {
+            parser.next_token();
             Ok(value)
         } else {
             parser.log_unexpected_str("unsigned integer");

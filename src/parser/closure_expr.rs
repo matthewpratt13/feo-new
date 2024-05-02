@@ -8,19 +8,19 @@ use super::{Parser, Precedence};
 
 impl ClosureExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let token = parser.consume_token();
+        let token = parser.next_token();
 
         let params = match token {
             Some(Token::Pipe { .. }) => {
                 let mut vec: Vec<ClosureParam> = Vec::new();
 
                 loop {
-                    if let Some(Token::Pipe { .. }) = parser.peek_current() {
-                        parser.consume_token();
+                    if let Some(Token::Pipe { .. }) = parser.current_token() {
+                        parser.next_token();
                         break;
                     }
 
-                    let name = match parser.peek_current() {
+                    let name = match parser.current_token() {
                         Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
                             parser.get_identifier_patt()
                         }
@@ -30,8 +30,8 @@ impl ClosureExpr {
                         }
                     }?;
 
-                    let ty = if let Some(Token::Colon { .. }) = parser.peek_current() {
-                        parser.consume_token();
+                    let ty = if let Some(Token::Colon { .. }) = parser.current_token() {
+                        parser.next_token();
                         Some(Type::parse(parser)?)
                     } else {
                         None
@@ -43,8 +43,8 @@ impl ClosureExpr {
                     };
                     vec.push(param);
 
-                    if let Some(Token::Comma { .. }) = parser.peek_current() {
-                        parser.consume_token();
+                    if let Some(Token::Comma { .. }) = parser.current_token() {
+                        parser.next_token();
                     }
                 }
 
@@ -57,8 +57,8 @@ impl ClosureExpr {
             }
         }?;
 
-        let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.peek_current() {
-            parser.consume_token();
+        let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
+            parser.next_token();
             Some(Box::new(Type::parse(parser)?))
         } else {
             None
