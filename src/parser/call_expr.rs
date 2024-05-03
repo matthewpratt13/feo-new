@@ -1,7 +1,7 @@
 use crate::{
     ast::{AssigneeExpr, CallExpr, Delimiter, Expression},
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{collection, parse::ParseOperation, Parser, Precedence};
@@ -17,7 +17,7 @@ impl ParseOperation for CallExpr {
             parser.next_token();
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token(TokenType::LParen);
+            parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)
         }?;
 
@@ -26,9 +26,8 @@ impl ParseOperation for CallExpr {
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RParen,
-            });
+            parser.log_missing_token("`)`");
+            parser.log_unmatched_delimiter(open_paren.clone());
             Err(ErrorsEmitted)
         }?;
 

@@ -3,8 +3,8 @@ use crate::{
         Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathExpr, PathPrefix,
         PathSegment, PathSubset, Separator, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{collection, parse::ParseDeclaration, Parser};
@@ -15,11 +15,21 @@ impl ParseDeclaration for ImportDecl {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ImportDecl, ErrorsEmitted> {
-        let kw_import = parser.expect_keyword(TokenType::Import)?;
+        let kw_import = if let Some(Token::Import { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::Import)
+        } else {
+            parser.log_unexpected_token("`import`");
+            Err(ErrorsEmitted)
+        }?;
 
         let tree = parse_import_tree(parser)?;
 
-        parser.expect_separator(TokenType::Semicolon)?;
+        match parser.next_token() {
+            Some(Token::Semicolon { .. }) => (),
+            Some(_) => parser.log_unexpected_token("`;`"),
+            None => parser.log_missing_token("`;`"),
+        }
 
         Ok(ImportDecl {
             attributes_opt,
@@ -56,7 +66,7 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
         let id = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_str("identifier");
+            parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
         }?;
 
@@ -73,18 +83,13 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
 }
 
 fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted> {
-    let token = parser.next_token();
-
-    let root = match token {
+    let root = match parser.next_token() {
         Some(Token::Package { .. }) => PathExpr::parse(parser, PathPrefix::Package),
         Some(Token::Super { .. }) => PathExpr::parse(parser, PathPrefix::Super),
         Some(Token::SelfKeyword { .. }) => PathExpr::parse(parser, PathPrefix::SelfKeyword),
         Some(Token::Identifier { .. }) => PathExpr::parse(parser, PathPrefix::Package),
         _ => {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "path prefix".to_string(),
-                found: token,
-            });
+            parser.log_unexpected_token("path prefix");
             Err(ErrorsEmitted)
         }
     }?;
@@ -103,7 +108,7 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
     let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
         Ok(Delimiter::LBrace)
     } else {
-        parser.log_unexpected_token(TokenType::LBrace);
+        parser.log_unexpected_token("`{`");
         Err(ErrorsEmitted)
     }?;
 
@@ -112,16 +117,15 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
     {
         Ok(t)
     } else {
-        parser.log_unexpected_str("import trees");
+        parser.log_unexpected_token("import trees");
         Err(ErrorsEmitted)
     }?;
 
     let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
         Ok(Delimiter::RBrace)
     } else {
-        parser.log_error(ParserErrorKind::MissingDelimiter {
-            delim: TokenType::RBrace,
-        });
+        parser.log_missing_token("`}`");
+        parser.log_unmatched_delimiter(open_brace.clone());
         Err(ErrorsEmitted)
     }?;
 

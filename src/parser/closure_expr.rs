@@ -17,7 +17,7 @@ impl ParseConstruct for ClosureExpr {
                 if vec.is_some() {
                     Ok(ClosureParams::Some(vec.unwrap()))
                 } else {
-                    parser.log_unexpected_str("closure parameters");
+                    parser.log_unexpected_token("closure parameters");
                     Err(ErrorsEmitted)
                 }
             }
@@ -26,7 +26,7 @@ impl ParseConstruct for ClosureExpr {
                 Ok(ClosureParams::None)
             }
             _ => {
-                parser.log_unexpected_str("`|` or `||`");
+                parser.log_unexpected_token("`|` or `||`");
                 Err(ErrorsEmitted)
             }
         }?;
@@ -60,7 +60,7 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
             parser.get_identifier_patt()
         }
         _ => {
-            parser.log_unexpected_str("identifier");
+            parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
         }
     }?;

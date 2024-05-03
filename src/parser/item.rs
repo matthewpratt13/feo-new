@@ -4,7 +4,7 @@ use crate::{
         ModuleItem, OuterAttr, Statement, StaticItemDecl, StructDef, TraitDef, TraitImplDef,
         TupleStructDef, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -82,7 +82,7 @@ impl Item {
                 visibility,
             )?)),
             _ => {
-                parser.log_unexpected_str("declaration or definition");
+                parser.log_unexpected_token("declaration or definition");
                 Err(ErrorsEmitted)
             }
         }
@@ -138,7 +138,7 @@ impl ParseStatement for Item {
                 ))),
 
                 _ => {
-                    parser.log_unexpected_str("`{` or `(`");
+                    parser.log_unexpected_token("`{` or `(`");
                     Err(ErrorsEmitted)
                 }
             },
@@ -154,18 +154,12 @@ impl ParseStatement for Item {
                     InherentImplDef::parse(parser, attributes_opt, visibility)?,
                 ))),
                 _ => {
-                    parser.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`for` or `{`".to_string(),
-                        found: token,
-                    });
+                    parser.log_unexpected_token("`for` or `{`");
                     Err(ErrorsEmitted)
                 }
             },
             _ => {
-                parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "declaration or definition item".to_string(),
-                    found: token,
-                });
+                parser.log_unexpected_token("declaration or definition item");
                 Err(ErrorsEmitted)
             }
         }

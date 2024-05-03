@@ -1,7 +1,7 @@
 use crate::{
     ast::{Identifier, Keyword, OuterAttr, StaticItemDecl, Type, Visibility},
     error::ErrorsEmitted,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use super::{parse::ParseDeclaration, Parser, Precedence};
@@ -12,7 +12,13 @@ impl ParseDeclaration for StaticItemDecl {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<StaticItemDecl, ErrorsEmitted> {
-        let kw_static = parser.expect_keyword(TokenType::Static)?;
+        let kw_static = if let Some(Token::Static { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::Static)
+        } else {
+            parser.log_unexpected_token("`static`");
+            Err(ErrorsEmitted)
+        }?;
 
         let kw_mut_opt = if let Some(Token::Mut { .. }) = parser.current_token() {
             parser.next_token();
@@ -24,11 +30,15 @@ impl ParseDeclaration for StaticItemDecl {
         let item_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_str("identifier");
+            parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
         }?;
 
-        parser.expect_separator(TokenType::Colon)?;
+        match parser.next_token() {
+            Some(Token::Colon { .. }) => (),
+            Some(_) => parser.log_unexpected_token("`:`"),
+            None => parser.log_missing_token("`:`"),
+        }
 
         let item_type = Type::parse(parser)?;
 
@@ -39,7 +49,11 @@ impl ParseDeclaration for StaticItemDecl {
             None
         };
 
-        parser.expect_separator(TokenType::Semicolon)?;
+        match parser.next_token() {
+            Some(Token::Semicolon { .. }) => (),
+            Some(_) => parser.log_unexpected_token("`;`"),
+            None => parser.log_missing_token("`;`"),
+        }
 
         Ok(StaticItemDecl {
             attributes_opt,

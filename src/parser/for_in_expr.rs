@@ -1,20 +1,23 @@
 use crate::{
-    ast::{BlockExpr, Expression, ForInExpr, Pattern},
+    ast::{BlockExpr, Expression, ForInExpr, Keyword, Pattern},
     error::ErrorsEmitted,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use super::{
     parse::{ParseConstruct, ParseControl},
-    test_utils::log_token,
     Parser, Precedence,
 };
 
 impl ParseControl for ForInExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        log_token(parser, "enter `ForInExpr::parse()`", true);
-
-        let kw_for = parser.expect_keyword(TokenType::For)?;
+        let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::For)
+        } else {
+            parser.log_unexpected_token("`for`");
+            Err(ErrorsEmitted)
+        }?;
 
         let assignee = match parser.current_token() {
             Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
@@ -29,14 +32,20 @@ impl ParseControl for ForInExpr {
             }
         }?;
 
-        let kw_in = parser.expect_keyword(TokenType::In)?;
+        let kw_in = if let Some(Token::In { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::In)
+        } else {
+            parser.log_unexpected_token("`in`");
+            Err(ErrorsEmitted)
+        }?;
 
         let iterable = parser.parse_expression(Precedence::Lowest)?;
 
         let block = if let Some(Token::LBrace { .. }) = parser.current_token() {
             Ok(Box::new(BlockExpr::parse(parser)?))
         } else {
-            parser.log_unexpected_token(TokenType::LBrace);
+            parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
         }?;
 
@@ -47,8 +56,6 @@ impl ParseControl for ForInExpr {
             iterable: Box::new(iterable),
             block,
         };
-
-        log_token(parser, "exit `ForInExpr::parse()`", true);
 
         Ok(Expression::ForIn(expr))
     }

@@ -1,7 +1,7 @@
 use crate::{
     ast::{Delimiter, Expression, GroupedExpr},
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{parse::ParseConstruct, test_utils::log_token, Parser, Precedence};
@@ -12,10 +12,9 @@ impl ParseConstruct for GroupedExpr {
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
             parser.next_token();
-            log_token(parser, "consume token", false);
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token(TokenType::LParen);
+            parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)
         }?;
 
@@ -24,9 +23,8 @@ impl ParseConstruct for GroupedExpr {
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RParen,
-            });
+            parser.log_missing_token("`)`");
+            parser.log_unmatched_delimiter(open_paren.clone());
             Err(ErrorsEmitted)
         }?;
 

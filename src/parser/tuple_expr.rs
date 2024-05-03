@@ -2,8 +2,8 @@ use crate::{
     ast::{
         AssigneeExpr, Delimiter, Expression, Separator, TupleElements, TupleExpr, TupleIndexExpr,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{
@@ -21,7 +21,7 @@ impl ParseConstruct for TupleExpr {
             parser.next_token();
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token(TokenType::LParen);
+            parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)
         }?;
 
@@ -30,9 +30,8 @@ impl ParseConstruct for TupleExpr {
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RParen,
-            });
+            parser.log_missing_token("`)`");
+            parser.log_unmatched_delimiter(open_paren.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -67,7 +66,7 @@ fn parse_tuple_elements(
             elements.push((element, Separator::Comma));
             parser.next_token();
         } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
-            parser.log_unexpected_str("`,` or `)`");
+            parser.log_unexpected_token("`,` or `)`");
         } else if matches!(parser.current_token(), Some(Token::RParen { .. })) {
             *final_element_opt = Some(Box::new(element));
             break;
@@ -91,7 +90,7 @@ impl ParseOperation for TupleIndexExpr {
             parser.next_token();
             Ok(value)
         } else {
-            parser.log_unexpected_str("unsigned integer");
+            parser.log_unexpected_token("unsigned integer");
             Err(ErrorsEmitted)
         }?;
 

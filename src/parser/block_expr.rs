@@ -1,8 +1,8 @@
 use crate::{
     ast::{BlockExpr, Delimiter, Expression, InnerAttr, Statement},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     parser::test_utils::log_token,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use super::{collection, parse::ParseConstruct, Parser};
@@ -15,10 +15,9 @@ impl ParseConstruct for BlockExpr {
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
             parser.next_token();
-            log_token(parser, "consume token", true);
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token(TokenType::LBrace);
+            parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
         }?;
 
@@ -27,9 +26,8 @@ impl ParseConstruct for BlockExpr {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RBrace,
-            });
+            parser.log_missing_token("`}`");
+            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -47,7 +45,7 @@ impl ParseConstruct for BlockExpr {
 
 fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, ErrorsEmitted> {
     let mut statements: Vec<Statement> = Vec::new();
-    
+
     while !matches!(
         parser.current_token(),
         Some(Token::RBrace { .. } | Token::EOF)
