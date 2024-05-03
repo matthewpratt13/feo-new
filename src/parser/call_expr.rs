@@ -4,14 +4,11 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{collection, Parser, Precedence};
+use super::{collection, parse::ParseOperation, Parser, Precedence};
 
-impl CallExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        callee: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
-        let callee = AssigneeExpr::try_from(callee).map_err(|e| {
+impl ParseOperation for CallExpr {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let callee = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;

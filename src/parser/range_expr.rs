@@ -4,13 +4,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{test_utils::log_token, Parser};
+use super::{parse::ParseOperation, test_utils::log_token, Parser};
 
-impl RangeExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        left_expr: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
+impl ParseOperation for RangeExpr {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `RangeExpr::parse()`", true);
 
         let from = match left_expr.clone() {
@@ -91,7 +88,9 @@ impl RangeExpr {
 
         Ok(Expression::Range(expr))
     }
+}
 
+impl RangeExpr {
     pub(crate) fn parse_prefix(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `RangeExpr::parse_prefix()`", true);
 

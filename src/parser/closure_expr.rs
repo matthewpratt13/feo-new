@@ -4,10 +4,10 @@ use crate::{
     token::Token,
 };
 
-use super::{collection, Parser, Precedence};
+use super::{collection, parse::ParseConstruct, Parser, Precedence};
 
-impl ClosureExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstruct for ClosureExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let params = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
                 parser.next_token();
@@ -55,7 +55,7 @@ impl ClosureExpr {
 }
 
 fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitted> {
-    let name = match parser.current_token() {
+    let param_name = match parser.current_token() {
         Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
             parser.get_identifier_patt()
         }
@@ -65,7 +65,7 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
         }
     }?;
 
-    let ty = if let Some(Token::Colon { .. }) = parser.current_token() {
+    let type_ann_opt = if let Some(Token::Colon { .. }) = parser.current_token() {
         parser.next_token();
         Some(Type::parse(parser)?)
     } else {
@@ -73,8 +73,8 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
     };
 
     let param = ClosureParam {
-        param_name: name,
-        type_ann_opt: ty,
+        param_name,
+        type_ann_opt,
     };
 
     Ok(param)

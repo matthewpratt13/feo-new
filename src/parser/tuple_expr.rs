@@ -6,10 +6,13 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::{
+    parse::{ParseConstruct, ParseOperation},
+    Parser, Precedence,
+};
 
-impl TupleExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstruct for TupleExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let mut elements = Vec::new();
 
         let mut final_element_opt = None::<Box<Expression>>;
@@ -22,27 +25,7 @@ impl TupleExpr {
             Err(ErrorsEmitted)
         }?;
 
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RParen { .. } | Token::EOF)
-        ) {
-            let element = parser.parse_expression(Precedence::Lowest)?;
-
-            if let Some(Token::Comma { .. }) = parser.current_token() {
-                elements.push((element, Separator::Comma));
-                parser.next_token();
-            } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
-                parser.log_unexpected_str("`,` or `)`");
-            } else if matches!(parser.current_token(), Some(Token::RParen { .. })) {
-                final_element_opt = Some(Box::new(element));
-                break;
-            }
-        }
-
-        let tuple_elements = TupleElements {
-            elements: elements.clone(),
-            final_element_opt: final_element_opt.clone(),
-        };
+        let tuple_elements = parse_tuple_elements(parser, &mut elements, &mut final_element_opt)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
@@ -69,9 +52,37 @@ impl TupleExpr {
     }
 }
 
-impl TupleIndexExpr {
-    pub(crate) fn parse(parser: &mut Parser, lhs: Expression) -> Result<Expression, ErrorsEmitted> {
-        let assignee_expr = AssigneeExpr::try_from(lhs).map_err(|e| {
+fn parse_tuple_elements(
+    parser: &mut Parser,
+    elements: &mut Vec<(Expression, Separator)>,
+    final_element_opt: &mut Option<Box<Expression>>,
+) -> Result<TupleElements, ErrorsEmitted> {
+    while !matches!(
+        parser.current_token(),
+        Some(Token::RParen { .. } | Token::EOF)
+    ) {
+        let element = parser.parse_expression(Precedence::Lowest)?;
+
+        if let Some(Token::Comma { .. }) = parser.current_token() {
+            elements.push((element, Separator::Comma));
+            parser.next_token();
+        } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
+            parser.log_unexpected_str("`,` or `)`");
+        } else if matches!(parser.current_token(), Some(Token::RParen { .. })) {
+            *final_element_opt = Some(Box::new(element));
+            break;
+        }
+    }
+    let tuple_elements = TupleElements {
+        elements: elements.clone(),
+        final_element_opt: final_element_opt.clone(),
+    };
+    Ok(tuple_elements)
+}
+
+impl ParseOperation for TupleIndexExpr {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;

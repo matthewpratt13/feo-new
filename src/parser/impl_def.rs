@@ -10,8 +10,8 @@ use crate::{
 
 use super::{
     collection,
-    item::{ParseAssociatedItem, ParseDeclaration, ParseItem},
-    ParseDefinition, Parser,
+    parse::{ParseAssociatedItem, ParseDeclaration, ParseDefinition},
+    Parser,
 };
 
 impl ParseDefinition for InherentImplDef {

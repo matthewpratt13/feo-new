@@ -4,7 +4,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{item::ParseDeclaration, Parser, Precedence};
+use super::{parse::ParseDeclaration, Parser, Precedence};
 
 impl ParseDeclaration for StaticItemDecl {
     fn parse(

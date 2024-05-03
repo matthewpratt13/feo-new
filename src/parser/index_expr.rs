@@ -4,10 +4,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::{parse::ParseOperation, Parser, Precedence};
 
-impl IndexExpr {
-    pub(crate) fn parse(
+impl ParseOperation for IndexExpr {
+   fn parse(
         parser: &mut Parser,
         array: Expression,
     ) -> Result<Expression, ErrorsEmitted> {

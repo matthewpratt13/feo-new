@@ -7,7 +7,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{collection, item::ParseDefinition, Parser};
+use super::{collection, parse::ParseDefinition, Parser};
 
 impl ParseDefinition for StructDef {
     fn parse(
@@ -32,7 +32,7 @@ impl ParseDefinition for StructDef {
         }?;
 
         let fields_opt =
-            collection::get_collection(parser, StructDefField::parse, Delimiter::RBrace)?;
+            collection::get_collection(parser, parse_struct_def_field, Delimiter::RBrace)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -79,7 +79,7 @@ impl ParseDefinition for TupleStructDef {
         }?;
 
         let fields_opt =
-            collection::get_collection(parser, TupleStructDefField::parse, Delimiter::RParen)?;
+            collection::get_collection(parser, parse_tuple_struct_def_field, Delimiter::RParen)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
@@ -104,49 +104,45 @@ impl ParseDefinition for TupleStructDef {
     }
 }
 
-impl StructDefField {
-    fn parse(parser: &mut Parser) -> Result<StructDefField, ErrorsEmitted> {
-        let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
+fn parse_struct_def_field(parser: &mut Parser) -> Result<StructDefField, ErrorsEmitted> {
+    let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
-        let visibility = Visibility::visibility(parser)?;
+    let visibility = Visibility::visibility(parser)?;
 
-        let token = parser.next_token();
+    let token = parser.next_token();
 
-        let field = if let Some(Token::Identifier { name, .. }) = token {
-            let field_name = Identifier(name);
+    let field = if let Some(Token::Identifier { name, .. }) = token {
+        let field_name = Identifier(name);
 
-            let _ = parser.expect_separator(TokenType::Colon)?;
-
-            let field_type = Box::new(Type::parse(parser)?);
-
-            StructDefField {
-                attributes_opt,
-                visibility,
-                field_name,
-                field_type,
-            }
-        } else {
-            parser.log_unexpected_str("identifier`");
-            return Err(ErrorsEmitted);
-        };
-
-        Ok(field)
-    }
-}
-
-impl TupleStructDefField {
-    fn parse(parser: &mut Parser) -> Result<TupleStructDefField, ErrorsEmitted> {
-        let visibility = Visibility::visibility(parser)?;
+        parser.expect_separator(TokenType::Colon)?;
 
         let field_type = Box::new(Type::parse(parser)?);
 
-        let field = TupleStructDefField {
+        StructDefField {
+            attributes_opt,
             visibility,
+            field_name,
             field_type,
-        };
+        }
+    } else {
+        parser.log_unexpected_str("identifier`");
+        return Err(ErrorsEmitted);
+    };
 
-        Ok(field)
-    }
+    Ok(field)
+}
+
+fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefField, ErrorsEmitted> {
+    let visibility = Visibility::visibility(parser)?;
+
+    let field_type = Box::new(Type::parse(parser)?);
+
+    let field = TupleStructDefField {
+        visibility,
+        field_type,
+    };
+
+    Ok(field)
 }
 
 #[cfg(test)]

@@ -4,7 +4,7 @@ use crate::{
     token::Token,
 };
 
-use super::{item::ParseAssociatedItem, Parser, Precedence};
+use super::{parse::ParseAssociatedItem, Parser, Precedence};
 
 /// Helper function that collects a generic element into a vector based on the input function.
 /// Takes in a `Delimiter` (for reusability) to distinguish the outer limits of the collection.

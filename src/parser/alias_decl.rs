@@ -4,16 +4,14 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{item::ParseDeclaration, Parser};
+use super::{parse::ParseDeclaration, Parser};
 
 impl ParseDeclaration for AliasDecl {
     fn parse(
         parser: &mut Parser,
         attributes_opt: Option<Vec<OuterAttr>>,
-        _visibility: Visibility,
+        visibility: Visibility,
     ) -> Result<AliasDecl, ErrorsEmitted> {
-        let visibility = Visibility::visibility(parser)?;
-
         let kw_alias = parser.expect_keyword(TokenType::Alias)?;
 
         let alias_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {

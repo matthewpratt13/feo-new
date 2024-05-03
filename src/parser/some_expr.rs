@@ -4,10 +4,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::Parser;
+use super::{parse::ParseConstruct, Parser};
 
-impl SomeExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstruct for SomeExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_some = parser.expect_keyword(TokenType::Some)?;
 
         let expression = if let Some(Token::LParen { .. }) = parser.current_token() {

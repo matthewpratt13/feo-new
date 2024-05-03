@@ -4,10 +4,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{test_utils::log_token, Parser, Precedence};
+use super::{parse::ParseConstruct, test_utils::log_token, Parser, Precedence};
 
-impl GroupedExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstruct for GroupedExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `GroupedExpr::parse()`", true);
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
@@ -19,7 +19,7 @@ impl GroupedExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let inner_expression = parser.parse_expression(Precedence::Lowest)?;
+        let expression = parser.parse_expression(Precedence::Lowest)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
@@ -32,7 +32,7 @@ impl GroupedExpr {
 
         let expr = GroupedExpr {
             open_paren,
-            expression: Box::new(inner_expression),
+            expression: Box::new(expression),
             close_paren,
         };
 

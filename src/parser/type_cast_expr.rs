@@ -4,13 +4,10 @@ use crate::{
     token::TokenType,
 };
 
-use super::Parser;
+use super::{parse::ParseOperation, Parser};
 
-impl TypeCastExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        left_expr: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
+impl ParseOperation for TypeCastExpr {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let operand = Box::new(ValueExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted

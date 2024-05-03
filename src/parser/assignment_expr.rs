@@ -7,13 +7,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::Parser;
+use super::{parse::ParseOperation, Parser};
 
-impl AssignmentExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        left_expr: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
+impl ParseOperation for AssignmentExpr {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         {
             let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
@@ -50,11 +47,8 @@ impl AssignmentExpr {
     }
 }
 
-impl CompoundAssignmentExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        left_expr: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
+impl ParseOperation for CompoundAssignmentExpr {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let compound_assignment_op = match operator_token.token_type() {
