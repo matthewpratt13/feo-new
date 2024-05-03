@@ -56,14 +56,10 @@ impl TupleExpr {
         let expr = TupleExpr {
             open_paren,
             elements_opt: {
-                if elements.is_empty() {
-                    if final_element_opt.is_none() {
-                        None
-                    } else {
-                        Some(tuple_elements)
-                    }
-                } else {
-                    Some(tuple_elements)
+                match elements.is_empty() {
+                    true if final_element_opt.is_none() => None,
+                    true => Some(tuple_elements),
+                    false => Some(tuple_elements),
                 }
             },
             close_paren,

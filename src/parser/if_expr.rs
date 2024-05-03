@@ -41,10 +41,9 @@ impl IfExpr {
             condition: Box::new(condition),
             if_block: Box::new(if_block),
             else_if_blocks_opt: {
-                if else_if_blocks.is_empty() {
-                    None
-                } else {
-                    Some(else_if_blocks)
+                match else_if_blocks.is_empty() {
+                    true => None,
+                    false => Some(else_if_blocks),
                 }
             },
             trailing_else_block_opt,

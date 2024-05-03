@@ -49,10 +49,9 @@ impl BlockExpr {
             attributes_opt,
             open_brace,
             statements_opt: {
-                if statements.is_empty() {
-                    None
-                } else {
-                    Some(statements)
+                match statements.is_empty() {
+                    true => None,
+                    false => Some(statements),
                 }
             },
             close_brace,

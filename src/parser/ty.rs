@@ -151,10 +151,9 @@ impl Type {
                 Ok(Type::Function {
                     function_name,
                     params_opt: {
-                        if params.is_empty() {
-                            None
-                        } else {
-                            Some(params)
+                        match params.is_empty() {
+                            true => None,
+                            false => Some(params),
                         }
                     },
                     return_type_opt,

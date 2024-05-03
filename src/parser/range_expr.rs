@@ -67,14 +67,13 @@ impl RangeExpr {
             }
         };
 
-        let expr = if to.is_ok() {
-            RangeExpr {
+        let expr = match to.is_ok() {
+            true => RangeExpr {
                 from_opt: Some(Box::new(from)),
                 range_op,
                 to_opt: Some(Box::new(to?)),
-            }
-        } else {
-            RangeExpr {
+            },
+            false => RangeExpr {
                 from_opt: Some(Box::new(from)),
                 range_op: range_op.clone(),
                 to_opt: {
@@ -85,7 +84,7 @@ impl RangeExpr {
                         None
                     }
                 },
-            }
+            },
         };
 
         log_token(parser, "exit `RangeExpr::parse()`", true);

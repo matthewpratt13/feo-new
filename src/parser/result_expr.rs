@@ -10,13 +10,13 @@ impl ResultExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let token = parser.next_token();
 
-        let kw_ok_or_err = if let Some(Token::Ok { .. }) = token {
-            Ok(Keyword::Ok)
-        } else if let Some(Token::Err { .. }) = token {
-            Ok(Keyword::Err)
-        } else {
-            parser.log_unexpected_str("`Ok` or `Err`");
-            Err(ErrorsEmitted)
+        let kw_ok_or_err = match token {
+            Some(Token::Ok { .. }) => Ok(Keyword::Ok),
+            Some(Token::Err { .. }) => Ok(Keyword::Err),
+            _ => {
+                parser.log_unexpected_str("`Ok` or `Err`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let expression = if let Some(Token::LParen { .. }) = parser.current_token() {

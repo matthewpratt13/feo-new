@@ -341,25 +341,25 @@ impl Parser {
                         let expr = self.parse_primary();
                         self.next_token();
 
-                        if let Some(Token::Colon { .. }) = self.peek_ahead_by(2) {
-                            let path = PathExpr {
-                                root: PathPrefix::Identifier(Identifier(name)),
-                                tree_opt: None,
-                                wildcard_opt: None,
-                            };
-                            StructExpr::parse(self, path)
-                        } else if let Some(Token::FatArrow { .. } | Token::If { .. }) =
-                            self.peek_ahead_by(2)
-                        {
-                            if let Some(Token::LBrace { .. }) = self.current_token() {
-                                self.set_context(ParserContext::MatchArm);
-                                expr
-                            } else {
-                                self.log_unexpected_token(TokenType::LBrace);
-                                Err(ErrorsEmitted)
+                        match self.peek_ahead_by(2) {
+                            Some(Token::Colon { .. }) => {
+                                let path = PathExpr {
+                                    root: PathPrefix::Identifier(Identifier(name)),
+                                    tree_opt: None,
+                                    wildcard_opt: None,
+                                };
+                                StructExpr::parse(self, path)
                             }
-                        } else {
-                            expr
+                            Some(Token::FatArrow { .. } | Token::If { .. }) => {
+                                if let Some(Token::LBrace { .. }) = self.current_token() {
+                                    self.set_context(ParserContext::MatchArm);
+                                    expr
+                                } else {
+                                    self.log_unexpected_token(TokenType::LBrace);
+                                    Err(ErrorsEmitted)
+                                }
+                            }
+                            _ => expr,
                         }
                     }
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =

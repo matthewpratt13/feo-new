@@ -119,7 +119,7 @@ pub enum Delimiter {
     RBracket,
     LBrace,
     RBrace,
-    Pipe
+    Pipe,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -482,15 +482,12 @@ impl TryFrom<Expression> for Pattern {
             Expression::Grouped(g) => Ok(Pattern::GroupedPatt(Box::new(Pattern::try_from(
                 *g.expression,
             )?))),
-            Expression::Range(r) => {
-                if r.from_opt.is_none() && r.to_opt.is_none() {
-                    Ok(Pattern::RestPatt {
-                        dbl_dot: r.range_op,
-                    })
-                } else {
-                    Ok(Pattern::RangePatt(r))
-                }
-            }
+            Expression::Range(r) => match r.from_opt.is_none() && r.to_opt.is_none() {
+                true => Ok(Pattern::RestPatt {
+                    dbl_dot: r.range_op,
+                }),
+                false => Ok(Pattern::RangePatt(r)),
+            },
             Expression::Tuple(TupleExpr { elements_opt, .. }) => {
                 let mut elements: Vec<Pattern> = Vec::new();
 

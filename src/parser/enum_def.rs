@@ -101,14 +101,16 @@ impl EnumVariant {
 
         let token = parser.current_token();
 
-        let variant_type_opt = if let Some(Token::LBrace { .. }) = token {
-            let variant_struct = EnumVariantStruct::parse(parser)?;
-            Some(EnumVariantType::Struct(variant_struct))
-        } else if let Some(Token::LParen { .. }) = token {
-            let variant_tuple = EnumVariantTuple::parse(parser)?;
-            Some(EnumVariantType::Tuple(variant_tuple))
-        } else {
-            None
+        let variant_type_opt = match token {
+            Some(Token::LBrace { .. }) => {
+                let variant_struct = EnumVariantStruct::parse(parser)?;
+                Some(EnumVariantType::Struct(variant_struct))
+            }
+            Some(Token::LParen { .. }) => {
+                let variant_tuple = EnumVariantTuple::parse(parser)?;
+                Some(EnumVariantType::Tuple(variant_tuple))
+            }
+            _ => None,
         };
 
         Ok(EnumVariant {
@@ -174,18 +176,17 @@ impl EnumVariantStruct {
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 
-        if fields.is_empty() {
-            Ok(EnumVariantStruct {
+        match fields.is_empty() {
+            true => Ok(EnumVariantStruct {
                 open_brace,
                 fields_opt: None,
                 close_brace,
-            })
-        } else {
-            Ok(EnumVariantStruct {
+            }),
+            false => Ok(EnumVariantStruct {
                 open_brace,
                 fields_opt: Some(fields),
                 close_brace,
-            })
+            }),
         }
     }
 }

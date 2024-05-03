@@ -55,10 +55,9 @@ impl MatchExpr {
             scrutinee,
             open_brace,
             arms_opt: {
-                if match_arms.is_empty() {
-                    None
-                } else {
-                    Some(match_arms)
+                match match_arms.is_empty() {
+                    true => None,
+                    false => Some(match_arms),
                 }
             },
             final_arm,

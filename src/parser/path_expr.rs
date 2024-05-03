@@ -36,10 +36,9 @@ impl PathExpr {
         let expr = PathExpr {
             root,
             tree_opt: {
-                if tree.is_empty() {
-                    None
-                } else {
-                    Some(tree)
+                match tree.is_empty() {
+                    true => None,
+                    false => Some(tree),
                 }
             },
             wildcard_opt,

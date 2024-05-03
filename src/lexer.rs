@@ -181,10 +181,8 @@ impl<'a> Lexer<'a> {
 
         self.advance(); // skip first `/`
 
-        if let Some('/') = self.peek_current() {
-            self.advance(); // skip second `/`
-
-            if self.peek_current() == Some('/') || self.peek_current() == Some('!') {
+        match self.peek_current() {
+            Some('/') if self.peek_current() == Some('/') || self.peek_current() == Some('!') => {
                 let comment_type = if self.peek_current() == Some('/') {
                     DocCommentType::OuterDocComment
                 } else {
@@ -215,7 +213,8 @@ impl<'a> Lexer<'a> {
                     span,
                     comment_type,
                 })
-            } else {
+            }
+            Some('/') => {
                 // consume ordinary newline or trailing comment (`//`)
                 while let Some(c) = self.peek_current() {
                     if c == '\n' {
@@ -229,28 +228,30 @@ impl<'a> Lexer<'a> {
                     span: Span::new("", start_pos, self.pos),
                 })
             }
-        } else if let Some('*') = self.peek_current() {
-            // consume inline or block comment (`/• •/`)
-            self.advance(); // skip `*`
+            Some('*') => {
+                // consume inline or block comment (`/• •/`)
+                self.advance(); // skip `*`
 
-            while let Some(c) = self.peek_current() {
-                if c == '*' {
-                    self.advance(); // skip closing `*`
-                    self.advance(); // skip closing `/`
-                    break;
+                while let Some(c) = self.peek_current() {
+                    if c == '*' {
+                        self.advance(); // skip closing `*`
+                        self.advance(); // skip closing `/`
+                        break;
+                    }
+
+                    self.advance();
                 }
 
-                self.advance();
+                // replace actual source code with `""`, as ordinary comments are discarded
+                Ok(Token::BlockComment {
+                    span: Span::new("", start_pos, self.pos),
+                })
             }
-
-            // replace actual source code with `""`, as ordinary comments are discarded
-            Ok(Token::BlockComment {
-                span: Span::new("", start_pos, self.pos),
-            })
-        } else {
-            // return the first `/` as a `Token::Slash` instead of aborting
-            let span = Span::new(self.input, start_pos, self.pos);
-            Ok(Token::Slash { punc: '/', span })
+            _ => {
+                // return the first `/` as a `Token::Slash` instead of aborting
+                let span = Span::new(self.input, start_pos, self.pos);
+                Ok(Token::Slash { punc: '/', span })
+            }
         }
     }
 
