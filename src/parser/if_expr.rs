@@ -16,29 +16,10 @@ impl ParseControl for IfExpr {
 
         let kw_if = parser.expect_keyword(TokenType::If)?;
 
-        let mut else_if_blocks: Vec<(Keyword, Box<Expression>)> = Vec::new();
-        let mut trailing_else_block_opt: Option<(Keyword, Box<Expression>)> = None;
-
         let condition = GroupedExpr::parse(parser)?;
-
         let if_block = BlockExpr::parse(parser)?;
 
-        while let Some(Token::Else { .. }) = parser.current_token() {
-            parser.next_token();
-
-            if let Some(Token::If { .. }) = parser.current_token() {
-                let if_expr = Box::new(IfExpr::parse(parser)?);
-                else_if_blocks.push((Keyword::Else, if_expr));
-            } else {
-                continue;
-            }
-
-            if let Some(Token::LBrace { .. }) = parser.current_token() {
-                let block = Box::new(BlockExpr::parse(parser)?);
-                trailing_else_block_opt = Some((Keyword::Else, block));
-                break;
-            }
-        }
+        let (else_if_blocks, trailing_else_block_opt) = parse_else_blocks(parser)?;
 
         let expr = IfExpr {
             kw_if,
@@ -57,6 +38,39 @@ impl ParseControl for IfExpr {
 
         Ok(Expression::If(expr))
     }
+}
+
+fn parse_else_blocks(
+    parser: &mut Parser,
+) -> Result<
+    (
+        Vec<(Keyword, Box<Expression>)>,
+        Option<(Keyword, Box<Expression>)>,
+    ),
+    ErrorsEmitted,
+> {
+    let mut else_if_blocks: Vec<(Keyword, Box<Expression>)> = Vec::new();
+
+    let mut trailing_else_block_opt: Option<(Keyword, Box<Expression>)> = None;
+
+    while let Some(Token::Else { .. }) = parser.current_token() {
+        parser.next_token();
+
+        if let Some(Token::If { .. }) = parser.current_token() {
+            let if_expr = Box::new(IfExpr::parse(parser)?);
+            else_if_blocks.push((Keyword::Else, if_expr));
+        } else {
+            continue;
+        }
+
+        if let Some(Token::LBrace { .. }) = parser.current_token() {
+            let block = Box::new(BlockExpr::parse(parser)?);
+            trailing_else_block_opt = Some((Keyword::Else, block));
+            break;
+        }
+    }
+
+    Ok((else_if_blocks, trailing_else_block_opt))
 }
 
 #[cfg(test)]

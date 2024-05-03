@@ -22,19 +22,7 @@ impl ParseConstruct for BlockExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let mut statements: Vec<Statement> = Vec::new();
-
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RBrace { .. } | Token::EOF)
-        ) {
-            let statement = parser.parse_statement()?;
-            statements.push(statement);
-
-            if let Some(Token::Semicolon { .. }) = parser.current_token() {
-                parser.next_token();
-            }
-        }
+        let statements = parse_statements(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -60,6 +48,22 @@ impl ParseConstruct for BlockExpr {
         log_token(parser, "exit `BlockExpr::parser()`", true);
         Ok(Expression::Block(expr))
     }
+}
+
+fn parse_statements(parser: &mut Parser) -> Result<Vec<Statement>, ErrorsEmitted> {
+    let mut statements: Vec<Statement> = Vec::new();
+    while !matches!(
+        parser.current_token(),
+        Some(Token::RBrace { .. } | Token::EOF)
+    ) {
+        let statement = parser.parse_statement()?;
+        statements.push(statement);
+
+        if let Some(Token::Semicolon { .. }) = parser.current_token() {
+            parser.next_token();
+        }
+    }
+    Ok(statements)
 }
 
 #[cfg(test)]

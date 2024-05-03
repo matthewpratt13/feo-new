@@ -17,8 +17,6 @@ impl ParseDefinition for EnumDef {
     ) -> Result<EnumDef, ErrorsEmitted> {
         let kw_enum = parser.expect_keyword(TokenType::Enum)?;
 
-        let mut variants: Vec<EnumVariant> = Vec::new();
-
         let enum_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
@@ -32,6 +30,8 @@ impl ParseDefinition for EnumDef {
             parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
+
+        let mut variants: Vec<EnumVariant> = Vec::new();
 
         while !matches!(
             parser.current_token(),
@@ -123,14 +123,33 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
         Err(ErrorsEmitted)
     }?;
 
+    let fields = parse_enum_variant_struct_fields(parser)?;
+
+    let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+
+    match fields.is_empty() {
+        true => Ok(EnumVariantStruct {
+            open_brace,
+            fields_opt: None,
+            close_brace,
+        }),
+        false => Ok(EnumVariantStruct {
+            open_brace,
+            fields_opt: Some(fields),
+            close_brace,
+        }),
+    }
+}
+
+fn parse_enum_variant_struct_fields(
+    parser: &mut Parser,
+) -> Result<Vec<(Identifier, Type)>, ErrorsEmitted> {
     let mut fields: Vec<(Identifier, Type)> = Vec::new();
 
-    // TODO: replace with `while loop`
-    loop {
-        if let Some(Token::RBrace { .. }) = parser.current_token() {
-            break;
-        }
-
+    while !matches!(
+        parser.current_token(),
+        Some(Token::RBrace { .. } | Token::EOF { .. })
+    ) {
         let token = parser.next_token();
 
         let field_name = if let Some(Token::Identifier { name, .. }) = token {
@@ -148,38 +167,17 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
         let field_type = Type::parse(parser)?;
         fields.push((field_name, field_type));
 
-        let token = parser.current_token();
-
-        match token {
-            Some(Token::Comma { .. }) => {
-                parser.next_token();
-                continue;
-            }
-            Some(Token::RBrace { .. }) => break,
-            Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "`,` or `}`".to_string(),
-                found: Some(t),
-            }),
-            None => {
-                parser.expect_delimiter(TokenType::RBrace)?;
-            }
+        if let Some(Token::Comma { .. }) = parser.current_token() {
+            parser.next_token();
+        } else if !matches!(
+            parser.current_token(),
+            Some(Token::RBrace { .. } | Token::EOF)
+        ) {
+            parser.log_unexpected_str("`,` or `}`");
+            return Err(ErrorsEmitted);
         }
     }
-
-    let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
-
-    match fields.is_empty() {
-        true => Ok(EnumVariantStruct {
-            open_brace,
-            fields_opt: None,
-            close_brace,
-        }),
-        false => Ok(EnumVariantStruct {
-            open_brace,
-            fields_opt: Some(fields),
-            close_brace,
-        }),
-    }
+    Ok(fields)
 }
 
 fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTuple, ErrorsEmitted> {
