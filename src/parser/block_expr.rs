@@ -22,7 +22,7 @@ impl ParseConstruct for BlockExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let statements = parse_statements(parser)?;
+        let statements_opt = parse_statements(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -36,12 +36,7 @@ impl ParseConstruct for BlockExpr {
         let expr = BlockExpr {
             attributes_opt,
             open_brace,
-            statements_opt: {
-                match statements.is_empty() {
-                    true => None,
-                    false => Some(statements),
-                }
-            },
+            statements_opt,
             close_brace,
         };
 
@@ -50,8 +45,9 @@ impl ParseConstruct for BlockExpr {
     }
 }
 
-fn parse_statements(parser: &mut Parser) -> Result<Vec<Statement>, ErrorsEmitted> {
+fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, ErrorsEmitted> {
     let mut statements: Vec<Statement> = Vec::new();
+    
     while !matches!(
         parser.current_token(),
         Some(Token::RBrace { .. } | Token::EOF)
@@ -63,7 +59,11 @@ fn parse_statements(parser: &mut Parser) -> Result<Vec<Statement>, ErrorsEmitted
             parser.next_token();
         }
     }
-    Ok(statements)
+
+    match statements.is_empty() {
+        true => Ok(None),
+        false => Ok(Some(statements)),
+    }
 }
 
 #[cfg(test)]

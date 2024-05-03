@@ -19,7 +19,7 @@ impl ParseConstruct for GroupedExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let inner_expression = parser.parse_expression(Precedence::Lowest)?;
+        let expression = parser.parse_expression(Precedence::Lowest)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
@@ -32,7 +32,7 @@ impl ParseConstruct for GroupedExpr {
 
         let expr = GroupedExpr {
             open_paren,
-            expression: Box::new(inner_expression),
+            expression: Box::new(expression),
             close_paren,
         };
 

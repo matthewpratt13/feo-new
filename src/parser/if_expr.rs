@@ -17,20 +17,16 @@ impl ParseControl for IfExpr {
         let kw_if = parser.expect_keyword(TokenType::If)?;
 
         let condition = GroupedExpr::parse(parser)?;
+
         let if_block = BlockExpr::parse(parser)?;
 
-        let (else_if_blocks, trailing_else_block_opt) = parse_else_blocks(parser)?;
+        let (else_if_blocks_opt, trailing_else_block_opt) = parse_else_blocks(parser)?;
 
         let expr = IfExpr {
             kw_if,
             condition: Box::new(condition),
             if_block: Box::new(if_block),
-            else_if_blocks_opt: {
-                match else_if_blocks.is_empty() {
-                    true => None,
-                    false => Some(else_if_blocks),
-                }
-            },
+            else_if_blocks_opt,
             trailing_else_block_opt,
         };
 
@@ -44,7 +40,7 @@ fn parse_else_blocks(
     parser: &mut Parser,
 ) -> Result<
     (
-        Vec<(Keyword, Box<Expression>)>,
+        Option<Vec<(Keyword, Box<Expression>)>>,
         Option<(Keyword, Box<Expression>)>,
     ),
     ErrorsEmitted,
@@ -70,7 +66,12 @@ fn parse_else_blocks(
         }
     }
 
-    Ok((else_if_blocks, trailing_else_block_opt))
+    let else_if_blocks_opt = match else_if_blocks.is_empty() {
+        true => None,
+        false => Some(else_if_blocks),
+    };
+
+    Ok((else_if_blocks_opt, trailing_else_block_opt))
 }
 
 #[cfg(test)]

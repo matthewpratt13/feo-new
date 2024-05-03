@@ -31,28 +31,7 @@ impl ParseDefinition for EnumDef {
             Err(ErrorsEmitted)
         }?;
 
-        let mut variants: Vec<EnumVariant> = Vec::new();
-
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RBrace { .. } | Token::EOF)
-        ) {
-            let attributes_opt =
-                collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
-
-            let variant = parse_enum_variant(parser, attributes_opt)?;
-            variants.push(variant);
-
-            if let Some(Token::Comma { .. }) = parser.current_token() {
-                parser.next_token();
-            } else if !matches!(
-                parser.current_token(),
-                Some(Token::RBrace { .. } | Token::EOF)
-            ) {
-                parser.log_unexpected_str("`,` or `}`");
-                return Err(ErrorsEmitted);
-            }
-        }
+        let variants = parse_enum_variants(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -75,6 +54,32 @@ impl ParseDefinition for EnumDef {
     }
 }
 
+fn parse_enum_variants(parser: &mut Parser) -> Result<Vec<EnumVariant>, ErrorsEmitted> {
+    let mut variants: Vec<EnumVariant> = Vec::new();
+
+    while !matches!(
+        parser.current_token(),
+        Some(Token::RBrace { .. } | Token::EOF)
+    ) {
+        let attributes_opt = collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
+
+        let variant = parse_enum_variant(parser, attributes_opt)?;
+        variants.push(variant);
+
+        if let Some(Token::Comma { .. }) = parser.current_token() {
+            parser.next_token();
+        } else if !matches!(
+            parser.current_token(),
+            Some(Token::RBrace { .. } | Token::EOF)
+        ) {
+            parser.log_unexpected_str("`,` or `}`");
+            return Err(ErrorsEmitted);
+        }
+    }
+
+    Ok(variants)
+}
+
 fn parse_enum_variant(
     parser: &mut Parser,
     attributes_opt: Option<Vec<OuterAttr>>,
@@ -93,9 +98,7 @@ fn parse_enum_variant(
         Err(ErrorsEmitted)
     }?;
 
-    let token = parser.current_token();
-
-    let variant_type_opt = match token {
+    let variant_type_opt = match parser.current_token() {
         Some(Token::LBrace { .. }) => {
             let variant_struct = parse_enum_variant_struct(parser)?;
             Some(EnumVariantType::Struct(variant_struct))

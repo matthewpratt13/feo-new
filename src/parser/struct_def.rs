@@ -114,7 +114,7 @@ fn parse_struct_def_field(parser: &mut Parser) -> Result<StructDefField, ErrorsE
     let field = if let Some(Token::Identifier { name, .. }) = token {
         let field_name = Identifier(name);
 
-        let _ = parser.expect_separator(TokenType::Colon)?;
+        parser.expect_separator(TokenType::Colon)?;
 
         let field_type = Box::new(Type::parse(parser)?);
 

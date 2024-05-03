@@ -116,7 +116,14 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
         Err(ErrorsEmitted)
     }?;
 
-    let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+    let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
+        Ok(Delimiter::RBrace)
+    } else {
+        parser.log_error(ParserErrorKind::MissingDelimiter {
+            delim: TokenType::RBrace,
+        });
+        Err(ErrorsEmitted)
+    }?;
 
     Ok(PathSubset {
         open_brace,
