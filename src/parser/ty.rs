@@ -3,8 +3,8 @@ use crate::{
         Delimiter, FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType,
         SelfType, Type,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{collection, test_utils::log_token, Parser};
@@ -15,8 +15,6 @@ impl Type {
         log_token(parser, "enter `TypeExpr::parse()`", true);
 
         let token = parser.next_token();
-
-        log_token(parser, "consume token", false);
 
         match token {
             Some(Token::I32Type { .. }) => Ok(Type::I32(PrimitiveType::I32)),
@@ -50,26 +48,44 @@ impl Type {
             }
 
             Some(Token::VecType { .. }) => {
-                parser.expect_separator(TokenType::LessThan)?;
+                match parser.next_token() {
+                    Some(Token::LessThan { .. }) => (),
+                    Some(_) => parser.log_unexpected_token("`<`"),
+                    None => parser.log_missing_token("`<`"),
+                }
 
                 let ty = Type::parse(parser)?;
 
-                parser.expect_separator(TokenType::GreaterThan)?;
+                match parser.next_token() {
+                    Some(Token::GreaterThan { .. }) => (),
+                    Some(_) => parser.log_unexpected_token("`>`"),
+                    None => parser.log_missing_token("`>`"),
+                }
 
                 Ok(Type::Vec(Box::new(ty)))
             }
 
             Some(Token::MappingType { .. }) => {
-                parser.expect_separator(TokenType::LessThan)?;
-
+                match parser.next_token() {
+                    Some(Token::LessThan { .. }) => (),
+                    Some(_) => parser.log_unexpected_token("`<`"),
+                    None => parser.log_missing_token("`<`"),
+                }
                 let key_type = Box::new(Type::parse(parser)?);
 
-                parser.expect_separator(TokenType::Comma)?;
+                match parser.next_token() {
+                    Some(Token::Comma { .. }) => (),
+                    Some(_) => parser.log_unexpected_token("`,`"),
+                    None => parser.log_missing_token("`,`"),
+                }
 
                 let value_type = Box::new(Type::parse(parser)?);
 
-                parser.expect_separator(TokenType::GreaterThan)?;
-
+                match parser.next_token() {
+                    Some(Token::GreaterThan { .. }) => (),
+                    Some(_) => parser.log_unexpected_token("`>`"),
+                    None => parser.log_missing_token("`>`"),
+                }
                 Ok(Type::Mapping {
                     key_type,
                     value_type,
@@ -77,25 +93,45 @@ impl Type {
             }
 
             Some(Token::OptionType { .. }) => {
-                parser.expect_separator(TokenType::LessThan)?;
+                match parser.next_token() {
+                    Some(Token::LessThan { .. }) => (),
+                    Some(_) => parser.log_unexpected_token("`<`"),
+                    None => parser.log_missing_token("`<`"),
+                }
 
                 let ty = Type::parse(parser)?;
 
-                parser.expect_separator(TokenType::GreaterThan)?;
+                match parser.next_token() {
+                    Some(Token::GreaterThan { .. }) => (),
+                    Some(_) => parser.log_unexpected_token("`<`"),
+                    None => parser.log_missing_token("`<`"),
+                }
 
                 Ok(Type::Option(Box::new(ty)))
             }
 
             Some(Token::ResultType { .. }) => {
-                parser.expect_separator(TokenType::LessThan)?;
+                match parser.next_token() {
+                    Some(Token::LessThan { .. }) => (),
+                    Some(_) => parser.log_unexpected_token("`<`"),
+                    None => parser.log_missing_token("`<`"),
+                }
 
                 let ok = Box::new(Type::parse(parser)?);
 
-                parser.expect_separator(TokenType::Comma)?;
+                match parser.next_token() {
+                    Some(Token::Comma { .. }) => (),
+                    Some(_) => parser.log_unexpected_token("`,`"),
+                    None => parser.log_missing_token("`,`"),
+                }
 
                 let err = Box::new(Type::parse(parser)?);
 
-                parser.expect_separator(TokenType::GreaterThan)?;
+                match parser.next_token() {
+                    Some(Token::GreaterThan { .. }) => (),
+                    Some(_) => parser.log_unexpected_token("`>`"),
+                    None => parser.log_missing_token("`>`"),
+                }
 
                 Ok(Type::Result { ok, err })
             }
@@ -129,7 +165,7 @@ impl Type {
             },
 
             _ => {
-                parser.log_unexpected_str("type annotation");
+                parser.log_unexpected_token("type annotation");
                 Err(ErrorsEmitted)
             }
         }
@@ -142,20 +178,20 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
     let function_name = if let Some(Token::Identifier { name, .. }) = token {
         Ok(Identifier(name))
     } else {
-        parser.log_unexpected_str("identifier");
+        parser.log_unexpected_token("identifier");
         Err(ErrorsEmitted)
     }?;
 
     if let Some(Token::LBrace { .. }) = parser.current_token() {
         parser.next_token();
     } else {
-        parser.log_unexpected_token(TokenType::LBrace);
+        parser.log_unexpected_token("`{`");
     };
 
     if let Some(Token::LParen { .. }) = parser.current_token() {
         parser.next_token();
     } else {
-        parser.log_unexpected_token(TokenType::LParen);
+        parser.log_unexpected_token("`(`");
     }
 
     // `&self` and `&mut self` can only occur as the first parameter in a method
@@ -171,10 +207,10 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
         params.append(&mut subsequent_params.unwrap())
     };
 
-    if let Some(Token::RParen { .. }) = parser.current_token() {
-        parser.next_token();
-    } else {
-        parser.expect_delimiter(TokenType::RParen)?;
+    match parser.next_token() {
+        Some(Token::RParen { .. }) => (),
+        Some(_) => parser.log_unexpected_token("`)`"),
+        None => parser.log_missing_token("`)`"),
     }
 
     let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
@@ -202,20 +238,20 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     if let Some(Token::Semicolon { .. }) = parser.current_token() {
         parser.next_token();
     } else {
-        parser.log_unexpected_token(TokenType::Semicolon);
+        parser.log_unexpected_token("`;`");
     }
 
     let num_elements = if let Some(Token::UIntLiteral { value, .. }) = parser.next_token() {
         Ok(value)
     } else {
-        parser.log_unexpected_str("unsigned integer");
+        parser.log_unexpected_token("unsigned integer");
         Err(ErrorsEmitted)
     }?;
 
-    if let Some(Token::RBracket { .. }) = parser.current_token() {
-        parser.next_token();
-    } else {
-        parser.expect_delimiter(TokenType::RBracket)?;
+    match parser.next_token() {
+        Some(Token::RBracket { .. }) => (),
+        Some(_) => parser.log_unexpected_token("`]`"),
+        None => parser.log_missing_token("`]`"),
     }
 
     Ok(Type::Array {
@@ -233,16 +269,14 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
             if let Some(t) = collection::get_collection(parser, Type::parse, Delimiter::RParen)? {
                 Ok(t)
             } else {
-                parser.log_error(ParserErrorKind::TokenNotFound {
-                    expected: "type".to_string(),
-                });
+                parser.log_unexpected_token("type");
                 Err(ErrorsEmitted)
             }?;
 
-        if let Some(Token::RParen { .. }) = parser.current_token() {
-            parser.next_token();
-        } else {
-            parser.expect_delimiter(TokenType::RParen)?;
+        match parser.next_token() {
+            Some(Token::RParen { .. }) => (),
+            Some(_) => parser.log_unexpected_token("`)`"),
+            None => parser.log_missing_token("`)`"),
         }
 
         Ok(Type::Tuple(types))

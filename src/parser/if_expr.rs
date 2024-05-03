@@ -1,20 +1,23 @@
 use crate::{
     ast::{BlockExpr, Expression, GroupedExpr, IfExpr, Keyword},
     error::ErrorsEmitted,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use super::{
     parse::{ParseConstruct, ParseControl},
-    test_utils::log_token,
     Parser,
 };
 
 impl ParseControl for IfExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        log_token(parser, "enter `IfExpr::parse()`", true);
-
-        let kw_if = parser.expect_keyword(TokenType::If)?;
+        let kw_if = if let Some(Token::If { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::If)
+        } else {
+            parser.log_unexpected_token("`if`");
+            Err(ErrorsEmitted)
+        }?;
 
         let condition = GroupedExpr::parse(parser)?;
 
@@ -29,8 +32,6 @@ impl ParseControl for IfExpr {
             else_if_blocks_opt,
             trailing_else_block_opt,
         };
-
-        log_token(parser, "exit `IfExpr::parse()`", true);
 
         Ok(Expression::If(expr))
     }

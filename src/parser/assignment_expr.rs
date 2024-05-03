@@ -18,7 +18,7 @@ impl ParseOperation for AssignmentExpr {
                 parser.next_token();
                 Ok(AssignmentOp)
             } else {
-                parser.log_unexpected_str("assignment operator");
+                parser.log_unexpected_token("assignment operator");
                 Err(ErrorsEmitted)
             }?;
 
@@ -58,7 +58,7 @@ impl ParseOperation for CompoundAssignmentExpr {
             TokenType::SlashEquals => Ok(CompoundAssignmentOp::DivideAssign),
             TokenType::PercentEquals => Ok(CompoundAssignmentOp::ModulusAssign),
             _ => {
-                parser.log_unexpected_str("compound assignment operator");
+                parser.log_unexpected_token("compound assignment operator");
                 Err(ErrorsEmitted)
             }
         }?;

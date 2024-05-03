@@ -1,7 +1,7 @@
 use crate::{
     ast::{Expression, GroupedExpr, Keyword, ResultExpr},
     error::ErrorsEmitted,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use super::{parse::ParseConstruct, Parser};
@@ -14,7 +14,7 @@ impl ParseConstruct for ResultExpr {
             Some(Token::Ok { .. }) => Ok(Keyword::Ok),
             Some(Token::Err { .. }) => Ok(Keyword::Err),
             _ => {
-                parser.log_unexpected_str("`Ok` or `Err`");
+                parser.log_unexpected_token("`Ok` or `Err`");
                 Err(ErrorsEmitted)
             }
         }?;
@@ -22,7 +22,7 @@ impl ParseConstruct for ResultExpr {
         let expression = if let Some(Token::LParen { .. }) = parser.current_token() {
             Ok(Box::new(GroupedExpr::parse(parser)?))
         } else {
-            parser.log_unexpected_token(TokenType::LParen);
+            parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)
         }?;
 

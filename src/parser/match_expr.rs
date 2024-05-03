@@ -1,7 +1,7 @@
 use crate::{
     ast::{AssigneeExpr, BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr, Pattern},
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{
@@ -14,7 +14,13 @@ impl ParseControl for MatchExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `MatchExpr::parse()`", true);
 
-        let kw_match = parser.expect_keyword(TokenType::Match)?;
+        let kw_match = if let Some(Token::Match { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::Match)
+        } else {
+            parser.log_unexpected_token("`match`");
+            Err(ErrorsEmitted)
+        }?;
 
         let matched_expression = parser.parse_expression(Precedence::Assignment)?;
 
@@ -28,7 +34,7 @@ impl ParseControl for MatchExpr {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token(TokenType::LBrace);
+            parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
         }?;
 
@@ -39,18 +45,15 @@ impl ParseControl for MatchExpr {
         let final_arm = if let Some(a) = match_arms.pop() {
             Box::new(a)
         } else {
-            parser.log_error(ParserErrorKind::TokenNotFound {
-                expected: "match arm".to_string(),
-            });
+            parser.log_missing_token("match arm");
             return Err(ErrorsEmitted);
         };
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RBrace,
-            });
+            parser.log_missing_token("`}`");
+            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -96,11 +99,9 @@ impl MatchArm {
 
         if let Some(Token::FatArrow { .. }) = parser.current_token() {
             log_token(parser, "encounter `=>`", false);
-
             parser.next_token();
-            log_token(parser, "consume token", true);
         } else {
-            parser.log_unexpected_token(TokenType::FatArrow);
+            parser.log_unexpected_token("`=>`");
             return Err(ErrorsEmitted);
         }
 
@@ -112,9 +113,7 @@ impl MatchArm {
 
         if let Some(Token::Comma { .. }) = parser.current_token() {
             log_token(parser, "encounter `,`", false);
-
             parser.next_token();
-            log_token(parser, "consume token", true);
         }
 
         log_token(parser, "exit `MatchArm::parse()`", true);
@@ -141,13 +140,9 @@ fn parse_match_arms(parser: &mut Parser) -> Result<Vec<Expression>, ErrorsEmitte
         let arm = MatchArm::parse(parser, expression)?;
         match_arms.push(arm);
 
-        log_token(parser, "foo", true);
-
         if let Some(Token::Comma { .. }) = parser.current_token() {
             log_token(parser, "encounter `,`", false);
-
             parser.next_token();
-            log_token(parser, "consume token", true);
         }
     }
 

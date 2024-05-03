@@ -1,9 +1,9 @@
 use std::{error::Error, fmt, sync::Arc};
 
-use crate::token::{Token, TokenType};
+use crate::token::Token;
 
 /// Enum representing the different types of lexer errors.
-/// Used in conjunction with `CompilerError` to keep track of errors encountered 
+/// Used in conjunction with `CompilerError` to keep track of errors encountered
 /// during tokenization.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexErrorKind {
@@ -129,7 +129,7 @@ impl fmt::Display for LexErrorKind {
 impl Error for LexErrorKind {}
 
 /// Enum representing the different types of parsing errors.
-/// Used in conjunction with `CompilerError` to keep track of errors encountered 
+/// Used in conjunction with `CompilerError` to keep track of errors encountered
 /// during parsing.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum ParserErrorKind {
@@ -140,16 +140,16 @@ pub enum ParserErrorKind {
 
     UnexpectedEndOfInput,
 
-    TokenNotFound {
+    MissingToken {
         expected: String,
     },
 
-    MissingDelimiter {
-        delim: TokenType,
+    UnmatchedDelimiter {
+        expected: String,
     },
 
     InvalidTokenContext {
-        token: TokenType,
+        token: Option<Token>,
     },
 
     TypeConversionError {
@@ -172,15 +172,15 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::UnexpectedEndOfInput => {
                 writeln!(f, "parsing error: unexpected end of input")
             }
-            ParserErrorKind::TokenNotFound { expected } => {
+            ParserErrorKind::MissingToken { expected } => {
                 writeln!(f, "token not found: expected {expected}, found none")
             }
-            ParserErrorKind::MissingDelimiter { delim } => {
-                writeln!(f, "missing delimiter: expected `{delim}`, found none")
+            ParserErrorKind::UnmatchedDelimiter { expected } => {
+                writeln!(f, "unmatched delimiter: expected {expected}, found none")
             }
 
             ParserErrorKind::InvalidTokenContext { token } => {
-                writeln!(f, "syntax error: invalid token context – `{token}`")
+                writeln!(f, "syntax error: invalid token context – `{:#?}`", token)
             }
 
             ParserErrorKind::TypeConversionError { type_a, type_b } => writeln!(

@@ -1,7 +1,7 @@
 use crate::{
     ast::{ArrayExpr, Delimiter, Expression},
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{collection, parse::ParseConstruct, Parser, Precedence};
@@ -12,7 +12,7 @@ impl ParseConstruct for ArrayExpr {
             parser.next_token();
             Ok(Delimiter::LBracket)
         } else {
-            parser.log_unexpected_token(TokenType::LBracket);
+            parser.log_unexpected_token("`[`");
             Err(ErrorsEmitted)
         }?;
 
@@ -22,9 +22,8 @@ impl ParseConstruct for ArrayExpr {
         let close_bracket = if let Some(Token::RBracket { .. }) = parser.next_token() {
             Ok(Delimiter::RBracket)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RBracket,
-            });
+            parser.log_missing_token("`]`");
+            parser.log_unmatched_delimiter(open_bracket.clone());
             Err(ErrorsEmitted)
         }?;
 

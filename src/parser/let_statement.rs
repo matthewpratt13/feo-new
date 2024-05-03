@@ -1,7 +1,7 @@
 use crate::{
     ast::{Keyword, LetStmt, Statement, Type},
     error::ErrorsEmitted,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use super::{parse::ParseStatement, Parser, Precedence};
@@ -12,7 +12,7 @@ impl ParseStatement for LetStmt {
             parser.next_token();
             Ok(Keyword::Let)
         } else {
-            parser.log_unexpected_str("`let`");
+            parser.log_unexpected_token("`let`");
             Err(ErrorsEmitted)
         }?;
 
@@ -33,7 +33,11 @@ impl ParseStatement for LetStmt {
             None
         };
 
-        parser.expect_separator(TokenType::Semicolon)?;
+        match parser.next_token() {
+            Some(Token::Semicolon { .. }) => (),
+            Some(_) => parser.log_unexpected_token("`;`"),
+            None => parser.log_missing_token("`;`"),
+        }
 
         let stmt = LetStmt {
             kw_let,

@@ -1,7 +1,7 @@
 use crate::{
-    ast::{Delimiter, Identifier, InnerAttr, Item, ModuleItem, OuterAttr, Visibility},
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    ast::{Delimiter, Identifier, InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{collection, parse::ParseDefinition, Parser};
@@ -12,30 +12,35 @@ impl ParseDefinition for ModuleItem {
         outer_attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ModuleItem, ErrorsEmitted> {
-        let kw_module = parser.expect_keyword(TokenType::Module)?;
+        let kw_module = if let Some(Token::Module { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::Module)
+        } else {
+            parser.log_unexpected_token("`module`");
+            Err(ErrorsEmitted)
+        }?;
 
         let module_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_str("identifier");
+            parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token(TokenType::LBrace);
+            parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
         }?;
 
-        let (inner_attributes_opt, items) = parse_item(parser)?;
+        let (inner_attributes_opt, items_opt) = parse_item(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RBrace,
-            });
+            parser.log_missing_token("`}`");
+            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -46,18 +51,15 @@ impl ParseDefinition for ModuleItem {
             module_name,
             open_brace,
             inner_attributes_opt,
-            items_opt: {
-                match items.is_empty() {
-                    true => None,
-                    false => Some(items),
-                }
-            },
+            items_opt,
             close_brace,
         })
     }
 }
 
-fn parse_item(parser: &mut Parser) -> Result<(Option<Vec<InnerAttr>>, Vec<Item>), ErrorsEmitted> {
+fn parse_item(
+    parser: &mut Parser,
+) -> Result<(Option<Vec<InnerAttr>>, Option<Vec<Item>>), ErrorsEmitted> {
     let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
     let mut items: Vec<Item> = Vec::new();
@@ -73,8 +75,13 @@ fn parse_item(parser: &mut Parser) -> Result<(Option<Vec<InnerAttr>>, Vec<Item>)
         let item = Item::parse(parser, attributes_opt, item_visibility)?;
         items.push(item);
     }
-    
-    Ok((inner_attributes_opt, items))
+
+    let items_opt = match items.is_empty() {
+        true => Ok(None),
+        false => Ok(Some(items)),
+    }?;
+
+    Ok((inner_attributes_opt, items_opt))
 }
 
 #[cfg(test)]

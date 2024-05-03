@@ -32,7 +32,7 @@ pub(crate) fn get_collection<T>(
                     parser.current_token(),
                     Some(Token::RParen { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_str("`,` or `)`");
+                    parser.log_unexpected_token("`,` or `)`");
                     return Err(ErrorsEmitted);
                 }
             }
@@ -53,7 +53,7 @@ pub(crate) fn get_collection<T>(
                     parser.current_token(),
                     Some(Token::RBrace { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_str("`,` or `}`");
+                    parser.log_unexpected_token("`,` or `}`");
                     return Err(ErrorsEmitted);
                 }
             }
@@ -76,14 +76,14 @@ pub(crate) fn get_collection<T>(
                     parser.current_token(),
                     Some(Token::Pipe { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_str("`,` or `|`");
+                    parser.log_unexpected_token("`,` or `|`");
                     return Err(ErrorsEmitted);
                 }
             }
         }
 
         _ => {
-            parser.log_unexpected_str("closing delimiter type");
+            parser.log_unexpected_token("closing delimiter type");
             return Err(ErrorsEmitted);
         }
     }
@@ -120,7 +120,7 @@ pub(crate) fn get_expressions(
                     parser.current_token(),
                     Some(Token::RParen { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_str("`,` or `)`");
+                    parser.log_unexpected_token("`,` or `)`");
                     return Err(ErrorsEmitted);
                 }
             }
@@ -140,14 +140,14 @@ pub(crate) fn get_expressions(
                     parser.current_token(),
                     Some(Token::RBracket { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_str("`,` or `]`");
+                    parser.log_unexpected_token("`,` or `]`");
                     return Err(ErrorsEmitted);
                 }
             }
         }
 
         _ => {
-            parser.log_unexpected_str("closing delimiter type");
+            parser.log_unexpected_token("closing delimiter type");
             return Err(ErrorsEmitted);
         }
     }

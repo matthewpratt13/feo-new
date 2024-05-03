@@ -1,10 +1,10 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, OuterAttr,
-        TraitDef, TraitDefItem, Visibility,
+        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, Keyword,
+        OuterAttr, TraitDef, TraitDefItem, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{
@@ -19,19 +19,25 @@ impl ParseDefinition for TraitDef {
         outer_attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<TraitDef, ErrorsEmitted> {
-        let kw_trait = parser.expect_keyword(TokenType::Trait)?;
+        let kw_trait = if let Some(Token::Trait { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::Trait)
+        } else {
+            parser.log_unexpected_token("`trait`");
+            Err(ErrorsEmitted)
+        }?;
 
         let trait_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_str("identifier");
+            parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token(TokenType::LBrace);
+            parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
         }?;
 
@@ -42,9 +48,8 @@ impl ParseDefinition for TraitDef {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RBrace,
-            });
+            parser.log_missing_token("`}`");
+            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -84,7 +89,7 @@ impl ParseAssociatedItem for TraitDefItem {
                 Ok(TraitDefItem::FunctionDef(function_def))
             }
             _ => {
-                parser.log_unexpected_str("`const`, `alias` or `func`");
+                parser.log_unexpected_token("`const`, `alias` or `func`");
                 Err(ErrorsEmitted)
             }
         }

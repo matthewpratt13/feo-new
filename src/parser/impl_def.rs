@@ -1,11 +1,11 @@
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InherentImplDef,
-        InherentImplItem, OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem, Type,
-        Visibility,
+        InherentImplItem, Keyword, OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem,
+        Type, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{
@@ -20,14 +20,20 @@ impl ParseDefinition for InherentImplDef {
         attributes_opt: Option<Vec<OuterAttr>>,
         _visibility: Visibility,
     ) -> Result<InherentImplDef, ErrorsEmitted> {
-        let kw_impl = parser.expect_keyword(TokenType::Impl)?;
+        let kw_impl = if let Some(Token::Impl { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::Impl)
+        } else {
+            parser.log_unexpected_token("`impl`");
+            Err(ErrorsEmitted)
+        }?;
 
         let nominal_type = Type::parse(parser)?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token(TokenType::LBrace);
+            parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
         }?;
 
@@ -36,9 +42,8 @@ impl ParseDefinition for InherentImplDef {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RBrace,
-            });
+            parser.log_missing_token("`}`");
+            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -59,7 +64,13 @@ impl ParseDefinition for TraitImplDef {
         attributes_opt: Option<Vec<OuterAttr>>,
         _visibility: Visibility,
     ) -> Result<TraitImplDef, ErrorsEmitted> {
-        let kw_impl = parser.expect_keyword(TokenType::Impl)?;
+        let kw_impl = if let Some(Token::Impl { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::Impl)
+        } else {
+            parser.log_unexpected_token("`impl`");
+            Err(ErrorsEmitted)
+        }?;
 
         let token = parser.current_token();
 
@@ -68,24 +79,26 @@ impl ParseDefinition for TraitImplDef {
             parser.next_token();
             path
         } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "implemented trait path".to_string(),
-                found: token,
-            });
-
+            parser.log_unexpected_token("implemented trait path");
             parser.next_token();
 
             Err(ErrorsEmitted)
         }?;
 
-        let kw_for = parser.expect_keyword(TokenType::For)?;
+        let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::For)
+        } else {
+            parser.log_unexpected_token("`for`");
+            Err(ErrorsEmitted)
+        }?;
 
         let implementing_type = Type::parse(parser)?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token(TokenType::LBrace);
+            parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
         }?;
 
@@ -94,9 +107,8 @@ impl ParseDefinition for TraitImplDef {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RBrace,
-            });
+            parser.log_missing_token("`}`");
+            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -130,7 +142,7 @@ impl ParseAssociatedItem for InherentImplItem {
                 Ok(InherentImplItem::FunctionDef(function_def))
             }
             _ => {
-                parser.log_unexpected_str("`const` or `func`");
+                parser.log_unexpected_token("`const` or `func`");
                 Err(ErrorsEmitted)
             }
         }
@@ -157,7 +169,7 @@ impl ParseAssociatedItem for TraitImplItem {
                 Ok(TraitImplItem::FunctionDef(function_def))
             }
             _ => {
-                parser.log_unexpected_str("`const`, `alias` or `func`");
+                parser.log_unexpected_token("`const`, `alias` or `func`");
                 Err(ErrorsEmitted)
             }
         }

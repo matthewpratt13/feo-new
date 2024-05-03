@@ -1,7 +1,7 @@
 use crate::{
-    ast::{AliasDecl, Identifier, OuterAttr, Type, Visibility},
+    ast::{AliasDecl, Identifier, Keyword, OuterAttr, Type, Visibility},
     error::ErrorsEmitted,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use super::{parse::ParseDeclaration, Parser};
@@ -12,12 +12,18 @@ impl ParseDeclaration for AliasDecl {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<AliasDecl, ErrorsEmitted> {
-        let kw_alias = parser.expect_keyword(TokenType::Alias)?;
+        let kw_alias = if let Some(Token::Alias { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::Alias)
+        } else {
+            parser.log_unexpected_token("`alias`");
+            Err(ErrorsEmitted)
+        }?;
 
         let alias_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_str("identifier");
+            parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
         }?;
 
@@ -28,7 +34,11 @@ impl ParseDeclaration for AliasDecl {
             None
         };
 
-        parser.expect_separator(TokenType::Semicolon)?;
+        match parser.next_token() {
+            Some(Token::Semicolon { .. }) => (),
+            Some(_) => parser.log_unexpected_token("`;`"),
+            None => parser.log_missing_token("`;`"),
+        }
 
         Ok(AliasDecl {
             attributes_opt,

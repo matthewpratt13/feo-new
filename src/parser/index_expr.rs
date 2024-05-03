@@ -1,16 +1,13 @@
 use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, IndexExpr},
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{parse::ParseOperation, Parser, Precedence};
 
 impl ParseOperation for IndexExpr {
-   fn parse(
-        parser: &mut Parser,
-        array: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, array: Expression) -> Result<Expression, ErrorsEmitted> {
         let array = AssigneeExpr::try_from(array).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -19,7 +16,7 @@ impl ParseOperation for IndexExpr {
         let open_bracket = if let Some(Token::LBracket { .. }) = parser.next_token() {
             Ok(Delimiter::LBracket)
         } else {
-            parser.log_unexpected_token(TokenType::LBracket);
+            parser.log_unexpected_token("`[`");
             Err(ErrorsEmitted)
         }?;
 
@@ -28,9 +25,8 @@ impl ParseOperation for IndexExpr {
         let close_bracket = if let Some(Token::RBracket { .. }) = parser.next_token() {
             Ok(Delimiter::RBracket)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RBracket,
-            });
+            parser.log_missing_token("`]`");
+            parser.log_unmatched_delimiter(open_bracket.clone());
             Err(ErrorsEmitted)
         }?;
 

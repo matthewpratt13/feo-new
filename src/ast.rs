@@ -49,8 +49,6 @@ pub enum Keyword {
     Module,
     Package,
     SelfKeyword,
-    SelfType,
-    Super,
     Pub,
     As,
     Const,
@@ -64,7 +62,6 @@ pub enum Keyword {
     If,
     Else,
     Match,
-    Loop,
     For,
     In,
     While,
@@ -201,16 +198,8 @@ pub enum RangeOp {
 /// Enum representing the different separators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Separator {
-    Colon,
-    Semicolon,
     Comma,
     ColonColonAsterisk,
-    ThinArrow,
-    FatArrow,
-    LeftAngledBracket,
-    RightAngledBracket,
-    Pipe,
-    DblPipe,
 }
 
 ///////////////////////////////////////////////////////////////////////////

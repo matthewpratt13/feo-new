@@ -87,8 +87,8 @@ use crate::{
         DereferenceOp, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, Identifier, IfExpr,
         IndexExpr, Item, Keyword, LetStmt, Literal, MatchArm, MatchExpr, MethodCallExpr, NoneExpr,
         PathExpr, PathPrefix, Pattern, RangeExpr, RangeOp, ReferenceExpr, ReferenceOp, ResultExpr,
-        ReturnExpr, SelfType, Separator, SomeExpr, Statement, StructExpr, TupleExpr,
-        TupleIndexExpr, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, WhileExpr,
+        ReturnExpr, SelfType, SomeExpr, Statement, StructExpr, TupleExpr, TupleIndexExpr,
+        TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream, TokenType},
@@ -268,9 +268,7 @@ impl Parser {
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
         log_token(self, "enter `parse_primary()`", true);
 
-        let token = self.current_token();
-
-        match token {
+        match self.current_token() {
             Some(Token::Identifier { name, .. }) => {
                 let expr = PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)));
                 expr
@@ -293,11 +291,12 @@ impl Parser {
                 self.next_token();
                 expr
             }
-            _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "identifier, `_`, literal or `(`".to_string(),
-                    found: token,
-                });
+            Some(_) => {
+                self.log_unexpected_token("literal, identifier or grouped expression");
+                Err(ErrorsEmitted)
+            }
+            None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted)
             }
         }
@@ -324,8 +323,6 @@ impl Parser {
             ) => {
                 let expr = self.parse_primary();
                 self.next_token();
-                log_token(self, "consume token", true);
-
                 expr
             }
 
@@ -354,7 +351,7 @@ impl Parser {
                                     self.set_context(ParserContext::MatchArm);
                                     expr
                                 } else {
-                                    self.log_unexpected_token(TokenType::LBrace);
+                                    self.log_unexpected_token("`{`");
                                     Err(ErrorsEmitted)
                                 }
                             }
@@ -467,7 +464,7 @@ impl Parser {
                     BinaryExpr::parse(self, left)
                 } else {
                     self.log_error(ParserErrorKind::InvalidTokenContext {
-                        token: TokenType::Pipe,
+                        token: self.current_token(),
                     });
                     Err(ErrorsEmitted)
                 }
@@ -484,7 +481,7 @@ impl Parser {
                     BinaryExpr::parse(self, left)
                 } else {
                     self.log_error(ParserErrorKind::InvalidTokenContext {
-                        token: TokenType::Pipe,
+                        token: self.current_token(),
                     });
                     Err(ErrorsEmitted)
                 }
@@ -540,16 +537,16 @@ impl Parser {
 
             Some(Token::Return { .. }) => ReturnExpr::parse(self),
 
-            _ => {
-                log_token(self, "unexpected token", true);
-                self.next_token(); // skip token
-
-                log_token(self, "consume token", true);
-
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "prefix expression".to_string(),
-                    found: self.current_token(),
+            Some(_) => {
+                self.log_error(ParserErrorKind::InvalidTokenContext {
+                    token: self.current_token(),
                 });
+
+                Err(ErrorsEmitted)
+            }
+
+            None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted)
             }
         }
@@ -728,12 +725,6 @@ impl Parser {
                     self.parse_expression(Precedence::Lowest)?,
                 ));
 
-                if let Some(Token::Semicolon { .. }) = self.current_token() {
-                    log_token(self, "encounter `;`", false);
-                    self.next_token();
-                    log_token(self, "consume token", true);
-                }
-
                 statement
             }
         }
@@ -749,7 +740,6 @@ impl Parser {
 
         let kw_ref_opt = if let Some(Token::Ref { .. }) = self.current_token() {
             self.next_token();
-            log_token(self, "consume token", false);
             Some(Keyword::Ref)
         } else {
             None
@@ -757,7 +747,6 @@ impl Parser {
 
         let kw_mut_opt = if let Some(Token::Mut { .. }) = self.current_token() {
             self.next_token();
-            log_token(self, "consume token", false);
             Some(Keyword::Mut)
         } else {
             None
@@ -766,7 +755,7 @@ impl Parser {
         let name = if let Some(Token::Identifier { name, .. }) = self.next_token() {
             Ok(Identifier(name))
         } else {
-            self.log_unexpected_str("identifier");
+            self.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
         }?;
 
@@ -787,6 +776,7 @@ impl Parser {
     fn next_token(&mut self) -> Option<Token> {
         if let Some(t) = self.current_token() {
             self.current += 1;
+            log_token(self, "consume token", false);
             Some(t)
         } else {
             self.log_error(ParserErrorKind::UnexpectedEndOfInput);
@@ -794,115 +784,32 @@ impl Parser {
         }
     }
 
-    /// Consume and check the current token, returning its respective `Keyword` or `ErrorsEmitted`.
-    fn expect_keyword(&mut self, expected: TokenType) -> Result<Keyword, ErrorsEmitted> {
-        log_token(self, "enter `expect_keyword()`", false);
-
-        let token = self.next_token().unwrap_or(Token::EOF);
-
-        log_token(self, "consume token", false);
-
-        if token.token_type() == expected {
-            match token.token_type() {
-                TokenType::Import { .. } => Ok(Keyword::Import),
-                TokenType::Module { .. } => Ok(Keyword::Module),
-                TokenType::Package { .. } => Ok(Keyword::Package),
-                TokenType::SelfKeyword { .. } => Ok(Keyword::SelfKeyword),
-                TokenType::SelfType { .. } => Ok(Keyword::SelfType),
-                TokenType::Super { .. } => Ok(Keyword::Super),
-                TokenType::Pub { .. } => Ok(Keyword::Pub),
-                TokenType::As { .. } => Ok(Keyword::As),
-                TokenType::Const { .. } => Ok(Keyword::Const),
-                TokenType::Static { .. } => Ok(Keyword::Static),
-                TokenType::Alias { .. } => Ok(Keyword::Alias),
-                TokenType::Func { .. } => Ok(Keyword::Func),
-                TokenType::Struct { .. } => Ok(Keyword::Struct),
-                TokenType::Enum { .. } => Ok(Keyword::Enum),
-                TokenType::Trait { .. } => Ok(Keyword::Trait),
-                TokenType::Impl { .. } => Ok(Keyword::Impl),
-                TokenType::If { .. } => Ok(Keyword::If),
-                TokenType::Else { .. } => Ok(Keyword::Else),
-                TokenType::Match { .. } => Ok(Keyword::Match),
-                TokenType::Loop { .. } => Ok(Keyword::Loop),
-                TokenType::For { .. } => Ok(Keyword::For),
-                TokenType::In { .. } => Ok(Keyword::In),
-                TokenType::While { .. } => Ok(Keyword::While),
-                TokenType::Break { .. } => Ok(Keyword::Break),
-                TokenType::Continue { .. } => Ok(Keyword::Continue),
-                TokenType::Return { .. } => Ok(Keyword::Return),
-                TokenType::Let { .. } => Ok(Keyword::Let),
-                TokenType::Mut { .. } => Ok(Keyword::Mut),
-                TokenType::Some { .. } => Ok(Keyword::Some),
-                TokenType::None { .. } => Ok(Keyword::None),
-                TokenType::Ok { .. } => Ok(Keyword::Ok),
-                TokenType::Err { .. } => Ok(Keyword::Err),
-                _ => {
-                    self.log_unexpected_str("keyword");
-                    Err(ErrorsEmitted)
-                }
-            }
+    /// Get the token at the current index in the `TokenStream`.
+    fn current_token(&self) -> Option<Token> {
+        if self.current < self.stream.tokens().len() {
+            self.stream.tokens().get(self.current).cloned()
         } else {
-            self.log_unexpected_token(expected);
-            Err(ErrorsEmitted)
+            Some(Token::EOF)
         }
     }
 
-    /// Consume and check the current token, returning its respective `Delimiter`
-    /// or `ErrorsEmitted`.
-    fn expect_delimiter(&mut self, expected: TokenType) -> Result<Delimiter, ErrorsEmitted> {
-        log_token(self, "enter `expect_delimiter()`", false);
+    /// Peek at the token `num_tokens` ahead of the token at the current index in the `TokenStream`.
+    fn peek_ahead_by(&self, num_tokens: usize) -> Option<Token> {
+        let i = self.current + num_tokens;
 
-        let token = self.next_token().unwrap_or(Token::EOF);
-
-        log_token(self, "consume token", false);
-
-        if token.token_type() == expected {
-            match token.token_type() {
-                TokenType::LParen => Ok(Delimiter::LParen),
-                TokenType::RParen => Ok(Delimiter::RParen),
-                TokenType::LBrace => Ok(Delimiter::LBrace),
-                TokenType::RBrace => Ok(Delimiter::RBrace),
-                TokenType::LBracket => Ok(Delimiter::LBracket),
-                TokenType::RBracket => Ok(Delimiter::RBracket),
-                _ => {
-                    self.log_unexpected_str("delimiter");
-                    Err(ErrorsEmitted)
-                }
-            }
+        if i < self.stream.tokens().len() {
+            self.stream.tokens().get(i).cloned()
         } else {
-            self.log_unexpected_token(expected);
-            Err(ErrorsEmitted)
+            None
         }
     }
 
-    /// Consume and check the current token, returning its respective `Separator`
-    /// or `ErrorsEmitted`.
-    fn expect_separator(&mut self, expected: TokenType) -> Result<Separator, ErrorsEmitted> {
-        log_token(self, "enter `expect_separator()`", false);
-
-        let token = self.next_token().unwrap_or(Token::EOF);
-
-        log_token(self, "consume token", false);
-
-        if token.token_type() == expected {
-            match token.token_type() {
-                TokenType::Colon => Ok(Separator::Colon),
-                TokenType::Semicolon => Ok(Separator::Semicolon),
-                TokenType::Comma => Ok(Separator::Comma),
-                TokenType::ThinArrow => Ok(Separator::ThinArrow),
-                TokenType::FatArrow => Ok(Separator::FatArrow),
-                TokenType::LessThan => Ok(Separator::LeftAngledBracket),
-                TokenType::GreaterThan => Ok(Separator::RightAngledBracket),
-                TokenType::Pipe => Ok(Separator::Pipe),
-                TokenType::DblPipe => Ok(Separator::DblPipe),
-                _ => {
-                    self.log_unexpected_str("separator");
-                    Err(ErrorsEmitted)
-                }
-            }
+    /// Peek at the token `num_tokens` behind the token at the current index in the `TokenStream`.
+    fn peek_behind_by(&self, num_tokens: usize) -> Option<Token> {
+        if self.current >= num_tokens {
+            self.stream.tokens().get(self.current - num_tokens).cloned()
         } else {
-            self.log_unexpected_token(expected);
-            Err(ErrorsEmitted)
+            None
         }
     }
 
@@ -927,27 +834,32 @@ impl Parser {
         self.errors.push(error);
     }
 
-    /// Log error information on encountering an unexpected token, with the expected behaviour
-    /// described as a `&str`.
-    fn log_unexpected_str(&mut self, expected: &str) {
+    /// Log error information on encountering an unexpected token by providing the expected token.
+    fn log_unexpected_token(&mut self, expected: &str) {
         self.log_error(ParserErrorKind::UnexpectedToken {
             expected: expected.to_string(),
             found: self.current_token(),
         });
 
         self.next_token();
-        log_token(self, "consume token", false);
     }
 
-    /// Log error information on encountering an unexpected token by providing the expected token.
-    fn log_unexpected_token(&mut self, expected: TokenType) {
-        self.log_error(ParserErrorKind::UnexpectedToken {
+    /// Log error information when an expected token is missing.
+    fn log_missing_token(&mut self, expected: &str) {
+        self.log_error(ParserErrorKind::MissingToken {
             expected: expected.to_string(),
-            found: self.current_token(),
         });
 
         self.next_token();
-        log_token(self, "consume token", false);
+    }
+
+    /// Log error information about an unmatched delimiter.
+    fn log_unmatched_delimiter(&mut self, expected: Delimiter) {
+        self.log_error(ParserErrorKind::UnmatchedDelimiter {
+            expected: format!("{:?}", expected),
+        });
+
+        self.next_token();
     }
 
     /// Retrieve a list of any errors that occurred during parsing.
@@ -957,17 +869,8 @@ impl Parser {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // GETTERS
+    // PRECEDENCE RETRIEVAL
     ///////////////////////////////////////////////////////////////////////////
-
-    /// Get the token at the current index in the `TokenStream`.
-    fn current_token(&self) -> Option<Token> {
-        if self.current < self.stream.tokens().len() {
-            self.stream.tokens().get(self.current).cloned()
-        } else {
-            Some(Token::EOF)
-        }
-    }
 
     /// Retrieve the precedence for a given token (operator), considering the current context.
     /// If the current context is `ParserContent::FieldAccess`, the precedence for `Token::Dot`
@@ -1048,26 +951,6 @@ impl Parser {
             | Token::PercentEquals { .. } => Precedence::CompoundAssignment,
             Token::Equals { .. } => Precedence::Assignment,
             _ => *self.precedences.get(token).unwrap_or(&Precedence::Lowest),
-        }
-    }
-
-    /// Peek at the token `num_tokens` ahead of the token at the current index in the `TokenStream`.
-    fn peek_ahead_by(&self, num_tokens: usize) -> Option<Token> {
-        let i = self.current + num_tokens;
-
-        if i < self.stream.tokens().len() {
-            self.stream.tokens().get(i).cloned()
-        } else {
-            None
-        }
-    }
-
-    /// Peek at the token `num_tokens` behind the token at the current index in the `TokenStream`.
-    fn peek_behind_by(&self, num_tokens: usize) -> Option<Token> {
-        if self.current >= num_tokens {
-            self.stream.tokens().get(self.current - num_tokens).cloned()
-        } else {
-            None
         }
     }
 

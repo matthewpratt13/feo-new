@@ -3,14 +3,13 @@ use crate::{
         BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier,
         Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
 use super::{
     collection,
     parse::{ParseConstruct, ParseDefinition},
-    test_utils::log_token,
     Parser,
 };
 
@@ -20,21 +19,25 @@ impl ParseDefinition for FunctionItem {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<FunctionItem, ErrorsEmitted> {
-        log_token(parser, "enter `FunctionItem::parse()`", true);
-
-        let kw_func = parser.expect_keyword(TokenType::Func)?;
+        let kw_func = if let Some(Token::Func { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::Func)
+        } else {
+            parser.log_unexpected_token("`func`");
+            Err(ErrorsEmitted)
+        }?;
 
         let function_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_str("identifier");
+            parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
         }?;
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
             Ok(Delimiter::LParen)
         } else {
-            parser.log_unexpected_token(TokenType::LParen);
+            parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)
         }?;
 
@@ -44,15 +47,13 @@ impl ParseDefinition for FunctionItem {
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RParen,
-            });
+            parser.log_missing_token("`)`");
+            parser.log_unmatched_delimiter(open_paren.clone());
             Err(ErrorsEmitted)
         }?;
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
             parser.next_token();
-            log_token(parser, "consume token", false);
 
             let ty = Type::parse(parser)?;
             Some(Box::new(ty))
@@ -65,8 +66,6 @@ impl ParseDefinition for FunctionItem {
         } else {
             None
         };
-
-        log_token(parser, "exit `FunctionItem::parse()`", true);
 
         Ok(FunctionItem {
             attributes_opt,
@@ -84,13 +83,10 @@ impl ParseDefinition for FunctionItem {
 
 impl FunctionOrMethodParam {
     pub(crate) fn parse(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
-        log_token(parser, "enter `FunctionOrMethodParam::parse()`", true);
-
         let token = parser.current_token();
 
         let prefix_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = token {
             parser.next_token();
-            log_token(parser, "consume token", false);
 
             match token {
                 Some(Token::Ampersand { .. }) => Some(ReferenceOp::Borrow),
@@ -104,7 +100,6 @@ impl FunctionOrMethodParam {
         let param = match parser.current_token() {
             Some(Token::SelfKeyword { .. }) => {
                 parser.next_token();
-                log_token(parser, "consume token", false);
 
                 let self_param = SelfParam {
                     prefix_opt,
@@ -116,7 +111,11 @@ impl FunctionOrMethodParam {
             Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
                 let param_name = parser.get_identifier_patt()?;
 
-                parser.expect_separator(TokenType::Colon)?;
+                match parser.next_token() {
+                    Some(Token::Colon { .. }) => (),
+                    Some(_) => parser.log_unexpected_token("`:`"),
+                    None => parser.log_missing_token("`:`"),
+                }
 
                 let param_type = Box::new(Type::parse(parser)?);
 
@@ -129,12 +128,11 @@ impl FunctionOrMethodParam {
             }
 
             _ => {
-                parser.log_unexpected_str("`self` or identifier");
+                parser.log_unexpected_token("`self` or identifier");
                 Err(ErrorsEmitted)
             }
         };
 
-        log_token(parser, "exit `FunctionOrMethodParam::parse()`", true);
         param
     }
 }

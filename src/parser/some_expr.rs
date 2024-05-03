@@ -1,19 +1,25 @@
 use crate::{
-    ast::{Expression, GroupedExpr, SomeExpr},
+    ast::{Expression, GroupedExpr, Keyword, SomeExpr},
     error::ErrorsEmitted,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use super::{parse::ParseConstruct, Parser};
 
 impl ParseConstruct for SomeExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let kw_some = parser.expect_keyword(TokenType::Some)?;
+        let kw_some = if let Some(Token::Some { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Keyword::Some)
+        } else {
+            parser.log_unexpected_token("`Some`");
+            Err(ErrorsEmitted)
+        }?;
 
         let expression = if let Some(Token::LParen { .. }) = parser.current_token() {
             Ok(Box::new(GroupedExpr::parse(parser)?))
         } else {
-            parser.log_unexpected_token(TokenType::LParen);
+            parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)
         }?;
 
@@ -32,7 +38,7 @@ mod tests {
 
     #[test]
     fn parse_some_expr() -> Result<(), ()> {
-        let input = r#"Some(foo);"#;
+        let input = r#"Some(foo)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

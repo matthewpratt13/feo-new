@@ -38,7 +38,7 @@ impl ParseOperation for BinaryExpr {
             TokenType::DblGreaterThan => Ok(BinaryOp::ShiftRight),
             TokenType::DblAsterisk => Ok(BinaryOp::Exponentiation),
             _ => {
-                parser.log_unexpected_str("binary operator");
+                parser.log_unexpected_token("binary operator");
                 Err(ErrorsEmitted)
             }
         }?;
@@ -86,7 +86,7 @@ impl ParseOperation for ComparisonExpr {
             TokenType::LessThanEquals => Ok(ComparisonOp::LessEqual),
             TokenType::GreaterThanEquals => Ok(ComparisonOp::GreaterEqual),
             _ => {
-                parser.log_unexpected_str("comparison operator");
+                parser.log_unexpected_token("comparison operator");
                 Err(ErrorsEmitted)
             }
         }?;

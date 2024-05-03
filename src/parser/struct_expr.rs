@@ -1,19 +1,18 @@
 use crate::{
     ast::{Delimiter, Expression, Identifier, OuterAttr, PathExpr, StructExpr, StructField},
-    error::{ErrorsEmitted, ParserErrorKind},
-    token::{Token, TokenType},
+    error::ErrorsEmitted,
+    token::Token,
 };
 
-use super::{collection, test_utils::log_token, Parser, Precedence};
+use super::{collection, Parser, Precedence};
 
 impl StructExpr {
     pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<Expression, ErrorsEmitted> {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
             parser.next_token();
-            log_token(parser, "consume token", true);
             Ok(Delimiter::LBrace)
         } else {
-            parser.log_unexpected_token(TokenType::LBrace);
+            parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
         }?;
 
@@ -22,9 +21,8 @@ impl StructExpr {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
-            parser.log_error(ParserErrorKind::MissingDelimiter {
-                delim: TokenType::RBrace,
-            });
+            parser.log_missing_token("`}`");
+            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -46,11 +44,15 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
         parser.next_token();
         Ok(Identifier(name))
     } else {
-        parser.expect_delimiter(TokenType::RBrace)?;
+        parser.log_missing_token("identifier");
         Err(ErrorsEmitted)
     }?;
 
-    parser.expect_separator(TokenType::Colon)?;
+    match parser.next_token() {
+        Some(Token::Colon { .. }) => (),
+        Some(_) => parser.log_unexpected_token("`:`"),
+        None => parser.log_missing_token("`:`"),
+    }
 
     let field_value = parser.parse_expression(Precedence::Lowest)?;
 
