@@ -6,6 +6,9 @@ use crate::{
 
 use super::{item::ParseAssociatedItem, Parser, Precedence};
 
+/// Helper function that collects a generic element into a vector based on the input function.
+/// Also takes in a `Delimiter` (for reusability) to distinguish the outer limits of the collection.
+/// Replaces the same iterative code in the respective parsing functions.
 pub(crate) fn get_collection<T>(
     parser: &mut Parser,
     f: fn(&mut Parser) -> Result<T, ErrorsEmitted>,
@@ -91,6 +94,9 @@ pub(crate) fn get_collection<T>(
     }
 }
 
+/// Helper function that collects expressions into a vector.
+/// Also takes in a `Delimiter` (for reusability) to distinguish the outer limits of the collection.
+/// Replaces the same iterative code in the respective expression parsing functions.
 pub(crate) fn get_expressions(
     parser: &mut Parser,
     precedence: Precedence,
@@ -152,6 +158,9 @@ pub(crate) fn get_expressions(
     }
 }
 
+/// Helper function that collects associated items (items that implement `ParseAssociatedItem`)
+/// into a vector.
+/// Replaces the same iterative code in the respective item parsing functions.
 pub(crate) fn get_associated_items<T: ParseAssociatedItem>(
     parser: &mut Parser,
 ) -> Result<Option<Vec<T>>, ErrorsEmitted> {
@@ -175,6 +184,8 @@ pub(crate) fn get_associated_items<T: ParseAssociatedItem>(
     }
 }
 
+/// Helper function that parses item attributes into a vector of generic attributes.
+/// Replaces the same iterative code in the respective item parsing functions.
 pub(crate) fn get_attributes<T>(
     parser: &mut Parser,
     f: fn(&Parser) -> Option<T>,
