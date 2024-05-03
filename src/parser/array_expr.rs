@@ -36,8 +36,7 @@ impl ArrayExpr {
             }
         }
 
-        let close_bracket = if let Some(Token::RBracket { .. }) = parser.current_token() {
-            parser.next_token();
+        let close_bracket = if let Some(Token::RBracket { .. }) = parser.next_token() {
             Ok(Delimiter::RBracket)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {

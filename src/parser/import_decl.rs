@@ -39,7 +39,6 @@ impl ImportTree {
 
         while let Some(Token::DblColon { .. }) = parser.current_token() {
             parser.next_token();
-
             let next_segment = PathSegment::parse(parser)?;
             path_segments.push(next_segment);
         }
@@ -55,8 +54,7 @@ impl ImportTree {
             let kw_as = Keyword::As;
             parser.next_token();
 
-            let id = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
-                parser.next_token();
+            let id = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
                 Ok(Identifier(name))
             } else {
                 parser.log_unexpected_str("identifier");

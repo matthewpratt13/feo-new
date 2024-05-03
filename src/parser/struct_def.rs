@@ -3,7 +3,7 @@ use crate::{
         Delimiter, Identifier, OuterAttr, StructDef, StructDefField, TupleStructDef,
         TupleStructDefField, Type, Visibility,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
 
@@ -17,8 +17,7 @@ impl ParseDefinition for StructDef {
     ) -> Result<StructDef, ErrorsEmitted> {
         let kw_struct = parser.expect_keyword(TokenType::Struct)?;
 
-        let struct_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
-            parser.next_token();
+        let struct_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_str("identifier");
@@ -34,7 +33,14 @@ impl ParseDefinition for StructDef {
 
         let fields = collection::get_collection_braces_comma(parser, StructDefField::parse)?;
 
-        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RBrace,
+            });
+            Err(ErrorsEmitted)
+        }?;
 
         Ok(StructDef {
             attributes_opt,
@@ -79,7 +85,14 @@ impl ParseDefinition for TupleStructDef {
 
         let fields = collection::get_collection_parens_comma(parser, TupleStructDefField::parse)?;
 
-        let close_paren = parser.expect_delimiter(TokenType::RParen)?;
+        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
+            Ok(Delimiter::RParen)
+        } else {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RParen,
+            });
+            Err(ErrorsEmitted)
+        }?;
 
         parser.expect_separator(TokenType::Semicolon)?;
 

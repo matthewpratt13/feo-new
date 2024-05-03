@@ -19,19 +19,14 @@ impl FunctionItem {
 
         let kw_func = parser.expect_keyword(TokenType::Func)?;
 
-        let function_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
-            parser.next_token();
-            log_token(parser, "consume token", false);
-
+        let function_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
-            parser.next_token();
-            log_token(parser, "consume token", false);
+        let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token(TokenType::LParen);
@@ -41,7 +36,6 @@ impl FunctionItem {
         let params = collection::get_collection_parens_comma(parser, FunctionOrMethodParam::parse)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
-            log_token(parser, "consume token", false);
             Ok(Delimiter::RParen)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -135,8 +129,6 @@ impl FunctionOrMethodParam {
             }
 
             _ => {
-                log_token(parser, "foo", true);
-
                 parser.log_unexpected_str("`self` or identifier");
                 Err(ErrorsEmitted)
             }

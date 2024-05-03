@@ -19,8 +19,7 @@ impl StructExpr {
 
         let fields = collection::get_collection_braces_comma(parser, parse_struct_field)?;
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
-            parser.next_token();
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {

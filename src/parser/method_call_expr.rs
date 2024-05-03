@@ -13,7 +13,7 @@ impl MethodCallExpr {
             ErrorsEmitted
         })?;
 
-        let token = parser.current_token();
+        let token = parser.next_token();
 
         let method_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
@@ -25,10 +25,7 @@ impl MethodCallExpr {
             Err(ErrorsEmitted)
         }?;
 
-        parser.next_token();
-
-        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
-            parser.next_token();
+        let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token(TokenType::LParen);

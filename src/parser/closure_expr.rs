@@ -8,10 +8,10 @@ use super::{Parser, Precedence};
 
 impl ClosureExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let token = parser.next_token();
-
-        let params = match token {
+        let params = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
+                parser.next_token();
+
                 let mut vec: Vec<ClosureParam> = Vec::new();
 
                 loop {
@@ -50,7 +50,10 @@ impl ClosureExpr {
 
                 Ok(ClosureParams::Some(vec))
             }
-            Some(Token::DblPipe { .. }) => Ok(ClosureParams::None),
+            Some(Token::DblPipe { .. }) => {
+                parser.next_token();
+                Ok(ClosureParams::None)
+            }
             _ => {
                 parser.log_unexpected_str("`|` or `||`");
                 Err(ErrorsEmitted)

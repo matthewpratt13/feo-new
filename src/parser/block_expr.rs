@@ -36,8 +36,7 @@ impl BlockExpr {
             }
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
-            parser.next_token();
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {

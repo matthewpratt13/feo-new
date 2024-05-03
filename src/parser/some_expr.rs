@@ -17,8 +17,6 @@ impl SomeExpr {
             Err(ErrorsEmitted)
         }?;
 
-        parser.expect_separator(TokenType::Semicolon)?;
-
         let expr = SomeExpr {
             kw_some,
             expression,

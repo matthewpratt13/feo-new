@@ -21,16 +21,14 @@ impl ParseDefinition for TraitDef {
     ) -> Result<TraitDef, ErrorsEmitted> {
         let kw_trait = parser.expect_keyword(TokenType::Trait)?;
 
-        let trait_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
-            parser.next_token();
+        let trait_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            parser.next_token();
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);

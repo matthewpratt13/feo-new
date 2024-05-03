@@ -33,12 +33,14 @@ impl ParseDefinition for EnumDef {
             Err(ErrorsEmitted)
         }?;
 
+        // TODO: replace with `while` loop
         loop {
             if let Some(Token::RBrace { .. }) = parser.current_token() {
                 break;
             }
 
-            let attributes_opt = collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
+            let attributes_opt =
+                collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
 
             let variant = EnumVariant::parse(parser, attributes_opt)?;
             variants.push(variant);
@@ -57,7 +59,14 @@ impl ParseDefinition for EnumDef {
             }
         }
 
-        let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
+            Ok(Delimiter::RBrace)
+        } else {
+            parser.log_error(ParserErrorKind::MissingDelimiter {
+                delim: TokenType::RBrace,
+            });
+            Err(ErrorsEmitted)
+        }?;
 
         Ok(EnumDef {
             attributes_opt,

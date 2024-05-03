@@ -1,10 +1,10 @@
 use crate::{
-    ast::{Delimiter, Expression, Keyword, ResultExpr},
+    ast::{Expression, GroupedExpr, Keyword, ResultExpr},
     error::ErrorsEmitted,
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::Parser;
 
 impl ResultExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
@@ -19,20 +19,16 @@ impl ResultExpr {
             Err(ErrorsEmitted)
         }?;
 
-        if let Some(Token::LParen { .. }) = parser.next_token() {
-            Ok(Delimiter::LParen)
+        let expression = if let Some(Token::LParen { .. }) = parser.current_token() {
+            Ok(Box::new(GroupedExpr::parse(parser)?))
         } else {
             parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
-        let expression = parser.parse_expression(Precedence::Lowest)?;
-
-        parser.expect_delimiter(TokenType::RParen)?;
-
         let expr = ResultExpr {
             kw_ok_or_err,
-            expression: Box::new(expression),
+            expression,
         };
 
         Ok(Expression::ResultExpr(expr))
