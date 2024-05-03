@@ -7,7 +7,7 @@ use crate::{
 use super::{item::ParseAssociatedItem, Parser, Precedence};
 
 /// Helper function that collects a generic element into a vector based on the input function.
-/// Also takes in a `Delimiter` (for reusability) to distinguish the outer limits of the collection.
+/// Takes in a `Delimiter` (for reusability) to distinguish the outer limits of the collection.
 /// Replaces the same iterative code in the respective parsing functions.
 pub(crate) fn get_collection<T>(
     parser: &mut Parser,
@@ -95,7 +95,7 @@ pub(crate) fn get_collection<T>(
 }
 
 /// Helper function that collects expressions into a vector.
-/// Also takes in a `Delimiter` (for reusability) to distinguish the outer limits of the collection.
+/// Takes in a `Delimiter` (for reusability) to distinguish the outer limits of the collection.
 /// Replaces the same iterative code in the respective expression parsing functions.
 pub(crate) fn get_expressions(
     parser: &mut Parser,
