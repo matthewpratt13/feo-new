@@ -16,7 +16,7 @@ impl ArrayExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let elements =
+        let elements_opt =
             collection::get_expressions(parser, Precedence::Lowest, Delimiter::RBracket)?;
 
         let close_bracket = if let Some(Token::RBracket { .. }) = parser.next_token() {
@@ -30,13 +30,7 @@ impl ArrayExpr {
 
         let expr = ArrayExpr {
             open_bracket,
-            elements_opt: {
-                if elements.is_empty() {
-                    None
-                } else {
-                    Some(elements)
-                }
-            },
+            elements_opt,
             close_bracket,
         };
 

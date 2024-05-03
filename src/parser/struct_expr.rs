@@ -17,7 +17,7 @@ impl StructExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let fields = collection::get_collection(parser, parse_struct_field, Delimiter::RBrace)?;
+        let fields_opt = collection::get_collection(parser, parse_struct_field, Delimiter::RBrace)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -31,13 +31,7 @@ impl StructExpr {
         let expr = StructExpr {
             path,
             open_brace,
-            fields_opt: {
-                if fields.is_empty() {
-                    None
-                } else {
-                    Some(fields)
-                }
-            },
+            fields_opt,
             close_brace,
         };
 

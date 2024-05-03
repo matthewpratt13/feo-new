@@ -14,7 +14,12 @@ impl ClosureExpr {
 
                 let vec = collection::get_collection(parser, parse_closure_param, Delimiter::Pipe)?;
 
-                Ok(ClosureParams::Some(vec))
+                if vec.is_some() {
+                    Ok(ClosureParams::Some(vec.unwrap()))
+                } else {
+                    parser.log_unexpected_str("closure parameters");
+                    Err(ErrorsEmitted)
+                }
             }
             Some(Token::DblPipe { .. }) => {
                 parser.next_token();

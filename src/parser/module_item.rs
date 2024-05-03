@@ -30,7 +30,7 @@ impl ModuleItem {
 
         let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
-        let items = collection::get_associated_items::<Item>(parser)?;
+        let items_opt = collection::get_associated_items::<Item>(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -48,13 +48,7 @@ impl ModuleItem {
             module_name,
             open_brace,
             inner_attributes_opt,
-            items_opt: {
-                if items.is_empty() {
-                    None
-                } else {
-                    Some(items)
-                }
-            },
+            items_opt,
             close_brace,
         })
     }

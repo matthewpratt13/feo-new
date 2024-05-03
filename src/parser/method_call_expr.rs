@@ -32,7 +32,7 @@ impl MethodCallExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let args = collection::get_expressions(parser, Precedence::Lowest, Delimiter::RParen)?;
+        let args_opt = collection::get_expressions(parser, Precedence::Lowest, Delimiter::RParen)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
@@ -47,13 +47,7 @@ impl MethodCallExpr {
             receiver: Box::new(receiver),
             method_name,
             open_paren,
-            args_opt: {
-                if args.is_empty() {
-                    None
-                } else {
-                    Some(args)
-                }
-            },
+            args_opt,
             close_paren,
         };
 

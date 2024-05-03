@@ -112,7 +112,14 @@ impl PathSubset {
             Err(ErrorsEmitted)
         }?;
 
-        let trees = collection::get_collection(parser, ImportTree::parse, Delimiter::RBrace)?;
+        let trees = if let Some(t) =
+            collection::get_collection(parser, ImportTree::parse, Delimiter::RBrace)?
+        {
+            Ok(t)
+        } else {
+            parser.log_unexpected_str("import trees");
+            Err(ErrorsEmitted)
+        }?;
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 

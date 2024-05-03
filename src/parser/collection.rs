@@ -10,7 +10,7 @@ pub(crate) fn get_collection<T>(
     parser: &mut Parser,
     f: fn(&mut Parser) -> Result<T, ErrorsEmitted>,
     close_delimiter: Delimiter,
-) -> Result<Vec<T>, ErrorsEmitted> {
+) -> Result<Option<Vec<T>>, ErrorsEmitted> {
     let mut collection: Vec<T> = Vec::new();
 
     match close_delimiter {
@@ -85,14 +85,17 @@ pub(crate) fn get_collection<T>(
         }
     }
 
-    Ok(collection)
+    match collection.is_empty() {
+        true => Ok(None),
+        false => Ok(Some(collection)),
+    }
 }
 
 pub(crate) fn get_expressions(
     parser: &mut Parser,
     precedence: Precedence,
     close_delimiter: Delimiter,
-) -> Result<Vec<Expression>, ErrorsEmitted> {
+) -> Result<Option<Vec<Expression>>, ErrorsEmitted> {
     let mut expressions: Vec<Expression> = Vec::new();
 
     match close_delimiter {
@@ -143,12 +146,15 @@ pub(crate) fn get_expressions(
         }
     }
 
-    Ok(expressions)
+    match expressions.is_empty() {
+        true => Ok(None),
+        false => Ok(Some(expressions)),
+    }
 }
 
 pub(crate) fn get_associated_items<T: ParseAssociatedItem>(
     parser: &mut Parser,
-) -> Result<Vec<T>, ErrorsEmitted> {
+) -> Result<Option<Vec<T>>, ErrorsEmitted> {
     let mut items: Vec<T> = Vec::new();
 
     while !matches!(
@@ -163,7 +169,10 @@ pub(crate) fn get_associated_items<T: ParseAssociatedItem>(
         items.push(item);
     }
 
-    Ok(items)
+    match items.is_empty() {
+        true => Ok(None),
+        false => Ok(Some(items)),
+    }
 }
 
 pub(crate) fn get_attributes<T>(

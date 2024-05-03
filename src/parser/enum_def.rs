@@ -131,6 +131,7 @@ impl EnumVariantStruct {
 
         let mut fields: Vec<(Identifier, Type)> = Vec::new();
 
+        // TODO: replace with `while loop`
         loop {
             if let Some(Token::RBrace { .. }) = parser.current_token() {
                 break;
@@ -198,7 +199,13 @@ impl EnumVariantTuple {
             Err(ErrorsEmitted)
         }?;
 
-        let element_types = collection::get_collection(parser, Type::parse, Delimiter::RParen)?;
+        let element_types =
+            if let Some(t) = collection::get_collection(parser, Type::parse, Delimiter::RParen)? {
+                Ok(t)
+            } else {
+                parser.log_unexpected_str("type");
+                Err(ErrorsEmitted)
+            }?;
 
         let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 

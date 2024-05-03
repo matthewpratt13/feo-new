@@ -33,11 +33,8 @@ impl FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        let params = collection::get_collection(
-            parser,
-            FunctionOrMethodParam::parse,
-            Delimiter::RParen,
-        )?;
+        let params_opt =
+            collection::get_collection(parser, FunctionOrMethodParam::parse, Delimiter::RParen)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
@@ -72,13 +69,7 @@ impl FunctionItem {
             kw_func,
             function_name,
             open_paren,
-            params_opt: {
-                if params.is_empty() {
-                    None
-                } else {
-                    Some(params)
-                }
-            },
+            params_opt,
             close_paren,
             return_type_opt,
             block_opt,

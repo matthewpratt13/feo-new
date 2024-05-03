@@ -31,7 +31,8 @@ impl ParseDefinition for StructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let fields = collection::get_collection(parser, StructDefField::parse, Delimiter::RBrace)?;
+        let fields_opt =
+            collection::get_collection(parser, StructDefField::parse, Delimiter::RBrace)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -48,13 +49,7 @@ impl ParseDefinition for StructDef {
             kw_struct,
             struct_name,
             open_brace,
-            fields_opt: {
-                if fields.is_empty() {
-                    None
-                } else {
-                    Some(fields)
-                }
-            },
+            fields_opt,
             close_brace,
         })
     }
@@ -83,7 +78,7 @@ impl ParseDefinition for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let fields =
+        let fields_opt =
             collection::get_collection(parser, TupleStructDefField::parse, Delimiter::RParen)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
@@ -103,13 +98,7 @@ impl ParseDefinition for TupleStructDef {
             kw_struct,
             struct_name,
             open_paren,
-            fields_opt: {
-                if fields.is_empty() {
-                    None
-                } else {
-                    Some(fields)
-                }
-            },
+            fields_opt,
             close_paren,
         })
     }

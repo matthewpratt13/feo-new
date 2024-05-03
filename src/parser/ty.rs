@@ -3,7 +3,7 @@ use crate::{
         Delimiter, FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType,
         SelfType, Type,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
 
@@ -46,7 +46,16 @@ impl Type {
                     parser.next_token();
                     Ok(Type::UnitType)
                 } else {
-                    let types = collection::get_collection(parser, Type::parse, Delimiter::RParen)?;
+                    let types = if let Some(t) =
+                        collection::get_collection(parser, Type::parse, Delimiter::RParen)?
+                    {
+                        Ok(t)
+                    } else {
+                        parser.log_error(ParserErrorKind::TokenNotFound {
+                            expected: "type".to_string(),
+                        });
+                        Err(ErrorsEmitted)
+                    }?;
 
                     if let Some(Token::RParen { .. }) = parser.current_token() {
                         parser.next_token();
@@ -115,13 +124,15 @@ impl Type {
                     params.push(param);
                 }
 
-                let subsequent_params = &mut collection::get_collection(
+                let subsequent_params = collection::get_collection(
                     parser,
                     FunctionOrMethodParam::parse,
                     Delimiter::RParen,
                 )?;
 
-                params.append(subsequent_params);
+                if subsequent_params.is_some() {
+                    params.append(&mut subsequent_params.unwrap())
+                };
 
                 if let Some(Token::RParen { .. }) = parser.current_token() {
                     parser.next_token();

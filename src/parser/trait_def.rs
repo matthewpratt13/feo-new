@@ -37,7 +37,7 @@ impl ParseDefinition for TraitDef {
 
         let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
-        let trait_items = collection::get_associated_items::<TraitDefItem>(parser)?;
+        let trait_items_opt = collection::get_associated_items::<TraitDefItem>(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -55,13 +55,7 @@ impl ParseDefinition for TraitDef {
             trait_name,
             open_brace,
             inner_attributes_opt,
-            trait_items_opt: {
-                if trait_items.is_empty() {
-                    None
-                } else {
-                    Some(trait_items)
-                }
-            },
+            trait_items_opt,
             close_brace,
         })
     }

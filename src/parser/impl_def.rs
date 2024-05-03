@@ -31,7 +31,7 @@ impl ParseDefinition for InherentImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let associated_items = collection::get_associated_items::<InherentImplItem>(parser)?;
+        let associated_items_opt = collection::get_associated_items::<InherentImplItem>(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -47,13 +47,7 @@ impl ParseDefinition for InherentImplDef {
             kw_impl,
             nominal_type,
             open_brace,
-            associated_items_opt: {
-                if associated_items.is_empty() {
-                    None
-                } else {
-                    Some(associated_items)
-                }
-            },
+            associated_items_opt,
             close_brace,
         })
     }
@@ -95,7 +89,7 @@ impl ParseDefinition for TraitImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let associated_items = collection::get_associated_items::<TraitImplItem>(parser)?;
+        let associated_items_opt = collection::get_associated_items::<TraitImplItem>(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -113,13 +107,7 @@ impl ParseDefinition for TraitImplDef {
             kw_for,
             implementing_type,
             open_brace,
-            associated_items_opt: {
-                if associated_items.is_empty() {
-                    None
-                } else {
-                    Some(associated_items)
-                }
-            },
+            associated_items_opt,
             close_brace,
         })
     }
