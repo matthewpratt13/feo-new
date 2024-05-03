@@ -7,10 +7,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{collection, test_utils::log_token, Parser};
+use super::{collection, item::ParseItem, test_utils::log_token, Parser};
 
-impl FunctionItem {
-    pub(crate) fn parse(
+impl ParseItem for FunctionItem {
+    fn parse(
         parser: &mut Parser,
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,

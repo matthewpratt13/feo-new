@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     collection,
-    item::{ParseAssociatedItem, ParseDeclaration},
+    item::{ParseAssociatedItem, ParseDeclaration, ParseItem},
     ParseDefinition, Parser,
 };
 

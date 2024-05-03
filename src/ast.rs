@@ -1,6 +1,6 @@
 //! # AST
 //!
-//! Contains the different nodes that make up the abstract syntax tree, and the tokens
+//! Contains the different nodes that make up the abstract syntax tree (AST) and the tokens
 //! within those nodes. The primary nodes are `Expression`, `Item` and `Statement`.
 
 mod expression;

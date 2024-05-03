@@ -1,9 +1,8 @@
 //! # Lexer
 //!
-//! Feo's lexer.
-//! This lexer tokenizes identifiers (sequences of alphabetic characters), keywords numbers,
+//! Tokenizes identifiers (sequences of alphabetic characters), keywords, numbers,
 //! hash literals, static byte arrays, character and string literals, delimiters, doc comments
-//! and punctuation. It ignores ordinary comments, and it stops tokenizing when it reaches
+//! and punctuation. It ignores ordinary comments and stops tokenizing when it reaches
 //! the end of the input string.
 
 use std::{iter::Peekable, str::Chars};

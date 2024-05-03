@@ -97,7 +97,7 @@ use crate::{
 
 pub use self::precedence::Precedence;
 use self::{
-    item::{ParseDeclaration, ParseDefinition},
+    item::{ParseDeclaration, ParseDefinition, ParseItem},
     test_utils::log_token,
 };
 

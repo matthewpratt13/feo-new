@@ -4,10 +4,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{collection, Parser};
+use super::{collection, item::ParseItem, Parser};
 
-impl ModuleItem {
-    pub(crate) fn parse(
+impl ParseItem for ModuleItem {
+    fn parse(
         parser: &mut Parser,
         outer_attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
@@ -30,7 +30,20 @@ impl ModuleItem {
 
         let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
-        let items_opt = collection::get_associated_items::<Item>(parser)?;
+        let mut items: Vec<Item> = Vec::new();
+
+        while !matches!(
+            parser.current_token(),
+            Some(Token::RBrace { .. } | Token::EOF)
+        ) {
+            let attributes_opt =
+                collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
+
+            let item_visibility = Visibility::visibility(parser)?;
+
+            let item = Item::parse(parser, attributes_opt, item_visibility)?;
+            items.push(item);
+        }
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -48,7 +61,12 @@ impl ModuleItem {
             module_name,
             open_brace,
             inner_attributes_opt,
-            items_opt,
+            items_opt: {
+                match items.is_empty() {
+                    true => None,
+                    false => Some(items),
+                }
+            },
             close_brace,
         })
     }
