@@ -28,22 +28,7 @@ impl ParseDefinition for ModuleItem {
             Err(ErrorsEmitted)
         }?;
 
-        let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
-
-        let mut items: Vec<Item> = Vec::new();
-
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RBrace { .. } | Token::EOF)
-        ) {
-            let attributes_opt =
-                collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
-
-            let item_visibility = Visibility::visibility(parser)?;
-
-            let item = Item::parse(parser, attributes_opt, item_visibility)?;
-            items.push(item);
-        }
+        let (inner_attributes_opt, items) = parse_item(parser)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -70,6 +55,26 @@ impl ParseDefinition for ModuleItem {
             close_brace,
         })
     }
+}
+
+fn parse_item(parser: &mut Parser) -> Result<(Option<Vec<InnerAttr>>, Vec<Item>), ErrorsEmitted> {
+    let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
+
+    let mut items: Vec<Item> = Vec::new();
+
+    while !matches!(
+        parser.current_token(),
+        Some(Token::RBrace { .. } | Token::EOF)
+    ) {
+        let attributes_opt = collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
+
+        let item_visibility = Visibility::visibility(parser)?;
+
+        let item = Item::parse(parser, attributes_opt, item_visibility)?;
+        items.push(item);
+    }
+    
+    Ok((inner_attributes_opt, items))
 }
 
 #[cfg(test)]

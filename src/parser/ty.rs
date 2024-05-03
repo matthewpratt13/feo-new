@@ -41,124 +41,9 @@ impl Type {
             Some(Token::StrType { .. }) => Ok(Type::Str(PrimitiveType::Str)),
             Some(Token::CharType { .. }) => Ok(Type::Char(PrimitiveType::Char)),
             Some(Token::BoolType { .. }) => Ok(Type::Bool(PrimitiveType::Bool)),
-            Some(Token::LParen { .. }) => {
-                if let Some(Token::RParen { .. }) = parser.current_token() {
-                    parser.next_token();
-                    Ok(Type::UnitType)
-                } else {
-                    let types = if let Some(t) =
-                        collection::get_collection(parser, Type::parse, Delimiter::RParen)?
-                    {
-                        Ok(t)
-                    } else {
-                        parser.log_error(ParserErrorKind::TokenNotFound {
-                            expected: "type".to_string(),
-                        });
-                        Err(ErrorsEmitted)
-                    }?;
-
-                    if let Some(Token::RParen { .. }) = parser.current_token() {
-                        parser.next_token();
-                    } else {
-                        parser.expect_delimiter(TokenType::RParen)?;
-                    }
-
-                    Ok(Type::Tuple(types))
-                }
-            }
-            Some(Token::LBracket { .. }) => {
-                let ty = Type::parse(parser)?;
-
-                if let Some(Token::Semicolon { .. }) = parser.current_token() {
-                    parser.next_token();
-                } else {
-                    parser.log_unexpected_token(TokenType::Semicolon);
-                }
-
-                let num_elements =
-                    if let Some(Token::UIntLiteral { value, .. }) = parser.next_token() {
-                        Ok(value)
-                    } else {
-                        parser.log_unexpected_str("unsigned integer");
-                        Err(ErrorsEmitted)
-                    }?;
-
-                if let Some(Token::RBracket { .. }) = parser.current_token() {
-                    parser.next_token();
-                } else {
-                    parser.expect_delimiter(TokenType::RBracket)?;
-                }
-
-                Ok(Type::Array {
-                    element_type: Box::new(ty),
-                    num_elements,
-                })
-            }
-            Some(Token::Func { .. }) => {
-                let mut params: Vec<FunctionOrMethodParam> = Vec::new();
-
-                let function_name = if let Some(Token::Identifier { name, .. }) = token {
-                    Ok(Identifier(name))
-                } else {
-                    parser.log_unexpected_str("identifier");
-                    Err(ErrorsEmitted)
-                }?;
-
-                if let Some(Token::LBrace { .. }) = parser.current_token() {
-                    parser.next_token();
-                } else {
-                    parser.log_unexpected_token(TokenType::LBrace);
-                };
-
-                if let Some(Token::LParen { .. }) = parser.current_token() {
-                    parser.next_token();
-                } else {
-                    parser.log_unexpected_token(TokenType::LParen);
-                }
-
-                // `&self` and `&mut self` can only occur as the first parameter in a method
-                if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
-                    parser.current_token()
-                {
-                    let param = FunctionOrMethodParam::parse(parser)?;
-                    params.push(param);
-                }
-
-                let subsequent_params = collection::get_collection(
-                    parser,
-                    FunctionOrMethodParam::parse,
-                    Delimiter::RParen,
-                )?;
-
-                if subsequent_params.is_some() {
-                    params.append(&mut subsequent_params.unwrap())
-                };
-
-                if let Some(Token::RParen { .. }) = parser.current_token() {
-                    parser.next_token();
-                } else {
-                    parser.expect_delimiter(TokenType::RParen)?;
-                }
-
-                let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token()
-                {
-                    parser.next_token();
-                    Some(Box::new(Type::parse(parser)?))
-                } else {
-                    None
-                };
-
-                Ok(Type::Function {
-                    function_name,
-                    params_opt: {
-                        match params.is_empty() {
-                            true => None,
-                            false => Some(params),
-                        }
-                    },
-                    return_type_opt,
-                })
-            }
+            Some(Token::LParen { .. }) => parse_tuple_type(parser),
+            Some(Token::LBracket { .. }) => parse_array_type(parser),
+            Some(Token::Func { .. }) => parse_function_type(token, parser),
             Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => {
                 let inner_type = Box::new(Type::parse(parser)?);
                 Ok(Type::Reference(inner_type))
@@ -235,20 +120,132 @@ impl Type {
                 Ok(Type::UserDefined(path))
             }
 
-            Some(Token::SelfType { .. }) => {
-                if let Some(Token::DblColon { .. }) = parser.peek_ahead_by(1) {
+            Some(Token::SelfType { .. }) => match parser.peek_ahead_by(1) {
+                Some(Token::DblColon { .. }) => {
                     let path = PathExpr::parse(parser, PathPrefix::SelfType(SelfType))?;
                     Ok(Type::UserDefined(path))
-                } else {
-                    Ok(Type::SelfType(SelfType))
                 }
-            }
+                _ => Ok(Type::SelfType(SelfType)),
+            },
 
             _ => {
                 parser.log_unexpected_str("type annotation");
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
+    let mut params: Vec<FunctionOrMethodParam> = Vec::new();
+
+    let function_name = if let Some(Token::Identifier { name, .. }) = token {
+        Ok(Identifier(name))
+    } else {
+        parser.log_unexpected_str("identifier");
+        Err(ErrorsEmitted)
+    }?;
+
+    if let Some(Token::LBrace { .. }) = parser.current_token() {
+        parser.next_token();
+    } else {
+        parser.log_unexpected_token(TokenType::LBrace);
+    };
+
+    if let Some(Token::LParen { .. }) = parser.current_token() {
+        parser.next_token();
+    } else {
+        parser.log_unexpected_token(TokenType::LParen);
+    }
+
+    // `&self` and `&mut self` can only occur as the first parameter in a method
+    if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = parser.current_token() {
+        let param = FunctionOrMethodParam::parse(parser)?;
+        params.push(param);
+    }
+
+    let subsequent_params =
+        collection::get_collection(parser, FunctionOrMethodParam::parse, Delimiter::RParen)?;
+
+    if subsequent_params.is_some() {
+        params.append(&mut subsequent_params.unwrap())
+    };
+
+    if let Some(Token::RParen { .. }) = parser.current_token() {
+        parser.next_token();
+    } else {
+        parser.expect_delimiter(TokenType::RParen)?;
+    }
+
+    let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
+        parser.next_token();
+        Some(Box::new(Type::parse(parser)?))
+    } else {
+        None
+    };
+
+    Ok(Type::Function {
+        function_name,
+        params_opt: {
+            match params.is_empty() {
+                true => None,
+                false => Some(params),
+            }
+        },
+        return_type_opt,
+    })
+}
+
+fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
+    let ty = Type::parse(parser)?;
+
+    if let Some(Token::Semicolon { .. }) = parser.current_token() {
+        parser.next_token();
+    } else {
+        parser.log_unexpected_token(TokenType::Semicolon);
+    }
+
+    let num_elements = if let Some(Token::UIntLiteral { value, .. }) = parser.next_token() {
+        Ok(value)
+    } else {
+        parser.log_unexpected_str("unsigned integer");
+        Err(ErrorsEmitted)
+    }?;
+
+    if let Some(Token::RBracket { .. }) = parser.current_token() {
+        parser.next_token();
+    } else {
+        parser.expect_delimiter(TokenType::RBracket)?;
+    }
+
+    Ok(Type::Array {
+        element_type: Box::new(ty),
+        num_elements,
+    })
+}
+
+fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
+    if let Some(Token::RParen { .. }) = parser.current_token() {
+        parser.next_token();
+        Ok(Type::UnitType)
+    } else {
+        let types =
+            if let Some(t) = collection::get_collection(parser, Type::parse, Delimiter::RParen)? {
+                Ok(t)
+            } else {
+                parser.log_error(ParserErrorKind::TokenNotFound {
+                    expected: "type".to_string(),
+                });
+                Err(ErrorsEmitted)
+            }?;
+
+        if let Some(Token::RParen { .. }) = parser.current_token() {
+            parser.next_token();
+        } else {
+            parser.expect_delimiter(TokenType::RParen)?;
+        }
+
+        Ok(Type::Tuple(types))
     }
 }
 
