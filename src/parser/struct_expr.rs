@@ -4,7 +4,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{test_utils::log_token, Parser, Precedence};
+use super::{collection, test_utils::log_token, Parser, Precedence};
 
 impl StructExpr {
     pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<Expression, ErrorsEmitted> {
@@ -17,58 +17,9 @@ impl StructExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let mut fields: Vec<StructField> = Vec::new();
+        let fields_opt = collection::get_collection(parser, parse_struct_field, Delimiter::RBrace)?;
 
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RBrace { .. } | Token::EOF)
-        ) {
-            let mut attributes: Vec<OuterAttr> = Vec::new();
-
-            while let Some(oa) = OuterAttr::outer_attr(parser) {
-                attributes.push(oa);
-                parser.next_token();
-            }
-
-            let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
-                parser.next_token();
-                Ok(Identifier(name))
-            } else {
-                parser.expect_delimiter(TokenType::RBrace)?;
-                Err(ErrorsEmitted)
-            }?;
-
-            parser.expect_separator(TokenType::Colon)?;
-
-            let field_value = parser.parse_expression(Precedence::Lowest)?;
-
-            let field = StructField {
-                attributes_opt: {
-                    if attributes.is_empty() {
-                        None
-                    } else {
-                        Some(attributes)
-                    }
-                },
-                field_name,
-                field_value,
-            };
-
-            fields.push(field);
-
-            if let Some(Token::Comma { .. }) = parser.current_token() {
-                parser.next_token();
-            } else if !matches!(
-                parser.current_token(),
-                Some(Token::RBrace { .. } | Token::EOF)
-            ) {
-                parser.log_unexpected_str("`,` or `}`");
-                return Err(ErrorsEmitted);
-            }
-        }
-
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
-            parser.next_token();
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -80,18 +31,36 @@ impl StructExpr {
         let expr = StructExpr {
             path,
             open_brace,
-            fields_opt: {
-                if fields.is_empty() {
-                    None
-                } else {
-                    Some(fields)
-                }
-            },
+            fields_opt,
             close_brace,
         };
 
         Ok(Expression::Struct(expr))
     }
+}
+
+fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted> {
+    let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
+
+    let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
+        parser.next_token();
+        Ok(Identifier(name))
+    } else {
+        parser.expect_delimiter(TokenType::RBrace)?;
+        Err(ErrorsEmitted)
+    }?;
+
+    parser.expect_separator(TokenType::Colon)?;
+
+    let field_value = parser.parse_expression(Precedence::Lowest)?;
+
+    let field = StructField {
+        attributes_opt,
+        field_name,
+        field_value,
+    };
+
+    Ok(field)
 }
 
 // impl TupleStructExpr {

@@ -8,7 +8,8 @@ use super::{Parser, Precedence};
 
 impl LetStmt {
     pub(crate) fn parse(parser: &mut Parser) -> Result<LetStmt, ErrorsEmitted> {
-        let kw_let = if let Some(Token::Let { .. }) = parser.next_token() {
+        let kw_let = if let Some(Token::Let { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Keyword::Let)
         } else {
             parser.log_unexpected_str("`let`");
@@ -24,7 +25,8 @@ impl LetStmt {
             None
         };
 
-        let value_opt = if let Some(Token::Equals { .. }) = parser.next_token() {
+        let value_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
+            parser.next_token();
             let value = parser.parse_expression(Precedence::Lowest)?;
             Some(value)
         } else {

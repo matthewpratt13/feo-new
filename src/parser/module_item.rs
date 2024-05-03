@@ -4,39 +4,31 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::Parser;
+use super::{collection, item::ParseItem, Parser};
 
-impl ModuleItem {
-    pub(crate) fn parse(
+impl ParseItem for ModuleItem {
+    fn parse(
         parser: &mut Parser,
-        outer_attributes: Vec<OuterAttr>,
+        outer_attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ModuleItem, ErrorsEmitted> {
         let kw_module = parser.expect_keyword(TokenType::Module)?;
 
-        let token = parser.next_token();
-
-        let module_name = if let Some(Token::Identifier { name, .. }) = token {
+        let module_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            parser.next_token();
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
 
-        let mut inner_attributes: Vec<InnerAttr> = Vec::new();
-
-        while let Some(ia) = InnerAttr::inner_attr(parser) {
-            inner_attributes.push(ia);
-            parser.next_token();
-        }
+        let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
         let mut items: Vec<Item> = Vec::new();
 
@@ -44,16 +36,12 @@ impl ModuleItem {
             parser.current_token(),
             Some(Token::RBrace { .. } | Token::EOF)
         ) {
-            let mut item_attributes: Vec<OuterAttr> = Vec::new();
-
-            while let Some(oa) = OuterAttr::outer_attr(parser) {
-                item_attributes.push(oa);
-                parser.next_token();
-            }
+            let attributes_opt =
+                collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
 
             let item_visibility = Visibility::visibility(parser)?;
 
-            let item = Item::parse(parser, item_attributes, item_visibility)?;
+            let item = Item::parse(parser, attributes_opt, item_visibility)?;
             items.push(item);
         }
 
@@ -67,29 +55,16 @@ impl ModuleItem {
         }?;
 
         Ok(ModuleItem {
-            outer_attributes_opt: {
-                if outer_attributes.is_empty() {
-                    None
-                } else {
-                    Some(outer_attributes)
-                }
-            },
+            outer_attributes_opt,
             visibility,
             kw_module,
             module_name,
             open_brace,
-            inner_attributes_opt: {
-                if inner_attributes.is_empty() {
-                    None
-                } else {
-                    Some(inner_attributes)
-                }
-            },
+            inner_attributes_opt,
             items_opt: {
-                if items.is_empty() {
-                    None
-                } else {
-                    Some(items)
+                match items.is_empty() {
+                    true => None,
+                    false => Some(items),
                 }
             },
             close_brace,

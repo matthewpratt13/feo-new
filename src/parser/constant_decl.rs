@@ -9,7 +9,7 @@ use super::{item::ParseDeclaration, Parser, Precedence};
 impl ParseDeclaration for ConstantDecl {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ConstantDecl, ErrorsEmitted> {
         let kw_const = parser.expect_keyword(TokenType::Const)?;
@@ -25,8 +25,7 @@ impl ParseDeclaration for ConstantDecl {
 
         let item_type = Box::new(Type::parse(parser)?);
 
-        let value = if let Some(Token::Equals { .. }) = parser.current_token() {
-            parser.next_token();
+        let value = if let Some(Token::Equals { .. }) = parser.next_token() {
             let expr = parser.parse_expression(Precedence::Lowest)?;
             Ok(ValueExpr::try_from(expr).map_err(|e| {
                 parser.log_error(e);
@@ -40,14 +39,7 @@ impl ParseDeclaration for ConstantDecl {
         parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(ConstantDecl {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
-
+            attributes_opt,
             visibility,
             kw_const,
             item_name,

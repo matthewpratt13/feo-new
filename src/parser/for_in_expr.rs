@@ -12,18 +12,18 @@ impl ForInExpr {
 
         let kw_for = parser.expect_keyword(TokenType::For)?;
 
-        let assignee =
-            if let Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) =
-                parser.current_token()
-            {
+        let assignee = match parser.current_token() {
+            Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
                 parser.get_identifier_patt()
-            } else {
+            }
+            _ => {
                 let expression = parser.parse_expression(Precedence::Lowest)?;
                 Pattern::try_from(expression).map_err(|e| {
                     parser.log_error(e);
                     ErrorsEmitted
                 })
-            }?;
+            }
+        }?;
 
         let kw_in = parser.expect_keyword(TokenType::In)?;
 

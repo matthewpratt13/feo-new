@@ -9,7 +9,7 @@ use super::{item::ParseDeclaration, Parser};
 impl ParseDeclaration for AliasDecl {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         _visibility: Visibility,
     ) -> Result<AliasDecl, ErrorsEmitted> {
         let visibility = Visibility::visibility(parser)?;
@@ -33,13 +33,7 @@ impl ParseDeclaration for AliasDecl {
         parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(AliasDecl {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             visibility,
             kw_alias,
             alias_name,

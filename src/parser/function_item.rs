@@ -7,41 +7,36 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{test_utils::log_token, Parser};
+use super::{collection, item::ParseItem, test_utils::log_token, Parser};
 
-impl FunctionItem {
-    pub(crate) fn parse(
+impl ParseItem for FunctionItem {
+    fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<FunctionItem, ErrorsEmitted> {
         log_token(parser, "enter `FunctionItem::parse()`", true);
 
         let kw_func = parser.expect_keyword(TokenType::Func)?;
 
-        let function_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
-            parser.next_token();
-            log_token(parser, "consume token", false);
-
+        let function_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_str("identifier");
             Err(ErrorsEmitted)
         }?;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
-            parser.next_token();
-            log_token(parser, "consume token", false);
+        let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
-        let params_opt = parse_function_params(parser);
+        let params_opt =
+            collection::get_collection(parser, FunctionOrMethodParam::parse, Delimiter::RParen)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
-            log_token(parser, "consume token", false);
             Ok(Delimiter::RParen)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -69,13 +64,7 @@ impl FunctionItem {
         log_token(parser, "exit `FunctionItem::parse()`", true);
 
         Ok(FunctionItem {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             visibility,
             kw_func,
             function_name,
@@ -135,8 +124,6 @@ impl FunctionOrMethodParam {
             }
 
             _ => {
-                log_token(parser, "foo", true);
-
                 parser.log_unexpected_str("`self` or identifier");
                 Err(ErrorsEmitted)
             }
@@ -144,38 +131,6 @@ impl FunctionOrMethodParam {
 
         log_token(parser, "exit `FunctionOrMethodParam::parse()`", true);
         param
-    }
-}
-
-fn parse_function_params(parser: &mut Parser) -> Option<Vec<FunctionOrMethodParam>> {
-    log_token(parser, "enter `parse_function_params()`", true);
-
-    let mut params = Vec::new();
-
-    while !matches!(
-        parser.current_token(),
-        Some(Token::RParen { .. } | Token::EOF)
-    ) {
-        if let Ok(param) = FunctionOrMethodParam::parse(parser) {
-            params.push(param);
-
-            if let Some(Token::Comma { .. }) = parser.current_token() {
-                parser.next_token();
-                log_token(parser, "consume token", false);
-            }
-        }
-
-        if matches!(parser.current_token(), Some(Token::RParen { .. })) {
-            break;
-        }
-    }
-
-    log_token(parser, "exit `parse_function_params()`", true);
-
-    if params.is_empty() {
-        None
-    } else {
-        Some(params)
     }
 }
 
@@ -187,7 +142,7 @@ mod tests {
     fn parse_function_def_without_block() -> Result<(), ()> {
         let input = r#"
         #[modifier]
-        pub func only_owner(&mut parser, mut caller: h160, ref balances: Mapping<u160, u256>)"#;
+        pub func only_owner(&mut self, mut caller: h160, ref balances: Mapping<u160, u256>)"#;
 
         let mut parser = test_utils::get_parser(input, false);
 

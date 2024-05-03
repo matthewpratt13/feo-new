@@ -18,13 +18,12 @@ impl AssignmentExpr {
             let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
             let assignment_op = if let Token::Equals { .. } = operator_token {
+                parser.next_token();
                 Ok(AssignmentOp)
             } else {
                 parser.log_unexpected_str("assignment operator");
                 Err(ErrorsEmitted)
             }?;
-
-            parser.next_token();
 
             let precedence = parser.get_precedence(&operator_token);
 

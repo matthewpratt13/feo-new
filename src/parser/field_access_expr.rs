@@ -13,10 +13,9 @@ impl FieldAccessExpr {
             ErrorsEmitted
         })?;
 
-        let token = parser.current_token();
+        let token = parser.next_token();
 
         let expr = if let Some(Token::Identifier { name, .. }) = token {
-            parser.next_token();
             Ok(FieldAccessExpr {
                 object: Box::new(assignee_expr),
                 field: Identifier(name),

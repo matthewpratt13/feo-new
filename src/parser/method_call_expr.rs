@@ -4,7 +4,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::{collection, Parser, Precedence};
 
 impl MethodCallExpr {
     pub(crate) fn parse(parser: &mut Parser, lhs: Expression) -> Result<Expression, ErrorsEmitted> {
@@ -13,7 +13,7 @@ impl MethodCallExpr {
             ErrorsEmitted
         })?;
 
-        let token = parser.current_token();
+        let token = parser.next_token();
 
         let method_name = if let Some(Token::Identifier { name, .. }) = token {
             Ok(Identifier(name))
@@ -25,17 +25,14 @@ impl MethodCallExpr {
             Err(ErrorsEmitted)
         }?;
 
-        parser.next_token();
-
-        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
-            parser.next_token();
+        let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token(TokenType::LParen);
             Err(ErrorsEmitted)
         }?;
 
-        let args = MethodCallExpr::parse_arguments(parser)?;
+        let args_opt = collection::get_expressions(parser, Precedence::Lowest, Delimiter::RParen)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
@@ -50,35 +47,11 @@ impl MethodCallExpr {
             receiver: Box::new(receiver),
             method_name,
             open_paren,
-            args_opt: {
-                if args.is_empty() {
-                    None
-                } else {
-                    Some(args)
-                }
-            },
+            args_opt,
             close_paren,
         };
 
         Ok(Expression::MethodCall(expr))
-    }
-
-    fn parse_arguments(parser: &mut Parser) -> Result<Vec<Expression>, ErrorsEmitted> {
-        let mut arguments = Vec::new();
-
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RParen { .. } | Token::EOF)
-        ) {
-            let argument = parser.parse_expression(Precedence::Lowest)?;
-            arguments.push(argument);
-
-            if let Some(Token::Comma { .. }) = parser.current_token() {
-                parser.next_token();
-            }
-        }
-
-        Ok(arguments)
     }
 }
 

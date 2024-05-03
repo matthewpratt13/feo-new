@@ -7,12 +7,12 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{item::ParseDeclaration, Parser};
+use super::{collection, item::ParseDeclaration, Parser};
 
 impl ParseDeclaration for ImportDecl {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ImportDecl, ErrorsEmitted> {
         let kw_import = parser.expect_keyword(TokenType::Import)?;
@@ -22,13 +22,7 @@ impl ParseDeclaration for ImportDecl {
         parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(ImportDecl {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             visibility,
             kw_import,
             tree,
@@ -45,7 +39,6 @@ impl ImportTree {
 
         while let Some(Token::DblColon { .. }) = parser.current_token() {
             parser.next_token();
-
             let next_segment = PathSegment::parse(parser)?;
             path_segments.push(next_segment);
         }
@@ -61,8 +54,7 @@ impl ImportTree {
             let kw_as = Keyword::As;
             parser.next_token();
 
-            let id = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
-                parser.next_token();
+            let id = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
                 Ok(Identifier(name))
             } else {
                 parser.log_unexpected_str("identifier");
@@ -113,40 +105,21 @@ impl PathSegment {
 
 impl PathSubset {
     fn parse(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
-        let mut trees: Vec<ImportTree> = Vec::new();
-
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
             Err(ErrorsEmitted)
         }?;
-        loop {
-            if let Some(Token::RBrace { .. }) = parser.current_token() {
-                break;
-            }
 
-            let tree = ImportTree::parse(parser)?;
-            trees.push(tree);
-
-            let token = parser.current_token();
-
-            match token {
-                Some(Token::Comma { .. }) => {
-                    parser.next_token();
-                    continue;
-                }
-                Some(Token::RBrace { .. }) => break,
-                Some(Token::ColonColonAsterisk { .. }) => break,
-                Some(t) => parser.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "`,` or `}`".to_string(),
-                    found: Some(t),
-                }),
-                None => {
-                    parser.expect_delimiter(TokenType::RBrace)?;
-                }
-            }
-        }
+        let trees = if let Some(t) =
+            collection::get_collection(parser, ImportTree::parse, Delimiter::RBrace)?
+        {
+            Ok(t)
+        } else {
+            parser.log_unexpected_str("import trees");
+            Err(ErrorsEmitted)
+        }?;
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 

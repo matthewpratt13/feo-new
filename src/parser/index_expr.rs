@@ -16,8 +16,7 @@ impl IndexExpr {
             ErrorsEmitted
         })?;
 
-        let open_bracket = if let Some(Token::LBracket { .. }) = parser.current_token() {
-            parser.next_token();
+        let open_bracket = if let Some(Token::LBracket { .. }) = parser.next_token() {
             Ok(Delimiter::LBracket)
         } else {
             parser.log_unexpected_token(TokenType::LBracket);
@@ -26,8 +25,7 @@ impl IndexExpr {
 
         let index = parser.parse_expression(Precedence::Lowest)?;
 
-        let close_bracket = if let Some(Token::RBracket { .. }) = parser.current_token() {
-            parser.next_token();
+        let close_bracket = if let Some(Token::RBracket { .. }) = parser.next_token() {
             Ok(Delimiter::RBracket)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {

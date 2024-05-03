@@ -1,56 +1,30 @@
 use crate::{
-    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Expression, Type},
+    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Delimiter, Expression, Type},
     error::ErrorsEmitted,
     token::Token,
 };
 
-use super::{Parser, Precedence};
+use super::{collection, Parser, Precedence};
 
 impl ClosureExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let token = parser.next_token();
-
-        let params = match token {
+        let params = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
-                let mut vec: Vec<ClosureParam> = Vec::new();
+                parser.next_token();
 
-                loop {
-                    if let Some(Token::Pipe { .. }) = parser.current_token() {
-                        parser.next_token();
-                        break;
-                    }
+                let vec = collection::get_collection(parser, parse_closure_param, Delimiter::Pipe)?;
 
-                    let name = match parser.current_token() {
-                        Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
-                            parser.get_identifier_patt()
-                        }
-                        _ => {
-                            parser.log_unexpected_str("identifier");
-                            Err(ErrorsEmitted)
-                        }
-                    }?;
-
-                    let ty = if let Some(Token::Colon { .. }) = parser.current_token() {
-                        parser.next_token();
-                        Some(Type::parse(parser)?)
-                    } else {
-                        None
-                    };
-
-                    let param = ClosureParam {
-                        param_name: name,
-                        type_ann_opt: ty,
-                    };
-                    vec.push(param);
-
-                    if let Some(Token::Comma { .. }) = parser.current_token() {
-                        parser.next_token();
-                    }
+                if vec.is_some() {
+                    Ok(ClosureParams::Some(vec.unwrap()))
+                } else {
+                    parser.log_unexpected_str("closure parameters");
+                    Err(ErrorsEmitted)
                 }
-
-                Ok(ClosureParams::Some(vec))
             }
-            Some(Token::DblPipe { .. }) => Ok(ClosureParams::None),
+            Some(Token::DblPipe { .. }) => {
+                parser.next_token();
+                Ok(ClosureParams::None)
+            }
             _ => {
                 parser.log_unexpected_str("`|` or `||`");
                 Err(ErrorsEmitted)
@@ -78,6 +52,32 @@ impl ClosureExpr {
 
         Ok(Expression::Closure(expr))
     }
+}
+
+fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitted> {
+    let name = match parser.current_token() {
+        Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
+            parser.get_identifier_patt()
+        }
+        _ => {
+            parser.log_unexpected_str("identifier");
+            Err(ErrorsEmitted)
+        }
+    }?;
+
+    let ty = if let Some(Token::Colon { .. }) = parser.current_token() {
+        parser.next_token();
+        Some(Type::parse(parser)?)
+    } else {
+        None
+    };
+
+    let param = ClosureParam {
+        param_name: name,
+        type_ann_opt: ty,
+    };
+
+    Ok(param)
 }
 
 #[cfg(test)]

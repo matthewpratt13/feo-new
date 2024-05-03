@@ -9,7 +9,7 @@ use super::{item::ParseDeclaration, Parser, Precedence};
 impl ParseDeclaration for StaticItemDecl {
     fn parse(
         parser: &mut Parser,
-        attributes: Vec<OuterAttr>,
+        attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<StaticItemDecl, ErrorsEmitted> {
         let kw_static = parser.expect_keyword(TokenType::Static)?;
@@ -42,13 +42,7 @@ impl ParseDeclaration for StaticItemDecl {
         parser.expect_separator(TokenType::Semicolon)?;
 
         Ok(StaticItemDecl {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             visibility,
             kw_static,
             kw_mut_opt,

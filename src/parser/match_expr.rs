@@ -21,9 +21,7 @@ impl MatchExpr {
             ErrorsEmitted
         })?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            parser.next_token();
-            log_token(parser, "consume token", false);
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token(TokenType::LBrace);
@@ -31,6 +29,8 @@ impl MatchExpr {
         }?;
 
         let mut match_arms = parse_match_arms(parser)?;
+
+        // let match_arms = collection::get_collection_braces_comma(parser, MatchArm::parse)?;
 
         let final_arm = if let Some(a) = match_arms.pop() {
             Box::new(a)
@@ -41,8 +41,7 @@ impl MatchExpr {
             return Err(ErrorsEmitted);
         };
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
-            parser.next_token();
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -56,10 +55,9 @@ impl MatchExpr {
             scrutinee,
             open_brace,
             arms_opt: {
-                if match_arms.is_empty() {
-                    None
-                } else {
-                    Some(match_arms)
+                match match_arms.is_empty() {
+                    true => None,
+                    false => Some(match_arms),
                 }
             },
             final_arm,
@@ -103,11 +101,9 @@ impl MatchArm {
         }
 
         let body = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            let expr = Box::new(BlockExpr::parse(parser)?);
-            expr
+            Box::new(BlockExpr::parse(parser)?)
         } else {
-            let expr = Box::new(parser.parse_expression(Precedence::Lowest)?);
-            expr
+            Box::new(parser.parse_expression(Precedence::Lowest)?)
         };
 
         if let Some(Token::Comma { .. }) = parser.current_token() {

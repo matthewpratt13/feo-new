@@ -4,7 +4,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::{collection, Parser, Precedence};
 
 impl ArrayExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
@@ -16,28 +16,10 @@ impl ArrayExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let mut elements: Vec<Expression> = Vec::new();
+        let elements_opt =
+            collection::get_expressions(parser, Precedence::Lowest, Delimiter::RBracket)?;
 
-        while !matches!(
-            parser.current_token(),
-            Some(Token::RBracket { .. } | Token::EOF)
-        ) {
-            let element = parser.parse_expression(Precedence::Lowest)?;
-            elements.push(element);
-
-            if let Some(Token::Comma { .. }) = parser.current_token() {
-                parser.next_token();
-            } else if !matches!(
-                parser.current_token(),
-                Some(Token::RBracket { .. } | Token::EOF)
-            ) {
-                parser.log_unexpected_str("`,` or `]`");
-                return Err(ErrorsEmitted);
-            }
-        }
-
-        let close_bracket = if let Some(Token::RBracket { .. }) = parser.current_token() {
-            parser.next_token();
+        let close_bracket = if let Some(Token::RBracket { .. }) = parser.next_token() {
             Ok(Delimiter::RBracket)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -48,13 +30,7 @@ impl ArrayExpr {
 
         let expr = ArrayExpr {
             open_bracket,
-            elements_opt: {
-                if elements.is_empty() {
-                    None
-                } else {
-                    Some(elements)
-                }
-            },
+            elements_opt,
             close_bracket,
         };
 

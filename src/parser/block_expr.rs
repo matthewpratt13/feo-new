@@ -5,18 +5,13 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::Parser;
+use super::{collection, Parser};
 
 impl BlockExpr {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `BlockExpr::parse()`", true);
 
-        let mut attributes: Vec<InnerAttr> = Vec::new();
-
-        while let Some(ia) = InnerAttr::inner_attr(parser) {
-            attributes.push(ia);
-            parser.next_token();
-        }
+        let attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
             parser.next_token();
@@ -41,8 +36,7 @@ impl BlockExpr {
             }
         }
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
-            parser.next_token();
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
@@ -52,19 +46,12 @@ impl BlockExpr {
         }?;
 
         let expr = BlockExpr {
-            attributes_opt: {
-                if attributes.is_empty() {
-                    None
-                } else {
-                    Some(attributes)
-                }
-            },
+            attributes_opt,
             open_brace,
             statements_opt: {
-                if statements.is_empty() {
-                    None
-                } else {
-                    Some(statements)
+                match statements.is_empty() {
+                    true => None,
+                    false => Some(statements),
                 }
             },
             close_brace,

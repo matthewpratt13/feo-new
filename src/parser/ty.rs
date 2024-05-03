@@ -1,10 +1,13 @@
 use crate::{
-    ast::{FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType, SelfType, Type},
-    error::ErrorsEmitted,
+    ast::{
+        Delimiter, FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType,
+        SelfType, Type,
+    },
+    error::{ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenType},
 };
 
-use super::{test_utils::log_token, Parser};
+use super::{collection, test_utils::log_token, Parser};
 
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
@@ -43,34 +46,16 @@ impl Type {
                     parser.next_token();
                     Ok(Type::UnitType)
                 } else {
-                    let mut types: Vec<Type> = Vec::new();
-
-                    loop {
-                        if let Some(Token::Comma { .. }) = parser.current_token() {
-                            parser.next_token();
-                        }
-
-                        if let Some(Token::RParen { .. }) = parser.current_token() {
-                            break;
-                        }
-
-                        let ty = Type::parse(parser)?;
-                        types.push(ty);
-
-                        let token = parser.current_token();
-
-                        match token {
-                            Some(Token::Comma { .. }) => {
-                                parser.next_token();
-                                continue;
-                            }
-                            Some(Token::RParen { .. }) => break,
-                            Some(_) => parser.log_unexpected_str("`,` or `)`"),
-                            None => {
-                                parser.expect_delimiter(TokenType::RParen)?;
-                            }
-                        }
-                    }
+                    let types = if let Some(t) =
+                        collection::get_collection(parser, Type::parse, Delimiter::RParen)?
+                    {
+                        Ok(t)
+                    } else {
+                        parser.log_error(ParserErrorKind::TokenNotFound {
+                            expected: "type".to_string(),
+                        });
+                        Err(ErrorsEmitted)
+                    }?;
 
                     if let Some(Token::RParen { .. }) = parser.current_token() {
                         parser.next_token();
@@ -131,7 +116,7 @@ impl Type {
                     parser.log_unexpected_token(TokenType::LParen);
                 }
 
-                // `&parser` and `&mut parser` can only occur as the first parameter in a method
+                // `&self` and `&mut self` can only occur as the first parameter in a method
                 if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
                     parser.current_token()
                 {
@@ -139,32 +124,15 @@ impl Type {
                     params.push(param);
                 }
 
-                loop {
-                    if let Some(Token::Comma { .. }) = parser.current_token() {
-                        parser.next_token();
-                    }
+                let subsequent_params = collection::get_collection(
+                    parser,
+                    FunctionOrMethodParam::parse,
+                    Delimiter::RParen,
+                )?;
 
-                    if let Some(Token::RParen { .. }) = parser.current_token() {
-                        break;
-                    }
-
-                    let param = FunctionOrMethodParam::parse(parser)?;
-                    params.push(param);
-
-                    let token = parser.current_token();
-
-                    match token {
-                        Some(Token::Comma { .. }) => {
-                            parser.next_token();
-                            continue;
-                        }
-                        Some(Token::RParen { .. }) => break,
-                        Some(_) => parser.log_unexpected_str("`,` or `)`"),
-                        None => {
-                            parser.expect_delimiter(TokenType::RParen)?;
-                        }
-                    }
-                }
+                if subsequent_params.is_some() {
+                    params.append(&mut subsequent_params.unwrap())
+                };
 
                 if let Some(Token::RParen { .. }) = parser.current_token() {
                     parser.next_token();
@@ -183,10 +151,9 @@ impl Type {
                 Ok(Type::Function {
                     function_name,
                     params_opt: {
-                        if params.is_empty() {
-                            None
-                        } else {
-                            Some(params)
+                        match params.is_empty() {
+                            true => None,
+                            false => Some(params),
                         }
                     },
                     return_type_opt,

@@ -42,6 +42,7 @@ mod binary_expr;
 mod block_expr;
 mod call_expr;
 mod closure_expr;
+pub(crate) mod collection;
 mod constant_decl;
 mod enum_def;
 mod field_access_expr;
@@ -96,7 +97,7 @@ use crate::{
 
 pub use self::precedence::Precedence;
 use self::{
-    item::{ParseDeclaration, ParseDefinition},
+    item::{ParseDeclaration, ParseDefinition, ParseItem},
     test_utils::log_token,
 };
 
@@ -340,25 +341,25 @@ impl Parser {
                         let expr = self.parse_primary();
                         self.next_token();
 
-                        if let Some(Token::Colon { .. }) = self.peek_ahead_by(2) {
-                            let path = PathExpr {
-                                root: PathPrefix::Identifier(Identifier(name)),
-                                tree_opt: None,
-                                wildcard_opt: None,
-                            };
-                            StructExpr::parse(self, path)
-                        } else if let Some(Token::FatArrow { .. } | Token::If { .. }) =
-                            self.peek_ahead_by(2)
-                        {
-                            if let Some(Token::LBrace { .. }) = self.current_token() {
-                                self.set_context(ParserContext::MatchArm);
-                                expr
-                            } else {
-                                self.log_unexpected_token(TokenType::LBrace);
-                                Err(ErrorsEmitted)
+                        match self.peek_ahead_by(2) {
+                            Some(Token::Colon { .. }) => {
+                                let path = PathExpr {
+                                    root: PathPrefix::Identifier(Identifier(name)),
+                                    tree_opt: None,
+                                    wildcard_opt: None,
+                                };
+                                StructExpr::parse(self, path)
                             }
-                        } else {
-                            expr
+                            Some(Token::FatArrow { .. } | Token::If { .. }) => {
+                                if let Some(Token::LBrace { .. }) = self.current_token() {
+                                    self.set_context(ParserContext::MatchArm);
+                                    expr
+                                } else {
+                                    self.log_unexpected_token(TokenType::LBrace);
+                                    Err(ErrorsEmitted)
+                                }
+                            }
+                            _ => expr,
                         }
                     }
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
@@ -741,12 +742,7 @@ impl Parser {
 
     /// Parse the current token and convert it from an `Item` to a `Statement`.
     fn get_item(&mut self) -> Result<Statement, ErrorsEmitted> {
-        let mut outer_attributes: Vec<OuterAttr> = Vec::new();
-
-        while let Some(oa) = OuterAttr::outer_attr(self) {
-            outer_attributes.push(oa);
-            self.next_token();
-        }
+        let attributes_opt = collection::get_attributes(self, OuterAttr::outer_attr);
 
         let visibility = Visibility::visibility(self)?;
 
@@ -755,40 +751,40 @@ impl Parser {
         match token {
             Some(Token::Import { .. }) => Ok(Statement::Item(Item::ImportDecl(ImportDecl::parse(
                 self,
-                outer_attributes,
+                attributes_opt,
                 visibility,
             )?))),
             Some(Token::Alias { .. }) => Ok(Statement::Item(Item::AliasDecl(AliasDecl::parse(
                 self,
-                outer_attributes,
+                attributes_opt,
                 visibility,
             )?))),
             Some(Token::Const { .. }) => Ok(Statement::Item(Item::ConstantDecl(
-                ConstantDecl::parse(self, outer_attributes, visibility)?,
+                ConstantDecl::parse(self, attributes_opt, visibility)?,
             ))),
             Some(Token::Static { .. }) => Ok(Statement::Item(Item::StaticItemDecl(
-                StaticItemDecl::parse(self, outer_attributes, visibility)?,
+                StaticItemDecl::parse(self, attributes_opt, visibility)?,
             ))),
             Some(Token::Module { .. }) => Ok(Statement::Item(Item::ModuleItem(Box::new(
-                ModuleItem::parse(self, outer_attributes, visibility)?,
+                ModuleItem::parse(self, attributes_opt, visibility)?,
             )))),
             Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
                 self,
-                outer_attributes,
+                attributes_opt,
                 visibility,
             )?))),
             Some(Token::Enum { .. }) => Ok(Statement::Item(Item::EnumDef(EnumDef::parse(
                 self,
-                outer_attributes,
+                attributes_opt,
                 visibility,
             )?))),
             Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
                 Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::StructDef(
-                    StructDef::parse(self, outer_attributes, visibility)?,
+                    StructDef::parse(self, attributes_opt, visibility)?,
                 ))),
 
                 Some(Token::LParen { .. }) => Ok(Statement::Item(Item::TupleStructDef(
-                    TupleStructDef::parse(self, outer_attributes, visibility)?,
+                    TupleStructDef::parse(self, attributes_opt, visibility)?,
                 ))),
 
                 _ => {
@@ -798,14 +794,14 @@ impl Parser {
             },
 
             Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionItem(
-                FunctionItem::parse(self, outer_attributes, visibility)?,
+                FunctionItem::parse(self, attributes_opt, visibility)?,
             ))),
             Some(Token::Impl { .. }) => match self.peek_ahead_by(2) {
                 Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
-                    TraitImplDef::parse(self, outer_attributes, visibility)?,
+                    TraitImplDef::parse(self, attributes_opt, visibility)?,
                 ))),
                 Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
-                    InherentImplDef::parse(self, outer_attributes, visibility)?,
+                    InherentImplDef::parse(self, attributes_opt, visibility)?,
                 ))),
                 _ => {
                     self.log_error(ParserErrorKind::UnexpectedToken {

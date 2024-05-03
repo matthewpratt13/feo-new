@@ -21,8 +21,7 @@ impl GroupedExpr {
 
         let inner_expression = parser.parse_expression(Precedence::Lowest)?;
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.current_token() {
-            parser.next_token();
+        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
         } else {
             parser.log_error(ParserErrorKind::MissingDelimiter {
