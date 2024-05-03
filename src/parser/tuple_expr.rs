@@ -6,7 +6,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{parse::ParseConstruct, Parser, Precedence};
+use super::{
+    parse::{ParseConstruct, ParseOperation},
+    Parser, Precedence,
+};
 
 impl ParseConstruct for TupleExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
@@ -69,9 +72,9 @@ impl ParseConstruct for TupleExpr {
     }
 }
 
-impl TupleIndexExpr {
-    pub(crate) fn parse(parser: &mut Parser, lhs: Expression) -> Result<Expression, ErrorsEmitted> {
-        let assignee_expr = AssigneeExpr::try_from(lhs).map_err(|e| {
+impl ParseOperation for TupleIndexExpr {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;

@@ -739,6 +739,10 @@ impl Parser {
         }
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // PATTERN PARSING
+    ///////////////////////////////////////////////////////////////////////////
+
     /// Helper function to parse an identifier as and `IdentifierPatt`.
     fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
         log_token(self, "enter get_identifier_patt()`", true);
