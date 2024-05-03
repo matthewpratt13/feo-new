@@ -4,10 +4,14 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{test_utils::log_token, Parser};
+use super::{
+    parse::{ParseConstruct, ParseControl},
+    test_utils::log_token,
+    Parser,
+};
 
-impl IfExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseControl for IfExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `IfExpr::parse()`", true);
 
         let kw_if = parser.expect_keyword(TokenType::If)?;

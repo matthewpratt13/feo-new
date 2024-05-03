@@ -4,11 +4,11 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{collection, Parser, Precedence};
+use super::{collection, parse::ParseOperation, Parser, Precedence};
 
-impl MethodCallExpr {
-    pub(crate) fn parse(parser: &mut Parser, lhs: Expression) -> Result<Expression, ErrorsEmitted> {
-        let receiver = AssigneeExpr::try_from(lhs).map_err(|e| {
+impl ParseOperation for MethodCallExpr {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let receiver = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;

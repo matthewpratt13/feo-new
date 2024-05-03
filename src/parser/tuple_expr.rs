@@ -6,10 +6,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::{parse::ParseConstruct, Parser, Precedence};
 
-impl TupleExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstruct for TupleExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let mut elements = Vec::new();
 
         let mut final_element_opt = None::<Box<Expression>>;

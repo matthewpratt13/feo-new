@@ -1,13 +1,13 @@
 use crate::{
-    ast::{Keyword, LetStmt, Type},
+    ast::{Keyword, LetStmt, Statement, Type},
     error::ErrorsEmitted,
     token::{Token, TokenType},
 };
 
-use super::{Parser, Precedence};
+use super::{parse::ParseStatement, Parser, Precedence};
 
-impl LetStmt {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<LetStmt, ErrorsEmitted> {
+impl ParseStatement for LetStmt {
+    fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {
         let kw_let = if let Some(Token::Let { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::Let)
@@ -35,12 +35,14 @@ impl LetStmt {
 
         parser.expect_separator(TokenType::Semicolon)?;
 
-        Ok(LetStmt {
+        let stmt = LetStmt {
             kw_let,
             assignee,
             type_ann_opt,
             value_opt,
-        })
+        };
+
+        Ok(Statement::Let(stmt))
     }
 }
 

@@ -5,10 +5,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{collection, Parser};
+use super::{collection, parse::ParseConstruct, Parser};
 
-impl BlockExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstruct for BlockExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `BlockExpr::parse()`", true);
 
         let attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);

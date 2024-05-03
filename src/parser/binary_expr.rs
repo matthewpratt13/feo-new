@@ -7,16 +7,13 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::Parser;
+use super::{parse::ParseOperation, Parser};
 
-impl BinaryExpr {
+impl ParseOperation for BinaryExpr {
     /// Parse a binary operation (e.g., arithmetic, logical and comparison expressions).
     /// This method parses the operator and calls `parse_expression()` recursively to handle
     /// the right-hand side of the expression.
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        left_expr: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `BinaryExpr::parse()`", true);
 
         let lhs = ValueExpr::try_from(left_expr).map_err(|e| {
@@ -68,13 +65,10 @@ impl BinaryExpr {
     }
 }
 
-impl ComparisonExpr {
-    /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on 
+impl ParseOperation for ComparisonExpr {
+    /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on
     /// the input operator.
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        left_expr: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `ComparisonExpr::parse()`", true);
 
         let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {

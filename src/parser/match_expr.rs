@@ -4,10 +4,14 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{test_utils::log_token, Parser, Precedence};
+use super::{
+    parse::{ParseConstruct, ParseControl},
+    test_utils::log_token,
+    Parser, Precedence,
+};
 
-impl MatchExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseControl for MatchExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `MatchExpr::parse()`", true);
 
         let kw_match = parser.expect_keyword(TokenType::Match)?;

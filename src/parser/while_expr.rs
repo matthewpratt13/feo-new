@@ -4,10 +4,13 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::Parser;
+use super::{
+    parse::{ParseConstruct, ParseControl},
+    Parser,
+};
 
-impl WhileExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseControl for WhileExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_while = parser.expect_keyword(TokenType::While)?;
 
         let condition = if let Some(Token::LParen { .. }) = parser.current_token() {

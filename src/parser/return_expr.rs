@@ -4,10 +4,10 @@ use crate::{
     token::TokenType,
 };
 
-use super::{Parser, Precedence};
+use super::{parse::ParseConstruct, Parser, Precedence};
 
-impl ReturnExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstruct for ReturnExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let kw_return = parser.expect_keyword(TokenType::Return)?;
 
         let expression_opt = match parser.current_token().is_some() {

@@ -4,10 +4,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{test_utils::log_token, Parser, Precedence};
+use super::{parse::ParseConstruct, test_utils::log_token, Parser, Precedence};
 
-impl GroupedExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstruct for GroupedExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         log_token(parser, "enter `GroupedExpr::parse()`", true);
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {

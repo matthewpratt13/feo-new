@@ -7,7 +7,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{collection, item::ParseDefinition, Parser};
+use super::{collection, parse::ParseDefinition, Parser};
 
 impl ParseDefinition for StructDef {
     fn parse(

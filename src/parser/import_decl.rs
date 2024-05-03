@@ -7,7 +7,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{collection, item::ParseDeclaration, Parser};
+use super::{collection, parse::ParseDeclaration, Parser};
 
 impl ParseDeclaration for ImportDecl {
     fn parse(

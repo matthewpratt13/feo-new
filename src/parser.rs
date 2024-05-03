@@ -42,7 +42,7 @@ mod binary_expr;
 mod block_expr;
 mod call_expr;
 mod closure_expr;
-pub(crate) mod collection;
+mod collection;
 mod constant_decl;
 mod enum_def;
 mod field_access_expr;
@@ -58,6 +58,7 @@ mod let_statement;
 mod match_expr;
 mod method_call_expr;
 mod module_item;
+mod parse;
 mod path_expr;
 mod precedence;
 mod range_expr;
@@ -81,15 +82,13 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr,
-        ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr, Delimiter,
-        DereferenceExpr, DereferenceOp, EnumDef, Expression, FieldAccessExpr, ForInExpr,
-        FunctionItem, GroupedExpr, Identifier, IfExpr, ImportDecl, IndexExpr, InherentImplDef,
-        Item, Keyword, LetStmt, Literal, MatchArm, MatchExpr, MethodCallExpr, ModuleItem, NoneExpr,
-        OuterAttr, PathExpr, PathPrefix, Pattern, RangeExpr, RangeOp, ReferenceExpr, ReferenceOp,
-        ResultExpr, ReturnExpr, SelfType, Separator, SomeExpr, Statement, StaticItemDecl,
-        StructDef, StructExpr, TraitDef, TraitImplDef, TupleExpr, TupleIndexExpr, TupleStructDef,
-        TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, Visibility, WhileExpr,
+        ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
+        ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter, DereferenceExpr,
+        DereferenceOp, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, Identifier, IfExpr,
+        IndexExpr, Item, Keyword, LetStmt, Literal, MatchArm, MatchExpr, MethodCallExpr, NoneExpr,
+        PathExpr, PathPrefix, Pattern, RangeExpr, RangeOp, ReferenceExpr, ReferenceOp, ResultExpr,
+        ReturnExpr, SelfType, Separator, SomeExpr, Statement, StructExpr, TupleExpr,
+        TupleIndexExpr, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     token::{Token, TokenStream, TokenType},
@@ -97,7 +96,7 @@ use crate::{
 
 pub use self::precedence::Precedence;
 use self::{
-    item::{ParseDeclaration, ParseDefinition, ParseItem},
+    parse::{ParseConstruct, ParseControl, ParseOperation, ParseStatement},
     test_utils::log_token,
 };
 
@@ -694,7 +693,7 @@ impl Parser {
         let token = self.current_token();
 
         match token {
-            Some(Token::Let { .. }) => Ok(Statement::Let(LetStmt::parse(self)?)),
+            Some(Token::Let { .. }) => LetStmt::parse_statement(self),
 
             Some(
                 Token::Import { .. }
@@ -722,7 +721,7 @@ impl Parser {
                 | Token::Topic { .. }
                 | Token::Calldata { .. }
                 | Token::Pub { .. },
-            ) => self.get_item(),
+            ) => Item::parse_statement(self),
 
             _ => {
                 let statement = Ok(Statement::Expression(
@@ -736,87 +735,6 @@ impl Parser {
                 }
 
                 statement
-            }
-        }
-    }
-
-    /// Parse the current token and convert it from an `Item` to a `Statement`.
-    fn get_item(&mut self) -> Result<Statement, ErrorsEmitted> {
-        let attributes_opt = collection::get_attributes(self, OuterAttr::outer_attr);
-
-        let visibility = Visibility::visibility(self)?;
-
-        let token = self.current_token();
-
-        match token {
-            Some(Token::Import { .. }) => Ok(Statement::Item(Item::ImportDecl(ImportDecl::parse(
-                self,
-                attributes_opt,
-                visibility,
-            )?))),
-            Some(Token::Alias { .. }) => Ok(Statement::Item(Item::AliasDecl(AliasDecl::parse(
-                self,
-                attributes_opt,
-                visibility,
-            )?))),
-            Some(Token::Const { .. }) => Ok(Statement::Item(Item::ConstantDecl(
-                ConstantDecl::parse(self, attributes_opt, visibility)?,
-            ))),
-            Some(Token::Static { .. }) => Ok(Statement::Item(Item::StaticItemDecl(
-                StaticItemDecl::parse(self, attributes_opt, visibility)?,
-            ))),
-            Some(Token::Module { .. }) => Ok(Statement::Item(Item::ModuleItem(Box::new(
-                ModuleItem::parse(self, attributes_opt, visibility)?,
-            )))),
-            Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
-                self,
-                attributes_opt,
-                visibility,
-            )?))),
-            Some(Token::Enum { .. }) => Ok(Statement::Item(Item::EnumDef(EnumDef::parse(
-                self,
-                attributes_opt,
-                visibility,
-            )?))),
-            Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
-                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::StructDef(
-                    StructDef::parse(self, attributes_opt, visibility)?,
-                ))),
-
-                Some(Token::LParen { .. }) => Ok(Statement::Item(Item::TupleStructDef(
-                    TupleStructDef::parse(self, attributes_opt, visibility)?,
-                ))),
-
-                _ => {
-                    self.log_unexpected_str("`{` or `(`");
-                    Err(ErrorsEmitted)
-                }
-            },
-
-            Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionItem(
-                FunctionItem::parse(self, attributes_opt, visibility)?,
-            ))),
-            Some(Token::Impl { .. }) => match self.peek_ahead_by(2) {
-                Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
-                    TraitImplDef::parse(self, attributes_opt, visibility)?,
-                ))),
-                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
-                    InherentImplDef::parse(self, attributes_opt, visibility)?,
-                ))),
-                _ => {
-                    self.log_error(ParserErrorKind::UnexpectedToken {
-                        expected: "`for` or `{`".to_string(),
-                        found: token,
-                    });
-                    Err(ErrorsEmitted)
-                }
-            },
-            _ => {
-                self.log_error(ParserErrorKind::UnexpectedToken {
-                    expected: "declaration or definition item".to_string(),
-                    found: token,
-                });
-                Err(ErrorsEmitted)
             }
         }
     }

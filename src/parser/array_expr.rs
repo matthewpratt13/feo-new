@@ -4,10 +4,10 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{collection, Parser, Precedence};
+use super::{collection, parse::ParseConstruct, Parser, Precedence};
 
-impl ArrayExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstruct for ArrayExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let open_bracket = if let Some(Token::LBracket { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Delimiter::LBracket)

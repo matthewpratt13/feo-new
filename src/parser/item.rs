@@ -1,67 +1,21 @@
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, EnumDef, FunctionItem, ImportDecl, InherentImplDef, Item,
-        ModuleItem, OuterAttr, StaticItemDecl, StructDef, TraitDef, TraitImplDef, Visibility,
+        ModuleItem, OuterAttr, Statement, StaticItemDecl, StructDef, TraitDef, TraitImplDef,
+        TupleStructDef, Visibility,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
-use super::Parser;
+use super::{
+    collection,
+    parse::{ParseDeclaration, ParseDefinition, ParseStatement},
+    Parser,
+};
 
-/// Trait that defines a shared interface for module and function items.
-pub(crate) trait ParseItem
-where
-    Self: Sized,
-{
-    fn parse(
-        parser: &mut Parser,
-        attributes_opt: Option<Vec<OuterAttr>>,
-        visibility: Visibility,
-    ) -> Result<Self, ErrorsEmitted>;
-}
-
-/// Trait that defines a shared interface for declaration type `Item`.
-/// E.g., `ConstantDecl` and `ImportDecl`.
-pub(crate) trait ParseDeclaration
-where
-    Self: Sized,
-{
-    fn parse(
-        parser: &mut Parser,
-        attributes_opt: Option<Vec<OuterAttr>>,
-        visibility: Visibility,
-    ) -> Result<Self, ErrorsEmitted>;
-}
-
-/// Trait that defines a shared interface for definition type `Item`.
-/// E.g., `StructDef` and `TraitDef`.
-pub(crate) trait ParseDefinition
-where
-    Self: Sized,
-{
-    fn parse(
-        parser: &mut Parser,
-        attributes_opt: Option<Vec<OuterAttr>>,
-        visibility: Visibility,
-    ) -> Result<Self, ErrorsEmitted>;
-}
-
-/// Trait that defines a shared interface for associated items – i.e., an `Item` that is associated
-/// with traits and implementations. E.g., `TraitDefItem` and `InherentImplItem`.
-pub(crate) trait ParseAssociatedItem
-where
-    Self: Sized,
-{
-    fn parse(
-        parser: &mut Parser,
-        attributes_opt: Option<Vec<OuterAttr>>,
-        visibility: Visibility,
-    ) -> Result<Self, ErrorsEmitted>;
-}
-
-impl ParseItem for Item {
-    fn parse(
+impl Item {
+    pub(crate) fn parse(
         parser: &mut Parser,
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
@@ -129,6 +83,89 @@ impl ParseItem for Item {
             )?)),
             _ => {
                 parser.log_unexpected_str("declaration or definition");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+}
+
+impl ParseStatement for Item {
+    /// Parse the current token and convert it from an `Item` to a `Statement`.
+    fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {
+        let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
+
+        let visibility = Visibility::visibility(parser)?;
+
+        let token = parser.current_token();
+
+        match token {
+            Some(Token::Import { .. }) => Ok(Statement::Item(Item::ImportDecl(ImportDecl::parse(
+                parser,
+                attributes_opt,
+                visibility,
+            )?))),
+            Some(Token::Alias { .. }) => Ok(Statement::Item(Item::AliasDecl(AliasDecl::parse(
+                parser,
+                attributes_opt,
+                visibility,
+            )?))),
+            Some(Token::Const { .. }) => Ok(Statement::Item(Item::ConstantDecl(
+                ConstantDecl::parse(parser, attributes_opt, visibility)?,
+            ))),
+            Some(Token::Static { .. }) => Ok(Statement::Item(Item::StaticItemDecl(
+                StaticItemDecl::parse(parser, attributes_opt, visibility)?,
+            ))),
+            Some(Token::Module { .. }) => Ok(Statement::Item(Item::ModuleItem(Box::new(
+                ModuleItem::parse(parser, attributes_opt, visibility)?,
+            )))),
+            Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
+                parser,
+                attributes_opt,
+                visibility,
+            )?))),
+            Some(Token::Enum { .. }) => Ok(Statement::Item(Item::EnumDef(EnumDef::parse(
+                parser,
+                attributes_opt,
+                visibility,
+            )?))),
+            Some(Token::Struct { .. }) => match parser.peek_ahead_by(2) {
+                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::StructDef(
+                    StructDef::parse(parser, attributes_opt, visibility)?,
+                ))),
+
+                Some(Token::LParen { .. }) => Ok(Statement::Item(Item::TupleStructDef(
+                    TupleStructDef::parse(parser, attributes_opt, visibility)?,
+                ))),
+
+                _ => {
+                    parser.log_unexpected_str("`{` or `(`");
+                    Err(ErrorsEmitted)
+                }
+            },
+
+            Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionItem(
+                FunctionItem::parse(parser, attributes_opt, visibility)?,
+            ))),
+            Some(Token::Impl { .. }) => match parser.peek_ahead_by(2) {
+                Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
+                    TraitImplDef::parse(parser, attributes_opt, visibility)?,
+                ))),
+                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
+                    InherentImplDef::parse(parser, attributes_opt, visibility)?,
+                ))),
+                _ => {
+                    parser.log_error(ParserErrorKind::UnexpectedToken {
+                        expected: "`for` or `{`".to_string(),
+                        found: token,
+                    });
+                    Err(ErrorsEmitted)
+                }
+            },
+            _ => {
+                parser.log_error(ParserErrorKind::UnexpectedToken {
+                    expected: "declaration or definition item".to_string(),
+                    found: token,
+                });
                 Err(ErrorsEmitted)
             }
         }

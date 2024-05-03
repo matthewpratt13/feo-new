@@ -4,7 +4,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{item::ParseDeclaration, Parser};
+use super::{parse::ParseDeclaration, Parser};
 
 impl ParseDeclaration for AliasDecl {
     fn parse(

@@ -4,10 +4,10 @@ use crate::{
     token::Token,
 };
 
-use super::{collection, Parser, Precedence};
+use super::{collection, parse::ParseConstruct, Parser, Precedence};
 
-impl ClosureExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstruct for ClosureExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let params = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
                 parser.next_token();
