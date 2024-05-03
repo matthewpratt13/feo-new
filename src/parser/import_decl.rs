@@ -112,7 +112,7 @@ impl PathSubset {
             Err(ErrorsEmitted)
         }?;
 
-        let trees = collection::get_collection_braces_comma(parser, ImportTree::parse)?;
+        let trees = collection::get_collection(parser, ImportTree::parse, Delimiter::RBrace)?;
 
         let close_brace = parser.expect_delimiter(TokenType::RBrace)?;
 

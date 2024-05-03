@@ -198,7 +198,7 @@ impl EnumVariantTuple {
             Err(ErrorsEmitted)
         }?;
 
-        let element_types = collection::get_collection_parens_comma(parser, Type::parse)?;
+        let element_types = collection::get_collection(parser, Type::parse, Delimiter::RParen)?;
 
         let close_paren = parser.expect_delimiter(TokenType::RParen)?;
 

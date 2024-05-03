@@ -33,7 +33,11 @@ impl FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        let params = collection::get_collection_parens_comma(parser, FunctionOrMethodParam::parse)?;
+        let params = collection::get_collection(
+            parser,
+            FunctionOrMethodParam::parse,
+            Delimiter::RParen,
+        )?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)

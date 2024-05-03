@@ -31,7 +31,7 @@ impl ParseDefinition for StructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let fields = collection::get_collection_braces_comma(parser, StructDefField::parse)?;
+        let fields = collection::get_collection(parser, StructDefField::parse, Delimiter::RBrace)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -83,7 +83,8 @@ impl ParseDefinition for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let fields = collection::get_collection_parens_comma(parser, TupleStructDefField::parse)?;
+        let fields =
+            collection::get_collection(parser, TupleStructDefField::parse, Delimiter::RParen)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)

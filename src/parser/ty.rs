@@ -1,5 +1,8 @@
 use crate::{
-    ast::{FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType, SelfType, Type},
+    ast::{
+        Delimiter, FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType,
+        SelfType, Type,
+    },
     error::ErrorsEmitted,
     token::{Token, TokenType},
 };
@@ -43,7 +46,7 @@ impl Type {
                     parser.next_token();
                     Ok(Type::UnitType)
                 } else {
-                    let types = collection::get_collection_parens_comma(parser, Type::parse)?;
+                    let types = collection::get_collection(parser, Type::parse, Delimiter::RParen)?;
 
                     if let Some(Token::RParen { .. }) = parser.current_token() {
                         parser.next_token();
@@ -112,9 +115,10 @@ impl Type {
                     params.push(param);
                 }
 
-                let subsequent_params = &mut collection::get_collection_parens_comma(
+                let subsequent_params = &mut collection::get_collection(
                     parser,
                     FunctionOrMethodParam::parse,
+                    Delimiter::RParen,
                 )?;
 
                 params.append(subsequent_params);

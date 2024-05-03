@@ -24,7 +24,7 @@ impl CallExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let args = collection::get_expressions(parser, Precedence::Lowest)?;
+        let args = collection::get_expressions(parser, Precedence::Lowest, Delimiter::RParen)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)

@@ -1,59 +1,86 @@
 use crate::{
-    ast::{Expression, OuterAttr, Visibility},
+    ast::{Delimiter, Expression, OuterAttr, Visibility},
     error::ErrorsEmitted,
     token::Token,
 };
 
 use super::{item::ParseAssociatedItem, Parser, Precedence};
 
-pub(crate) fn get_collection_braces_comma<T>(
+pub(crate) fn get_collection<T>(
     parser: &mut Parser,
     f: fn(&mut Parser) -> Result<T, ErrorsEmitted>,
+    close_delimiter: Delimiter,
 ) -> Result<Vec<T>, ErrorsEmitted> {
     let mut collection: Vec<T> = Vec::new();
 
-    while !matches!(
-        parser.current_token(),
-        Some(Token::RBrace { .. } | Token::EOF),
-    ) {
-        let item = f(parser)?;
+    match close_delimiter {
+        Delimiter::RParen => {
+            while !matches!(
+                parser.current_token(),
+                Some(Token::RParen { .. } | Token::EOF),
+            ) {
+                let item = f(parser)?;
 
-        collection.push(item);
+                collection.push(item);
 
-        if let Some(Token::Comma { .. }) = parser.current_token() {
-            parser.next_token();
-        } else if !matches!(
-            parser.current_token(),
-            Some(Token::RBrace { .. } | Token::EOF)
-        ) {
-            parser.log_unexpected_str("`,` or `}`");
-            return Err(ErrorsEmitted);
+                if let Some(Token::Comma { .. }) = parser.current_token() {
+                    parser.next_token();
+                } else if !matches!(
+                    parser.current_token(),
+                    Some(Token::RParen { .. } | Token::EOF)
+                ) {
+                    parser.log_unexpected_str("`,` or `)`");
+                    return Err(ErrorsEmitted);
+                }
+            }
         }
-    }
 
-    Ok(collection)
-}
-pub(crate) fn get_collection_parens_comma<T>(
-    parser: &mut Parser,
-    f: fn(&mut Parser) -> Result<T, ErrorsEmitted>,
-) -> Result<Vec<T>, ErrorsEmitted> {
-    let mut collection: Vec<T> = Vec::new();
+        Delimiter::RBrace => {
+            while !matches!(
+                parser.current_token(),
+                Some(Token::RBrace { .. } | Token::EOF),
+            ) {
+                let item = f(parser)?;
 
-    while !matches!(
-        parser.current_token(),
-        Some(Token::RParen { .. } | Token::EOF)
-    ) {
-        let item = f(parser)?;
+                collection.push(item);
 
-        collection.push(item);
+                if let Some(Token::Comma { .. }) = parser.current_token() {
+                    parser.next_token();
+                } else if !matches!(
+                    parser.current_token(),
+                    Some(Token::RBrace { .. } | Token::EOF)
+                ) {
+                    parser.log_unexpected_str("`,` or `}`");
+                    return Err(ErrorsEmitted);
+                }
+            }
+        }
 
-        if let Some(Token::Comma { .. }) = parser.current_token() {
-            parser.next_token();
-        } else if !matches!(
-            parser.current_token(),
-            Some(Token::RParen { .. } | Token::EOF)
-        ) {
-            parser.log_unexpected_str("`,` or `)`");
+        Delimiter::Pipe => {
+            while !matches!(
+                parser.current_token(),
+                Some(Token::Pipe { .. } | Token::EOF),
+            ) {
+                let item = f(parser)?;
+                collection.push(item);
+
+                if let Some(Token::Comma { .. }) = parser.current_token() {
+                    parser.next_token();
+                } else if let Some(Token::Pipe { .. }) = parser.current_token() {
+                    parser.next_token();
+                    break;
+                } else if !matches!(
+                    parser.current_token(),
+                    Some(Token::Pipe { .. } | Token::EOF)
+                ) {
+                    parser.log_unexpected_str("`,` or `|`");
+                    return Err(ErrorsEmitted);
+                }
+            }
+        }
+
+        _ => {
+            parser.log_unexpected_str("closing delimiter type");
             return Err(ErrorsEmitted);
         }
     }
@@ -64,24 +91,54 @@ pub(crate) fn get_collection_parens_comma<T>(
 pub(crate) fn get_expressions(
     parser: &mut Parser,
     precedence: Precedence,
+    close_delimiter: Delimiter,
 ) -> Result<Vec<Expression>, ErrorsEmitted> {
     let mut expressions: Vec<Expression> = Vec::new();
 
-    while !matches!(
-        parser.current_token(),
-        Some(Token::RParen { .. } | Token::EOF),
-    ) {
-        let expr = parser.parse_expression(precedence)?;
+    match close_delimiter {
+        Delimiter::RParen => {
+            while !matches!(
+                parser.current_token(),
+                Some(Token::RParen { .. } | Token::EOF),
+            ) {
+                let expr = parser.parse_expression(precedence)?;
 
-        expressions.push(expr);
+                expressions.push(expr);
 
-        if let Some(Token::Comma { .. }) = parser.current_token() {
-            parser.next_token();
-        } else if !matches!(
-            parser.current_token(),
-            Some(Token::RParen { .. } | Token::EOF)
-        ) {
-            parser.log_unexpected_str("`,` or `)`");
+                if let Some(Token::Comma { .. }) = parser.current_token() {
+                    parser.next_token();
+                } else if !matches!(
+                    parser.current_token(),
+                    Some(Token::RParen { .. } | Token::EOF)
+                ) {
+                    parser.log_unexpected_str("`,` or `)`");
+                    return Err(ErrorsEmitted);
+                }
+            }
+        }
+        Delimiter::RBracket => {
+            while !matches!(
+                parser.current_token(),
+                Some(Token::RBracket { .. } | Token::EOF),
+            ) {
+                let expr = parser.parse_expression(precedence)?;
+
+                expressions.push(expr);
+
+                if let Some(Token::Comma { .. }) = parser.current_token() {
+                    parser.next_token();
+                } else if !matches!(
+                    parser.current_token(),
+                    Some(Token::RBracket { .. } | Token::EOF)
+                ) {
+                    parser.log_unexpected_str("`,` or `]`");
+                    return Err(ErrorsEmitted);
+                }
+            }
+        }
+
+        _ => {
+            parser.log_unexpected_str("closing delimiter type");
             return Err(ErrorsEmitted);
         }
     }
