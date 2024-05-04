@@ -1,8 +1,8 @@
-use crate::{lexer::Lexer, logger::LogLevel, parser::Parser};
+use crate::{lexer::Lexer, logger::{LogLevel, LogMsg}, parser::Parser};
 
 /// Utility function that generates a `Parser` instance given some input string (used in testing).
 #[allow(dead_code)]
-pub fn get_parser(input: &str, print_tokens: bool) -> Parser {
+pub fn get_parser(input: &str, log_level: LogLevel, print_tokens: bool) -> Parser {
     let mut lexer = Lexer::new(input);
 
     let stream = lexer
@@ -13,9 +13,11 @@ pub fn get_parser(input: &str, print_tokens: bool) -> Parser {
         println!("{:#?}", stream.tokens());
     }
 
-    let mut parser = Parser::new(stream, LogLevel::Debug);
+    let mut parser = Parser::new(stream, log_level);
 
-    parser.logger.log(LogLevel::Info, "instantiated parser");
+    parser
+        .logger
+        .log(LogLevel::Info, LogMsg("instantiated parser".to_string()));
 
     parser
 }

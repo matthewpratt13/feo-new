@@ -56,19 +56,19 @@ impl ParseOperation for MethodCallExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::test_utils;
+    use crate::{logger::LogLevel, parser::test_utils};
 
     #[test]
     fn parse_method_call_expr_with_args() -> Result<(), ()> {
         let input = r#"receiver.method(x, "foo", -10)"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -76,13 +76,13 @@ mod tests {
     fn parse_method_call_expr_without_args() -> Result<(), ()> {
         let input = r#"receiver.method()"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 }

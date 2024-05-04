@@ -151,19 +151,19 @@ impl RangeExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::test_utils;
+    use crate::{logger::LogLevel, parser::test_utils};
 
     #[test]
     fn parse_range_expr_excl() -> Result<(), ()> {
         let input = r#"1..10"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -171,13 +171,13 @@ mod tests {
     fn parse_range_expr_incl() -> Result<(), ()> {
         let input = r#"..=20"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -185,13 +185,13 @@ mod tests {
     fn parse_range_expr_full() -> Result<(), ()> {
         let input = r#".."#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 }

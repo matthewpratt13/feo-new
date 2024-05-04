@@ -82,19 +82,19 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::test_utils;
+    use crate::{logger::LogLevel, parser::test_utils};
 
     #[test]
     fn parse_closure_expr_without_block() -> Result<(), ()> {
         let input = r#"|| 2 + 2"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -104,13 +104,13 @@ mod tests {
             print("hello {}", world);
         }"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 }

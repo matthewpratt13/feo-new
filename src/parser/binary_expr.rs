@@ -3,7 +3,7 @@ use crate::{
         AssigneeExpr, BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression, ValueExpr,
     },
     error::ErrorsEmitted,
-    logger::LogLevel,
+    logger::{LogLevel, LogMsg},
     token::{Token, TokenType},
 };
 
@@ -14,9 +14,10 @@ impl ParseOperation for BinaryExpr {
     /// This method parses the operator and calls `parse_expression()` recursively to handle
     /// the right-hand side of the expression.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        parser
-            .logger
-            .log(LogLevel::Debug, "entering `BinaryExpr::parse()`");
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `BinaryExpr::parse()`".to_string()),
+        );
         parser.log_current_token(true);
 
         let lhs = ValueExpr::try_from(left_expr).map_err(|e| {
@@ -63,9 +64,10 @@ impl ParseOperation for BinaryExpr {
             rhs: Box::new(rhs),
         };
 
-        parser
-            .logger
-            .log(LogLevel::Debug, "exiting `BinaryExpr::parse()`");
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("exiting `BinaryExpr::parse()`".to_string()),
+        );
         parser.log_current_token(false);
 
         Ok(Expression::Binary(expr))
@@ -76,9 +78,10 @@ impl ParseOperation for ComparisonExpr {
     /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on
     /// the input operator.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        parser
-            .logger
-            .log(LogLevel::Debug, "entering `ComparisonExpr::parse()`");
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `ComparisonExpr::parse()`".to_string()),
+        );
         parser.log_current_token(true);
 
         let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
@@ -118,9 +121,10 @@ impl ParseOperation for ComparisonExpr {
             rhs,
         };
 
-        parser
-            .logger
-            .log(LogLevel::Debug, "exiting `ComparisonExpr::parse()`");
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("exiting `ComparisonExpr::parse()`".to_string()),
+        );
         parser.log_current_token(false);
 
         Ok(Expression::Comparison(expr))
@@ -129,19 +133,19 @@ impl ParseOperation for ComparisonExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::test_utils;
+    use crate::{logger::LogLevel, parser::test_utils};
 
     #[test]
     fn parse_binary_expr_add() -> Result<(), ()> {
         let input = r#"x + 2"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -150,13 +154,13 @@ mod tests {
     fn parse_binary_expr_subtract() -> Result<(), ()> {
         let input = r#"x - 2"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -165,13 +169,13 @@ mod tests {
     fn parse_binary_expr_multiply() -> Result<(), ()> {
         let input = r#"x * 2"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -179,13 +183,13 @@ mod tests {
     fn parse_binary_expr_modulus() -> Result<(), ()> {
         let input = r#"x % 2"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -193,13 +197,13 @@ mod tests {
     fn parse_binary_expr_logical_and() -> Result<(), ()> {
         let input = r#"x && y"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -208,13 +212,13 @@ mod tests {
     fn parse_binary_expr_logical_or() -> Result<(), ()> {
         let input = r#"x || y"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -223,13 +227,13 @@ mod tests {
     fn parse_binary_expr_bitwise_and() -> Result<(), ()> {
         let input = r#"x & y"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -238,13 +242,13 @@ mod tests {
     fn parse_binary_expr_bitwise_or() -> Result<(), ()> {
         let input = r#"x | y"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -252,13 +256,13 @@ mod tests {
     fn parse_binary_expr_bitwise_xor() -> Result<(), ()> {
         let input = r#"x ^ y"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -266,13 +270,13 @@ mod tests {
     fn parse_binary_expr_shift_left() -> Result<(), ()> {
         let input = r#"2 << 4"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -280,13 +284,13 @@ mod tests {
     fn parse_binary_expr_exponent() -> Result<(), ()> {
         let input = r#"x**2"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -294,13 +298,13 @@ mod tests {
     fn parse_comparison_expr_less_than() -> Result<(), ()> {
         let input = r#"x < 2"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -308,13 +312,13 @@ mod tests {
     fn parse_comparison_expr_greater_equal() -> Result<(), ()> {
         let input = r#"x >= 2"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -323,13 +327,13 @@ mod tests {
     fn parse_comparison_expr_not_equal() -> Result<(), ()> {
         let input = r#"x != 2"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 }

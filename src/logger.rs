@@ -8,28 +8,31 @@ pub enum LogLevel {
     Critical,
 }
 
+#[derive(Debug, Clone)]
+pub struct LogMsg(pub String);
+
 #[derive(Debug)]
 pub struct Logger {
     level: LogLevel,
-    messages: Vec<String>,
+    messages: Vec<LogMsg>,
 }
 
 impl Logger {
     pub fn new(level: LogLevel) -> Self {
         Self {
             level,
-            messages: Vec::<String>::new(),
+            messages: Vec::<LogMsg>::new(),
         }
     }
 
-    pub fn log(&mut self, level: LogLevel, msg: &str) {
+    pub fn log(&mut self, level: LogLevel, msg: LogMsg) {
         if self.level <= level {
-            self.messages.push(msg.to_string());
+            self.messages.push(msg);
         }
     }
 
     #[allow(dead_code)]
-    pub fn logs(&self) -> Vec<String> {
+    pub fn logs(&self) -> Vec<LogMsg> {
         self.messages.clone()
     }
 }

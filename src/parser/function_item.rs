@@ -139,7 +139,7 @@ impl FunctionOrMethodParam {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::test_utils;
+    use crate::{logger::LogLevel, parser::test_utils};
 
     #[test]
     fn parse_function_def_without_block() -> Result<(), ()> {
@@ -147,13 +147,13 @@ mod tests {
         #[modifier]
         pub func only_owner(&mut self, mut caller: h160, ref balances: Mapping<u160, u256>)"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -185,13 +185,13 @@ mod tests {
             };
         }"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 }

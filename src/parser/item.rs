@@ -5,7 +5,7 @@ use crate::{
         TupleStructDef, Visibility,
     },
     error::ErrorsEmitted,
-    logger::LogLevel,
+    logger::{LogLevel, LogMsg},
     token::Token,
 };
 
@@ -95,7 +95,7 @@ impl ParseStatement for Item {
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {
         parser
             .logger
-            .log(LogLevel::Debug, "entering `Item::parse_statement()`");
+            .log(LogLevel::Debug, LogMsg("entering `Item::parse_statement()`".to_string()));
         parser.log_current_token(true);
 
         let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);

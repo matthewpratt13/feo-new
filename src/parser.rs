@@ -91,7 +91,7 @@ use crate::{
         TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, WhileExpr,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
-    logger::{LogLevel, Logger},
+    logger::{LogLevel, LogMsg, Logger},
     token::{Token, TokenStream, TokenType},
 };
 
@@ -146,7 +146,10 @@ impl Parser {
 
     /// Define and initialize token precedence levels.
     fn init_precedences(&mut self, tokens: Vec<Token>) {
-        self.logger.log(LogLevel::Debug, "initializing precedences");
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg("initializing precedences".to_string()),
+        );
 
         for t in tokens {
             match t.token_type() {
@@ -211,8 +214,10 @@ impl Parser {
     /// struct instances.
     fn set_context(&mut self, context: ParserContext) {
         self.context = context;
-        self.logger
-            .log(LogLevel::Debug, &format!("set context: {:?}", context));
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg(format!("set context: {:?}", context)),
+        );
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -222,18 +227,22 @@ impl Parser {
     fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
 
-        self.logger.log(LogLevel::Info, "starting to parse tokens");
+        self.logger.log(
+            LogLevel::Info,
+            LogMsg("starting to parse tokens".to_string()),
+        );
 
         while self.current < self.stream.tokens().len() {
             let statement = self.parse_statement()?;
             self.logger.log(
                 LogLevel::Info,
-                &format!("parsed statement: {:?}", statement),
+                LogMsg(format!("parsed statement: {:?}", statement)),
             );
             statements.push(statement);
         }
 
-        self.logger.log(LogLevel::Info, "reached end of file");
+        self.logger
+            .log(LogLevel::Info, LogMsg("reached end of file".to_string()));
         Ok(statements)
     }
 
@@ -251,37 +260,46 @@ impl Parser {
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
         self.logger.log(
             LogLevel::Debug,
-            &format!(
+            LogMsg(format!(
                 "entering `parse_expression()` with precedence: {:?}",
                 precedence
-            ),
+            )),
         );
 
         self.log_current_token(true);
 
         let mut left_expr = self.parse_prefix()?; // start with prefix expression
-        self.logger.log(LogLevel::Debug, "exited `parse_prefix()`");
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg("exited `parse_prefix()`".to_string()),
+        );
         self.log_current_token(true);
 
         // repeatedly call `parse_infix()` while the precedence of the current token is higher
         // than the input precedence
         while precedence < self.peek_precedence() {
             self.log_current_token(true);
-            self.logger
-                .log(LogLevel::Debug, "current precedence >= input precedence");
+            self.logger.log(
+                LogLevel::Debug,
+                LogMsg("current precedence >= input precedence".to_string()),
+            );
 
             if let Some(infix_parser) = self.parse_infix() {
                 left_expr = infix_parser(self, left_expr)?; // parse infix expressions
-                self.logger
-                    .log(LogLevel::Debug, "exited infix parsing function");
+                self.logger.log(
+                    LogLevel::Debug,
+                    LogMsg("exited infix parsing function".to_string()),
+                );
                 self.log_current_token(true);
             } else {
                 break;
             }
         }
 
-        self.logger
-            .log(LogLevel::Debug, "exiting `parse_expression()`");
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg("exiting `parse_expression()`".to_string()),
+        );
         self.log_current_token(true);
 
         Ok(left_expr)
@@ -290,8 +308,10 @@ impl Parser {
     /// Parse the basic building blocks of expressions (e.g., grouped expressions, identifiers
     /// and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
-        self.logger
-            .log(LogLevel::Debug, "entering `parse_primary()`");
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `parse_primary()`".to_string()),
+        );
         self.log_current_token(true);
 
         match self.current_token() {
@@ -324,7 +344,7 @@ impl Parser {
             None => {
                 self.logger.log(
                     LogLevel::Error,
-                    &ParserErrorKind::UnexpectedEndOfInput.to_string(),
+                    LogMsg(ParserErrorKind::UnexpectedEndOfInput.to_string()),
                 );
                 Err(ErrorsEmitted)
             }
@@ -336,8 +356,10 @@ impl Parser {
     /// Where applicable, check the current token and set the parser context based on
     /// surrounding tokens.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
-        self.logger
-            .log(LogLevel::Debug, "entering `parse_prefix()`");
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `parse_prefix()`".to_string()),
+        );
         self.log_current_token(true);
 
         match self.current_token() {
@@ -578,7 +600,7 @@ impl Parser {
             None => {
                 self.logger.log(
                     LogLevel::Error,
-                    &ParserErrorKind::UnexpectedEndOfInput.to_string(),
+                    LogMsg(ParserErrorKind::UnexpectedEndOfInput.to_string()),
                 );
                 Err(ErrorsEmitted)
             }
@@ -592,7 +614,10 @@ impl Parser {
     fn parse_infix(
         &mut self,
     ) -> Option<fn(&mut Self, Expression) -> Result<Expression, ErrorsEmitted>> {
-        self.logger.log(LogLevel::Debug, "entering `parse_infix()`");
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `parse_infix()`".to_string()),
+        );
         self.log_current_token(true);
 
         match &self.current_token() {
@@ -704,18 +729,22 @@ impl Parser {
             Some(_) => {
                 self.logger.log(
                     LogLevel::Debug,
-                    &ParserErrorKind::InvalidTokenContext {
-                        token: self.current_token(),
-                    }
-                    .to_string(),
+                    LogMsg(
+                        ParserErrorKind::InvalidTokenContext {
+                            token: self.current_token(),
+                        }
+                        .to_string(),
+                    ),
                 );
                 self.log_current_token(true);
                 None
             }
 
             None => {
-                self.logger
-                    .log(LogLevel::Debug, "no infix parsing function found");
+                self.logger.log(
+                    LogLevel::Debug,
+                    LogMsg("no infix parsing function found".to_string()),
+                );
                 self.log_current_token(true);
                 None
             }
@@ -728,8 +757,10 @@ impl Parser {
 
     /// Parse a statement (i.e., let statement, item or expression).
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        self.logger
-            .log(LogLevel::Debug, "entering `parse_statement()`");
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `parse_statement()`".to_string()),
+        );
         self.log_current_token(true);
 
         let token = self.current_token();
@@ -781,8 +812,10 @@ impl Parser {
 
     /// Helper function to parse an identifier as and `IdentifierPatt`.
     fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
-        self.logger
-            .log(LogLevel::Debug, "entering `get_identifier_patt()`");
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `get_identifier_patt()`".to_string()),
+        );
         self.log_current_token(false);
 
         let kw_ref_opt = if let Some(Token::Ref { .. }) = self.current_token() {
@@ -806,8 +839,10 @@ impl Parser {
             Err(ErrorsEmitted)
         }?;
 
-        self.logger
-            .log(LogLevel::Debug, "exiting `get_identifier_patt()`");
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg("exiting `get_identifier_patt()`".to_string()),
+        );
         self.log_current_token(false);
 
         Ok(Pattern::IdentifierPatt {
@@ -825,13 +860,14 @@ impl Parser {
     fn next_token(&mut self) -> Option<Token> {
         if let Some(t) = self.current_token() {
             self.current += 1;
-            self.logger.log(LogLevel::Debug, "consumed token");
+            self.logger
+                .log(LogLevel::Debug, LogMsg("consumed token".to_string()));
             self.log_current_token(true);
             Some(t)
         } else {
             self.logger.log(
                 LogLevel::Error,
-                &ParserErrorKind::UnexpectedEndOfInput.to_string(),
+                LogMsg(ParserErrorKind::UnexpectedEndOfInput.to_string()),
             );
             None
         }
@@ -885,7 +921,7 @@ impl Parser {
             self.stream.tokens()[i].span().start(),
         );
 
-        self.logger.log(LogLevel::Error,  &error.to_string());
+        self.logger.log(LogLevel::Error, LogMsg(error.to_string()));
         self.errors.push(error);
     }
 
@@ -893,13 +929,15 @@ impl Parser {
         let token = self.current_token();
         let precedence = self.get_precedence(&token.clone().unwrap_or(Token::EOF));
 
-        self.logger
-            .log(LogLevel::Debug, &format!("current token: {:?}", token));
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg(format!("current token: {:?}", token)),
+        );
 
         if log_precedence {
             self.logger.log(
                 LogLevel::Debug,
-                &format!("current precedence: {:?}", precedence),
+                LogMsg(format!("current precedence: {:?}", precedence)),
             );
         }
     }
@@ -926,7 +964,7 @@ impl Parser {
     /// Log error information about an unmatched delimiter.
     fn log_unmatched_delimiter(&mut self, expected: Delimiter) {
         self.log_error(ParserErrorKind::UnmatchedDelimiter {
-            delim: format!("{:#?}", expected),
+            delim: format!("{:?}", expected),
         });
 
         self.next_token();
@@ -1026,14 +1064,16 @@ impl Parser {
 
     /// Get the precedence of the next token
     fn peek_precedence(&mut self) -> Precedence {
-        self.logger
-            .log(LogLevel::Debug, "entering `peek_precedence()`");
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `peek_precedence()`".to_string()),
+        );
 
         let precedence = self.get_precedence(&self.current_token().unwrap_or(Token::EOF));
 
         self.logger.log(
             LogLevel::Debug,
-            &format!("peeked precedence: {:?}", precedence),
+            LogMsg(format!("peeked precedence: {:?}", precedence)),
         );
 
         precedence
@@ -1126,19 +1166,21 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
+    use crate::logger::LogLevel;
+
     use super::test_utils;
 
     #[test]
     fn parse_break_expr() -> Result<(), ()> {
         let input = r#"break"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -1146,13 +1188,13 @@ mod tests {
     fn parse_continue_expr() -> Result<(), ()> {
         let input = r#"continue"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -1160,13 +1202,13 @@ mod tests {
     fn parse_underscore_expr() -> Result<(), ()> {
         let input = r#"_"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 }
