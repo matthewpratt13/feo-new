@@ -1,7 +1,7 @@
 use crate::{
     ast::{BlockExpr, Delimiter, Expression, InnerAttr, Statement},
     error::ErrorsEmitted,
-    parser::test_utils::log_token,
+    logger::LogLevel,
     token::Token,
 };
 
@@ -9,7 +9,10 @@ use super::{collection, parse::ParseConstruct, Parser};
 
 impl ParseConstruct for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        log_token(parser, "enter `BlockExpr::parse()`", true);
+        parser
+            .logger
+            .log(LogLevel::Debug, "entering `BlockExpr::parse()`");
+        parser.log_current_token(false);
 
         let attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
@@ -38,7 +41,10 @@ impl ParseConstruct for BlockExpr {
             close_brace,
         };
 
-        log_token(parser, "exit `BlockExpr::parser()`", true);
+        parser
+            .logger
+            .log(LogLevel::Debug, "exiting `BlockExpr::parse()`");
+        parser.log_current_token(false);
         Ok(Expression::Block(expr))
     }
 }

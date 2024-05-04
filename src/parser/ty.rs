@@ -4,15 +4,19 @@ use crate::{
         SelfType, Type,
     },
     error::ErrorsEmitted,
+    logger::LogLevel,
     token::Token,
 };
 
-use super::{collection, test_utils::log_token, Parser};
+use super::{collection, Parser};
 
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
-        log_token(parser, "enter `TypeExpr::parse()`", true);
+        parser
+            .logger
+            .log(LogLevel::Debug, "entering `Type::parse()`");
+        parser.log_current_token(false);
 
         let token = parser.next_token();
 

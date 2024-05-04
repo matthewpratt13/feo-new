@@ -1,17 +1,21 @@
 use crate::{
     ast::{Expression, Identifier, PathExpr, PathPrefix, Separator},
     error::ErrorsEmitted,
+    logger::LogLevel,
     token::Token,
 };
 
-use super::{test_utils::log_token, Parser};
+use super::Parser;
 
 impl PathExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         root: PathPrefix,
     ) -> Result<Expression, ErrorsEmitted> {
-        log_token(parser, "enter `PathExpr::parse()`", true);
+        parser
+            .logger
+            .log(LogLevel::Debug, "entering `PathExpr::parse()`");
+        parser.log_current_token(false);
 
         let mut tree: Vec<Identifier> = Vec::new();
 
@@ -44,7 +48,10 @@ impl PathExpr {
             wildcard_opt,
         };
 
-        log_token(parser, "exit `PathExpr::parse()`", true);
+        parser
+            .logger
+            .log(LogLevel::Debug, "exiting `PathExpr::parse()`");
+        parser.log_current_token(false);
 
         Ok(Expression::Path(expr))
     }

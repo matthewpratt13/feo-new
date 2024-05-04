@@ -3,7 +3,7 @@ use crate::{
         AssigneeExpr, BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression, ValueExpr,
     },
     error::ErrorsEmitted,
-    parser::test_utils::log_token,
+    logger::LogLevel,
     token::{Token, TokenType},
 };
 
@@ -14,7 +14,10 @@ impl ParseOperation for BinaryExpr {
     /// This method parses the operator and calls `parse_expression()` recursively to handle
     /// the right-hand side of the expression.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        log_token(parser, "enter `BinaryExpr::parse()`", true);
+        parser
+            .logger
+            .log(LogLevel::Debug, "entering `BinaryExpr::parse()`");
+        parser.log_current_token(true);
 
         let lhs = ValueExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
@@ -60,7 +63,11 @@ impl ParseOperation for BinaryExpr {
             rhs: Box::new(rhs),
         };
 
-        log_token(parser, "exit `BinaryExpr::parse()`", true);
+        parser
+            .logger
+            .log(LogLevel::Debug, "exiting `BinaryExpr::parse()`");
+        parser.log_current_token(false);
+
         Ok(Expression::Binary(expr))
     }
 }
@@ -69,7 +76,10 @@ impl ParseOperation for ComparisonExpr {
     /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on
     /// the input operator.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        log_token(parser, "enter `ComparisonExpr::parse()`", true);
+        parser
+            .logger
+            .log(LogLevel::Debug, "entering `ComparisonExpr::parse()`");
+        parser.log_current_token(true);
 
         let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
@@ -108,7 +118,10 @@ impl ParseOperation for ComparisonExpr {
             rhs,
         };
 
-        log_token(parser, "exit `ComparisonExpr::parse()`", true);
+        parser
+            .logger
+            .log(LogLevel::Debug, "exiting `ComparisonExpr::parse()`");
+        parser.log_current_token(false);
 
         Ok(Expression::Comparison(expr))
     }

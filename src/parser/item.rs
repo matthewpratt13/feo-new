@@ -5,6 +5,7 @@ use crate::{
         TupleStructDef, Visibility,
     },
     error::ErrorsEmitted,
+    logger::LogLevel,
     token::Token,
 };
 
@@ -92,6 +93,11 @@ impl Item {
 impl ParseStatement for Item {
     /// Parse the current token and convert it from an `Item` to a `Statement`.
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {
+        parser
+            .logger
+            .log(LogLevel::Debug, "entering `Item::parse_statement()`");
+        parser.log_current_token(true);
+
         let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
         let visibility = Visibility::visibility(parser)?;
