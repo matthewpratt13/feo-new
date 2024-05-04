@@ -595,7 +595,6 @@ impl Parser {
                 self.log_error(ParserErrorKind::InvalidTokenContext {
                     token: self.current_token(),
                 });
-
                 Err(ErrorsEmitted)
             }
 
@@ -812,13 +811,142 @@ impl Parser {
     // PATTERN PARSING
     ///////////////////////////////////////////////////////////////////////////
 
+    fn parse_pattern(&mut self) -> Result<Pattern, ErrorsEmitted> {
+        self.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `parse_pattern()`".to_string()),
+        );
+        self.log_current_token(true);
+
+        match self.current_token() {
+            Some(Token::IntLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Int(value))),
+            Some(Token::UIntLiteral { value, .. }) => Ok(Pattern::Literal(Literal::UInt(value))),
+            Some(Token::BigUIntLiteral { value, .. }) => {
+                Ok(Pattern::Literal(Literal::BigUInt(value)))
+            }
+            Some(Token::ByteLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Byte(value))),
+            Some(Token::BytesLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Bytes(value))),
+            Some(Token::HashLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Hash(value))),
+            Some(Token::StrLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Str(value))),
+            Some(Token::CharLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Char(value))),
+            Some(Token::BoolLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Bool(value))),
+            Some(Token::LParen { .. }) => {
+                if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
+                    TuplePatt::parse(self)
+                } else {
+                    let patt = GroupedPatt::parse(self);
+                    self.next_token();
+                    patt
+                }
+            }
+            Some(Token::Identifier { name, .. }) => {
+                if &name == "_" {
+                    self.next_token();
+                    Ok(Pattern::WildcardPatt {
+                        underscore: Identifier(name),
+                    })
+                } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
+                    let patt = PathPatt::parse(self, PathPrefix::Identifier(Identifier(name)))?;
+                    self.next_token();
+
+                    if let Some(Token::Colon { .. }) = self.peek_ahead_by(2) {
+                        let path = PathPatt {
+                            root: PathPrefix::Identifier(Identifier(name)),
+                            tree_opt: None,
+                        };
+                        StructPatt::parse(self, path)
+                    } else {
+                        patt
+                    }
+                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
+                    self.peek_ahead_by(1)
+                {
+                    let patt = PathPatt::parse(self, PathPrefix::Identifier(Identifier(name)));
+                    self.next_token();
+                    patt
+                } else {
+                    IdentifierPatt::parse(self)
+                }
+            }
+
+            Some(Token::Ref { .. } | Token::Mut { .. }) => IdentifierPatt::parse(self),
+
+            Some(Token::SelfType { .. }) => {
+                if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
+                    let path = PathExpr {
+                        root: PathPrefix::SelfType(SelfType),
+                        tree_opt: None,
+                        wildcard_opt: None,
+                    };
+
+                    self.next_token();
+                    StructPatt::parse(self, path)
+                } else {
+                    self.next_token();
+                    PathPatt::parse(self, PathPrefix::SelfType(SelfType))
+                }
+            }
+            Some(Token::SelfKeyword { .. }) => {
+                self.next_token();
+                PathPatt::parse(self, PathPrefix::SelfKeyword)
+            }
+            Some(Token::Package { .. }) => {
+                self.next_token();
+                PathPatt::parse(self, PathPrefix::Package)
+            }
+            Some(Token::Super { .. }) => {
+                self.next_token();
+                PathPatt::parse(self, PathPrefix::Super)
+            }
+
+            Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
+                if self.peek_ahead_by(1).is_none() {
+                    let patt = RestPatt {
+                        dbl_dot: RangeOp::RangeExclusive,
+                    };
+                    self.next_token();
+                    Ok(Pattern::RestPatt(patt))
+                } else {
+                    RangePatt::parse_prefix(self)
+                }
+            }
+
+            Some(Token::Some { .. }) => SomePatt::parse(self),
+
+            Some(Token::None { .. }) => {
+                self.next_token();
+
+                Ok(Pattern::NonePatt(NonePatt {
+                    kw_none: Keyword::None,
+                }))
+            }
+
+            Some(Token::Ok { .. } | Token::Err { .. }) => ResultPatt::parse(self),
+
+            Some(_) => {
+                self.log_error(ParserErrorKind::InvalidTokenContext {
+                    token: self.current_token(),
+                });
+                Err(ErrorsEmitted)
+            }
+
+            None => {
+                self.logger.log(
+                    LogLevel::Error,
+                    LogMsg(ParserErrorKind::UnexpectedEndOfInput.to_string()),
+                );
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
     /// Helper function to parse an identifier as and `IdentifierPatt`.
     fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
         self.logger.log(
             LogLevel::Debug,
             LogMsg("entering `get_identifier_patt()`".to_string()),
         );
-        self.log_current_token(false);
+        self.log_current_token(true);
 
         let kw_ref_opt = if let Some(Token::Ref { .. }) = self.current_token() {
             self.next_token();

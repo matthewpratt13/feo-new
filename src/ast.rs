@@ -437,27 +437,22 @@ impl TryFrom<Expression> for AssigneeExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Literal(Literal),
-    IdentifierPatt {
-        kw_ref_opt: Option<Keyword>,
-        kw_mut_opt: Option<Keyword>,
-        name: Identifier,
-    },
-    PathPatt(PathExpr),
+    IdentifierPatt(IdentifierPatt),
+    PathPatt(PathPatt),
     GroupedPatt(Box<Pattern>),
-    RangePatt(RangeExpr),
-    TuplePatt(Option<Vec<Pattern>>),
-    StructPatt {
-        struct_name: Identifier,
-        fields_opt: Option<Vec<(Identifier, Pattern)>>,
-    },
+    RangePatt(RangePatt),
+    TuplePatt(TuplePatt),
+    StructPatt(StructPatt),
     // TupleStructPatt {
     //     name: Identifier,
     //     elements_opt: Option<Vec<Pattern>>,
     // },
-    WildcardPatt(Identifier),
-    RestPatt {
-        dbl_dot: RangeOp,
-    },
+    WildcardPatt(WildcardPatt),
+    RestPatt(RestPatt),
+    SomePatt(SomePatt),
+    NonePatt(NonePatt),
+    ResultPatt(ResultPatt),
+    
 }
 
 impl TryFrom<Expression> for Pattern {
