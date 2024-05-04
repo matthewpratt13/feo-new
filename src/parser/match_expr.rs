@@ -116,6 +116,8 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
     Ok(arm)
 }
 
+// TODO: create a higher-level `Pattern::parse()` function to handle all cases needing a `Pattern`
+// TODO: (i.e., to replace this function)
 fn parse_pattern(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
     match parser.current_token() {
         Some(Token::UIntLiteral { value, .. }) => {
