@@ -23,6 +23,12 @@ pub struct StructPattField {
 // STRUCTURES
 ///////////////////////////////////////////////////////////////////////////
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct GroupedPatt {
+    pub open_paren: Delimiter,
+    pub expression: Box<Pattern>,
+    pub close_paren: Delimiter,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentifierPatt {
@@ -85,4 +91,3 @@ pub struct TuplePatt {
 pub struct WildcardPatt {
     pub underscore: Identifier,
 }
-

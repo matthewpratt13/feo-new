@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier,
-        Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
+        IdentifierPatt, Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
     },
     error::ErrorsEmitted,
     token::Token,
@@ -109,7 +109,7 @@ impl FunctionOrMethodParam {
                 Ok(FunctionOrMethodParam::MethodParam(self_param))
             }
             Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
-                let param_name = parser.get_identifier_patt()?;
+                let param_name = IdentifierPatt::parse(parser)?;
 
                 match parser.next_token() {
                     Some(Token::Colon { .. }) => (),

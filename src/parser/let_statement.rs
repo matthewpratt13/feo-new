@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Keyword, LetStmt, Statement, Type},
+    ast::{IdentifierPatt, Keyword, LetStmt, Statement, Type},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -16,7 +16,7 @@ impl ParseStatement for LetStmt {
             Err(ErrorsEmitted)
         }?;
 
-        let assignee = parser.get_identifier_patt()?;
+        let assignee = IdentifierPatt::parse(parser)?;
 
         let type_ann_opt = if let Some(Token::Colon { .. }) = parser.current_token() {
             parser.next_token();

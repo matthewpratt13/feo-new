@@ -49,6 +49,8 @@ mod field_access_expr;
 mod for_in_expr;
 mod function_item;
 mod grouped_expr;
+mod grouped_patt;
+mod identifier_patt;
 mod if_expr;
 mod impl_def;
 mod import_decl;
@@ -60,17 +62,23 @@ mod method_call_expr;
 mod module_item;
 mod parse;
 mod path_expr;
+mod path_patt;
 mod precedence;
 mod range_expr;
+mod range_patt;
 mod result_expr;
+mod result_patt;
 mod return_expr;
 mod some_expr;
+mod some_patt;
 mod static_item_decl;
 mod struct_def;
 mod struct_expr;
+mod struct_patt;
 mod test_utils;
 mod trait_def;
 mod tuple_expr;
+mod tuple_patt;
 mod ty;
 mod type_cast_expr;
 mod unary_expr;
@@ -84,11 +92,13 @@ use crate::{
     ast::{
         ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
         ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter, DereferenceExpr,
-        DereferenceOp, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, Identifier, IfExpr,
-        IndexExpr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, NoneExpr, PathExpr,
-        PathPrefix, Pattern, RangeExpr, RangeOp, ReferenceExpr, ReferenceOp, ResultExpr,
-        ReturnExpr, SelfType, SomeExpr, Statement, StructExpr, TupleExpr, TupleIndexExpr,
-        TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, WhileExpr,
+        DereferenceOp, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
+        Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal, MatchExpr,
+        MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, PathPrefix, Pattern, RangeExpr,
+        RangeOp, RangePatt, ReferenceExpr, ReferenceOp, RestPatt, ResultExpr, ResultPatt,
+        ReturnExpr, SelfType, SomeExpr, SomePatt, Statement, StructExpr, StructPatt, TupleExpr,
+        TupleIndexExpr, TuplePatt, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr,
+        WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
@@ -842,11 +852,13 @@ impl Parser {
             Some(Token::Identifier { name, .. }) => {
                 if &name == "_" {
                     self.next_token();
-                    Ok(Pattern::WildcardPatt {
+                    Ok(Pattern::WildcardPatt(WildcardPatt {
                         underscore: Identifier(name),
-                    })
+                    }))
                 } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    let patt = PathPatt::parse(self, PathPrefix::Identifier(Identifier(name)))?;
+                    let parse =
+                        PathPatt::parse(self, PathPrefix::Identifier(Identifier(name.clone())));
+                    let patt = parse;
                     self.next_token();
 
                     if let Some(Token::Colon { .. }) = self.peek_ahead_by(2) {
@@ -873,10 +885,9 @@ impl Parser {
 
             Some(Token::SelfType { .. }) => {
                 if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    let path = PathExpr {
+                    let path = PathPatt {
                         root: PathPrefix::SelfType(SelfType),
                         tree_opt: None,
-                        wildcard_opt: None,
                     };
 
                     self.next_token();
@@ -941,46 +952,42 @@ impl Parser {
     }
 
     /// Helper function to parse an identifier as and `IdentifierPatt`.
-    fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
-        self.logger.log(
-            LogLevel::Debug,
-            LogMsg("entering `get_identifier_patt()`".to_string()),
-        );
-        self.log_current_token(true);
+    // fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
+    //     self.logger.log(
+    //         LogLevel::Debug,
+    //         LogMsg("entering `get_identifier_patt()`".to_string()),
+    //     );
+    //     self.log_current_token(true);
 
-        let kw_ref_opt = if let Some(Token::Ref { .. }) = self.current_token() {
-            self.next_token();
-            Some(Keyword::Ref)
-        } else {
-            None
-        };
+    //     let kw_ref_opt = if let Some(Token::Ref { .. }) = self.current_token() {
+    //         self.next_token();
+    //         Some(Keyword::Ref)
+    //     } else {
+    //         None
+    //     };
 
-        let kw_mut_opt = if let Some(Token::Mut { .. }) = self.current_token() {
-            self.next_token();
-            Some(Keyword::Mut)
-        } else {
-            None
-        };
+    //     let kw_mut_opt = if let Some(Token::Mut { .. }) = self.current_token() {
+    //         self.next_token();
+    //         Some(Keyword::Mut)
+    //     } else {
+    //         None
+    //     };
 
-        let name = if let Some(Token::Identifier { name, .. }) = self.next_token() {
-            Ok(Identifier(name))
-        } else {
-            self.log_unexpected_token("identifier");
-            Err(ErrorsEmitted)
-        }?;
+    //     let name = if let Some(Token::Identifier { name, .. }) = self.next_token() {
+    //         Ok(Identifier(name))
+    //     } else {
+    //         self.log_unexpected_token("identifier");
+    //         Err(ErrorsEmitted)
+    //     }?;
 
-        self.logger.log(
-            LogLevel::Debug,
-            LogMsg("exiting `get_identifier_patt()`".to_string()),
-        );
-        self.log_current_token(false);
+    //     self.logger.log(
+    //         LogLevel::Debug,
+    //         LogMsg("exiting `get_identifier_patt()`".to_string()),
+    //     );
+    //     self.log_current_token(false);
 
-        Ok(Pattern::IdentifierPatt {
-            kw_ref_opt,
-            kw_mut_opt,
-            name,
-        })
-    }
+    //     IdentifierPatt::parse(self)
+    // }
 
     ///////////////////////////////////////////////////////////////////////////
     // TOKEN RETRIEVAL

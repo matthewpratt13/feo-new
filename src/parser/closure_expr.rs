@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Delimiter, Expression, Type},
+    ast::{BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Delimiter, Expression, IdentifierPatt, Type},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -57,7 +57,8 @@ impl ParseConstruct for ClosureExpr {
 fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitted> {
     let param_name = match parser.current_token() {
         Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
-            parser.get_identifier_patt()
+            IdentifierPatt::parse(parser)
+            // parser.get_identifier_patt()
         }
         _ => {
             parser.log_unexpected_token("identifier");
