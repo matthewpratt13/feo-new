@@ -1,7 +1,7 @@
 use crate::{
     ast::{BlockExpr, Delimiter, Expression, InnerAttr, Statement},
     error::ErrorsEmitted,
-    parser::test_utils::log_token,
+    logger::{LogLevel, LogMsg},
     token::Token,
 };
 
@@ -9,7 +9,11 @@ use super::{collection, parse::ParseConstruct, Parser};
 
 impl ParseConstruct for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        log_token(parser, "enter `BlockExpr::parse()`", true);
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `BlockExpr::parse()`".to_string()),
+        );
+        parser.log_current_token(false);
 
         let attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
@@ -38,7 +42,11 @@ impl ParseConstruct for BlockExpr {
             close_brace,
         };
 
-        log_token(parser, "exit `BlockExpr::parser()`", true);
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("exiting `BlockExpr::parse()`".to_string()),
+        );
+        parser.log_current_token(false);
         Ok(Expression::Block(expr))
     }
 }
@@ -66,7 +74,7 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::test_utils;
+    use crate::{logger::LogLevel, parser::test_utils};
 
     #[test]
     fn parse_block_expr() -> Result<(), ()> {
@@ -77,13 +85,13 @@ mod tests {
             y
         }"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 }

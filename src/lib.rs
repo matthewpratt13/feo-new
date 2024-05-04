@@ -5,6 +5,7 @@ mod ast;
 mod error;
 mod keccak;
 mod lexer;
+mod logger;
 mod parser;
 mod span;
 mod token;

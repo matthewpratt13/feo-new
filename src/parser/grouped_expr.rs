@@ -1,14 +1,19 @@
 use crate::{
     ast::{Delimiter, Expression, GroupedExpr},
     error::ErrorsEmitted,
+    logger::{LogLevel, LogMsg},
     token::Token,
 };
 
-use super::{parse::ParseConstruct, test_utils::log_token, Parser, Precedence};
+use super::{parse::ParseConstruct, Parser, Precedence};
 
 impl ParseConstruct for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        log_token(parser, "enter `GroupedExpr::parse()`", true);
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `GroupedExpr::parse()`".to_string()),
+        );
+        parser.log_current_token(false);
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
             parser.next_token();
@@ -34,7 +39,11 @@ impl ParseConstruct for GroupedExpr {
             close_paren,
         };
 
-        log_token(parser, "exit `GroupedExpr::parse()`", true);
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("exiting `BinaryExpr::parse()`".to_string()),
+        );
+        parser.log_current_token(false);
 
         Ok(Expression::Grouped(expr))
     }
@@ -42,19 +51,19 @@ impl ParseConstruct for GroupedExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::test_utils;
+    use crate::{logger::LogLevel, parser::test_utils};
 
     #[test]
     fn parse_grouped_expr() -> Result<(), ()> {
         let input = r#"(x + 2)"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 }

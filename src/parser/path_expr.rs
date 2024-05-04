@@ -1,17 +1,22 @@
 use crate::{
     ast::{Expression, Identifier, PathExpr, PathPrefix, Separator},
     error::ErrorsEmitted,
+    logger::{LogLevel, LogMsg},
     token::Token,
 };
 
-use super::{test_utils::log_token, Parser};
+use super::Parser;
 
 impl PathExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
         root: PathPrefix,
     ) -> Result<Expression, ErrorsEmitted> {
-        log_token(parser, "enter `PathExpr::parse()`", true);
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `PathExpr::parse()`".to_string()),
+        );
+        parser.log_current_token(false);
 
         let mut tree: Vec<Identifier> = Vec::new();
 
@@ -44,7 +49,11 @@ impl PathExpr {
             wildcard_opt,
         };
 
-        log_token(parser, "exit `PathExpr::parse()`", true);
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("exiting `PathExpr::parse()`".to_string()),
+        );
+        parser.log_current_token(false);
 
         Ok(Expression::Path(expr))
     }
@@ -52,19 +61,19 @@ impl PathExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::test_utils;
+    use crate::{logger::LogLevel, parser::test_utils};
 
     #[test]
     fn parse_path_expr_identifier() -> Result<(), ()> {
         let input = r#"foo_bar"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -72,13 +81,13 @@ mod tests {
     fn parse_path_expr_standard() -> Result<(), ()> {
         let input = r#"package::some_module::SomeObject"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 
@@ -86,13 +95,13 @@ mod tests {
     fn parse_path_expr_wildcard() -> Result<(), ()> {
         let input = r#"self::some_module::*"#;
 
-        let mut parser = test_utils::get_parser(input, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
         let statements = parser.parse();
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.errors())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 }
