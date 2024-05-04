@@ -1,19 +1,19 @@
 use crate::{
-    ast::{AssigneeExpr, BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr, Pattern},
-    error::ErrorsEmitted,
+    ast::{
+        AssigneeExpr, BlockExpr, Delimiter, Expression, Identifier, Keyword, Literal, MatchArm,
+        MatchExpr, Pattern,
+    },
+    error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
 use super::{
     parse::{ParseConstruct, ParseControl},
-    test_utils::log_token,
     Parser, Precedence,
 };
 
 impl ParseControl for MatchExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        log_token(parser, "enter `MatchExpr::parse()`", true);
-
         let kw_match = if let Some(Token::Match { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::Match)
@@ -22,9 +22,7 @@ impl ParseControl for MatchExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let matched_expression = parser.parse_expression(Precedence::Assignment)?;
-
-        log_token(parser, "matched expression (scrutinee)`", true);
+        let matched_expression = parser.parse_expression(Precedence::Lowest)?;
 
         let scrutinee = AssigneeExpr::try_from(matched_expression).map_err(|e| {
             parser.log_error(e);
@@ -38,16 +36,26 @@ impl ParseControl for MatchExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let mut match_arms = parse_match_arms(parser)?;
+        let mut arms = Vec::new();
 
-        // let match_arms = collection::get_collection_braces_comma(parser, MatchArm::parse)?;
+        while !matches!(
+            parser.current_token(),
+            Some(Token::RBrace { .. } | Token::EOF)
+        ) {
+            let arm = parse_match_arm(parser)?;
+            arms.push(arm);
 
-        let final_arm = if let Some(a) = match_arms.pop() {
-            Box::new(a)
+            if let Some(Token::Comma { .. }) = parser.current_token() {
+                parser.next_token();
+            }
+        }
+
+        let final_arm = if let Some(a) = arms.pop() {
+            Ok(Box::new(a))
         } else {
             parser.log_missing_token("match arm");
-            return Err(ErrorsEmitted);
-        };
+            Err(ErrorsEmitted)
+        }?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -62,91 +70,74 @@ impl ParseControl for MatchExpr {
             scrutinee,
             open_brace,
             arms_opt: {
-                match match_arms.is_empty() {
+                match arms.is_empty() {
                     true => None,
-                    false => Some(match_arms),
+                    false => Some(arms),
                 }
             },
             final_arm,
             close_brace,
         };
 
-        log_token(parser, "exit `MatchExpr::parse()`", true);
-
         Ok(Expression::Match(expr))
     }
 }
 
-impl MatchArm {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        expression: Expression,
-    ) -> Result<Expression, ErrorsEmitted> {
-        log_token(parser, "enter `MatchArm::parse()`", true);
+fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
+    let pattern = parse_pattern(parser)?;
 
-        let pattern = Pattern::try_from(expression).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+    let guard_opt = if let Some(Token::If { .. }) = parser.current_token() {
+        parser.next_token();
+        let expr = parser.parse_expression(Precedence::Lowest)?;
+        Some((Keyword::If, Box::new(expr)))
+    } else {
+        None
+    };
 
-        let guard_opt = if let Some(Token::If { .. }) = parser.current_token() {
-            parser.next_token();
-            let expr = Box::new(parser.parse_expression(Precedence::Assignment)?);
-            Some((Keyword::If, expr))
-        } else {
-            None
-        };
-
-        if let Some(Token::FatArrow { .. }) = parser.current_token() {
-            log_token(parser, "encounter `=>`", false);
-            parser.next_token();
-        } else {
-            parser.log_unexpected_token("`=>`");
-            return Err(ErrorsEmitted);
-        }
-
-        let body = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            Box::new(BlockExpr::parse(parser)?)
-        } else {
-            Box::new(parser.parse_expression(Precedence::Lowest)?)
-        };
-
-        if let Some(Token::Comma { .. }) = parser.current_token() {
-            log_token(parser, "encounter `,`", false);
-            parser.next_token();
-        }
-
-        log_token(parser, "exit `MatchArm::parse()`", true);
-
-        let expr = MatchArm {
-            pattern,
-            guard_opt,
-            body,
-        };
-
-        Ok(Expression::MatchArm(expr))
+    if let Some(Token::FatArrow { .. }) = parser.current_token() {
+        parser.next_token();
+    } else {
+        parser.log_unexpected_token("`=>`");
+        return Err(ErrorsEmitted);
     }
+
+    let body = if let Some(Token::LBrace { .. }) = parser.current_token() {
+        Box::new(BlockExpr::parse(parser)?)
+    } else {
+        Box::new(parser.parse_expression(Precedence::Lowest)?)
+    };
+
+    let arm = MatchArm {
+        pattern,
+        guard_opt,
+        body,
+    };
+
+    Ok(arm)
 }
 
-fn parse_match_arms(parser: &mut Parser) -> Result<Vec<Expression>, ErrorsEmitted> {
-    let mut match_arms: Vec<Expression> = Vec::new();
-
-    while !matches!(
-        parser.current_token(),
-        Some(Token::RBrace { .. } | Token::EOF)
-    ) {
-        let expression = parser.parse_expression(Precedence::Assignment)?;
-
-        let arm = MatchArm::parse(parser, expression)?;
-        match_arms.push(arm);
-
-        if let Some(Token::Comma { .. }) = parser.current_token() {
-            log_token(parser, "encounter `,`", false);
+fn parse_pattern(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+    match parser.current_token() {
+        Some(Token::UIntLiteral { value, .. }) => {
             parser.next_token();
+            Ok(Pattern::Literal(Literal::UInt(value)))
+        }
+        Some(Token::Identifier { name, .. }) => {
+            parser.next_token();
+            if &name == "_" {
+                Ok(Pattern::WildcardPatt(Identifier("_".to_string())))
+            } else {
+                todo!()
+            }
+        }
+        _ => {
+            parser.log_error(ParserErrorKind::InvalidTokenContext {
+                token: parser.current_token(),
+            });
+
+            Err(ErrorsEmitted)
         }
     }
-
-    Ok(match_arms)
 }
 
 #[cfg(test)]

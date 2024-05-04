@@ -85,8 +85,8 @@ use crate::{
         ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
         ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter, DereferenceExpr,
         DereferenceOp, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, Identifier, IfExpr,
-        IndexExpr, Item, Keyword, LetStmt, Literal, MatchArm, MatchExpr, MethodCallExpr, NoneExpr,
-        PathExpr, PathPrefix, Pattern, RangeExpr, RangeOp, ReferenceExpr, ReferenceOp, ResultExpr,
+        IndexExpr, Item, Keyword, LetStmt, Literal, MatchExpr, MethodCallExpr, NoneExpr, PathExpr,
+        PathPrefix, Pattern, RangeExpr, RangeOp, ReferenceExpr, ReferenceOp, ResultExpr,
         ReturnExpr, SelfType, SomeExpr, Statement, StructExpr, TupleExpr, TupleIndexExpr,
         TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr, WhileExpr,
     },
@@ -443,8 +443,7 @@ impl Parser {
             Some(Token::LBrace { .. }) => {
                 if self.is_match_expr() {
                     self.set_context(ParserContext::MatchArm);
-                    let expr = self.parse_prefix()?;
-                    MatchArm::parse(self, expr)
+                    MatchExpr::parse(self)
                 } else {
                     let expr = BlockExpr::parse(self);
                     expr
@@ -667,14 +666,13 @@ impl Parser {
 
             Some(Token::Equals { .. }) => Some(AssignmentExpr::parse),
 
-            Some(Token::FatArrow { .. }) => {
-                if self.context == ParserContext::MatchArm {
-                    Some(MatchArm::parse)
-                } else {
-                    None
-                }
-            }
-
+            // Some(Token::FatArrow { .. }) => {
+            //     if self.context == ParserContext::MatchArm {
+            //         Some(MatchArm::parse)
+            //     } else {
+            //         None
+            //     }
+            // }
             _ => None,
         }
     }
