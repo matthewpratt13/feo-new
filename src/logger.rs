@@ -28,7 +28,8 @@ impl Logger {
         }
     }
 
-    // pub fn logs(&self) -> Vec<String> {
-    //     self.messages.clone()
-    // }
+    #[allow(dead_code)]
+    pub fn logs(&self) -> Vec<String> {
+        self.messages.clone()
+    }
 }

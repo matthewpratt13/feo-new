@@ -885,7 +885,7 @@ impl Parser {
             self.stream.tokens()[i].span().start(),
         );
 
-        self.logger.log(LogLevel::Error, &error.to_string());
+        self.logger.log(LogLevel::Error,  &error.to_string());
         self.errors.push(error);
     }
 
@@ -926,7 +926,7 @@ impl Parser {
     /// Log error information about an unmatched delimiter.
     fn log_unmatched_delimiter(&mut self, expected: Delimiter) {
         self.log_error(ParserErrorKind::UnmatchedDelimiter {
-            expected: format!("{:?}", expected),
+            delim: format!("{:#?}", expected),
         });
 
         self.next_token();

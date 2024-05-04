@@ -145,7 +145,7 @@ pub enum ParserErrorKind {
     },
 
     UnmatchedDelimiter {
-        expected: String,
+        delim: String,
     },
 
     InvalidTokenContext {
@@ -164,31 +164,31 @@ pub enum ParserErrorKind {
 impl fmt::Display for ParserErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParserErrorKind::UnexpectedToken { expected, found } => writeln!(
+            ParserErrorKind::UnexpectedToken { expected, found } => write!(
                 f,
-                "unexpected token: expected {}, found `{:#?}`",
+                "unexpected token. Expected {}, found `{:#?}`",
                 expected, found
             ),
             ParserErrorKind::UnexpectedEndOfInput => {
-                writeln!(f, "parsing error: unexpected end of input")
+                write!(f, "parsing error. Unexpected end of input")
             }
             ParserErrorKind::MissingToken { expected } => {
-                writeln!(f, "token not found: expected {expected}, found none")
+                write!(f, "token not found. Expected {expected}, found none")
             }
-            ParserErrorKind::UnmatchedDelimiter { expected } => {
-                writeln!(f, "unmatched delimiter: expected {expected}, found none")
+            ParserErrorKind::UnmatchedDelimiter { delim } => {
+                write!(f, "unmatched delimiter ({delim})")
             }
 
             ParserErrorKind::InvalidTokenContext { token } => {
-                writeln!(f, "syntax error: invalid token context – `{:#?}`", token)
+                write!(f, "syntax error. Invalid token context – `{:#?}`", token)
             }
 
-            ParserErrorKind::TypeConversionError { type_a, type_b } => writeln!(
+            ParserErrorKind::TypeConversionError { type_a, type_b } => write!(
                 f,
-                "conversion error: unable to convert {type_a} into {type_b}"
+                "conversion error. Unable to convert {type_a} into {type_b}"
             ),
 
-            ParserErrorKind::UnknownError => writeln!(f, "unknown parser error"),
+            ParserErrorKind::UnknownError => write!(f, "unknown parsing error"),
         }
     }
 }
@@ -232,9 +232,9 @@ where
     T: Clone + fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(
+        write!(
             f,
-            "{} [Ln {}, Col {}]",
+            "ERROR: {} [Ln {}, Col {}]",
             self.error_kind, self.line, self.col
         )
     }

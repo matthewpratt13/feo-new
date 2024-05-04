@@ -13,7 +13,11 @@ pub fn get_parser(input: &str, print_tokens: bool) -> Parser {
         println!("{:#?}", stream.tokens());
     }
 
-    Parser::new(stream, LogLevel::Debug)
+    let mut parser = Parser::new(stream, LogLevel::Debug);
+
+    parser.logger.log(LogLevel::Info, "instantiated parser");
+
+    parser
 }
 
 // /// Utility function that is used to report the current token and its precedence for debugging.
