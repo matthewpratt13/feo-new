@@ -240,7 +240,6 @@ pub enum Expression {
     Block(BlockExpr),
     If(IfExpr),       // condition, true, false
     Match(MatchExpr), // scrutinee, body
-    MatchArm(MatchArm),
     ForIn(ForInExpr), // variable, iterable, body
     While(WhileExpr), // while, condition, body
     SomeExpr(SomeExpr),
@@ -455,7 +454,7 @@ pub enum Pattern {
     //     name: Identifier,
     //     elements_opt: Option<Vec<Pattern>>,
     // },
-    WildcardPatt(UnderscoreExpr),
+    WildcardPatt(Identifier),
     RestPatt {
         dbl_dot: RangeOp,
     },
@@ -552,7 +551,7 @@ impl TryFrom<Expression> for Pattern {
 
             //     Ok(Pattern::TupleStructPatt { name, elements_opt })
             // }
-            Expression::Underscore(u) => Ok(Pattern::WildcardPatt(u)),
+            Expression::Underscore(_) => Ok(Pattern::WildcardPatt(Identifier("_".to_string()))),
 
             _ => Err(ParserErrorKind::TypeConversionError {
                 type_a: "`Expression`".to_string(),

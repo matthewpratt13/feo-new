@@ -184,8 +184,8 @@ pub struct MatchExpr {
     pub kw_match: Keyword,
     pub scrutinee: AssigneeExpr,
     pub open_brace: Delimiter,
-    pub arms_opt: Option<Vec<Expression>>,
-    pub final_arm: Box<Expression>, // default case
+    pub arms_opt: Option<Vec<MatchArm>>,
+    pub final_arm: Box<MatchArm>, // default case
     pub close_brace: Delimiter,
 }
 
