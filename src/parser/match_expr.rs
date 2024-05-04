@@ -1,9 +1,6 @@
 use crate::{
-    ast::{
-        AssigneeExpr, BlockExpr, Delimiter, Expression, Identifier, Keyword, Literal, MatchArm,
-        MatchExpr, Pattern,
-    },
-    error::{ErrorsEmitted, ParserErrorKind},
+    ast::{AssigneeExpr, BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -84,7 +81,7 @@ impl ParseControl for MatchExpr {
 }
 
 fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
-    let pattern = parse_pattern(parser)?;
+    let pattern = parser.parse_pattern()?;
 
     let guard_opt = if let Some(Token::If { .. }) = parser.current_token() {
         parser.next_token();
@@ -116,31 +113,33 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
     Ok(arm)
 }
 
-// TODO: create a higher-level `parse_pattern()` function to handle all cases needing a `Pattern`
-// TODO: (i.e., to replace this function)
-fn parse_pattern(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
-    match parser.current_token() {
-        Some(Token::UIntLiteral { value, .. }) => {
-            parser.next_token();
-            Ok(Pattern::Literal(Literal::UInt(value)))
-        }
-        Some(Token::Identifier { name, .. }) => {
-            parser.next_token();
-            if &name == "_" {
-                Ok(Pattern::WildcardPatt(Identifier("_".to_string())))
-            } else {
-                todo!()
-            }
-        }
-        _ => {
-            parser.log_error(ParserErrorKind::InvalidTokenContext {
-                token: parser.current_token(),
-            });
+// // TODO: create a higher-level `parse_pattern()` function to handle all cases needing a `Pattern`
+// // TODO: (i.e., to replace this function)
+// fn parse_pattern(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+//     match parser.current_token() {
+//         Some(Token::UIntLiteral { value, .. }) => {
+//             parser.next_token();
+//             Ok(Pattern::Literal(Literal::UInt(value)))
+//         }
+//         Some(Token::Identifier { name, .. }) => {
+//             parser.next_token();
+//             if &name == "_" {
+//                 Ok(Pattern::WildcardPatt(WildcardPatt {
+//                     underscore: Identifier("_".to_string()),
+//                 }))
+//             } else {
+//                 todo!()
+//             }
+//         }
+//         _ => {
+//             parser.log_error(ParserErrorKind::InvalidTokenContext {
+//                 token: parser.current_token(),
+//             });
 
-            Err(ErrorsEmitted)
-        }
-    }
-}
+//             Err(ErrorsEmitted)
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
