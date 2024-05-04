@@ -227,6 +227,8 @@ impl Parser {
     fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
 
+        self.logger.clear_logs();
+
         self.logger.log(
             LogLevel::Info,
             LogMsg("starting to parse tokens".to_string()),
@@ -925,6 +927,7 @@ impl Parser {
         self.errors.push(error);
     }
 
+    /// Utility function that is used to report the current token and its precedence for debugging.
     fn log_current_token(&mut self, log_precedence: bool) {
         let token = self.current_token();
         let precedence = self.get_precedence(&token.clone().unwrap_or(Token::EOF));
