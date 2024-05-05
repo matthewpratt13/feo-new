@@ -16,7 +16,7 @@ impl IdentifierPatt {
         parser.log_current_token(true);
 
         let kw_ref_opt = if let Some(Token::Ref { .. }) = parser.current_token() {
-            let next_token = parser.next_token();
+            parser.next_token();
             Some(Keyword::Ref)
         } else {
             None

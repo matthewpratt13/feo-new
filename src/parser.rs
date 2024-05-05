@@ -821,6 +821,7 @@ impl Parser {
     // PATTERN PARSING
     ///////////////////////////////////////////////////////////////////////////
 
+    /// Parse a `Pattern` – used in match expressions, function call expression and elsewhere.
     fn parse_pattern(&mut self) -> Result<Pattern, ErrorsEmitted> {
         self.logger.log(
             LogLevel::Debug,
@@ -1029,44 +1030,6 @@ impl Parser {
             }
         }
     }
-
-    /// Helper function to parse an identifier as and `IdentifierPatt`.
-    // fn get_identifier_patt(&mut self) -> Result<Pattern, ErrorsEmitted> {
-    //     self.logger.log(
-    //         LogLevel::Debug,
-    //         LogMsg("entering `get_identifier_patt()`".to_string()),
-    //     );
-    //     self.log_current_token(true);
-
-    //     let kw_ref_opt = if let Some(Token::Ref { .. }) = self.current_token() {
-    //         self.next_token();
-    //         Some(Keyword::Ref)
-    //     } else {
-    //         None
-    //     };
-
-    //     let kw_mut_opt = if let Some(Token::Mut { .. }) = self.current_token() {
-    //         self.next_token();
-    //         Some(Keyword::Mut)
-    //     } else {
-    //         None
-    //     };
-
-    //     let name = if let Some(Token::Identifier { name, .. }) = self.next_token() {
-    //         Ok(Identifier(name))
-    //     } else {
-    //         self.log_unexpected_token("identifier");
-    //         Err(ErrorsEmitted)
-    //     }?;
-
-    //     self.logger.log(
-    //         LogLevel::Debug,
-    //         LogMsg("exiting `get_identifier_patt()`".to_string()),
-    //     );
-    //     self.log_current_token(false);
-
-    //     IdentifierPatt::parse(self)
-    // }
 
     ///////////////////////////////////////////////////////////////////////////
     // TOKEN RETRIEVAL

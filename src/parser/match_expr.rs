@@ -113,34 +113,6 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
     Ok(arm)
 }
 
-// // TODO: create a higher-level `parse_pattern()` function to handle all cases needing a `Pattern`
-// // TODO: (i.e., to replace this function)
-// fn parse_pattern(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
-//     match parser.current_token() {
-//         Some(Token::UIntLiteral { value, .. }) => {
-//             parser.next_token();
-//             Ok(Pattern::Literal(Literal::UInt(value)))
-//         }
-//         Some(Token::Identifier { name, .. }) => {
-//             parser.next_token();
-//             if &name == "_" {
-//                 Ok(Pattern::WildcardPatt(WildcardPatt {
-//                     underscore: Identifier("_".to_string()),
-//                 }))
-//             } else {
-//                 todo!()
-//             }
-//         }
-//         _ => {
-//             parser.log_error(ParserErrorKind::InvalidTokenContext {
-//                 token: parser.current_token(),
-//             });
-
-//             Err(ErrorsEmitted)
-//         }
-//     }
-// }
-
 #[cfg(test)]
 mod tests {
     use crate::{logger::LogLevel, parser::test_utils};
