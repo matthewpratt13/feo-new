@@ -1,4 +1,4 @@
-use super::{Delimiter, Identifier, Keyword, PathPrefix, Pattern, RangeOp, Separator};
+use super::{Delimiter, Identifier, Keyword, PathPrefix, Pattern, RangeOp, ReferenceOp, Separator};
 
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES
@@ -53,6 +53,12 @@ pub struct RangePatt {
     pub from_opt: Option<Box<Pattern>>,
     pub range_op: RangeOp, // `..` or `..=`
     pub to_opt: Option<Box<Pattern>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReferencePatt {
+    pub reference_op: ReferenceOp,
+    pub pattern: Box<Pattern>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

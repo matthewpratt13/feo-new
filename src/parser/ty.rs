@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Delimiter, FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType,
-        SelfType, Type,
+        Delimiter, FunctionOrMethodParam, Identifier, InferredType, PathExpr, PathPrefix,
+        PrimitiveType, SelfType, Type, Unit,
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
@@ -142,8 +142,16 @@ impl Type {
             }
 
             Some(Token::Identifier { name, .. }) => {
-                let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)))?;
-                Ok(Type::UserDefined(path))
+                if &name == "_" {
+                    let ty = InferredType {
+                        underscore: Identifier(name),
+                    };
+
+                    Ok(Type::InferredType(ty))
+                } else {
+                    let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)))?;
+                    Ok(Type::UserDefined(path))
+                }
             }
 
             Some(Token::Package { .. }) => {
@@ -268,8 +276,8 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
 fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     if let Some(Token::RParen { .. }) = parser.current_token() {
         parser.next_token();
-        Ok(Type::UnitType)
-    } else {
+        Ok(Type::UnitType(Unit))
+    } else if let Some(Token::Comma { .. }) = parser.peek_ahead_by(1) {
         let types =
             if let Some(t) = collection::get_collection(parser, Type::parse, Delimiter::RParen)? {
                 Ok(t)
@@ -278,13 +286,18 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
                 Err(ErrorsEmitted)
             }?;
 
-        match parser.next_token() {
-            Some(Token::RParen { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`)`"),
-            None => parser.log_missing_token("`)`"),
-        }
-
         Ok(Type::Tuple(types))
+    } else {
+        let ty = Type::parse(parser)?;
+
+        if let Some(Token::RParen { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Type::GroupedType(Box::new(ty)))
+        } else {
+            parser.log_missing_token("`)`");
+            parser.log_unmatched_delimiter(Delimiter::LParen);
+            Err(ErrorsEmitted)
+        }
     }
 }
 

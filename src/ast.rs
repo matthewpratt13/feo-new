@@ -440,6 +440,7 @@ pub enum Pattern {
     Literal(Literal),
     IdentifierPatt(IdentifierPatt),
     PathPatt(PathPatt),
+    ReferencePatt(ReferencePatt),
     GroupedPatt(GroupedPatt),
     RangePatt(RangePatt),
     TuplePatt(TuplePatt),
@@ -454,107 +455,6 @@ pub enum Pattern {
     NonePatt(NonePatt),
     ResultPatt(ResultPatt),
 }
-
-// impl TryFrom<Expression> for Pattern {
-//     type Error = ParserErrorKind;
-
-//     fn try_from(value: Expression) -> Result<Self, Self::Error> {
-//         match value {
-//             Expression::Literal(l) => Ok(Pattern::Literal(l)),
-//             Expression::Path(p) => Ok(Pattern::PathPatt(p)),
-//             Expression::Grouped(g) => Ok(Pattern::GroupedPatt(Box::new(Pattern::try_from(
-//                 *g.expression,
-//             )?))),
-//             Expression::Range(r) => match r.from_opt.is_none() && r.to_opt.is_none() {
-//                 true => Ok(Pattern::RestPatt {
-//                     dbl_dot: r.range_op,
-//                 }),
-//                 false => Ok(Pattern::RangePatt(r)),
-//             },
-//             Expression::Tuple(TupleExpr { elements_opt, .. }) => {
-//                 let mut elements: Vec<Pattern> = Vec::new();
-
-//                 let elements_opt = elements_opt.map(|te| {
-//                     te.elements.into_iter().for_each(|e| {
-//                         let pattern = Pattern::try_from(e.0).expect(
-//                             "conversion error: unable to convert `Expression` into `Pattern`",
-//                         );
-//                         elements.push(pattern);
-//                     });
-
-//                     if let Some(e) = te.final_element_opt {
-//                         let pattern = Pattern::try_from(*e).expect(
-//                             "conversion error: unable to convert `Expression` into `Pattern`",
-//                         );
-//                         elements.push(pattern);
-//                     }
-
-//                     elements
-//                 });
-
-//                 Ok(Pattern::TuplePatt(elements_opt))
-//             }
-//             Expression::Struct(StructExpr {
-//                 path, fields_opt, ..
-//             }) => {
-//                 let struct_name = path
-//                     .tree_opt
-//                     .unwrap_or([].to_vec())
-//                     .pop()
-//                     .unwrap_or(Identifier("".to_string()));
-
-//                 let mut fields: Vec<(Identifier, Pattern)> = Vec::new();
-
-//                 let fields_opt = fields_opt.map(|v| {
-//                     v.into_iter().for_each(|f| {
-//                         let pattern = Pattern::try_from(f.field_value).expect(
-//                             "conversion error: unable to convert `Expression` into `Pattern`",
-//                         );
-//                         fields.push((f.field_name, pattern));
-//                     });
-
-//                     fields
-//                 });
-
-//                 Ok(Pattern::StructPatt {
-//                     struct_name,
-//                     fields_opt,
-//                 })
-//             }
-
-            // Expression::TupleStruct(TupleStructExpr {
-            //     path, elements_opt, ..
-            // }) => {
-            //     let name = path
-            //         .tree_opt
-            //         .unwrap_or([].to_vec())
-            //         .pop()
-            //         .unwrap_or(Identifier("".to_string()));
-
-            //     let mut elements: Vec<Pattern> = Vec::new();
-
-            //     let elements_opt = elements_opt.map(|v| {
-            //         v.into_iter().for_each(|e| {
-            //             let pattern = Pattern::try_from(e).expect(
-            //                 "conversion error: unable to convert `Expression` into `Pattern`",
-            //             );
-            //             elements.push(pattern);
-            //         });
-
-            //         elements
-            //     });
-
-            //     Ok(Pattern::TupleStructPatt { name, elements_opt })
-            // }
-    //         Expression::Underscore(_) => Ok(Pattern::WildcardPatt(Identifier("_".to_string()))),
-
-    //         _ => Err(ParserErrorKind::TypeConversionError {
-    //             type_a: "`Expression`".to_string(),
-    //             type_b: "`Pattern`".to_string(),
-    //         }),
-    //     }
-    // }
-// }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
 /// A statement is a component of a block, which is a component of an outer expression
@@ -612,7 +512,9 @@ pub enum Type {
     Char(PrimitiveType),
     Bool(PrimitiveType),
 
-    UnitType, // ()
+    UnitType(Unit), // ()
+
+    GroupedType(Box<Type>),
 
     // built-in collections
     Array {
@@ -630,6 +532,8 @@ pub enum Type {
     },
     Reference(Box<Type>), //  `&Type` / `&mut Type`
     SelfType(SelfType),
+
+    InferredType(InferredType),
 
     Vec(Box<Type>),
     Mapping {
