@@ -614,6 +614,8 @@ pub enum Type {
 
     UnitType(Unit), // ()
 
+    GroupedType(Box<Type>),
+
     // built-in collections
     Array {
         element_type: Box<Type>,

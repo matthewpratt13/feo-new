@@ -269,7 +269,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     if let Some(Token::RParen { .. }) = parser.current_token() {
         parser.next_token();
         Ok(Type::UnitType(Unit))
-    } else {
+    } else if let Some(Token::Comma { .. }) = parser.peek_ahead_by(1) {
         let types =
             if let Some(t) = collection::get_collection(parser, Type::parse, Delimiter::RParen)? {
                 Ok(t)
@@ -278,13 +278,18 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
                 Err(ErrorsEmitted)
             }?;
 
-        match parser.next_token() {
-            Some(Token::RParen { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`)`"),
-            None => parser.log_missing_token("`)`"),
-        }
-
         Ok(Type::Tuple(types))
+    } else {
+        let ty = Type::parse(parser)?;
+
+        if let Some(Token::RParen { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Type::GroupedType(Box::new(ty)))
+        } else {
+            parser.log_missing_token("`)`");
+            parser.log_unmatched_delimiter(Delimiter::LParen);
+            Err(ErrorsEmitted)
+        }
     }
 }
 
