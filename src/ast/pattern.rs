@@ -63,13 +63,13 @@ pub struct RestPatt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResultPatt {
     pub kw_ok_or_err: Keyword,
-    pub expression: Box<Pattern>,
+    pub pattern: Box<Pattern>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SomePatt {
     pub kw_some: Keyword,
-    pub expression: Box<Pattern>,
+    pub pattern: Box<Pattern>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

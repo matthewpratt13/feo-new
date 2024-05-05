@@ -829,16 +829,71 @@ impl Parser {
         self.log_current_token(true);
 
         match self.current_token() {
-            Some(Token::IntLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Int(value))),
-            Some(Token::UIntLiteral { value, .. }) => Ok(Pattern::Literal(Literal::UInt(value))),
-            Some(Token::BigUIntLiteral { value, .. }) => {
-                Ok(Pattern::Literal(Literal::BigUInt(value)))
+            Some(Token::IntLiteral { value, .. }) => {
+                let patt = Pattern::Literal(Literal::Int(value));
+
+                if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
+                    self.peek_ahead_by(1)
+                {
+                    self.next_token();
+                    RangePatt::parse(self, patt)
+                } else {
+                    Ok(patt)
+                }
             }
-            Some(Token::ByteLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Byte(value))),
+            Some(Token::UIntLiteral { value, .. }) => {
+                let patt = Pattern::Literal(Literal::UInt(value));
+
+                if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
+                    self.peek_ahead_by(1)
+                {
+                    self.next_token();
+                    RangePatt::parse(self, patt)
+                } else {
+                    Ok(patt)
+                }
+            }
+
+            Some(Token::BigUIntLiteral { value, .. }) => {
+                let patt = Pattern::Literal(Literal::BigUInt(value));
+
+                if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
+                    self.peek_ahead_by(1)
+                {
+                    self.next_token();
+                    RangePatt::parse(self, patt)
+                } else {
+                    Ok(patt)
+                }
+            }
+            Some(Token::ByteLiteral { value, .. }) => {
+                let patt = Pattern::Literal(Literal::Byte(value));
+
+                if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
+                    self.peek_ahead_by(1)
+                {
+                    self.next_token();
+                    RangePatt::parse(self, patt)
+                } else {
+                    Ok(patt)
+                }
+            }
             Some(Token::BytesLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Bytes(value))),
             Some(Token::HashLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Hash(value))),
             Some(Token::StrLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Str(value))),
-            Some(Token::CharLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Char(value))),
+
+            Some(Token::CharLiteral { value, .. }) => {
+                let patt = Pattern::Literal(Literal::Char(value));
+
+                if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
+                    self.peek_ahead_by(1)
+                {
+                    self.next_token();
+                    RangePatt::parse(self, patt)
+                } else {
+                    Ok(patt)
+                }
+            }
             Some(Token::BoolLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Bool(value))),
             Some(Token::LParen { .. }) => {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
@@ -856,9 +911,8 @@ impl Parser {
                         underscore: Identifier(name),
                     }))
                 } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    let parse =
+                    let patt =
                         PathPatt::parse(self, PathPrefix::Identifier(Identifier(name.clone())));
-                    let patt = parse;
                     self.next_token();
 
                     if let Some(Token::Colon { .. }) = self.peek_ahead_by(2) {
@@ -876,6 +930,12 @@ impl Parser {
                     let patt = PathPatt::parse(self, PathPrefix::Identifier(Identifier(name)));
                     self.next_token();
                     patt
+                } else if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
+                    self.peek_ahead_by(1)
+                {
+                    let patt = PathPatt::parse(self, PathPrefix::Identifier(Identifier(name)))?;
+                    self.next_token();
+                    RangePatt::parse(self, patt)
                 } else {
                     IdentifierPatt::parse(self)
                 }
