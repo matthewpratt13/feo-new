@@ -838,6 +838,7 @@ impl Parser {
                     self.next_token();
                     RangePatt::parse(self, patt)
                 } else {
+                    self.next_token();
                     Ok(patt)
                 }
             }
@@ -850,6 +851,7 @@ impl Parser {
                     self.next_token();
                     RangePatt::parse(self, patt)
                 } else {
+                    self.next_token();
                     Ok(patt)
                 }
             }
@@ -863,6 +865,7 @@ impl Parser {
                     self.next_token();
                     RangePatt::parse(self, patt)
                 } else {
+                    self.next_token();
                     Ok(patt)
                 }
             }
@@ -875,12 +878,24 @@ impl Parser {
                     self.next_token();
                     RangePatt::parse(self, patt)
                 } else {
+                    self.next_token();
                     Ok(patt)
                 }
             }
-            Some(Token::BytesLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Bytes(value))),
-            Some(Token::HashLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Hash(value))),
-            Some(Token::StrLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Str(value))),
+            Some(Token::BytesLiteral { value, .. }) => {
+                self.next_token();
+
+                Ok(Pattern::Literal(Literal::Bytes(value)))
+            }
+            Some(Token::HashLiteral { value, .. }) => {
+                self.next_token();
+
+                Ok(Pattern::Literal(Literal::Hash(value)))
+            }
+            Some(Token::StrLiteral { value, .. }) => {
+                self.next_token();
+                Ok(Pattern::Literal(Literal::Str(value)))
+            }
 
             Some(Token::CharLiteral { value, .. }) => {
                 let patt = Pattern::Literal(Literal::Char(value));
@@ -891,10 +906,14 @@ impl Parser {
                     self.next_token();
                     RangePatt::parse(self, patt)
                 } else {
+                    self.next_token();
                     Ok(patt)
                 }
             }
-            Some(Token::BoolLiteral { value, .. }) => Ok(Pattern::Literal(Literal::Bool(value))),
+            Some(Token::BoolLiteral { value, .. }) => {
+                self.next_token();
+                Ok(Pattern::Literal(Literal::Bool(value)))
+            }
             Some(Token::LParen { .. }) => {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     TuplePatt::parse(self)
