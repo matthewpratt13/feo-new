@@ -66,6 +66,7 @@ mod path_patt;
 mod precedence;
 mod range_expr;
 mod range_patt;
+mod reference_patt;
 mod result_expr;
 mod result_patt;
 mod return_expr;
@@ -95,10 +96,10 @@ use crate::{
         DereferenceOp, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
         Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal, MatchExpr,
         MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, PathPrefix, Pattern, RangeExpr,
-        RangeOp, RangePatt, ReferenceExpr, ReferenceOp, RestPatt, ResultExpr, ResultPatt,
-        ReturnExpr, SelfType, SomeExpr, SomePatt, Statement, StructExpr, StructPatt, TupleExpr,
-        TupleIndexExpr, TuplePatt, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr, UnwrapExpr,
-        WhileExpr, WildcardPatt,
+        RangeOp, RangePatt, ReferenceExpr, ReferenceOp, ReferencePatt, RestPatt, ResultExpr,
+        ResultPatt, ReturnExpr, SelfType, SomeExpr, SomePatt, Statement, StructExpr, StructPatt,
+        TupleExpr, TupleIndexExpr, TuplePatt, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr,
+        UnwrapExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
@@ -988,6 +989,11 @@ impl Parser {
             Some(Token::Super { .. }) => {
                 self.next_token();
                 PathPatt::parse(self, PathPrefix::Super)
+            }
+
+            Some(Token::Ampersand { .. }) => ReferencePatt::parse(self, ReferenceOp::Borrow),
+            Some(Token::AmpersandMut { .. }) => {
+                ReferencePatt::parse(self, ReferenceOp::MutableBorrow)
             }
 
             Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {

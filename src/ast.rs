@@ -440,6 +440,7 @@ pub enum Pattern {
     Literal(Literal),
     IdentifierPatt(IdentifierPatt),
     PathPatt(PathPatt),
+    ReferencePatt(ReferencePatt),
     GroupedPatt(GroupedPatt),
     RangePatt(RangePatt),
     TuplePatt(TuplePatt),
