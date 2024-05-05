@@ -1,17 +1,17 @@
 use crate::{
-    ast::{Delimiter, Expression, GroupedExpr},
+    ast::{Delimiter, GroupedPatt, Pattern},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     token::Token,
 };
 
-use super::{parse::ParseConstruct, Parser, Precedence};
+use super::Parser;
 
-impl ParseConstruct for GroupedExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl GroupedPatt {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `GroupedExpr::parse()`".to_string()),
+            LogMsg("entering `GroupedPatt::parse()`".to_string()),
         );
         parser.log_current_token(false);
 
@@ -23,7 +23,7 @@ impl ParseConstruct for GroupedExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let expression = parser.parse_expression(Precedence::Lowest)?;
+        let pattern = parser.parse_pattern()?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
@@ -33,9 +33,9 @@ impl ParseConstruct for GroupedExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let expr = GroupedExpr {
+        let patt = GroupedPatt {
             open_paren,
-            expression: Box::new(expression),
+            pattern: Box::new(pattern),
             close_paren,
         };
 
@@ -45,25 +45,6 @@ impl ParseConstruct for GroupedExpr {
         );
         parser.log_current_token(false);
 
-        Ok(Expression::Grouped(expr))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{logger::LogLevel, parser::test_utils};
-
-    #[test]
-    fn parse_grouped_expr() -> Result<(), ()> {
-        let input = r#"(x + 2)"#;
-
-        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
-
-        let statements = parser.parse();
-
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
-        }
+        Ok(Pattern::GroupedPatt(patt))
     }
 }
