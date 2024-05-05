@@ -41,7 +41,7 @@ impl ParseConstruct for GroupedExpr {
 
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("exiting `BinaryExpr::parse()`".to_string()),
+            LogMsg("exiting `GroupedExpr::parse()`".to_string()),
         );
         parser.log_current_token(false);
 

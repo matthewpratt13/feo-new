@@ -26,7 +26,7 @@ pub struct StructPattField {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupedPatt {
     pub open_paren: Delimiter,
-    pub expression: Box<Pattern>,
+    pub pattern: Box<Pattern>,
     pub close_paren: Delimiter,
 }
 
