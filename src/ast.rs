@@ -530,7 +530,10 @@ pub enum Type {
         params_opt: Option<Vec<FunctionOrMethodParam>>,
         return_type_opt: Option<Box<Type>>,
     },
-    Reference(Box<Type>), //  `&Type` / `&mut Type`
+    Reference {
+        reference_op: ReferenceOp, // `&` or `&mut`
+        inner_type: Box<Type>,
+    }, 
     SelfType(SelfType),
 
     InferredType(InferredType),

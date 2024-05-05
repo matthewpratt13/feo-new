@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Delimiter, FunctionOrMethodParam, Hash, Identifier,
-        InferredType, Int, PathExpr, PathPrefix, SelfType, Str, Type, UInt, Unit,
+        InferredType, Int, PathExpr, PathPrefix, ReferenceOp, SelfType, Str, Type, UInt, Unit,
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
@@ -48,11 +48,20 @@ impl Type {
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
             Some(Token::Func { .. }) => parse_function_type(token, parser),
-            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => {
+            Some(Token::Ampersand { .. }) => {
                 let inner_type = Box::new(Type::parse(parser)?);
-                Ok(Type::Reference(inner_type))
+                Ok(Type::Reference {
+                    reference_op: ReferenceOp::Borrow,
+                    inner_type,
+                })
             }
-
+            Some(Token::AmpersandMut { .. }) => {
+                let inner_type = Box::new(Type::parse(parser)?);
+                Ok(Type::Reference {
+                    reference_op: ReferenceOp::MutableBorrow,
+                    inner_type,
+                })
+            }
             Some(Token::VecType { .. }) => {
                 match parser.next_token() {
                     Some(Token::LessThan { .. }) => (),
