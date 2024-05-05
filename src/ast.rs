@@ -525,15 +525,11 @@ pub enum Type {
 
     UserDefined(PathType), // struct, enum, trait, alias, constant (paths / items)
 
-    Function {
-        function_name: Identifier,
-        params_opt: Option<Vec<FunctionOrMethodParam>>,
-        return_type_opt: Option<Box<Type>>,
-    },
+    FunctionPtr(FunctionPtr),
     Reference {
         reference_op: ReferenceOp, // `&` or `&mut`
         inner_type: Box<Type>,
-    }, 
+    },
     SelfType(SelfType),
 
     InferredType(InferredType),

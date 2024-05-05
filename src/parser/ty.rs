@@ -1,7 +1,8 @@
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, Delimiter, FunctionOrMethodParam, Hash, Identifier,
-        InferredType, Int, PathExpr, PathPrefix, ReferenceOp, SelfType, Str, Type, UInt, Unit,
+        BigUInt, Bool, Byte, Bytes, Char, Delimiter, FunctionOrMethodParam, FunctionPtr, Hash,
+        Identifier, InferredType, Int, PathExpr, PathPrefix, ReferenceOp, SelfType, Str, Type,
+        UInt, Unit,
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
@@ -205,17 +206,13 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
         Err(ErrorsEmitted)
     }?;
 
-    if let Some(Token::LBrace { .. }) = parser.current_token() {
+    let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
         parser.next_token();
-    } else {
-        parser.log_unexpected_token("`{`");
-    };
-
-    if let Some(Token::LParen { .. }) = parser.current_token() {
-        parser.next_token();
+        Ok(Delimiter::LParen)
     } else {
         parser.log_unexpected_token("`(`");
-    }
+        Err(ErrorsEmitted)
+    }?;
 
     // `&self` and `&mut self` can only occur as the first parameter in a method
     if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = parser.current_token() {
@@ -230,11 +227,13 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
         params.append(&mut subsequent_params.unwrap())
     };
 
-    match parser.next_token() {
-        Some(Token::RParen { .. }) => (),
-        Some(_) => parser.log_unexpected_token("`)`"),
-        None => parser.log_missing_token("`)`"),
-    }
+    let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
+        Ok(Delimiter::RParen)
+    } else {
+        parser.log_missing_token("`)`");
+        parser.log_unmatched_delimiter(open_paren.clone());
+        Err(ErrorsEmitted)
+    }?;
 
     let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
         parser.next_token();
@@ -243,16 +242,21 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
         None
     };
 
-    Ok(Type::Function {
+    let ty = FunctionPtr {
         function_name,
+        open_paren,
         params_opt: {
-            match params.is_empty() {
-                true => None,
-                false => Some(params),
+            if params.is_empty() {
+                None
+            } else {
+                Some(params)
             }
         },
+        close_paren,
         return_type_opt,
-    })
+    };
+
+    Ok(Type::FunctionPtr(ty))
 }
 
 fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {

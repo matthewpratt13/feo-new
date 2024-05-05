@@ -1,6 +1,6 @@
 pub use crate::{B16, B2, B32, B4, B8, H160, H256, H512, U256, U512};
 
-use super::{Expression, Identifier};
+use super::{Delimiter, Expression, FunctionOrMethodParam, Identifier, Type};
 
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]
@@ -54,6 +54,15 @@ pub enum Hash {
 
 /// Type alias representing a path to an `Item` or local variable.
 pub type PathType = Expression;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionPtr {
+    pub function_name: Identifier,
+    pub open_paren: Delimiter,
+    pub params_opt: Option<Vec<FunctionOrMethodParam>>,
+    pub close_paren: Delimiter,
+    pub return_type_opt: Option<Box<Type>>,
+}
 
 /// Struct that wraps a `Vec<u8>` into a dynamic byte array (string literal).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
