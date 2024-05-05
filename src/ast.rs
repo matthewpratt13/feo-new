@@ -612,7 +612,7 @@ pub enum Type {
     Char(PrimitiveType),
     Bool(PrimitiveType),
 
-    UnitType, // ()
+    UnitType(Unit), // ()
 
     // built-in collections
     Array {

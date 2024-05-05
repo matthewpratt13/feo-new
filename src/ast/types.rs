@@ -89,3 +89,7 @@ pub struct Str(pub Vec<u8>);
 /// Unit struct that represents the `Self` type.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SelfType;
+
+/// Unit struct that represents the unit type `()`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Unit;

@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         Delimiter, FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType,
-        SelfType, Type,
+        SelfType, Type, Unit,
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
@@ -268,7 +268,7 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
 fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     if let Some(Token::RParen { .. }) = parser.current_token() {
         parser.next_token();
-        Ok(Type::UnitType)
+        Ok(Type::UnitType(Unit))
     } else {
         let types =
             if let Some(t) = collection::get_collection(parser, Type::parse, Delimiter::RParen)? {
