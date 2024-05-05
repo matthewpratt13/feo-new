@@ -522,38 +522,38 @@ pub enum Pattern {
 //                 })
 //             }
 
-            // Expression::TupleStruct(TupleStructExpr {
-            //     path, elements_opt, ..
-            // }) => {
-            //     let name = path
-            //         .tree_opt
-            //         .unwrap_or([].to_vec())
-            //         .pop()
-            //         .unwrap_or(Identifier("".to_string()));
+// Expression::TupleStruct(TupleStructExpr {
+//     path, elements_opt, ..
+// }) => {
+//     let name = path
+//         .tree_opt
+//         .unwrap_or([].to_vec())
+//         .pop()
+//         .unwrap_or(Identifier("".to_string()));
 
-            //     let mut elements: Vec<Pattern> = Vec::new();
+//     let mut elements: Vec<Pattern> = Vec::new();
 
-            //     let elements_opt = elements_opt.map(|v| {
-            //         v.into_iter().for_each(|e| {
-            //             let pattern = Pattern::try_from(e).expect(
-            //                 "conversion error: unable to convert `Expression` into `Pattern`",
-            //             );
-            //             elements.push(pattern);
-            //         });
+//     let elements_opt = elements_opt.map(|v| {
+//         v.into_iter().for_each(|e| {
+//             let pattern = Pattern::try_from(e).expect(
+//                 "conversion error: unable to convert `Expression` into `Pattern`",
+//             );
+//             elements.push(pattern);
+//         });
 
-            //         elements
-            //     });
+//         elements
+//     });
 
-            //     Ok(Pattern::TupleStructPatt { name, elements_opt })
-            // }
-    //         Expression::Underscore(_) => Ok(Pattern::WildcardPatt(Identifier("_".to_string()))),
+//     Ok(Pattern::TupleStructPatt { name, elements_opt })
+// }
+//         Expression::Underscore(_) => Ok(Pattern::WildcardPatt(Identifier("_".to_string()))),
 
-    //         _ => Err(ParserErrorKind::TypeConversionError {
-    //             type_a: "`Expression`".to_string(),
-    //             type_b: "`Pattern`".to_string(),
-    //         }),
-    //     }
-    // }
+//         _ => Err(ParserErrorKind::TypeConversionError {
+//             type_a: "`Expression`".to_string(),
+//             type_b: "`Pattern`".to_string(),
+//         }),
+//     }
+// }
 // }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
@@ -632,6 +632,8 @@ pub enum Type {
     },
     Reference(Box<Type>), //  `&Type` / `&mut Type`
     SelfType(SelfType),
+
+    InferredType(InferredType),
 
     Vec(Box<Type>),
     Mapping {

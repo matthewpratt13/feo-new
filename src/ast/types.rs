@@ -1,6 +1,6 @@
 pub use crate::{B16, B2, B32, B4, B8, H160, H256, H512, U256, U512};
 
-use super::Expression;
+use super::{Expression, Identifier};
 
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]
@@ -86,10 +86,16 @@ pub type PathType = Expression;
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Str(pub Vec<u8>);
 
+/// Unit struct that represents the unit type `()`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Unit;
+
 /// Unit struct that represents the `Self` type.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SelfType;
 
-/// Unit struct that represents the unit type `()`.
+/// Struct that represents an inferred type.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Unit;
+pub struct InferredType {
+    pub underscore: Identifier,
+}

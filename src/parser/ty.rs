@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Delimiter, FunctionOrMethodParam, Identifier, PathExpr, PathPrefix, PrimitiveType,
-        SelfType, Type, Unit,
+        Delimiter, FunctionOrMethodParam, Identifier, InferredType, PathExpr, PathPrefix,
+        PrimitiveType, SelfType, Type, Unit,
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
@@ -142,8 +142,16 @@ impl Type {
             }
 
             Some(Token::Identifier { name, .. }) => {
-                let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)))?;
-                Ok(Type::UserDefined(path))
+                if &name == "_" {
+                    let ty = InferredType {
+                        underscore: Identifier(name),
+                    };
+
+                    Ok(Type::InferredType(ty))
+                } else {
+                    let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)))?;
+                    Ok(Type::UserDefined(path))
+                }
             }
 
             Some(Token::Package { .. }) => {
