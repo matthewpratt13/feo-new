@@ -1,11 +1,13 @@
 use crate::{
     ast::{
-        Delimiter, FunctionOrMethodParam, Identifier, InferredType, PathExpr, PathPrefix,
-        PrimitiveType, SelfType, Type, Unit,
+        BigUInt, Bool, Byte, Bytes, Char, Delimiter, FunctionOrMethodParam, FunctionPtr, Hash,
+        Identifier, InferredType, Int, PathExpr, PathPrefix, ReferenceOp, SelfType, Str, Type,
+        UInt, Unit,
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     token::Token,
+    B16, B2, B32, B4, B8, H160, H256, H512, U256, U512,
 };
 
 use super::{collection, Parser};
@@ -22,36 +24,45 @@ impl Type {
         let token = parser.next_token();
 
         match token {
-            Some(Token::I32Type { .. }) => Ok(Type::I32(PrimitiveType::I32)),
-            Some(Token::I64Type { .. }) => Ok(Type::I64(PrimitiveType::I64)),
-            Some(Token::I128Type { .. }) => Ok(Type::I128(PrimitiveType::I128)),
-            Some(Token::U8Type { .. }) => Ok(Type::U8(PrimitiveType::U8)),
-            Some(Token::U16Type { .. }) => Ok(Type::U16(PrimitiveType::U16)),
-            Some(Token::U32Type { .. }) => Ok(Type::U32(PrimitiveType::U32)),
-            Some(Token::U64Type { .. }) => Ok(Type::U64(PrimitiveType::U64)),
-            Some(Token::U128Type { .. }) => Ok(Type::U128(PrimitiveType::U128)),
-            Some(Token::U256Type { .. }) => Ok(Type::U256(PrimitiveType::U256)),
-            Some(Token::U512Type { .. }) => Ok(Type::U512(PrimitiveType::U512)),
-            Some(Token::ByteType { .. }) => Ok(Type::Byte(PrimitiveType::Byte)),
-            Some(Token::B2Type { .. }) => Ok(Type::B2(PrimitiveType::B2)),
-            Some(Token::B4Type { .. }) => Ok(Type::B4(PrimitiveType::B4)),
-            Some(Token::B8Type { .. }) => Ok(Type::B8(PrimitiveType::B8)),
-            Some(Token::B16Type { .. }) => Ok(Type::B16(PrimitiveType::B16)),
-            Some(Token::B32Type { .. }) => Ok(Type::B32(PrimitiveType::B32)),
-            Some(Token::H160Type { .. }) => Ok(Type::H160(PrimitiveType::H160)),
-            Some(Token::H256Type { .. }) => Ok(Type::H256(PrimitiveType::H256)),
-            Some(Token::H512Type { .. }) => Ok(Type::H512(PrimitiveType::H512)),
-            Some(Token::StrType { .. }) => Ok(Type::Str(PrimitiveType::Str)),
-            Some(Token::CharType { .. }) => Ok(Type::Char(PrimitiveType::Char)),
-            Some(Token::BoolType { .. }) => Ok(Type::Bool(PrimitiveType::Bool)),
+            Some(Token::I32Type { .. }) => Ok(Type::I32(Int::I32(0_i32))),
+            Some(Token::I64Type { .. }) => Ok(Type::I64(Int::I64(0_i64))),
+            Some(Token::I128Type { .. }) => Ok(Type::I128(Int::I128(0_i128))),
+            Some(Token::U8Type { .. }) => Ok(Type::U8(UInt::U8(0_u8))),
+            Some(Token::U16Type { .. }) => Ok(Type::U16(UInt::U16(0_u16))),
+            Some(Token::U32Type { .. }) => Ok(Type::U32(UInt::U32(0_u32))),
+            Some(Token::U64Type { .. }) => Ok(Type::U64(UInt::U64(0_u64))),
+            Some(Token::U128Type { .. }) => Ok(Type::U128(UInt::U128(0_u128))),
+            Some(Token::U256Type { .. }) => Ok(Type::U256(BigUInt::U256(U256::zero()))),
+            Some(Token::U512Type { .. }) => Ok(Type::U512(BigUInt::U512(U512::zero()))),
+            Some(Token::ByteType { .. }) => Ok(Type::Byte(Byte(0_u8))),
+            Some(Token::B2Type { .. }) => Ok(Type::B2(Bytes::B2(B2::zero()))),
+            Some(Token::B4Type { .. }) => Ok(Type::B4(Bytes::B4(B4::zero()))),
+            Some(Token::B8Type { .. }) => Ok(Type::B8(Bytes::B8(B8::zero()))),
+            Some(Token::B16Type { .. }) => Ok(Type::B16(Bytes::B16(B16::zero()))),
+            Some(Token::B32Type { .. }) => Ok(Type::B32(Bytes::B32(B32::zero()))),
+            Some(Token::H160Type { .. }) => Ok(Type::H160(Hash::H160(H160::zero()))),
+            Some(Token::H256Type { .. }) => Ok(Type::H256(Hash::H256(H256::zero()))),
+            Some(Token::H512Type { .. }) => Ok(Type::H512(Hash::H512(H512::zero()))),
+            Some(Token::StrType { .. }) => Ok(Type::Str(Str(Vec::<u8>::new()))),
+            Some(Token::CharType { .. }) => Ok(Type::Char(Char('\0'))),
+            Some(Token::BoolType { .. }) => Ok(Type::Bool(Bool(false))),
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
             Some(Token::Func { .. }) => parse_function_type(token, parser),
-            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => {
+            Some(Token::Ampersand { .. }) => {
                 let inner_type = Box::new(Type::parse(parser)?);
-                Ok(Type::Reference(inner_type))
+                Ok(Type::Reference {
+                    reference_op: ReferenceOp::Borrow,
+                    inner_type,
+                })
             }
-
+            Some(Token::AmpersandMut { .. }) => {
+                let inner_type = Box::new(Type::parse(parser)?);
+                Ok(Type::Reference {
+                    reference_op: ReferenceOp::MutableBorrow,
+                    inner_type,
+                })
+            }
             Some(Token::VecType { .. }) => {
                 match parser.next_token() {
                     Some(Token::LessThan { .. }) => (),
@@ -195,17 +206,13 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
         Err(ErrorsEmitted)
     }?;
 
-    if let Some(Token::LBrace { .. }) = parser.current_token() {
+    let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
         parser.next_token();
-    } else {
-        parser.log_unexpected_token("`{`");
-    };
-
-    if let Some(Token::LParen { .. }) = parser.current_token() {
-        parser.next_token();
+        Ok(Delimiter::LParen)
     } else {
         parser.log_unexpected_token("`(`");
-    }
+        Err(ErrorsEmitted)
+    }?;
 
     // `&self` and `&mut self` can only occur as the first parameter in a method
     if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = parser.current_token() {
@@ -220,11 +227,13 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
         params.append(&mut subsequent_params.unwrap())
     };
 
-    match parser.next_token() {
-        Some(Token::RParen { .. }) => (),
-        Some(_) => parser.log_unexpected_token("`)`"),
-        None => parser.log_missing_token("`)`"),
-    }
+    let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
+        Ok(Delimiter::RParen)
+    } else {
+        parser.log_missing_token("`)`");
+        parser.log_unmatched_delimiter(open_paren.clone());
+        Err(ErrorsEmitted)
+    }?;
 
     let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
         parser.next_token();
@@ -233,16 +242,21 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
         None
     };
 
-    Ok(Type::Function {
+    let ty = FunctionPtr {
         function_name,
+        open_paren,
         params_opt: {
-            match params.is_empty() {
-                true => None,
-                false => Some(params),
+            if params.is_empty() {
+                None
+            } else {
+                Some(params)
             }
         },
+        close_paren,
         return_type_opt,
-    })
+    };
+
+    Ok(Type::FunctionPtr(ty))
 }
 
 fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {

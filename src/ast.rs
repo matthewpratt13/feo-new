@@ -489,28 +489,28 @@ pub enum Item {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     // primitives
-    I32(PrimitiveType),
-    I64(PrimitiveType),
-    I128(PrimitiveType),
-    U8(PrimitiveType),
-    U16(PrimitiveType),
-    U32(PrimitiveType),
-    U64(PrimitiveType),
-    U128(PrimitiveType),
-    U256(PrimitiveType),
-    U512(PrimitiveType),
-    Byte(PrimitiveType),
-    B2(PrimitiveType),
-    B4(PrimitiveType),
-    B8(PrimitiveType),
-    B16(PrimitiveType),
-    B32(PrimitiveType),
-    H160(PrimitiveType),
-    H256(PrimitiveType),
-    H512(PrimitiveType),
-    Str(PrimitiveType),
-    Char(PrimitiveType),
-    Bool(PrimitiveType),
+    I32(Int),
+    I64(Int),
+    I128(Int),
+    U8(UInt),
+    U16(UInt),
+    U32(UInt),
+    U64(UInt),
+    U128(UInt),
+    U256(BigUInt),
+    U512(BigUInt),
+    Byte(Byte),
+    B2(Bytes),
+    B4(Bytes),
+    B8(Bytes),
+    B16(Bytes),
+    B32(Bytes),
+    H160(Hash),
+    H256(Hash),
+    H512(Hash),
+    Str(Str),
+    Char(Char),
+    Bool(Bool),
 
     UnitType(Unit), // ()
 
@@ -525,12 +525,11 @@ pub enum Type {
 
     UserDefined(PathType), // struct, enum, trait, alias, constant (paths / items)
 
-    Function {
-        function_name: Identifier,
-        params_opt: Option<Vec<FunctionOrMethodParam>>,
-        return_type_opt: Option<Box<Type>>,
+    FunctionPtr(FunctionPtr),
+    Reference {
+        reference_op: ReferenceOp, // `&` or `&mut`
+        inner_type: Box<Type>,
     },
-    Reference(Box<Type>), //  `&Type` / `&mut Type`
     SelfType(SelfType),
 
     InferredType(InferredType),
