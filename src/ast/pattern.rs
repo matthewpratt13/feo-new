@@ -32,9 +32,9 @@ pub struct GroupedPatt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentifierPatt {
-    kw_ref_opt: Keyword,
-    kw_mut_opt: Keyword,
-    name: Identifier,
+    pub kw_ref_opt: Option<Keyword>,
+    pub kw_mut_opt: Option<Keyword>,
+    pub name: Identifier,
 }
 
 #[derive(Debug, Clone, PartialEq)]
