@@ -70,58 +70,58 @@ pub enum LexErrorKind {
 impl fmt::Display for LexErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexErrorKind::LexIntError => writeln!(f, "error tokenizing signed integer literal"),
-            LexErrorKind::LexUIntError => writeln!(f, "error tokenizing unsigned integer literal"),
+            LexErrorKind::LexIntError => write!(f, "error tokenizing signed integer literal"),
+            LexErrorKind::LexUIntError => write!(f, "error tokenizing unsigned integer literal"),
             LexErrorKind::LexBigUIntError => {
-                writeln!(f, "error tokenizing large unsigned integer literal")
+                write!(f, "error tokenizing large unsigned integer literal")
             }
-            LexErrorKind::LexBoolError => writeln!(f, "error tokenizing boolean literal"),
-            LexErrorKind::LexHashError => writeln!(f, "error tokenizing hash literal"),
+            LexErrorKind::LexBoolError => write!(f, "error tokenizing boolean literal"),
+            LexErrorKind::LexHashError => write!(f, "error tokenizing hash literal"),
             LexErrorKind::InvalidHashLength { len } => {
-                writeln!(f, "syntax error: invalid hash length – {len}")
+                write!(f, "syntax error: invalid hash length – {len}")
             }
             LexErrorKind::UnrecognizedChar { value } => {
-                writeln!(f, "syntax error: unrecognized character – `{value}`")
+                write!(f, "syntax error: unrecognized character – `{value}`")
             }
             LexErrorKind::EmptyCharLiteral => {
-                writeln!(f, "scanning error: empty character literal")
+                write!(f, "scanning error: empty character literal")
             }
             LexErrorKind::UnrecognizedKeyword { name } => {
-                writeln!(f, "syntax error: unrecognized keyword – `{name}`")
+                write!(f, "syntax error: unrecognized keyword – `{name}`")
             }
             LexErrorKind::UnrecognizedInnerAttribute { name } => {
-                writeln!(f, "syntax error: unrecognized inner attribute – `{name}`")
+                write!(f, "syntax error: unrecognized inner attribute – `{name}`")
             }
             LexErrorKind::UnrecognizedOuterAttribute { name } => {
-                writeln!(f, "syntax error: unrecognized outer attribute – `{name}`")
+                write!(f, "syntax error: unrecognized outer attribute – `{name}`")
             }
-            LexErrorKind::UnexpectedChar { expected, found } => writeln!(
+            LexErrorKind::UnexpectedChar { expected, found } => write!(
                 f,
                 "unexpected character: expected {expected}, found `{found}`",
             ),
             LexErrorKind::MissingQuote { quote } => {
-                writeln!(f, "missing quote: expected `{quote}`, found none")
+                write!(f, "missing quote: expected `{quote}`, found none")
             }
             LexErrorKind::MissingDelimiter { delim } => {
-                writeln!(f, "missing delimiter: expected `{delim}`, found none")
+                write!(f, "missing delimiter: expected `{delim}`, found none")
             }
-            LexErrorKind::MismatchedDelimiter { expected, found } => writeln!(
+            LexErrorKind::MismatchedDelimiter { expected, found } => write!(
                 f,
                 "mismatched delimiter: expected `{expected}`, found `{found}`"
             ),
             LexErrorKind::UnrecognizedEscapeSequence { sequence } => {
-                writeln!(
+                write!(
                     f,
                     "syntax error: unrecognized escape sequence – `{sequence}`"
                 )
             }
             LexErrorKind::CharNotFound { expected } => {
-                writeln!(f, "character not found: expected {expected}, found none")
+                write!(f, "character not found: expected {expected}, found none")
             }
             LexErrorKind::UnexpectedEndOfInput => {
-                writeln!(f, "scanning error: unexpected end of input")
+                write!(f, "scanning error: unexpected end of input")
             }
-            LexErrorKind::UnknownError => writeln!(f, "unknown lexer error"),
+            LexErrorKind::UnknownError => write!(f, "unknown lexer error"),
         }
     }
 }
@@ -186,10 +186,14 @@ impl fmt::Display for ParserErrorKind {
 
             ParserErrorKind::InvalidTokenContext { token } => {
                 write!(f, "syntax error. Invalid token context – `{:#?}`", token)
-            }  
-            
+            }
+
             ParserErrorKind::ExtraTokens { token, msg } => {
-                write!(f, "syntax error. Extra tokens detected – `{:#?}`. {msg}", token)
+                write!(
+                    f,
+                    "syntax error. Extra tokens detected – `{:#?}`. {msg}",
+                    token
+                )
             }
 
             ParserErrorKind::TypeConversionError { type_a, type_b } => write!(
@@ -220,6 +224,10 @@ where
 {
     /// Create a new `CompilerError` that provides details at a precise location in the source code.
     pub fn new(error_kind: T, source: &str, pos: usize) -> Self {
+        if pos > source.len() {
+            panic!("position out of bounds");
+        }
+
         let slice = &source[..pos];
         let lines: Vec<&str> = slice.split('\n').collect();
         let line_count = lines.len();
