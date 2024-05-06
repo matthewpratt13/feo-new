@@ -49,6 +49,13 @@ pub struct StructField {
     pub field_value: Expression,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructAssigneeExprField {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
+    pub field_name: Identifier,
+    pub field_value: AssigneeExpr,
+}
+
 /// Struct representing a collection of elements in a tuple expression.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleElements {
