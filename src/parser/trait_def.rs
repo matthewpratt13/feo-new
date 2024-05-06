@@ -75,17 +75,14 @@ impl ParseAssociatedItem for TraitDefItem {
         match parser.current_token() {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
-                parser.next_token();
                 Ok(TraitDefItem::ConstantDecl(constant_decl))
             }
             Some(Token::Alias { .. }) => {
                 let alias_decl = AliasDecl::parse(parser, attributes_opt, visibility)?;
-                parser.next_token();
                 Ok(TraitDefItem::AliasDecl(alias_decl))
             }
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
-                parser.next_token();
                 Ok(TraitDefItem::FunctionDef(function_def))
             }
             _ => {
@@ -111,10 +108,10 @@ mod tests {
             pub alias NewType;
 
             #[modifier]
-            func only_owner(&mut self, caller: h160);
-            func transfer(&mut self, to: h160, amount: u256) -> Error;
+            func only_owner(&mut self, caller: h160) {}
+            func transfer(&mut self, to: h160, amount: u256) -> Error {}
             #[view]
-            func sender(&self) -> h160;
+            func sender(&self) -> h160 {}
         }"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);

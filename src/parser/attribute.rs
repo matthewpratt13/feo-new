@@ -10,6 +10,7 @@ impl InnerAttr {
         let token = parser.current_token();
 
         match token {
+            Some(Token::Abstract { .. }) => Some(InnerAttr::Abstract),
             Some(Token::Contract { .. }) => Some(InnerAttr::Contract),
             Some(Token::Library { .. }) => Some(InnerAttr::Library),
             Some(Token::Interface { .. }) => Some(InnerAttr::Interface),

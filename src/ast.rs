@@ -81,6 +81,7 @@ pub enum Keyword {
 /// Enum representing the different inner attributes used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum InnerAttr {
+    Abstract,
     Contract,
     Interface,
     Library,

@@ -52,20 +52,24 @@ impl ParseDeclaration for ConstantDecl {
             Ok(None)
         }?;
 
-        match parser.next_token() {
-            Some(Token::Semicolon { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`;`"),
-            None => parser.log_missing_token("`;`"),
-        }
+        if let Some(Token::Semicolon { .. }) = parser.current_token() {
+            parser.next_token();
 
-        Ok(ConstantDecl {
-            attributes_opt,
-            visibility,
-            kw_const,
-            item_name,
-            item_type,
-            value_opt,
-        })
+            Ok(ConstantDecl {
+                attributes_opt,
+                visibility,
+                kw_const,
+                item_name,
+                item_type,
+                value_opt,
+            })
+        } else if let Some(_) = parser.current_token() {
+            parser.log_unexpected_token("`;`");
+            Err(ErrorsEmitted)
+        } else {
+            parser.log_missing_token("`;`");
+            Err(ErrorsEmitted)
+        }
     }
 }
 
