@@ -119,11 +119,13 @@ impl Type {
 
                 match parser.next_token() {
                     Some(Token::GreaterThan { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`<`"),
-                    None => parser.log_missing_token("`<`"),
+                    Some(_) => parser.log_unexpected_token("`>`"),
+                    None => parser.log_missing_token("`>`"),
                 }
 
-                Ok(Type::Option(Box::new(ty)))
+                Ok(Type::Option {
+                    inner_type: Box::new(ty),
+                })
             }
 
             Some(Token::ResultType { .. }) => {

@@ -20,7 +20,7 @@ impl TuplePatt {
             Err(ErrorsEmitted)
         }?;
 
-        let tuple_elements =
+        let tuple_patt_elements =
             parse_tuple_patt_elements(parser, &mut elements, &mut final_element_opt)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
@@ -33,13 +33,7 @@ impl TuplePatt {
 
         let patt = TuplePatt {
             open_paren,
-            elements_opt: {
-                match elements.is_empty() {
-                    true if final_element_opt.is_none() => None,
-                    true => Some(tuple_elements),
-                    false => Some(tuple_elements),
-                }
-            },
+            tuple_patt_elements,
             close_paren,
         };
 

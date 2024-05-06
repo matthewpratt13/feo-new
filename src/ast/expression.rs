@@ -246,7 +246,7 @@ pub struct StructExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleExpr {
     pub open_paren: Delimiter,
-    pub elements_opt: Option<TupleElements>,
+    pub tuple_elements: TupleElements,
     pub close_paren: Delimiter,
 }
 

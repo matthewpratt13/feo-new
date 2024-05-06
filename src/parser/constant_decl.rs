@@ -35,15 +35,21 @@ impl ParseDeclaration for ConstantDecl {
 
         let item_type = Box::new(Type::parse(parser)?);
 
-        let value = if let Some(Token::Equals { .. }) = parser.next_token() {
-            let expr = parser.parse_expression(Precedence::Lowest)?;
-            Ok(ValueExpr::try_from(expr).map_err(|e| {
-                parser.log_error(e);
-                ErrorsEmitted
-            })?)
+        let value_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
+            parser.next_token();
+
+            if parser.current_token().is_some() {
+                let expr = parser.parse_expression(Precedence::Lowest)?;
+                Ok(Some(ValueExpr::try_from(expr).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted
+                })?))
+            } else {
+                parser.log_missing_token("value");
+                Err(ErrorsEmitted)
+            }
         } else {
-            parser.log_unexpected_token("value expression");
-            Err(ErrorsEmitted)
+            Ok(None)
         }?;
 
         match parser.next_token() {
@@ -58,7 +64,7 @@ impl ParseDeclaration for ConstantDecl {
             kw_const,
             item_name,
             item_type,
-            value,
+            value_opt,
         })
     }
 }

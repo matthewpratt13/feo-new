@@ -2,8 +2,7 @@
 // HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 use super::{
-    Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, Pattern, ReferenceOp,
-    Separator, Type, ValueExpr,
+    Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathType, Pattern, ReferenceOp, Separator, Type, ValueExpr
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -48,7 +47,7 @@ pub enum Visibility {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EnumVariantStruct {
     pub open_brace: Delimiter,
-    pub fields_opt: Option<Vec<(Identifier, Type)>>,
+    pub fields: Vec<StructDefField>,
     pub close_brace: Delimiter,
 }
 
@@ -117,6 +116,7 @@ pub struct StructDefField {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleStructDefField {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub field_type: Box<Type>,
 }
@@ -141,7 +141,7 @@ pub struct ConstantDecl {
     pub kw_const: Keyword,
     pub item_name: Identifier,
     pub item_type: Box<Type>,
-    pub value: ValueExpr,
+    pub value_opt: Option<ValueExpr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -247,7 +247,7 @@ pub struct TraitDef {
 pub struct TraitImplDef {
     pub attributes_opt: Option<Vec<OuterAttr>>,
     pub kw_impl: Keyword,
-    pub implemented_trait_path: Expression,
+    pub implemented_trait_path: PathType,
     pub kw_for: Keyword,
     pub implementing_type: Type,
     pub open_brace: Delimiter,

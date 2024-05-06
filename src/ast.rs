@@ -337,7 +337,7 @@ pub enum AssigneeExpr {
     GroupedExpr(Box<AssigneeExpr>),
     UnderscoreExpr(UnderscoreExpr),
     SliceExpr(Vec<AssigneeExpr>),
-    TupleExpr(Option<Vec<AssigneeExpr>>),
+    TupleExpr(Vec<AssigneeExpr>),
     StructExpr(Vec<(Identifier, AssigneeExpr)>),
     // TupleStructExpr(Vec<AssigneeExpr>),
 }
@@ -373,26 +373,16 @@ impl TryFrom<Expression> for AssigneeExpr {
             }
 
             Expression::Tuple(t) => {
-                let assignee_expressions = t.elements_opt.map(|te| {
-                    let mut elements: Vec<Expression> = Vec::new();
-
-                    te.elements.into_iter().for_each(|e| {
-                        elements.push(e.0);
-                    });
-
-                    if let Some(e) = te.final_element_opt {
-                        elements.push(*e)
-                    }
-
-                    elements
-                        .into_iter()
-                        .map(|e| {
-                            AssigneeExpr::try_from(e).expect(
+                let assignee_expressions = t
+                    .tuple_elements
+                    .elements
+                    .into_iter()
+                    .map(|te| {
+                        AssigneeExpr::try_from(te.0).expect(
                             "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         )
-                        })
-                        .collect::<Vec<AssigneeExpr>>()
-                });
+                    })
+                    .collect::<Vec<AssigneeExpr>>();
 
                 Ok(AssigneeExpr::TupleExpr(assignee_expressions))
             }
@@ -540,7 +530,9 @@ pub enum Type {
         value_type: Box<Type>,
     },
 
-    Option(Box<Type>),
+    Option {
+        inner_type: Box<Type>,
+    },
     Result {
         ok: Box<Type>,
         err: Box<Type>,
