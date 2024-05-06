@@ -32,6 +32,13 @@ pub struct ClosureParam {
     pub type_ann_opt: Option<Type>,
 }
 
+/// Struct representing a key-value pair in a mapping.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MappingPair {
+    pub key: Expression,
+    pub value: Expression,
+}
+
 /// Struct representing a single arm in a match statement.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchArm {
@@ -184,6 +191,13 @@ pub struct IndexExpr {
     pub open_bracket: Delimiter,
     pub index: Box<Expression>,
     pub close_bracket: Delimiter,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MappingExpr {
+    pub open_brace: Delimiter,
+    pub pairs_opt: Option<Vec<MappingPair>>,
+    pub close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
