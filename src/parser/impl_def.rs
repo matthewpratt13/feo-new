@@ -148,7 +148,15 @@ impl ParseAssociatedItem for InherentImplItem {
 
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
-                Ok(InherentImplItem::FunctionDef(function_def))
+                if function_def.block_opt.is_none() {
+                    parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
+                        token: parser.current_token(),
+                        msg: "Functions in implementation blocks must have bodies".to_string(),
+                    });
+                    Err(ErrorsEmitted)
+                } else {
+                    Ok(InherentImplItem::FunctionDef(function_def))
+                }
             }
             _ => {
                 parser.log_unexpected_token("`const` or `func`");
@@ -183,7 +191,15 @@ impl ParseAssociatedItem for TraitImplItem {
             }
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
-                Ok(TraitImplItem::FunctionDef(function_def))
+                if function_def.block_opt.is_none() {
+                    parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
+                        token: parser.current_token(),
+                        msg: "Functions in implementation blocks must have bodies".to_string(),
+                    });
+                    Err(ErrorsEmitted)
+                } else {
+                    Ok(TraitImplItem::FunctionDef(function_def))
+                }
             }
             _ => {
                 parser.log_unexpected_token("`const`, `alias` or `func`");

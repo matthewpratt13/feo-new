@@ -83,7 +83,15 @@ impl ParseAssociatedItem for TraitDefItem {
             }
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
-                Ok(TraitDefItem::FunctionDef(function_def))
+                if function_def.block_opt.is_some() {
+                    parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
+                        token: parser.current_token(),
+                        msg: "Functions in trait definitions cannot have bodies".to_string(),
+                    });
+                    Err(ErrorsEmitted)
+                } else {
+                    Ok(TraitDefItem::FunctionDef(function_def))
+                }
             }
             _ => {
                 parser.log_unexpected_token("`const`, `alias` or `func`");
