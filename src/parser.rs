@@ -57,6 +57,7 @@ mod import_decl;
 mod index_expr;
 mod item;
 mod let_statement;
+mod mapping_expr;
 mod match_expr;
 mod method_call_expr;
 mod module_item;
@@ -94,12 +95,12 @@ use crate::{
         ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
         ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter, DereferenceExpr,
         DereferenceOp, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
-        Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal, MatchExpr,
-        MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, PathPrefix, Pattern, RangeExpr,
-        RangeOp, RangePatt, ReferenceExpr, ReferenceOp, ReferencePatt, RestPatt, ResultExpr,
-        ResultPatt, ReturnExpr, SelfType, SomeExpr, SomePatt, Statement, StructExpr, StructPatt,
-        TupleExpr, TupleIndexExpr, TuplePatt, TypeCastExpr, UnaryExpr, UnaryOp, UnderscoreExpr,
-        UnwrapExpr, WhileExpr, WildcardPatt,
+        Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
+        MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, PathPrefix,
+        Pattern, RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferenceOp, ReferencePatt,
+        RestPatt, ResultExpr, ResultPatt, ReturnExpr, SelfType, SomeExpr, SomePatt, Statement,
+        StructExpr, StructPatt, TupleExpr, TupleIndexExpr, TuplePatt, TypeCastExpr, UnaryExpr,
+        UnaryOp, UnderscoreExpr, UnwrapExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
@@ -122,7 +123,6 @@ enum ParserContext {
     TupleIndex,  // `.`
     FieldAccess, // `.`
     MethodCall,  // `.`
-    MatchArm,
 }
 
 /// Parser struct that stores a stream of tokens and contains methods to parse expressions,
@@ -212,8 +212,8 @@ impl Parser {
                     self.precedences.insert(t, Precedence::CompoundAssignment)
                 }
                 TokenType::Equals => self.precedences.insert(t, Precedence::Assignment),
-                TokenType::FatArrow => self.precedences.insert(t, Precedence::Assignment),
-
+                // TokenType::Colon => self.precedences.insert(t, Precedence::Assignment),
+                // TokenType::FatArrow => self.precedences.insert(t, Precedence::Assignment),
                 _ => self.precedences.insert(t, Precedence::Lowest),
             };
         }
@@ -414,7 +414,6 @@ impl Parser {
                             }
                             Some(Token::FatArrow { .. } | Token::If { .. }) => {
                                 if let Some(Token::LBrace { .. }) = self.current_token() {
-                                    self.set_context(ParserContext::MatchArm);
                                     expr
                                 } else {
                                     self.log_unexpected_token("`{`");
@@ -506,15 +505,14 @@ impl Parser {
                 }
             }
 
-            Some(Token::LBrace { .. }) => {
-                if self.is_match_expr() {
-                    self.set_context(ParserContext::MatchArm);
-                    MatchExpr::parse(self)
-                } else {
-                    let expr = BlockExpr::parse(self);
-                    expr
-                }
-            }
+            Some(Token::LBrace { .. }) => match self.peek_ahead_by(2) {
+                Some(Token::Colon { .. }) => MappingExpr::parse(self),
+                Some(Token::FatArrow { .. }) => MatchExpr::parse(self),
+                _ => match self.peek_ahead_by(1) {
+                    Some(Token::RBrace { .. }) => MappingExpr::parse(self),
+                    _ => BlockExpr::parse(self),
+                },
+            },
 
             Some(Token::LBracket { .. }) => ArrayExpr::parse(self),
 
@@ -1079,14 +1077,14 @@ impl Parser {
         }
     }
 
-    /// Peek at the token `num_tokens` behind the token at the current index in the `TokenStream`.
-    fn peek_behind_by(&self, num_tokens: usize) -> Option<Token> {
-        if self.current >= num_tokens {
-            self.stream.tokens().get(self.current - num_tokens).cloned()
-        } else {
-            None
-        }
-    }
+    // /// Peek at the token `num_tokens` behind the token at the current index in the `TokenStream`.
+    // fn peek_behind_by(&self, num_tokens: usize) -> Option<Token> {
+    //     if self.current >= num_tokens {
+    //         self.stream.tokens().get(self.current - num_tokens).cloned()
+    //     } else {
+    //         None
+    //     }
+    // }
 
     ///////////////////////////////////////////////////////////////////////////
     // ERROR HANDLING
@@ -1245,6 +1243,8 @@ impl Parser {
             | Token::SlashEquals { .. }
             | Token::PercentEquals { .. } => Precedence::CompoundAssignment,
             Token::Equals { .. } => Precedence::Assignment,
+            // Token::Colon { .. } => Precedence::Assignment,
+            // Token::FatArrow { .. } => Precedence::Assignment,
             _ => *self.precedences.get(token).unwrap_or(&Precedence::Lowest),
         }
     }
@@ -1339,14 +1339,6 @@ impl Parser {
         match (self.current_token(), self.peek_ahead_by(1)) {
             (Some(Token::DblPipe { .. }), Some(Token::Identifier { .. })) => false,
             _ => true,
-        }
-    }
-
-    /// Determine if `Token::LBrace` indicates the opening of a match expression body.
-    fn is_match_expr(&self) -> bool {
-        match (self.peek_behind_by(2), self.peek_ahead_by(2)) {
-            (Some(Token::Match { .. }), Some(Token::FatArrow { .. } | Token::If { .. })) => true,
-            _ => false,
         }
     }
 }

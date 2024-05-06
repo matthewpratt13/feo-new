@@ -239,6 +239,7 @@ pub enum Expression {
     Tuple(TupleExpr),
     Struct(StructExpr),
     // TupleStruct(TupleStructExpr),
+    Mapping(MappingExpr),
     Block(BlockExpr),
     If(IfExpr),       // condition, true, false
     Match(MatchExpr), // scrutinee, body
@@ -272,6 +273,7 @@ pub enum ValueExpr {
     UnderscoreExpr(UnderscoreExpr),
     ArrayExpr(ArrayExpr),
     StructExpr(StructExpr),
+    MappingExpr(MappingExpr),
     // TupleStructExpr(TupleStructExpr),
     TupleExpr(TupleExpr),
     IfExpr(IfExpr),
@@ -308,6 +310,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::Array(a) => Ok(ValueExpr::ArrayExpr(a)),
             Expression::Tuple(t) => Ok(ValueExpr::TupleExpr(t)),
             Expression::Struct(s) => Ok(ValueExpr::StructExpr(s)),
+            Expression::Mapping(m) => Ok(ValueExpr::MappingExpr(m)),
             // Expression::TupleStruct(ts) => Ok(ValueExpr::TupleStructExpr(ts)),
             Expression::Block(b) => Ok(ValueExpr::BlockExpr(b)),
             Expression::If(i) => Ok(ValueExpr::IfExpr(i)),
