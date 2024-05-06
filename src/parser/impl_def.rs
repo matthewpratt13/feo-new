@@ -5,6 +5,7 @@ use crate::{
         Type, Visibility,
     },
     error::ErrorsEmitted,
+    logger::{LogLevel, LogMsg},
     token::Token,
 };
 
@@ -134,7 +135,15 @@ impl ParseAssociatedItem for InherentImplItem {
         match parser.current_token() {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
-                Ok(InherentImplItem::ConstantDecl(constant_decl))
+                if constant_decl.value_opt.is_none() {
+                    parser.logger.log(
+                        LogLevel::Warning,
+                        LogMsg("value cannot be `None`".to_string()),
+                    );
+                    Err(ErrorsEmitted)
+                } else {
+                    Ok(InherentImplItem::ConstantDecl(constant_decl))
+                }
             }
 
             Some(Token::Func { .. }) => {
@@ -158,7 +167,15 @@ impl ParseAssociatedItem for TraitImplItem {
         match parser.current_token() {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
-                Ok(TraitImplItem::ConstantDecl(constant_decl))
+                if constant_decl.value_opt.is_none() {
+                    parser.logger.log(
+                        LogLevel::Warning,
+                        LogMsg("value cannot be `None`".to_string()),
+                    );
+                    Err(ErrorsEmitted)
+                } else {
+                    Ok(TraitImplItem::ConstantDecl(constant_decl))
+                }
             }
             Some(Token::Alias { .. }) => {
                 let alias_decl = AliasDecl::parse(parser, attributes_opt, visibility)?;
