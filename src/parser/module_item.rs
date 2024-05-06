@@ -95,13 +95,19 @@ mod tests {
             #![contract]
 
             import package::foo_error::Error;
-         
-            pub trait Bar {
+           
+            trait Bar {
                 #![interface]
 
-                func transfer(&mut self, to: h160, amount: u256) -> Result<Baz, Error>;
+                const ADDRESS: h160;
+                func transfer(&mut self, to: h160, amount: u256) -> Result<Baz, Error> {}
             }
 
+            trait FooBar {
+                #[modifier]
+                func only_owner(caller: h160) -> bool {}
+            }
+            
             #[event]
             pub struct Baz {
                 #[topic]
@@ -118,13 +124,7 @@ mod tests {
                 #[storage]
                 const ADDRESS: h160 = $0x12345123451234512345;
     
-                #[modifier]
-                pub func only_owner(caller: h160) -> bool {
-                    if (caller != OWNER) {
-                        return true;
-                    }
-                }
-
+            
                 #[constructor]
                 pub func new(address: h160, amount: u256) -> Foo {
                     Foo { owner: address, balance: amount }
@@ -137,6 +137,14 @@ mod tests {
                     to.balance += amount;
 
                     Ok(Baz { to: to, amount: amount })
+                }
+            }
+
+            impl FooBar for Foo {
+                func only_owner(caller: h160) -> bool {
+                    if (caller != OWNER) {
+                        return true;
+                    }
                 }
             }
         }"#;

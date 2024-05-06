@@ -90,6 +90,10 @@ pub enum Token {
         name: String,
         span: Span,
     }, // type of trait, notated `#![interface]`
+    Abstract {
+        name: String,
+        span: Span,
+    }, // type of trait, notated `#![abstract]`
     Constructor {
         name: String,
         span: Span,
@@ -569,7 +573,7 @@ pub enum Token {
 }
 
 impl Token {
-    /// Convert a `Token` into a `TokenType` for more streamlined parsing – 
+    /// Convert a `Token` into a `TokenType` for more streamlined parsing –
     /// i.e., excluding span information.
     pub fn token_type(&self) -> TokenType {
         match self.clone() {
@@ -592,6 +596,7 @@ impl Token {
             Token::Library { .. } => TokenType::Library,
             Token::Script { .. } => TokenType::Script,
             Token::Interface { .. } => TokenType::Interface,
+            Token::Abstract { .. } => TokenType::Abstract,
             Token::Constructor { .. } => TokenType::Constructor,
             Token::Modifier { .. } => TokenType::Modifier,
             Token::Test { .. } => TokenType::Test,
@@ -734,6 +739,7 @@ impl Token {
             Token::Library { span, .. } => span,
             Token::Script { span, .. } => span,
             Token::Interface { span, .. } => span,
+            Token::Abstract { span, .. } => span,
             Token::Constructor { span, .. } => span,
             Token::Modifier { span, .. } => span,
             Token::Test { span, .. } => span,
@@ -877,6 +883,7 @@ impl fmt::Display for TokenType {
             TokenType::Library { .. } => write!(f, "`library`"),
             TokenType::Script { .. } => write!(f, "`script`"),
             TokenType::Interface { .. } => write!(f, "`interface`"),
+            TokenType::Abstract { .. } => write!(f, "`abstract`"),
             TokenType::Constructor { .. } => write!(f, "`constructor`"),
             TokenType::Modifier { .. } => write!(f, "`modifier`"),
             TokenType::Test { .. } => write!(f, "`test`"),
@@ -1044,6 +1051,7 @@ impl fmt::Debug for Token {
             Self::Interface { name, .. } => {
                 f.debug_struct("Interface").field("name", name).finish()
             }
+            Self::Abstract { name, .. } => f.debug_struct("Abstract").field("name", name).finish(),
             Self::Constructor { name, .. } => {
                 f.debug_struct("Constructor").field("name", name).finish()
             }
@@ -1243,7 +1251,7 @@ pub enum DocCommentType {
     OuterDocComment, // `///`
 }
 
-/// Enum representing the different token types, without extra information (except for literals). 
+/// Enum representing the different token types, without extra information (except for literals).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum TokenType {
     Iden(String),
@@ -1265,6 +1273,7 @@ pub enum TokenType {
     Library,
     Script,
     Interface,
+    Abstract,
     Constructor,
     Modifier,
     Test,

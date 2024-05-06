@@ -794,6 +794,7 @@ impl Parser {
                 | Token::Library { .. }
                 | Token::Script { .. }
                 | Token::Interface { .. }
+                | Token::Abstract { .. }
                 | Token::Constructor { .. }
                 | Token::Modifier { .. }
                 | Token::Test { .. }

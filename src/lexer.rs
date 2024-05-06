@@ -366,6 +366,16 @@ impl<'a> Lexer<'a> {
                         Err(ErrorsEmitted)
                     }
                 }
+                "abstract" => {
+                    if let Some(']') = self.peek_current() {
+                        let token = self.tokenize_inner_attribute(name, span);
+                        self.advance();
+                        token
+                    } else {
+                        self.log_error(LexErrorKind::MissingDelimiter { delim: ']' });
+                        Err(ErrorsEmitted)
+                    }
+                }
                 "constructor" => {
                     if let Some(']') = self.peek_current() {
                         let token = self.tokenize_outer_attribute(name, span);
@@ -426,6 +436,7 @@ impl<'a> Lexer<'a> {
                         Err(ErrorsEmitted)
                     }
                 }
+
                 "library" => {
                     if let Some(']') = self.peek_current() {
                         let token = self.tokenize_inner_attribute(name, span);
@@ -559,6 +570,7 @@ impl<'a> Lexer<'a> {
         span: Span,
     ) -> Result<Token, ErrorsEmitted> {
         match name.as_str() {
+            "abstract" => Ok(Token::Abstract { name, span }),
             "contract" => Ok(Token::Contract { name, span }),
             "interface" => Ok(Token::Interface { name, span }),
             "library" => Ok(Token::Library { name, span }),
@@ -1155,6 +1167,7 @@ fn is_keyword(value: &str) -> bool {
 /// List of reserved attribute keywords to match against some input `&str`.
 fn is_attribute(value: &str) -> bool {
     [
+        "abstract",
         "calldata",
         "constructor",
         "contract",
