@@ -38,7 +38,7 @@ impl ParseDefinition for StructDef {
         }?;
 
         let fields_opt =
-            collection::get_collection(parser, parse_struct_def_field, Delimiter::RBrace)?;
+            collection::get_collection(parser, StructDefField::parse, Delimiter::RBrace)?;
 
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
@@ -118,36 +118,38 @@ impl ParseDefinition for TupleStructDef {
     }
 }
 
-fn parse_struct_def_field(parser: &mut Parser) -> Result<StructDefField, ErrorsEmitted> {
-    let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
+impl StructDefField {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<StructDefField, ErrorsEmitted> {
+        let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
-    let visibility = Visibility::visibility(parser)?;
+        let visibility = Visibility::visibility(parser)?;
 
-    let token = parser.next_token();
+        let token = parser.next_token();
 
-    let field = if let Some(Token::Identifier { name, .. }) = token {
-        let field_name = Identifier(name);
+        let field = if let Some(Token::Identifier { name, .. }) = token {
+            let field_name = Identifier(name);
 
-        match parser.next_token() {
-            Some(Token::Colon { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`:`"),
-            None => parser.log_missing_token("`:`"),
-        }
+            match parser.next_token() {
+                Some(Token::Colon { .. }) => (),
+                Some(_) => parser.log_unexpected_token("`:`"),
+                None => parser.log_missing_token("`:`"),
+            }
 
-        let field_type = Box::new(Type::parse(parser)?);
+            let field_type = Box::new(Type::parse(parser)?);
 
-        StructDefField {
-            attributes_opt,
-            visibility,
-            field_name,
-            field_type,
-        }
-    } else {
-        parser.log_unexpected_token("identifier`");
-        return Err(ErrorsEmitted);
-    };
+            StructDefField {
+                attributes_opt,
+                visibility,
+                field_name,
+                field_type,
+            }
+        } else {
+            parser.log_unexpected_token("identifier`");
+            return Err(ErrorsEmitted);
+        };
 
-    Ok(field)
+        Ok(field)
+    }
 }
 
 fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefField, ErrorsEmitted> {
