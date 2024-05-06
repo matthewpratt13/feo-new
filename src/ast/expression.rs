@@ -63,12 +63,6 @@ pub struct TupleElements {
     pub final_element_opt: Option<Box<Expression>>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TupleAssigneeExprElements {
-    pub elements: Vec<(AssigneeExpr, Separator)>,
-    pub final_element_opt: Option<Box<AssigneeExpr>>,
-}
-
 ///////////////////////////////////////////////////////////////////////////
 // AST NODE STRUCTURES
 ///////////////////////////////////////////////////////////////////////////
