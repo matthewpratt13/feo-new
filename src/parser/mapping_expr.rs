@@ -37,12 +37,14 @@ impl ParseConstruct for MappingExpr {
 }
 
 fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted> {
-    let key = parser.parse_expression(Precedence::Lowest)?;
+    let key = parser.parse_pattern()?;
 
-    if let Some(Token::Colon { .. }) = parser.current_token() {
-        parser.next_token();
-    } else {
-        parser.log_unexpected_token("`:`");
+    match parser.current_token() {
+        Some(Token::Colon { .. }) => {
+            let _ = parser.next_token();
+        }
+        Some(_) => parser.log_unexpected_token("`:`"),
+        None => parser.log_missing_token("`:`"),
     }
 
     let value = parser.parse_expression(Precedence::Lowest)?;
@@ -50,4 +52,38 @@ fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted>
     let pair = MappingPair { key, value };
 
     Ok(pair)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{logger::LogLevel, parser::test_utils};
+
+    #[test]
+    fn parse_mapping_expr_empty() -> Result<(), ()> {
+        let input = r#"{}"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+        }
+    }
+
+    #[test]
+
+    fn parse_mapping_expr_with_elements() -> Result<(), ()> {
+        let input = r#"{x: 2, y: true, z: foo}"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+        }
+    }
 }

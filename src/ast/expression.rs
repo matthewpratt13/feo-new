@@ -35,7 +35,7 @@ pub struct ClosureParam {
 /// Struct representing a key-value pair in a mapping.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MappingPair {
-    pub key: Expression,
+    pub key: Pattern,
     pub value: Expression,
 }
 

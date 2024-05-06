@@ -212,8 +212,8 @@ impl Parser {
                     self.precedences.insert(t, Precedence::CompoundAssignment)
                 }
                 TokenType::Equals => self.precedences.insert(t, Precedence::Assignment),
-                TokenType::FatArrow => self.precedences.insert(t, Precedence::Assignment),
-
+                // TokenType::Colon => self.precedences.insert(t, Precedence::Assignment),
+                // TokenType::FatArrow => self.precedences.insert(t, Precedence::Assignment),
                 _ => self.precedences.insert(t, Precedence::Lowest),
             };
         }
@@ -505,15 +505,14 @@ impl Parser {
                 }
             }
 
-            Some(Token::LBrace { .. }) => {
-                if self.is_match_expr() {
-                    MatchExpr::parse(self)
-                } else if self.is_mapping_expr() {
-                    MappingExpr::parse(self)
-                } else {
-                    BlockExpr::parse(self)
-                }
-            }
+            Some(Token::LBrace { .. }) => match self.peek_ahead_by(2) {
+                Some(Token::Colon { .. }) => MappingExpr::parse(self),
+                Some(Token::FatArrow { .. }) => MatchExpr::parse(self),
+                _ => match self.peek_ahead_by(1) {
+                    Some(Token::RBrace { .. }) => MappingExpr::parse(self),
+                    _ => BlockExpr::parse(self),
+                },
+            },
 
             Some(Token::LBracket { .. }) => ArrayExpr::parse(self),
 
@@ -1078,14 +1077,14 @@ impl Parser {
         }
     }
 
-    /// Peek at the token `num_tokens` behind the token at the current index in the `TokenStream`.
-    fn peek_behind_by(&self, num_tokens: usize) -> Option<Token> {
-        if self.current >= num_tokens {
-            self.stream.tokens().get(self.current - num_tokens).cloned()
-        } else {
-            None
-        }
-    }
+    // /// Peek at the token `num_tokens` behind the token at the current index in the `TokenStream`.
+    // fn peek_behind_by(&self, num_tokens: usize) -> Option<Token> {
+    //     if self.current >= num_tokens {
+    //         self.stream.tokens().get(self.current - num_tokens).cloned()
+    //     } else {
+    //         None
+    //     }
+    // }
 
     ///////////////////////////////////////////////////////////////////////////
     // ERROR HANDLING
@@ -1244,6 +1243,8 @@ impl Parser {
             | Token::SlashEquals { .. }
             | Token::PercentEquals { .. } => Precedence::CompoundAssignment,
             Token::Equals { .. } => Precedence::Assignment,
+            // Token::Colon { .. } => Precedence::Assignment,
+            // Token::FatArrow { .. } => Precedence::Assignment,
             _ => *self.precedences.get(token).unwrap_or(&Precedence::Lowest),
         }
     }
@@ -1338,21 +1339,6 @@ impl Parser {
         match (self.current_token(), self.peek_ahead_by(1)) {
             (Some(Token::DblPipe { .. }), Some(Token::Identifier { .. })) => false,
             _ => true,
-        }
-    }
-
-    /// Determine if `Token::LBrace` indicates the opening of a match expression body.
-    fn is_match_expr(&self) -> bool {
-        match (self.peek_behind_by(2), self.peek_ahead_by(2)) {
-            (Some(Token::Match { .. }), Some(Token::FatArrow { .. } | Token::If { .. })) => true,
-            _ => false,
-        }
-    }
-
-    fn is_mapping_expr(&self) -> bool {
-        match (self.current_token(), self.peek_ahead_by(2)) {
-            (Some(Token::LBrace { .. }), Some(Token::Comma { .. })) => true,
-            _ => false,
         }
     }
 }
