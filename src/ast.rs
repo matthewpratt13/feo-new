@@ -530,7 +530,9 @@ pub enum Type {
         value_type: Box<Type>,
     },
 
-    Option(Box<Type>),
+    Option {
+        inner_type: Box<Type>,
+    },
     Result {
         ok: Box<Type>,
         err: Box<Type>,

@@ -123,7 +123,9 @@ impl Type {
                     None => parser.log_missing_token("`<`"),
                 }
 
-                Ok(Type::Option(Box::new(ty)))
+                Ok(Type::Option {
+                    inner_type: Box::new(ty),
+                })
             }
 
             Some(Token::ResultType { .. }) => {
