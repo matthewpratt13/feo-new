@@ -89,7 +89,7 @@ pub struct StructPatt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TuplePatt {
     pub open_paren: Delimiter,
-    pub elements_opt: Option<TuplePattElements>,
+    pub tuple_patt_elements: TuplePattElements,
     pub close_paren: Delimiter,
 }
 
