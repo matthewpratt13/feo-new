@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Identifier, Keyword, OuterAttr, StaticItemDecl, Type, Visibility},
+    ast::{AssigneeExpr, Identifier, Keyword, OuterAttr, StaticItemDecl, Type, Visibility},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -44,7 +44,13 @@ impl ParseDeclaration for StaticItemDecl {
 
         let value_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
             parser.next_token();
-            Some(Box::new(parser.parse_expression(Precedence::Lowest)?))
+            let expression = parser.parse_expression(Precedence::Lowest)?;
+            let assignee_expr = AssigneeExpr::try_from(expression).map_err(|e| {
+                parser.log_error(e);
+                ErrorsEmitted
+            })?;
+
+            Some(Box::new(assignee_expr))
         } else {
             None
         };

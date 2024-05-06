@@ -2,7 +2,7 @@
 // HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 use super::{
-    Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathType, Pattern, ReferenceOp, Separator, Type, ValueExpr
+    AssigneeExpr, Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathType, Pattern, ReferenceOp, Separator, Type, ValueExpr
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -206,7 +206,7 @@ pub struct StaticItemDecl {
     pub kw_mut_opt: Option<Keyword>,
     pub item_name: Identifier,
     pub item_type: Type,
-    pub value_opt: Option<Box<Expression>>,
+    pub value_opt: Option<Box<AssigneeExpr>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
