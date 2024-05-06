@@ -339,7 +339,7 @@ pub enum AssigneeExpr {
     UnderscoreExpr(UnderscoreExpr),
     SliceExpr(Vec<AssigneeExpr>),
     TupleExpr(Vec<AssigneeExpr>),
-    StructExpr(Vec<(Identifier, AssigneeExpr)>),
+    StructExpr(Vec<StructAssigneeExprField>),
     // TupleStructExpr(Vec<AssigneeExpr>),
 }
 
@@ -389,14 +389,21 @@ impl TryFrom<Expression> for AssigneeExpr {
             }
 
             Expression::Struct(s) => {
-                let mut assignee_expressions: Vec<(Identifier, AssigneeExpr)> = Vec::new();
+                let mut assignee_expressions: Vec<StructAssigneeExprField> = Vec::new();
 
                 s.fields_opt.map(|v| {
                     v.into_iter().for_each(|s| {
-                        let value = AssigneeExpr::try_from(s.field_value).expect(
+                        let attributes_opt = s.attributes_opt;
+                        let field_value = AssigneeExpr::try_from(s.field_value).expect(
                             "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         );
-                        assignee_expressions.push((s.field_name, value));
+
+                        let struct_assignee_expr_field = StructAssigneeExprField {
+                            attributes_opt,
+                            field_name: s.field_name,
+                            field_value,
+                        };
+                        assignee_expressions.push(struct_assignee_expr_field);
                     })
                 });
 
