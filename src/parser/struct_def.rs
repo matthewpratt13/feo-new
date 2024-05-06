@@ -151,11 +151,14 @@ fn parse_struct_def_field(parser: &mut Parser) -> Result<StructDefField, ErrorsE
 }
 
 fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefField, ErrorsEmitted> {
+    let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
+
     let visibility = Visibility::visibility(parser)?;
 
     let field_type = Box::new(Type::parse(parser)?);
 
     let field = TupleStructDefField {
+        attributes_opt,
         visibility,
         field_type,
     };

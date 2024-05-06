@@ -117,6 +117,7 @@ pub struct StructDefField {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleStructDefField {
+    pub attributes_opt: Option<Vec<OuterAttr>>,
     pub visibility: Visibility,
     pub field_type: Box<Type>,
 }
