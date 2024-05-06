@@ -62,7 +62,13 @@ impl ParseDefinition for FunctionItem {
         };
 
         let block_opt = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            Some(BlockExpr::parse(parser)?)
+            if let Some(Token::RBrace { .. }) = parser.peek_ahead_by(1) {
+                parser.next_token();
+                parser.next_token();
+                None
+            } else {
+                Some(BlockExpr::parse(parser)?)
+            }
         } else {
             None
         };

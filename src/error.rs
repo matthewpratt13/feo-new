@@ -152,6 +152,11 @@ pub enum ParserErrorKind {
         token: Option<Token>,
     },
 
+    ExtraTokens {
+        token: Option<Token>,
+        msg: String,
+    },
+
     TypeConversionError {
         type_a: String,
         type_b: String,
@@ -181,6 +186,10 @@ impl fmt::Display for ParserErrorKind {
 
             ParserErrorKind::InvalidTokenContext { token } => {
                 write!(f, "syntax error. Invalid token context – `{:#?}`", token)
+            }  
+            
+            ParserErrorKind::ExtraTokens { token, msg } => {
+                write!(f, "syntax error. Extra tokens detected – `{:#?}`. {msg}", token)
             }
 
             ParserErrorKind::TypeConversionError { type_a, type_b } => write!(
