@@ -8,7 +8,7 @@ use crate::{
 /// Enum representing the different types of tokens.
 #[allow(dead_code)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Token {
+pub(crate) enum Token {
     // includes `_`
     Identifier {
         name: String,
@@ -575,7 +575,7 @@ pub enum Token {
 impl Token {
     /// Convert a `Token` into a `TokenType` for more streamlined parsing –
     /// i.e., excluding span information.
-    pub fn token_type(&self) -> TokenType {
+    pub(crate) fn token_type(&self) -> TokenType {
         match self.clone() {
             Token::Identifier { name, .. } => TokenType::Iden(name),
             Token::IntLiteral { value, .. } => TokenType::IntLit(value),
@@ -718,7 +718,7 @@ impl Token {
     }
 
     /// Retrieve the span of a given token.
-    pub fn span(&self) -> Span {
+    pub(crate) fn span(&self) -> Span {
         match self.clone() {
             Token::Identifier { span, .. } => span,
             Token::IntLiteral { span, .. } => span,
@@ -1246,14 +1246,14 @@ impl fmt::Debug for Token {
 
 /// Enum representing the different doc comment types.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum DocCommentType {
+pub(crate) enum DocCommentType {
     InnerDocComment, // `//!`
     OuterDocComment, // `///`
 }
 
 /// Enum representing the different token types, without extra information (except for literals).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum TokenType {
+pub(crate) enum TokenType {
     Iden(String),
     IntLit(Int),
     UIntLit(UInt),
@@ -1395,7 +1395,7 @@ pub enum TokenType {
 
 /// Collection of `Token` resulting from the tokenization process.
 #[derive(Debug, Clone)]
-pub struct TokenStream {
+pub(crate) struct TokenStream {
     tokens: Vec<Token>,
     span: Span,
 }
@@ -1403,7 +1403,7 @@ pub struct TokenStream {
 impl TokenStream {
     /// Constructor method.
     /// Stores the source data used in parsing (i.e., tokens).
-    pub fn new(tokens: &[Token], input: &str, start: usize, end: usize) -> Self {
+    pub(crate) fn new(tokens: &[Token], input: &str, start: usize, end: usize) -> Self {
         let span = Span::new(input, start, end);
 
         TokenStream {
@@ -1413,12 +1413,12 @@ impl TokenStream {
     }
 
     /// Get the tokens in the stream.
-    pub fn tokens(&self) -> Vec<Token> {
+    pub(crate) fn tokens(&self) -> Vec<Token> {
         self.tokens.clone()
     }
 
     /// Get the stream span.
-    pub fn span(&self) -> Span {
+    pub(crate) fn span(&self) -> Span {
         self.span.clone()
     }
 }

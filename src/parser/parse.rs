@@ -45,7 +45,7 @@ where
 
 /// Trait that defines a shared interface for associated items – i.e., an `Item` that is associated
 /// with traits and implementations. E.g., `TraitDefItem` and `InherentImplItem`.
-pub(crate) trait ParseAssociatedItem
+pub trait ParseAssociatedItem
 where
     Self: Sized,
 {
@@ -55,6 +55,6 @@ where
         visibility: Visibility,
     ) -> Result<Self, ErrorsEmitted>;
 }
-pub(crate) trait ParseStatement {
+pub trait ParseStatement {
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted>;
 }

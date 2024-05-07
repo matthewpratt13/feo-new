@@ -6,8 +6,8 @@ use super::{Expression, Keyword, Pattern, Type};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetStmt {
-    pub kw_let: Keyword,
-    pub assignee: Pattern,
-    pub type_ann_opt: Option<Type>,    
-    pub value_opt: Option<Expression>, 
+    pub(crate) kw_let: Keyword,
+    pub(crate) assignee: Pattern,
+    pub(crate) type_ann_opt: Option<Type>,    
+    pub(crate) value_opt: Option<Expression>, 
 }

@@ -1,3 +1,14 @@
+mod alias_decl;
+mod constant_decl;
+mod enum_def;
+mod function_item;
+mod impl_def;
+mod import_decl;
+mod module_item;
+mod static_item_decl;
+mod struct_def;
+mod trait_def;
+
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, EnumDef, FunctionItem, ImportDecl, InherentImplDef, Item,
@@ -9,11 +20,8 @@ use crate::{
     token::Token,
 };
 
-use super::{
-    collection,
-    parse::{ParseDeclaration, ParseDefinition, ParseStatement},
-    Parser,
-};
+pub(crate) use super::parse::{ParseAssociatedItem, ParseDeclaration, ParseDefinition};
+use super::{collection, ParseStatement, Parser};
 
 impl Item {
     pub(crate) fn parse(
@@ -93,9 +101,10 @@ impl Item {
 impl ParseStatement for Item {
     /// Parse the current token and convert it from an `Item` to a `Statement`.
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {
-        parser
-            .logger
-            .log(LogLevel::Debug, LogMsg("entering `Item::parse_statement()`".to_string()));
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `Item::parse_statement()`".to_string()),
+        );
         parser.log_current_token(true);
 
         let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);

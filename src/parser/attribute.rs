@@ -20,6 +20,7 @@ impl InnerAttr {
         }
     }
 }
+
 impl OuterAttr {
     pub(crate) fn outer_attr(parser: &Parser) -> Option<OuterAttr> {
         let token = parser.current_token();
