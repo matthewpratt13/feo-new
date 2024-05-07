@@ -19,6 +19,7 @@ impl ParseConstruct for BlockExpr {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Delimiter::LBrace)
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
             parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
@@ -30,7 +31,7 @@ impl ParseConstruct for BlockExpr {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
+            parser.log_unmatched_delimiter(&open_brace);
             Err(ErrorsEmitted)
         }?;
 

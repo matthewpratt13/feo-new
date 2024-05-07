@@ -21,7 +21,7 @@ impl ParseConstruct for MappingExpr {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
+            parser.log_unmatched_delimiter(&open_brace);
             Err(ErrorsEmitted)
         }?;
 

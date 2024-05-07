@@ -157,11 +157,14 @@ pub enum ParserErrorKind {
         msg: String,
     },
 
-    TypeConversionError {
-        type_a: String,
-        type_b: String,
+    UnexpectedExpression {
+        expected: String,
+        found: String,
     },
 
+    // TODO: add `MissingExpression`
+
+    // TODO: add `UnexpectedPattern`
     #[default]
     UnknownError,
 }
@@ -196,10 +199,9 @@ impl fmt::Display for ParserErrorKind {
                 )
             }
 
-            ParserErrorKind::TypeConversionError { type_a, type_b } => write!(
-                f,
-                "conversion error. Unable to convert {type_a} into {type_b}"
-            ),
+            ParserErrorKind::UnexpectedExpression { expected, found } => {
+                write!(f, "unexpected expression. Expected {expected}, found {found}")
+            }
 
             ParserErrorKind::UnknownError => write!(f, "unknown parsing error"),
         }

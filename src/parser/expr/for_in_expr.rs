@@ -15,10 +15,9 @@ impl ParseControl for ForInExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let assignee = match parser.current_token() {
+        let pattern = match parser.current_token() {
             Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
                 IdentifierPatt::parse(parser)
-                // parser.get_identifier_patt()
             }
             _ => parser.parse_pattern(),
         }?;
@@ -26,6 +25,7 @@ impl ParseControl for ForInExpr {
         let kw_in = if let Some(Token::In { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::In)
+            // TODO: handle `None` case (`MissingToken`)
         } else {
             parser.log_unexpected_token("`in`");
             Err(ErrorsEmitted)
@@ -35,6 +35,7 @@ impl ParseControl for ForInExpr {
 
         let block = if let Some(Token::LBrace { .. }) = parser.current_token() {
             Ok(Box::new(BlockExpr::parse(parser)?))
+            // TODO: handle `None` case (`MissingToken`)
         } else {
             parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
@@ -42,7 +43,7 @@ impl ParseControl for ForInExpr {
 
         let expr = ForInExpr {
             kw_for,
-            assignee,
+            pattern,
             kw_in,
             iterable: Box::new(iterable),
             block,

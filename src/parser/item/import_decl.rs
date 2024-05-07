@@ -125,7 +125,7 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
         Ok(Delimiter::RBrace)
     } else {
         parser.log_missing_token("`}`");
-        parser.log_unmatched_delimiter(open_brace.clone());
+        parser.log_unmatched_delimiter(&open_brace);
         Err(ErrorsEmitted)
     }?;
 

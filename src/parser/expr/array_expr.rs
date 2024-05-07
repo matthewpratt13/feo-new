@@ -22,7 +22,7 @@ impl ParseConstruct for ArrayExpr {
             Ok(Delimiter::RBracket)
         } else {
             parser.log_missing_token("`]`");
-            parser.log_unmatched_delimiter(open_bracket.clone());
+            parser.log_unmatched_delimiter(&open_bracket);
             Err(ErrorsEmitted)
         }?;
 

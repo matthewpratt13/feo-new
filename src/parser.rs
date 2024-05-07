@@ -207,7 +207,7 @@ impl Parser {
             let statement = self.parse_statement()?;
             self.logger.log(
                 LogLevel::Info,
-                LogMsg(format!("parsed statement: {:?}", statement)),
+                LogMsg(format!("parsed statement: {:#?}", statement)),
             );
             statements.push(statement);
         }
@@ -597,7 +597,7 @@ impl Parser {
                 } else if self.is_field_access() {
                     self.set_context(ParserContext::FieldAccess);
                 } else {
-                    self.set_context(ParserContext::Default);
+                    self.set_context(ParserContext::Default)
                 }
 
                 self.next_token();
@@ -1105,9 +1105,9 @@ impl Parser {
     }
 
     /// Log error information about an unmatched delimiter.
-    fn log_unmatched_delimiter(&mut self, expected: Delimiter) {
+    fn log_unmatched_delimiter(&mut self, expected: &Delimiter) {
         self.log_error(ParserErrorKind::UnmatchedDelimiter {
-            delim: format!("{:?}", expected),
+            delim: format!("{:?}", *expected),
         });
 
         self.next_token();
@@ -1238,33 +1238,25 @@ impl Parser {
 
     /// Determine if `Token::Dot` indicates a method call.
     fn is_method_call(&self) -> bool {
-        if self.peek_ahead_by(2).is_some() {
-            match (
-                self.current_token(),
-                self.peek_ahead_by(1),
-                self.peek_ahead_by(2),
-            ) {
-                (
-                    Some(Token::Dot { .. }),
-                    Some(Token::Identifier { .. }),
-                    Some(Token::LParen { .. }),
-                ) => true, // `receiver.method()`
-                _ => false,
-            }
-        } else {
-            false
+        match (
+            self.current_token(),
+            self.peek_ahead_by(1),
+            self.peek_ahead_by(2),
+        ) {
+            (
+                Some(Token::Dot { .. }),
+                Some(Token::Identifier { .. }),
+                Some(Token::LParen { .. }),
+            ) => true, // `receiver.method()`
+            _ => false,
         }
     }
 
     /// Determine if `Token::Dot` indicates field access.
     fn is_field_access(&self) -> bool {
-        if self.peek_ahead_by(1).is_some() {
-            match (self.current_token(), self.peek_ahead_by(1)) {
-                (Some(Token::Dot { .. }), Some(Token::Identifier { .. })) => true, // `object.field`
-                _ => false,
-            }
-        } else {
-            false
+        match (self.current_token(), self.peek_ahead_by(1)) {
+            (Some(Token::Dot { .. }), Some(Token::Identifier { .. })) => true, // `object.field`
+            _ => false,
         }
     }
 

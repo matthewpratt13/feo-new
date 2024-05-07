@@ -21,11 +21,15 @@ impl ParseOperation for IndexExpr {
 
         let index = parser.parse_expression(Precedence::Lowest)?;
 
+        // TODO: handle invalid index expression – refer to Rust reference for expression type 
+        // TODO: (value, place or assignee)
+
         let close_bracket = if let Some(Token::RBracket { .. }) = parser.next_token() {
             Ok(Delimiter::RBracket)
+            // TODO: handle `Some(_)` case (`UnexpectedToken`)
         } else {
             parser.log_missing_token("`]`");
-            parser.log_unmatched_delimiter(open_bracket.clone());
+            parser.log_unmatched_delimiter(&open_bracket);
             Err(ErrorsEmitted)
         }?;
 

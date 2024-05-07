@@ -44,7 +44,7 @@ impl ParseDefinition for EnumDef {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
+            parser.log_unmatched_delimiter(&open_brace);
             Err(ErrorsEmitted)
         }?;
 
@@ -142,7 +142,7 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
         Ok(Delimiter::RBrace)
     } else {
         parser.log_missing_token("`}`");
-        parser.log_unmatched_delimiter(open_brace.clone());
+        parser.log_unmatched_delimiter(&open_brace);
         Err(ErrorsEmitted)
     }?;
 
@@ -173,7 +173,7 @@ fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTuple, Err
         Ok(Delimiter::RParen)
     } else {
         parser.log_missing_token("`)`");
-        parser.log_unmatched_delimiter(open_paren.clone());
+        parser.log_unmatched_delimiter(&open_paren);
         Err(ErrorsEmitted)
     }?;
 

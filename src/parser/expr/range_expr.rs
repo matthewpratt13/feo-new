@@ -7,20 +7,23 @@ use crate::{
 
 impl ParseOperation for RangeExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        // TODO: should be `AssigneeExpr` (can be more than just numbers and identifiers)
         let from = match left_expr.clone() {
             Expression::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(left_expr),
                 _ => {
-                    parser.log_unexpected_token("numeric literal");
+                    parser.log_unexpected_token("numeric value");
                     Err(ErrorsEmitted)
                 }
             },
             Expression::Path(_) => {
-                parser.log_unexpected_token("path expression");
+                // TODO: should be `UnexpectedExpression` (but will be replaced)
+                parser.log_unexpected_token("identifier");
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("numeric literal or path expression");
+                // TODO: should be `UnexpectedExpression` (but will be replaced)
+                parser.log_unexpected_token("numeric value or identifier");
                 Err(ErrorsEmitted)
             }
         }?;
@@ -30,6 +33,7 @@ impl ParseOperation for RangeExpr {
         let range_op = match operator_token.token_type() {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
             TokenType::DotDotEquals => Ok(RangeOp::RangeInclusive),
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
             _ => {
                 parser.log_unexpected_token("range operator");
                 Err(ErrorsEmitted)
@@ -42,11 +46,12 @@ impl ParseOperation for RangeExpr {
 
         let expression = parser.parse_expression(precedence)?;
 
+        // TODO: should be `AssigneeExpr` (can be more than just numbers and identifiers)
         let to = match expression.clone() {
             Expression::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
                 _ => {
-                    parser.log_unexpected_token("numeric literal");
+                    parser.log_unexpected_token("numeric value");
                     Err(ErrorsEmitted)
                 }
             },
@@ -54,30 +59,31 @@ impl ParseOperation for RangeExpr {
             Expression::Path(_) => Ok(expression),
 
             _ => {
-                parser.log_unexpected_token("numeric literal or path expression");
+                // TODO: should be `UnexpectedExpression` (but will be replaced)
+                parser.log_unexpected_token("numeric value or identifier");
                 Err(ErrorsEmitted)
             }
         };
 
         let expr = match to.is_ok() {
-            true => RangeExpr {
+            true => Ok(RangeExpr {
                 from_opt: Some(Box::new(from)),
                 range_op,
                 to_opt: Some(Box::new(to?)),
-            },
-            false => RangeExpr {
+            }),
+            false => Ok(RangeExpr {
                 from_opt: Some(Box::new(from)),
                 range_op: range_op.clone(),
                 to_opt: {
                     if range_op == RangeOp::RangeInclusive {
-                        parser.log_unexpected_token("`..`");
+                        parser.log_unexpected_token("exclusive range operator (`..`)");
                         return Err(ErrorsEmitted);
                     } else {
                         None
                     }
                 },
-            },
-        };
+            }),
+        }?;
 
         Ok(Expression::Range(expr))
     }
@@ -91,7 +97,7 @@ impl RangeExpr {
             Token::DblDot { .. } => Ok(RangeOp::RangeExclusive),
             Token::DotDotEquals { .. } => Ok(RangeOp::RangeInclusive),
             _ => {
-                parser.log_unexpected_token("range operator");
+                parser.log_unexpected_token("range operator (`..` or `..=`)");
                 Err(ErrorsEmitted)
             }
         }?;
@@ -104,7 +110,7 @@ impl RangeExpr {
                 range_op: range_op.clone(),
                 to_opt: {
                     if range_op == RangeOp::RangeInclusive {
-                        parser.log_unexpected_token("`..`");
+                        parser.log_unexpected_token("exclusive range operator (`..`)");
                         return Err(ErrorsEmitted);
                     } else {
                         None
@@ -119,11 +125,14 @@ impl RangeExpr {
 
         let expression = parser.parse_expression(precedence)?;
 
+        // TODO: convert to `AssigneeExpr`
+
+        // TODO: can be more than just numbers or identifiers (i.e., all `AssigneeExpr`)
         let to = match expression.clone() {
             Expression::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
                 _ => {
-                    parser.log_unexpected_token("numeric literal");
+                    parser.log_unexpected_token("numeric value");
                     Err(ErrorsEmitted)
                 }
             },
@@ -131,7 +140,8 @@ impl RangeExpr {
             Expression::Path(_) => Ok(expression),
 
             _ => {
-                parser.log_unexpected_token("numeric literal or path expression");
+                // TODO: should be `UnexpectedExpr` (but will be replaced)
+                parser.log_unexpected_token("numeric value or identifier");
                 Err(ErrorsEmitted)
             }
         }?;

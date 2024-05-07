@@ -15,16 +15,28 @@ impl ParseControl for IfExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let condition = GroupedExpr::parse(parser)?;
+        let condition = if let Some(Token::LParen { .. }) = parser.current_token() {
+            Ok(Box::new(GroupedExpr::parse(parser)?))
+            // TODO: handle `None` case (`MissingToken`)
+        } else {
+            parser.log_unexpected_token("`(`");
+            Err(ErrorsEmitted)
+        }?;
 
-        let if_block = BlockExpr::parse(parser)?;
+        let if_block = if let Some(Token::LBrace { .. }) = parser.current_token() {
+            Ok(Box::new(BlockExpr::parse(parser)?))
+            // TODO: handle `None` case (`MissingToken`)
+        } else {
+            parser.log_unexpected_token("`{`");
+            Err(ErrorsEmitted)
+        }?;
 
         let (else_if_blocks_opt, trailing_else_block_opt) = parse_else_blocks(parser)?;
 
         let expr = IfExpr {
             kw_if,
-            condition: Box::new(condition),
-            if_block: Box::new(if_block),
+            condition,
+            if_block,
             else_if_blocks_opt,
             trailing_else_block_opt,
         };

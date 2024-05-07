@@ -22,7 +22,8 @@ impl ParseControl for MatchExpr {
             ErrorsEmitted
         })?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
+        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::LBrace)
         } else {
             parser.log_unexpected_token("`{`");
@@ -54,7 +55,7 @@ impl ParseControl for MatchExpr {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
+            parser.log_unmatched_delimiter(&open_brace);
             Err(ErrorsEmitted)
         }?;
 
@@ -87,8 +88,10 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         None
     };
 
+    // TODO: replace with `match` expression
     if let Some(Token::FatArrow { .. }) = parser.current_token() {
         parser.next_token();
+        // TODO: handle `None` case (`MissingToken`) 
     } else {
         parser.log_unexpected_token("`=>`");
         return Err(ErrorsEmitted);

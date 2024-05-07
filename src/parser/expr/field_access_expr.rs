@@ -1,12 +1,19 @@
 use crate::{
     ast::{AssigneeExpr, Expression, FieldAccessExpr, Identifier},
     error::{ErrorsEmitted, ParserErrorKind},
+    logger::{LogLevel, LogMsg},
     parser::{ParseOperation, Parser},
     token::Token,
 };
 
 impl ParseOperation for FieldAccessExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg("entering `FieldAccessExpr::parse()`".to_string()),
+        );
+        parser.log_current_token(true);
+
         let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted

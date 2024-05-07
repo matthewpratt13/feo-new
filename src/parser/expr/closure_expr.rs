@@ -19,6 +19,7 @@ impl ParseConstruct for ClosureExpr {
                 if vec.is_some() {
                     Ok(ClosureParams::Some(vec.unwrap()))
                 } else {
+                    // TODO: replace with `MissingExpression`
                     parser.log_unexpected_token("closure parameters");
                     Err(ErrorsEmitted)
                 }
@@ -60,8 +61,9 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
     let param_name = match parser.current_token() {
         Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
             IdentifierPatt::parse(parser)
-            // parser.get_identifier_patt()
         }
+
+        // TODO: handle `None` case (`UnexpectedEndOfInput`)
         _ => {
             parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)

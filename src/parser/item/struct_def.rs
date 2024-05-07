@@ -44,7 +44,7 @@ impl ParseDefinition for StructDef {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
+            parser.log_unmatched_delimiter(&open_brace);
             Err(ErrorsEmitted)
         }?;
 
@@ -96,7 +96,7 @@ impl ParseDefinition for TupleStructDef {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_token("`)`");
-            parser.log_unmatched_delimiter(open_paren.clone());
+            parser.log_unmatched_delimiter(&open_paren);
             Err(ErrorsEmitted)
         }?;
 

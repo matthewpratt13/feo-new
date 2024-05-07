@@ -28,7 +28,7 @@ impl ParseConstruct for GroupedExpr {
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_token("`)`");
-            parser.log_unmatched_delimiter(open_paren.clone());
+            parser.log_unmatched_delimiter(&open_paren);
             Err(ErrorsEmitted)
         }?;
 

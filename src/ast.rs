@@ -320,9 +320,9 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::SomeExpr(s) => Ok(ValueExpr::SomeExpr(s)),
             Expression::NoneExpr(n) => Ok(ValueExpr::NoneExpr(n)),
             Expression::ResultExpr(r) => Ok(ValueExpr::ResultExpr(r)),
-            _ => Err(ParserErrorKind::TypeConversionError {
-                type_a: "`Expression`".to_string(),
-                type_b: "`ValueExpr`".to_string(),
+            _ => Err(ParserErrorKind::UnexpectedExpression {
+                expected: "value expression".to_string(),
+                found: format!("{:?}", value),
             }),
         }
     }
@@ -425,9 +425,9 @@ impl TryFrom<Expression> for AssigneeExpr {
 
             //     Ok(AssigneeExpr::TupleStructExpr(assignee_expressions))
             // }
-            _ => Err(ParserErrorKind::TypeConversionError {
-                type_a: "`Expression`".to_string(),
-                type_b: "`AssigneeExpr`".to_string(),
+            _ => Err(ParserErrorKind::UnexpectedExpression {
+                expected: "assignee expression".to_string(),
+                found: format!("{:?}", value),
             }),
         }
     }

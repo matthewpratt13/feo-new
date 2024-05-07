@@ -21,7 +21,7 @@ impl StructExpr {
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
+            parser.log_unmatched_delimiter(&open_brace);
             Err(ErrorsEmitted)
         }?;
 
@@ -42,6 +42,7 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
     let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
         parser.next_token();
         Ok(Identifier(name))
+        // TODO: handle `None` case ('UnexpectedEndOfInput`)
     } else {
         parser.log_missing_token("identifier");
         Err(ErrorsEmitted)

@@ -233,7 +233,7 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
         Ok(Delimiter::RParen)
     } else {
         parser.log_missing_token("`)`");
-        parser.log_unmatched_delimiter(open_paren.clone());
+        parser.log_unmatched_delimiter(&open_paren);
         Err(ErrorsEmitted)
     }?;
 
@@ -311,7 +311,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
             Ok(Type::GroupedType(Box::new(ty)))
         } else {
             parser.log_missing_token("`)`");
-            parser.log_unmatched_delimiter(Delimiter::LParen);
+            parser.log_unmatched_delimiter(&Delimiter::LParen);
             Err(ErrorsEmitted)
         }
     }
