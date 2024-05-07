@@ -8,16 +8,16 @@
 use std::{iter::Peekable, str::Chars};
 
 use crate::{
-    ast::{self, BigUInt, Byte, Hash, Int, Str, UInt},
+    ast::{BigUInt, Byte, Bytes, Hash, Int, Str, UInt},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{DocCommentType, Token, TokenStream},
-    H160, H256, H512, U512,
+    B16, B2, B32, B4, B8, H160, H256, H512, U512,
 };
 
 /// Struct that stores an input string (source code) and contains methods to render tokens
 /// from characters in that string (i.e., tokenization).
-pub struct Lexer<'a> {
+pub(crate) struct Lexer<'a> {
     input: &'a str,
     pos: usize,
     peekable_chars: Peekable<Chars<'a>>,
@@ -767,7 +767,7 @@ impl<'a> Lexer<'a> {
                         });
                     }
 
-                    let bytes = ast::get_bytes(value.as_bytes());
+                    let bytes = get_bytes(value.as_bytes());
 
                     return Ok(Token::BytesLiteral { value: bytes, span });
                 }
@@ -1149,6 +1149,63 @@ impl<'a> Lexer<'a> {
     pub(crate) fn errors(&self) -> &[CompilerError<LexErrorKind>] {
         &self.errors
     }
+}
+
+/// Helper function to turn a byte slice (`&[u8]`) into a `Bytes`.
+fn get_bytes(value: &[u8]) -> Bytes {
+    let bytes = match value.len() {
+        0 => panic!("empty slice"),
+        1 => panic!("byte string literals must have more than one character"),
+        2 => Bytes::B2(B2::from_slice(value)),
+        3 => Bytes::B4(B4::from(&pad_zeroes::<3, 4>(value))),
+        4 => Bytes::B4(B4::from_slice(value)),
+        5 => Bytes::B8(B8::from(&pad_zeroes::<5, 8>(value))),
+        6 => Bytes::B8(B8::from(&pad_zeroes::<6, 8>(value))),
+        7 => Bytes::B8(B8::from(&pad_zeroes::<7, 8>(value))),
+        8 => Bytes::B8(B8::from_slice(value)),
+        9 => Bytes::B16(B16::from(&pad_zeroes::<9, 16>(value))),
+        10 => Bytes::B16(B16::from(&pad_zeroes::<10, 16>(value))),
+        11 => Bytes::B16(B16::from(&pad_zeroes::<11, 16>(value))),
+        12 => Bytes::B16(B16::from(&pad_zeroes::<12, 16>(value))),
+        13 => Bytes::B16(B16::from(&pad_zeroes::<13, 16>(value))),
+        14 => Bytes::B16(B16::from(&pad_zeroes::<14, 16>(value))),
+        15 => Bytes::B16(B16::from(&pad_zeroes::<15, 16>(value))),
+        16 => Bytes::B16(B16::from_slice(value)),
+        17 => Bytes::B32(B32::from(&pad_zeroes::<17, 32>(value))),
+        18 => Bytes::B32(B32::from(&pad_zeroes::<18, 32>(value))),
+        19 => Bytes::B32(B32::from(&pad_zeroes::<19, 32>(value))),
+        20 => Bytes::B32(B32::from(&pad_zeroes::<20, 32>(value))),
+        21 => Bytes::B32(B32::from(&pad_zeroes::<21, 32>(value))),
+        22 => Bytes::B32(B32::from(&pad_zeroes::<22, 32>(value))),
+        23 => Bytes::B32(B32::from(&pad_zeroes::<23, 32>(value))),
+        24 => Bytes::B32(B32::from(&pad_zeroes::<24, 32>(value))),
+        25 => Bytes::B32(B32::from(&pad_zeroes::<25, 32>(value))),
+        26 => Bytes::B32(B32::from(&pad_zeroes::<26, 32>(value))),
+        27 => Bytes::B32(B32::from(&pad_zeroes::<27, 32>(value))),
+        28 => Bytes::B32(B32::from(&pad_zeroes::<28, 32>(value))),
+        29 => Bytes::B32(B32::from(&pad_zeroes::<29, 32>(value))),
+        30 => Bytes::B32(B32::from(&pad_zeroes::<30, 32>(value))),
+        31 => Bytes::B32(B32::from(&pad_zeroes::<31, 32>(value))),
+        32 => Bytes::B32(B32::from_slice(value)),
+        _ => panic!("slice too big"),
+    };
+
+    bytes
+}
+
+/// Pads an input byte slice with zeroes to turn it into a fixed size array.
+/// Useful when converting a byte string literal into a `Bytes` literal.
+#[track_caller]
+fn pad_zeroes<const A: usize, const B: usize>(slice: &[u8]) -> [u8; B] {
+    assert!(B >= A, "input size is greater than target size");
+
+    let arr: [u8; A] = slice
+        .try_into()
+        .expect("unable to convert slice into fixed size byte array");
+    let mut target = [0; B];
+
+    target[..A].copy_from_slice(&arr);
+    target
 }
 
 /// List of reserved keywords to match against some input `&str`.

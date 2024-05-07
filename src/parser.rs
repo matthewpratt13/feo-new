@@ -34,59 +34,17 @@
 //! parsing functions for different operators. Developers can easily trace the parsing process
 //! and identify any issues by inspecting the individual parsing functions.
 
-mod alias_decl;
-mod array_expr;
-mod assignment_expr;
 mod attribute;
-mod binary_expr;
-mod block_expr;
-mod call_expr;
-mod closure_expr;
 mod collection;
-mod constant_decl;
-mod enum_def;
-mod field_access_expr;
-mod for_in_expr;
-mod function_item;
-mod grouped_expr;
-mod grouped_patt;
-mod identifier_patt;
-mod if_expr;
-mod impl_def;
-mod import_decl;
-mod index_expr;
+mod expr;
 mod item;
 mod let_statement;
-mod mapping_expr;
-mod match_expr;
-mod method_call_expr;
-mod module_item;
 mod parse;
-mod path_expr;
-mod path_patt;
+mod patt;
 mod precedence;
-mod range_expr;
-mod range_patt;
-mod reference_patt;
-mod result_expr;
-mod result_patt;
-mod return_expr;
-mod some_expr;
-mod some_patt;
-mod static_item_decl;
-mod struct_def;
-mod struct_expr;
-mod struct_patt;
 mod test_utils;
-mod trait_def;
-mod tuple_expr;
-mod tuple_patt;
 mod ty;
-mod type_cast_expr;
-mod unary_expr;
-mod unwrap_expr;
 mod visibility;
-mod while_expr;
 
 use std::collections::HashMap;
 
@@ -107,8 +65,8 @@ use crate::{
     token::{Token, TokenStream, TokenType},
 };
 
-use self::parse::{ParseConstruct, ParseControl, ParseOperation, ParseStatement};
-pub use self::precedence::Precedence;
+pub(crate) use self::parse::{ParseConstruct, ParseControl, ParseOperation, ParseStatement};
+pub(crate) use self::precedence::Precedence;
 
 /// Enum representing the different parsing contexts in which tokens can be interpreted.
 /// This context can influence the precedence of specific tokens according to their role
@@ -128,7 +86,7 @@ enum ParserContext {
 /// Parser struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling functionality.
 #[derive(Debug)]
-pub(crate) struct Parser {
+pub struct Parser {
     stream: TokenStream,
     current: usize,
     precedences: HashMap<Token, Precedence>, // map tokens to corresponding precedence levels
@@ -140,7 +98,7 @@ pub(crate) struct Parser {
 impl Parser {
     /// Create a new `Parser` instance.
     /// Initialize an empty `Vec` to store potentials errors that occur during parsing.
-    pub(crate) fn new(stream: TokenStream, log_level: LogLevel) -> Self {
+    fn new(stream: TokenStream, log_level: LogLevel) -> Self {
         let tokens = stream.tokens();
         let mut parser = Parser {
             stream,
@@ -1157,7 +1115,7 @@ impl Parser {
 
     /// Retrieve a list of any errors that occurred during parsing.
     #[allow(dead_code)]
-    pub fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
+    pub(crate) fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
         &self.errors
     }
 

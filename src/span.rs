@@ -14,7 +14,7 @@ impl Span {
     /// Constructor method.
     /// Create a new `Span` instance with a `start` and `end` position in some input string.
     /// Use `Arc` to share references to this source code among different threads.
-    pub fn new(input: &str, start: usize, end: usize) -> Self {
+    pub(crate) fn new(input: &str, start: usize, end: usize) -> Self {
         Span {
             input: Arc::new(input.to_string()),
             start,

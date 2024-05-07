@@ -4,7 +4,7 @@ use crate::{
     token::Token,
 };
 
-use super::{parse::ParseAssociatedItem, Parser, Precedence};
+use super::{item::ParseAssociatedItem, Parser, Precedence};
 
 /// Helper function that collects a generic element into a vector based on the input function.
 /// Takes in a `Delimiter` (for reusability) to distinguish the outer limits of the collection.
@@ -186,10 +186,7 @@ pub(crate) fn get_associated_items<T: ParseAssociatedItem>(
 
 /// Helper function that parses item attributes into a vector of generic attributes.
 /// Replaces the same iterative code in the respective item parsing functions.
-pub(crate) fn get_attributes<T>(
-    parser: &mut Parser,
-    f: fn(&Parser) -> Option<T>,
-) -> Option<Vec<T>> {
+pub(crate) fn get_attributes<T>(parser: &mut Parser, f: fn(&Parser) -> Option<T>) -> Option<Vec<T>> {
     let mut attributes = Vec::new();
 
     while let Some(a) = f(parser) {

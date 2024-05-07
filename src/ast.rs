@@ -11,7 +11,7 @@ mod types;
 
 use crate::error::ParserErrorKind;
 
-pub use self::{expression::*, item::*, pattern::*, statement::*, types::*};
+pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*};
 
 ///////////////////////////////////////////////////////////////////////////
 // LITERAL
@@ -19,7 +19,7 @@ pub use self::{expression::*, item::*, pattern::*, statement::*, types::*};
 
 /// Enum representing the different literals used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Literal {
+pub(crate) enum Literal {
     Int(Int),
     UInt(UInt),
     BigUInt(BigUInt),
@@ -37,7 +37,7 @@ pub enum Literal {
 
 /// Wrapper type, turning a `String` into an `Identifier`.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Identifier(pub String);
+pub(crate) struct Identifier(pub String);
 
 ///////////////////////////////////////////////////////////////////////////
 // KEYWORDS
@@ -45,7 +45,7 @@ pub struct Identifier(pub String);
 
 /// Enum representing the different keywords used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Keyword {
+pub(crate) enum Keyword {
     Import,
     Module,
     Package,
@@ -80,7 +80,7 @@ pub enum Keyword {
 
 /// Enum representing the different inner attributes used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub enum InnerAttr {
+pub(crate) enum InnerAttr {
     Abstract,
     Contract,
     Interface,
@@ -91,7 +91,7 @@ pub enum InnerAttr {
 
 /// Enum representing the different outer attributes used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub enum OuterAttr {
+pub(crate) enum OuterAttr {
     Calldata,
     Constructor,
     Error,
@@ -111,7 +111,7 @@ pub enum OuterAttr {
 
 /// Enum representing the different delimiters used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Delimiter {
+pub(crate) enum Delimiter {
     LParen,
     RParen,
     LBracket,
@@ -127,25 +127,25 @@ pub enum Delimiter {
 
 /// Enum representing the different unary operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub enum UnaryOp {
+pub(crate) enum UnaryOp {
     Negate, // `-`
     Not,    // `!`
 }
 
 /// Enum representing the different reference operators used in AST nodes (i.e., `&` and `&mut`).
 #[derive(Debug, Clone, PartialEq)]
-pub enum ReferenceOp {
+pub(crate) enum ReferenceOp {
     Borrow,        // `&`
     MutableBorrow, // `&mut`
 }
 
 /// Unit struct representing the dereference operator (`*`).
 #[derive(Debug, Clone, PartialEq)]
-pub struct DereferenceOp;
+pub(crate) struct DereferenceOp;
 
 /// Enum representing the different binary operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub enum BinaryOp {
+pub(crate) enum BinaryOp {
     Add,
     Subtract,
     Multiply,
@@ -163,7 +163,7 @@ pub enum BinaryOp {
 
 /// Enum representing the different comparison operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub enum ComparisonOp {
+pub(crate) enum ComparisonOp {
     Equal,
     NotEqual,
     LessThan,
@@ -174,7 +174,7 @@ pub enum ComparisonOp {
 
 /// Enum representing the different compound assignment operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub enum CompoundAssignmentOp {
+pub(crate) enum CompoundAssignmentOp {
     AddAssign,
     SubtractAssign,
     MultiplyAssign,
@@ -184,22 +184,22 @@ pub enum CompoundAssignmentOp {
 
 /// Unit struct representing the assignment operator (`=`) used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub struct AssignmentOp;
+pub(crate) struct AssignmentOp;
 
 /// Unit struct representing the unwrap operator (`?`) used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub struct UnwrapOp;
+pub(crate) struct UnwrapOp;
 
 /// Enum representing the different range operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub enum RangeOp {
+pub(crate) enum RangeOp {
     RangeExclusive, // `..`
     RangeInclusive, // `..=`
 }
 
 /// Enum representing the different separators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Separator {
+pub(crate) enum Separator {
     Comma,
     ColonColonAsterisk,
 }
@@ -211,7 +211,7 @@ pub enum Separator {
 /// Enum representing the different types of expression in the AST.
 /// `Expression` nodes always produce or evaluate to a value and may have side effects.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expression {
+pub(crate) enum Expression {
     Literal(Literal),
     Path(PathExpr),
     MethodCall(MethodCallExpr),
@@ -252,7 +252,7 @@ pub enum Expression {
 
 /// Enum representing value type expressions, which are subsets of `Expression`.
 #[derive(Debug, Clone, PartialEq)]
-pub enum ValueExpr {
+pub(crate) enum ValueExpr {
     Literal(Literal),
     PathExpr(PathExpr),
     MethodCallExpr(MethodCallExpr),
@@ -330,7 +330,7 @@ impl TryFrom<Expression> for ValueExpr {
 
 /// Enum representing assignee type expressions, which are subsets of `Expression`.
 #[derive(Debug, Clone, PartialEq)]
-pub enum AssigneeExpr {
+pub(crate) enum AssigneeExpr {
     Literal(Literal),
     PathExpr(PathExpr),
     MethodCallExpr(MethodCallExpr), // e.g., getter in a comparison expression
@@ -437,7 +437,7 @@ impl TryFrom<Expression> for AssigneeExpr {
 /// Patterns are used to match values against structures, as well as within
 /// variable declarations and as function parameters.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Pattern {
+pub(crate) enum Pattern {
     Literal(Literal),
     IdentifierPatt(IdentifierPatt),
     PathPatt(PathPatt),
@@ -461,7 +461,7 @@ pub enum Pattern {
 /// A statement is a component of a block, which is a component of an outer expression
 /// or function.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement {
+pub(crate) enum Statement {
     Let(LetStmt),
     Item(Item),
     Expression(Expression),
@@ -470,7 +470,7 @@ pub enum Statement {
 /// Enum representing the different item nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Item {
+pub(crate) enum Item {
     ImportDecl(ImportDecl),
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
@@ -488,7 +488,7 @@ pub enum Item {
 /// Enum representing the language's different types, which help to define a value's
 /// memory interpretation and the appropriate operations that may be performed.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Type {
+pub(crate) enum Type {
     // primitives
     I32(Int),
     I64(Int),
@@ -548,65 +548,4 @@ pub enum Type {
         ok: Box<Type>,
         err: Box<Type>,
     },
-}
-
-///////////////////////////////////////////////////////////////////////////
-// HELPER FUNCTIONS
-///////////////////////////////////////////////////////////////////////////
-
-/// Helper function to turn a byte slice (`&[u8]`) into a `Bytes`.
-pub fn get_bytes(value: &[u8]) -> Bytes {
-    let bytes = match value.len() {
-        0 => panic!("empty slice"),
-        1 => panic!("byte string literals must have more than one character"),
-        2 => Bytes::B2(B2::from_slice(value)),
-        3 => Bytes::B4(B4::from(&pad_zeroes::<3, 4>(value))),
-        4 => Bytes::B4(B4::from_slice(value)),
-        5 => Bytes::B8(B8::from(&pad_zeroes::<5, 8>(value))),
-        6 => Bytes::B8(B8::from(&pad_zeroes::<6, 8>(value))),
-        7 => Bytes::B8(B8::from(&pad_zeroes::<7, 8>(value))),
-        8 => Bytes::B8(B8::from_slice(value)),
-        9 => Bytes::B16(B16::from(&pad_zeroes::<9, 16>(value))),
-        10 => Bytes::B16(B16::from(&pad_zeroes::<10, 16>(value))),
-        11 => Bytes::B16(B16::from(&pad_zeroes::<11, 16>(value))),
-        12 => Bytes::B16(B16::from(&pad_zeroes::<12, 16>(value))),
-        13 => Bytes::B16(B16::from(&pad_zeroes::<13, 16>(value))),
-        14 => Bytes::B16(B16::from(&pad_zeroes::<14, 16>(value))),
-        15 => Bytes::B16(B16::from(&pad_zeroes::<15, 16>(value))),
-        16 => Bytes::B16(B16::from_slice(value)),
-        17 => Bytes::B32(B32::from(&pad_zeroes::<17, 32>(value))),
-        18 => Bytes::B32(B32::from(&pad_zeroes::<18, 32>(value))),
-        19 => Bytes::B32(B32::from(&pad_zeroes::<19, 32>(value))),
-        20 => Bytes::B32(B32::from(&pad_zeroes::<20, 32>(value))),
-        21 => Bytes::B32(B32::from(&pad_zeroes::<21, 32>(value))),
-        22 => Bytes::B32(B32::from(&pad_zeroes::<22, 32>(value))),
-        23 => Bytes::B32(B32::from(&pad_zeroes::<23, 32>(value))),
-        24 => Bytes::B32(B32::from(&pad_zeroes::<24, 32>(value))),
-        25 => Bytes::B32(B32::from(&pad_zeroes::<25, 32>(value))),
-        26 => Bytes::B32(B32::from(&pad_zeroes::<26, 32>(value))),
-        27 => Bytes::B32(B32::from(&pad_zeroes::<27, 32>(value))),
-        28 => Bytes::B32(B32::from(&pad_zeroes::<28, 32>(value))),
-        29 => Bytes::B32(B32::from(&pad_zeroes::<29, 32>(value))),
-        30 => Bytes::B32(B32::from(&pad_zeroes::<30, 32>(value))),
-        31 => Bytes::B32(B32::from(&pad_zeroes::<31, 32>(value))),
-        32 => Bytes::B32(B32::from_slice(value)),
-        _ => panic!("slice too big"),
-    };
-
-    bytes
-}
-
-/// Pads an input byte slice with zeroes to turn it into a fixed size array.
-/// Useful when converting a byte string literal into a `Bytes` literal.
-#[track_caller]
-fn pad_zeroes<const A: usize, const B: usize>(slice: &[u8]) -> [u8; B] {
-    assert!(B >= A, "input size is greater than target size");
-
-    let arr: [u8; A] = slice
-        .try_into()
-        .expect("unable to convert slice into fixed size byte array");
-    let mut target = [0; B];
-
-    target[..A].copy_from_slice(&arr);
-    target
 }

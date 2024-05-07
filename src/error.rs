@@ -223,7 +223,7 @@ where
     T: Clone,
 {
     /// Create a new `CompilerError` that provides details at a precise location in the source code.
-    pub fn new(error_kind: T, source: &str, pos: usize) -> Self {
+    pub(crate) fn new(error_kind: T, source: &str, pos: usize) -> Self {
         if pos > source.len() {
             panic!("position out of bounds");
         }
@@ -264,4 +264,4 @@ impl<T> Error for CompilerError<T> where T: Clone + fmt::Display + fmt::Debug {}
 /// that an error has occurred without returning the actual error, instead allowing the error
 /// to be logged in the respective struct for later use.
 #[derive(Debug, Clone, PartialEq)]
-pub struct ErrorsEmitted;
+pub(crate) struct ErrorsEmitted;
