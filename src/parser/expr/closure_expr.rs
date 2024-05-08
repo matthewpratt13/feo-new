@@ -36,10 +36,16 @@ impl ParseConstruct for ClosureExpr {
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
             parser.next_token();
-            Some(Box::new(Type::parse(parser)?))
+
+            if parser.current_token().is_some() {
+                Ok(Some(Box::new(Type::parse(parser)?)))
+            } else {
+                parser.log_missing_token("return type");
+                Err(ErrorsEmitted)
+            }
         } else {
-            None
-        };
+            Ok(None)
+        }?;
 
         let expression = if return_type_opt.is_some() {
             BlockExpr::parse(parser)?
@@ -72,10 +78,16 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
 
     let type_ann_opt = if let Some(Token::Colon { .. }) = parser.current_token() {
         parser.next_token();
-        Some(Type::parse(parser)?)
+
+        if parser.current_token().is_some() {
+            Ok(Some(Type::parse(parser)?))
+        } else {
+            parser.log_missing_token("type");
+            Err(ErrorsEmitted)
+        }
     } else {
-        None
-    };
+        Ok(None)
+    }?;
 
     let param = ClosureParam {
         param_name,

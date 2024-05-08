@@ -57,7 +57,7 @@ impl ParseDeclaration for ConstantDecl {
 
                 Ok(Some(value_expr))
             } else {
-                parser.log_missing_token("value expression");
+                parser.log_missing_token("value");
                 Err(ErrorsEmitted)
             }
         } else {

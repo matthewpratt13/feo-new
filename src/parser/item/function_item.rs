@@ -55,11 +55,15 @@ impl ParseDefinition for FunctionItem {
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
             parser.next_token();
 
-            let ty = Type::parse(parser)?;
-            Some(Box::new(ty))
+            if parser.current_token().is_some() {
+                Ok(Some(Box::new(Type::parse(parser)?)))
+            } else {
+                parser.log_missing_token("return type");
+                Err(ErrorsEmitted)
+            }
         } else {
-            None
-        };
+            Ok(None)
+        }?;
 
         let block_opt = if let Some(Token::LBrace { .. }) = parser.current_token() {
             if let Some(Token::RBrace { .. }) = parser.peek_ahead_by(1) {

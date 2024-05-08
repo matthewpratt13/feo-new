@@ -303,10 +303,16 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
 
     let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
         parser.next_token();
-        Some(Box::new(Type::parse(parser)?))
+
+        if parser.current_token().is_some() {
+            Ok(Some(Box::new(Type::parse(parser)?)))
+        } else {
+            parser.log_missing_token("return type");
+            Err(ErrorsEmitted)
+        }
     } else {
-        None
-    };
+        Ok(None)
+    }?;
 
     let ty = FunctionPtr {
         function_name,

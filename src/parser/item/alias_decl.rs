@@ -30,10 +30,16 @@ impl ParseDeclaration for AliasDecl {
 
         let original_type_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
             parser.next_token();
-            Some(Type::parse(parser)?)
+
+            if parser.current_token().is_some() {
+                Ok(Some(Type::parse(parser)?))
+            } else {
+                parser.log_missing_token("original type");
+                Err(ErrorsEmitted)
+            }
         } else {
-            None
-        };
+            Ok(None)
+        }?;
 
         if let Some(Token::Semicolon { .. }) = parser.current_token() {
             parser.next_token();
