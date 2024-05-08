@@ -1035,15 +1035,6 @@ impl Parser {
         }
     }
 
-    // /// Peek at the token `num_tokens` behind the token at the current index in the `TokenStream`.
-    // fn peek_behind_by(&self, num_tokens: usize) -> Option<Token> {
-    //     if self.current >= num_tokens {
-    //         self.stream.tokens().get(self.current - num_tokens).cloned()
-    //     } else {
-    //         None
-    //     }
-    // }
-
     ///////////////////////////////////////////////////////////////////////////
     // ERROR HANDLING
     ///////////////////////////////////////////////////////////////////////////
