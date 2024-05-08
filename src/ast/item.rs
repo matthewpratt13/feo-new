@@ -210,7 +210,7 @@ pub struct StaticItemDecl {
     pub(crate) kw_mut_opt: Option<Keyword>,
     pub(crate) item_name: Identifier,
     pub(crate) item_type: Type,
-    pub(crate) value_opt: Option<Box<AssigneeExpr>>,
+    pub(crate) assignee_opt: Option<Box<AssigneeExpr>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

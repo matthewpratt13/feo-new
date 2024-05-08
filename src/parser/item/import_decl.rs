@@ -25,18 +25,21 @@ impl ParseDeclaration for ImportDecl {
 
         let tree = parse_import_tree(parser)?;
 
-        match parser.next_token() {
-            Some(Token::Semicolon { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`;`"),
-            None => parser.log_missing_token("`;`"),
+        if let Some(Token::Semicolon { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(ImportDecl {
+                attributes_opt,
+                visibility,
+                kw_import,
+                tree,
+            })
+        } else if let Some(_) = parser.current_token() {
+            parser.log_unexpected_token("`;`");
+            Err(ErrorsEmitted)
+        } else {
+            parser.log_missing_token("`;`");
+            Err(ErrorsEmitted)
         }
-
-        Ok(ImportDecl {
-            attributes_opt,
-            visibility,
-            kw_import,
-            tree,
-        })
     }
 }
 
@@ -89,7 +92,7 @@ fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted>
         Some(Token::SelfKeyword { .. }) => PathExpr::parse(parser, PathPrefix::SelfKeyword),
         Some(Token::Identifier { .. }) => PathExpr::parse(parser, PathPrefix::Package),
         _ => {
-            parser.log_unexpected_token("path prefix");
+            parser.log_unexpected_token("`package`, `super`, `self` or identifier path prefix");
             Err(ErrorsEmitted)
         }
     }?;
@@ -117,6 +120,7 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
     {
         Ok(t)
     } else {
+        // TODO: should be `UnexpectedItems`
         parser.log_unexpected_token("import trees");
         Err(ErrorsEmitted)
     }?;

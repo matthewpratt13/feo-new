@@ -4,7 +4,7 @@ use crate::{
         InherentImplItem, Keyword, OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem,
         Type, Visibility,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg},
     token::Token,
 };
@@ -29,6 +29,7 @@ impl ParseDefinition for InherentImplDef {
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
+            // TODO: handle `None` case (`MissingToken`)
         } else {
             parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
@@ -75,6 +76,7 @@ impl ParseDefinition for TraitImplDef {
             let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)));
             parser.next_token();
             path
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
             parser.log_unexpected_token("implemented trait path");
             parser.next_token();
@@ -85,6 +87,7 @@ impl ParseDefinition for TraitImplDef {
         let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::For)
+            // TODO: handle `None` case (`MissingToken`)
         } else {
             parser.log_unexpected_token("`for`");
             Err(ErrorsEmitted)
@@ -94,6 +97,7 @@ impl ParseDefinition for TraitImplDef {
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
+            // TODO: handle `None` case (`MissingToken`)
         } else {
             parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
@@ -134,7 +138,7 @@ impl ParseAssociatedItem for InherentImplItem {
                 if constant_decl.value_opt.is_none() {
                     parser.logger.log(
                         LogLevel::Warning,
-                        LogMsg("value cannot be `None`".to_string()),
+                        LogMsg("assigned value cannot be `None`".to_string()),
                     );
                     Err(ErrorsEmitted)
                 } else {
@@ -145,9 +149,10 @@ impl ParseAssociatedItem for InherentImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
+                    // TODO: should be `MissingItems`
+                    parser.log_error(ParserErrorKind::ExtraTokens {
                         token: parser.current_token(),
-                        msg: "Functions in implementation blocks must have bodies".to_string(),
+                        msg: "functions in implementation blocks must have bodies".to_string(),
                     });
                     Err(ErrorsEmitted)
                 } else {
@@ -174,7 +179,7 @@ impl ParseAssociatedItem for TraitImplItem {
                 if constant_decl.value_opt.is_none() {
                     parser.logger.log(
                         LogLevel::Warning,
-                        LogMsg("value cannot be `None`".to_string()),
+                        LogMsg("assigned value cannot be `None`".to_string()),
                     );
                     Err(ErrorsEmitted)
                 } else {
@@ -188,9 +193,10 @@ impl ParseAssociatedItem for TraitImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
+                    // TODO: should be `MissingItems`
+                    parser.log_error(ParserErrorKind::ExtraTokens {
                         token: parser.current_token(),
-                        msg: "Functions in implementation blocks must have bodies".to_string(),
+                        msg: "functions in implementation blocks must have bodies".to_string(),
                     });
                     Err(ErrorsEmitted)
                 } else {

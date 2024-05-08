@@ -165,6 +165,11 @@ pub enum ParserErrorKind {
     // TODO: add `MissingExpression`
 
     // TODO: add `UnexpectedPattern`
+
+    // TODO: add `MissingItems`
+
+    // TODO: add `UnexpectedItem`
+    
     #[default]
     UnknownError,
 }

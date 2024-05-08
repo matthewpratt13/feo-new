@@ -22,13 +22,15 @@ impl ParseDefinition for ModuleItem {
 
         let module_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
-            parser.log_unexpected_token("identifier");
+            parser.log_unexpected_token("module name");
             Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
+            // TODO: handle `None` case (`MissingToken`)
         } else {
             parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)

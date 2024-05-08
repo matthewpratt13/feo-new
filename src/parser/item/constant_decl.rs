@@ -25,7 +25,7 @@ impl ParseDeclaration for ConstantDecl {
             Ok(Identifier(name))
             // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
-            parser.log_unexpected_token("constant identifier");
+            parser.log_unexpected_token("constant name");
             Err(ErrorsEmitted)
         }?;
 
@@ -49,11 +49,13 @@ impl ParseDeclaration for ConstantDecl {
             parser.next_token();
 
             if parser.current_token().is_some() {
-                let expr = parser.parse_expression(Precedence::Lowest)?;
-                Ok(Some(ValueExpr::try_from(expr).map_err(|e| {
+                let expression = parser.parse_expression(Precedence::Lowest)?;
+                let value_expr = ValueExpr::try_from(expression).map_err(|e| {
                     parser.log_error(e);
                     ErrorsEmitted
-                })?))
+                })?;
+
+                Ok(Some(value_expr))
             } else {
                 parser.log_missing_token("value expression");
                 Err(ErrorsEmitted)

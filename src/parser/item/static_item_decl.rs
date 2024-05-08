@@ -30,47 +30,66 @@ impl ParseDeclaration for StaticItemDecl {
 
         let item_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
-            parser.log_unexpected_token("identifier");
+            parser.log_unexpected_token("static item name");
             Err(ErrorsEmitted)
         }?;
 
-        match parser.next_token() {
-            Some(Token::Colon { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`:`"),
-            None => parser.log_missing_token("`:`"),
+        match parser.current_token() {
+            Some(Token::Colon { .. }) => {
+                parser.next_token();
+            }
+            Some(_) => {
+                parser.log_unexpected_token("`:`");
+                return Err(ErrorsEmitted);
+            }
+            _ => {
+                parser.log_missing_token("`:`");
+                return Err(ErrorsEmitted);
+            }
         }
 
         let item_type = Type::parse(parser)?;
 
-        let value_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
+        let assignee_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
             parser.next_token();
-            let expression = parser.parse_expression(Precedence::Lowest)?;
-            let assignee_expr = AssigneeExpr::try_from(expression).map_err(|e| {
-                parser.log_error(e);
-                ErrorsEmitted
-            })?;
 
-            Some(Box::new(assignee_expr))
+            if parser.current_token().is_some() {
+                let expression = parser.parse_expression(Precedence::Lowest)?;
+                let assignee_expr = AssigneeExpr::try_from(expression).map_err(|e| {
+                    parser.log_error(e);
+                    ErrorsEmitted
+                })?;
+
+                Ok(Some(Box::new(assignee_expr)))
+            } else {
+                parser.log_missing_token("assignee expression");
+                Err(ErrorsEmitted)
+            }
         } else {
-            None
-        };
+            Ok(None)
+        }?;
 
-        match parser.next_token() {
-            Some(Token::Semicolon { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`;`"),
-            None => parser.log_missing_token("`;`"),
+        if let Some(Token::Semicolon { .. }) = parser.current_token() {
+            parser.next_token();
+
+            Ok(StaticItemDecl {
+                attributes_opt,
+                visibility,
+                kw_static,
+                kw_mut_opt,
+                item_name,
+                item_type,
+                assignee_opt,
+            })
+        } else if let Some(_) = parser.current_token() {
+            parser.log_unexpected_token("`;`");
+            Err(ErrorsEmitted)
+        } else {
+            parser.log_missing_token("`;`");
+            Err(ErrorsEmitted)
         }
-
-        Ok(StaticItemDecl {
-            attributes_opt,
-            visibility,
-            kw_static,
-            kw_mut_opt,
-            item_name,
-            item_type,
-            value_opt,
-        })
     }
 }
 

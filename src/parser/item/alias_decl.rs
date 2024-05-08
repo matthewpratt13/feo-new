@@ -24,7 +24,7 @@ impl ParseDeclaration for AliasDecl {
             Ok(Identifier(name))
             // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
-            parser.log_unexpected_token("type alias identifier");
+            parser.log_unexpected_token("type alias name");
             Err(ErrorsEmitted)
         }?;
 

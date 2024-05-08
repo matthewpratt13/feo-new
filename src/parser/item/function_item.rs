@@ -34,6 +34,8 @@ impl ParseDefinition for FunctionItem {
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
             Ok(Delimiter::LParen)
+
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
             parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)
