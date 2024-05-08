@@ -91,7 +91,7 @@ impl Item {
                 visibility,
             )?)),
             _ => {
-                parser.log_unexpected_token("declaration or definition");
+                parser.log_unexpected_token("item declaration or definition");
                 Err(ErrorsEmitted)
             }
         }
@@ -174,7 +174,7 @@ impl ParseStatement for Item {
                 }
             },
             _ => {
-                parser.log_unexpected_token("declaration or definition item");
+                parser.log_unexpected_token("item declaration or definition item");
                 Err(ErrorsEmitted)
             }
         }

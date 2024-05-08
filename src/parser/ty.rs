@@ -64,94 +64,157 @@ impl Type {
                 })
             }
             Some(Token::VecType { .. }) => {
-                match parser.next_token() {
-                    Some(Token::LessThan { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`<`"),
-                    None => parser.log_missing_token("`<`"),
+                match parser.current_token() {
+                    Some(Token::LessThan { .. }) => {
+                        parser.next_token();
+                    }
+                    Some(_) => {
+                        parser.log_unexpected_token("`<`");
+                        return Err(ErrorsEmitted);
+                    }
+                    _ => {
+                        parser.log_missing_token("`<`");
+                        return Err(ErrorsEmitted);
+                    }
                 }
 
                 let ty = Type::parse(parser)?;
 
-                match parser.next_token() {
-                    Some(Token::GreaterThan { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`>`"),
-                    None => parser.log_missing_token("`>`"),
-                }
+                if let Some(Token::GreaterThan { .. }) = parser.current_token() {
+                    parser.next_token();
 
-                Ok(Type::Vec(Box::new(ty)))
+                    Ok(Type::Vec(Box::new(ty)))
+                } else if let Some(_) = parser.current_token() {
+                    parser.log_unexpected_token("`>`");
+                    Err(ErrorsEmitted)
+                } else {
+                    parser.log_missing_token("`>`");
+                    Err(ErrorsEmitted)
+                }
             }
 
             Some(Token::MappingType { .. }) => {
-                match parser.next_token() {
-                    Some(Token::LessThan { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`<`"),
-                    None => parser.log_missing_token("`<`"),
+                match parser.current_token() {
+                    Some(Token::LessThan { .. }) => {
+                        parser.next_token();
+                    }
+                    Some(_) => {
+                        parser.log_unexpected_token("`<`");
+                        return Err(ErrorsEmitted);
+                    }
+                    _ => {
+                        parser.log_missing_token("`<`");
+                        return Err(ErrorsEmitted);
+                    }
                 }
+
                 let key_type = Box::new(Type::parse(parser)?);
 
-                match parser.next_token() {
-                    Some(Token::Comma { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`,`"),
-                    None => parser.log_missing_token("`,`"),
+                match parser.current_token() {
+                    Some(Token::Comma { .. }) => {
+                        parser.next_token();
+                    }
+                    Some(_) => {
+                        parser.log_unexpected_token("`,`");
+                        return Err(ErrorsEmitted);
+                    }
+                    _ => {
+                        parser.log_missing_token("`,`");
+                        return Err(ErrorsEmitted);
+                    }
                 }
 
                 let value_type = Box::new(Type::parse(parser)?);
 
-                match parser.next_token() {
-                    Some(Token::GreaterThan { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`>`"),
-                    None => parser.log_missing_token("`>`"),
+                if let Some(Token::GreaterThan { .. }) = parser.current_token() {
+                    parser.next_token();
+
+                    Ok(Type::Mapping {
+                        key_type,
+                        value_type,
+                    })
+                } else if let Some(_) = parser.current_token() {
+                    parser.log_unexpected_token("`>`");
+                    Err(ErrorsEmitted)
+                } else {
+                    parser.log_missing_token("`>`");
+                    Err(ErrorsEmitted)
                 }
-                Ok(Type::Mapping {
-                    key_type,
-                    value_type,
-                })
             }
 
             Some(Token::OptionType { .. }) => {
-                match parser.next_token() {
-                    Some(Token::LessThan { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`<`"),
-                    None => parser.log_missing_token("`<`"),
+                match parser.current_token() {
+                    Some(Token::LessThan { .. }) => {
+                        parser.next_token();
+                    }
+                    Some(_) => {
+                        parser.log_unexpected_token("`<`");
+                        return Err(ErrorsEmitted);
+                    }
+                    _ => {
+                        parser.log_missing_token("`<`");
+                        return Err(ErrorsEmitted);
+                    }
                 }
 
                 let ty = Type::parse(parser)?;
 
-                match parser.next_token() {
-                    Some(Token::GreaterThan { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`>`"),
-                    None => parser.log_missing_token("`>`"),
-                }
+                if let Some(Token::GreaterThan { .. }) = parser.current_token() {
+                    parser.next_token();
 
-                Ok(Type::Option {
-                    inner_type: Box::new(ty),
-                })
+                    Ok(Type::Option {
+                        inner_type: Box::new(ty),
+                    })
+                } else if let Some(_) = parser.current_token() {
+                    parser.log_unexpected_token("`>`");
+                    Err(ErrorsEmitted)
+                } else {
+                    parser.log_missing_token("`>`");
+                    Err(ErrorsEmitted)
+                }
             }
 
             Some(Token::ResultType { .. }) => {
-                match parser.next_token() {
-                    Some(Token::LessThan { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`<`"),
-                    None => parser.log_missing_token("`<`"),
+                match parser.current_token() {
+                    Some(Token::LessThan { .. }) => {
+                        parser.next_token();
+                    }
+                    Some(_) => {
+                        parser.log_unexpected_token("`<`");
+                        return Err(ErrorsEmitted);
+                    }
+                    _ => {
+                        parser.log_missing_token("`<`");
+                        return Err(ErrorsEmitted);
+                    }
                 }
-
                 let ok = Box::new(Type::parse(parser)?);
 
-                match parser.next_token() {
-                    Some(Token::Comma { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`,`"),
-                    None => parser.log_missing_token("`,`"),
+                match parser.current_token() {
+                    Some(Token::Comma { .. }) => {
+                        parser.next_token();
+                    }
+                    Some(_) => {
+                        parser.log_unexpected_token("`,`");
+                        return Err(ErrorsEmitted);
+                    }
+                    _ => {
+                        parser.log_missing_token("`,`");
+                        return Err(ErrorsEmitted);
+                    }
                 }
-
                 let err = Box::new(Type::parse(parser)?);
 
-                match parser.next_token() {
-                    Some(Token::GreaterThan { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`>`"),
-                    None => parser.log_missing_token("`>`"),
+                if let Some(Token::GreaterThan { .. }) = parser.current_token() {
+                    parser.next_token();
+                    Ok(Type::Result { ok, err })
+                } else if let Some(_) = parser.current_token() {
+                    parser.log_unexpected_token("`>`");
+                    Err(ErrorsEmitted)
+                } else {
+                    parser.log_missing_token("`>`");
+                    Err(ErrorsEmitted)
                 }
-
-                Ok(Type::Result { ok, err })
             }
 
             Some(Token::Identifier { name, .. }) => {
@@ -204,13 +267,14 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
     let function_name = if let Some(Token::Identifier { name, .. }) = token {
         Ok(Identifier(name))
     } else {
-        parser.log_unexpected_token("identifier");
+        parser.log_unexpected_token("function name");
         Err(ErrorsEmitted)
     }?;
 
     let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
         parser.next_token();
         Ok(Delimiter::LParen)
+        // TODO: handle `None` case (`MissingToken`)
     } else {
         parser.log_unexpected_token("`(`");
         Err(ErrorsEmitted)
@@ -272,21 +336,26 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
 
     let num_elements = if let Some(Token::UIntLiteral { value, .. }) = parser.next_token() {
         Ok(value)
+        // TODO: handle `None` case (`MissingToken`)
     } else {
         parser.log_unexpected_token("unsigned integer");
         Err(ErrorsEmitted)
     }?;
 
-    match parser.next_token() {
-        Some(Token::RBracket { .. }) => (),
-        Some(_) => parser.log_unexpected_token("`]`"),
-        None => parser.log_missing_token("`]`"),
-    }
+    if let Some(Token::RBracket { .. }) = parser.current_token() {
+        parser.next_token();
 
-    Ok(Type::Array {
-        element_type: Box::new(ty),
-        num_elements,
-    })
+        Ok(Type::Array {
+            element_type: Box::new(ty),
+            num_elements,
+        })
+    } else if let Some(_) = parser.current_token() {
+        parser.log_unexpected_token("`]`");
+        Err(ErrorsEmitted)
+    } else {
+        parser.log_missing_token("`]`");
+        Err(ErrorsEmitted)
+    }
 }
 
 fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {

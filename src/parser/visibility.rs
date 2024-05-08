@@ -8,9 +8,7 @@ use super::Parser;
 
 impl Visibility {
     pub(crate) fn visibility(parser: &mut Parser) -> Result<Visibility, ErrorsEmitted> {
-        let token = parser.current_token();
-
-        match token {
+        match parser.current_token() {
             Some(Token::Pub { .. }) => {
                 parser.next_token();
 
@@ -22,6 +20,7 @@ impl Visibility {
                         {
                             parser.next_token();
                             Ok(Keyword::Package)
+                            // TODO: handle `None` case (`UnexpectedEndOfInput`)
                         } else {
                             parser.log_unexpected_token("`package`");
                             Err(ErrorsEmitted)
@@ -30,12 +29,8 @@ impl Visibility {
                         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
                             Ok(Delimiter::RParen)
                         } else {
-                            match parser.current_token() {
-                                Some(Token::RParen { .. }) => (),
-                                Some(_) => parser.log_unexpected_token("`)`"),
-                                None => parser.log_missing_token("`)`"),
-                            }
-
+                            parser.log_missing_token("`)`");
+                            parser.log_unmatched_delimiter(&Delimiter::LParen);
                             Err(ErrorsEmitted)
                         }?;
 
