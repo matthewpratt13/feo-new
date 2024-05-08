@@ -35,7 +35,7 @@ impl ParseOperation for RangeExpr {
             TokenType::DotDotEquals => Ok(RangeOp::RangeInclusive),
             // TODO: handle `None` case (`UnexpectedEndOfInput`)
             _ => {
-                parser.log_unexpected_token("range operator");
+                parser.log_unexpected_token("range operator (`..` or `..=`)");
                 Err(ErrorsEmitted)
             }
         }?;

@@ -26,8 +26,9 @@ impl ParseDefinition for FunctionItem {
 
         let function_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
-            parser.log_unexpected_token("identifier");
+            parser.log_unexpected_token("function identifier");
             Err(ErrorsEmitted)
         }?;
 
@@ -63,6 +64,8 @@ impl ParseDefinition for FunctionItem {
                 parser.next_token();
                 parser.next_token();
                 None
+
+            // TODO: handle `None` case (`MissingToken` and `UnmatchedDelimiter`)
             } else {
                 Some(BlockExpr::parse(parser)?)
             }
@@ -100,7 +103,7 @@ impl FunctionOrMethodParam {
             None
         };
 
-        let param = match parser.current_token() {
+        match parser.current_token() {
             Some(Token::SelfKeyword { .. }) => {
                 parser.next_token();
 
@@ -114,12 +117,19 @@ impl FunctionOrMethodParam {
             Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
                 let param_name = IdentifierPatt::parse(parser)?;
 
-                match parser.next_token() {
-                    Some(Token::Colon { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`:`"),
-                    None => parser.log_missing_token("`:`"),
+                match parser.current_token() {
+                    Some(Token::Colon { .. }) => {
+                        parser.next_token();
+                    }
+                    Some(_) => {
+                        parser.log_unexpected_token("`:`");
+                        return Err(ErrorsEmitted);
+                    }
+                    _ => {
+                        parser.log_missing_token("`:`");
+                        return Err(ErrorsEmitted);
+                    }
                 }
-
                 let param_type = Box::new(Type::parse(parser)?);
 
                 let function_param = FunctionParam {
@@ -131,12 +141,10 @@ impl FunctionOrMethodParam {
             }
 
             _ => {
-                parser.log_unexpected_token("`self` or identifier");
+                parser.log_unexpected_token("function or method parameter (identifier or `self`)");
                 Err(ErrorsEmitted)
             }
-        };
-
-        param
+        }
     }
 }
 

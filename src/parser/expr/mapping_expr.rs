@@ -40,10 +40,16 @@ fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted>
 
     match parser.current_token() {
         Some(Token::Colon { .. }) => {
-            let _ = parser.next_token();
+            parser.next_token();
         }
-        Some(_) => parser.log_unexpected_token("`:`"),
-        None => parser.log_missing_token("`:`"),
+        Some(_) => {
+            parser.log_unexpected_token("`:`");
+            return Err(ErrorsEmitted);
+        }
+        _ => {
+            parser.log_missing_token("`:`");
+            return Err(ErrorsEmitted);
+        }
     }
 
     let value = parser.parse_expression(Precedence::Lowest)?;

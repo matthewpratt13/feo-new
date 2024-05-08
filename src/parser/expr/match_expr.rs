@@ -47,6 +47,7 @@ impl ParseControl for MatchExpr {
         let final_arm = if let Some(a) = arms.pop() {
             Ok(Box::new(a))
         } else {
+        // TODO: change – a `MatchArm` is not a `Token`
             parser.log_missing_token("match arm");
             Err(ErrorsEmitted)
         }?;
@@ -88,13 +89,18 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         None
     };
 
-    // TODO: replace with `match` expression
-    if let Some(Token::FatArrow { .. }) = parser.current_token() {
-        parser.next_token();
-        // TODO: handle `None` case (`MissingToken`) 
-    } else {
-        parser.log_unexpected_token("`=>`");
-        return Err(ErrorsEmitted);
+    match parser.current_token() {
+        Some(Token::FatArrow { .. }) => {
+            parser.next_token();
+        }
+        Some(_) => {
+            parser.log_unexpected_token("`=>`");
+            return Err(ErrorsEmitted);
+        }
+        _ => {
+            parser.log_missing_token("`=>`");
+            return Err(ErrorsEmitted);
+        }
     }
 
     let body = if let Some(Token::LBrace { .. }) = parser.current_token() {

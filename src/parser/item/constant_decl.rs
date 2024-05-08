@@ -23,15 +23,24 @@ impl ParseDeclaration for ConstantDecl {
 
         let item_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
-            parser.log_unexpected_token("identifier");
+            parser.log_unexpected_token("constant identifier");
             Err(ErrorsEmitted)
         }?;
 
-        match parser.next_token() {
-            Some(Token::Colon { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`:`"),
-            None => parser.log_missing_token("`:`"),
+        match parser.current_token() {
+            Some(Token::Colon { .. }) => {
+                parser.next_token();
+            }
+            Some(_) => {
+                parser.log_unexpected_token("`:`");
+                return Err(ErrorsEmitted);
+            }
+            _ => {
+                parser.log_missing_token("`:`");
+                return Err(ErrorsEmitted);
+            }
         }
 
         let item_type = Box::new(Type::parse(parser)?);
@@ -46,7 +55,7 @@ impl ParseDeclaration for ConstantDecl {
                     ErrorsEmitted
                 })?))
             } else {
-                parser.log_missing_token("value");
+                parser.log_missing_token("value expression");
                 Err(ErrorsEmitted)
             }
         } else {

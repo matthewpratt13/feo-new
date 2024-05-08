@@ -22,8 +22,9 @@ impl ParseDeclaration for AliasDecl {
 
         let alias_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
-            parser.log_unexpected_token("identifier");
+            parser.log_unexpected_token("type alias identifier");
             Err(ErrorsEmitted)
         }?;
 
@@ -34,19 +35,22 @@ impl ParseDeclaration for AliasDecl {
             None
         };
 
-        match parser.next_token() {
-            Some(Token::Semicolon { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`;`"),
-            None => parser.log_missing_token("`;`"),
+        if let Some(Token::Semicolon { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(AliasDecl {
+                attributes_opt,
+                visibility,
+                kw_alias,
+                alias_name,
+                original_type_opt,
+            })
+        } else if let Some(_) = parser.current_token() {
+            parser.log_unexpected_token("`;`");
+            Err(ErrorsEmitted)
+        } else {
+            parser.log_missing_token("`;`");
+            Err(ErrorsEmitted)
         }
-
-        Ok(AliasDecl {
-            attributes_opt,
-            visibility,
-            kw_alias,
-            alias_name,
-            original_type_opt,
-        })
     }
 }
 

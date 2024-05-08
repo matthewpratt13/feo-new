@@ -43,14 +43,22 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
         parser.next_token();
         Ok(Identifier(name))
     } else {
-        parser.log_missing_token("identifier");
+        parser.log_missing_token("struct field identifier");
         Err(ErrorsEmitted)
     }?;
 
-    match parser.next_token() {
-        Some(Token::Colon { .. }) => (),
-        Some(_) => parser.log_unexpected_token("`:`"),
-        None => parser.log_missing_token("`:`"),
+    match parser.current_token() {
+        Some(Token::Colon { .. }) => {
+            parser.next_token();
+        }
+        Some(_) => {
+            parser.log_unexpected_token("`:`");
+            return Err(ErrorsEmitted);
+        }
+        _ => {
+            parser.log_missing_token("`:`");
+            return Err(ErrorsEmitted);
+        }
     }
 
     let field_value = parser.parse_expression(Precedence::Lowest)?;

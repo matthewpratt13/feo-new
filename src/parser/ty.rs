@@ -296,6 +296,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     } else if let Some(Token::Comma { .. }) = parser.peek_ahead_by(1) {
         let types =
             if let Some(t) = collection::get_collection(parser, Type::parse, Delimiter::RParen)? {
+                parser.next_token();
                 Ok(t)
             } else {
                 parser.log_unexpected_token("type");
