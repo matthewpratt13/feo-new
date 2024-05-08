@@ -20,7 +20,7 @@ impl ParseConstruct for ResultExpr {
 
         let expression = if let Some(Token::LParen { .. }) = parser.current_token() {
             Ok(Box::new(GroupedExpr::parse(parser)?))
-            // TODO: handle `None` case
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
             parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)

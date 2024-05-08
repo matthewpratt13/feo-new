@@ -17,6 +17,7 @@ impl SomePatt {
 
         let pattern = if let Some(Token::LParen { .. }) = parser.current_token() {
             Ok(Box::new(GroupedPatt::parse(parser)?))
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
             parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)

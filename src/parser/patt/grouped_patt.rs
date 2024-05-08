@@ -40,7 +40,7 @@ impl GroupedPatt {
 
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("exiting `GroupedExpr::parse()`".to_string()),
+            LogMsg("exiting `GroupedPatt::parse()`".to_string()),
         );
         parser.log_current_token(false);
 

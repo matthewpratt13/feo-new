@@ -10,7 +10,7 @@ impl IdentifierPatt {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `get_identifier_patt()`".to_string()),
+            LogMsg("entering `IdentifierPatt:parse()`".to_string()),
         );
         parser.log_current_token(true);
 
@@ -37,7 +37,7 @@ impl IdentifierPatt {
 
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("exiting `get_identifier_patt()`".to_string()),
+            LogMsg("exiting `IdentifierPatt::parse()`".to_string()),
         );
         parser.log_current_token(false);
 
