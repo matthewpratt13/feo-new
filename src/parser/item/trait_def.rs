@@ -26,6 +26,7 @@ impl ParseDefinition for TraitDef {
 
         let trait_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
             parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
@@ -34,6 +35,7 @@ impl ParseDefinition for TraitDef {
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
         } else {
+            // TODO: handle `None` case (`MissingToken`)
             parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
         }?;
@@ -83,7 +85,7 @@ impl ParseAssociatedItem for TraitDefItem {
                 if function_def.block_opt.is_some() {
                     parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
                         token: parser.current_token(),
-                        msg: "Functions in trait definitions cannot have bodies".to_string(),
+                        msg: "functions in trait definitions cannot have bodies".to_string(),
                     });
                     Err(ErrorsEmitted)
                 } else {

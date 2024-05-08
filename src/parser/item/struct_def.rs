@@ -25,13 +25,15 @@ impl ParseDefinition for StructDef {
 
         let struct_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
+            // TODO: handle `None` case (`UnexpectedEndOfInput`)
         } else {
-            parser.log_unexpected_token("identifier");
+            parser.log_unexpected_token("struct name");
             Err(ErrorsEmitted)
         }?;
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
+            // TODO: handle `None` case (`MissingToken`)
         } else {
             parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)
@@ -74,16 +76,16 @@ impl ParseDefinition for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
-            parser.next_token();
+        let struct_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
             Ok(Identifier(name))
         } else {
-            parser.log_unexpected_token("identifier");
+            parser.log_unexpected_token("struct name");
             Err(ErrorsEmitted)
         }?;
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
             Ok(Delimiter::LParen)
+            // TODO: handle `None` case (`MissingToken`)
         } else {
             parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)
@@ -100,21 +102,24 @@ impl ParseDefinition for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
-        match parser.next_token() {
-            Some(Token::Semicolon { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`;`"),
-            None => parser.log_missing_token("`;`"),
+        if let Some(Token::Semicolon { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(TupleStructDef {
+                attributes_opt,
+                visibility,
+                kw_struct,
+                struct_name,
+                open_paren,
+                fields_opt,
+                close_paren,
+            })
+        } else if let Some(_) = parser.current_token() {
+            parser.log_unexpected_token("`;`");
+            Err(ErrorsEmitted)
+        } else {
+            parser.log_missing_token("`;`");
+            Err(ErrorsEmitted)
         }
-
-        Ok(TupleStructDef {
-            attributes_opt,
-            visibility,
-            kw_struct,
-            struct_name,
-            open_paren,
-            fields_opt,
-            close_paren,
-        })
     }
 }
 
@@ -124,28 +129,35 @@ impl StructDefField {
 
         let visibility = Visibility::visibility(parser)?;
 
-        let token = parser.next_token();
-
-        let field = if let Some(Token::Identifier { name, .. }) = token {
-            let field_name = Identifier(name);
-
-            match parser.next_token() {
-                Some(Token::Colon { .. }) => (),
-                Some(_) => parser.log_unexpected_token("`:`"),
-                None => parser.log_missing_token("`:`"),
-            }
-
-            let field_type = Box::new(Type::parse(parser)?);
-
-            StructDefField {
-                attributes_opt,
-                visibility,
-                field_name,
-                field_type,
-            }
+        let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(Identifier(name))
         } else {
-            parser.log_unexpected_token("identifier`");
-            return Err(ErrorsEmitted);
+            parser.log_missing_token("struct field name");
+            Err(ErrorsEmitted)
+        }?;
+
+        match parser.current_token() {
+            Some(Token::Colon { .. }) => {
+                parser.next_token();
+            }
+            Some(_) => {
+                parser.log_unexpected_token("`:`");
+                return Err(ErrorsEmitted);
+            }
+            _ => {
+                parser.log_missing_token("`:`");
+                return Err(ErrorsEmitted);
+            }
+        }
+
+        let field_type = Box::new(Type::parse(parser)?);
+
+        let field = StructDefField {
+            attributes_opt,
+            visibility,
+            field_name,
+            field_type,
         };
 
         Ok(field)

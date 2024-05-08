@@ -43,7 +43,7 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
         parser.next_token();
         Ok(Identifier(name))
     } else {
-        parser.log_missing_token("struct field identifier");
+        parser.log_missing_token("struct field name");
         Err(ErrorsEmitted)
     }?;
 

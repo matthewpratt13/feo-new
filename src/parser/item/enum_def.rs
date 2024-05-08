@@ -34,7 +34,7 @@ impl ParseDefinition for EnumDef {
 
         let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
             Ok(Delimiter::LBrace)
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
+            // TODO: handle `None` case (`MissingToken`)
         } else {
             parser.log_unexpected_token("`{`");
             Err(ErrorsEmitted)

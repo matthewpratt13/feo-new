@@ -87,7 +87,6 @@ impl ParseDefinition for TraitImplDef {
         let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::For)
-            // TODO: handle `None` case (`MissingToken`)
         } else {
             parser.log_unexpected_token("`for`");
             Err(ErrorsEmitted)
