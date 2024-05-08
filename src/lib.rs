@@ -2,7 +2,7 @@ use fixed_hash::{construct_fixed_hash, impl_fixed_hash_conversions};
 use uint::construct_uint;
 
 mod ast;
-mod error;
+pub mod error;
 mod keccak;
 mod lexer;
 mod logger;
