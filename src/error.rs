@@ -169,7 +169,6 @@ pub enum ParserErrorKind {
     // TODO: add `MissingItems`
 
     // TODO: add `UnexpectedItem`
-    
     #[default]
     UnknownError,
 }
@@ -205,7 +204,10 @@ impl fmt::Display for ParserErrorKind {
             }
 
             ParserErrorKind::UnexpectedExpression { expected, found } => {
-                write!(f, "unexpected expression. Expected {expected}, found {found}")
+                write!(
+                    f,
+                    "unexpected expression. Expected {expected}, found {found}"
+                )
             }
 
             ParserErrorKind::UnknownError => write!(f, "unknown parsing error"),
@@ -240,13 +242,11 @@ where
         let line_count = lines.len();
         let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
 
-        let start_pos = if pos > 80 { pos - 80 } else { 0 };
-
         Self {
             error_kind,
             line: line_count,
             col: last_line_len,
-            _source: Arc::new(source[start_pos..pos].trim().to_string()),
+            _source: Arc::new(source.trim().to_string()),
         }
     }
 }

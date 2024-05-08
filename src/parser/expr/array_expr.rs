@@ -65,7 +65,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.errors())),
         }
     }
 }
