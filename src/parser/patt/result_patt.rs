@@ -1,6 +1,6 @@
 use crate::{
     ast::{GroupedPatt, Keyword, Pattern, ResultPatt},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     parser::Parser,
     token::Token,
 };
@@ -18,12 +18,16 @@ impl ResultPatt {
 
         parser.next_token();
 
-        let pattern = if let Some(Token::LParen { .. }) = parser.current_token() {
-            Ok(Box::new(GroupedPatt::parse(parser)?))
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
+        let pattern = match parser.current_token() {
+            Some(Token::LParen { .. }) => Ok(Box::new(GroupedPatt::parse(parser)?)),
+            Some(Token::EOF) | None => {
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let patt = ResultPatt {

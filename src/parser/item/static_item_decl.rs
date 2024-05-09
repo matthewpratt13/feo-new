@@ -1,6 +1,6 @@
 use crate::{
     ast::{AssigneeExpr, Identifier, Keyword, OuterAttr, StaticItemDecl, Type, Visibility},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     parser::Precedence,
     token::Token,
 };
@@ -28,24 +28,28 @@ impl ParseDeclaration for StaticItemDecl {
             None
         };
 
-        let item_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
-        } else {
-            parser.log_unexpected_token("static item name");
-            Err(ErrorsEmitted)
+        let item_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::EOF) | None => {
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("static item name");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         match parser.current_token() {
             Some(Token::Colon { .. }) => {
                 parser.next_token();
             }
-            Some(_) => {
-                parser.log_unexpected_token("`:`");
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`:`");
                 return Err(ErrorsEmitted);
             }
             _ => {
-                parser.log_missing_token("`:`");
+                parser.log_unexpected_token("`:`");
                 return Err(ErrorsEmitted);
             }
         }
@@ -64,31 +68,35 @@ impl ParseDeclaration for StaticItemDecl {
 
                 Ok(Some(Box::new(assignee_expr)))
             } else {
-                parser.log_missing_token("assignee expression");
+                parser.log_missing("expr", "assignee expression");
                 Err(ErrorsEmitted)
             }
         } else {
             Ok(None)
         }?;
 
-        if let Some(Token::Semicolon { .. }) = parser.current_token() {
-            parser.next_token();
+        match parser.current_token() {
+            Some(Token::Semicolon { .. }) => {
+                parser.next_token();
 
-            Ok(StaticItemDecl {
-                attributes_opt,
-                visibility,
-                kw_static,
-                kw_mut_opt,
-                item_name,
-                item_type,
-                assignee_opt,
-            })
-        } else if let Some(_) = parser.current_token() {
-            parser.log_unexpected_token("`;`");
-            Err(ErrorsEmitted)
-        } else {
-            parser.log_missing_token("`;`");
-            Err(ErrorsEmitted)
+                Ok(StaticItemDecl {
+                    attributes_opt,
+                    visibility,
+                    kw_static,
+                    kw_mut_opt,
+                    item_name,
+                    item_type,
+                    assignee_opt,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`;`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`;`");
+                Err(ErrorsEmitted)
+            }
         }
     }
 }

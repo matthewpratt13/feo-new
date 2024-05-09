@@ -1,6 +1,6 @@
 use crate::{
     ast::{AliasDecl, Identifier, Keyword, OuterAttr, Type, Visibility},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
@@ -20,12 +20,16 @@ impl ParseDeclaration for AliasDecl {
             Err(ErrorsEmitted)
         }?;
 
-        let alias_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
-        } else {
-            parser.log_unexpected_token("type alias name");
-            Err(ErrorsEmitted)
+        let alias_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::EOF) | None => {
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("type alias name");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let original_type_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
@@ -41,21 +45,26 @@ impl ParseDeclaration for AliasDecl {
             Ok(None)
         }?;
 
-        if let Some(Token::Semicolon { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(AliasDecl {
-                attributes_opt,
-                visibility,
-                kw_alias,
-                alias_name,
-                original_type_opt,
-            })
-        } else if let Some(_) = parser.current_token() {
-            parser.log_unexpected_token("`;`");
-            Err(ErrorsEmitted)
-        } else {
-            parser.log_missing_token("`;`");
-            Err(ErrorsEmitted)
+        match parser.current_token() {
+            Some(Token::Semicolon { .. }) => {
+                parser.next_token();
+                Ok(AliasDecl {
+                    attributes_opt,
+                    visibility,
+                    kw_alias,
+                    alias_name,
+                    original_type_opt,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`;`");
+                Err(ErrorsEmitted)
+            }
+
+            _ => {
+                parser.log_unexpected_token("`;`");
+                Err(ErrorsEmitted)
+            }
         }
     }
 }

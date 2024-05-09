@@ -3,7 +3,7 @@ use crate::{
         Delimiter, EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTuple, EnumVariantType,
         Identifier, Keyword, OuterAttr, StructDefField, Type, Visibility,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     parser::{collection, Parser},
     token::Token,
 };
@@ -24,20 +24,28 @@ impl ParseDefinition for EnumDef {
             Err(ErrorsEmitted)
         }?;
 
-        let enum_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
-        } else {
-            parser.log_unexpected_token("enum identifier");
-            Err(ErrorsEmitted)
+        let enum_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::EOF) | None => {
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("enum identifier");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::LBrace)
-            // TODO: handle `None` case (`MissingToken`)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.next_token() {
+            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let variants = parse_enum_variants(parser)?;
@@ -96,12 +104,16 @@ fn parse_enum_variant(
 
     let visibility = Visibility::visibility(parser)?;
 
-    let variant_name = if let Some(Token::Identifier { name, .. }) = token {
-        Ok(Identifier(name))
-        // TODO: handle `None` case (`UnexpectedEndOfInput`)
-    } else {
-        parser.log_unexpected_token("enum variant identifier");
-        Err(ErrorsEmitted)
+    let variant_name = match token {
+        Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+        Some(Token::EOF) | None => {
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            Err(ErrorsEmitted)
+        }
+        _ => {
+            parser.log_unexpected_token("enum variant identifier");
+            Err(ErrorsEmitted)
+        }
     }?;
 
     let variant_type_opt = match parser.current_token() {
@@ -137,8 +149,7 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
     {
         Ok(sdf)
     } else {
-        // TODO: change – a `StructDefField` is not a `Token`
-        parser.log_missing_token("struct field");
+        parser.log_missing("struct field", "struct field");
         Err(ErrorsEmitted)
     }?;
 
@@ -169,8 +180,7 @@ fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTuple, Err
         if let Some(t) = collection::get_collection(parser, Type::parse, Delimiter::RParen)? {
             Ok(t)
         } else {
-            // TODO: change – a `Type` is not a `Token`
-            parser.log_unexpected_token("type");
+            parser.log_missing("type", "type");
             Err(ErrorsEmitted)
         }?;
 

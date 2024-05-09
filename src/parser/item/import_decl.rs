@@ -25,20 +25,24 @@ impl ParseDeclaration for ImportDecl {
 
         let tree = parse_import_tree(parser)?;
 
-        if let Some(Token::Semicolon { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(ImportDecl {
-                attributes_opt,
-                visibility,
-                kw_import,
-                tree,
-            })
-        } else if let Some(_) = parser.current_token() {
-            parser.log_unexpected_token("`;`");
-            Err(ErrorsEmitted)
-        } else {
-            parser.log_missing_token("`;`");
-            Err(ErrorsEmitted)
+        match parser.current_token() {
+            Some(Token::Semicolon { .. }) => {
+                parser.next_token();
+                Ok(ImportDecl {
+                    attributes_opt,
+                    visibility,
+                    kw_import,
+                    tree,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`;`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`;`");
+                Err(ErrorsEmitted)
+            }
         }
     }
 }
@@ -120,8 +124,7 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
     {
         Ok(t)
     } else {
-        // TODO: should be `UnexpectedItems`
-        parser.log_unexpected_token("import trees");
+        parser.log_missing("import trees", "import trees");
         Err(ErrorsEmitted)
     }?;
 

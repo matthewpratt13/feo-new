@@ -1,6 +1,6 @@
 use crate::{
     ast::{Delimiter, Keyword, PubPackageVis, Visibility},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
@@ -16,14 +16,19 @@ impl Visibility {
                     Some(Token::LParen { .. }) => {
                         parser.next_token();
 
-                        let kw_package = if let Some(Token::Package { .. }) = parser.current_token()
-                        {
-                            parser.next_token();
-                            Ok(Keyword::Package)
-                            // TODO: handle `None` case (`UnexpectedEndOfInput`)
-                        } else {
-                            parser.log_unexpected_token("`package`");
-                            Err(ErrorsEmitted)
+                        let kw_package = match parser.current_token() {
+                            Some(Token::Package { .. }) => {
+                                parser.next_token();
+                                Ok(Keyword::Package)
+                            }
+                            Some(Token::EOF) | None => {
+                                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                                Err(ErrorsEmitted)
+                            }
+                            _ => {
+                                parser.log_unexpected_token("`package`");
+                                Err(ErrorsEmitted)
+                            }
                         }?;
 
                         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {

@@ -3,7 +3,7 @@ use crate::{
         BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier,
         IdentifierPatt, Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     parser::ParseConstruct,
     token::Token,
 };
@@ -24,21 +24,28 @@ impl ParseDefinition for FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        let function_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
-        } else {
-            parser.log_unexpected_token("function identifier");
-            Err(ErrorsEmitted)
+        let function_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::EOF) | None => {
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("function identifier");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
-            Ok(Delimiter::LParen)
-
-            // TODO: handle `None` case (`MissingToken`)
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
+        let open_paren = match parser.next_token() {
+            Some(Token::LParen { .. }) => Ok(Delimiter::LParen),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`(`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let params_opt =
@@ -66,18 +73,22 @@ impl ParseDefinition for FunctionItem {
         }?;
 
         let block_opt = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            if let Some(Token::RBrace { .. }) = parser.peek_ahead_by(1) {
-                parser.next_token();
-                parser.next_token();
-                None
-
-            // TODO: handle `None` case (`MissingToken` and `UnmatchedDelimiter`)
-            } else {
-                Some(BlockExpr::parse(parser)?)
+            match parser.peek_ahead_by(1) {
+                Some(Token::RBrace { .. }) => {
+                    parser.next_token();
+                    parser.next_token();
+                    Ok(None)
+                }
+                Some(Token::EOF) | None => {
+                    parser.log_missing_token("`}`");
+                    parser.log_unmatched_delimiter(&open_paren);
+                    Err(ErrorsEmitted)
+                }
+                _ => Ok(Some(BlockExpr::parse(parser)?)),
             }
         } else {
-            None
-        };
+            Ok(None)
+        }?;
 
         Ok(FunctionItem {
             attributes_opt,
@@ -127,12 +138,12 @@ impl FunctionOrMethodParam {
                     Some(Token::Colon { .. }) => {
                         parser.next_token();
                     }
-                    Some(_) => {
-                        parser.log_unexpected_token("`:`");
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`:`");
                         return Err(ErrorsEmitted);
                     }
                     _ => {
-                        parser.log_missing_token("`:`");
+                        parser.log_unexpected_token("`:`");
                         return Err(ErrorsEmitted);
                     }
                 }

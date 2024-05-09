@@ -27,12 +27,16 @@ impl ParseDefinition for InherentImplDef {
 
         let nominal_type = Type::parse(parser)?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::LBrace)
-            // TODO: handle `None` case (`MissingToken`)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.next_token() {
+            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let associated_items_opt = collection::get_associated_items::<InherentImplItem>(parser)?;
@@ -72,16 +76,23 @@ impl ParseDefinition for TraitImplDef {
 
         let token = parser.current_token();
 
-        let implemented_trait_path = if let Some(Token::Identifier { name, .. }) = token {
-            let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)));
-            parser.next_token();
-            path
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
-        } else {
-            parser.log_unexpected_token("implemented trait path");
-            parser.next_token();
+        let implemented_trait_path = match token {
+            Some(Token::Identifier { name, .. }) => {
+                let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)));
+                parser.next_token();
+                path
+            }
+            Some(Token::EOF) | None => {
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted)
+            }
 
-            Err(ErrorsEmitted)
+            _ => {
+                parser.log_unexpected_token("implemented trait path");
+                parser.next_token();
+
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
@@ -94,12 +105,16 @@ impl ParseDefinition for TraitImplDef {
 
         let implementing_type = Type::parse(parser)?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::LBrace)
-            // TODO: handle `None` case (`MissingToken`)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.next_token() {
+            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let associated_items_opt = collection::get_associated_items::<TraitImplItem>(parser)?;
@@ -148,11 +163,7 @@ impl ParseAssociatedItem for InherentImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    // TODO: should be `MissingItems`
-                    parser.log_error(ParserErrorKind::ExtraTokens {
-                        token: parser.current_token(),
-                        msg: "functions in implementation blocks must have bodies".to_string(),
-                    });
+                    parser.log_missing("item", "associated item");
                     Err(ErrorsEmitted)
                 } else {
                     Ok(InherentImplItem::FunctionDef(function_def))
@@ -192,11 +203,7 @@ impl ParseAssociatedItem for TraitImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    // TODO: should be `MissingItems`
-                    parser.log_error(ParserErrorKind::ExtraTokens {
-                        token: parser.current_token(),
-                        msg: "functions in implementation blocks must have bodies".to_string(),
-                    });
+                    parser.log_missing("item", "associated item");
                     Err(ErrorsEmitted)
                 } else {
                     Ok(TraitImplItem::FunctionDef(function_def))

@@ -39,22 +39,26 @@ impl ParseStatement for LetStmt {
             Ok(None)
         }?;
 
-        if let Some(Token::Semicolon { .. }) = parser.current_token() {
-            parser.next_token();
-            let stmt = LetStmt {
-                kw_let,
-                assignee,
-                type_ann_opt,
-                value_opt,
-            };
+        match parser.current_token() {
+            Some(Token::Semicolon { .. }) => {
+                parser.next_token();
+                let stmt = LetStmt {
+                    kw_let,
+                    assignee,
+                    type_ann_opt,
+                    value_opt,
+                };
 
-            Ok(Statement::Let(stmt))
-        } else if let Some(_) = parser.current_token() {
-            parser.log_unexpected_token("`;`");
-            Err(ErrorsEmitted)
-        } else {
-            parser.log_missing_token("`;`");
-            Err(ErrorsEmitted)
+                Ok(Statement::Let(stmt))
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`;`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`;`");
+                Err(ErrorsEmitted)
+            }
         }
     }
 }

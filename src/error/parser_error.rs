@@ -44,12 +44,11 @@ pub enum ParserErrorKind {
         found: String,
     },
 
-    UnexpectedItem {
+    MissingItem {
         expected: String,
-        found: String,
     },
 
-    MissingItem {
+    MissingType {
         expected: String,
     },
 
@@ -103,11 +102,13 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::UnexpectedPattern { expected, found } => {
                 write!(f, "unexpected pattern. Expected {expected}, found {found}")
             }
-            ParserErrorKind::UnexpectedItem { expected, found } => {
-                write!(f, "unexpected item. Expected {expected}, found {found}")
-            }
+
             ParserErrorKind::MissingItem { expected } => {
                 write!(f, "item not found. Expected {expected}, found none")
+            }  
+            
+            ParserErrorKind::MissingType { expected } => {
+                write!(f, "type annotation not found. Expected {expected}, found none")
             }
             ParserErrorKind::UnknownError => write!(f, "unknown parsing error"),
         }

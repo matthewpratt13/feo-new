@@ -4,7 +4,7 @@ use crate::{
         Identifier, InferredType, Int, PathExpr, PathPrefix, ReferenceOp, SelfType, Str, Type,
         UInt, Unit,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg},
     token::Token,
     B16, B2, B32, B4, B8, H160, H256, H512, U256, U512,
@@ -15,10 +15,9 @@ use super::{collection, Parser};
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("entering `Type::parse()`"),
-        );
+        parser
+            .logger
+            .log(LogLevel::Debug, LogMsg::from("entering `Type::parse()`"));
         parser.log_current_token(false);
 
         let token = parser.next_token();
@@ -68,28 +67,31 @@ impl Type {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
-                    Some(_) => {
-                        parser.log_unexpected_token("`<`");
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`<`");
                         return Err(ErrorsEmitted);
                     }
                     _ => {
-                        parser.log_missing_token("`<`");
+                        parser.log_unexpected_token("`<`");
                         return Err(ErrorsEmitted);
                     }
                 }
 
                 let ty = Type::parse(parser)?;
 
-                if let Some(Token::GreaterThan { .. }) = parser.current_token() {
-                    parser.next_token();
-
-                    Ok(Type::Vec(Box::new(ty)))
-                } else if let Some(_) = parser.current_token() {
-                    parser.log_unexpected_token("`>`");
-                    Err(ErrorsEmitted)
-                } else {
-                    parser.log_missing_token("`>`");
-                    Err(ErrorsEmitted)
+                match parser.current_token() {
+                    Some(Token::GreaterThan { .. }) => {
+                        parser.next_token();
+                        Ok(Type::Vec(Box::new(ty)))
+                    }
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`>`");
+                        Err(ErrorsEmitted)
+                    }
+                    _ => {
+                        parser.log_unexpected_token("`>`");
+                        Err(ErrorsEmitted)
+                    }
                 }
             }
 
@@ -98,12 +100,12 @@ impl Type {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
-                    Some(_) => {
-                        parser.log_unexpected_token("`<`");
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`<`");
                         return Err(ErrorsEmitted);
                     }
                     _ => {
-                        parser.log_missing_token("`<`");
+                        parser.log_unexpected_token("`<`");
                         return Err(ErrorsEmitted);
                     }
                 }
@@ -114,31 +116,35 @@ impl Type {
                     Some(Token::Comma { .. }) => {
                         parser.next_token();
                     }
-                    Some(_) => {
-                        parser.log_unexpected_token("`,`");
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`,`");
                         return Err(ErrorsEmitted);
                     }
                     _ => {
-                        parser.log_missing_token("`,`");
+                        parser.log_unexpected_token("`,`");
                         return Err(ErrorsEmitted);
                     }
                 }
 
                 let value_type = Box::new(Type::parse(parser)?);
 
-                if let Some(Token::GreaterThan { .. }) = parser.current_token() {
-                    parser.next_token();
+                match parser.current_token() {
+                    Some(Token::GreaterThan { .. }) => {
+                        parser.next_token();
 
-                    Ok(Type::Mapping {
-                        key_type,
-                        value_type,
-                    })
-                } else if let Some(_) = parser.current_token() {
-                    parser.log_unexpected_token("`>`");
-                    Err(ErrorsEmitted)
-                } else {
-                    parser.log_missing_token("`>`");
-                    Err(ErrorsEmitted)
+                        Ok(Type::Mapping {
+                            key_type,
+                            value_type,
+                        })
+                    }
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`>`");
+                        Err(ErrorsEmitted)
+                    }
+                    _ => {
+                        parser.log_unexpected_token("`>`");
+                        Err(ErrorsEmitted)
+                    }
                 }
             }
 
@@ -147,30 +153,35 @@ impl Type {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
-                    Some(_) => {
-                        parser.log_unexpected_token("`<`");
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`<`");
                         return Err(ErrorsEmitted);
                     }
                     _ => {
-                        parser.log_missing_token("`<`");
+                        parser.log_unexpected_token("`<`");
                         return Err(ErrorsEmitted);
                     }
                 }
 
                 let ty = Type::parse(parser)?;
 
-                if let Some(Token::GreaterThan { .. }) = parser.current_token() {
-                    parser.next_token();
+                match parser.current_token() {
+                    Some(Token::GreaterThan { .. }) => {
+                        parser.next_token();
 
-                    Ok(Type::Option {
-                        inner_type: Box::new(ty),
-                    })
-                } else if let Some(_) = parser.current_token() {
-                    parser.log_unexpected_token("`>`");
-                    Err(ErrorsEmitted)
-                } else {
-                    parser.log_missing_token("`>`");
-                    Err(ErrorsEmitted)
+                        Ok(Type::Option {
+                            inner_type: Box::new(ty),
+                        })
+                    }
+
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`>`");
+                        Err(ErrorsEmitted)
+                    }
+                    _ => {
+                        parser.log_unexpected_token("`>`");
+                        Err(ErrorsEmitted)
+                    }
                 }
             }
 
@@ -179,12 +190,12 @@ impl Type {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
-                    Some(_) => {
-                        parser.log_unexpected_token("`<`");
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`<`");
                         return Err(ErrorsEmitted);
                     }
                     _ => {
-                        parser.log_missing_token("`<`");
+                        parser.log_unexpected_token("`<`");
                         return Err(ErrorsEmitted);
                     }
                 }
@@ -194,26 +205,30 @@ impl Type {
                     Some(Token::Comma { .. }) => {
                         parser.next_token();
                     }
-                    Some(_) => {
-                        parser.log_unexpected_token("`,`");
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`,`");
                         return Err(ErrorsEmitted);
                     }
                     _ => {
-                        parser.log_missing_token("`,`");
+                        parser.log_unexpected_token("`,`");
                         return Err(ErrorsEmitted);
                     }
                 }
                 let err = Box::new(Type::parse(parser)?);
 
-                if let Some(Token::GreaterThan { .. }) = parser.current_token() {
-                    parser.next_token();
-                    Ok(Type::Result { ok, err })
-                } else if let Some(_) = parser.current_token() {
-                    parser.log_unexpected_token("`>`");
-                    Err(ErrorsEmitted)
-                } else {
-                    parser.log_missing_token("`>`");
-                    Err(ErrorsEmitted)
+                match parser.current_token() {
+                    Some(Token::GreaterThan { .. }) => {
+                        parser.next_token();
+                        Ok(Type::Result { ok, err })
+                    }
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`>`");
+                        Err(ErrorsEmitted)
+                    }
+                    _ => {
+                        parser.log_unexpected_token("`>`");
+                        Err(ErrorsEmitted)
+                    }
                 }
             }
 
@@ -253,6 +268,11 @@ impl Type {
                 _ => Ok(Type::SelfType(SelfType)),
             },
 
+            Some(Token::EOF) | None => {
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted)
+            }
+
             _ => {
                 parser.log_unexpected_token("type annotation");
                 Err(ErrorsEmitted)
@@ -271,13 +291,19 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
         Err(ErrorsEmitted)
     }?;
 
-    let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
-        parser.next_token();
-        Ok(Delimiter::LParen)
-        // TODO: handle `None` case (`MissingToken`)
-    } else {
-        parser.log_unexpected_token("`(`");
-        Err(ErrorsEmitted)
+    let open_paren = match parser.current_token() {
+        Some(Token::LParen { .. }) => {
+            parser.next_token();
+            Ok(Delimiter::LParen)
+        }
+        Some(Token::EOF) | None => {
+            parser.log_missing_token("`(`");
+            Err(ErrorsEmitted)
+        }
+        _ => {
+            parser.log_unexpected_token("`(`");
+            Err(ErrorsEmitted)
+        }
     }?;
 
     // `&self` and `&mut self` can only occur as the first parameter in a method
@@ -340,27 +366,35 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         parser.log_unexpected_token("`;`");
     }
 
-    let num_elements = if let Some(Token::UIntLiteral { value, .. }) = parser.next_token() {
-        Ok(value)
-        // TODO: handle `None` case (`MissingToken`)
-    } else {
-        parser.log_unexpected_token("unsigned integer");
-        Err(ErrorsEmitted)
+    let num_elements = match parser.next_token() {
+        Some(Token::UIntLiteral { value, .. }) => Ok(value),
+        Some(Token::EOF) | None => {
+            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            Err(ErrorsEmitted)
+        }
+        _ => {
+            parser.log_unexpected_token("unsigned integer");
+            Err(ErrorsEmitted)
+        }
     }?;
 
-    if let Some(Token::RBracket { .. }) = parser.current_token() {
-        parser.next_token();
+    match parser.current_token() {
+        Some(Token::RBracket { .. }) => {
+            parser.next_token();
 
-        Ok(Type::Array {
-            element_type: Box::new(ty),
-            num_elements,
-        })
-    } else if let Some(_) = parser.current_token() {
-        parser.log_unexpected_token("`]`");
-        Err(ErrorsEmitted)
-    } else {
-        parser.log_missing_token("`]`");
-        Err(ErrorsEmitted)
+            Ok(Type::Array {
+                element_type: Box::new(ty),
+                num_elements,
+            })
+        }
+        Some(Token::EOF) | None => {
+            parser.log_missing_token("`]`");
+            Err(ErrorsEmitted)
+        }
+        _ => {
+            parser.log_unexpected_token("`]`");
+            Err(ErrorsEmitted)
+        }
     }
 }
 
@@ -374,7 +408,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
                 parser.next_token();
                 Ok(t)
             } else {
-                parser.log_unexpected_token("type");
+                parser.log_missing("type", "tuple element type");
                 Err(ErrorsEmitted)
             }?;
 
@@ -382,13 +416,20 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     } else {
         let ty = Type::parse(parser)?;
 
-        if let Some(Token::RParen { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Type::GroupedType(Box::new(ty)))
-        } else {
-            parser.log_missing_token("`)`");
-            parser.log_unmatched_delimiter(&Delimiter::LParen);
-            Err(ErrorsEmitted)
+        match parser.current_token() {
+            Some(Token::RParen { .. }) => {
+                parser.next_token();
+                Ok(Type::GroupedType(Box::new(ty)))
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`)`");
+                parser.log_unmatched_delimiter(&Delimiter::LParen);
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`)`");
+                Err(ErrorsEmitted)
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     ast::{Delimiter, Identifier, InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
@@ -20,20 +20,28 @@ impl ParseDefinition for ModuleItem {
             Err(ErrorsEmitted)
         }?;
 
-        let module_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
-        } else {
-            parser.log_unexpected_token("module name");
-            Err(ErrorsEmitted)
+        let module_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::EOF) | None => {
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("module name");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::LBrace)
-            // TODO: handle `None` case (`MissingToken`)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.next_token() {
+            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let (inner_attributes_opt, items_opt) = parse_item(parser)?;

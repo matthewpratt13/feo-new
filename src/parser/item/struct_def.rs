@@ -3,7 +3,7 @@ use crate::{
         Delimiter, Identifier, Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef,
         TupleStructDefField, Type, Visibility,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     token::Token,
 };
 
@@ -23,20 +23,29 @@ impl ParseDefinition for StructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
-        } else {
-            parser.log_unexpected_token("struct name");
-            Err(ErrorsEmitted)
+        let struct_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::EOF) | None => {
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted)
+            }
+
+            _ => {
+                parser.log_unexpected_token("struct name");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::LBrace)
-            // TODO: handle `None` case (`MissingToken`)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.next_token() {
+            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let fields_opt =
@@ -83,12 +92,16 @@ impl ParseDefinition for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
-            Ok(Delimiter::LParen)
-            // TODO: handle `None` case (`MissingToken`)
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
+        let open_paren = match parser.next_token() {
+            Some(Token::LParen { .. }) => Ok(Delimiter::LParen),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`(`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let fields_opt =
@@ -102,23 +115,27 @@ impl ParseDefinition for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
-        if let Some(Token::Semicolon { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(TupleStructDef {
-                attributes_opt,
-                visibility,
-                kw_struct,
-                struct_name,
-                open_paren,
-                fields_opt,
-                close_paren,
-            })
-        } else if let Some(_) = parser.current_token() {
-            parser.log_unexpected_token("`;`");
-            Err(ErrorsEmitted)
-        } else {
-            parser.log_missing_token("`;`");
-            Err(ErrorsEmitted)
+        match parser.current_token() {
+            Some(Token::Semicolon { .. }) => {
+                parser.next_token();
+                Ok(TupleStructDef {
+                    attributes_opt,
+                    visibility,
+                    kw_struct,
+                    struct_name,
+                    open_paren,
+                    fields_opt,
+                    close_paren,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`;`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`;`");
+                Err(ErrorsEmitted)
+            }
         }
     }
 }
@@ -141,12 +158,13 @@ impl StructDefField {
             Some(Token::Colon { .. }) => {
                 parser.next_token();
             }
-            Some(_) => {
-                parser.log_unexpected_token("`:`");
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`:`");
                 return Err(ErrorsEmitted);
             }
+
             _ => {
-                parser.log_missing_token("`:`");
+                parser.log_unexpected_token("`:`");
                 return Err(ErrorsEmitted);
             }
         }
