@@ -1,3 +1,5 @@
+use core::fmt;
+
 /// Enum representing different log levels, which controls the verbosity of the logs,
 /// from the most to the least verbose.
 #[allow(dead_code)]
@@ -59,5 +61,11 @@ impl From<&str> for LogMsg {
 impl From<String> for LogMsg {
     fn from(value: String) -> Self {
         LogMsg(value)
+    }
+}
+
+impl fmt::Display for LogMsg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }

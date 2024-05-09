@@ -9,6 +9,8 @@ mod pattern;
 mod statement;
 mod types;
 
+use core::fmt;
+
 use crate::error::ParserErrorKind;
 
 pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*};
@@ -119,6 +121,20 @@ pub(crate) enum Delimiter {
     LBrace,
     RBrace,
     Pipe,
+}
+
+impl fmt::Display for Delimiter {
+    fn fmt(&self, f: &mut fmt::Formatter::<'_>) -> fmt::Result {
+        match self {
+            Delimiter::LParen => write!(f, "("),
+            Delimiter::RParen => write!(f, ")"),
+            Delimiter::LBracket => write!(f, "["),
+            Delimiter::RBracket => write!(f, "]"),
+            Delimiter::LBrace => write!(f, "{{"),
+            Delimiter::RBrace => write!(f, "}}"),
+            Delimiter::Pipe => write!(f, "|"),
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////

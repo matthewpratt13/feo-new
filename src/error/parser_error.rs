@@ -7,12 +7,12 @@ use crate::token::Token;
 /// during parsing.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum ParserErrorKind {
+    UnexpectedEndOfInput,
+
     UnexpectedToken {
         expected: String,
         found: Option<Token>,
     },
-
-    UnexpectedEndOfInput,
 
     MissingToken {
         expected: String,
@@ -30,19 +30,33 @@ pub enum ParserErrorKind {
         token: Option<Token>,
         msg: String,
     },
-
     UnexpectedExpression {
         expected: String,
         found: String,
     },
 
-    // TODO: add `MissingExpression`
+    MissingExpression {
+        expected: String,
+    },
 
-    // TODO: add `UnexpectedPattern`
+    UnexpectedPattern {
+        expected: String,
+        found: String,
+    },
 
-    // TODO: add `MissingItems`
+    MissingPattern {
+        expected: String,
+    },
 
-    // TODO: add `UnexpectedItem`
+    UnexpectedItem {
+        expected: String,
+        found: String,
+    },
+
+    MissingItem {
+        expected: String,
+    },
+
     #[default]
     UnknownError,
 }
@@ -50,40 +64,58 @@ pub enum ParserErrorKind {
 impl fmt::Display for ParserErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            ParserErrorKind::UnexpectedEndOfInput => {
+                write!(f, "unexpected end of input")
+            }
             ParserErrorKind::UnexpectedToken { expected, found } => write!(
                 f,
                 "unexpected token. Expected {}, found `{:?}`",
                 expected, found
             ),
-            ParserErrorKind::UnexpectedEndOfInput => {
-                write!(f, "parsing error. Unexpected end of input")
-            }
             ParserErrorKind::MissingToken { expected } => {
                 write!(f, "token not found. Expected {expected}, found none")
             }
             ParserErrorKind::UnmatchedDelimiter { delim } => {
-                write!(f, "unmatched delimiter ({delim})")
-            }
-
-            ParserErrorKind::InvalidTokenContext { token } => {
-                write!(f, "syntax error. Invalid token context – `{:?}`", token)
-            }
-
-            ParserErrorKind::ExtraTokens { token, msg } => {
                 write!(
                     f,
-                    "syntax error. Extra tokens detected – `{:?}`. {msg}",
+                    "unmatched delimiter. Expected delimiter to match `{delim}`"
+                )
+            }
+            ParserErrorKind::InvalidTokenContext { token } => {
+                write!(
+                    f,
+                    "syntax error. Token invalid in current context: `{:?}`",
                     token
                 )
             }
-
+            ParserErrorKind::ExtraTokens { token, msg } => {
+                write!(
+                    f,
+                    "syntax error. Detected extra tokens: `{:?}`. {msg}",
+                    token
+                )
+            }
             ParserErrorKind::UnexpectedExpression { expected, found } => {
                 write!(
                     f,
                     "unexpected expression. Expected {expected}, found {found}"
                 )
             }
-
+            ParserErrorKind::MissingExpression { expected } => {
+                write!(f, "expression not found. Expected {expected}, found none")
+            }
+            ParserErrorKind::UnexpectedPattern { expected, found } => {
+                write!(f, "unexpected pattern. Expected {expected}, found {found}")
+            }
+            ParserErrorKind::MissingPattern { expected } => {
+                write!(f, "pattern not found. Expected {expected}, found none")
+            }
+            ParserErrorKind::UnexpectedItem { expected, found } => {
+                write!(f, "unexpected item. Expected {expected}, found {found}")
+            }
+            ParserErrorKind::MissingItem { expected } => {
+                write!(f, "item not found. Expected {expected}, found none")
+            }
             ParserErrorKind::UnknownError => write!(f, "unknown parsing error"),
         }
     }
