@@ -470,7 +470,7 @@ impl Parser {
                     ClosureExpr::parse(self)
                 } else if self.is_bitwise_or() {
                     self.set_context(ParserContext::BitwiseOr);
-                    self.next_token(); // Consume the pipe
+                    self.next_token();
                     let left = self.parse_prefix()?;
                     BinaryExpr::parse(self, left)
                 } else {
@@ -487,7 +487,7 @@ impl Parser {
                     ClosureExpr::parse(self)
                 } else if self.is_logical_or() {
                     self.set_context(ParserContext::LogicalOr);
-                    self.next_token(); // Consume the pipe
+                    self.next_token();
                     let left = self.parse_prefix()?;
                     BinaryExpr::parse(self, left)
                 } else {
@@ -591,7 +591,7 @@ impl Parser {
                     ParserContext::FieldAccess => Some(FieldAccessExpr::parse),
                     ParserContext::MethodCall => Some(MethodCallExpr::parse),
                     ParserContext::TupleIndex => Some(TupleIndexExpr::parse),
-                    _ => None, // Default to no infix parser
+                    _ => None, // default to no infix parser
                 }
             }
 
