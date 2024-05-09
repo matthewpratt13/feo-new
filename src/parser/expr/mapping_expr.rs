@@ -42,12 +42,12 @@ fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted>
         Some(Token::Colon { .. }) => {
             parser.next_token();
         }
-        Some(_) => {
-            parser.log_unexpected_token("`:`");
+        Some(Token::EOF) | None => {
+            parser.log_missing_token("`:`");
             return Err(ErrorsEmitted);
         }
         _ => {
-            parser.log_missing_token("`:`");
+            parser.log_unexpected_token("`:`");
             return Err(ErrorsEmitted);
         }
     }

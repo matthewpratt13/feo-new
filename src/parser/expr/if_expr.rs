@@ -15,20 +15,28 @@ impl ParseControl for IfExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let condition = if let Some(Token::LParen { .. }) = parser.current_token() {
-            Ok(Box::new(GroupedExpr::parse(parser)?))
-            // TODO: handle `None` case (`MissingToken`)
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
+        let condition = match parser.current_token() {
+            Some(Token::LParen { .. }) => Ok(Box::new(GroupedExpr::parse(parser)?)),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`(`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let if_block = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            Ok(Box::new(BlockExpr::parse(parser)?))
-            // TODO: handle `None` case (`MissingToken`)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let if_block = match parser.current_token() {
+            Some(Token::LBrace { .. }) => Ok(Box::new(BlockExpr::parse(parser)?)),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let (else_if_blocks_opt, trailing_else_block_opt) = parse_else_blocks(parser)?;

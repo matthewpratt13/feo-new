@@ -51,12 +51,12 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
         Some(Token::Colon { .. }) => {
             parser.next_token();
         }
-        Some(_) => {
-            parser.log_unexpected_token("`:`");
+        Some(Token::EOF) | None => {
+            parser.log_missing_token("`:`");
             return Err(ErrorsEmitted);
         }
         _ => {
-            parser.log_missing_token("`:`");
+            parser.log_unexpected_token("`:`");
             return Err(ErrorsEmitted);
         }
     }

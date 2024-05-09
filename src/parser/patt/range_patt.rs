@@ -1,6 +1,6 @@
 use crate::{
     ast::{Literal, Pattern, RangeOp, RangePatt},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     parser::Parser,
     token::{Token, TokenType},
 };
@@ -17,8 +17,7 @@ impl RangePatt {
             },
             Pattern::IdentifierPatt(_) => Ok(left_patt),
             _ => {
-                // TODO: should be `UnexpectedPattern`
-                parser.log_unexpected_token("numeric value or identifier pattern");
+                parser.log_unexpected_patt("numeric value or identifier", left_patt);
                 Err(ErrorsEmitted)
             }
         }?;
@@ -28,7 +27,10 @@ impl RangePatt {
         let range_op = match operator_token.token_type() {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
             TokenType::DotDotEquals => Ok(RangeOp::RangeInclusive),
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
+            TokenType::EOF => {
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted)
+            }
             _ => {
                 parser.log_unexpected_token("range operator (`..` or `..=`)");
                 Err(ErrorsEmitted)
@@ -39,7 +41,7 @@ impl RangePatt {
 
         let pattern = parser.parse_pattern()?;
 
-        let to = match pattern.clone() {
+        let to = match &pattern {
             Pattern::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(pattern),
                 _ => {
@@ -51,8 +53,7 @@ impl RangePatt {
             Pattern::IdentifierPatt(_) => Ok(pattern),
 
             _ => {
-                // TODO: should be `UnexpectedPattern`
-                parser.log_unexpected_token("numeric value or identifier pattern");
+                parser.log_unexpected_patt("numeric value or identifier", pattern);
                 Err(ErrorsEmitted)
             }
         };
@@ -113,7 +114,7 @@ impl RangePatt {
 
         let pattern = parser.parse_pattern()?;
 
-        let to = match pattern.clone() {
+        let to = match &pattern {
             Pattern::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(pattern),
                 _ => {
@@ -125,8 +126,7 @@ impl RangePatt {
             Pattern::IdentifierPatt(_) => Ok(pattern),
 
             _ => {
-                // TODO: should be `UnexpectedPatt`
-                parser.log_unexpected_token("numeric value or identifier pattern");
+                parser.log_unexpected_patt("numeric value or identifier", pattern);
                 Err(ErrorsEmitted)
             }
         }?;

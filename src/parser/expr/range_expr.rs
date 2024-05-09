@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expression, Literal, RangeExpr, RangeOp},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseOperation, Parser},
     token::{Token, TokenType},
 };
@@ -33,7 +33,10 @@ impl ParseOperation for RangeExpr {
         let range_op = match operator_token.token_type() {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
             TokenType::DotDotEquals => Ok(RangeOp::RangeInclusive),
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
+            TokenType::EOF => {
+                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                Err(ErrorsEmitted)
+            }
             _ => {
                 parser.log_unexpected_token("range operator (`..` or `..=`)");
                 Err(ErrorsEmitted)
@@ -47,7 +50,7 @@ impl ParseOperation for RangeExpr {
         let expression = parser.parse_expression(precedence)?;
 
         // TODO: should be `AssigneeExpr` (can be more than just numbers and identifiers)
-        let to = match expression.clone() {
+        let to = match &expression {
             Expression::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
                 _ => {

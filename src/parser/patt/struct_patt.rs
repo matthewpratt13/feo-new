@@ -50,12 +50,12 @@ fn parse_struct_patt_field(parser: &mut Parser) -> Result<StructPattField, Error
         Some(Token::Colon { .. }) => {
             parser.next_token();
         }
-        Some(_) => {
-            parser.log_unexpected_token("`:`");
+        Some(Token::EOF) | None => {
+            parser.log_missing_token("`:`");
             return Err(ErrorsEmitted);
         }
         _ => {
-            parser.log_missing_token("`:`");
+            parser.log_unexpected_token("`:`");
             return Err(ErrorsEmitted);
         }
     }

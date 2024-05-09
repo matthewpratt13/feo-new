@@ -1077,8 +1077,8 @@ impl Parser {
         self.next_token();
     }
 
-    /// Log error information on encountering an unexpected expression by providing
-    /// the expected expression, without advancing the parser.
+    /// Log error information on encountering an unexpected expression by naming
+    /// the expected expression and providing what was found, without advancing the parser.
     fn log_unexpected_expr(&mut self, expected: &str, expr: Expression) {
         self.log_error(ParserErrorKind::UnexpectedExpression {
             expected: expected.to_string(),
@@ -1086,17 +1086,16 @@ impl Parser {
         });
     }
 
-    /// Log error information on encountering an unexpected pattern by providing
-    /// the expected pattern, without advancing the parser.
+    /// Log error information on encountering an unexpected pattern by naming the expected pattern
+    /// and providing what was found, without advancing the parser.
     fn log_unexpected_patt(&mut self, expected: &str, patt: Pattern) {
         self.log_error(ParserErrorKind::UnexpectedPattern {
             expected: expected.to_string(),
             found: format!("{:?}", patt),
         });
     }
-
-    /// Log error information on encountering an unexpected item by providing
-    /// the expected item, without advancing the parser.
+    /// Log error information on encountering an unexpected item by naming the expected item 
+    /// and providing what was found, without advancing the parser.
     fn log_unexpected_item(&mut self, expected: &str, item: Item) {
         self.log_error(ParserErrorKind::UnexpectedItem {
             expected: expected.to_string(),
@@ -1114,7 +1113,7 @@ impl Parser {
                 expected: expected.to_string(),
             }),
             _ => self.logger.log(
-                LogLevel::Debug,
+                LogLevel::Error,
                 LogMsg::from(format!("{ty} not found. Expected {expected}, found none")),
             ),
         }
