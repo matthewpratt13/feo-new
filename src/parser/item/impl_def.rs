@@ -137,7 +137,7 @@ impl ParseAssociatedItem for InherentImplItem {
                 if constant_decl.value_opt.is_none() {
                     parser.logger.log(
                         LogLevel::Warning,
-                        LogMsg("assigned value cannot be `None`".to_string()),
+                        LogMsg::from("assigned value cannot be `None`"),
                     );
                     Err(ErrorsEmitted)
                 } else {
@@ -178,7 +178,7 @@ impl ParseAssociatedItem for TraitImplItem {
                 if constant_decl.value_opt.is_none() {
                     parser.logger.log(
                         LogLevel::Warning,
-                        LogMsg("assigned value cannot be `None`".to_string()),
+                        LogMsg::from("assigned value cannot be `None`"),
                     );
                     Err(ErrorsEmitted)
                 } else {

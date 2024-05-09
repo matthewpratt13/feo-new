@@ -17,7 +17,7 @@ impl Type {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `Type::parse()`".to_string()),
+            LogMsg::from("entering `Type::parse()`"),
         );
         parser.log_current_token(false);
 

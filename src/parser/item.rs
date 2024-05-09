@@ -103,7 +103,7 @@ impl ParseStatement for Item {
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `Item::parse_statement()`".to_string()),
+            LogMsg::from("entering `Item::parse_statement()`"),
         );
         parser.log_current_token(true);
 

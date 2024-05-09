@@ -1,4 +1,4 @@
-/// Enum representing different log levels, which controls the verbosity of the logs, 
+/// Enum representing different log levels, which controls the verbosity of the logs,
 /// from the most to the least verbose.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -10,9 +10,10 @@ pub enum LogLevel {
     Critical,
 }
 
-/// Wrapper around a `String`, that represents a log message. 
+/// Wrapper around a `String`, that represents a log message.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub struct LogMsg(pub String);
+pub struct LogMsg(String);
 
 /// Struct that keeps track of events and errors that occur doing some process.
 #[derive(Debug)]
@@ -46,5 +47,17 @@ impl Logger {
     /// Clear all log messages.
     pub fn clear_logs(&mut self) {
         self.messages.clear()
+    }
+}
+
+impl From<&str> for LogMsg {
+    fn from(value: &str) -> Self {
+        LogMsg(value.to_string())
+    }
+}
+
+impl From<String> for LogMsg {
+    fn from(value: String) -> Self {
+        LogMsg(value)
     }
 }

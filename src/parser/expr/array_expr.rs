@@ -10,7 +10,7 @@ impl ParseConstruct for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `ArrayExpr::parse()`".to_string()),
+            LogMsg::from("entering `ArrayExpr::parse()`"),
         );
         parser.log_current_token(true);
 
@@ -41,7 +41,7 @@ impl ParseConstruct for ArrayExpr {
 
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("exiting `ArrayExpr::parse()`".to_string()),
+            LogMsg::from("exiting `ArrayExpr::parse()`"),
         );
         parser.log_current_token(true);
 
@@ -70,7 +70,7 @@ mod tests {
     #[test]
 
     fn parse_array_expr_with_elements() -> Result<(), ()> {
-        let input = r#"[1, 2, 3]"#;
+        let input = r#"[1, 2, 3"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

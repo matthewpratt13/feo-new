@@ -107,7 +107,7 @@ pub(crate) fn get_expressions(
 
     parser.logger.log(
         LogLevel::Debug,
-        LogMsg("entering `get_expressions()`".to_string()),
+        LogMsg::from("entering `get_expressions()`"),
     );
     parser.log_current_token(true);
 
@@ -159,15 +159,14 @@ pub(crate) fn get_expressions(
         }
     }
 
-    parser.logger.log(
-        LogLevel::Debug,
-        LogMsg("exiting `get_expressions()`".to_string()),
-    );
+    parser
+        .logger
+        .log(LogLevel::Debug, LogMsg::from("exiting `get_expressions()`"));
     parser.log_current_token(true);
 
     parser.logger.log(
         LogLevel::Debug,
-        LogMsg(format!(
+        LogMsg::from(format!(
             "expressions.is_empty(): {}",
             expressions.is_empty()
         )),

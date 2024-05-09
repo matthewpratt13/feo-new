@@ -10,7 +10,7 @@ impl ParseConstruct for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `BlockExpr::parse()`".to_string()),
+            LogMsg::from("entering `BlockExpr::parse()`"),
         );
         parser.log_current_token(false);
 
@@ -44,7 +44,7 @@ impl ParseConstruct for BlockExpr {
 
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("exiting `BlockExpr::parse()`".to_string()),
+            LogMsg::from("exiting `BlockExpr::parse()`"),
         );
         parser.log_current_token(false);
         Ok(Expression::Block(expr))

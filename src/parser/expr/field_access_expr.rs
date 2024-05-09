@@ -10,7 +10,7 @@ impl ParseOperation for FieldAccessExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `FieldAccessExpr::parse()`".to_string()),
+            LogMsg::from("entering `FieldAccessExpr::parse()`"),
         );
         parser.log_current_token(true);
 

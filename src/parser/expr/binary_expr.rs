@@ -15,7 +15,7 @@ impl ParseOperation for BinaryExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `BinaryExpr::parse()`".to_string()),
+            LogMsg::from("entering `BinaryExpr::parse()`"),
         );
         parser.log_current_token(true);
 
@@ -65,7 +65,7 @@ impl ParseOperation for BinaryExpr {
 
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("exiting `BinaryExpr::parse()`".to_string()),
+            LogMsg::from("exiting `BinaryExpr::parse()`"),
         );
         parser.log_current_token(false);
 
@@ -79,7 +79,7 @@ impl ParseOperation for ComparisonExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `ComparisonExpr::parse()`".to_string()),
+            LogMsg::from("entering `ComparisonExpr::parse()`"),
         );
         parser.log_current_token(true);
 
@@ -98,7 +98,9 @@ impl ParseOperation for ComparisonExpr {
             TokenType::LessThanEquals => Ok(ComparisonOp::LessEqual),
             TokenType::GreaterThanEquals => Ok(ComparisonOp::GreaterEqual),
             _ => {
-                parser.log_unexpected_token("binary comparison operator (`<`, `>`, `<=`, `>=`, `==` or `!=`");
+                parser.log_unexpected_token(
+                    "binary comparison operator (`<`, `>`, `<=`, `>=`, `==` or `!=`",
+                );
                 Err(ErrorsEmitted)
             }
         }?;
@@ -122,7 +124,7 @@ impl ParseOperation for ComparisonExpr {
 
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("exiting `ComparisonExpr::parse()`".to_string()),
+            LogMsg::from("exiting `ComparisonExpr::parse()`"),
         );
         parser.log_current_token(false);
 

@@ -10,7 +10,7 @@ impl PathExpr {
     pub(crate) fn parse(parser: &mut Parser, root: PathPrefix) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `PathExpr::parse()`".to_string()),
+            LogMsg::from("entering `PathExpr::parse()`"),
         );
         parser.log_current_token(false);
 
@@ -47,7 +47,7 @@ impl PathExpr {
 
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("exiting `PathExpr::parse()`".to_string()),
+            LogMsg::from("exiting `PathExpr::parse()`"),
         );
         parser.log_current_token(false);
 

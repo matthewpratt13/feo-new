@@ -10,7 +10,7 @@ impl GroupedPatt {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `GroupedPatt::parse()`".to_string()),
+            LogMsg::from("entering `GroupedPatt::parse()`"),
         );
         parser.log_current_token(false);
 
@@ -40,7 +40,7 @@ impl GroupedPatt {
 
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("exiting `GroupedPatt::parse()`".to_string()),
+            LogMsg::from("exiting `GroupedPatt::parse()`"),
         );
         parser.log_current_token(false);
 

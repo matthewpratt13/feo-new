@@ -10,7 +10,7 @@ impl ParseConstruct for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `GroupedExpr::parse()`".to_string()),
+            LogMsg::from("entering `GroupedExpr::parse()`"),
         );
         parser.log_current_token(false);
 
@@ -40,7 +40,7 @@ impl ParseConstruct for GroupedExpr {
 
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("exiting `GroupedExpr::parse()`".to_string()),
+            LogMsg::from("exiting `GroupedExpr::parse()`"),
         );
         parser.log_current_token(false);
 
