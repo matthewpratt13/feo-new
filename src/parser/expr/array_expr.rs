@@ -1,19 +1,12 @@
 use crate::{
     ast::{ArrayExpr, Delimiter, Expression},
     error::ErrorsEmitted,
-    logger::{LogLevel, LogMsg},
     parser::{collection, ParseConstruct, Parser, Precedence},
     token::Token,
 };
 
 impl ParseConstruct for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("entering `ArrayExpr::parse()`"),
-        );
-        parser.log_current_token(true);
-
         let open_bracket = if let Some(Token::LBracket { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Delimiter::LBracket)
@@ -38,12 +31,6 @@ impl ParseConstruct for ArrayExpr {
             elements_opt,
             close_bracket,
         };
-
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("exiting `ArrayExpr::parse()`"),
-        );
-        parser.log_current_token(true);
 
         Ok(Expression::Array(expr))
     }
