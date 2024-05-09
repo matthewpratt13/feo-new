@@ -32,7 +32,13 @@ pub enum BigUInt {
 
 /// Struct that wraps a `u8` into a `Byte` type that is usually treated as a single text character.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Byte(pub u8);
+pub struct Byte(u8);
+
+impl From<u8> for Byte {
+    fn from(value: u8) -> Self {
+        Byte(value)
+    }
+}
 
 /// Wrappers for the different static byte array (`Bytes`) types.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -63,15 +69,33 @@ pub struct FunctionPtr {
 
 /// Struct that wraps a `Vec<u8>` into a dynamic byte array (string literal).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Str(pub Vec<u8>);
+pub struct Str(Vec<u8>);
+
+impl From<&str> for Str {
+    fn from(value: &str) -> Self {
+        Str(value.as_bytes().to_vec())
+    }
+}
 
 /// Wrapper for the `char` type.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Char(pub char);
+pub struct Char(char);
+
+impl From<char> for Char {
+    fn from(value: char) -> Self {
+        Char(value)
+    }
+}
 
 /// Wrapper for the `bool` type.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Bool(pub bool);
+pub struct Bool(bool);
+
+impl From<bool> for Bool {
+    fn from(value: bool) -> Self {
+        Bool(value)
+    }
+}
 
 /// Unit struct that represents the unit type `()`.
 #[derive(Debug, Clone, PartialEq)]

@@ -717,7 +717,7 @@ impl<'a> Lexer<'a> {
                     let span = Span::new(self.input, start_pos, self.pos);
 
                     return Ok(Token::StrLiteral {
-                        value: Str(buf.as_bytes().to_vec()),
+                        value: Str::from(buf.as_str()),
                         span,
                     });
                 }
@@ -762,7 +762,7 @@ impl<'a> Lexer<'a> {
 
                     if value.len() == 1 {
                         return Ok(Token::ByteLiteral {
-                            value: Byte(value.as_bytes()[0]),
+                            value: Byte::from(value.as_bytes()[0]),
                             span,
                         });
                     }
