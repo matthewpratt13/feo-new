@@ -1077,6 +1077,49 @@ impl Parser {
         self.next_token();
     }
 
+    /// Log error information on encountering an unexpected expression by providing
+    /// the expected expression, without advancing the parser.
+    fn log_unexpected_expr(&mut self, expected: &str, expr: Expression) {
+        self.log_error(ParserErrorKind::UnexpectedExpression {
+            expected: expected.to_string(),
+            found: format!("{:?}", expr),
+        });
+    }
+
+    /// Log error information on encountering an unexpected pattern by providing
+    /// the expected pattern, without advancing the parser.
+    fn log_unexpected_patt(&mut self, expected: &str, patt: Pattern) {
+        self.log_error(ParserErrorKind::UnexpectedPattern {
+            expected: expected.to_string(),
+            found: format!("{:?}", patt),
+        });
+    }
+
+    /// Log error information on encountering an unexpected item by providing
+    /// the expected item, without advancing the parser.
+    fn log_unexpected_item(&mut self, expected: &str, item: Item) {
+        self.log_error(ParserErrorKind::UnexpectedItem {
+            expected: expected.to_string(),
+            found: format!("{:?}", item),
+        });
+    }
+
+    /// Log error information when an expected node is missing.
+    fn log_missing(&mut self, ty: &str, expected: &str) {
+        match ty {
+            "expr" => self.log_error(ParserErrorKind::MissingExpression {
+                expected: expected.to_string(),
+            }),
+            "item" => self.log_error(ParserErrorKind::MissingItem {
+                expected: expected.to_string(),
+            }),
+            _ => self.logger.log(
+                LogLevel::Debug,
+                LogMsg::from(format!("{ty} not found. Expected {expected}, found none")),
+            ),
+        }
+    }
+
     /// Retrieve a list of any errors that occurred during parsing.
     #[allow(dead_code)]
     pub(crate) fn errors(&self) -> &[CompilerError<ParserErrorKind>] {

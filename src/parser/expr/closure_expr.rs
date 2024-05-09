@@ -19,8 +19,7 @@ impl ParseConstruct for ClosureExpr {
                 if vec.is_some() {
                     Ok(ClosureParams::Some(vec.unwrap()))
                 } else {
-                    // TODO: replace with `MissingExpression`
-                    parser.log_unexpected_token("closure parameters");
+                    parser.log_missing("expr", "closure parameters");
                     Err(ErrorsEmitted)
                 }
             }
@@ -69,7 +68,11 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
             IdentifierPatt::parse(parser)
         }
 
-        // TODO: handle `None` case (`UnexpectedEndOfInput`)
+        Some(Token::EOF) | None => {
+            parser.log_missing_token("identifier");
+            Err(ErrorsEmitted)
+        }
+
         _ => {
             parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
@@ -117,7 +120,7 @@ mod tests {
 
     #[test]
     fn parse_closure_expr_with_block() -> Result<(), ()> {
-        let input = r#"|world: str| -> () {
+        let input = r#"| param | -> () {
             print("hello {}", world);
         }"#;
 
@@ -127,7 +130,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
         }
     }
 }
