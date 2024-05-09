@@ -1,6 +1,6 @@
 use crate::{
     ast::{BlockExpr, Delimiter, Expression, InnerAttr, Statement},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg},
     parser::{collection, ParseConstruct, Parser},
     token::Token,
@@ -16,13 +16,26 @@ impl ParseConstruct for BlockExpr {
 
         let attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Delimiter::LBrace)
-            // TODO: handle `None` case (`UnexpectedEndOfInput`)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.current_token() {
+            Some(Token::LBrace { .. }) => {
+                parser.next_token();
+                Ok(Delimiter::LBrace)
+            }
+            Some(Token::EOF) => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            None => {
+                parser.logger.log(
+                    LogLevel::Error,
+                    LogMsg::from(ParserErrorKind::UnexpectedEndOfInput.to_string()),
+                );
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let statements_opt = parse_statements(parser)?;
@@ -46,7 +59,8 @@ impl ParseConstruct for BlockExpr {
             LogLevel::Debug,
             LogMsg::from("exiting `BlockExpr::parse()`"),
         );
-        parser.log_current_token(false);
+        parser.log_current_token(true);
+
         Ok(Expression::Block(expr))
     }
 }
@@ -79,9 +93,8 @@ mod tests {
     #[test]
     fn parse_block_expr() -> Result<(), ()> {
         let input = r#"
-        #![unsafe]
-        {
-            x + 2;
+        #![unsafe] {
+            x + 5;
             y
         }"#;
 

@@ -203,7 +203,7 @@ impl Parser {
             let statement = self.parse_statement()?;
             self.logger.log(
                 LogLevel::Info,
-                LogMsg::from(format!("parsed statement: {:#?}", statement)),
+                LogMsg::from(format!("parsed statement: {:?}", statement)),
             );
             statements.push(statement);
         }
@@ -960,18 +960,15 @@ impl Parser {
 
             Some(Token::Ok { .. } | Token::Err { .. }) => ResultPatt::parse(self),
 
-            Some(_) => {
-                self.log_error(ParserErrorKind::InvalidTokenContext {
-                    token: self.current_token(),
-                });
+            Some(Token::EOF) | None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted)
             }
 
-            None => {
-                self.logger.log(
-                    LogLevel::Error,
-                    LogMsg::from(ParserErrorKind::UnexpectedEndOfInput.to_string()),
-                );
+            _ => {
+                self.log_error(ParserErrorKind::InvalidTokenContext {
+                    token: self.current_token(),
+                });
                 Err(ErrorsEmitted)
             }
         }
