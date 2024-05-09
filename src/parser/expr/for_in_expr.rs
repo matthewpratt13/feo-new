@@ -22,30 +22,40 @@ impl ParseControl for ForInExpr {
             _ => parser.parse_pattern(),
         }?;
 
-        let kw_in = if let Some(Token::In { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Keyword::In)
-            // TODO: handle `None` case (`MissingToken`)
-        } else {
-            parser.log_unexpected_token("`in`");
-            Err(ErrorsEmitted)
+        let kw_in = match parser.current_token() {
+            Some(Token::In { .. }) => {
+                parser.next_token();
+                Ok(Keyword::In)
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`in`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`in`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let iterable = parser.parse_expression(Precedence::Lowest)?;
+        let iterable = Box::new(parser.parse_expression(Precedence::Lowest)?);
 
-        let block = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            Ok(Box::new(BlockExpr::parse(parser)?))
-            // TODO: handle `None` case (`MissingToken`)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let block = match parser.current_token() {
+            Some(Token::LBrace { .. }) => Ok(Box::new(BlockExpr::parse(parser)?)),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let expr = ForInExpr {
             kw_for,
             pattern,
             kw_in,
-            iterable: Box::new(iterable),
+            iterable,
             block,
         };
 
