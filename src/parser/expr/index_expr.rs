@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, IndexExpr},
+    ast::{AssigneeExpr, Delimiter, Expression, IndexExpr, ValueExpr},
     error::ErrorsEmitted,
     parser::{ParseOperation, Parser, Precedence},
     token::Token,
@@ -19,10 +19,12 @@ impl ParseOperation for IndexExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let index = parser.parse_expression(Precedence::Lowest)?;
+        let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        // TODO: handle invalid index expression – refer to Rust reference for expression type
-        // TODO: (value, place or assignee)
+        let index = ValueExpr::try_from(expression).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         let close_bracket = match parser.next_token() {
             Some(Token::RBracket { .. }) => Ok(Delimiter::RBracket),

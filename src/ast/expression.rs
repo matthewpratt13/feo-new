@@ -189,7 +189,7 @@ pub struct IfExpr {
 pub struct IndexExpr {
     pub(crate) array: Box<AssigneeExpr>,
     pub(crate) open_bracket: Delimiter,
-    pub(crate) index: Box<Expression>,
+    pub(crate) index: Box<ValueExpr>,
     pub(crate) close_bracket: Delimiter,
 }
 
@@ -233,9 +233,9 @@ pub struct PathExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RangeExpr {
-    pub(crate) from_opt: Option<Box<Expression>>, // TODO: change to `AssigneeExpr`
-    pub(crate) range_op: RangeOp, // `..` or `..=`
-    pub(crate) to_opt: Option<Box<Expression>>, // TODO: change to `AssigneeExpr`
+    pub(crate) from_opt: Option<Box<AssigneeExpr>>, // TODO: change to `AssigneeExpr`
+    pub(crate) range_op: RangeOp,                   // `..` or `..=`
+    pub(crate) to_opt: Option<Box<AssigneeExpr>>,   // TODO: change to `AssigneeExpr`
 }
 
 #[derive(Debug, Clone, PartialEq)]

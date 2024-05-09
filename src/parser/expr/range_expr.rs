@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Literal, RangeExpr, RangeOp},
+    ast::{AssigneeExpr, Expression, RangeExpr, RangeOp},
     error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseOperation, Parser},
     token::{Token, TokenType},
@@ -7,26 +7,10 @@ use crate::{
 
 impl ParseOperation for RangeExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        // TODO: should be `AssigneeExpr` (can be more than just numbers and identifiers)
-        let from = match left_expr.clone() {
-            Expression::Literal(l) => match l {
-                Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(left_expr),
-                _ => {
-                    parser.log_unexpected_token("numeric value");
-                    Err(ErrorsEmitted)
-                }
-            },
-            Expression::Path(_) => {
-                // TODO: should be `UnexpectedExpression` (but will be replaced)
-                parser.log_unexpected_token("identifier");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                // TODO: should be `UnexpectedExpression` (but will be replaced)
-                parser.log_unexpected_token("numeric value or identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let from = AssigneeExpr::try_from(left_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
@@ -49,24 +33,10 @@ impl ParseOperation for RangeExpr {
 
         let expression = parser.parse_expression(precedence)?;
 
-        // TODO: should be `AssigneeExpr` (can be more than just numbers and identifiers)
-        let to = match &expression {
-            Expression::Literal(l) => match l {
-                Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
-                _ => {
-                    parser.log_unexpected_token("numeric value");
-                    Err(ErrorsEmitted)
-                }
-            },
-
-            Expression::Path(_) => Ok(expression),
-
-            _ => {
-                // TODO: should be `UnexpectedExpression` (but will be replaced)
-                parser.log_unexpected_token("numeric value or identifier");
-                Err(ErrorsEmitted)
-            }
-        };
+        let to = AssigneeExpr::try_from(expression).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        });
 
         let expr = match to.is_ok() {
             true => Ok(RangeExpr {
@@ -128,26 +98,10 @@ impl RangeExpr {
 
         let expression = parser.parse_expression(precedence)?;
 
-        // TODO: convert to `AssigneeExpr`
-
-        // TODO: can be more than just numbers or identifiers (i.e., all `AssigneeExpr`)
-        let to = match expression.clone() {
-            Expression::Literal(l) => match l {
-                Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(expression),
-                _ => {
-                    parser.log_unexpected_token("numeric value");
-                    Err(ErrorsEmitted)
-                }
-            },
-
-            Expression::Path(_) => Ok(expression),
-
-            _ => {
-                // TODO: should be `UnexpectedExpr` (but will be replaced)
-                parser.log_unexpected_token("numeric value or identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let to = AssigneeExpr::try_from(expression).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         parser.next_token();
 
