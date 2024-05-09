@@ -57,7 +57,9 @@ impl ParseOperation for CompoundAssignmentExpr {
             TokenType::SlashEquals => Ok(CompoundAssignmentOp::DivideAssign),
             TokenType::PercentEquals => Ok(CompoundAssignmentOp::ModulusAssign),
             _ => {
-                parser.log_unexpected_token("compound assignment operator (`+=`, `-=`, `*=`, `/=` or `%=`)");
+                parser.log_unexpected_token(
+                    "compound assignment operator (`+=`, `-=`, `*=`, `/=` or `%=`)",
+                );
                 Err(ErrorsEmitted)
             }
         }?;
@@ -94,7 +96,7 @@ mod tests {
 
     #[test]
     fn parse_assignment_expr() -> Result<(), ()> {
-        let input = r#"x = 5"#;
+        let input = r#"x = 2"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
@@ -108,7 +110,7 @@ mod tests {
 
     #[test]
     fn parse_compound_assignment_plus_equals() -> Result<(), ()> {
-        let input = r#"x += 5"#;
+        let input = r#"x += 5 "#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

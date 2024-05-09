@@ -548,18 +548,15 @@ impl Parser {
 
             Some(Token::Return { .. }) => ReturnExpr::parse(self),
 
-            Some(_) => {
-                self.log_error(ParserErrorKind::InvalidTokenContext {
-                    token: self.current_token(),
-                });
+            Some(Token::EOF) | None => {
+                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
                 Err(ErrorsEmitted)
             }
 
-            None => {
-                self.logger.log(
-                    LogLevel::Error,
-                    LogMsg::from(ParserErrorKind::UnexpectedEndOfInput.to_string()),
-                );
+            _ => {
+                self.log_error(ParserErrorKind::InvalidTokenContext {
+                    token: self.current_token(),
+                });
                 Err(ErrorsEmitted)
             }
         }

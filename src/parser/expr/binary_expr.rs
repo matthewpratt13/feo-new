@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn parse_binary_expr_add() -> Result<(), ()> {
-        let input = r#"x + 2"#;
+        let input = r#"x + 5"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn parse_comparison_expr_less_than() -> Result<(), ()> {
-        let input = r#"x < 2"#;
+        let input = r#"x < 5"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

@@ -52,7 +52,7 @@ impl fmt::Display for ParserErrorKind {
         match self {
             ParserErrorKind::UnexpectedToken { expected, found } => write!(
                 f,
-                "unexpected token. Expected {}, found `{:#?}`",
+                "unexpected token. Expected {}, found `{:?}`",
                 expected, found
             ),
             ParserErrorKind::UnexpectedEndOfInput => {
@@ -66,13 +66,13 @@ impl fmt::Display for ParserErrorKind {
             }
 
             ParserErrorKind::InvalidTokenContext { token } => {
-                write!(f, "syntax error. Invalid token context – `{:#?}`", token)
+                write!(f, "syntax error. Invalid token context – `{:?}`", token)
             }
 
             ParserErrorKind::ExtraTokens { token, msg } => {
                 write!(
                     f,
-                    "syntax error. Extra tokens detected – `{:#?}`. {msg}",
+                    "syntax error. Extra tokens detected – `{:?}`. {msg}",
                     token
                 )
             }
