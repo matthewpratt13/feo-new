@@ -22,11 +22,6 @@ impl Span {
         }
     }
 
-    /// Retrieve the start index for a given `Span`.
-    pub fn start(&self) -> usize {
-        self.start
-    }
-
     /// Retrieve a thread-safe reference to the source code.
     pub fn input(&self) -> Arc<String> {
         Arc::clone(&self.input)

@@ -1,6 +1,7 @@
 use crate::{
     ast::{Delimiter, Expression, OuterAttr, Visibility},
     error::ErrorsEmitted,
+    logger::{LogLevel, LogMsg},
     token::Token,
 };
 
@@ -104,6 +105,12 @@ pub(crate) fn get_expressions(
 ) -> Result<Option<Vec<Expression>>, ErrorsEmitted> {
     let mut expressions: Vec<Expression> = Vec::new();
 
+    parser.logger.log(
+        LogLevel::Debug,
+        LogMsg("entering `get_expressions()`".to_string()),
+    );
+    parser.log_current_token(true);
+
     match close_delimiter {
         Delimiter::RParen => {
             while !matches!(
@@ -152,6 +159,20 @@ pub(crate) fn get_expressions(
         }
     }
 
+    parser.logger.log(
+        LogLevel::Debug,
+        LogMsg("exiting `get_expressions()`".to_string()),
+    );
+    parser.log_current_token(true);
+
+    parser.logger.log(
+        LogLevel::Debug,
+        LogMsg(format!(
+            "expressions.is_empty(): {}",
+            expressions.is_empty()
+        )),
+    );
+
     match expressions.is_empty() {
         true => Ok(None),
         false => Ok(Some(expressions)),
@@ -186,7 +207,10 @@ pub(crate) fn get_associated_items<T: ParseAssociatedItem>(
 
 /// Helper function that parses item attributes into a vector of generic attributes.
 /// Replaces the same iterative code in the respective item parsing functions.
-pub(crate) fn get_attributes<T>(parser: &mut Parser, f: fn(&Parser) -> Option<T>) -> Option<Vec<T>> {
+pub(crate) fn get_attributes<T>(
+    parser: &mut Parser,
+    f: fn(&Parser) -> Option<T>,
+) -> Option<Vec<T>> {
     let mut attributes = Vec::new();
 
     while let Some(a) = f(parser) {
