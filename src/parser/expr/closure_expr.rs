@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn parse_closure_expr_without_block() -> Result<(), ()> {
-        let input = r#"|| 2 + "#;
+        let input = r#"|| 2 + 2"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
