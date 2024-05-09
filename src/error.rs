@@ -22,12 +22,8 @@ where
 {
     /// Create a new `CompilerError` that provides details at a precise location in the source code.
     pub(crate) fn new(error_kind: T, source: &str, pos: usize) -> Self {
-        if pos > source.len() {
-            panic!("position out of bounds");
-        }
-
         let slice = &source[..pos];
-        let lines: Vec<&str> = slice.split('\n').collect();
+        let lines = slice.split('\n').collect::<Vec<_>>();
         let line_count = lines.len();
         let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
 
