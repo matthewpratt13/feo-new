@@ -1,6 +1,6 @@
 use crate::{
     ast::{Delimiter, Keyword, PubPackageVis, Visibility},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -22,7 +22,7 @@ impl Visibility {
                                 Ok(Keyword::Package)
                             }
                             Some(Token::EOF) | None => {
-                                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                                parser.log_unexpected_eoi();
                                 Err(ErrorsEmitted)
                             }
                             _ => {

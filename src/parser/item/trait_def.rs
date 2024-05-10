@@ -3,7 +3,7 @@ use crate::{
         AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, Keyword,
         OuterAttr, TraitDef, TraitDefItem, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     parser::Parser,
     token::Token,
 };
@@ -27,7 +27,7 @@ impl ParseDefinition for TraitDef {
         let trait_name = match parser.next_token() {
             Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
             Some(Token::EOF) | None => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {

@@ -4,7 +4,7 @@ use crate::{
         Identifier, InferredType, Int, PathExpr, PathPrefix, ReferenceOp, SelfType, Str, Type,
         UInt, Unit,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     token::Token,
     B16, B2, B32, B4, B8, H160, H256, H512, U256, U512,
@@ -269,7 +269,7 @@ impl Type {
             },
 
             Some(Token::EOF) | None => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 
@@ -369,7 +369,7 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     let num_elements = match parser.next_token() {
         Some(Token::UIntLiteral { value, .. }) => Ok(value),
         Some(Token::EOF) | None => {
-            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            parser.log_unexpected_eoi();
             Err(ErrorsEmitted)
         }
         _ => {

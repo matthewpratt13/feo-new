@@ -1,6 +1,6 @@
 use crate::{
     ast::{Delimiter, Identifier, InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -23,7 +23,7 @@ impl ParseDefinition for ModuleItem {
         let module_name = match parser.next_token() {
             Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
             Some(Token::EOF) | None => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {

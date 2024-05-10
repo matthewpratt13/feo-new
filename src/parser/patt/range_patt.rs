@@ -1,6 +1,6 @@
 use crate::{
     ast::{Literal, Pattern, RangeOp, RangePatt},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     parser::Parser,
     token::{Token, TokenType},
 };
@@ -28,7 +28,7 @@ impl RangePatt {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
             TokenType::DotDotEquals => Ok(RangeOp::RangeInclusive),
             TokenType::EOF => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {

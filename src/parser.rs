@@ -305,10 +305,7 @@ impl Parser {
                 Err(ErrorsEmitted)
             }
             None => {
-                self.logger.log(
-                    LogLevel::Error,
-                    LogMsg::from(ParserErrorKind::UnexpectedEndOfInput.to_string()),
-                );
+                self.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
         }
@@ -549,7 +546,7 @@ impl Parser {
             Some(Token::Return { .. }) => ReturnExpr::parse(self),
 
             Some(Token::EOF) | None => {
-                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                self.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 
@@ -961,7 +958,7 @@ impl Parser {
             Some(Token::Ok { .. } | Token::Err { .. }) => ResultPatt::parse(self),
 
             Some(Token::EOF) | None => {
-                self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                self.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 
@@ -987,10 +984,7 @@ impl Parser {
             self.log_current_token(true);
             Some(t)
         } else {
-            self.logger.log(
-                LogLevel::Error,
-                LogMsg::from(ParserErrorKind::UnexpectedEndOfInput.to_string()),
-            );
+            self.log_unexpected_eoi();
             None
         }
     }
@@ -1103,6 +1097,10 @@ impl Parser {
                 LogMsg::from(format!("{ty} not found. Expected {expected}, found none")),
             ),
         }
+    }
+
+    fn log_unexpected_eoi(&mut self) {
+        self.log_error(ParserErrorKind::UnexpectedEndOfInput)
     }
 
     /// Retrieve a list of any errors that occurred during parsing.

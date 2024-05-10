@@ -1,6 +1,6 @@
 use crate::{
     ast::{AssigneeExpr, Identifier, Keyword, OuterAttr, StaticItemDecl, Type, Visibility},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     parser::Precedence,
     token::Token,
 };
@@ -31,7 +31,7 @@ impl ParseDeclaration for StaticItemDecl {
         let item_name = match parser.next_token() {
             Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
             Some(Token::EOF) | None => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {

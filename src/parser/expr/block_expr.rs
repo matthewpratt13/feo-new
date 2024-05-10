@@ -1,6 +1,6 @@
 use crate::{
     ast::{BlockExpr, Delimiter, Expression, InnerAttr, Statement},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::{collection, ParseConstruct, Parser},
     token::Token,
@@ -26,10 +26,7 @@ impl ParseConstruct for BlockExpr {
                 Err(ErrorsEmitted)
             }
             None => {
-                parser.logger.log(
-                    LogLevel::Error,
-                    LogMsg::from(ParserErrorKind::UnexpectedEndOfInput.to_string()),
-                );
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {

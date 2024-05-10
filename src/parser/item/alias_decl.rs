@@ -1,6 +1,6 @@
 use crate::{
     ast::{AliasDecl, Identifier, Keyword, OuterAttr, Type, Visibility},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -23,7 +23,7 @@ impl ParseDeclaration for AliasDecl {
         let alias_name = match parser.next_token() {
             Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
             Some(Token::EOF) | None => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {

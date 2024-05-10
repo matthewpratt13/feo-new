@@ -3,7 +3,7 @@ use crate::{
         Delimiter, EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTuple, EnumVariantType,
         Identifier, Keyword, OuterAttr, StructDefField, Type, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     parser::{collection, Parser},
     token::Token,
 };
@@ -27,7 +27,7 @@ impl ParseDefinition for EnumDef {
         let enum_name = match parser.next_token() {
             Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
             Some(Token::EOF) | None => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {
@@ -107,7 +107,7 @@ fn parse_enum_variant(
     let variant_name = match token {
         Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
         Some(Token::EOF) | None => {
-            parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+            parser.log_unexpected_eoi();
             Err(ErrorsEmitted)
         }
         _ => {

@@ -4,7 +4,7 @@ use crate::{
         InherentImplItem, Keyword, OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem,
         Type, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     token::Token,
 };
@@ -83,7 +83,7 @@ impl ParseDefinition for TraitImplDef {
                 path
             }
             Some(Token::EOF) | None => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 

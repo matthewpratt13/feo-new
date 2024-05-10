@@ -1,6 +1,6 @@
 use crate::{
     ast::{AssigneeExpr, Expression, RangeExpr, RangeOp},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     parser::{ParseOperation, Parser},
     token::{Token, TokenType},
 };
@@ -18,7 +18,7 @@ impl ParseOperation for RangeExpr {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
             TokenType::DotDotEquals => Ok(RangeOp::RangeInclusive),
             TokenType::EOF => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {

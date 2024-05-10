@@ -3,7 +3,7 @@ use crate::{
         Delimiter, Identifier, Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef,
         TupleStructDefField, Type, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     token::Token,
 };
 
@@ -26,7 +26,7 @@ impl ParseDefinition for StructDef {
         let struct_name = match parser.next_token() {
             Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
             Some(Token::EOF) | None => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 

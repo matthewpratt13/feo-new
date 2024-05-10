@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expression, GroupedExpr, Keyword, SomeExpr},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     parser::{ParseConstruct, Parser},
     token::Token,
 };
@@ -18,7 +18,7 @@ impl ParseConstruct for SomeExpr {
         let expression = match parser.current_token() {
             Some(Token::LParen { .. }) => Ok(Box::new(GroupedExpr::parse(parser)?)),
             Some(Token::EOF) | None => {
-                parser.log_error(ParserErrorKind::UnexpectedEndOfInput);
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {
