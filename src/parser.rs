@@ -99,9 +99,8 @@ impl Parser {
     /// Create a new `Parser` instance.
     /// Initialize an empty `Vec` to store potentials errors that occur during parsing.
     fn new(stream: TokenStream, log_level: LogLevel) -> Self {
-        let tokens = stream.tokens();
         let mut parser = Parser {
-            stream,
+            stream: stream.clone(),
             current: 0,
             precedences: HashMap::new(),
             context: ParserContext::Default,
@@ -109,16 +108,16 @@ impl Parser {
             logger: Logger::new(log_level),
         };
 
-        parser.init_precedences(tokens);
+        parser.init_precedences(stream.tokens());
         parser
     }
 
     /// Define and initialize token precedence levels.
-    fn init_precedences(&mut self, tokens: Vec<Token>) {
+    fn init_precedences(&mut self, tokens: &[Token]) {
         self.logger
             .log(LogLevel::Debug, LogMsg::from("initializing precedences"));
 
-        for t in tokens {
+        for t in tokens.to_vec() {
             match t.token_type() {
                 TokenType::DblColon | TokenType::ColonColonAsterisk => {
                     self.precedences.insert(t, Precedence::Path)
@@ -977,16 +976,21 @@ impl Parser {
 
     /// Advance the parser to the next token (returns current token).
     fn next_token(&mut self) -> Option<Token> {
-        if let Some(t) = self.current_token() {
+        if self.current < self.stream.tokens().len() {
             self.current += 1;
+
             self.logger
                 .log(LogLevel::Debug, LogMsg::from("consumed token"));
-            self.log_current_token(true);
-            Some(t)
         } else {
-            self.log_unexpected_eoi();
-            None
+            self.logger.log(
+                LogLevel::Warning,
+                LogMsg::from("WARNING: reached end of tokens"),
+            );
         }
+
+        self.log_current_token(true);
+
+        self.current_token()
     }
 
     /// Get the token at the current index in the `TokenStream`.
@@ -1016,7 +1020,19 @@ impl Parser {
     /// Log information about an error that occurred during parsing, by pushing the error
     /// to the `errors` vector and providing information about error kind and position.
     fn log_error(&mut self, error_kind: ParserErrorKind) {
-        let error = CompilerError::new(error_kind, &self.stream.span().input(), self.current);
+        let i = if self.current < self.stream.tokens().len() {
+            self.current
+        } else if self.current == self.stream.tokens().len() && self.stream.tokens().len() > 0 {
+            self.current - 1
+        } else {
+            0
+        };
+
+        let error = CompilerError::new(
+            error_kind,
+            &self.stream.span().input(),
+            self.stream.tokens()[i].span().start() + 1,
+        );
 
         self.logger
             .log(LogLevel::Error, LogMsg::from(error.to_string()));
@@ -1026,7 +1042,7 @@ impl Parser {
     /// Utility function that is used to report the current token and its precedence for debugging.
     fn log_current_token(&mut self, log_precedence: bool) {
         let token = self.current_token();
-        let precedence = self.get_precedence(&token.clone().unwrap_or(Token::EOF));
+        let precedence = self.get_precedence(&token.clone().unwrap());
 
         self.logger.log(
             LogLevel::Debug,
@@ -1202,7 +1218,7 @@ impl Parser {
             LogMsg::from("entering `peek_precedence()`"),
         );
 
-        let precedence = self.get_precedence(&self.current_token().unwrap_or(Token::EOF));
+        let precedence = self.get_precedence(&self.current_token().unwrap());
 
         self.logger.log(
             LogLevel::Debug,

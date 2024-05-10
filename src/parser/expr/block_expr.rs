@@ -37,7 +37,8 @@ impl ParseConstruct for BlockExpr {
 
         let statements_opt = parse_statements(parser)?;
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::RBrace)
         } else {
             parser.log_missing_token("`}`");
@@ -65,6 +66,12 @@ impl ParseConstruct for BlockExpr {
 fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, ErrorsEmitted> {
     let mut statements: Vec<Statement> = Vec::new();
 
+    parser.logger.log(
+        LogLevel::Debug,
+        LogMsg::from("entering `parse_statements()`"),
+    );
+    parser.log_current_token(true);
+
     while !matches!(
         parser.current_token(),
         Some(Token::RBrace { .. } | Token::EOF)
@@ -76,6 +83,12 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
             parser.next_token();
         }
     }
+
+    parser.logger.log(
+        LogLevel::Debug,
+        LogMsg::from("exiting `parse_statements()`"),
+    );
+    parser.log_current_token(false);
 
     match statements.is_empty() {
         true => Ok(None),
@@ -93,7 +106,7 @@ mod tests {
         #![unsafe] {
             x + 5;
             y
-        }"#;
+        "#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
