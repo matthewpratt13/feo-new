@@ -8,7 +8,7 @@
 use std::{iter::Peekable, str::Chars};
 
 use crate::{
-    ast::{BigUInt, Byte, Bytes, Hash, Int, Str, UInt},
+    ast::{BigUInt, Bool, Byte, Bytes, Char, Hash, Int, Str, UInt},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{DocCommentType, Token, TokenStream},
@@ -285,7 +285,7 @@ impl<'a> Lexer<'a> {
                 "false" => Ok(Token::BoolLiteral {
                     value: {
                         if let Ok(n) = name.parse::<bool>() {
-                            n
+                            Bool::from(n)
                         } else {
                             self.log_error(LexErrorKind::LexBoolError);
                             return Err(ErrorsEmitted);
@@ -319,7 +319,7 @@ impl<'a> Lexer<'a> {
                 "true" => Ok(Token::BoolLiteral {
                     value: {
                         if let Ok(n) = name.parse::<bool>() {
-                            n
+                            Bool::from(n)
                         } else {
                             self.log_error(LexErrorKind::LexBoolError);
                             return Err(ErrorsEmitted);
@@ -798,7 +798,7 @@ impl<'a> Lexer<'a> {
                         let span = Span::new(self.input, start_pos, self.pos);
 
                         Ok(Token::CharLiteral {
-                            value: escaped_char,
+                            value: Char::from(escaped_char),
                             span,
                         })
                     } else {
@@ -822,7 +822,10 @@ impl<'a> Lexer<'a> {
 
                         let span = Span::new(self.input, start_pos, self.pos);
 
-                        Ok(Token::CharLiteral { value, span })
+                        Ok(Token::CharLiteral {
+                            value: Char::from(value),
+                            span,
+                        })
                     } else {
                         self.log_error(LexErrorKind::MissingQuote { quote: '\'' });
                         Err(ErrorsEmitted)

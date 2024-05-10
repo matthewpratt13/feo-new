@@ -1065,7 +1065,7 @@ impl Parser {
     /// Log error information about an unmatched delimiter.
     fn log_unmatched_delimiter(&mut self, expected: &Delimiter) {
         self.log_error(ParserErrorKind::UnmatchedDelimiter {
-            delim: format!("{:?}", *expected),
+            delim: format!("{}", *expected),
         });
 
         self.next_token();
@@ -1076,7 +1076,7 @@ impl Parser {
     fn log_unexpected_patt(&mut self, expected: &str, patt: Pattern) {
         self.log_error(ParserErrorKind::UnexpectedPattern {
             expected: expected.to_string(),
-            found: format!("{:?}", patt),
+            found: format!("{}", patt),
         });
     }
 

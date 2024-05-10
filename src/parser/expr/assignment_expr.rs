@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn parse_compound_assignment_plus_equals() -> Result<(), ()> {
-        let input = r#"x += 5 "#;
+        let input = r#"x += 5"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
