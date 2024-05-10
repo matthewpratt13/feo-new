@@ -35,7 +35,7 @@ impl ParseDeclaration for StaticItemDecl {
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("static item name");
+                parser.log_unexpected_token("static item identifier");
                 Err(ErrorsEmitted)
             }
         }?;
@@ -68,7 +68,7 @@ impl ParseDeclaration for StaticItemDecl {
 
                 Ok(Some(Box::new(assignee_expr)))
             } else {
-                parser.log_missing("expr", "assignee expression");
+                parser.log_missing("expr", "assignee");
                 Err(ErrorsEmitted)
             }
         } else {

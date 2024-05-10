@@ -27,7 +27,7 @@ impl ParseDeclaration for AliasDecl {
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("type alias name");
+                parser.log_unexpected_token("identifier");
                 Err(ErrorsEmitted)
             }
         }?;

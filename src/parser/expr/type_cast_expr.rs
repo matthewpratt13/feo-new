@@ -7,10 +7,10 @@ use crate::{
 
 impl ParseOperation for TypeCastExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let operand = Box::new(ValueExpr::try_from(left_expr).map_err(|e| {
+        let value_expr = ValueExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
-        })?);
+        })?;
 
         let kw_as = if let Some(Token::As { .. }) = parser.current_token() {
             parser.next_token();
@@ -23,7 +23,7 @@ impl ParseOperation for TypeCastExpr {
         let new_type = Box::new(Type::parse(parser)?);
 
         let expr = TypeCastExpr {
-            operand,
+            operand: Box::new(value_expr),
             kw_as,
             new_type,
         };

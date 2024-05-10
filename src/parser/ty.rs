@@ -333,7 +333,7 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
         if parser.current_token().is_some() {
             Ok(Some(Box::new(Type::parse(parser)?)))
         } else {
-            parser.log_missing_token("return type");
+            parser.log_missing("type", "function return type");
             Err(ErrorsEmitted)
         }
     } else {
@@ -373,7 +373,7 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
             Err(ErrorsEmitted)
         }
         _ => {
-            parser.log_unexpected_token("unsigned integer");
+            parser.log_unexpected_token("array length (unsigned integer)");
             Err(ErrorsEmitted)
         }
     }?;

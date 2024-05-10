@@ -28,7 +28,7 @@ impl ParseDeclaration for ConstantDecl {
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("constant name");
+                parser.log_unexpected_token("identifier");
                 Err(ErrorsEmitted)
             }
         }?;
@@ -61,7 +61,7 @@ impl ParseDeclaration for ConstantDecl {
 
                 Ok(Some(value_expr))
             } else {
-                parser.log_missing_token("value");
+                parser.log_missing("expr", "value");
                 Err(ErrorsEmitted)
             }
         } else {

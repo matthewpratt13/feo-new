@@ -65,7 +65,7 @@ impl ParseDefinition for FunctionItem {
             if parser.current_token().is_some() {
                 Ok(Some(Box::new(Type::parse(parser)?)))
             } else {
-                parser.log_missing_token("return type");
+                parser.log_missing("type", "function return type");
                 Err(ErrorsEmitted)
             }
         } else {

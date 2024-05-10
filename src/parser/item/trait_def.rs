@@ -93,7 +93,7 @@ impl ParseAssociatedItem for TraitDefItem {
                 if function_def.block_opt.is_some() {
                     parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
                         token: parser.current_token(),
-                        msg: "functions in trait definitions cannot have bodies".to_string(),
+                        msg: "Functions in trait definitions cannot have bodies".to_string(),
                     });
                     Err(ErrorsEmitted)
                 } else {

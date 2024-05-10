@@ -27,7 +27,7 @@ impl ParseDefinition for ModuleItem {
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("module name");
+                parser.log_unexpected_token("module identifier");
                 Err(ErrorsEmitted)
             }
         }?;

@@ -163,7 +163,7 @@ impl ParseAssociatedItem for InherentImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.log_missing("item", "associated item");
+                    parser.log_missing("item", "implementation associated item");
                     Err(ErrorsEmitted)
                 } else {
                     Ok(InherentImplItem::FunctionDef(function_def))
@@ -203,7 +203,7 @@ impl ParseAssociatedItem for TraitImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.log_missing("item", "associated item");
+                    parser.log_missing("item", "trait implementation associated item");
                     Err(ErrorsEmitted)
                 } else {
                     Ok(TraitImplItem::FunctionDef(function_def))

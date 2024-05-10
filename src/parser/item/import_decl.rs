@@ -124,7 +124,7 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
     {
         Ok(t)
     } else {
-        parser.log_missing("import trees", "import trees");
+        parser.log_missing("path component", "import declaration path import tree");
         Err(ErrorsEmitted)
     }?;
 

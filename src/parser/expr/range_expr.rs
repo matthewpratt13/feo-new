@@ -7,7 +7,7 @@ use crate::{
 
 impl ParseOperation for RangeExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let from = AssigneeExpr::try_from(left_expr).map_err(|e| {
+        let from_assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
@@ -33,19 +33,19 @@ impl ParseOperation for RangeExpr {
 
         let expression = parser.parse_expression(precedence)?;
 
-        let to = AssigneeExpr::try_from(expression).map_err(|e| {
+        let to_assignee_expr = AssigneeExpr::try_from(expression).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         });
 
-        let expr = match to.is_ok() {
+        let expr = match to_assignee_expr.is_ok() {
             true => Ok(RangeExpr {
-                from_opt: Some(Box::new(from)),
+                from_opt: Some(Box::new(from_assignee_expr)),
                 range_op,
-                to_opt: Some(Box::new(to?)),
+                to_opt: Some(Box::new(to_assignee_expr?)),
             }),
             false => Ok(RangeExpr {
-                from_opt: Some(Box::new(from)),
+                from_opt: Some(Box::new(from_assignee_expr)),
                 range_op: range_op.clone(),
                 to_opt: {
                     if range_op == RangeOp::RangeInclusive {
@@ -98,7 +98,7 @@ impl RangeExpr {
 
         let expression = parser.parse_expression(precedence)?;
 
-        let to = AssigneeExpr::try_from(expression).map_err(|e| {
+        let to_assignee_expr = AssigneeExpr::try_from(expression).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
@@ -108,7 +108,7 @@ impl RangeExpr {
         let expr = RangeExpr {
             from_opt: None,
             range_op,
-            to_opt: Some(Box::new(to)),
+            to_opt: Some(Box::new(to_assignee_expr)),
         };
 
         Ok(Expression::Range(expr))

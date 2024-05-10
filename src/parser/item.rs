@@ -174,7 +174,7 @@ impl ParseStatement for Item {
                 }
             },
             _ => {
-                parser.log_unexpected_token("item declaration or definition item");
+                parser.log_unexpected_token("item keyword");
                 Err(ErrorsEmitted)
             }
         }

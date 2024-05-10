@@ -32,7 +32,7 @@ impl ParseStatement for LetStmt {
                 let value = parser.parse_expression(Precedence::Lowest)?;
                 Ok(Some(value))
             } else {
-                parser.log_missing_token("value");
+                parser.log_missing("expr", "value");
                 Err(ErrorsEmitted)
             }
         } else {

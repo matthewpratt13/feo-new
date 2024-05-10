@@ -22,12 +22,19 @@ impl ParseControl for MatchExpr {
             ErrorsEmitted
         })?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Delimiter::LBrace)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.current_token() {
+            Some(Token::LBrace { .. }) => {
+                parser.next_token();
+                Ok(Delimiter::LBrace)
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let mut arms = Vec::new();
@@ -47,7 +54,7 @@ impl ParseControl for MatchExpr {
         let final_arm = if let Some(a) = arms.pop() {
             Ok(Box::new(a))
         } else {
-            parser.log_missing("match arm", "match arm");
+            parser.log_missing("patt", "match arm");
             Err(ErrorsEmitted)
         }?;
 

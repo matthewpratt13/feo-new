@@ -1,6 +1,6 @@
 use crate::{
     ast::{AssigneeExpr, Expression, FieldAccessExpr, Identifier},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::{ParseOperation, Parser},
     token::Token,
@@ -19,19 +19,19 @@ impl ParseOperation for FieldAccessExpr {
             ErrorsEmitted
         })?;
 
-        let token = parser.next_token();
-
-        let expr = if let Some(Token::Identifier { name, .. }) = token {
-            Ok(FieldAccessExpr {
+        let expr = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(FieldAccessExpr {
                 object: Box::new(assignee_expr),
                 field: Identifier(name),
-            })
-        } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier after `.`".to_string(),
-                found: token,
-            });
-            Err(ErrorsEmitted)
+            }),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("identifier");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("identifier");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         Ok(Expression::FieldAccess(expr))

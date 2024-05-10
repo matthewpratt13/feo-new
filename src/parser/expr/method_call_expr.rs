@@ -1,30 +1,34 @@
 use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr},
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     parser::{collection, ParseOperation, Parser, Precedence},
     token::Token,
 };
 
 impl ParseOperation for MethodCallExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let receiver = AssigneeExpr::try_from(left_expr).map_err(|e| {
+        let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        let token = parser.next_token();
-
-        let method_name = if let Some(Token::Identifier { name, .. }) = token {
-            Ok(Identifier(name))
-        } else {
-            parser.log_error(ParserErrorKind::UnexpectedToken {
-                expected: "identifier after `.`".to_string(),
-                found: token,
-            });
-            Err(ErrorsEmitted)
+        let method_name = match parser.current_token() {
+            Some(Token::Identifier { name, .. }) => {
+                parser.next_token();
+                Ok(Identifier(name))
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("identifier");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("identifier");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
+        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::LParen)
         } else {
             parser.log_unexpected_token("`(`");
@@ -42,7 +46,7 @@ impl ParseOperation for MethodCallExpr {
         }?;
 
         let expr = MethodCallExpr {
-            receiver: Box::new(receiver),
+            receiver: Box::new(assignee_expr),
             method_name,
             open_paren,
             args_opt,

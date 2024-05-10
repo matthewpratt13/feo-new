@@ -14,12 +14,13 @@ impl ParseConstruct for ClosureExpr {
             Some(Token::Pipe { .. }) => {
                 parser.next_token();
 
-                let vec = collection::get_collection(parser, parse_closure_param, Delimiter::Pipe)?;
+                let vec_opt =
+                    collection::get_collection(parser, parse_closure_param, Delimiter::Pipe)?;
 
-                if vec.is_some() {
-                    Ok(ClosureParams::Some(vec.unwrap()))
+                if vec_opt.is_some() {
+                    Ok(ClosureParams::Some(vec_opt.unwrap()))
                 } else {
-                    parser.log_missing("expr", "closure parameters");
+                    parser.log_missing("patt", "closure parameters");
                     Err(ErrorsEmitted)
                 }
             }
@@ -47,15 +48,15 @@ impl ParseConstruct for ClosureExpr {
         }?;
 
         let expression = if return_type_opt.is_some() {
-            BlockExpr::parse(parser)?
+            Box::new(BlockExpr::parse(parser)?)
         } else {
-            parser.parse_expression(Precedence::Lowest)?
+            Box::new(parser.parse_expression(Precedence::Lowest)?)
         };
 
         let expr = ClosureExpr {
             params,
             return_type_opt,
-            expression: Box::new(expression),
+            expression,
         };
 
         Ok(Expression::Closure(expr))

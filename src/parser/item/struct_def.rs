@@ -150,7 +150,7 @@ impl StructDefField {
             parser.next_token();
             Ok(Identifier(name))
         } else {
-            parser.log_missing_token("struct field name");
+            parser.log_missing_token("struct field identifier");
             Err(ErrorsEmitted)
         }?;
 

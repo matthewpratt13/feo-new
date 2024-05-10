@@ -149,7 +149,7 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
     {
         Ok(sdf)
     } else {
-        parser.log_missing("struct field", "struct field");
+        parser.log_missing("item field", "struct field");
         Err(ErrorsEmitted)
     }?;
 
@@ -180,7 +180,7 @@ fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTuple, Err
         if let Some(t) = collection::get_collection(parser, Type::parse, Delimiter::RParen)? {
             Ok(t)
         } else {
-            parser.log_missing("type", "type");
+            parser.log_missing("type", "tuple element type annotation");
             Err(ErrorsEmitted)
         }?;
 

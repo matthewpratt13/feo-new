@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, Expression, ForInExpr, IdentifierPatt, Keyword},
+    ast::{BlockExpr, Expression, ForInExpr, Keyword},
     error::ErrorsEmitted,
     parser::{ParseConstruct, ParseControl, Parser, Precedence},
     token::Token,
@@ -15,12 +15,7 @@ impl ParseControl for ForInExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let pattern = match parser.current_token() {
-            Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
-                IdentifierPatt::parse(parser)
-            }
-            _ => parser.parse_pattern(),
-        }?;
+        let pattern = parser.parse_pattern()?;
 
         let kw_in = match parser.current_token() {
             Some(Token::In { .. }) => {

@@ -6,13 +6,14 @@ use crate::{
 };
 
 impl ParseOperation for IndexExpr {
-    fn parse(parser: &mut Parser, array: Expression) -> Result<Expression, ErrorsEmitted> {
-        let array = AssigneeExpr::try_from(array).map_err(|e| {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        let open_bracket = if let Some(Token::LBracket { .. }) = parser.next_token() {
+        let open_bracket = if let Some(Token::LBracket { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::LBracket)
         } else {
             parser.log_unexpected_token("`[`");
@@ -21,7 +22,7 @@ impl ParseOperation for IndexExpr {
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        let index = ValueExpr::try_from(expression).map_err(|e| {
+        let value_expr = ValueExpr::try_from(expression).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
@@ -40,9 +41,9 @@ impl ParseOperation for IndexExpr {
         }?;
 
         let expr = IndexExpr {
-            array: Box::new(array),
+            array: Box::new(assignee_expr),
             open_bracket,
-            index: Box::new(index),
+            index: Box::new(value_expr),
             close_bracket,
         };
 
