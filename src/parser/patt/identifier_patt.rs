@@ -28,7 +28,8 @@ impl IdentifierPatt {
             None
         };
 
-        let name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
+        let name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("identifier");

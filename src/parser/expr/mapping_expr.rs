@@ -1,6 +1,7 @@
 use crate::{
     ast::{Delimiter, Expression, MappingExpr, MappingPair},
     error::ErrorsEmitted,
+    logger::{LogLevel, LogMsg},
     parser::{collection, ParseConstruct, Parser, Precedence},
     token::Token,
 };
@@ -37,7 +38,19 @@ impl ParseConstruct for MappingExpr {
 }
 
 fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted> {
+    parser.logger.log(
+        LogLevel::Debug,
+        LogMsg::from("entering `parse_mapping_pair()`"),
+    );
+
+    parser.log_current_token(false);
+
     let key = parser.parse_pattern()?;
+
+    parser
+        .logger
+        .log(LogLevel::Debug, LogMsg::from("exiting `parse_pattern()`"));
+    parser.log_current_token(true);
 
     match parser.current_token() {
         Some(Token::Colon { .. }) => {

@@ -894,7 +894,8 @@ impl Parser {
                     self.next_token();
                     RangePatt::parse(self, patt)
                 } else {
-                    IdentifierPatt::parse(self)
+                    let patt = IdentifierPatt::parse(self);
+                    patt
                 }
             }
 
