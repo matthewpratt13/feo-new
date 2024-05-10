@@ -19,11 +19,15 @@ impl ParseOperation for FieldAccessExpr {
             ErrorsEmitted
         })?;
 
-        let expr = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(FieldAccessExpr {
-                object: Box::new(assignee_expr),
-                field: Identifier(name),
-            }),
+        let expr = match parser.current_token() {
+            Some(Token::Identifier { name, .. }) => {
+                parser.next_token();
+
+                Ok(FieldAccessExpr {
+                    object: Box::new(assignee_expr),
+                    field: Identifier(name),
+                })
+            }
             Some(Token::EOF) | None => {
                 parser.log_missing_token("identifier");
                 Err(ErrorsEmitted)

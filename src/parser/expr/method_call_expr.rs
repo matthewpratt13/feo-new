@@ -37,7 +37,8 @@ impl ParseOperation for MethodCallExpr {
 
         let args_opt = collection::get_expressions(parser, Precedence::Lowest, Delimiter::RParen)?;
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
+        let close_paren = if let Some(Token::RParen { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_token("`)`");

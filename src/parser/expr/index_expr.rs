@@ -27,8 +27,12 @@ impl ParseOperation for IndexExpr {
             ErrorsEmitted
         })?;
 
-        let close_bracket = match parser.next_token() {
-            Some(Token::RBracket { .. }) => Ok(Delimiter::RBracket),
+        let close_bracket = match parser.current_token() {
+            Some(Token::RBracket { .. }) => {
+                parser.next_token();
+
+                Ok(Delimiter::RBracket)
+            }
             Some(Token::EOF) | None => {
                 parser.log_missing_token("`]`");
                 parser.log_unmatched_delimiter(&open_bracket);
