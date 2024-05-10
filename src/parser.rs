@@ -1072,8 +1072,6 @@ impl Parser {
         self.log_error(ParserErrorKind::MissingToken {
             expected: expected.to_string(),
         });
-
-        self.next_token();
     }
 
     /// Log error information about an unmatched delimiter.
@@ -1113,6 +1111,7 @@ impl Parser {
         }
     }
 
+    /// Log error information when the source code has to an unexpected end.
     fn log_unexpected_eoi(&mut self) {
         self.log_error(ParserErrorKind::UnexpectedEndOfInput)
     }
