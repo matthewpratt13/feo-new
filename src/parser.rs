@@ -1016,9 +1016,7 @@ impl Parser {
     /// Log information about an error that occurred during parsing, by pushing the error
     /// to the `errors` vector and providing information about error kind and position.
     fn log_error(&mut self, error_kind: ParserErrorKind) {
-        let pos = self.stream.span().input().encode_utf16().count();
-
-        let error = CompilerError::new(error_kind, &self.stream.span().input(), pos);
+        let error = CompilerError::new(error_kind, &self.stream.span().input(), self.current);
 
         self.logger
             .log(LogLevel::Error, LogMsg::from(error.to_string()));

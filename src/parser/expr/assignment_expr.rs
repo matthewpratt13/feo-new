@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn parse_assignment_expr() -> Result<(), ()> {
-        let input = r#"x = 2"#;
+        let input = r#"x = 5"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
