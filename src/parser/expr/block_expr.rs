@@ -112,7 +112,7 @@ mod tests {
         #![unsafe] {
             x + 5;
             y
-        "#;
+        }"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

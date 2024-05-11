@@ -1023,19 +1023,16 @@ impl Parser {
     /// Log information about an error that occurred during parsing, by pushing the error
     /// to the `errors` vector and providing information about error kind and position.
     fn log_error(&mut self, error_kind: ParserErrorKind) {
-        let i = if self.current < self.stream.tokens().len() {
-            self.current
-        } else if self.current == self.stream.tokens().len() && self.stream.tokens().len() > 0 {
-            self.current - 1
-        } else {
-            0
+        let current = self.current;
+        let tokens = self.stream.tokens();
+
+        let pos = match current {
+            _ if current < tokens.len() => tokens[current].span().start(),
+            _ if current == tokens.len() && tokens.len() > 0 => tokens[current - 1].span().end(),
+            _ => 0,
         };
 
-        let error = CompilerError::new(
-            error_kind,
-            &self.stream.span().input(),
-            self.stream.tokens()[i].span().start(),
-        );
+        let error = CompilerError::new(error_kind, &self.stream.span().input(), pos);
 
         self.logger
             .log(LogLevel::Error, LogMsg::from(error.to_string()));
