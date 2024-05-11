@@ -77,6 +77,7 @@ fn parse_else_blocks(
             Some(Token::LBrace { .. }) => {
                 let block = Box::new(BlockExpr::parse(parser)?);
                 trailing_else_block_opt = Some((Keyword::Else, block));
+                break
             }
             Some(Token::EOF) | None => {
                 parser.log_missing_token("`if` or `{`");

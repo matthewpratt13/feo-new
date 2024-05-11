@@ -750,10 +750,28 @@ impl Parser {
                 | Token::Pub { .. },
             ) => Item::parse_statement(self),
 
+            Some(
+                Token::If { .. } | Token::Match { .. } | Token::For { .. } | Token::While { .. },
+            ) => Ok(Statement::Expression(
+                self.parse_expression(Precedence::Lowest)?,
+            )),
+
             _ => {
                 let statement = Ok(Statement::Expression(
                     self.parse_expression(Precedence::Lowest)?,
                 ));
+
+                match self.current_token() {
+                    Some(Token::Semicolon { .. }) => {
+                        self.next_token();
+                    }
+                    Some(Token::RBrace { .. } | Token::EOF) => (),
+
+                    _ => {
+                        self.log_unexpected_token("`;` or `}`");
+                        return Err(ErrorsEmitted);
+                    }
+                }
 
                 statement
             }

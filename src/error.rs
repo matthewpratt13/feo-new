@@ -27,15 +27,19 @@ where
         let line_count = lines.len();
         let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
 
-        let char_count = source.trim().chars().count();
+        let start_index = if pos >= 80 { pos - 80 } else { 0 };
 
-        let start_pos = if pos > 80 { char_count - 80 } else { 0 };
+        let end_index = if pos > source.len() {
+            source.len()
+        } else {
+            pos
+        };
 
         Self {
             error_kind,
             line: line_count,
             col: last_line_len,
-            _source: Arc::new(source[start_pos..pos].trim().to_string()),
+            _source: Arc::new(source[start_index..end_index].trim().to_string()),
         }
     }
 }

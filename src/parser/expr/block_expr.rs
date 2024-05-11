@@ -78,10 +78,6 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
     ) {
         let statement = parser.parse_statement()?;
         statements.push(statement);
-
-        if let Some(Token::Semicolon { .. }) = parser.current_token() {
-            parser.next_token();
-        }
     }
 
     parser.logger.log(
