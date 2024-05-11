@@ -106,7 +106,7 @@ mod tests {
             return true;
         } else {
             return false;
-        }"#;
+        "#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
