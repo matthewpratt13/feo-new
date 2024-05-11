@@ -29,6 +29,11 @@ impl Item {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<Item, ErrorsEmitted> {
+        parser
+            .logger
+            .log(LogLevel::Debug, LogMsg::from("entering `Item::parse()`"));
+        parser.log_current_token(false);
+
         match parser.current_token() {
             Some(Token::Import { .. }) => Ok(Item::ImportDecl(ImportDecl::parse(
                 parser,

@@ -7,7 +7,10 @@ use crate::{
 };
 
 impl PathExpr {
-    pub(crate) fn parse(parser: &mut Parser, root: PathPrefix) -> Result<Expression, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        root: PathPrefix,
+    ) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `PathExpr::parse()`"),
@@ -45,10 +48,9 @@ impl PathExpr {
             wildcard_opt,
         };
 
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("exiting `PathExpr::parse()`"),
-        );
+        parser
+            .logger
+            .log(LogLevel::Debug, LogMsg::from("exiting `PathExpr::parse()`"));
         parser.log_current_token(false);
 
         Ok(Expression::Path(expr))

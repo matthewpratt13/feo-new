@@ -40,7 +40,7 @@ impl ParseConstruct for ClosureExpr {
             if parser.current_token().is_some() {
                 Ok(Some(Box::new(Type::parse(parser)?)))
             } else {
-                parser.log_missing_token("return type");
+                parser.log_missing("type", "closure return type");
                 Err(ErrorsEmitted)
             }
         } else {
@@ -86,7 +86,7 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
         if parser.current_token().is_some() {
             Ok(Some(Type::parse(parser)?))
         } else {
-            parser.log_missing_token("type");
+            parser.log_missing("type", "closure parameter type annotation");
             Err(ErrorsEmitted)
         }
     } else {

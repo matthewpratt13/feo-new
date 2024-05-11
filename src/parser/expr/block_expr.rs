@@ -16,12 +16,6 @@ impl ParseConstruct for BlockExpr {
 
         let attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from(format!("attributes: {:?}", attributes_opt)),
-        );
-        parser.log_current_token(true);
-
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 parser.next_token();
@@ -93,6 +87,10 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
     parser.logger.log(
         LogLevel::Debug,
         LogMsg::from("exiting `parse_statements()`"),
+    );
+    parser.logger.log(
+        LogLevel::Debug,
+        LogMsg::from(format!("statements.is_empty(): {}", statements.is_empty())),
     );
     parser.log_current_token(false);
 
