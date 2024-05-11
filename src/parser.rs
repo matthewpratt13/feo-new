@@ -1023,6 +1023,15 @@ impl Parser {
         }
     }
 
+    // Peek at the token `num_tokens` behind without consuming it
+    fn peek_behind_by(&self, num_tokens: usize) -> Option<&Token> {
+        if self.current < num_tokens {
+            None
+        } else {
+            Some(&self.stream.tokens()[self.current - num_tokens])
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // ERROR HANDLING
     ///////////////////////////////////////////////////////////////////////////
@@ -1113,6 +1122,9 @@ impl Parser {
                 expected: expected.to_string(),
             }),
             "type" => self.log_error(ParserErrorKind::MissingType {
+                expected: expected.to_string(),
+            }),
+            "patt" => self.log_error(ParserErrorKind::MissingPattern {
                 expected: expected.to_string(),
             }),
             _ => self.logger.log(
@@ -1276,34 +1288,84 @@ impl Parser {
 
     /// Determine if `Token::Pipe` indicates a closure parameter delimiter.
     fn is_closure_with_params(&self) -> bool {
-        match (self.current_token(), self.peek_ahead_by(1)) {
-            (Some(Token::Pipe { .. }), Some(Token::Identifier { .. })) => true,
+        match (
+            self.peek_behind_by(1),
+            self.current_token(),
+            self.peek_ahead_by(1),
+        ) {
+            (
+                Some(
+                    Token::LParen { .. }
+                    | Token::LBracket { .. }
+                    | Token::LBrace { .. }
+                    | Token::Equals { .. },
+                )
+                | None,
+                Some(Token::Pipe { .. }),
+                Some(
+                    Token::Identifier { .. }
+                    | Token::Ref { .. }
+                    | Token::Mut { .. }
+                    | Token::Pipe { .. },
+                ),
+            ) => true,
             _ => false,
         }
     }
 
     /// Determine if `Token::Pipe` indicates the bitwise OR operator.
     fn is_bitwise_or(&self) -> bool {
-        match (self.current_token(), self.peek_ahead_by(1)) {
-            (Some(Token::Pipe { .. }), Some(Token::Identifier { .. })) => false,
-            _ => true,
-        }
+        !self.is_closure_with_params()
     }
 
     /// Determine if `Token::DblPipe` indicates an empty closure parameter list.
     fn is_closure_without_params(&self) -> bool {
-        match (self.current_token(), self.peek_ahead_by(1)) {
-            (Some(Token::DblPipe { .. }), Some(Token::Identifier { .. })) => true,
+        match (
+            self.peek_behind_by(1),
+            self.current_token(),
+            self.peek_ahead_by(1),
+        ) {
+            (
+                Some(
+                    Token::LParen { .. }
+                    | Token::LBracket { .. }
+                    | Token::LBrace { .. }
+                    | Token::Equals { .. },
+                )
+                | None,
+                Some(Token::DblPipe { .. }),
+                Some(
+                    Token::Identifier { .. }
+                    | Token::IntLiteral { .. }
+                    | Token::UIntLiteral { .. }
+                    | Token::BigUIntLiteral { .. }
+                    | Token::HashLiteral { .. }
+                    | Token::ByteLiteral { .. }
+                    | Token::BytesLiteral { .. }
+                    | Token::CharLiteral { .. }
+                    | Token::StrLiteral { .. }
+                    | Token::BoolLiteral { .. }
+                    | Token::Bang { .. }
+                    | Token::Minus { .. }
+                    | Token::Ampersand { .. }
+                    | Token::Asterisk { .. }
+                    | Token::ThinArrow { .. }
+                    | Token::Some { .. }
+                    | Token::None { .. }
+                    | Token::Ok { .. }
+                    | Token::Err { .. }
+                    | Token::LParen { .. }
+                    | Token::LBracket { .. }
+                    | Token::LBrace { .. },
+                ),
+            ) => true,
             _ => false,
         }
     }
 
     /// Determine if `Token::DblPipe` indicates the logical OR operator.
     fn is_logical_or(&self) -> bool {
-        match (self.current_token(), self.peek_ahead_by(1)) {
-            (Some(Token::DblPipe { .. }), Some(Token::Identifier { .. })) => false,
-            _ => true,
-        }
+        !self.is_closure_without_params()
     }
 }
 
