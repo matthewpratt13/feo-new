@@ -29,7 +29,7 @@ where
 
         let char_count = source.trim().chars().count();
 
-        let start_pos = if char_count > 80 { char_count - 80 } else { 0 };
+        let start_pos = if pos > 80 { char_count - 80 } else { 0 };
 
         Self {
             error_kind,

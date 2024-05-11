@@ -20,6 +20,10 @@ impl ParseConstruct for ReturnExpr {
             false => None,
         };
 
+        if let Some(Token::Semicolon { .. }) = parser.current_token() {
+            parser.next_token();
+        }
+
         let expr = ReturnExpr {
             kw_return,
             expression_opt,

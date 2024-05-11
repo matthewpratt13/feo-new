@@ -554,7 +554,7 @@ impl Parser {
                     token: self.current_token(),
                 });
 
-                self.next_token();
+                // self.next_token();
 
                 Err(ErrorsEmitted)
             }
@@ -1080,7 +1080,7 @@ impl Parser {
             expected: expected.to_string(),
         });
 
-        self.next_token();
+        // self.next_token();
     }
 
     /// Log error information about an unmatched delimiter.
