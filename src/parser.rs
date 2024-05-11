@@ -768,7 +768,7 @@ impl Parser {
                     Some(Token::RBrace { .. } | Token::EOF) => (),
 
                     _ => {
-                        self.log_unexpected_token("`;` or `}`");
+                        self.log_unexpected_token("`;`, `}` or EOF");
                         return Err(ErrorsEmitted);
                     }
                 }
