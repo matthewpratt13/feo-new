@@ -978,6 +978,7 @@ impl Parser {
     /// Advance the parser to the next token (returns current token).
     fn next_token(&mut self) -> Option<Token> {
         let token = self.current_token();
+
         if self.current < self.stream.tokens().len() {
             self.current += 1;
 
@@ -1033,7 +1034,7 @@ impl Parser {
         let error = CompilerError::new(
             error_kind,
             &self.stream.span().input(),
-            self.stream.tokens()[i].span().start() + 1,
+            self.stream.tokens()[i].span().start(),
         );
 
         self.logger
@@ -1074,6 +1075,8 @@ impl Parser {
         self.log_error(ParserErrorKind::MissingToken {
             expected: expected.to_string(),
         });
+
+        self.next_token();
     }
 
     /// Log error information about an unmatched delimiter.

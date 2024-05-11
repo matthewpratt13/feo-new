@@ -16,6 +16,12 @@ impl ParseConstruct for BlockExpr {
 
         let attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg::from(format!("attributes: {:?}", attributes_opt)),
+        );
+        parser.log_current_token(true);
+
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 parser.next_token();
@@ -102,11 +108,11 @@ mod tests {
 
     #[test]
     fn parse_block_expr() -> Result<(), ()> {
-        let input = r#"
+        let input = r#" 
         #![unsafe] {
             x + 5;
             y
-        }"#;
+        "#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
