@@ -553,6 +553,9 @@ impl Parser {
                 self.log_error(ParserErrorKind::InvalidTokenContext {
                     token: self.current_token(),
                 });
+
+                self.next_token();
+
                 Err(ErrorsEmitted)
             }
         }
@@ -694,6 +697,7 @@ impl Parser {
                     LogLevel::Debug,
                     LogMsg::from("no infix parsing function found"),
                 );
+                self.next_token();
                 self.log_current_token(true);
                 None
             }
@@ -966,6 +970,9 @@ impl Parser {
                 self.log_error(ParserErrorKind::InvalidTokenContext {
                     token: self.current_token(),
                 });
+
+                self.next_token();
+
                 Err(ErrorsEmitted)
             }
         }
@@ -1092,6 +1099,8 @@ impl Parser {
             expected: expected.to_string(),
             found: format!("{}", patt),
         });
+
+        self.next_token();
     }
 
     /// Log error information when an expected node is missing.
