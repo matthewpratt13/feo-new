@@ -22,6 +22,10 @@ impl Type {
 
         let token = parser.next_token();
 
+        parser
+            .logger
+            .log(LogLevel::Debug, LogMsg::from(format!("token: {:?}", token)));
+
         match token {
             Some(Token::I32Type { .. }) => Ok(Type::I32(Int::I32(i32::default()))),
             Some(Token::I64Type { .. }) => Ok(Type::I64(Int::I64(i64::default()))),
@@ -399,7 +403,16 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
 }
 
 fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
+    parser.logger.log(
+        LogLevel::Debug,
+        LogMsg::from("entering `parse_tuple_type()`"),
+    );
+    parser.log_current_token(true);
+
     if let Some(Token::RParen { .. }) = parser.current_token() {
+        parser
+            .logger
+            .log(LogLevel::Debug, LogMsg::from("encountered `)`"));
         parser.next_token();
         Ok(Type::UnitType(Unit))
     } else if let Some(Token::Comma { .. }) = parser.peek_ahead_by(1) {

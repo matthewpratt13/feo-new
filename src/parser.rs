@@ -977,6 +977,7 @@ impl Parser {
 
     /// Advance the parser to the next token (returns current token).
     fn next_token(&mut self) -> Option<Token> {
+        let token = self.current_token();
         if self.current < self.stream.tokens().len() {
             self.current += 1;
 
@@ -991,7 +992,7 @@ impl Parser {
 
         self.log_current_token(true);
 
-        self.current_token()
+        token
     }
 
     /// Get the token at the current index in the `TokenStream`.
