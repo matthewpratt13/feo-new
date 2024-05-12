@@ -491,8 +491,8 @@ impl Parser {
                 }
             }
 
-            Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
-                if self.peek_ahead_by(1).is_none() {
+            Some(Token::DblDot { .. }) => match (self.peek_behind_by(1), self.peek_ahead_by(1)) {
+                (None, Some(Token::Semicolon { .. } | Token::EOF) | None) => {
                     let expr = RangeExpr {
                         from_opt: None,
                         range_op: RangeOp::RangeExclusive,
@@ -500,10 +500,12 @@ impl Parser {
                     };
                     self.next_token();
                     Ok(Expression::Range(expr))
-                } else {
-                    RangeExpr::parse_prefix(self)
                 }
-            }
+
+                _ => RangeExpr::parse_prefix(self),
+            },
+
+            Some(Token::DotDotEquals { .. }) => RangeExpr::parse_prefix(self),
 
             Some(Token::If { .. }) => IfExpr::parse(self),
 
@@ -952,17 +954,40 @@ impl Parser {
                 ReferencePatt::parse(self, ReferenceOp::MutableBorrow)
             }
 
-            Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
-                if self.peek_ahead_by(1).is_none() {
+            Some(Token::DblDot { .. }) => match (self.peek_behind_by(1), self.peek_ahead_by(1)) {
+                (
+                    Some(Token::LParen { .. } | Token::Comma { .. }),
+                    Some(Token::RParen { .. } | Token::Comma { .. }),
+                )
+                | (
+                    Some(Token::LBracket { .. } | Token::Comma { .. }),
+                    Some(Token::RBracket { .. } | Token::Comma { .. }),
+                )
+                | (
+                    Some(Token::LBrace { .. } | Token::Comma { .. }),
+                    Some(Token::RBrace { .. } | Token::Comma { .. }),
+                ) => {
                     let patt = RestPatt {
                         dbl_dot: RangeOp::RangeExclusive,
                     };
                     self.next_token();
                     Ok(Pattern::RestPatt(patt))
-                } else {
-                    RangePatt::parse_prefix(self)
                 }
-            }
+
+                (Some(Token::None { .. }), Some(Token::EOF) | None) => {
+                    let patt = RangePatt {
+                        from_opt: None,
+                        range_op: RangeOp::RangeExclusive,
+                        to_opt: None,
+                    };
+                    self.next_token();
+                    Ok(Pattern::RangePatt(patt))
+                }
+
+                _ => RangePatt::parse_prefix(self),
+            },
+
+            Some(Token::DotDotEquals { .. }) => RangePatt::parse_prefix(self),
 
             Some(Token::Some { .. }) => SomePatt::parse(self),
 
