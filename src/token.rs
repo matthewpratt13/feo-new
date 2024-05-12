@@ -6,7 +6,6 @@ use crate::{
 };
 
 /// Enum representing the different types of tokens.
-#[allow(dead_code)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub(crate) enum Token {
     // includes `_`

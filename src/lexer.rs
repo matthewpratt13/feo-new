@@ -352,6 +352,7 @@ impl<'a> Lexer<'a> {
                 "str" => Ok(Token::StrType { name, span }),
                 "char" => Ok(Token::CharType { name, span }),
                 "bool" => Ok(Token::BoolType { name, span }),
+                "Self" => Ok(Token::SelfType { name, span }),
                 "Option" => Ok(Token::OptionType { name, span }),
                 "Result" => Ok(Token::ResultType { name, span }),
                 "Vec" => Ok(Token::VecType { name, span }),
@@ -1219,7 +1220,7 @@ fn is_keyword(value: &str) -> bool {
         "None", "Ok", "package", "pub", "ref", "return", "self", "Some", "static", "struct",
         "super", "trait", "true", "while", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128",
         "u256", "u512", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256", "h512", "String",
-        "str", "char", "bool", "Option", "Result", "Vec", "Mapping",
+        "str", "char", "bool", "Self", "Option", "Result", "Vec", "Mapping",
     ]
     .contains(&value)
 }

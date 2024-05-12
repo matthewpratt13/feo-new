@@ -47,7 +47,6 @@ impl PathExpr {
                     false => Some(tree),
                 }
             },
-            // wildcard_opt,
         };
 
         parser
@@ -78,7 +77,21 @@ mod tests {
     }
 
     #[test]
-    fn parse_path_expr_standard() -> Result<(), ()> {
+    fn parse_path_expr_self_keyword() -> Result<(), ()> {
+        let input = r#"self"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+        }
+    }
+
+    #[test]
+    fn parse_path_expr_full() -> Result<(), ()> {
         let input = r#"package::some_module::SomeObject"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
@@ -91,17 +104,31 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn parse_path_expr_wildcard() -> Result<(), ()> {
-    //     let input = r#"self::some_module::*"#;
+    #[test]
+    fn parse_path_expr_super() -> Result<(), ()> {
+        let input = r#"super::SOME_CONSTANT"#;
 
-    //     let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-    //     let statements = parser.parse();
+        let statements = parser.parse();
 
-    //     match statements {
-    //         Ok(t) => Ok(println!("{:#?}", t)),
-    //         Err(_) => Err(println!("{:#?}", parser.logger.logs())),
-    //     }
-    // }
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+        }
+    }
+
+    #[test]
+    fn parse_path_expr_method() -> Result<(), ()> {
+        let input = r#"Self::method"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+        }
+    }
 }
