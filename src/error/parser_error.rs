@@ -56,6 +56,11 @@ pub enum ParserErrorKind {
         expected: String,
     },
 
+    UnexpectedRangeOp {
+        expected: String,
+        found: String,
+    },
+
     #[default]
     UnknownError,
 }
@@ -121,6 +126,10 @@ impl fmt::Display for ParserErrorKind {
                 write!(f, "pattern not found. Expected {expected}, found none")
             }
             ParserErrorKind::UnknownError => write!(f, "unknown parsing error"),
+            ParserErrorKind::UnexpectedRangeOp { expected, found } => write!(
+                f,
+                "unexpected range operator. Expected {expected}, found {found}"
+            ),
         }
     }
 }

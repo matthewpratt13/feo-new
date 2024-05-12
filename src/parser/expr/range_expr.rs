@@ -1,6 +1,6 @@
 use crate::{
     ast::{AssigneeExpr, Expression, RangeExpr, RangeOp},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseOperation, Parser},
     token::{Token, TokenType},
 };
@@ -12,7 +12,7 @@ impl ParseOperation for RangeExpr {
             ErrorsEmitted
         })?;
 
-        let operator_token = parser.current_token().unwrap_or(Token::EOF);
+        let operator_token = parser.current_token().unwrap();
 
         let range_op = match operator_token.token_type() {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
@@ -22,12 +22,36 @@ impl ParseOperation for RangeExpr {
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("range operator (`..` or `..=`)");
+                parser.log_unexpected_token(&format!(
+                    "range operator ({} or {})",
+                    RangeOp::RangeExclusive,
+                    RangeOp::RangeInclusive
+                ));
                 Err(ErrorsEmitted)
             }
         }?;
 
         parser.next_token();
+
+        if let Some(Token::EOF) = parser.current_token() {
+            let expr = RangeExpr {
+                from_opt: Some(Box::new(from_assignee_expr)),
+                range_op: {
+                    if range_op == RangeOp::RangeInclusive {
+                        parser.log_error(ParserErrorKind::UnexpectedRangeOp {
+                            expected: RangeOp::RangeExclusive.to_string(),
+                            found: range_op.to_string(),
+                        });
+                        return Err(ErrorsEmitted);
+                    } else {
+                        range_op
+                    }
+                },
+                to_opt: None,
+            };
+
+            return Ok(Expression::Range(expr));
+        }
 
         let precedence = parser.get_precedence(&operator_token);
 
@@ -36,27 +60,13 @@ impl ParseOperation for RangeExpr {
         let to_assignee_expr = AssigneeExpr::try_from(expression).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
-        });
+        })?;
 
-        let expr = match to_assignee_expr.is_ok() {
-            true => Ok(RangeExpr {
-                from_opt: Some(Box::new(from_assignee_expr)),
-                range_op,
-                to_opt: Some(Box::new(to_assignee_expr?)),
-            }),
-            false => Ok(RangeExpr {
-                from_opt: Some(Box::new(from_assignee_expr)),
-                range_op: range_op.clone(),
-                to_opt: {
-                    if range_op == RangeOp::RangeInclusive {
-                        parser.log_unexpected_token("exclusive range operator (`..`)");
-                        return Err(ErrorsEmitted);
-                    } else {
-                        None
-                    }
-                },
-            }),
-        }?;
+        let expr = Ok(RangeExpr {
+            from_opt: Some(Box::new(from_assignee_expr)),
+            range_op,
+            to_opt: Some(Box::new(to_assignee_expr)),
+        })?;
 
         Ok(Expression::Range(expr))
     }
@@ -64,13 +74,17 @@ impl ParseOperation for RangeExpr {
 
 impl RangeExpr {
     pub(crate) fn parse_prefix(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let operator_token = parser.current_token().unwrap_or(Token::EOF);
+        let operator_token = parser.current_token().unwrap();
 
         let range_op = match operator_token {
             Token::DblDot { .. } => Ok(RangeOp::RangeExclusive),
             Token::DotDotEquals { .. } => Ok(RangeOp::RangeInclusive),
             _ => {
-                parser.log_unexpected_token("range operator (`..` or `..=`)");
+                parser.log_unexpected_token(&format!(
+                    "range operator ({} or {})",
+                    RangeOp::RangeExclusive,
+                    RangeOp::RangeInclusive
+                ));
                 Err(ErrorsEmitted)
             }
         }?;
@@ -83,7 +97,10 @@ impl RangeExpr {
                 range_op: range_op.clone(),
                 to_opt: {
                     if range_op == RangeOp::RangeInclusive {
-                        parser.log_unexpected_token("exclusive range operator (`..`)");
+                        parser.log_error(ParserErrorKind::UnexpectedRangeOp {
+                            expected: RangeOp::RangeExclusive.to_string(),
+                            found: range_op.to_string(),
+                        });
                         return Err(ErrorsEmitted);
                     } else {
                         None
@@ -121,7 +138,7 @@ mod tests {
 
     #[test]
     fn parse_range_expr_excl() -> Result<(), ()> {
-        let input = r#"1..10"#;
+        let input = r#"0..foo"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

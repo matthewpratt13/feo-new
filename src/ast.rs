@@ -281,6 +281,15 @@ pub(crate) enum RangeOp {
     RangeInclusive, // `..=`
 }
 
+impl fmt::Display for RangeOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RangeOp::RangeExclusive => write!(f, "`..`"),
+            RangeOp::RangeInclusive => write!(f, "`..=`"),
+        }
+    }
+}
+
 /// Enum representing the different separators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Separator {
