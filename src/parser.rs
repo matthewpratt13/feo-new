@@ -451,7 +451,6 @@ impl Parser {
 
             Some(Token::LBrace { .. }) => match self.peek_ahead_by(2) {
                 Some(Token::Colon { .. }) => MappingExpr::parse(self),
-                Some(Token::FatArrow { .. }) => MatchExpr::parse(self),
                 _ => match self.peek_ahead_by(1) {
                     Some(Token::RBrace { .. }) => MappingExpr::parse(self),
                     _ => BlockExpr::parse(self),

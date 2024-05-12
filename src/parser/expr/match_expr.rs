@@ -15,6 +15,11 @@ impl ParseControl for MatchExpr {
             Err(ErrorsEmitted)
         }?;
 
+        if let Some(Token::LBrace { .. } | Token::Semicolon { .. }) = parser.current_token() {
+            parser.log_missing("expr", "scrutinee expression");
+            return Err(ErrorsEmitted);
+        }
+
         let matched_expression = parser.parse_expression(Precedence::Lowest)?;
 
         let scrutinee = AssigneeExpr::try_from(matched_expression).map_err(|e| {
@@ -111,10 +116,25 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
     }
 
     let body = if let Some(Token::LBrace { .. }) = parser.current_token() {
-        Box::new(BlockExpr::parse(parser)?)
+        Ok(Box::new(BlockExpr::parse(parser)?))
     } else {
-        Box::new(parser.parse_expression(Precedence::Lowest)?)
-    };
+        let expr = Box::new(parser.parse_expression(Precedence::Lowest)?);
+        match parser.current_token() {
+            Some(Token::Comma { .. }) => {
+                parser.next_token();
+                Ok(expr)
+            }
+            Some(Token::RBrace { .. }) => Ok(expr),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`,`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`,`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }?;
 
     let arm = MatchArm {
         pattern,
