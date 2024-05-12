@@ -370,8 +370,8 @@ impl Parser {
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    let expr = PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)));
                     self.next_token();
+                    let expr = PathExpr::parse(self, PathPrefix::Identifier(Identifier(name)));
                     expr
                 } else {
                     let expr = self.parse_primary();

@@ -20,13 +20,22 @@ impl PathExpr {
         let mut tree: Vec<Identifier> = Vec::new();
 
         while let Some(Token::DblColon { .. }) = parser.current_token() {
-            if let Some(Token::Identifier { name, .. }) = parser.peek_ahead_by(1) {
-                parser.next_token();
-                parser.next_token();
+            match parser.peek_ahead_by(1) {
+                Some(Token::Identifier { name, .. }) => {
+                    parser.next_token();
+                    parser.next_token();
 
-                tree.push(Identifier(name));
-            } else {
-                break;
+                    tree.push(Identifier(name));
+                }
+                Some(Token::LBrace { .. }) => break,
+                Some(Token::EOF) | None => {
+                    parser.log_unexpected_eoi();
+                    return Err(ErrorsEmitted);
+                }
+                _ => {
+                    parser.log_unexpected_token("identifier");
+                    return Err(ErrorsEmitted);
+                }
             }
         }
 
