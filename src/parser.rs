@@ -352,7 +352,6 @@ impl Parser {
                                 let path = PathExpr {
                                     root: PathPrefix::Identifier(Identifier(name)),
                                     tree_opt: None,
-                                    wildcard_opt: None,
                                 };
                                 StructExpr::parse(self, path)
                             }
@@ -384,7 +383,6 @@ impl Parser {
                     let path = PathExpr {
                         root: PathPrefix::SelfType(SelfType),
                         tree_opt: None,
-                        wildcard_opt: None,
                     };
 
                     self.next_token();

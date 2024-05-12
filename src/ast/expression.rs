@@ -228,14 +228,13 @@ pub struct NoneExpr {
 pub struct PathExpr {
     pub(crate) root: PathPrefix,
     pub(crate) tree_opt: Option<Vec<Identifier>>,
-    pub(crate) wildcard_opt: Option<Separator>, // `::*`
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RangeExpr {
-    pub(crate) from_opt: Option<Box<AssigneeExpr>>, // TODO: change to `AssigneeExpr`
-    pub(crate) range_op: RangeOp,                   // `..` or `..=`
-    pub(crate) to_opt: Option<Box<AssigneeExpr>>,   // TODO: change to `AssigneeExpr`
+    pub(crate) from_opt: Option<Box<AssigneeExpr>>,
+    pub(crate) range_op: RangeOp, // `..` or `..=`
+    pub(crate) to_opt: Option<Box<AssigneeExpr>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

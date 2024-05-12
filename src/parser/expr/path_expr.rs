@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Identifier, PathExpr, PathPrefix, Separator},
+    ast::{Expression, Identifier, PathExpr, PathPrefix},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::Parser,
@@ -39,13 +39,6 @@ impl PathExpr {
             }
         }
 
-        let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.current_token() {
-            parser.next_token();
-            Some(Separator::ColonColonAsterisk)
-        } else {
-            None
-        };
-
         let expr = PathExpr {
             root,
             tree_opt: {
@@ -54,7 +47,7 @@ impl PathExpr {
                     false => Some(tree),
                 }
             },
-            wildcard_opt,
+            // wildcard_opt,
         };
 
         parser
@@ -98,17 +91,17 @@ mod tests {
         }
     }
 
-    #[test]
-    fn parse_path_expr_wildcard() -> Result<(), ()> {
-        let input = r#"self::some_module::*"#;
+    // #[test]
+    // fn parse_path_expr_wildcard() -> Result<(), ()> {
+    //     let input = r#"self::some_module::*"#;
 
-        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+    //     let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+    //     let statements = parser.parse();
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
-        }
-    }
+    //     match statements {
+    //         Ok(t) => Ok(println!("{:#?}", t)),
+    //         Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+    //     }
+    // }
 }
