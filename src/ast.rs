@@ -607,7 +607,7 @@ impl fmt::Display for Pattern {
                 Literal::Char(c) => write!(f, "{}", c),
                 Literal::Bool(b) => write!(f, "{}", b),
             },
-            Pattern::IdentifierPatt(id) => write!(f, "{}", id),
+            Pattern::IdentifierPatt(id) => write!(f, "{}", id.name),
             Pattern::PathPatt(pth) => write!(f, "{:?}", pth),
             Pattern::ReferencePatt(r) => write!(f, "{:?}", r),
             Pattern::GroupedPatt(g) => write!(f, "{:?}", *g),
