@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Expression, GroupedExpr},
+    ast::{Delimiter, Expression, GroupedExpr, TupleElements, TupleExpr},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::{ParseConstruct, Parser, Precedence},
@@ -21,6 +21,27 @@ impl ParseConstruct for GroupedExpr {
             parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)
         }?;
+
+        if let Some(Token::RParen { .. }) = parser.current_token() {
+            let tuple_expr = TupleExpr {
+                open_paren: open_paren.clone(),
+                tuple_elements: TupleElements {
+                    elements: Vec::new(),
+                    final_element_opt: None,
+                },
+                close_paren: Delimiter::RParen,
+            };
+
+            let expression = Box::new(Expression::Tuple(tuple_expr));
+
+            let grouped_expr = GroupedExpr {
+                open_paren,
+                expression,
+                close_paren: Delimiter::RParen,
+            };
+
+            return Ok(Expression::Grouped(grouped_expr));
+        }
 
         let expression = Box::new(parser.parse_expression(Precedence::Lowest)?);
 
