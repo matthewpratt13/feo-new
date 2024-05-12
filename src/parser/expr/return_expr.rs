@@ -15,9 +15,9 @@ impl ParseConstruct for ReturnExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let expression_opt = match parser.current_token().is_some() {
-            true => Some(Box::new(parser.parse_expression(Precedence::Lowest)?)),
-            false => None,
+        let expression_opt = match parser.current_token() {
+            Some(Token::RBrace { .. } | Token::Semicolon { .. } | Token::EOF) | None => None,
+            _ => Some(Box::new(parser.parse_expression(Precedence::Lowest)?)),
         };
 
         if let Some(Token::Semicolon { .. }) = parser.current_token() {
@@ -39,7 +39,7 @@ mod tests {
 
     #[test]
     fn parse_return_expr() -> Result<(), ()> {
-        let input = r#"return foo"#;
+        let input = r#"return (x + 2)"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
