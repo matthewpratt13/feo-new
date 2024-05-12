@@ -1297,10 +1297,7 @@ impl Parser {
 
     /// Determine if `Token::Dot` indicates field access.
     fn is_field_access(&self) -> bool {
-        match (self.current_token(), self.peek_ahead_by(1)) {
-            (Some(Token::Dot { .. }), Some(Token::Identifier { .. })) => true, // `object.field`
-            _ => false,
-        }
+        !self.is_method_call() && !self.is_tuple_index()
     }
 
     /// Determine if `Token::Pipe` indicates a closure parameter delimiter.

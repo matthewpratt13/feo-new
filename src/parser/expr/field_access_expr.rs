@@ -22,7 +22,7 @@ impl ParseOperation for FieldAccessExpr {
                 })
             }
             Some(Token::EOF) | None => {
-                parser.log_missing_token("identifier");
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {

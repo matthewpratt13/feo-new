@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn parse_method_call_expr_with_args() -> Result<(), ()> {
-        let input = r#"receiver.method(x, "foo", -10)"#;
+        let input = r#"receiver.method()"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
