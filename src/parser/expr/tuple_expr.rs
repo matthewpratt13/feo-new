@@ -73,12 +73,19 @@ impl ParseOperation for TupleIndexExpr {
             ErrorsEmitted
         })?;
 
-        let index = if let Some(Token::UIntLiteral { value, .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(value)
-        } else {
-            parser.log_unexpected_token("tuple index (unsigned integer)");
-            Err(ErrorsEmitted)
+        let index = match parser.current_token() {
+            Some(Token::UIntLiteral { value, .. }) => {
+                parser.next_token();
+                Ok(value)
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("tuple index (unsigned decimal integer)");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let expr = TupleIndexExpr {

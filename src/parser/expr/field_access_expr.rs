@@ -26,7 +26,7 @@ impl ParseOperation for FieldAccessExpr {
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("identifier");
+                parser.log_unexpected_token("identifier in field access expression");
                 Err(ErrorsEmitted)
             }
         }?;
