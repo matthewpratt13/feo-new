@@ -34,8 +34,8 @@ impl ParseOperation for IndexExpr {
                 Ok(Delimiter::RBracket)
             }
             Some(Token::EOF) | None => {
-                parser.log_missing_token("`]`");
                 parser.log_unmatched_delimiter(&open_bracket);
+                parser.log_missing_token("`]`");
                 Err(ErrorsEmitted)
             }
             _ => {

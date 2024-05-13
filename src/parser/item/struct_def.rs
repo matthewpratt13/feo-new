@@ -54,8 +54,8 @@ impl ParseDefinition for StructDef {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
-            parser.log_missing_token("`}`");
             parser.log_unmatched_delimiter(&open_brace);
+            parser.log_missing_token("`}`");
             Err(ErrorsEmitted)
         }?;
 
@@ -110,8 +110,8 @@ impl ParseDefinition for TupleStructDef {
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
         } else {
-            parser.log_missing_token("`)`");
             parser.log_unmatched_delimiter(&open_paren);
+            parser.log_missing_token("`)`");
             Err(ErrorsEmitted)
         }?;
 

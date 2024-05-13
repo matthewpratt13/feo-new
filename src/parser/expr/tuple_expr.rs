@@ -23,8 +23,8 @@ impl ParseConstruct for TupleExpr {
             parser.next_token();
             Ok(Delimiter::RParen)
         } else {
-            parser.log_missing_token("`)`");
             parser.log_unmatched_delimiter(&open_paren);
+            parser.log_missing_token("`)`");
             Err(ErrorsEmitted)
         }?;
 

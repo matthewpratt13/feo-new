@@ -41,8 +41,8 @@ impl ParseConstruct for BlockExpr {
             parser.next_token();
             Ok(Delimiter::RBrace)
         } else {
-            parser.log_missing_token("`}`");
             parser.log_unmatched_delimiter(&open_brace);
+            parser.log_missing_token("`}`");
             Err(ErrorsEmitted)
         }?;
 

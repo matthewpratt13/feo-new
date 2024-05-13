@@ -53,8 +53,8 @@ impl ParseDefinition for EnumDef {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
-            parser.log_missing_token("`}`");
             parser.log_unmatched_delimiter(&open_brace);
+            parser.log_missing_token("`}`");
             Err(ErrorsEmitted)
         }?;
 
@@ -156,8 +156,8 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
     let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
         Ok(Delimiter::RBrace)
     } else {
-        parser.log_missing_token("`}`");
         parser.log_unmatched_delimiter(&open_brace);
+        parser.log_missing_token("`}`");
         Err(ErrorsEmitted)
     }?;
 
@@ -187,8 +187,8 @@ fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTuple, Err
     let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
         Ok(Delimiter::RParen)
     } else {
-        parser.log_missing_token("`)`");
         parser.log_unmatched_delimiter(&open_paren);
+        parser.log_missing_token("`)`");
         Err(ErrorsEmitted)
     }?;
 
