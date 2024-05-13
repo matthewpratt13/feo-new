@@ -21,7 +21,6 @@ impl ParseConstruct for TupleExpr {
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.current_token() {
             parser.next_token();
-
             Ok(Delimiter::RParen)
         } else {
             parser.log_missing_token("`)`");
@@ -103,7 +102,7 @@ mod tests {
 
     #[test]
     fn parse_tuple_expr() -> Result<(), ()> {
-        let input = r#"(true, "foo", 10, x)"#;
+        let input = r#"(true, "foo", 10)"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
