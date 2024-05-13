@@ -344,26 +344,55 @@ impl Parser {
                     }))
                 } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     {
-                        let expr = self.parse_primary();
-                        self.next_token();
+                        // let expr = self.parse_primary();
+                        // self.next_token();
 
-                        match self.peek_ahead_by(2) {
-                            Some(Token::Colon { .. }) => {
+                        // match self.peek_ahead_by(2) {
+                        //     Some(Token::Colon { .. }) => {
+                        //         let path = PathExpr {
+                        //             root: PathPrefix::Identifier(Identifier(name)),
+                        //             tree_opt: None,
+                        //         };
+                        //         StructExpr::parse(self, path)
+                        //     }
+                        //     Some(Token::FatArrow { .. } | Token::If { .. }) => {
+                        //         if let Some(Token::LBrace { .. }) = self.current_token() {
+                        //             expr
+                        //         } else {
+                        //             self.log_unexpected_token("`{`");
+                        //             Err(ErrorsEmitted)
+                        //         }
+                        //     }
+                        //     _ => expr,
+                        // }
+
+                        match self.peek_behind_by(1) {
+                            Some(
+                                Token::Equals { .. }
+                                | Token::LParen { .. }
+                                | Token::LBracket { .. }
+                                | Token::LBrace { .. }
+                                | Token::Comma { .. }
+                                | Token::RBrace { .. }
+                                | Token::Return { .. }
+                                | Token::Semicolon { .. },
+                            )
+                            | None => {
                                 let path = PathExpr {
                                     root: PathPrefix::Identifier(Identifier(name)),
                                     tree_opt: None,
                                 };
+
+                                self.next_token();
+
                                 StructExpr::parse(self, path)
                             }
-                            Some(Token::FatArrow { .. } | Token::If { .. }) => {
-                                if let Some(Token::LBrace { .. }) = self.current_token() {
-                                    expr
-                                } else {
-                                    self.log_unexpected_token("`{`");
-                                    Err(ErrorsEmitted)
-                                }
+
+                            _ => {
+                                let expr = self.parse_primary();
+                                self.next_token();
+                                expr
                             }
-                            _ => expr,
                         }
                     }
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
@@ -580,6 +609,9 @@ impl Parser {
                 } else if self.is_field_access() {
                     self.set_context(ParserContext::FieldAccess);
                 } else {
+                    self.log_error(ParserErrorKind::InvalidTokenContext {
+                        token: self.current_token(),
+                    });
                     self.set_context(ParserContext::Default)
                 }
 
@@ -678,16 +710,12 @@ impl Parser {
             Some(Token::Equals { .. }) => Some(AssignmentExpr::parse),
 
             Some(_) => {
-                self.logger.log(
-                    LogLevel::Debug,
-                    LogMsg::from(
-                        ParserErrorKind::InvalidTokenContext {
-                            token: self.current_token(),
-                        }
-                        .to_string(),
-                    ),
-                );
+                self.log_error(ParserErrorKind::InvalidTokenContext {
+                    token: self.current_token(),
+                });
+
                 self.log_current_token(true);
+                // self.next_token();
                 None
             }
 
@@ -696,8 +724,8 @@ impl Parser {
                     LogLevel::Debug,
                     LogMsg::from("no infix parsing function found"),
                 );
-                self.next_token();
                 self.log_current_token(true);
+                // self.next_token();
                 None
             }
         }
@@ -1296,8 +1324,8 @@ impl Parser {
 
     /// Determine if `Token::Dot` token indicates a tuple index operator (followed by a digit).
     fn is_tuple_index(&self) -> bool {
-        match self.peek_ahead_by(1) {
-            Some(Token::UIntLiteral { .. }) => true,
+        match (self.current_token(), self.peek_ahead_by(1)) {
+            (Some(Token::Dot { .. }), Some(Token::UIntLiteral { .. })) => true,
             _ => false,
         }
     }
@@ -1320,7 +1348,13 @@ impl Parser {
 
     /// Determine if `Token::Dot` indicates field access.
     fn is_field_access(&self) -> bool {
-        !self.is_method_call() && !self.is_tuple_index()
+        match (self.current_token(), self.peek_ahead_by(1)) {
+            (Some(Token::Dot { .. }), Some(Token::Identifier { .. })) => {
+                !self.is_method_call() && !self.is_tuple_index()
+            }
+
+            _ => false,
+        }
     }
 
     /// Determine if `Token::Pipe` indicates a closure parameter delimiter.
@@ -1332,10 +1366,14 @@ impl Parser {
         ) {
             (
                 Some(
-                    Token::LParen { .. }
+                    Token::Equals { .. }
+                    | Token::LParen { .. }
                     | Token::LBracket { .. }
                     | Token::LBrace { .. }
-                    | Token::Equals { .. },
+                    | Token::Comma { .. }
+                    | Token::RBrace { .. }
+                    | Token::Return { .. }
+                    | Token::Semicolon { .. },
                 )
                 | None,
                 Some(Token::Pipe { .. }),
@@ -1364,10 +1402,14 @@ impl Parser {
         ) {
             (
                 Some(
-                    Token::LParen { .. }
+                    Token::Equals { .. }
+                    | Token::LParen { .. }
                     | Token::LBracket { .. }
                     | Token::LBrace { .. }
-                    | Token::Equals { .. },
+                    | Token::Comma { .. }
+                    | Token::RBrace { .. }
+                    | Token::Return { .. }
+                    | Token::Semicolon { .. },
                 )
                 | None,
                 Some(Token::DblPipe { .. }),
