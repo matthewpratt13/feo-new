@@ -8,15 +8,15 @@ use super::Parser;
 
 impl Visibility {
     pub(crate) fn visibility(parser: &mut Parser) -> Result<Visibility, ErrorsEmitted> {
-        match parser.current_token() {
+        match parser.current_token().as_ref() {
             Some(Token::Pub { .. }) => {
                 parser.next_token();
 
-                match parser.current_token() {
+                match parser.current_token().as_ref() {
                     Some(Token::LParen { .. }) => {
                         parser.next_token();
 
-                        let kw_package = match parser.current_token() {
+                        let kw_package = match parser.current_token().as_ref() {
                             Some(Token::Package { .. }) => {
                                 parser.next_token();
                                 Ok(Keyword::Package)

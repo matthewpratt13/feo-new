@@ -1258,13 +1258,10 @@ pub(crate) struct TokenStream {
 impl TokenStream {
     /// Constructor method.
     /// Stores the source data used in parsing (i.e., tokens).
-    pub(crate) fn new(tokens: &[Token], input: &str, start: usize, end: usize) -> Self {
+    pub(crate) fn new(tokens: Vec<Token>, input: &str, start: usize, end: usize) -> Self {
         let span = Span::new(input, start, end);
 
-        TokenStream {
-            tokens: tokens.to_vec(),
-            span,
-        }
+        TokenStream { tokens, span }
     }
 
     /// Get the tokens in the stream.

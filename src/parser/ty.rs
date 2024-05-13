@@ -22,7 +22,7 @@ impl Type {
 
         let token = parser.next_token();
 
-        match token {
+        match token.as_ref() {
             Some(Token::I32Type { .. }) => Ok(Type::I32(Int::I32(i32::default()))),
             Some(Token::I64Type { .. }) => Ok(Type::I64(Int::I64(i64::default()))),
             Some(Token::I128Type { .. }) => Ok(Type::I128(Int::I128(i128::default()))),
@@ -63,7 +63,7 @@ impl Type {
                 })
             }
             Some(Token::VecType { .. }) => {
-                match parser.current_token() {
+                match parser.current_token().as_ref() {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
@@ -79,7 +79,7 @@ impl Type {
 
                 let ty = Type::parse(parser)?;
 
-                match parser.current_token() {
+                match parser.current_token().as_ref() {
                     Some(Token::GreaterThan { .. }) => {
                         parser.next_token();
                         Ok(Type::Vec(Box::new(ty)))
@@ -96,7 +96,7 @@ impl Type {
             }
 
             Some(Token::MappingType { .. }) => {
-                match parser.current_token() {
+                match parser.current_token().as_ref() {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
@@ -112,7 +112,7 @@ impl Type {
 
                 let key_type = Box::new(Type::parse(parser)?);
 
-                match parser.current_token() {
+                match parser.current_token().as_ref() {
                     Some(Token::Comma { .. }) => {
                         parser.next_token();
                     }
@@ -128,7 +128,7 @@ impl Type {
 
                 let value_type = Box::new(Type::parse(parser)?);
 
-                match parser.current_token() {
+                match parser.current_token().as_ref() {
                     Some(Token::GreaterThan { .. }) => {
                         parser.next_token();
 
@@ -149,7 +149,7 @@ impl Type {
             }
 
             Some(Token::OptionType { .. }) => {
-                match parser.current_token() {
+                match parser.current_token().as_ref() {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
@@ -165,7 +165,7 @@ impl Type {
 
                 let ty = Type::parse(parser)?;
 
-                match parser.current_token() {
+                match parser.current_token().as_ref() {
                     Some(Token::GreaterThan { .. }) => {
                         parser.next_token();
 
@@ -186,7 +186,7 @@ impl Type {
             }
 
             Some(Token::ResultType { .. }) => {
-                match parser.current_token() {
+                match parser.current_token().as_ref() {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
@@ -201,7 +201,7 @@ impl Type {
                 }
                 let ok = Box::new(Type::parse(parser)?);
 
-                match parser.current_token() {
+                match parser.current_token().as_ref() {
                     Some(Token::Comma { .. }) => {
                         parser.next_token();
                     }
@@ -216,7 +216,7 @@ impl Type {
                 }
                 let err = Box::new(Type::parse(parser)?);
 
-                match parser.current_token() {
+                match parser.current_token().as_ref() {
                     Some(Token::GreaterThan { .. }) => {
                         parser.next_token();
                         Ok(Type::Result { ok, err })
@@ -233,14 +233,15 @@ impl Type {
             }
 
             Some(Token::Identifier { name, .. }) => {
-                if &name == "_" {
+                if name == "_" {
                     let ty = InferredType {
-                        underscore: Identifier(name),
+                        underscore: Identifier::from(name),
                     };
 
                     Ok(Type::InferredType(ty))
                 } else {
-                    let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)))?;
+                    let path =
+                        PathExpr::parse(parser, PathPrefix::Identifier(Identifier::from(name)))?;
                     Ok(Type::UserDefined(path))
                 }
             }
@@ -291,7 +292,7 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
         Err(ErrorsEmitted)
     }?;
 
-    let open_paren = match parser.current_token() {
+    let open_paren = match parser.current_token().as_ref() {
         Some(Token::LParen { .. }) => {
             parser.next_token();
             Ok(Delimiter::LParen)
@@ -378,7 +379,7 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         }
     }?;
 
-    match parser.current_token() {
+    match parser.current_token().as_ref() {
         Some(Token::RBracket { .. }) => {
             parser.next_token();
 
@@ -416,7 +417,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     } else {
         let ty = Type::parse(parser)?;
 
-        match parser.current_token() {
+        match parser.current_token().as_ref() {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
                 Ok(Type::GroupedType(Box::new(ty)))

@@ -20,17 +20,17 @@ pub(crate) fn get_collection<T>(
     match close_delimiter {
         Delimiter::RParen => {
             while !matches!(
-                parser.current_token(),
+                parser.current_token().as_ref(),
                 Some(Token::RParen { .. } | Token::EOF),
             ) {
                 let item = f(parser)?;
 
                 collection.push(item);
 
-                if let Some(Token::Comma { .. }) = parser.current_token() {
+                if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                 } else if !matches!(
-                    parser.current_token(),
+                    parser.current_token().as_ref(),
                     Some(Token::RParen { .. } | Token::EOF)
                 ) {
                     parser.log_unexpected_token("`,` or `)`");
@@ -41,17 +41,17 @@ pub(crate) fn get_collection<T>(
 
         Delimiter::RBrace => {
             while !matches!(
-                parser.current_token(),
+                parser.current_token().as_ref(),
                 Some(Token::RBrace { .. } | Token::EOF),
             ) {
                 let item = f(parser)?;
 
                 collection.push(item);
 
-                if let Some(Token::Comma { .. }) = parser.current_token() {
+                if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                 } else if !matches!(
-                    parser.current_token(),
+                    parser.current_token().as_ref(),
                     Some(Token::RBrace { .. } | Token::EOF)
                 ) {
                     parser.log_unexpected_token("`,` or `}`");
@@ -62,19 +62,19 @@ pub(crate) fn get_collection<T>(
 
         Delimiter::Pipe => {
             while !matches!(
-                parser.current_token(),
+                parser.current_token().as_ref(),
                 Some(Token::Pipe { .. } | Token::EOF),
             ) {
                 let item = f(parser)?;
                 collection.push(item);
 
-                if let Some(Token::Comma { .. }) = parser.current_token() {
+                if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
-                } else if let Some(Token::Pipe { .. }) = parser.current_token() {
+                } else if let Some(Token::Pipe { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                     break;
                 } else if !matches!(
-                    parser.current_token(),
+                    parser.current_token().as_ref(),
                     Some(Token::Pipe { .. } | Token::EOF)
                 ) {
                     parser.log_unexpected_token("`,` or `|`");
@@ -114,17 +114,17 @@ pub(crate) fn get_expressions(
     match close_delimiter {
         Delimiter::RParen => {
             while !matches!(
-                parser.current_token(),
+                parser.current_token().as_ref(),
                 Some(Token::RParen { .. } | Token::EOF),
             ) {
                 let expr = parser.parse_expression(precedence)?;
 
                 expressions.push(expr);
 
-                if let Some(Token::Comma { .. }) = parser.current_token() {
+                if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                 } else if !matches!(
-                    parser.current_token(),
+                    parser.current_token().as_ref(),
                     Some(Token::RParen { .. } | Token::EOF)
                 ) {
                     parser.log_unexpected_token("`,` or `)`");
@@ -134,17 +134,17 @@ pub(crate) fn get_expressions(
         }
         Delimiter::RBracket => {
             while !matches!(
-                parser.current_token(),
+                parser.current_token().as_ref(),
                 Some(Token::RBracket { .. } | Token::EOF),
             ) {
                 let expr = parser.parse_expression(precedence)?;
 
                 expressions.push(expr);
 
-                if let Some(Token::Comma { .. }) = parser.current_token() {
+                if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                 } else if !matches!(
-                    parser.current_token(),
+                    parser.current_token().as_ref(),
                     Some(Token::RBracket { .. } | Token::EOF)
                 ) {
                     parser.log_unexpected_token("`,` or `]`");
@@ -186,7 +186,7 @@ pub(crate) fn get_associated_items<T: ParseAssociatedItem>(
     let mut items: Vec<T> = Vec::new();
 
     while !matches!(
-        parser.current_token(),
+        parser.current_token().as_ref(),
         Some(Token::RBrace { .. } | Token::EOF)
     ) {
         let attributes_opt = get_attributes(parser, OuterAttr::outer_attr);

@@ -152,7 +152,7 @@ impl fmt::Display for Str {
 }
 
 /// Wrapper for the `char` type.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Char(char);
 
 impl From<char> for Char {
@@ -168,7 +168,7 @@ impl fmt::Display for Char {
 }
 
 /// Wrapper for the `bool` type.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Bool(bool);
 
 impl From<bool> for Bool {

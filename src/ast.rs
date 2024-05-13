@@ -57,6 +57,18 @@ impl fmt::Display for Literal {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Identifier(pub String);
 
+impl From<&str> for Identifier {
+    fn from(value: &str) -> Self {
+        Self(value.to_string())
+    }
+}
+
+impl From<&String> for Identifier {
+    fn from(value: &String) -> Self {
+        Self(value.to_string())
+    }
+}
+
 impl fmt::Display for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
