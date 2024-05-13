@@ -248,7 +248,7 @@ impl Parser {
                 LogMsg::from("current precedence >= input precedence"),
             );
 
-            if let Some(infix_parser) = self.parse_infix() {
+            if let Some(infix_parser) = self.parse_infix()? {
                 left_expr = infix_parser(self, left_expr)?; // parse infix expressions
                 self.logger.log(
                     LogLevel::Debug,
@@ -595,7 +595,8 @@ impl Parser {
     /// and should combine the left expression with the operator and a right expression.
     fn parse_infix(
         &mut self,
-    ) -> Option<fn(&mut Self, Expression) -> Result<Expression, ErrorsEmitted>> {
+    ) -> Result<Option<fn(&mut Self, Expression) -> Result<Expression, ErrorsEmitted>>, ErrorsEmitted>
+    {
         self.logger
             .log(LogLevel::Debug, LogMsg::from("entering `parse_infix()`"));
         self.log_current_token(true);
@@ -617,64 +618,80 @@ impl Parser {
 
                 self.next_token();
 
-                match self.context {
-                    ParserContext::FieldAccess => Some(FieldAccessExpr::parse),
-                    ParserContext::MethodCall => Some(MethodCallExpr::parse),
-                    ParserContext::TupleIndex => Some(TupleIndexExpr::parse),
-                    _ => None, // default to no infix parser
+                match self.current_token() {
+                    Some(Token::EOF) | None => {
+                        self.log_unexpected_eoi();
+                        return Err(ErrorsEmitted);
+                    }
+
+                    Some(Token::Identifier { .. } | Token::UIntLiteral { .. }) => {
+                        match self.context {
+                            ParserContext::FieldAccess => Ok(Some(FieldAccessExpr::parse)),
+                            ParserContext::MethodCall => Ok(Some(MethodCallExpr::parse)),
+                            ParserContext::TupleIndex => Ok(Some(TupleIndexExpr::parse)),
+                            _ => Ok(None), // default to no infix parser
+                        }
+                    }
+                    
+                    _ => {
+                        self.log_unexpected_token(
+                            "identifier or tuple index (unsigned decimal integer",
+                        );
+                        Err(ErrorsEmitted)
+                    }
                 }
             }
 
-            Some(Token::LParen { .. }) => Some(CallExpr::parse),
+            Some(Token::LParen { .. }) => Ok(Some(CallExpr::parse)),
 
-            Some(Token::LBracket { .. }) => Some(IndexExpr::parse),
+            Some(Token::LBracket { .. }) => Ok(Some(IndexExpr::parse)),
 
-            Some(Token::QuestionMark { .. }) => Some(UnwrapExpr::parse),
+            Some(Token::QuestionMark { .. }) => Ok(Some(UnwrapExpr::parse)),
 
             Some(Token::Ampersand { .. }) => {
                 if self.context == ParserContext::Unary {
-                    None
+                    Ok(None)
                 } else {
-                    Some(BinaryExpr::parse)
+                    Ok(Some(BinaryExpr::parse))
                 }
             }
 
             Some(Token::Minus { .. }) => {
                 if self.context == ParserContext::Unary {
-                    None
+                    Ok(None)
                 } else {
-                    Some(BinaryExpr::parse)
+                    Ok(Some(BinaryExpr::parse))
                 }
             }
 
             Some(Token::Asterisk { .. }) => {
                 if self.context == ParserContext::Unary {
-                    None
+                    Ok(None)
                 } else {
-                    Some(BinaryExpr::parse)
+                    Ok(Some(BinaryExpr::parse))
                 }
             }
 
-            Some(Token::As { .. }) => Some(TypeCastExpr::parse),
+            Some(Token::As { .. }) => Ok(Some(TypeCastExpr::parse)),
 
             Some(
                 Token::Plus { .. }
                 | Token::Slash { .. }
                 | Token::Percent { .. }
                 | Token::DblAsterisk { .. },
-            ) => Some(BinaryExpr::parse),
+            ) => Ok(Some(BinaryExpr::parse)),
 
             Some(Token::DblLessThan { .. } | Token::DblGreaterThan { .. }) => {
-                Some(BinaryExpr::parse)
+                Ok(Some(BinaryExpr::parse))
             }
 
-            Some(Token::Caret { .. }) => Some(BinaryExpr::parse),
+            Some(Token::Caret { .. }) => Ok(Some(BinaryExpr::parse)),
 
             Some(Token::Pipe { .. }) => {
                 if self.context == ParserContext::Closure {
-                    None
+                    Ok(None)
                 } else {
-                    Some(BinaryExpr::parse)
+                    Ok(Some(BinaryExpr::parse))
                 }
             }
 
@@ -685,19 +702,19 @@ impl Parser {
                 | Token::GreaterThan { .. }
                 | Token::LessThanEquals { .. }
                 | Token::GreaterThanEquals { .. },
-            ) => Some(ComparisonExpr::parse),
+            ) => Ok(Some(ComparisonExpr::parse)),
 
-            Some(Token::DblAmpersand { .. }) => Some(BinaryExpr::parse),
+            Some(Token::DblAmpersand { .. }) => Ok(Some(BinaryExpr::parse)),
 
             Some(Token::DblPipe { .. }) => {
                 if self.context == ParserContext::Closure {
-                    None
+                    Ok(None)
                 } else {
-                    Some(BinaryExpr::parse)
+                    Ok(Some(BinaryExpr::parse))
                 }
             }
 
-            Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => Some(RangeExpr::parse),
+            Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => Ok(Some(RangeExpr::parse)),
 
             Some(
                 Token::PlusEquals { .. }
@@ -705,9 +722,9 @@ impl Parser {
                 | Token::AsteriskEquals { .. }
                 | Token::SlashEquals { .. }
                 | Token::PercentEquals { .. },
-            ) => Some(CompoundAssignmentExpr::parse),
+            ) => Ok(Some(CompoundAssignmentExpr::parse)),
 
-            Some(Token::Equals { .. }) => Some(AssignmentExpr::parse),
+            Some(Token::Equals { .. }) => Ok(Some(AssignmentExpr::parse)),
 
             Some(_) => {
                 self.log_error(ParserErrorKind::InvalidTokenContext {
@@ -716,7 +733,7 @@ impl Parser {
 
                 self.log_current_token(true);
                 // self.next_token();
-                None
+                Err(ErrorsEmitted)
             }
 
             None => {
@@ -726,7 +743,7 @@ impl Parser {
                 );
                 self.log_current_token(true);
                 // self.next_token();
-                None
+                Ok(None)
             }
         }
     }
