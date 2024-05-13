@@ -14,10 +14,11 @@ impl ParseConstruct for ClosureExpr {
             Some(Token::Pipe { .. }) => {
                 parser.next_token();
 
-                let vec = collection::get_collection(parser, parse_closure_param, Delimiter::Pipe)?;
+                let vec_opt =
+                    collection::get_collection(parser, parse_closure_param, Delimiter::Pipe)?;
 
-                if vec.is_some() {
-                    Ok(ClosureParams::Some(vec.unwrap()))
+                if vec_opt.is_some() {
+                    Ok(ClosureParams::Some(vec_opt.unwrap()))
                 } else {
                     parser.log_unexpected_token("closure parameters");
                     Err(ErrorsEmitted)
@@ -35,21 +36,33 @@ impl ParseConstruct for ClosureExpr {
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
             parser.next_token();
-            Some(Box::new(Type::parse(parser)?))
+
+            match parser.current_token() {
+                Some(Token::LBrace { .. }) => {
+                    parser.log_missing("type", "closure return type");
+                    Err(ErrorsEmitted)
+                }
+                Some(Token::EOF { .. }) | None => {
+                    parser.log_unexpected_eoi();
+                    Err(ErrorsEmitted)
+                }
+
+                _ => Ok(Some(Box::new(Type::parse(parser)?))),
+            }
         } else {
-            None
-        };
+            Ok(None)
+        }?;
 
         let expression = if return_type_opt.is_some() {
-            BlockExpr::parse(parser)?
+            Box::new(BlockExpr::parse(parser)?)
         } else {
-            parser.parse_expression(Precedence::Lowest)?
+            Box::new(parser.parse_expression(Precedence::Lowest)?)
         };
 
         let expr = ClosureExpr {
             params,
             return_type_opt,
-            expression: Box::new(expression),
+            expression,
         };
 
         Ok(Expression::Closure(expr))
@@ -60,20 +73,37 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
     let param_name = match parser.current_token() {
         Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
             IdentifierPatt::parse(parser)
-            // parser.get_identifier_patt()
         }
+
+        Some(Token::EOF) | None => {
+            parser.log_missing("patt", "identifier pattern");
+            Err(ErrorsEmitted)
+        }
+
         _ => {
-            parser.log_unexpected_token("identifier");
+            parser.log_unexpected_token("identifier, `ref` or `mut`");
             Err(ErrorsEmitted)
         }
     }?;
 
     let type_ann_opt = if let Some(Token::Colon { .. }) = parser.current_token() {
         parser.next_token();
-        Some(Type::parse(parser)?)
+
+        match parser.current_token() {
+            Some(Token::Pipe { .. } | Token::Comma { .. }) => {
+                parser.log_missing("type", "closure parameter type annotation");
+                Err(ErrorsEmitted)
+            }
+            Some(Token::EOF { .. }) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+
+            _ => Ok(Some(Type::parse(parser)?)),
+        }
     } else {
-        None
-    };
+        Ok(None)
+    }?;
 
     let param = ClosureParam {
         param_name,
@@ -104,7 +134,7 @@ mod tests {
     #[test]
     fn parse_closure_expr_with_block() -> Result<(), ()> {
         let input = r#"|world: str| -> () {
-            print("hello {}", world);
+            print("hello {}", world)
         }"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);

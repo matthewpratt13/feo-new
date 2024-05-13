@@ -7,10 +7,6 @@ use crate::{
 
 impl TuplePatt {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
-        let mut elements = Vec::new();
-
-        let mut final_element_opt = None::<Box<Pattern>>;
-
         let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Delimiter::LParen)
@@ -19,14 +15,13 @@ impl TuplePatt {
             Err(ErrorsEmitted)
         }?;
 
-        let tuple_patt_elements =
-            parse_tuple_patt_elements(parser, &mut elements, &mut final_element_opt)?;
+        let tuple_patt_elements = parse_tuple_patt_elements(parser)?;
 
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
         } else {
+            parser.log_unmatched_delimiter(&open_paren);
             parser.log_missing_token("`)`");
-            parser.log_unmatched_delimiter(open_paren.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -40,11 +35,10 @@ impl TuplePatt {
     }
 }
 
-fn parse_tuple_patt_elements(
-    parser: &mut Parser,
-    elements: &mut Vec<(Pattern, Separator)>,
-    final_element_opt: &mut Option<Box<Pattern>>,
-) -> Result<TuplePattElements, ErrorsEmitted> {
+fn parse_tuple_patt_elements(parser: &mut Parser) -> Result<TuplePattElements, ErrorsEmitted> {
+    let mut elements = Vec::new();
+    let mut final_element_opt = None::<Box<Pattern>>;
+
     while !matches!(
         parser.current_token(),
         Some(Token::RParen { .. } | Token::EOF)
@@ -57,13 +51,13 @@ fn parse_tuple_patt_elements(
         } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
             parser.log_unexpected_token("`,` or `)`");
         } else if matches!(parser.current_token(), Some(Token::RParen { .. })) {
-            *final_element_opt = Some(Box::new(element));
+            final_element_opt = Some(Box::new(element));
             break;
         }
     }
-    let tuple_elements = TuplePattElements {
-        elements: elements.clone(),
-        final_element_opt: final_element_opt.clone(),
-    };
-    Ok(tuple_elements)
+
+    Ok(TuplePattElements {
+        elements,
+        final_element_opt,
+    })
 }

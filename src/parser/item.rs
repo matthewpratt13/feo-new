@@ -29,6 +29,11 @@ impl Item {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<Item, ErrorsEmitted> {
+        parser
+            .logger
+            .log(LogLevel::Debug, LogMsg::from("entering `Item::parse()`"));
+        parser.log_current_token(false);
+
         match parser.current_token() {
             Some(Token::Import { .. }) => Ok(Item::ImportDecl(ImportDecl::parse(
                 parser,
@@ -91,7 +96,7 @@ impl Item {
                 visibility,
             )?)),
             _ => {
-                parser.log_unexpected_token("declaration or definition");
+                parser.log_unexpected_token("item declaration or definition");
                 Err(ErrorsEmitted)
             }
         }
@@ -103,7 +108,7 @@ impl ParseStatement for Item {
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `Item::parse_statement()`".to_string()),
+            LogMsg::from("entering `Item::parse_statement()`"),
         );
         parser.log_current_token(true);
 
@@ -174,7 +179,7 @@ impl ParseStatement for Item {
                 }
             },
             _ => {
-                parser.log_unexpected_token("declaration or definition item");
+                parser.log_unexpected_token("item keyword");
                 Err(ErrorsEmitted)
             }
         }

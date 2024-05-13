@@ -27,11 +27,16 @@ impl ParseDefinition for InherentImplDef {
 
         let nominal_type = Type::parse(parser)?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::LBrace)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.next_token() {
+            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let associated_items_opt = collection::get_associated_items::<InherentImplItem>(parser)?;
@@ -39,8 +44,8 @@ impl ParseDefinition for InherentImplDef {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
+            parser.log_unmatched_delimiter(&open_brace);
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -71,15 +76,23 @@ impl ParseDefinition for TraitImplDef {
 
         let token = parser.current_token();
 
-        let implemented_trait_path = if let Some(Token::Identifier { name, .. }) = token {
-            let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)));
-            parser.next_token();
-            path
-        } else {
-            parser.log_unexpected_token("implemented trait path");
-            parser.next_token();
+        let implemented_trait_path = match token {
+            Some(Token::Identifier { name, .. }) => {
+                let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)));
+                parser.next_token();
+                path
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
 
-            Err(ErrorsEmitted)
+            _ => {
+                parser.log_unexpected_token("implemented trait path");
+                parser.next_token();
+
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
@@ -92,11 +105,16 @@ impl ParseDefinition for TraitImplDef {
 
         let implementing_type = Type::parse(parser)?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::LBrace)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.next_token() {
+            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let associated_items_opt = collection::get_associated_items::<TraitImplItem>(parser)?;
@@ -104,8 +122,8 @@ impl ParseDefinition for TraitImplDef {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
+            parser.log_unmatched_delimiter(&open_brace);
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -134,7 +152,7 @@ impl ParseAssociatedItem for InherentImplItem {
                 if constant_decl.value_opt.is_none() {
                     parser.logger.log(
                         LogLevel::Warning,
-                        LogMsg("value cannot be `None`".to_string()),
+                        LogMsg::from("assigned value cannot be `None`"),
                     );
                     Err(ErrorsEmitted)
                 } else {
@@ -145,10 +163,7 @@ impl ParseAssociatedItem for InherentImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
-                        token: parser.current_token(),
-                        msg: "Functions in implementation blocks must have bodies".to_string(),
-                    });
+                    parser.log_missing("item", "implementation associated item");
                     Err(ErrorsEmitted)
                 } else {
                     Ok(InherentImplItem::FunctionDef(function_def))
@@ -174,7 +189,7 @@ impl ParseAssociatedItem for TraitImplItem {
                 if constant_decl.value_opt.is_none() {
                     parser.logger.log(
                         LogLevel::Warning,
-                        LogMsg("value cannot be `None`".to_string()),
+                        LogMsg::from("assigned value cannot be `None`"),
                     );
                     Err(ErrorsEmitted)
                 } else {
@@ -188,10 +203,7 @@ impl ParseAssociatedItem for TraitImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
-                        token: parser.current_token(),
-                        msg: "Functions in implementation blocks must have bodies".to_string(),
-                    });
+                    parser.log_missing("item", "trait implementation associated item");
                     Err(ErrorsEmitted)
                 } else {
                     Ok(TraitImplItem::FunctionDef(function_def))

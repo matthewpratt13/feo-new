@@ -22,9 +22,14 @@ impl Span {
         }
     }
 
-    /// Retrieve the start index for a given `Span`.
+    /// Get the start position of a given span.
     pub fn start(&self) -> usize {
         self.start
+    }
+
+    /// Get the end position of a given span.
+    pub fn end(&self) -> usize {
+        self.end
     }
 
     /// Retrieve a thread-safe reference to the source code.

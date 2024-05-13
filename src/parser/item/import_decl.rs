@@ -25,18 +25,25 @@ impl ParseDeclaration for ImportDecl {
 
         let tree = parse_import_tree(parser)?;
 
-        match parser.next_token() {
-            Some(Token::Semicolon { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`;`"),
-            None => parser.log_missing_token("`;`"),
+        match parser.current_token() {
+            Some(Token::Semicolon { .. }) => {
+                parser.next_token();
+                Ok(ImportDecl {
+                    attributes_opt,
+                    visibility,
+                    kw_import,
+                    tree,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`;`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`;`");
+                Err(ErrorsEmitted)
+            }
         }
-
-        Ok(ImportDecl {
-            attributes_opt,
-            visibility,
-            kw_import,
-            tree,
-        })
     }
 }
 
@@ -89,7 +96,7 @@ fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted>
         Some(Token::SelfKeyword { .. }) => PathExpr::parse(parser, PathPrefix::SelfKeyword),
         Some(Token::Identifier { .. }) => PathExpr::parse(parser, PathPrefix::Package),
         _ => {
-            parser.log_unexpected_token("path prefix");
+            parser.log_unexpected_token("`package`, `super`, `self` or identifier path prefix");
             Err(ErrorsEmitted)
         }
     }?;
@@ -117,15 +124,15 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
     {
         Ok(t)
     } else {
-        parser.log_unexpected_token("import trees");
+        parser.log_missing("path component", "import declaration path import tree");
         Err(ErrorsEmitted)
     }?;
 
     let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
         Ok(Delimiter::RBrace)
     } else {
+        parser.log_unmatched_delimiter(&open_brace);
         parser.log_missing_token("`}`");
-        parser.log_unmatched_delimiter(open_brace.clone());
         Err(ErrorsEmitted)
     }?;
 

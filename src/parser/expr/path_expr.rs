@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Identifier, PathExpr, PathPrefix, Separator},
+    ast::{Expression, Identifier, PathExpr, PathPrefix},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::Parser,
@@ -7,32 +7,37 @@ use crate::{
 };
 
 impl PathExpr {
-    pub(crate) fn parse(parser: &mut Parser, root: PathPrefix) -> Result<Expression, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        root: PathPrefix,
+    ) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `PathExpr::parse()`".to_string()),
+            LogMsg::from("entering `PathExpr::parse()`"),
         );
         parser.log_current_token(false);
 
         let mut tree: Vec<Identifier> = Vec::new();
 
         while let Some(Token::DblColon { .. }) = parser.current_token() {
-            if let Some(Token::Identifier { name, .. }) = parser.peek_ahead_by(1) {
-                parser.next_token();
-                parser.next_token();
+            match parser.peek_ahead_by(1) {
+                Some(Token::Identifier { name, .. }) => {
+                    parser.next_token();
+                    parser.next_token();
 
-                tree.push(Identifier(name));
-            } else {
-                break;
+                    tree.push(Identifier(name));
+                }
+                Some(Token::LBrace { .. }) => break,
+                Some(Token::EOF) | None => {
+                    parser.log_unexpected_eoi();
+                    return Err(ErrorsEmitted);
+                }
+                _ => {
+                    parser.log_unexpected_token("identifier");
+                    return Err(ErrorsEmitted);
+                }
             }
         }
-
-        let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.current_token() {
-            parser.next_token();
-            Some(Separator::ColonColonAsterisk)
-        } else {
-            None
-        };
 
         let expr = PathExpr {
             root,
@@ -42,13 +47,11 @@ impl PathExpr {
                     false => Some(tree),
                 }
             },
-            wildcard_opt,
         };
 
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg("exiting `PathExpr::parse()`".to_string()),
-        );
+        parser
+            .logger
+            .log(LogLevel::Debug, LogMsg::from("exiting `PathExpr::parse()`"));
         parser.log_current_token(false);
 
         Ok(Expression::Path(expr))
@@ -74,7 +77,21 @@ mod tests {
     }
 
     #[test]
-    fn parse_path_expr_standard() -> Result<(), ()> {
+    fn parse_path_expr_self_keyword() -> Result<(), ()> {
+        let input = r#"self"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+        }
+    }
+
+    #[test]
+    fn parse_path_expr_full() -> Result<(), ()> {
         let input = r#"package::some_module::SomeObject"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
@@ -88,8 +105,22 @@ mod tests {
     }
 
     #[test]
-    fn parse_path_expr_wildcard() -> Result<(), ()> {
-        let input = r#"self::some_module::*"#;
+    fn parse_path_expr_super() -> Result<(), ()> {
+        let input = r#"super::SOME_CONSTANT"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+        }
+    }
+
+    #[test]
+    fn parse_path_expr_method() -> Result<(), ()> {
+        let input = r#"Self::method"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

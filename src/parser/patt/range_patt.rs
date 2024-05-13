@@ -11,16 +11,13 @@ impl RangePatt {
             Pattern::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(left_patt),
                 _ => {
-                    parser.log_unexpected_token("numeric literal");
+                    parser.log_unexpected_token("numeric value");
                     Err(ErrorsEmitted)
                 }
             },
-            Pattern::PathPatt(_) => {
-                parser.log_unexpected_token("path pattern");
-                Err(ErrorsEmitted)
-            }
+            Pattern::IdentifierPatt(_) => Ok(left_patt),
             _ => {
-                parser.log_unexpected_token("numeric literal or path pattern");
+                parser.log_unexpected_patt("numeric value or identifier", left_patt);
                 Err(ErrorsEmitted)
             }
         }?;
@@ -30,8 +27,12 @@ impl RangePatt {
         let range_op = match operator_token.token_type() {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
             TokenType::DotDotEquals => Ok(RangeOp::RangeInclusive),
+            TokenType::EOF => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
             _ => {
-                parser.log_unexpected_token("range operator");
+                parser.log_unexpected_token("range operator (`..` or `..=`)");
                 Err(ErrorsEmitted)
             }
         }?;
@@ -40,42 +41,42 @@ impl RangePatt {
 
         let pattern = parser.parse_pattern()?;
 
-        let to = match pattern.clone() {
+        let to = match &pattern {
             Pattern::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(pattern),
                 _ => {
-                    parser.log_unexpected_token("numeric literal");
+                    parser.log_unexpected_token("numeric value");
                     Err(ErrorsEmitted)
                 }
             },
 
-            Pattern::PathPatt(_) => Ok(pattern),
+            Pattern::IdentifierPatt(_) => Ok(pattern),
 
             _ => {
-                parser.log_unexpected_token("numeric literal or path pattern");
+                parser.log_unexpected_patt("numeric value or identifier", pattern);
                 Err(ErrorsEmitted)
             }
         };
 
         let expr = match to.is_ok() {
-            true => RangePatt {
+            true => Ok(RangePatt {
                 from_opt: Some(Box::new(from)),
                 range_op,
                 to_opt: Some(Box::new(to?)),
-            },
-            false => RangePatt {
+            }),
+            false => Ok(RangePatt {
                 from_opt: Some(Box::new(from)),
                 range_op: range_op.clone(),
                 to_opt: {
                     if range_op == RangeOp::RangeInclusive {
-                        parser.log_unexpected_token("`..`");
+                        parser.log_unexpected_token("exclusive range operator (`..`)");
                         return Err(ErrorsEmitted);
                     } else {
                         None
                     }
                 },
-            },
-        };
+            }),
+        }?;
 
         Ok(Pattern::RangePatt(expr))
     }
@@ -87,7 +88,7 @@ impl RangePatt {
             Token::DblDot { .. } => Ok(RangeOp::RangeExclusive),
             Token::DotDotEquals { .. } => Ok(RangeOp::RangeInclusive),
             _ => {
-                parser.log_unexpected_token("range operator");
+                parser.log_unexpected_token("range operator (`..` or `..=`)");
                 Err(ErrorsEmitted)
             }
         }?;
@@ -100,7 +101,7 @@ impl RangePatt {
                 range_op: range_op.clone(),
                 to_opt: {
                     if range_op == RangeOp::RangeInclusive {
-                        parser.log_unexpected_token("`..`");
+                        parser.log_unexpected_token("exclusive range operator (`..`)");
                         return Err(ErrorsEmitted);
                     } else {
                         None
@@ -113,19 +114,19 @@ impl RangePatt {
 
         let pattern = parser.parse_pattern()?;
 
-        let to = match pattern.clone() {
+        let to = match &pattern {
             Pattern::Literal(l) => match l {
                 Literal::Int(_) | Literal::UInt(_) | Literal::BigUInt(_) => Ok(pattern),
                 _ => {
-                    parser.log_unexpected_token("numeric literal");
+                    parser.log_unexpected_token("numeric value");
                     Err(ErrorsEmitted)
                 }
             },
 
-            Pattern::PathPatt(_) => Ok(pattern),
+            Pattern::IdentifierPatt(_) => Ok(pattern),
 
             _ => {
-                parser.log_unexpected_token("numeric literal or path pattern");
+                parser.log_unexpected_patt("numeric value or identifier", pattern);
                 Err(ErrorsEmitted)
             }
         }?;

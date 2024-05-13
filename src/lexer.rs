@@ -8,7 +8,7 @@
 use std::{iter::Peekable, str::Chars};
 
 use crate::{
-    ast::{BigUInt, Byte, Bytes, Hash, Int, Str, UInt},
+    ast::{BigUInt, Bool, Byte, Bytes, Char, Hash, Int, Str, UInt},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{DocCommentType, Token, TokenStream},
@@ -115,7 +115,7 @@ impl<'a> Lexer<'a> {
                     tokens.push(self.tokenize_numeric()?)
                 }
 
-                '.' => match self.peek_next() {
+                '.' => match &self.peek_next() {
                     Some('.') => tokens.push(self.tokenize_punctuation()?),
                     _ => {
                         self.advance();
@@ -169,8 +169,7 @@ impl<'a> Lexer<'a> {
             return Err(ErrorsEmitted);
         }
 
-        let stream = TokenStream::new(&tokens, self.input, 0, self.pos);
-        Ok(stream)
+        Ok(TokenStream::new(tokens, self.input, 0, self.pos))
     }
 
     /// Tokenize a doc comment by advancing the lexer position until the end of line, ignoring
@@ -180,7 +179,7 @@ impl<'a> Lexer<'a> {
 
         self.advance(); // skip first `/`
 
-        match self.peek_current() {
+        match &self.peek_current() {
             Some('/') if self.peek_current() == Some('/') || self.peek_current() == Some('!') => {
                 let comment_type = if self.peek_current() == Some('/') {
                     DocCommentType::OuterDocComment
@@ -285,7 +284,7 @@ impl<'a> Lexer<'a> {
                 "false" => Ok(Token::BoolLiteral {
                     value: {
                         if let Ok(n) = name.parse::<bool>() {
-                            n
+                            Bool::from(n)
                         } else {
                             self.log_error(LexErrorKind::LexBoolError);
                             return Err(ErrorsEmitted);
@@ -319,7 +318,7 @@ impl<'a> Lexer<'a> {
                 "true" => Ok(Token::BoolLiteral {
                     value: {
                         if let Ok(n) = name.parse::<bool>() {
-                            n
+                            Bool::from(n)
                         } else {
                             self.log_error(LexErrorKind::LexBoolError);
                             return Err(ErrorsEmitted);
@@ -352,6 +351,7 @@ impl<'a> Lexer<'a> {
                 "str" => Ok(Token::StrType { name, span }),
                 "char" => Ok(Token::CharType { name, span }),
                 "bool" => Ok(Token::BoolType { name, span }),
+                "Self" => Ok(Token::SelfType { name, span }),
                 "Option" => Ok(Token::OptionType { name, span }),
                 "Result" => Ok(Token::ResultType { name, span }),
                 "Vec" => Ok(Token::VecType { name, span }),
@@ -588,7 +588,7 @@ impl<'a> Lexer<'a> {
     fn tokenize_delimiter(&mut self) -> Result<Token, ErrorsEmitted> {
         let start_pos = self.pos;
 
-        let delim = self.peek_current();
+        let delim = &self.peek_current();
 
         match delim {
             Some('(') => {
@@ -618,7 +618,7 @@ impl<'a> Lexer<'a> {
             Some(d) => {
                 self.log_error(LexErrorKind::UnexpectedChar {
                     expected: "delimiter".to_string(),
-                    found: d,
+                    found: *d,
                 });
                 Err(ErrorsEmitted)
             }
@@ -717,7 +717,7 @@ impl<'a> Lexer<'a> {
                     let span = Span::new(self.input, start_pos, self.pos);
 
                     return Ok(Token::StrLiteral {
-                        value: Str(buf.as_bytes().to_vec()),
+                        value: Str::from(buf.as_str()),
                         span,
                     });
                 }
@@ -762,7 +762,7 @@ impl<'a> Lexer<'a> {
 
                     if value.len() == 1 {
                         return Ok(Token::ByteLiteral {
-                            value: Byte(value.as_bytes()[0]),
+                            value: Byte::from(value.as_bytes()[0]),
                             span,
                         });
                     }
@@ -798,7 +798,7 @@ impl<'a> Lexer<'a> {
                         let span = Span::new(self.input, start_pos, self.pos);
 
                         Ok(Token::CharLiteral {
-                            value: escaped_char,
+                            value: Char::from(escaped_char),
                             span,
                         })
                     } else {
@@ -822,7 +822,10 @@ impl<'a> Lexer<'a> {
 
                         let span = Span::new(self.input, start_pos, self.pos);
 
-                        Ok(Token::CharLiteral { value, span })
+                        Ok(Token::CharLiteral {
+                            value: Char::from(value),
+                            span,
+                        })
                     } else {
                         self.log_error(LexErrorKind::MissingQuote { quote: '\'' });
                         Err(ErrorsEmitted)
@@ -1216,7 +1219,7 @@ fn is_keyword(value: &str) -> bool {
         "None", "Ok", "package", "pub", "ref", "return", "self", "Some", "static", "struct",
         "super", "trait", "true", "while", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128",
         "u256", "u512", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256", "h512", "String",
-        "str", "char", "bool", "Option", "Result", "Vec", "Mapping",
+        "str", "char", "bool", "Self", "Option", "Result", "Vec", "Mapping",
     ]
     .contains(&value)
 }
@@ -1266,7 +1269,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn tokenize_assignment_stmt() {
+    fn tokenize_assignment_stmt() -> Result<(), ()> {
         let input = r#"let x: u256 = 0x1234_ABCD; // inline comment
         // line comment
         /*
@@ -1278,17 +1281,16 @@ mod tests {
 
         let mut lexer = Lexer::new(input);
 
-        let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current char: `{:?}`\n{:#?}",
-            lexer.peek_current(),
-            lexer.errors()
-        ));
+        let stream = lexer.lex();
 
-        println!("{:#?}", stream);
+        match stream {
+            Ok(t) => Ok(println!("{:?}", t)),
+            Err(_) => Err(println!("{:?}", lexer.errors())),
+        }
     }
 
     #[test]
-    fn tokenize_attributes() {
+    fn tokenize_attributes() -> Result<(), ()> {
         let input = r#"
         pub module foo {
             #![contract]
@@ -1309,13 +1311,12 @@ mod tests {
 
         let mut lexer = Lexer::new(input);
 
-        let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current char: {:?}\n{:#?}",
-            lexer.peek_current(),
-            lexer.errors()
-        ));
+        let stream = lexer.lex();
 
-        println!("{:#?}", stream);
+        match stream {
+            Ok(t) => Ok(println!("{:?}", t)),
+            Err(_) => Err(println!("{:?}", lexer.errors())),
+        }
     }
 
     #[test]
@@ -1326,17 +1327,16 @@ mod tests {
 
         let mut lexer = Lexer::new(input);
 
-        let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current char: {:?}\n{:#?}",
-            lexer.peek_current(),
-            lexer.errors()
-        ));
+        let stream = lexer.lex();
 
-        println!("{:#?}", stream);
+        match stream {
+            Ok(t) => println!("{:?}", t),
+            Err(_) => println!("{:?}", lexer.errors()),
+        }
     }
 
     #[test]
-    fn tokenize_function() {
+    fn tokenize_function() -> Result<(), ()> {
         let input = r#"
         func foo(param1: u64, param2: char, param3: bool) -> Result<ReturnType, Err> {
             let bar: b4 = b"bar";
@@ -1359,47 +1359,44 @@ mod tests {
 
         let mut lexer = Lexer::new(input);
 
-        let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current char: `{:?}`\n{:#?}",
-            lexer.peek_current(),
-            lexer.errors(),
-        ));
+        let stream = lexer.lex();
 
-        println!("{:#?}", stream);
+        match stream {
+            Ok(t) => Ok(println!("{:?}", t)),
+            Err(_) => Err(println!("{:?}", lexer.errors())),
+        }
     }
 
     #[test]
-    fn tokenize_hash_lits() {
+    fn tokenize_hash_lits() -> Result<(), ()> {
         let input = r#"let hash = $0xBEEF_CAFE_1234_5678_90AB_CDEF_CAFE_BEEF;"#;
 
         let mut lexer = Lexer::new(input);
 
-        let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current char: `{:?}`\n{:#?}",
-            lexer.peek_current(),
-            lexer.errors()
-        ));
+        let stream = lexer.lex();
 
-        println!("{:#?}", stream);
+        match stream {
+            Ok(t) => Ok(println!("{:?}", t)),
+            Err(_) => Err(println!("{:?}", lexer.errors())),
+        }
     }
 
     #[test]
-    fn tokenize_import_decl() {
+    fn tokenize_import_decl() -> Result<(), ()> {
         let input = r#"import package::some_module::SomeObject as Foo;"#;
 
         let mut lexer = Lexer::new(input);
 
-        let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current char: `{:?}`\n{:#?}",
-            lexer.peek_current(),
-            lexer.errors()
-        ));
+        let stream = lexer.lex();
 
-        println!("{:#?}", stream);
+        match stream {
+            Ok(t) => Ok(println!("{:?}", t)),
+            Err(_) => Err(println!("{:?}", lexer.errors())),
+        }
     }
 
     #[test]
-    fn tokenize_struct_def() {
+    fn tokenize_struct_def() -> Result<(), ()> {
         let input = r#"
         /// These is a doc comment
         /// for the struct called `Foo`.
@@ -1410,33 +1407,26 @@ mod tests {
 
         let mut lexer = Lexer::new(input);
 
-        let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current char: `{:?}`\n{:#?}",
-            lexer.peek_current(),
-            lexer.errors(),
-        ));
+        let stream = lexer.lex();
 
-        println!("{:#?}", stream);
+        match stream {
+            Ok(t) => Ok(println!("{:?}", t)),
+            Err(_) => Err(println!("{:?}", lexer.errors())),
+        }
     }
 
-    #[test]
     #[should_panic]
+    #[test]
     fn tokenize_unrecognized_chars() {
         let input = r#"~ § ±"#;
 
         let mut lexer = Lexer::new(input);
 
-        let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current char: `{:?}`\n{:#?}",
-            lexer.peek_current(),
-            lexer.errors(),
-        ));
-
-        println!("{:#?}", stream);
+        lexer.lex().expect(&format!("unrecognized input: {input}"));
     }
 
     #[test]
-    fn tokenize_comprehensive() {
+    fn tokenize_comprehensive() -> Result<(), ()> {
         let input = r#"
         ////////////////////////////////////////////////////////////////////////////////
         // `src/lib.feo`
@@ -1556,12 +1546,11 @@ mod tests {
 
         let mut lexer = Lexer::new(input);
 
-        let stream = lexer.lex().expect(&format!(
-            "unable to tokenize input. current char: `{:?}`\n{:#?}",
-            lexer.peek_current(),
-            lexer.errors(),
-        ));
+        let stream = lexer.lex();
 
-        println!("{:#?}", stream);
+        match stream {
+            Ok(t) => Ok(println!("{:?}", t)),
+            Err(_) => Err(println!("{:?}", lexer.errors())),
+        }
     }
 }

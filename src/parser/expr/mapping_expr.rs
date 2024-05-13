@@ -17,11 +17,12 @@ impl ParseConstruct for MappingExpr {
 
         let pairs_opt = collection::get_collection(parser, parse_mapping_pair, Delimiter::RBrace)?;
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::RBrace)
         } else {
+            parser.log_unmatched_delimiter(&open_brace);
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -40,10 +41,21 @@ fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted>
 
     match parser.current_token() {
         Some(Token::Colon { .. }) => {
-            let _ = parser.next_token();
+            parser.next_token();
+
+            if let Some(Token::Comma { .. } | Token::RBrace { .. }) = parser.current_token() {
+                parser.log_missing("expr", &format!("value for key: \"{}\"", key));
+                return Err(ErrorsEmitted);
+            }
         }
-        Some(_) => parser.log_unexpected_token("`:`"),
-        None => parser.log_missing_token("`:`"),
+        Some(Token::EOF) | None => {
+            parser.log_missing_token("`:`");
+            return Err(ErrorsEmitted);
+        }
+        _ => {
+            parser.log_unexpected_token("`:`");
+            return Err(ErrorsEmitted);
+        }
     }
 
     let value = parser.parse_expression(Precedence::Lowest)?;
@@ -74,7 +86,7 @@ mod tests {
     #[test]
 
     fn parse_mapping_expr_with_elements() -> Result<(), ()> {
-        let input = r#"{x: 2, y: true, z: foo}"#;
+        let input = r#"{x: 2, y: true, z: foo }"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

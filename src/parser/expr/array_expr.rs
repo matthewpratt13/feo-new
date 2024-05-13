@@ -18,11 +18,12 @@ impl ParseConstruct for ArrayExpr {
         let elements_opt =
             collection::get_expressions(parser, Precedence::Lowest, Delimiter::RBracket)?;
 
-        let close_bracket = if let Some(Token::RBracket { .. }) = parser.next_token() {
+        let close_bracket = if let Some(Token::RBracket { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::RBracket)
         } else {
+            parser.log_unmatched_delimiter(&open_bracket);
             parser.log_missing_token("`]`");
-            parser.log_unmatched_delimiter(open_bracket.clone());
             Err(ErrorsEmitted)
         }?;
 

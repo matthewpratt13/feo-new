@@ -1,38 +1,53 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, IndexExpr},
+    ast::{AssigneeExpr, Delimiter, Expression, IndexExpr, ValueExpr},
     error::ErrorsEmitted,
     parser::{ParseOperation, Parser, Precedence},
     token::Token,
 };
 
 impl ParseOperation for IndexExpr {
-    fn parse(parser: &mut Parser, array: Expression) -> Result<Expression, ErrorsEmitted> {
-        let array = AssigneeExpr::try_from(array).map_err(|e| {
+    fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        let open_bracket = if let Some(Token::LBracket { .. }) = parser.next_token() {
+        let open_bracket = if let Some(Token::LBracket { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::LBracket)
         } else {
             parser.log_unexpected_token("`[`");
             Err(ErrorsEmitted)
         }?;
 
-        let index = parser.parse_expression(Precedence::Lowest)?;
+        let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        let close_bracket = if let Some(Token::RBracket { .. }) = parser.next_token() {
-            Ok(Delimiter::RBracket)
-        } else {
-            parser.log_missing_token("`]`");
-            parser.log_unmatched_delimiter(open_bracket.clone());
-            Err(ErrorsEmitted)
+        let value_expr = ValueExpr::try_from(expression).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
+
+        let close_bracket = match parser.current_token() {
+            Some(Token::RBracket { .. }) => {
+                parser.next_token();
+
+                Ok(Delimiter::RBracket)
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_bracket);
+                parser.log_missing_token("`]`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`]`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let expr = IndexExpr {
-            array: Box::new(array),
+            array: Box::new(assignee_expr),
             open_bracket,
-            index: Box::new(index),
+            index: Box::new(value_expr),
             close_bracket,
         };
 

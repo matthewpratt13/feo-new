@@ -15,18 +15,28 @@ impl ParseControl for WhileExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let condition = if let Some(Token::LParen { .. }) = parser.current_token() {
-            Ok(Box::new(GroupedExpr::parse(parser)?))
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
+        let condition = match parser.current_token() {
+            Some(Token::LParen { .. }) => Ok(Box::new(GroupedExpr::parse(parser)?)),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`(`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let block = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            Ok(Box::new(BlockExpr::parse(parser)?))
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let block = match parser.current_token() {
+            Some(Token::LBrace { .. }) => Ok(Box::new(BlockExpr::parse(parser)?)),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let expr = WhileExpr {

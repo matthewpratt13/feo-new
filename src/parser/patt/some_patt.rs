@@ -15,11 +15,16 @@ impl SomePatt {
             Err(ErrorsEmitted)
         }?;
 
-        let pattern = if let Some(Token::LParen { .. }) = parser.current_token() {
-            Ok(Box::new(GroupedPatt::parse(parser)?))
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
+        let pattern = match parser.current_token() {
+            Some(Token::LParen { .. }) => Ok(Box::new(GroupedPatt::parse(parser)?)),
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let patt = SomePatt { kw_some, pattern };

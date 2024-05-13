@@ -21,8 +21,8 @@ impl StructPatt {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
+            parser.log_unmatched_delimiter(&open_brace);
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -42,14 +42,22 @@ fn parse_struct_patt_field(parser: &mut Parser) -> Result<StructPattField, Error
         parser.next_token();
         Ok(Identifier(name))
     } else {
-        parser.log_missing_token("identifier");
+        parser.log_missing_token("struct field identifier");
         Err(ErrorsEmitted)
     }?;
 
-    match parser.next_token() {
-        Some(Token::Colon { .. }) => (),
-        Some(_) => parser.log_unexpected_token("`:`"),
-        None => parser.log_missing_token("`:`"),
+    match parser.current_token() {
+        Some(Token::Colon { .. }) => {
+            parser.next_token();
+        }
+        Some(Token::EOF) | None => {
+            parser.log_missing_token("`:`");
+            return Err(ErrorsEmitted);
+        }
+        _ => {
+            parser.log_unexpected_token("`:`");
+            return Err(ErrorsEmitted);
+        }
     }
 
     let field_value = parser.parse_pattern()?;

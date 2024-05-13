@@ -1,6 +1,7 @@
 use crate::{
     ast::{Delimiter, Expression, OuterAttr, Visibility},
     error::ErrorsEmitted,
+    logger::{LogLevel, LogMsg},
     token::Token,
 };
 
@@ -19,17 +20,17 @@ pub(crate) fn get_collection<T>(
     match close_delimiter {
         Delimiter::RParen => {
             while !matches!(
-                parser.current_token(),
+                parser.current_token().as_ref(),
                 Some(Token::RParen { .. } | Token::EOF),
             ) {
                 let item = f(parser)?;
 
                 collection.push(item);
 
-                if let Some(Token::Comma { .. }) = parser.current_token() {
+                if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                 } else if !matches!(
-                    parser.current_token(),
+                    parser.current_token().as_ref(),
                     Some(Token::RParen { .. } | Token::EOF)
                 ) {
                     parser.log_unexpected_token("`,` or `)`");
@@ -40,17 +41,17 @@ pub(crate) fn get_collection<T>(
 
         Delimiter::RBrace => {
             while !matches!(
-                parser.current_token(),
+                parser.current_token().as_ref(),
                 Some(Token::RBrace { .. } | Token::EOF),
             ) {
                 let item = f(parser)?;
 
                 collection.push(item);
 
-                if let Some(Token::Comma { .. }) = parser.current_token() {
+                if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                 } else if !matches!(
-                    parser.current_token(),
+                    parser.current_token().as_ref(),
                     Some(Token::RBrace { .. } | Token::EOF)
                 ) {
                     parser.log_unexpected_token("`,` or `}`");
@@ -61,19 +62,19 @@ pub(crate) fn get_collection<T>(
 
         Delimiter::Pipe => {
             while !matches!(
-                parser.current_token(),
+                parser.current_token().as_ref(),
                 Some(Token::Pipe { .. } | Token::EOF),
             ) {
                 let item = f(parser)?;
                 collection.push(item);
 
-                if let Some(Token::Comma { .. }) = parser.current_token() {
+                if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
-                } else if let Some(Token::Pipe { .. }) = parser.current_token() {
+                } else if let Some(Token::Pipe { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                     break;
                 } else if !matches!(
-                    parser.current_token(),
+                    parser.current_token().as_ref(),
                     Some(Token::Pipe { .. } | Token::EOF)
                 ) {
                     parser.log_unexpected_token("`,` or `|`");
@@ -104,20 +105,26 @@ pub(crate) fn get_expressions(
 ) -> Result<Option<Vec<Expression>>, ErrorsEmitted> {
     let mut expressions: Vec<Expression> = Vec::new();
 
+    parser.logger.log(
+        LogLevel::Debug,
+        LogMsg::from("entering `get_expressions()`"),
+    );
+    parser.log_current_token(true);
+
     match close_delimiter {
         Delimiter::RParen => {
             while !matches!(
-                parser.current_token(),
+                parser.current_token().as_ref(),
                 Some(Token::RParen { .. } | Token::EOF),
             ) {
                 let expr = parser.parse_expression(precedence)?;
 
                 expressions.push(expr);
 
-                if let Some(Token::Comma { .. }) = parser.current_token() {
+                if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                 } else if !matches!(
-                    parser.current_token(),
+                    parser.current_token().as_ref(),
                     Some(Token::RParen { .. } | Token::EOF)
                 ) {
                     parser.log_unexpected_token("`,` or `)`");
@@ -127,17 +134,17 @@ pub(crate) fn get_expressions(
         }
         Delimiter::RBracket => {
             while !matches!(
-                parser.current_token(),
+                parser.current_token().as_ref(),
                 Some(Token::RBracket { .. } | Token::EOF),
             ) {
                 let expr = parser.parse_expression(precedence)?;
 
                 expressions.push(expr);
 
-                if let Some(Token::Comma { .. }) = parser.current_token() {
+                if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                 } else if !matches!(
-                    parser.current_token(),
+                    parser.current_token().as_ref(),
                     Some(Token::RBracket { .. } | Token::EOF)
                 ) {
                     parser.log_unexpected_token("`,` or `]`");
@@ -151,6 +158,18 @@ pub(crate) fn get_expressions(
             return Err(ErrorsEmitted);
         }
     }
+
+    parser
+        .logger
+        .log(LogLevel::Debug, LogMsg::from("exiting `get_expressions()`"));
+    parser.logger.log(
+        LogLevel::Debug,
+        LogMsg::from(format!(
+            "expressions.is_empty(): {}",
+            expressions.is_empty()
+        )),
+    );
+    parser.log_current_token(false);
 
     match expressions.is_empty() {
         true => Ok(None),
@@ -167,7 +186,7 @@ pub(crate) fn get_associated_items<T: ParseAssociatedItem>(
     let mut items: Vec<T> = Vec::new();
 
     while !matches!(
-        parser.current_token(),
+        parser.current_token().as_ref(),
         Some(Token::RBrace { .. } | Token::EOF)
     ) {
         let attributes_opt = get_attributes(parser, OuterAttr::outer_attr);
@@ -186,13 +205,30 @@ pub(crate) fn get_associated_items<T: ParseAssociatedItem>(
 
 /// Helper function that parses item attributes into a vector of generic attributes.
 /// Replaces the same iterative code in the respective item parsing functions.
-pub(crate) fn get_attributes<T>(parser: &mut Parser, f: fn(&Parser) -> Option<T>) -> Option<Vec<T>> {
+pub(crate) fn get_attributes<T>(
+    parser: &mut Parser,
+    f: fn(&Parser) -> Option<T>,
+) -> Option<Vec<T>> {
     let mut attributes = Vec::new();
+
+    parser
+        .logger
+        .log(LogLevel::Debug, LogMsg::from("entering `get_attributes()`"));
+    parser.log_current_token(false);
 
     while let Some(a) = f(parser) {
         attributes.push(a);
         parser.next_token();
     }
+
+    parser
+        .logger
+        .log(LogLevel::Debug, LogMsg::from("exiting `get_attributes()`"));
+    parser.logger.log(
+        LogLevel::Debug,
+        LogMsg::from(format!("attributes.is_empty(): {}", attributes.is_empty())),
+    );
+    parser.log_current_token(false);
 
     match attributes.is_empty() {
         true => None,

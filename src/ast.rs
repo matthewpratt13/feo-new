@@ -9,6 +9,8 @@ mod pattern;
 mod statement;
 mod types;
 
+use core::fmt;
+
 use crate::error::ParserErrorKind;
 
 pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*};
@@ -27,8 +29,24 @@ pub(crate) enum Literal {
     Bytes(Bytes),
     Hash(Hash),
     Str(Str),
-    Char(char),
-    Bool(bool),
+    Char(Char),
+    Bool(Bool),
+}
+
+impl fmt::Display for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Literal::Int(i) => write!(f, "{}", i),
+            Literal::UInt(ui) => write!(f, "{}", ui),
+            Literal::BigUInt(bui) => write!(f, "{}", bui),
+            Literal::Byte(by) => write!(f, "{}", by),
+            Literal::Bytes(bb) => write!(f, "{}", bb),
+            Literal::Hash(h) => write!(f, "{}", h),
+            Literal::Str(s) => write!(f, "{}", s),
+            Literal::Char(c) => write!(f, "{}", c),
+            Literal::Bool(b) => write!(f, "{}", b),
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -38,6 +56,24 @@ pub(crate) enum Literal {
 /// Wrapper type, turning a `String` into an `Identifier`.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Identifier(pub String);
+
+impl From<&str> for Identifier {
+    fn from(value: &str) -> Self {
+        Self(value.to_string())
+    }
+}
+
+impl From<&String> for Identifier {
+    fn from(value: &String) -> Self {
+        Self(value.to_string())
+    }
+}
+
+impl fmt::Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // KEYWORDS
@@ -76,6 +112,43 @@ pub(crate) enum Keyword {
     None,
     Ok,
     Err,
+}
+
+impl fmt::Display for Keyword {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Keyword::Import => write!(f, "import"),
+            Keyword::Module => write!(f, "module"),
+            Keyword::Package => write!(f, "package"),
+            Keyword::SelfKeyword => write!(f, "self"),
+            Keyword::Pub => write!(f, "pub"),
+            Keyword::As => write!(f, "as"),
+            Keyword::Const => write!(f, "const"),
+            Keyword::Static => write!(f, "static"),
+            Keyword::Alias => write!(f, "alias"),
+            Keyword::Func => write!(f, "func"),
+            Keyword::Struct => write!(f, "struct"),
+            Keyword::Enum => write!(f, "enum"),
+            Keyword::Trait => write!(f, "trait"),
+            Keyword::Impl => write!(f, "impl"),
+            Keyword::If => write!(f, "if"),
+            Keyword::Else => write!(f, "else"),
+            Keyword::Match => write!(f, "match"),
+            Keyword::For => write!(f, "for"),
+            Keyword::In => write!(f, "in"),
+            Keyword::While => write!(f, "while"),
+            Keyword::Break => write!(f, "break"),
+            Keyword::Continue => write!(f, "continue"),
+            Keyword::Return => write!(f, "return"),
+            Keyword::Let => write!(f, "let"),
+            Keyword::Ref => write!(f, "ref"),
+            Keyword::Mut => write!(f, "mut"),
+            Keyword::Some => write!(f, "Some"),
+            Keyword::None => write!(f, "None"),
+            Keyword::Ok => write!(f, "Ok"),
+            Keyword::Err => write!(f, "Err"),
+        }
+    }
 }
 
 /// Enum representing the different inner attributes used in AST nodes.
@@ -121,6 +194,20 @@ pub(crate) enum Delimiter {
     Pipe,
 }
 
+impl fmt::Display for Delimiter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Delimiter::LParen => write!(f, "("),
+            Delimiter::RParen => write!(f, ")"),
+            Delimiter::LBracket => write!(f, "["),
+            Delimiter::RBracket => write!(f, "]"),
+            Delimiter::LBrace => write!(f, "{{"),
+            Delimiter::RBrace => write!(f, "}}"),
+            Delimiter::Pipe => write!(f, "|"),
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // PUNCTUATION
 ///////////////////////////////////////////////////////////////////////////
@@ -137,6 +224,15 @@ pub(crate) enum UnaryOp {
 pub(crate) enum ReferenceOp {
     Borrow,        // `&`
     MutableBorrow, // `&mut`
+}
+
+impl fmt::Display for ReferenceOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ReferenceOp::Borrow => write!(f, "&"),
+            ReferenceOp::MutableBorrow => write!(f, "&mut"),
+        }
+    }
 }
 
 /// Unit struct representing the dereference operator (`*`).
@@ -197,6 +293,15 @@ pub(crate) enum RangeOp {
     RangeInclusive, // `..=`
 }
 
+impl fmt::Display for RangeOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RangeOp::RangeExclusive => write!(f, "`..`"),
+            RangeOp::RangeInclusive => write!(f, "`..=`"),
+        }
+    }
+}
+
 /// Enum representing the different separators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Separator {
@@ -250,6 +355,58 @@ pub(crate) enum Expression {
     ResultExpr(ResultExpr),
 }
 
+impl fmt::Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Expression::Literal(l) => match l {
+                Literal::Int(i) => write!(f, "{}", i),
+                Literal::UInt(ui) => write!(f, "{}", ui),
+                Literal::BigUInt(bui) => write!(f, "{}", bui),
+                Literal::Byte(by) => write!(f, "{}", by),
+                Literal::Bytes(bb) => write!(f, "{}", bb),
+                Literal::Hash(h) => write!(f, "{}", h),
+                Literal::Str(s) => write!(f, "{}", s),
+                Literal::Char(c) => write!(f, "{}", c),
+                Literal::Bool(b) => write!(f, "{}", b),
+            },
+            Expression::Path(pth) => write!(f, "{:?}", pth),
+            Expression::MethodCall(mc) => write!(f, "{:?}", mc),
+            Expression::FieldAccess(fa) => write!(f, "{:?}", fa),
+            Expression::Call(cal) => write!(f, "{:?}", cal),
+            Expression::Index(i) => write!(f, "{:?}", i),
+            Expression::TupleIndex(ti) => write!(f, "{:?}", ti),
+            Expression::Unwrap(unw) => write!(f, "{:?}", unw),
+            Expression::Unary(una) => write!(f, "{:?}", una),
+            Expression::Reference(r) => write!(f, "{:?}", r),
+            Expression::Dereference(dr) => write!(f, "{:?}", dr),
+            Expression::TypeCast(tc) => write!(f, "{:?}", tc),
+            Expression::Binary(bin) => write!(f, "{:?}", bin),
+            Expression::Comparison(cmp) => write!(f, "{:?}", cmp),
+            Expression::Grouped(grp) => write!(f, "{:?}", grp),
+            Expression::Range(rng) => write!(f, "{:?}", rng),
+            Expression::Assignment(asn) => write!(f, "{:?}", asn),
+            Expression::CompoundAssignment(casn) => write!(f, "{:?}", casn),
+            Expression::Return(ret) => write!(f, "{:?}", ret),
+            Expression::Break(_) => write!(f, "break"),
+            Expression::Continue(_) => write!(f, "continue"),
+            Expression::Underscore(_) => write!(f, "_"),
+            Expression::Closure(clo) => write!(f, "{:?}", clo),
+            Expression::Array(arr) => write!(f, "{:?}", arr),
+            Expression::Tuple(tup) => write!(f, "{:?}", tup),
+            Expression::Struct(strc) => write!(f, "{:?}", strc),
+            Expression::Mapping(map) => write!(f, "{:?}", map),
+            Expression::Block(blk) => write!(f, "{:?}", blk),
+            Expression::If(ifex) => write!(f, "{:?}", ifex),
+            Expression::Match(mat) => write!(f, "{:?}", mat),
+            Expression::ForIn(fi) => write!(f, "{:?}", fi),
+            Expression::While(whl) => write!(f, "{:?}", whl),
+            Expression::SomeExpr(som) => write!(f, "{:?}", som),
+            Expression::NoneExpr(_) => write!(f, "None"),
+            Expression::ResultExpr(res) => write!(f, "{:?}", res),
+        }
+    }
+}
+
 /// Enum representing value type expressions, which are subsets of `Expression`.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum ValueExpr {
@@ -261,7 +418,7 @@ pub(crate) enum ValueExpr {
     IndexExpr(IndexExpr),
     TupleIndexExpr(TupleIndexExpr),
     UnwrapExpr(UnwrapExpr),
-    NegationExpr(UnaryExpr),
+    UnaryExpr(UnaryExpr),
     ReferenceExpr(ReferenceExpr),
     DereferenceExpr(DereferenceExpr),
     TypeCastExpr(TypeCastExpr),
@@ -269,13 +426,13 @@ pub(crate) enum ValueExpr {
     GroupedExpr(GroupedExpr),
     RangeExpr(RangeExpr),
     ClosureExpr(ClosureExpr),
-    BlockExpr(BlockExpr),
     UnderscoreExpr(UnderscoreExpr),
     ArrayExpr(ArrayExpr),
-    StructExpr(StructExpr),
-    MappingExpr(MappingExpr),
-    // TupleStructExpr(TupleStructExpr),
     TupleExpr(TupleExpr),
+    StructExpr(StructExpr),
+    // TupleStructExpr(TupleStructExpr),
+    MappingExpr(MappingExpr),
+    BlockExpr(BlockExpr),
     IfExpr(IfExpr),
     MatchExpr(MatchExpr),
     ForInExpr(ForInExpr),
@@ -298,7 +455,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::Index(i) => Ok(ValueExpr::IndexExpr(i)),
             Expression::TupleIndex(ti) => Ok(ValueExpr::TupleIndexExpr(ti)),
             Expression::Unwrap(u) => Ok(ValueExpr::UnwrapExpr(u)),
-            Expression::Unary(u) => Ok(ValueExpr::NegationExpr(u)),
+            Expression::Unary(u) => Ok(ValueExpr::UnaryExpr(u)),
             Expression::Reference(b) => Ok(ValueExpr::ReferenceExpr(b)),
             Expression::Dereference(d) => Ok(ValueExpr::DereferenceExpr(d)),
             Expression::TypeCast(tc) => Ok(ValueExpr::TypeCastExpr(tc)),
@@ -320,9 +477,9 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::SomeExpr(s) => Ok(ValueExpr::SomeExpr(s)),
             Expression::NoneExpr(n) => Ok(ValueExpr::NoneExpr(n)),
             Expression::ResultExpr(r) => Ok(ValueExpr::ResultExpr(r)),
-            _ => Err(ParserErrorKind::TypeConversionError {
-                type_a: "`Expression`".to_string(),
-                type_b: "`ValueExpr`".to_string(),
+            _ => Err(ParserErrorKind::UnexpectedExpression {
+                expected: "value expression".to_string(),
+                found: format!("`{}`", value),
             }),
         }
     }
@@ -425,9 +582,9 @@ impl TryFrom<Expression> for AssigneeExpr {
 
             //     Ok(AssigneeExpr::TupleStructExpr(assignee_expressions))
             // }
-            _ => Err(ParserErrorKind::TypeConversionError {
-                type_a: "`Expression`".to_string(),
-                type_b: "`AssigneeExpr`".to_string(),
+            _ => Err(ParserErrorKind::UnexpectedExpression {
+                expected: "assignee expression".to_string(),
+                found: format!("{}", value),
             }),
         }
     }
@@ -455,6 +612,36 @@ pub(crate) enum Pattern {
     SomePatt(SomePatt),
     NonePatt(NonePatt),
     ResultPatt(ResultPatt),
+}
+
+impl fmt::Display for Pattern {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Pattern::Literal(l) => match l {
+                Literal::Int(i) => write!(f, "{}", i),
+                Literal::UInt(ui) => write!(f, "{}", ui),
+                Literal::BigUInt(bui) => write!(f, "{}", bui),
+                Literal::Byte(by) => write!(f, "{}", by),
+                Literal::Bytes(bb) => write!(f, "{}", bb),
+                Literal::Hash(h) => write!(f, "{}", h),
+                Literal::Str(s) => write!(f, "{}", s),
+                Literal::Char(c) => write!(f, "{}", c),
+                Literal::Bool(b) => write!(f, "{}", b),
+            },
+            Pattern::IdentifierPatt(id) => write!(f, "{}", id.name),
+            Pattern::PathPatt(pth) => write!(f, "{:?}", pth),
+            Pattern::ReferencePatt(r) => write!(f, "{:?}", r),
+            Pattern::GroupedPatt(g) => write!(f, "{:?}", *g),
+            Pattern::RangePatt(rng) => write!(f, "{:?}", rng),
+            Pattern::TuplePatt(tup) => write!(f, "{:?}", tup),
+            Pattern::StructPatt(s) => write!(f, "{:?}", s),
+            Pattern::WildcardPatt(_) => write!(f, "*"),
+            Pattern::RestPatt(_) => write!(f, ".."),
+            Pattern::SomePatt(som) => write!(f, "{:?}", som),
+            Pattern::NonePatt(_) => write!(f, "None"),
+            Pattern::ResultPatt(res) => write!(f, "{:?}", res),
+        }
+    }
 }
 
 /// Enum representing the different statement AST nodes, which are built up of expressions.
@@ -548,4 +735,55 @@ pub(crate) enum Type {
         ok: Box<Type>,
         err: Box<Type>,
     },
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Type::I32(_) => write!(f, "i32"),
+            Type::I64(_) => write!(f, "i64"),
+            Type::I128(_) => write!(f, "i128"),
+            Type::U8(_) => write!(f, "u8"),
+            Type::U16(_) => write!(f, "u16"),
+            Type::U32(_) => write!(f, "u32"),
+            Type::U64(_) => write!(f, "u64"),
+            Type::U128(_) => write!(f, "u128"),
+            Type::U256(_) => write!(f, "u256"),
+            Type::U512(_) => write!(f, "u512"),
+            Type::Byte(_) => write!(f, "byte"),
+            Type::B2(_) => write!(f, "b2"),
+            Type::B4(_) => write!(f, "b4"),
+            Type::B8(_) => write!(f, "b8"),
+            Type::B16(_) => write!(f, "b16"),
+            Type::B32(_) => write!(f, "b32"),
+            Type::H160(_) => write!(f, "h160"),
+            Type::H256(_) => write!(f, "h256"),
+            Type::H512(_) => write!(f, "h512"),
+            Type::Str(_) => write!(f, "str"),
+            Type::Char(_) => write!(f, "char"),
+            Type::Bool(_) => write!(f, "bool"),
+            Type::UnitType(_) => write!(f, "()"),
+            Type::GroupedType(g) => write!(f, "({})", *g),
+            Type::Array {
+                element_type,
+                num_elements,
+            } => write!(f, "[{}; {}]", *element_type, num_elements),
+            Type::Tuple(t) => write!(f, "({:?})", t),
+            Type::UserDefined(ud) => write!(f, "{}", ud),
+            Type::FunctionPtr(fp) => write!(f, "{}", fp),
+            Type::Reference {
+                reference_op,
+                inner_type,
+            } => write!(f, "{}{}", reference_op, *inner_type),
+            Type::SelfType(st) => write!(f, "{}", st),
+            Type::InferredType(_) => write!(f, "_"),
+            Type::Vec(v) => write!(f, "Vec<{}>", *v),
+            Type::Mapping {
+                key_type,
+                value_type,
+            } => write!(f, "Mapping<{}, {}>", *key_type, *value_type),
+            Type::Option { inner_type } => write!(f, "Option<{}>", *inner_type),
+            Type::Result { ok, err } => write!(f, "Result<{}, {}>", *ok, *err),
+        }
+    }
 }

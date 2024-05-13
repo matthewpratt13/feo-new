@@ -21,7 +21,7 @@ pub fn get_parser(input: &str, log_level: LogLevel, print_tokens: bool) -> Parse
 
     parser
         .logger
-        .log(LogLevel::Info, LogMsg("instantiated parser".to_string()));
+        .log(LogLevel::Info, LogMsg::from("instantiated parser"));
 
     parser
 }

@@ -91,9 +91,38 @@ mod tests {
     }
 
     #[test]
+    fn parse_unary_expr_not() -> Result<(), ()> {
+        let input = r#"!x.is_odd()"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+        }
+    }
+
+    #[test]
     // #[ignore]
-    fn parse_borrow_expr() -> Result<(), ()> {
+    fn parse_reference_expr_borrow() -> Result<(), ()> {
         let input = r#"&x"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+
+        let statements = parser.parse();
+
+        match statements {
+            Ok(t) => Ok(println!("{:#?}", t)),
+            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+        }
+    }
+
+    #[test]
+    // #[ignore]
+    fn parse_reference_expr_mut() -> Result<(), ()> {
+        let input = r#"&mut x"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

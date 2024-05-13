@@ -20,18 +20,28 @@ impl ParseDefinition for ModuleItem {
             Err(ErrorsEmitted)
         }?;
 
-        let module_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
-        } else {
-            parser.log_unexpected_token("identifier");
-            Err(ErrorsEmitted)
+        let module_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("module identifier");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::LBrace)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.next_token() {
+            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let (inner_attributes_opt, items_opt) = parse_item(parser)?;
@@ -39,8 +49,8 @@ impl ParseDefinition for ModuleItem {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
+            parser.log_unmatched_delimiter(&open_brace);
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 

@@ -7,9 +7,7 @@ use super::Parser;
 
 impl InnerAttr {
     pub(crate) fn inner_attr(parser: &Parser) -> Option<InnerAttr> {
-        let token = parser.current_token();
-
-        match token {
+        match parser.current_token().as_ref() {
             Some(Token::Abstract { .. }) => Some(InnerAttr::Abstract),
             Some(Token::Contract { .. }) => Some(InnerAttr::Contract),
             Some(Token::Library { .. }) => Some(InnerAttr::Library),
@@ -23,9 +21,7 @@ impl InnerAttr {
 
 impl OuterAttr {
     pub(crate) fn outer_attr(parser: &Parser) -> Option<OuterAttr> {
-        let token = parser.current_token();
-
-        match token {
+        match parser.current_token().as_ref() {
             Some(Token::Calldata { .. }) => Some(OuterAttr::Calldata),
             Some(Token::Constructor { .. }) => Some(OuterAttr::Constructor),
             Some(Token::Error { .. }) => Some(OuterAttr::Error),

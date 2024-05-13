@@ -163,7 +163,7 @@ pub struct FieldAccessExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ForInExpr {
     pub(crate) kw_for: Keyword,
-    pub(crate) assignee: Pattern,
+    pub(crate) pattern: Pattern,
     pub(crate) kw_in: Keyword,
     pub(crate) iterable: Box<Expression>,
     pub(crate) block: Box<Expression>,
@@ -189,7 +189,7 @@ pub struct IfExpr {
 pub struct IndexExpr {
     pub(crate) array: Box<AssigneeExpr>,
     pub(crate) open_bracket: Delimiter,
-    pub(crate) index: Box<Expression>,
+    pub(crate) index: Box<ValueExpr>,
     pub(crate) close_bracket: Delimiter,
 }
 
@@ -228,14 +228,13 @@ pub struct NoneExpr {
 pub struct PathExpr {
     pub(crate) root: PathPrefix,
     pub(crate) tree_opt: Option<Vec<Identifier>>,
-    pub(crate) wildcard_opt: Option<Separator>, // `::*`
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RangeExpr {
-    pub(crate) from_opt: Option<Box<Expression>>,
+    pub(crate) from_opt: Option<Box<AssigneeExpr>>,
     pub(crate) range_op: RangeOp, // `..` or `..=`
-    pub(crate) to_opt: Option<Box<Expression>>,
+    pub(crate) to_opt: Option<Box<AssigneeExpr>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

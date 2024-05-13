@@ -6,7 +6,7 @@ use crate::{
 
 impl ParseOperation for UnwrapExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let operand = Box::new(ValueExpr::try_from(left_expr).map_err(|e| {
+        let value_expr = Box::new(ValueExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?);
@@ -14,7 +14,7 @@ impl ParseOperation for UnwrapExpr {
         parser.next_token();
 
         let expr = UnwrapExpr {
-            value_expr: operand,
+            value_expr,
             op: UnwrapOp,
         };
 

@@ -21,17 +21,30 @@ impl ParseDeclaration for ConstantDecl {
             Err(ErrorsEmitted)
         }?;
 
-        let item_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
-        } else {
-            parser.log_unexpected_token("identifier");
-            Err(ErrorsEmitted)
+        let item_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("identifier");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        match parser.next_token() {
-            Some(Token::Colon { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`:`"),
-            None => parser.log_missing_token("`:`"),
+        match parser.current_token() {
+            Some(Token::Colon { .. }) => {
+                parser.next_token();
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`:`");
+                return Err(ErrorsEmitted);
+            }
+            _ => {
+                parser.log_unexpected_token("`:`");
+                return Err(ErrorsEmitted);
+            }
         }
 
         let item_type = Box::new(Type::parse(parser)?);
@@ -40,36 +53,42 @@ impl ParseDeclaration for ConstantDecl {
             parser.next_token();
 
             if parser.current_token().is_some() {
-                let expr = parser.parse_expression(Precedence::Lowest)?;
-                Ok(Some(ValueExpr::try_from(expr).map_err(|e| {
+                let expression = parser.parse_expression(Precedence::Lowest)?;
+                let value_expr = ValueExpr::try_from(expression).map_err(|e| {
                     parser.log_error(e);
                     ErrorsEmitted
-                })?))
+                })?;
+
+                Ok(Some(value_expr))
             } else {
-                parser.log_missing_token("value");
+                parser.log_missing("expr", "value");
                 Err(ErrorsEmitted)
             }
         } else {
             Ok(None)
         }?;
 
-        if let Some(Token::Semicolon { .. }) = parser.current_token() {
-            parser.next_token();
+        match parser.current_token() {
+            Some(Token::Semicolon { .. }) => {
+                parser.next_token();
 
-            Ok(ConstantDecl {
-                attributes_opt,
-                visibility,
-                kw_const,
-                item_name,
-                item_type,
-                value_opt,
-            })
-        } else if let Some(_) = parser.current_token() {
-            parser.log_unexpected_token("`;`");
-            Err(ErrorsEmitted)
-        } else {
-            parser.log_missing_token("`;`");
-            Err(ErrorsEmitted)
+                Ok(ConstantDecl {
+                    attributes_opt,
+                    visibility,
+                    kw_const,
+                    item_name,
+                    item_type,
+                    value_opt,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`;`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`;`");
+                Err(ErrorsEmitted)
+            }
         }
     }
 }

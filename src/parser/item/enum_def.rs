@@ -24,18 +24,28 @@ impl ParseDefinition for EnumDef {
             Err(ErrorsEmitted)
         }?;
 
-        let enum_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
-        } else {
-            parser.log_unexpected_token("identifier");
-            Err(ErrorsEmitted)
+        let enum_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("enum identifier");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::LBrace)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.next_token() {
+            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let variants = parse_enum_variants(parser)?;
@@ -43,8 +53,8 @@ impl ParseDefinition for EnumDef {
         let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
             Ok(Delimiter::RBrace)
         } else {
+            parser.log_unmatched_delimiter(&open_brace);
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -94,11 +104,16 @@ fn parse_enum_variant(
 
     let visibility = Visibility::visibility(parser)?;
 
-    let variant_name = if let Some(Token::Identifier { name, .. }) = token {
-        Ok(Identifier(name))
-    } else {
-        parser.log_unexpected_token("identifier");
-        Err(ErrorsEmitted)
+    let variant_name = match token {
+        Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+        Some(Token::EOF) | None => {
+            parser.log_unexpected_eoi();
+            Err(ErrorsEmitted)
+        }
+        _ => {
+            parser.log_unexpected_token("enum variant identifier");
+            Err(ErrorsEmitted)
+        }
     }?;
 
     let variant_type_opt = match parser.current_token() {
@@ -134,15 +149,15 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
     {
         Ok(sdf)
     } else {
-        parser.log_missing_token("struct definition field");
+        parser.log_missing("item field", "struct field");
         Err(ErrorsEmitted)
     }?;
 
     let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
         Ok(Delimiter::RBrace)
     } else {
+        parser.log_unmatched_delimiter(&open_brace);
         parser.log_missing_token("`}`");
-        parser.log_unmatched_delimiter(open_brace.clone());
         Err(ErrorsEmitted)
     }?;
 
@@ -165,15 +180,15 @@ fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTuple, Err
         if let Some(t) = collection::get_collection(parser, Type::parse, Delimiter::RParen)? {
             Ok(t)
         } else {
-            parser.log_unexpected_token("type");
+            parser.log_missing("type", "tuple element type annotation");
             Err(ErrorsEmitted)
         }?;
 
     let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
         Ok(Delimiter::RParen)
     } else {
+        parser.log_unmatched_delimiter(&open_paren);
         parser.log_missing_token("`)`");
-        parser.log_unmatched_delimiter(open_paren.clone());
         Err(ErrorsEmitted)
     }?;
 

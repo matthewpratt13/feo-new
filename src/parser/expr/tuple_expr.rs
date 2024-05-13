@@ -9,10 +9,6 @@ use crate::{
 
 impl ParseConstruct for TupleExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let mut elements = Vec::new();
-
-        let mut final_element_opt = None::<Box<Expression>>;
-
         let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Delimiter::LParen)
@@ -21,13 +17,14 @@ impl ParseConstruct for TupleExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let tuple_elements = parse_tuple_elements(parser, &mut elements, &mut final_element_opt)?;
+        let tuple_elements = parse_tuple_elements(parser)?;
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
+        let close_paren = if let Some(Token::RParen { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::RParen)
         } else {
+            parser.log_unmatched_delimiter(&open_paren);
             parser.log_missing_token("`)`");
-            parser.log_unmatched_delimiter(open_paren.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -41,11 +38,10 @@ impl ParseConstruct for TupleExpr {
     }
 }
 
-fn parse_tuple_elements(
-    parser: &mut Parser,
-    elements: &mut Vec<(Expression, Separator)>,
-    final_element_opt: &mut Option<Box<Expression>>,
-) -> Result<TupleElements, ErrorsEmitted> {
+fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmitted> {
+    let mut elements = Vec::new();
+    let mut final_element_opt = None::<Box<Expression>>;
+
     while !matches!(
         parser.current_token(),
         Some(Token::RParen { .. } | Token::EOF)
@@ -58,15 +54,15 @@ fn parse_tuple_elements(
         } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
             parser.log_unexpected_token("`,` or `)`");
         } else if matches!(parser.current_token(), Some(Token::RParen { .. })) {
-            *final_element_opt = Some(Box::new(element));
+            final_element_opt = Some(Box::new(element));
             break;
         }
     }
-    let tuple_elements = TupleElements {
-        elements: elements.clone(),
-        final_element_opt: final_element_opt.clone(),
-    };
-    Ok(tuple_elements)
+
+    Ok(TupleElements {
+        elements,
+        final_element_opt,
+    })
 }
 
 impl ParseOperation for TupleIndexExpr {
@@ -76,12 +72,19 @@ impl ParseOperation for TupleIndexExpr {
             ErrorsEmitted
         })?;
 
-        let index = if let Some(Token::UIntLiteral { value, .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(value)
-        } else {
-            parser.log_unexpected_token("unsigned integer");
-            Err(ErrorsEmitted)
+        let index = match parser.current_token() {
+            Some(Token::UIntLiteral { value, .. }) => {
+                parser.next_token();
+                Ok(value)
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("tuple index (unsigned decimal integer)");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let expr = TupleIndexExpr {
@@ -99,7 +102,7 @@ mod tests {
 
     #[test]
     fn parse_tuple_expr() -> Result<(), ()> {
-        let input = r#"(true, "foo", 10, x)"#;
+        let input = r#"(true, "foo", 10)"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

@@ -24,18 +24,28 @@ impl ParseDefinition for FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        let function_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
-        } else {
-            parser.log_unexpected_token("identifier");
-            Err(ErrorsEmitted)
+        let function_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("function identifier");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
-            Ok(Delimiter::LParen)
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
+        let open_paren = match parser.next_token() {
+            Some(Token::LParen { .. }) => Ok(Delimiter::LParen),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`(`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let params_opt =
@@ -44,31 +54,41 @@ impl ParseDefinition for FunctionItem {
         let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
             Ok(Delimiter::RParen)
         } else {
+            parser.log_unmatched_delimiter(&open_paren);
             parser.log_missing_token("`)`");
-            parser.log_unmatched_delimiter(open_paren.clone());
             Err(ErrorsEmitted)
         }?;
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
             parser.next_token();
 
-            let ty = Type::parse(parser)?;
-            Some(Box::new(ty))
-        } else {
-            None
-        };
-
-        let block_opt = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            if let Some(Token::RBrace { .. }) = parser.peek_ahead_by(1) {
-                parser.next_token();
-                parser.next_token();
-                None
+            if parser.current_token().is_some() {
+                Ok(Some(Box::new(Type::parse(parser)?)))
             } else {
-                Some(BlockExpr::parse(parser)?)
+                parser.log_missing("type", "function return type");
+                Err(ErrorsEmitted)
             }
         } else {
-            None
-        };
+            Ok(None)
+        }?;
+
+        let block_opt = if let Some(Token::LBrace { .. }) = parser.current_token() {
+            match parser.peek_ahead_by(1) {
+                Some(Token::RBrace { .. }) => {
+                    parser.next_token();
+                    parser.next_token();
+                    Ok(None)
+                }
+                Some(Token::EOF) | None => {
+                    parser.log_unmatched_delimiter(&open_paren);
+                    parser.log_missing_token("`}`");
+                    Err(ErrorsEmitted)
+                }
+                _ => Ok(Some(BlockExpr::parse(parser)?)),
+            }
+        } else {
+            Ok(None)
+        }?;
 
         Ok(FunctionItem {
             attributes_opt,
@@ -100,7 +120,7 @@ impl FunctionOrMethodParam {
             None
         };
 
-        let param = match parser.current_token() {
+        match parser.current_token() {
             Some(Token::SelfKeyword { .. }) => {
                 parser.next_token();
 
@@ -114,12 +134,19 @@ impl FunctionOrMethodParam {
             Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
                 let param_name = IdentifierPatt::parse(parser)?;
 
-                match parser.next_token() {
-                    Some(Token::Colon { .. }) => (),
-                    Some(_) => parser.log_unexpected_token("`:`"),
-                    None => parser.log_missing_token("`:`"),
+                match parser.current_token() {
+                    Some(Token::Colon { .. }) => {
+                        parser.next_token();
+                    }
+                    Some(Token::EOF) | None => {
+                        parser.log_missing_token("`:`");
+                        return Err(ErrorsEmitted);
+                    }
+                    _ => {
+                        parser.log_unexpected_token("`:`");
+                        return Err(ErrorsEmitted);
+                    }
                 }
-
                 let param_type = Box::new(Type::parse(parser)?);
 
                 let function_param = FunctionParam {
@@ -131,12 +158,10 @@ impl FunctionOrMethodParam {
             }
 
             _ => {
-                parser.log_unexpected_token("`self` or identifier");
+                parser.log_unexpected_token("function or method parameter (identifier or `self`)");
                 Err(ErrorsEmitted)
             }
-        };
-
-        param
+        }
     }
 }
 

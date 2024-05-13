@@ -15,16 +15,36 @@ impl ParseControl for IfExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let condition = GroupedExpr::parse(parser)?;
+        let condition = match parser.current_token() {
+            Some(Token::LParen { .. }) => Ok(Box::new(GroupedExpr::parse(parser)?)),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`(`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
+        }?;
 
-        let if_block = BlockExpr::parse(parser)?;
+        let if_block = match parser.current_token() {
+            Some(Token::LBrace { .. }) => Ok(Box::new(BlockExpr::parse(parser)?)),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
+        }?;
 
         let (else_if_blocks_opt, trailing_else_block_opt) = parse_else_blocks(parser)?;
 
         let expr = IfExpr {
             kw_if,
-            condition: Box::new(condition),
-            if_block: Box::new(if_block),
+            condition,
+            if_block,
             else_if_blocks_opt,
             trailing_else_block_opt,
         };
@@ -49,17 +69,24 @@ fn parse_else_blocks(
     while let Some(Token::Else { .. }) = parser.current_token() {
         parser.next_token();
 
-        if let Some(Token::If { .. }) = parser.current_token() {
-            let if_expr = Box::new(IfExpr::parse(parser)?);
-            else_if_blocks.push((Keyword::Else, if_expr));
-        } else {
-            continue;
-        }
-
-        if let Some(Token::LBrace { .. }) = parser.current_token() {
-            let block = Box::new(BlockExpr::parse(parser)?);
-            trailing_else_block_opt = Some((Keyword::Else, block));
-            break;
+        match parser.current_token() {
+            Some(Token::If { .. }) => {
+                let if_expr = Box::new(IfExpr::parse(parser)?);
+                else_if_blocks.push((Keyword::Else, if_expr));
+            }
+            Some(Token::LBrace { .. }) => {
+                let block = Box::new(BlockExpr::parse(parser)?);
+                trailing_else_block_opt = Some((Keyword::Else, block));
+                break
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`if` or `{`");
+                return Err(ErrorsEmitted);
+            }
+            _ => {
+                parser.log_unexpected_token("`if` or `{`");
+                return Err(ErrorsEmitted);
+            }
         }
     }
 
@@ -83,7 +110,7 @@ mod tests {
                 return true;
             }
         } else if (x == 5) {
-            return true;
+            return true; 
         } else {
             return false;
         }"#;

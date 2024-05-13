@@ -1,3 +1,5 @@
+use core::fmt;
+
 use super::{Delimiter, Identifier, Keyword, PathPrefix, Pattern, RangeOp, ReferenceOp, Separator};
 
 ///////////////////////////////////////////////////////////////////////////
@@ -35,6 +37,12 @@ pub struct IdentifierPatt {
     pub(crate) kw_ref_opt: Option<Keyword>,
     pub(crate) kw_mut_opt: Option<Keyword>,
     pub(crate) name: Identifier,
+}
+
+impl fmt::Display for IdentifierPatt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}{:?}{}", self.kw_ref_opt, self.kw_mut_opt, self.name)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

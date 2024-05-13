@@ -20,33 +20,52 @@ impl ParseDeclaration for AliasDecl {
             Err(ErrorsEmitted)
         }?;
 
-        let alias_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
-        } else {
-            parser.log_unexpected_token("identifier");
-            Err(ErrorsEmitted)
+        let alias_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("identifier");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let original_type_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
             parser.next_token();
-            Some(Type::parse(parser)?)
+
+            if parser.current_token().is_some() {
+                Ok(Some(Type::parse(parser)?))
+            } else {
+                parser.log_missing_token("original type");
+                Err(ErrorsEmitted)
+            }
         } else {
-            None
-        };
+            Ok(None)
+        }?;
 
-        match parser.next_token() {
-            Some(Token::Semicolon { .. }) => (),
-            Some(_) => parser.log_unexpected_token("`;`"),
-            None => parser.log_missing_token("`;`"),
+        match parser.current_token() {
+            Some(Token::Semicolon { .. }) => {
+                parser.next_token();
+                Ok(AliasDecl {
+                    attributes_opt,
+                    visibility,
+                    kw_alias,
+                    alias_name,
+                    original_type_opt,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`;`");
+                Err(ErrorsEmitted)
+            }
+
+            _ => {
+                parser.log_unexpected_token("`;`");
+                Err(ErrorsEmitted)
+            }
         }
-
-        Ok(AliasDecl {
-            attributes_opt,
-            visibility,
-            kw_alias,
-            alias_name,
-            original_type_opt,
-        })
     }
 }
 

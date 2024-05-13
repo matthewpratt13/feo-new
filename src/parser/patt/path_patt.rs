@@ -10,7 +10,7 @@ impl PathPatt {
     pub(crate) fn parse(parser: &mut Parser, root: PathPrefix) -> Result<Pattern, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg("entering `PathPatt::parse()`".to_string()),
+            LogMsg::from("entering `PathPatt::parse()`"),
         );
         parser.log_current_token(false);
 
@@ -37,10 +37,9 @@ impl PathPatt {
             },
         };
 
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg("exiting `PathPatt::parse()`".to_string()),
-        );
+        parser
+            .logger
+            .log(LogLevel::Debug, LogMsg::from("exiting `PathPatt::parse()`"));
         parser.log_current_token(false);
 
         Ok(Pattern::PathPatt(expr))

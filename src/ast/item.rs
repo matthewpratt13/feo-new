@@ -1,3 +1,5 @@
+use core::fmt;
+
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
@@ -16,6 +18,15 @@ pub(crate) enum EnumVariantType {
 pub(crate) enum FunctionOrMethodParam {
     FunctionParam(FunctionParam),
     MethodParam(SelfParam),
+}
+
+impl fmt::Display for FunctionOrMethodParam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FunctionOrMethodParam::FunctionParam(t) => write!(f, "{}", t),
+            FunctionOrMethodParam::MethodParam(t) => write!(f, "{}", t),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -76,6 +87,12 @@ pub(crate) struct FunctionParam {
     pub(crate) param_type: Box<Type>,
 }
 
+impl fmt::Display for FunctionParam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.param_name, self.param_type)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ImportTree {
     pub(crate) path_segments: Vec<PathSegment>,
@@ -108,6 +125,12 @@ pub(crate) struct PubPackageVis {
 pub(crate) struct SelfParam {
     pub(crate) prefix_opt: Option<ReferenceOp>,
     pub(crate) kw_self: Keyword,
+}
+
+impl fmt::Display for SelfParam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}{}", self.prefix_opt, self.kw_self)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -210,7 +233,7 @@ pub struct StaticItemDecl {
     pub(crate) kw_mut_opt: Option<Keyword>,
     pub(crate) item_name: Identifier,
     pub(crate) item_type: Type,
-    pub(crate) value_opt: Option<Box<AssigneeExpr>>,
+    pub(crate) assignee_opt: Option<Box<AssigneeExpr>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

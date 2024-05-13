@@ -15,6 +15,11 @@ impl ParseControl for MatchExpr {
             Err(ErrorsEmitted)
         }?;
 
+        if let Some(Token::LBrace { .. } | Token::Semicolon { .. }) = parser.current_token() {
+            parser.log_missing("expr", "scrutinee expression");
+            return Err(ErrorsEmitted);
+        }
+
         let matched_expression = parser.parse_expression(Precedence::Lowest)?;
 
         let scrutinee = AssigneeExpr::try_from(matched_expression).map_err(|e| {
@@ -22,11 +27,19 @@ impl ParseControl for MatchExpr {
             ErrorsEmitted
         })?;
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::LBrace)
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.current_token() {
+            Some(Token::LBrace { .. }) => {
+                parser.next_token();
+                Ok(Delimiter::LBrace)
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let mut arms = Vec::new();
@@ -46,15 +59,16 @@ impl ParseControl for MatchExpr {
         let final_arm = if let Some(a) = arms.pop() {
             Ok(Box::new(a))
         } else {
-            parser.log_missing_token("match arm");
+            parser.log_missing("patt", "match arm");
             Err(ErrorsEmitted)
         }?;
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
+        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
+            parser.next_token();
             Ok(Delimiter::RBrace)
         } else {
+            parser.log_unmatched_delimiter(&open_brace);
             parser.log_missing_token("`}`");
-            parser.log_unmatched_delimiter(open_brace.clone());
             Err(ErrorsEmitted)
         }?;
 
@@ -87,18 +101,40 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         None
     };
 
-    if let Some(Token::FatArrow { .. }) = parser.current_token() {
-        parser.next_token();
-    } else {
-        parser.log_unexpected_token("`=>`");
-        return Err(ErrorsEmitted);
+    match parser.current_token() {
+        Some(Token::FatArrow { .. }) => {
+            parser.next_token();
+        }
+        Some(Token::EOF) | None => {
+            parser.log_missing_token("`=>`");
+            return Err(ErrorsEmitted);
+        }
+        _ => {
+            parser.log_unexpected_token("`=>`");
+            return Err(ErrorsEmitted);
+        }
     }
 
     let body = if let Some(Token::LBrace { .. }) = parser.current_token() {
-        Box::new(BlockExpr::parse(parser)?)
+        Ok(Box::new(BlockExpr::parse(parser)?))
     } else {
-        Box::new(parser.parse_expression(Precedence::Lowest)?)
-    };
+        let expr = Box::new(parser.parse_expression(Precedence::Lowest)?);
+        match parser.current_token() {
+            Some(Token::Comma { .. }) => {
+                parser.next_token();
+                Ok(expr)
+            }
+            Some(Token::RBrace { .. }) => Ok(expr),
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("`,`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`,`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }?;
 
     let arm = MatchArm {
         pattern,
