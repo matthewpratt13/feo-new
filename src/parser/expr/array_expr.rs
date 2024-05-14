@@ -7,14 +7,16 @@ use crate::{
 
 impl ParseConstruct for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        match parser.current_token() {
+        let open_bracket = match parser.current_token() {
             Some(Token::LBracket { .. }) => {
                 parser.next_token();
+                Ok(Delimiter::LBracket)
             }
             _ => {
                 parser.log_unexpected_token("`[`");
+                Err(ErrorsEmitted)
             }
-        }
+        }?;
 
         let elements_opt =
             collection::get_expressions(parser, Precedence::Lowest, Delimiter::RBracket)?;
@@ -25,7 +27,7 @@ impl ParseConstruct for ArrayExpr {
                 Ok(Expression::Array(ArrayExpr { elements_opt }))
             }
             Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&Delimiter::LBracket);
+                parser.log_unmatched_delimiter(&open_bracket);
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }

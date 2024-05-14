@@ -46,7 +46,6 @@ mod test_utils;
 mod ty;
 mod visibility;
 
-
 use std::collections::HashMap;
 
 use crate::{
@@ -1160,7 +1159,7 @@ impl Parser {
             _ => 0,
         };
 
-        let error = CompilerError::new(error_kind, &self.stream.span().input(), pos);
+        let error = CompilerError::new(error_kind, pos, &self.stream.span().input());
         self.errors.push(error.clone());
 
         self.logger

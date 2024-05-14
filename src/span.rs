@@ -37,3 +37,33 @@ impl Span {
         Arc::clone(&self.input)
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct Position {
+    pub line: usize,
+    pub col: usize,
+    _snippet: String,
+}
+
+impl Position {
+    pub fn new(pos: usize, source: &str) -> Self {
+        let slice = &source[..pos];
+        let lines = slice.split('\n').collect::<Vec<_>>();
+        let line_count = lines.len();
+        let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
+
+        let start_index = if pos >= 80 { pos - 80 } else { 0 };
+
+        let end_index = if pos > source.len() {
+            source.len()
+        } else {
+            pos
+        };
+
+        Self {
+            line: line_count,
+            col: last_line_len,
+            _snippet: source[start_index..end_index].trim().to_string(),
+        }
+    }
+}
