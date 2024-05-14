@@ -1,6 +1,7 @@
 use crate::{
     ast::{Delimiter, Keyword, PubPackageVis, Visibility},
     error::ErrorsEmitted,
+    span::Position,
     token::Token,
 };
 
@@ -14,6 +15,9 @@ impl Visibility {
 
                 match parser.current_token().as_ref() {
                     Some(Token::LParen { .. }) => {
+                        let open_paren = Delimiter::LParen {
+                            position: Position::new(parser.current, &parser.stream.span().input()),
+                        };
                         parser.next_token();
 
                         let kw_package = match parser.current_token().as_ref() {
@@ -31,22 +35,27 @@ impl Visibility {
                             }
                         }?;
 
-                        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
-                            Ok(Delimiter::RParen)
-                        } else {
-                            parser.log_unmatched_delimiter(&Delimiter::LParen);
-                            parser.log_missing_token("`)`");
-                            Err(ErrorsEmitted)
-                        }?;
+                        match parser.current_token() {
+                            Some(Token::RParen { .. }) => {
+                                parser.next_token();
 
-                        let pub_package = PubPackageVis {
-                            kw_pub: Keyword::Pub,
-                            open_paren: Delimiter::LParen,
-                            kw_package,
-                            close_paren,
-                        };
+                                let pub_package = PubPackageVis {
+                                    kw_pub: Keyword::Pub,
+                                    kw_package,
+                                };
 
-                        Ok(Visibility::PubPackage(pub_package))
+                                Ok(Visibility::PubPackage(pub_package))
+                            }
+                            Some(Token::EOF) | None => {
+                                parser.log_unmatched_delimiter(&open_paren);
+                                parser.log_unexpected_eoi();
+                                Err(ErrorsEmitted)
+                            }
+                            _ => {
+                                parser.log_unexpected_token("`)`");
+                                Err(ErrorsEmitted)
+                            }
+                        }
                     }
                     _ => Ok(Visibility::Pub),
                 }

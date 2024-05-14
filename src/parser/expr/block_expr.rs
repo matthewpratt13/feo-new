@@ -3,6 +3,7 @@ use crate::{
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::{collection, ParseConstruct, Parser},
+    span::Position,
     token::Token,
 };
 
@@ -18,14 +19,11 @@ impl ParseConstruct for BlockExpr {
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
+                let position = Position::new(parser.current, &parser.stream.span().input());
                 parser.next_token();
-                Ok(Delimiter::LBrace)
+                Ok(Delimiter::LBrace { position })
             }
-            Some(Token::EOF) => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            None => {
+            Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
@@ -37,29 +35,32 @@ impl ParseConstruct for BlockExpr {
 
         let statements_opt = parse_statements(parser)?;
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_unmatched_delimiter(&open_brace);
-            parser.log_missing_token("`}`");
-            Err(ErrorsEmitted)
-        }?;
+        match parser.current_token() {
+            Some(Token::RBrace { .. }) => {
+                parser.next_token();
 
-        let expr = BlockExpr {
-            attributes_opt,
-            open_brace,
-            statements_opt,
-            close_brace,
-        };
+                parser.logger.log(
+                    LogLevel::Debug,
+                    LogMsg::from("exiting `BlockExpr::parse()`"),
+                );
+                parser.log_current_token(true);
 
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("exiting `BlockExpr::parse()`"),
-        );
-        parser.log_current_token(true);
-
-        Ok(Expression::Block(expr))
+                let expr = BlockExpr {
+                    attributes_opt,
+                    statements_opt,
+                };
+                Ok(Expression::Block(expr))
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_brace);
+                parser.log_missing_token("`}`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`}`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 

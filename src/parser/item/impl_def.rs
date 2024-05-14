@@ -6,6 +6,7 @@ use crate::{
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
+    span::Position,
     token::Token,
 };
 
@@ -27,8 +28,12 @@ impl ParseDefinition for InherentImplDef {
 
         let nominal_type = Type::parse(parser)?;
 
-        let open_brace = match parser.next_token() {
-            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+        let open_brace = match parser.current_token() {
+            Some(Token::LBrace { .. }) => {
+                let position = Position::new(parser.current, &parser.stream.span().input());
+                parser.next_token();
+                Ok(Delimiter::LBrace { position })
+            }
             Some(Token::EOF) | None => {
                 parser.log_missing_token("`{`");
                 Err(ErrorsEmitted)
@@ -41,22 +46,27 @@ impl ParseDefinition for InherentImplDef {
 
         let associated_items_opt = collection::get_associated_items::<InherentImplItem>(parser)?;
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_unmatched_delimiter(&open_brace);
-            parser.log_missing_token("`}`");
-            Err(ErrorsEmitted)
-        }?;
+        match parser.current_token() {
+            Some(Token::RBrace { .. }) => {
+                parser.next_token();
 
-        Ok(InherentImplDef {
-            attributes_opt,
-            kw_impl,
-            nominal_type,
-            open_brace,
-            associated_items_opt,
-            close_brace,
-        })
+                Ok(InherentImplDef {
+                    attributes_opt,
+                    kw_impl,
+                    nominal_type,
+                    associated_items_opt,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_brace);
+                parser.log_missing_token("`}`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`}`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 
@@ -105,8 +115,12 @@ impl ParseDefinition for TraitImplDef {
 
         let implementing_type = Type::parse(parser)?;
 
-        let open_brace = match parser.next_token() {
-            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+        let open_brace = match parser.current_token() {
+            Some(Token::LBrace { .. }) => {
+                let position = Position::new(parser.current, &parser.stream.span().input());
+                parser.next_token();
+                Ok(Delimiter::LBrace { position })
+            }
             Some(Token::EOF) | None => {
                 parser.log_missing_token("`{`");
                 Err(ErrorsEmitted)
@@ -119,24 +133,29 @@ impl ParseDefinition for TraitImplDef {
 
         let associated_items_opt = collection::get_associated_items::<TraitImplItem>(parser)?;
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_unmatched_delimiter(&open_brace);
-            parser.log_missing_token("`}`");
-            Err(ErrorsEmitted)
-        }?;
+        match parser.current_token() {
+            Some(Token::RBrace { .. }) => {
+                parser.next_token();
 
-        Ok(TraitImplDef {
-            attributes_opt,
-            kw_impl,
-            implemented_trait_path,
-            kw_for,
-            implementing_type,
-            open_brace,
-            associated_items_opt,
-            close_brace,
-        })
+                Ok(TraitImplDef {
+                    attributes_opt,
+                    kw_impl,
+                    implemented_trait_path,
+                    kw_for,
+                    implementing_type,
+                    associated_items_opt,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_brace);
+                parser.log_missing_token("`}`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`}`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 

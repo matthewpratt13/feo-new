@@ -1,6 +1,6 @@
 use core::fmt;
 
-use super::{Delimiter, Identifier, Keyword, PathPrefix, Pattern, RangeOp, ReferenceOp, Separator};
+use super::{Identifier, Keyword, PathPrefix, Pattern, RangeOp, ReferenceOp, Separator};
 
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES
@@ -27,9 +27,7 @@ pub(crate) struct StructPattField {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupedPatt {
-    pub(crate) open_paren: Delimiter,
     pub(crate) pattern: Box<Pattern>,
-    pub(crate) close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -89,16 +87,12 @@ pub struct SomePatt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructPatt {
     pub(crate) path: PathPatt,
-    pub(crate) open_brace: Delimiter,
     pub(crate) fields_opt: Option<Vec<StructPattField>>,
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TuplePatt {
-    pub(crate) open_paren: Delimiter,
     pub(crate) tuple_patt_elements: TuplePattElements,
-    pub(crate) close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -5,6 +5,7 @@ use crate::{
     },
     error::ErrorsEmitted,
     parser::Parser,
+    span::Position,
     token::Token,
 };
 
@@ -36,8 +37,12 @@ impl ParseDefinition for TraitDef {
             }
         }?;
 
-        let open_brace = match parser.next_token() {
-            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+        let open_brace = match parser.current_token() {
+            Some(Token::LBrace { .. }) => {
+                let position = Position::new(parser.current, &parser.stream.span().input());
+                parser.next_token();
+                Ok(Delimiter::LBrace { position })
+            }
             Some(Token::EOF) | None => {
                 parser.log_missing_token("`{`");
                 Err(ErrorsEmitted)
@@ -52,24 +57,29 @@ impl ParseDefinition for TraitDef {
 
         let trait_items_opt = collection::get_associated_items::<TraitDefItem>(parser)?;
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_unmatched_delimiter(&open_brace);
-            parser.log_missing_token("`}`");
-            Err(ErrorsEmitted)
-        }?;
+        match parser.current_token() {
+            Some(Token::RBrace { .. }) => {
+                parser.next_token();
 
-        Ok(TraitDef {
-            outer_attributes_opt,
-            visibility,
-            kw_trait,
-            trait_name,
-            open_brace,
-            inner_attributes_opt,
-            trait_items_opt,
-            close_brace,
-        })
+                Ok(TraitDef {
+                    outer_attributes_opt,
+                    visibility,
+                    kw_trait,
+                    trait_name,
+                    inner_attributes_opt,
+                    trait_items_opt,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_brace);
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`}`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 

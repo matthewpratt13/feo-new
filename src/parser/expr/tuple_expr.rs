@@ -4,14 +4,16 @@ use crate::{
     },
     error::ErrorsEmitted,
     parser::{ParseConstruct, ParseOperation, Parser, Precedence},
+    span::Position,
     token::Token,
 };
 
 impl ParseConstruct for TupleExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
+            let position = Position::new(parser.current, &parser.stream.span().input());
             parser.next_token();
-            Ok(Delimiter::LParen)
+            Ok(Delimiter::LParen { position })
         } else {
             parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)
@@ -19,22 +21,22 @@ impl ParseConstruct for TupleExpr {
 
         let tuple_elements = parse_tuple_elements(parser)?;
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_unmatched_delimiter(&open_paren);
-            parser.log_missing_token("`)`");
-            Err(ErrorsEmitted)
-        }?;
+        match parser.current_token() {
+            Some(Token::RParen { .. }) => {
+                parser.next_token();
 
-        let expr = TupleExpr {
-            open_paren,
-            tuple_elements,
-            close_paren,
-        };
-
-        Ok(Expression::Tuple(expr))
+                Ok(Expression::Tuple(TupleExpr { tuple_elements }))
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_paren);
+                parser.log_missing_token("`)`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`)`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 

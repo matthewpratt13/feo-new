@@ -2,6 +2,7 @@ use crate::{
     ast::{AssigneeExpr, CallExpr, Delimiter, Expression},
     error::ErrorsEmitted,
     parser::{collection, ParseOperation, Parser, Precedence},
+    span::Position,
     token::Token,
 };
 
@@ -12,33 +13,39 @@ impl ParseOperation for CallExpr {
             ErrorsEmitted
         })?;
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Delimiter::LParen)
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
+        let open_paren = match parser.current_token() {
+            Some(Token::LParen { .. }) => {
+                let position = Position::new(parser.current, &parser.stream.span().input());
+                parser.next_token();
+                Ok(Delimiter::LParen { position })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let args_opt = collection::get_expressions(parser, Precedence::Lowest, Delimiter::RParen)?;
+        let args_opt = collection::get_expressions(parser, Precedence::Lowest, &open_paren)?;
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_unmatched_delimiter(&open_paren);
-            parser.log_missing_token("`)`");
-            Err(ErrorsEmitted)
-        }?;
-
-        let expr = CallExpr {
-            callee,
-            open_paren,
-            args_opt,
-            close_paren,
-        };
-
-        Ok(Expression::Call(expr))
+        match parser.current_token() {
+            Some(Token::RParen { .. }) => {
+                parser.next_token();
+                Ok(Expression::Call(CallExpr { callee, args_opt }))
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_paren);
+                parser.log_missing_token("`)`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`)`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 

@@ -4,6 +4,7 @@ use crate::{
         TupleStructDefField, Type, Visibility,
     },
     error::ErrorsEmitted,
+    span::Position,
     token::Token,
 };
 
@@ -36,8 +37,12 @@ impl ParseDefinition for StructDef {
             }
         }?;
 
-        let open_brace = match parser.next_token() {
-            Some(Token::LBrace { .. }) => Ok(Delimiter::LBrace),
+        let open_brace = match parser.current_token() {
+            Some(Token::LBrace { .. }) => {
+                let position = Position::new(parser.current, &parser.stream.span().input());
+                parser.next_token();
+                Ok(Delimiter::LBrace { position })
+            }
             Some(Token::EOF) | None => {
                 parser.log_missing_token("`{`");
                 Err(ErrorsEmitted)
@@ -48,26 +53,30 @@ impl ParseDefinition for StructDef {
             }
         }?;
 
-        let fields_opt =
-            collection::get_collection(parser, StructDefField::parse, Delimiter::RBrace)?;
+        let fields_opt = collection::get_collection(parser, StructDefField::parse, &open_brace)?;
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_unmatched_delimiter(&open_brace);
-            parser.log_missing_token("`}`");
-            Err(ErrorsEmitted)
-        }?;
+        match parser.current_token() {
+            Some(Token::RBrace { .. }) => {
+                parser.next_token();
 
-        Ok(StructDef {
-            attributes_opt,
-            visibility,
-            kw_struct,
-            struct_name,
-            open_brace,
-            fields_opt,
-            close_brace,
-        })
+                Ok(StructDef {
+                    attributes_opt,
+                    visibility,
+                    kw_struct,
+                    struct_name,
+                    fields_opt,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_brace);
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`}`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 
@@ -92,8 +101,12 @@ impl ParseDefinition for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let open_paren = match parser.next_token() {
-            Some(Token::LParen { .. }) => Ok(Delimiter::LParen),
+        let open_paren = match parser.current_token() {
+            Some(Token::LParen { .. }) => {
+                let position = Position::new(parser.current, &parser.stream.span().input());
+                parser.next_token();
+                Ok(Delimiter::LParen { position })
+            }
             Some(Token::EOF) | None => {
                 parser.log_missing_token("`(`");
                 Err(ErrorsEmitted)
@@ -105,15 +118,22 @@ impl ParseDefinition for TupleStructDef {
         }?;
 
         let fields_opt =
-            collection::get_collection(parser, parse_tuple_struct_def_field, Delimiter::RParen)?;
+            collection::get_collection(parser, parse_tuple_struct_def_field, &open_paren)?;
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_unmatched_delimiter(&open_paren);
-            parser.log_missing_token("`)`");
-            Err(ErrorsEmitted)
-        }?;
+        match parser.current_token() {
+            Some(Token::RParen { .. }) => {
+                parser.next_token();
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_paren);
+                parser.log_unexpected_eoi();
+                return Err(ErrorsEmitted);
+            }
+            _ => {
+                parser.log_unexpected_token("`)`");
+                return Err(ErrorsEmitted);
+            }
+        }
 
         match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
@@ -123,9 +143,7 @@ impl ParseDefinition for TupleStructDef {
                     visibility,
                     kw_struct,
                     struct_name,
-                    open_paren,
                     fields_opt,
-                    close_paren,
                 })
             }
             Some(Token::EOF) | None => {

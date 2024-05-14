@@ -4,6 +4,7 @@ use crate::{
         PathSegment, PathSubset, Separator, Visibility,
     },
     error::ErrorsEmitted,
+    span::Position,
     token::Token,
 };
 
@@ -112,15 +113,16 @@ fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted>
 }
 
 fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
-    let open_brace = if let Some(Token::LBrace { .. }) = parser.next_token() {
-        Ok(Delimiter::LBrace)
+    let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
+        let position = Position::new(parser.current, &parser.stream.span().input());
+        parser.next_token();
+        Ok(Delimiter::LBrace { position })
     } else {
         parser.log_unexpected_token("`{`");
         Err(ErrorsEmitted)
     }?;
 
-    let trees = if let Some(t) =
-        collection::get_collection(parser, parse_import_tree, Delimiter::RBrace)?
+    let trees = if let Some(t) = collection::get_collection(parser, parse_import_tree, &open_brace)?
     {
         Ok(t)
     } else {
@@ -128,19 +130,22 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
         Err(ErrorsEmitted)
     }?;
 
-    let close_brace = if let Some(Token::RBrace { .. }) = parser.next_token() {
-        Ok(Delimiter::RBrace)
-    } else {
-        parser.log_unmatched_delimiter(&open_brace);
-        parser.log_missing_token("`}`");
-        Err(ErrorsEmitted)
-    }?;
+    match parser.current_token() {
+        Some(Token::RBrace { .. }) => {
+            parser.next_token();
 
-    Ok(PathSubset {
-        open_brace,
-        trees,
-        close_brace,
-    })
+            Ok(PathSubset { trees })
+        }
+        Some(Token::EOF) | None => {
+            parser.log_unmatched_delimiter(&open_brace);
+            parser.log_unexpected_eoi();
+            Err(ErrorsEmitted)
+        }
+        _ => {
+            parser.log_unexpected_token("`}`");
+            Err(ErrorsEmitted)
+        }
+    }
 }
 
 #[cfg(test)]

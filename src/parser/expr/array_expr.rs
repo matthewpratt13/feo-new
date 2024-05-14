@@ -2,6 +2,7 @@ use crate::{
     ast::{ArrayExpr, Delimiter, Expression},
     error::ErrorsEmitted,
     parser::{collection, ParseConstruct, Parser, Precedence},
+    span::Position,
     token::Token,
 };
 
@@ -9,8 +10,9 @@ impl ParseConstruct for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let open_bracket = match parser.current_token() {
             Some(Token::LBracket { .. }) => {
+                let position = Position::new(parser.current, &parser.stream.span().input());
                 parser.next_token();
-                Ok(Delimiter::LBracket)
+                Ok(Delimiter::LBracket { position })
             }
             _ => {
                 parser.log_unexpected_token("`[`");
@@ -18,8 +20,7 @@ impl ParseConstruct for ArrayExpr {
             }
         }?;
 
-        let elements_opt =
-            collection::get_expressions(parser, Precedence::Lowest, Delimiter::RBracket)?;
+        let elements_opt = collection::get_expressions(parser, Precedence::Lowest, &open_bracket)?;
 
         match parser.current_token() {
             Some(Token::RBracket { .. }) => {
@@ -28,7 +29,7 @@ impl ParseConstruct for ArrayExpr {
             }
             Some(Token::EOF) | None => {
                 parser.log_unmatched_delimiter(&open_bracket);
-                parser.log_unexpected_eoi();
+                parser.log_missing_token("`]`");
                 Err(ErrorsEmitted)
             }
             _ => {
@@ -45,7 +46,7 @@ mod tests {
 
     #[test]
     fn parse_array_expr_empty() -> Result<(), ()> {
-        let input = r#"["#;
+        let input = r#"[]"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
