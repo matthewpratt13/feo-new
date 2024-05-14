@@ -1,4 +1,4 @@
-use std::fmt;
+use core::fmt;
 
 use crate::{
     ast::{BigUInt, Bool, Byte, Bytes, Char, Hash, Int, Str, UInt},

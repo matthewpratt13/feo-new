@@ -1,4 +1,5 @@
-use std::{error::Error, fmt};
+use core::fmt;
+use std::error::Error;
 
 /// Enum representing the different types of lexer errors.
 /// Used in conjunction with `CompilerError` to keep track of errors encountered

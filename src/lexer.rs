@@ -5,7 +5,7 @@
 //! and punctuation. It ignores ordinary comments and stops tokenizing when it reaches
 //! the end of the input string.
 
-use std::{iter::Peekable, str::Chars};
+use core::{iter::Peekable, str::Chars};
 
 use crate::{
     ast::{BigUInt, Bool, Byte, Bytes, Char, Hash, Int, Str, UInt},
