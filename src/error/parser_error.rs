@@ -1,9 +1,7 @@
-
-
 use core::fmt;
 use std::error::Error;
 
-use crate::token::Token;
+use crate::{span::Position, token::Token};
 
 /// Enum representing the different types of parsing errors.
 /// Used in conjunction with `CompilerError` to keep track of errors encountered
@@ -23,6 +21,7 @@ pub enum ParserErrorKind {
 
     UnmatchedDelimiter {
         delim: String,
+        position: Position,
     },
 
     InvalidTokenContext {
@@ -82,10 +81,11 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::MissingToken { expected } => {
                 write!(f, "token not found. Expected {expected}, found none")
             }
-            ParserErrorKind::UnmatchedDelimiter { delim } => {
+            ParserErrorKind::UnmatchedDelimiter { delim, position } => {
                 write!(
                     f,
-                    "unmatched delimiter. Expected delimiter to match `{delim}`"
+                    "unmatched delimiter. Expected delimiter to match `{delim}` found at Ln {}, Col {}",
+                    position.line, position.col
                 )
             }
             ParserErrorKind::InvalidTokenContext { token } => {
