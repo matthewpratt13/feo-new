@@ -7,33 +7,33 @@ use crate::{
 
 impl ParseConstruct for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let open_bracket = if let Some(Token::LBracket { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Delimiter::LBracket)
-        } else {
-            parser.log_unexpected_token("`[`");
-            Err(ErrorsEmitted)
-        }?;
+        match parser.current_token() {
+            Some(Token::LBracket { .. }) => {
+                parser.next_token();
+            }
+            _ => {
+                parser.log_unexpected_token("`[`");
+            }
+        }
 
         let elements_opt =
             collection::get_expressions(parser, Precedence::Lowest, Delimiter::RBracket)?;
 
-        let close_bracket = if let Some(Token::RBracket { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Delimiter::RBracket)
-        } else {
-            parser.log_unmatched_delimiter(&open_bracket);
-            parser.log_missing_token("`]`");
-            Err(ErrorsEmitted)
-        }?;
-
-        let expr = ArrayExpr {
-            open_bracket,
-            elements_opt,
-            close_bracket,
-        };
-
-        Ok(Expression::Array(expr))
+        match parser.current_token() {
+            Some(Token::RBracket { .. }) => {
+                parser.next_token();
+                Ok(Expression::Array(ArrayExpr { elements_opt }))
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&Delimiter::LBracket);
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`]`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 
@@ -43,7 +43,7 @@ mod tests {
 
     #[test]
     fn parse_array_expr_empty() -> Result<(), ()> {
-        let input = r#"[]"#;
+        let input = r#"["#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

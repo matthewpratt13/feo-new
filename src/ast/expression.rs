@@ -76,9 +76,9 @@ pub(crate) struct TupleElements {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArrayExpr {
-    pub(crate) open_bracket: Delimiter,
+    // pub(crate) open_bracket: Delimiter,
     pub(crate) elements_opt: Option<Vec<Expression>>,
-    pub(crate) close_bracket: Delimiter,
+    // pub(crate) close_bracket: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
