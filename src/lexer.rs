@@ -1143,7 +1143,7 @@ impl<'a> Lexer<'a> {
     /// Log information about an error that occurred during tokenization by pushing the error
     /// to the `errors` vector and providing information about error kind and position.
     fn log_error(&mut self, error_kind: LexErrorKind) {
-        let error = CompilerError::new(error_kind, self.input, self.pos);
+        let error = CompilerError::new(error_kind, self.pos, self.input);
 
         self.errors.push(error);
     }

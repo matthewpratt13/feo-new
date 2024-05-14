@@ -13,12 +13,12 @@ use super::{item::ParseAssociatedItem, Parser, Precedence};
 pub(crate) fn get_collection<T>(
     parser: &mut Parser,
     f: fn(&mut Parser) -> Result<T, ErrorsEmitted>,
-    close_delimiter: Delimiter,
+    open_delimiter: &Delimiter,
 ) -> Result<Option<Vec<T>>, ErrorsEmitted> {
     let mut collection: Vec<T> = Vec::new();
 
-    match close_delimiter {
-        Delimiter::RParen => {
+    match open_delimiter {
+        Delimiter::LParen { .. } => {
             while !matches!(
                 parser.current_token().as_ref(),
                 Some(Token::RParen { .. } | Token::EOF),
@@ -39,7 +39,7 @@ pub(crate) fn get_collection<T>(
             }
         }
 
-        Delimiter::RBrace => {
+        Delimiter::LBrace { .. } => {
             while !matches!(
                 parser.current_token().as_ref(),
                 Some(Token::RBrace { .. } | Token::EOF),
@@ -60,7 +60,7 @@ pub(crate) fn get_collection<T>(
             }
         }
 
-        Delimiter::Pipe => {
+        Delimiter::Pipe { .. } => {
             while !matches!(
                 parser.current_token().as_ref(),
                 Some(Token::Pipe { .. } | Token::EOF),
@@ -101,7 +101,7 @@ pub(crate) fn get_collection<T>(
 pub(crate) fn get_expressions(
     parser: &mut Parser,
     precedence: Precedence,
-    close_delimiter: Delimiter,
+    open_delimiter: &Delimiter,
 ) -> Result<Option<Vec<Expression>>, ErrorsEmitted> {
     let mut expressions: Vec<Expression> = Vec::new();
 
@@ -111,8 +111,8 @@ pub(crate) fn get_expressions(
     );
     parser.log_current_token(true);
 
-    match close_delimiter {
-        Delimiter::RParen => {
+    match open_delimiter {
+        Delimiter::LParen { .. } => {
             while !matches!(
                 parser.current_token().as_ref(),
                 Some(Token::RParen { .. } | Token::EOF),
@@ -132,7 +132,7 @@ pub(crate) fn get_expressions(
                 }
             }
         }
-        Delimiter::RBracket => {
+        Delimiter::LBracket { .. } => {
             while !matches!(
                 parser.current_token().as_ref(),
                 Some(Token::RBracket { .. } | Token::EOF),

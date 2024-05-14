@@ -2,6 +2,7 @@ use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, IndexExpr, ValueExpr},
     error::ErrorsEmitted,
     parser::{ParseOperation, Parser, Precedence},
+    span::Position,
     token::Token,
 };
 
@@ -13,8 +14,9 @@ impl ParseOperation for IndexExpr {
         })?;
 
         let open_bracket = if let Some(Token::LBracket { .. }) = parser.current_token() {
+            let position = Position::new(parser.current, &parser.stream.span().input());
             parser.next_token();
-            Ok(Delimiter::LBracket)
+            Ok(Delimiter::LBracket { position })
         } else {
             parser.log_unexpected_token("`[`");
             Err(ErrorsEmitted)
@@ -27,11 +29,16 @@ impl ParseOperation for IndexExpr {
             ErrorsEmitted
         })?;
 
-        let close_bracket = match parser.current_token() {
+        match parser.current_token() {
             Some(Token::RBracket { .. }) => {
                 parser.next_token();
 
-                Ok(Delimiter::RBracket)
+                let expr = IndexExpr {
+                    array: Box::new(assignee_expr),
+                    index: Box::new(value_expr),
+                };
+
+                Ok(Expression::Index(expr))
             }
             Some(Token::EOF) | None => {
                 parser.log_unmatched_delimiter(&open_bracket);
@@ -42,16 +49,7 @@ impl ParseOperation for IndexExpr {
                 parser.log_unexpected_token("`]`");
                 Err(ErrorsEmitted)
             }
-        }?;
-
-        let expr = IndexExpr {
-            array: Box::new(assignee_expr),
-            open_bracket,
-            index: Box::new(value_expr),
-            close_bracket,
-        };
-
-        Ok(Expression::Index(expr))
+        }
     }
 }
 

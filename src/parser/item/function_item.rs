@@ -5,6 +5,7 @@ use crate::{
     },
     error::ErrorsEmitted,
     parser::ParseConstruct,
+    span::Position,
     token::Token,
 };
 
@@ -36,8 +37,12 @@ impl ParseDefinition for FunctionItem {
             }
         }?;
 
-        let open_paren = match parser.next_token() {
-            Some(Token::LParen { .. }) => Ok(Delimiter::LParen),
+        let open_paren = match parser.current_token() {
+            Some(Token::LParen { .. }) => {
+                let position = Position::new(parser.current, &parser.stream.span().input());
+                parser.next_token();
+                Ok(Delimiter::LParen { position })
+            }
             Some(Token::EOF) | None => {
                 parser.log_missing_token("`(`");
                 Err(ErrorsEmitted)
@@ -49,15 +54,22 @@ impl ParseDefinition for FunctionItem {
         }?;
 
         let params_opt =
-            collection::get_collection(parser, FunctionOrMethodParam::parse, Delimiter::RParen)?;
+            collection::get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_unmatched_delimiter(&open_paren);
-            parser.log_missing_token("`)`");
-            Err(ErrorsEmitted)
-        }?;
+        match parser.current_token() {
+            Some(Token::RParen { .. }) => {
+                parser.next_token();
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_paren);
+                parser.log_missing_token("`)`");
+                return Err(ErrorsEmitted);
+            }
+            _ => {
+                parser.log_unexpected_token("`)`");
+                return Err(ErrorsEmitted);
+            }
+        }
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
             parser.next_token();
@@ -95,9 +107,7 @@ impl ParseDefinition for FunctionItem {
             visibility,
             kw_func,
             function_name,
-            open_paren,
             params_opt,
-            close_paren,
             return_type_opt,
             block_opt,
         })
@@ -138,8 +148,14 @@ impl FunctionOrMethodParam {
                     Some(Token::Colon { .. }) => {
                         parser.next_token();
                     }
+
+                    Some(Token::RParen { .. } | Token::Comma { .. }) => {
+                        parser.log_missing("type", "function parameter type annotation");
+                        return Err(ErrorsEmitted);
+                    }
+
                     Some(Token::EOF) | None => {
-                        parser.log_missing_token("`:`");
+                        parser.log_unexpected_eoi();
                         return Err(ErrorsEmitted);
                     }
                     _ => {
@@ -147,6 +163,7 @@ impl FunctionOrMethodParam {
                         return Err(ErrorsEmitted);
                     }
                 }
+
                 let param_type = Box::new(Type::parse(parser)?);
 
                 let function_param = FunctionParam {

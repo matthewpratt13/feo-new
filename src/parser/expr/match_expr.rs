@@ -2,6 +2,7 @@ use crate::{
     ast::{AssigneeExpr, BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
     error::ErrorsEmitted,
     parser::{ParseConstruct, ParseControl, Parser, Precedence},
+    span::Position,
     token::Token,
 };
 
@@ -29,11 +30,12 @@ impl ParseControl for MatchExpr {
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
+                let position = Position::new(parser.current, &parser.stream.span().input());
                 parser.next_token();
-                Ok(Delimiter::LBrace)
+                Ok(Delimiter::LBrace { position })
             }
             Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {
@@ -63,30 +65,34 @@ impl ParseControl for MatchExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let close_brace = if let Some(Token::RBrace { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Delimiter::RBrace)
-        } else {
-            parser.log_unmatched_delimiter(&open_brace);
-            parser.log_missing_token("`}`");
-            Err(ErrorsEmitted)
-        }?;
+        match parser.current_token() {
+            Some(Token::RBrace { .. }) => {
+                parser.next_token();
 
-        let expr = MatchExpr {
-            kw_match,
-            scrutinee,
-            open_brace,
-            arms_opt: {
-                match arms.is_empty() {
-                    true => None,
-                    false => Some(arms),
-                }
-            },
-            final_arm,
-            close_brace,
-        };
+                let expr = MatchExpr {
+                    kw_match,
+                    scrutinee,
+                    arms_opt: {
+                        match arms.is_empty() {
+                            true => None,
+                            false => Some(arms),
+                        }
+                    },
+                    final_arm,
+                };
 
-        Ok(Expression::Match(expr))
+                Ok(Expression::Match(expr))
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_brace);
+                parser.log_missing_token("`}`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`}`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 
@@ -106,7 +112,7 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
             parser.next_token();
         }
         Some(Token::EOF) | None => {
-            parser.log_missing_token("`=>`");
+            parser.log_unexpected_eoi();
             return Err(ErrorsEmitted);
         }
         _ => {

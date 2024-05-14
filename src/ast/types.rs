@@ -2,7 +2,7 @@ use core::fmt;
 
 pub use crate::{B16, B2, B32, B4, B8, H160, H256, H512, U256, U512};
 
-use super::{Delimiter, FunctionOrMethodParam, Identifier, Type};
+use super::{FunctionOrMethodParam, Identifier, Type};
 
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]
@@ -122,18 +122,19 @@ impl fmt::Display for Hash {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionPtr {
     pub(crate) function_name: Identifier,
-    pub(crate) open_paren: Delimiter,
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
-    pub(crate) close_paren: Delimiter,
     pub(crate) return_type_opt: Option<Box<Type>>,
 }
 
 impl fmt::Display for FunctionPtr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}({:?}) [-> {:?}]", self.function_name, self.params_opt, self.return_type_opt)
+        write!(
+            f,
+            "{}({:?}) [-> {:?}]",
+            self.function_name, self.params_opt, self.return_type_opt
+        )
     }
 }
-
 
 /// Struct that wraps a `Vec<u8>` into a dynamic byte array (string literal).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

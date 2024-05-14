@@ -6,6 +6,7 @@ use crate::{
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
+    span::Position,
     token::Token,
     B16, B2, B32, B4, B8, H160, H256, H512, U256, U512,
 };
@@ -294,8 +295,9 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
 
     let open_paren = match parser.current_token().as_ref() {
         Some(Token::LParen { .. }) => {
+            let position = Position::new(parser.current, &parser.stream.span().input());
             parser.next_token();
-            Ok(Delimiter::LParen)
+            Ok(Delimiter::LParen { position })
         }
         Some(Token::EOF) | None => {
             parser.log_missing_token("`(`");
@@ -314,19 +316,26 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
     }
 
     let subsequent_params =
-        collection::get_collection(parser, FunctionOrMethodParam::parse, Delimiter::RParen)?;
+        collection::get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
 
     if subsequent_params.is_some() {
         params.append(&mut subsequent_params.unwrap())
     };
 
-    let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
-        Ok(Delimiter::RParen)
-    } else {
-        parser.log_unmatched_delimiter(&open_paren);
-        parser.log_missing_token("`)`");
-        Err(ErrorsEmitted)
-    }?;
+    match parser.current_token() {
+        Some(Token::RParen { .. }) => {
+            parser.next_token();
+        }
+        Some(Token::EOF) | None => {
+            parser.log_unmatched_delimiter(&open_paren);
+            parser.log_missing_token("`)`");
+            return Err(ErrorsEmitted);
+        }
+        _ => {
+            parser.log_unexpected_token("`)`");
+            return Err(ErrorsEmitted);
+        }
+    }
 
     let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
         parser.next_token();
@@ -343,7 +352,6 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
 
     let ty = FunctionPtr {
         function_name,
-        open_paren,
         params_opt: {
             if params.is_empty() {
                 None
@@ -351,7 +359,6 @@ fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type
                 Some(params)
             }
         },
-        close_paren,
         return_type_opt,
     };
 
@@ -404,8 +411,12 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         parser.next_token();
         Ok(Type::UnitType(Unit))
     } else if let Some(Token::Comma { .. }) = parser.peek_ahead_by(1) {
+        let open_delimiter = Delimiter::LParen {
+            position: Position::new(parser.current - 1, &parser.stream.span().input()),
+        };
+
         let types =
-            if let Some(t) = collection::get_collection(parser, Type::parse, Delimiter::RParen)? {
+            if let Some(t) = collection::get_collection(parser, Type::parse, &open_delimiter)? {
                 parser.next_token();
                 Ok(t)
             } else {
@@ -423,7 +434,10 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
                 Ok(Type::GroupedType(Box::new(ty)))
             }
             Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&Delimiter::LParen);
+                let position = Position::new(parser.current, &parser.stream.span().input());
+                parser.next_token();
+
+                parser.log_unmatched_delimiter(&Delimiter::LParen { position });
                 parser.log_missing_token("`)`");
                 Err(ErrorsEmitted)
             }

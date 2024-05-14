@@ -4,7 +4,7 @@ use core::fmt;
 // HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 use super::{
-    AssigneeExpr, Delimiter, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, Pattern,
+    AssigneeExpr, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, Pattern,
     ReferenceOp, Separator, Type, ValueExpr,
 };
 
@@ -61,16 +61,12 @@ pub(crate) type PathType = Expression;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct EnumVariantStruct {
-    pub(crate) open_brace: Delimiter,
     pub(crate) fields: Vec<StructDefField>,
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct EnumVariantTuple {
-    pub(crate) open_paren: Delimiter,
     pub(crate) element_types: Vec<Type>,
-    pub(crate) close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -108,17 +104,13 @@ pub(crate) struct PathSegment {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct PathSubset {
-    pub(crate) open_brace: Delimiter,
     pub(crate) trees: Vec<ImportTree>,
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct PubPackageVis {
     pub(crate) kw_pub: Keyword,
-    pub(crate) open_paren: Delimiter,
     pub(crate) kw_package: Keyword,
-    pub(crate) close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -177,9 +169,7 @@ pub struct EnumDef {
     pub(crate) visibility: Visibility,
     pub(crate) kw_enum: Keyword,
     pub(crate) enum_name: Identifier,
-    pub(crate) open_brace: Delimiter,
     pub(crate) variants: Vec<EnumVariant>,
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -188,9 +178,7 @@ pub struct FunctionItem {
     pub(crate) visibility: Visibility,
     pub(crate) kw_func: Keyword,
     pub(crate) function_name: Identifier,
-    pub(crate) open_paren: Delimiter,
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
-    pub(crate) close_paren: Delimiter,
     pub(crate) return_type_opt: Option<Box<Type>>,
     pub(crate) block_opt: Option<Expression>,
 }
@@ -208,9 +196,7 @@ pub struct InherentImplDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) kw_impl: Keyword,
     pub(crate) nominal_type: Type,
-    pub(crate) open_brace: Delimiter,
     pub(crate) associated_items_opt: Option<Vec<InherentImplItem>>,
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -219,10 +205,8 @@ pub struct ModuleItem {
     pub(crate) visibility: Visibility,
     pub(crate) kw_module: Keyword,
     pub(crate) module_name: Identifier,
-    pub(crate) open_brace: Delimiter,
     pub(crate) inner_attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) items_opt: Option<Vec<Item>>,
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -242,9 +226,7 @@ pub struct StructDef {
     pub(crate) visibility: Visibility,
     pub(crate) kw_struct: Keyword,
     pub(crate) struct_name: Identifier,
-    pub(crate) open_brace: Delimiter,
     pub(crate) fields_opt: Option<Vec<StructDefField>>,
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -253,9 +235,7 @@ pub struct TupleStructDef {
     pub(crate) visibility: Visibility,
     pub(crate) kw_struct: Keyword,
     pub(crate) struct_name: Identifier,
-    pub(crate) open_paren: Delimiter,
     pub(crate) fields_opt: Option<Vec<TupleStructDefField>>,
-    pub(crate) close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -264,10 +244,8 @@ pub struct TraitDef {
     pub(crate) visibility: Visibility,
     pub(crate) kw_trait: Keyword,
     pub(crate) trait_name: Identifier,
-    pub(crate) open_brace: Delimiter,
     pub(crate) inner_attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) trait_items_opt: Option<Vec<TraitDefItem>>,
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -277,7 +255,5 @@ pub struct TraitImplDef {
     pub(crate) implemented_trait_path: PathType,
     pub(crate) kw_for: Keyword,
     pub(crate) implementing_type: Type,
-    pub(crate) open_brace: Delimiter,
     pub(crate) associated_items_opt: Option<Vec<TraitImplItem>>,
-    pub(crate) close_brace: Delimiter,
 }

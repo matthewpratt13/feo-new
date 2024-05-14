@@ -76,9 +76,7 @@ pub(crate) struct TupleElements {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArrayExpr {
-    pub(crate) open_bracket: Delimiter,
     pub(crate) elements_opt: Option<Vec<Expression>>,
-    pub(crate) close_bracket: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -105,9 +103,7 @@ pub struct ComparisonExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BlockExpr {
     pub(crate) attributes_opt: Option<Vec<InnerAttr>>,
-    pub(crate) open_brace: Delimiter,
     pub(crate) statements_opt: Option<Vec<Statement>>,
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -124,9 +120,7 @@ pub struct BreakExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpr {
     pub(crate) callee: AssigneeExpr,
-    pub(crate) open_paren: Delimiter,
     pub(crate) args_opt: Option<Vec<Expression>>,
-    pub(crate) close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -171,9 +165,7 @@ pub struct ForInExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupedExpr {
-    pub(crate) open_paren: Delimiter,
     pub(crate) expression: Box<Expression>,
-    pub(crate) close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -188,35 +180,27 @@ pub struct IfExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IndexExpr {
     pub(crate) array: Box<AssigneeExpr>,
-    pub(crate) open_bracket: Delimiter,
     pub(crate) index: Box<ValueExpr>,
-    pub(crate) close_bracket: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MappingExpr {
-    pub(crate) open_brace: Delimiter,
     pub(crate) pairs_opt: Option<Vec<MappingPair>>,
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchExpr {
     pub(crate) kw_match: Keyword,
     pub(crate) scrutinee: AssigneeExpr,
-    pub(crate) open_brace: Delimiter,
     pub(crate) arms_opt: Option<Vec<MatchArm>>,
     pub(crate) final_arm: Box<MatchArm>, // default case
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MethodCallExpr {
     pub(crate) receiver: Box<AssigneeExpr>,
     pub(crate) method_name: Identifier,
-    pub(crate) open_paren: Delimiter,
     pub(crate) args_opt: Option<Vec<Expression>>,
-    pub(crate) close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -258,16 +242,12 @@ pub struct SomeExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructExpr {
     pub(crate) path: PathExpr,
-    pub(crate) open_brace: Delimiter,
     pub(crate) fields_opt: Option<Vec<StructField>>,
-    pub(crate) close_brace: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleExpr {
-    pub(crate) open_paren: Delimiter,
     pub(crate) tuple_elements: TupleElements,
-    pub(crate) close_paren: Delimiter,
 }
 
 #[derive(Debug, Clone, PartialEq)]

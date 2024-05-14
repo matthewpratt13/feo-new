@@ -2,14 +2,16 @@ use crate::{
     ast::{Delimiter, Pattern, Separator, TuplePatt, TuplePattElements},
     error::ErrorsEmitted,
     parser::Parser,
+    span::Position,
     token::Token,
 };
 
 impl TuplePatt {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
         let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
+            let position = Position::new(parser.current, &parser.stream.span().input());
             parser.next_token();
-            Ok(Delimiter::LParen)
+            Ok(Delimiter::LParen { position })
         } else {
             parser.log_unexpected_token("`(`");
             Err(ErrorsEmitted)
@@ -17,21 +19,24 @@ impl TuplePatt {
 
         let tuple_patt_elements = parse_tuple_patt_elements(parser)?;
 
-        let close_paren = if let Some(Token::RParen { .. }) = parser.next_token() {
-            Ok(Delimiter::RParen)
-        } else {
-            parser.log_unmatched_delimiter(&open_paren);
-            parser.log_missing_token("`)`");
-            Err(ErrorsEmitted)
-        }?;
+        match parser.current_token() {
+            Some(Token::RParen { .. }) => {
+                parser.next_token();
 
-        let patt = TuplePatt {
-            open_paren,
-            tuple_patt_elements,
-            close_paren,
-        };
-
-        Ok(Pattern::TuplePatt(patt))
+                Ok(Pattern::TuplePatt(TuplePatt {
+                    tuple_patt_elements,
+                }))
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_paren);
+                parser.log_missing_token("`)`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`)`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 

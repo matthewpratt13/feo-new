@@ -1,7 +1,9 @@
 mod lex_error;
 mod parser_error;
 
-use std::{error::Error, fmt, sync::Arc};
+use std::{error::Error, fmt};
+
+use crate::span::Position;
 
 pub(crate) use self::lex_error::LexErrorKind;
 pub(crate) use self::parser_error::ParserErrorKind;
@@ -11,9 +13,7 @@ pub(crate) use self::parser_error::ParserErrorKind;
 #[derive(Debug, Clone)]
 pub struct CompilerError<T: Clone> {
     error_kind: T,
-    line: usize,
-    col: usize,
-    _source: Arc<String>,
+    position: Position,
 }
 
 impl<T> CompilerError<T>
@@ -21,25 +21,10 @@ where
     T: Clone,
 {
     /// Create a new `CompilerError` that provides details at a precise location in the source code.
-    pub(crate) fn new(error_kind: T, source: &str, pos: usize) -> Self {
-        let slice = &source[..pos];
-        let lines = slice.split('\n').collect::<Vec<_>>();
-        let line_count = lines.len();
-        let last_line_len = lines.last().unwrap_or(&"").chars().count() + 1;
-
-        let start_index = if pos >= 80 { pos - 80 } else { 0 };
-
-        let end_index = if pos > source.len() {
-            source.len()
-        } else {
-            pos
-        };
-
+    pub(crate) fn new(error_kind: T, pos: usize, source: &str) -> Self {
         Self {
             error_kind,
-            line: line_count,
-            col: last_line_len,
-            _source: Arc::new(source[start_index..end_index].trim().to_string()),
+            position: Position::new(pos, source),
         }
     }
 }
@@ -52,7 +37,7 @@ where
         write!(
             f,
             "ERROR: {} [Ln {}, Col {}]",
-            self.error_kind, self.line, self.col
+            self.error_kind, self.position.line, self.position.col
         )
     }
 }
