@@ -84,7 +84,7 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::UnmatchedDelimiter { delim, position } => {
                 write!(
                     f,
-                    "unmatched delimiter. Expected delimiter to match `{delim}` found at Ln {}, Col {}",
+                    "unmatched `{delim}` delimiter [Ln {}, Col {}]. Expected matching delimiter",
                     position.line, position.col
                 )
             }

@@ -62,7 +62,6 @@ use crate::{
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
-    span::Position,
     token::{Token, TokenStream, TokenType},
 };
 
@@ -1208,11 +1207,10 @@ impl Parser {
     fn log_unmatched_delimiter(&mut self, expected: &Delimiter) {
         self.log_error(ParserErrorKind::UnmatchedDelimiter {
             delim: format!("{}", *expected),
-            position: Position::new(self.current, &self.stream.span().input()),
+            position: expected.position(),
         });
 
         // self.next_token();
-
     }
 
     /// Log error information on encountering an unexpected pattern by naming the expected pattern

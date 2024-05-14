@@ -24,7 +24,6 @@ pub(crate) fn get_collection<T>(
                 Some(Token::RParen { .. } | Token::EOF),
             ) {
                 let item = f(parser)?;
-
                 collection.push(item);
 
                 if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
@@ -45,7 +44,6 @@ pub(crate) fn get_collection<T>(
                 Some(Token::RBrace { .. } | Token::EOF),
             ) {
                 let item = f(parser)?;
-
                 collection.push(item);
 
                 if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
@@ -71,7 +69,6 @@ pub(crate) fn get_collection<T>(
                 if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                 } else if let Some(Token::Pipe { .. }) = parser.current_token().as_ref() {
-                    parser.next_token();
                     break;
                 } else if !matches!(
                     parser.current_token().as_ref(),
@@ -118,7 +115,6 @@ pub(crate) fn get_expressions(
                 Some(Token::RParen { .. } | Token::EOF),
             ) {
                 let expr = parser.parse_expression(precedence)?;
-
                 expressions.push(expr);
 
                 if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
@@ -138,7 +134,6 @@ pub(crate) fn get_expressions(
                 Some(Token::RBracket { .. } | Token::EOF),
             ) {
                 let expr = parser.parse_expression(precedence)?;
-
                 expressions.push(expr);
 
                 if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {

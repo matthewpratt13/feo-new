@@ -11,12 +11,12 @@ use crate::{
 
 impl ParseConstruct for ClosureExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let position = Position::new(parser.current, &parser.stream.span().input());
+        let open_pipe = Delimiter::Pipe { position };
+
         let params = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
                 parser.next_token();
-                
-                let open_pipe = Delimiter::Pipe { position };
 
                 let vec_opt = collection::get_collection(parser, parse_closure_param, &open_pipe)?;
 
@@ -36,6 +36,21 @@ impl ParseConstruct for ClosureExpr {
                 Err(ErrorsEmitted)
             }
         }?;
+
+        match parser.current_token() {
+            Some(Token::Pipe { .. } | Token::DblPipe { .. }) => {
+                parser.next_token();
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_pipe);
+                parser.log_missing_token("`|`");
+                return Err(ErrorsEmitted);
+            }
+            _ => {
+                parser.log_unexpected_token("`|`");
+                return Err(ErrorsEmitted);
+            }
+        }
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
             parser.next_token();
@@ -73,6 +88,9 @@ impl ParseConstruct for ClosureExpr {
 }
 
 fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitted> {
+    let position = Position::new(parser.current, &parser.stream.span().input());
+    let open_pipe = Delimiter::Pipe { position };
+
     let param_name = match parser.current_token() {
         Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
             IdentifierPatt::parse(parser)
@@ -98,6 +116,7 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
                 Err(ErrorsEmitted)
             }
             Some(Token::EOF { .. }) | None => {
+                parser.log_unmatched_delimiter(&open_pipe);
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }

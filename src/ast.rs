@@ -194,6 +194,17 @@ pub(crate) enum Delimiter {
     Pipe { position: Position },
 }
 
+impl Delimiter {
+    pub(crate) fn position(&self) -> Position {
+        match self.clone() {
+            Delimiter::LParen { position } => position,
+            Delimiter::LBracket { position } => position,
+            Delimiter::LBrace { position } => position,
+            Delimiter::Pipe { position } => position,
+        }
+    }
+}
+
 impl fmt::Display for Delimiter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
