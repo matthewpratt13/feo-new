@@ -39,7 +39,11 @@ pub struct IdentifierPatt {
 
 impl fmt::Display for IdentifierPatt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} {:?} {}", self.kw_ref_opt, self.kw_mut_opt, self.name)
+        write!(
+            f,
+            "{:?} {:?} {}",
+            self.kw_ref_opt, self.kw_mut_opt, self.name
+        )
     }
 }
 

@@ -118,17 +118,18 @@ impl FunctionOrMethodParam {
     pub(crate) fn parse(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
         let token = parser.current_token();
 
-        let reference_op_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = token {
-            parser.next_token();
+        let reference_op_opt =
+            if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = token {
+                parser.next_token();
 
-            match token {
-                Some(Token::Ampersand { .. }) => Some(ReferenceOp::Borrow),
-                Some(Token::AmpersandMut { .. }) => Some(ReferenceOp::MutableBorrow),
-                _ => None,
-            }
-        } else {
-            None
-        };
+                match token {
+                    Some(Token::Ampersand { .. }) => Some(ReferenceOp::Borrow),
+                    Some(Token::AmpersandMut { .. }) => Some(ReferenceOp::MutableBorrow),
+                    _ => None,
+                }
+            } else {
+                None
+            };
 
         match parser.current_token() {
             Some(Token::SelfKeyword { .. }) => {

@@ -9,7 +9,10 @@ use crate::{
 
 /// Parse a unary operation, specifically NOT (`!`) and negate (`-`), based on the input operator.
 impl UnaryExpr {
-    pub(crate) fn parse(parser: &mut Parser, unary_op: UnaryOp) -> Result<Expression, ErrorsEmitted> {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        unary_op: UnaryOp,
+    ) -> Result<Expression, ErrorsEmitted> {
         parser.next_token();
 
         let operand = parser.parse_expression(Precedence::Unary)?;

@@ -7,10 +7,7 @@ use crate::{
 };
 
 impl PathExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        root: PathRoot,
-    ) -> Result<Expression, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser, root: PathRoot) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `PathExpr::parse()`"),
