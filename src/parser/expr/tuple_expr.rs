@@ -4,7 +4,6 @@ use crate::{
     },
     error::ErrorsEmitted,
     parser::{ParseConstruct, ParseOperation, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
@@ -12,10 +11,7 @@ impl ParseConstruct for TupleExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
-                let position = Position::new(
-                    parser.current_token().unwrap().span().start(),
-                    &parser.stream.span().input(),
-                );
+                let position = parser.current_position();
                 parser.next_token();
                 Ok(Delimiter::LParen { position })
             }

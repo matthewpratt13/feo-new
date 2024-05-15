@@ -2,7 +2,6 @@ use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, IndexExpr, ValueExpr},
     error::ErrorsEmitted,
     parser::{ParseOperation, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
@@ -15,10 +14,7 @@ impl ParseOperation for IndexExpr {
 
         let open_bracket = match parser.current_token() {
             Some(Token::LBracket { .. }) => {
-                let position = Position::new(
-                    parser.current_token().unwrap().span().start(),
-                    &parser.stream.span().input(),
-                );
+                let position = parser.current_position();
                 parser.next_token();
                 Ok(Delimiter::LBracket { position })
             }

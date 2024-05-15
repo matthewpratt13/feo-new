@@ -62,6 +62,7 @@ use crate::{
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
+    span::Position,
     token::{Token, TokenStream, TokenType},
 };
 
@@ -1343,6 +1344,14 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
     // ADDITIONAL HELPERS
     ///////////////////////////////////////////////////////////////////////////
+    ///
+
+    fn current_position(&self) -> Position {
+        Position::new(
+            self.current_token().unwrap().span().start(),
+            &self.stream.span().input(),
+        )
+    }
 
     /// Determine if `Token::Dot` token indicates a tuple index operator (followed by a digit).
     fn is_tuple_index(&self) -> bool {

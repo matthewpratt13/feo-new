@@ -3,7 +3,6 @@ use crate::{
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::{collection, ParseConstruct, Parser},
-    span::Position,
     token::Token,
 };
 
@@ -19,10 +18,7 @@ impl ParseConstruct for BlockExpr {
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
-                let position = Position::new(
-                    parser.current_token().unwrap().span().start(),
-                    &parser.stream.span().input(),
-                );
+                let position = parser.current_position();
                 parser.next_token();
                 Ok(Delimiter::LBrace { position })
             }

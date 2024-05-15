@@ -2,7 +2,6 @@ use crate::{
     ast::{AssigneeExpr, BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseConstruct, ParseControl, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
@@ -33,10 +32,7 @@ impl ParseControl for MatchExpr {
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
-                let position = Position::new(
-                    parser.current_token().unwrap().span().start(),
-                    &parser.stream.span().input(),
-                );
+                let position = parser.current_position();
                 parser.next_token();
                 Ok(Delimiter::LBrace { position })
             }

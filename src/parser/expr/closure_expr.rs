@@ -5,7 +5,6 @@ use crate::{
     },
     error::ErrorsEmitted,
     parser::{collection, ParseConstruct, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
@@ -13,10 +12,7 @@ impl ParseConstruct for ClosureExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let closure_params = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
-                let position = Position::new(
-                    parser.current_token().unwrap().span().start(),
-                    &parser.stream.span().input(),
-                );
+                let position = parser.current_position();
                 let open_pipe = Delimiter::Pipe { position };
                 parser.next_token();
 
@@ -84,18 +80,7 @@ impl ParseConstruct for ClosureExpr {
 }
 
 fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitted> {
-    let position = Position::new(
-        parser
-            .current_token()
-            .ok_or_else(|| {
-                parser.log_missing("patt", "closure parameter name");
-                ErrorsEmitted
-            })?
-            .span()
-            .start(),
-        &parser.stream.span().input(),
-    );
-
+    let position = parser.current_position();
     let open_pipe = Delimiter::Pipe { position };
 
     let param_name = match parser.current_token() {

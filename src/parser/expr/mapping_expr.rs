@@ -2,7 +2,6 @@ use crate::{
     ast::{Delimiter, Expression, MappingExpr, MappingPair},
     error::ErrorsEmitted,
     parser::{collection, ParseConstruct, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
@@ -10,10 +9,7 @@ impl ParseConstruct for MappingExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
-                let position = Position::new(
-                    parser.current_token().unwrap().span().start(),
-                    &parser.stream.span().input(),
-                );
+                let position = parser.current_position();
                 parser.next_token();
                 Ok(Delimiter::LBrace { position })
             }
