@@ -32,14 +32,6 @@ impl ParseConstruct for BlockExpr {
             }
         }?;
 
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from(format!(
-                "OPEN BRACE TOKEN SPAN: {:?}",
-                parser.current_token().unwrap().span()
-            )),
-        );
-
         let statements_opt = parse_statements(parser)?;
 
         match parser.current_token() {
