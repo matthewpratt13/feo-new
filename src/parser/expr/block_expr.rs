@@ -19,7 +19,10 @@ impl ParseConstruct for BlockExpr {
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
+                let position = Position::new(
+                    parser.current_token().unwrap().span().start(),
+                    &parser.stream.span().input(),
+                );
                 parser.next_token();
                 Ok(Delimiter::LBrace { position })
             }
@@ -32,6 +35,14 @@ impl ParseConstruct for BlockExpr {
                 Err(ErrorsEmitted)
             }
         }?;
+
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg::from(format!(
+                "OPEN BRACE TOKEN SPAN: {:?}",
+                parser.current_token().unwrap().span()
+            )),
+        );
 
         let statements_opt = parse_statements(parser)?;
 
@@ -51,13 +62,9 @@ impl ParseConstruct for BlockExpr {
                 };
                 Ok(Expression::Block(expr))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
-            }
+
             _ => {
-                parser.log_unexpected_token("`}`");
+                parser.log_unmatched_delimiter(&open_brace);
                 Err(ErrorsEmitted)
             }
         }
@@ -104,7 +111,8 @@ mod tests {
     #[test]
     fn parse_block_expr() -> Result<(), ()> {
         let input = r#" 
-        #![unsafe] {
+        #![unsafe] 
+        {
             x + 5;
             y
         }"#;

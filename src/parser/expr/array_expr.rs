@@ -10,7 +10,10 @@ impl ParseConstruct for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let open_bracket = match parser.current_token() {
             Some(Token::LBracket { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
+                let position = Position::new(
+                    parser.current_token().unwrap().span().start(),
+                    &parser.stream.span().input(),
+                );
                 parser.next_token();
                 Ok(Delimiter::LBracket { position })
             }
@@ -27,13 +30,8 @@ impl ParseConstruct for ArrayExpr {
                 parser.next_token();
                 Ok(Expression::Array(ArrayExpr { elements_opt }))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_bracket);
-                parser.log_missing_token("`]`");
-                Err(ErrorsEmitted)
-            }
             _ => {
-                parser.log_unexpected_token("`]`");
+                parser.log_unmatched_delimiter(&open_bracket);
                 Err(ErrorsEmitted)
             }
         }

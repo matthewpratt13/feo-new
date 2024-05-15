@@ -1204,7 +1204,7 @@ impl Parser {
             position: expected.position(),
         });
 
-        // self.next_token();
+        self.next_token();
     }
 
     /// Log error information on encountering an unexpected pattern by naming the expected pattern
@@ -1245,12 +1245,6 @@ impl Parser {
     /// Log error information when the source code has to an unexpected end.
     fn log_unexpected_eoi(&mut self) {
         self.log_error(ParserErrorKind::UnexpectedEndOfInput)
-    }
-
-    /// Retrieve a list of any errors that occurred during parsing.
-    #[allow(dead_code)]
-    pub(crate) fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
-        &self.errors
     }
 
     ///////////////////////////////////////////////////////////////////////////

@@ -30,7 +30,10 @@ impl ParseOperation for MethodCallExpr {
 
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
+                let position = Position::new(
+                    parser.current_token().unwrap().span().start(),
+                    &parser.stream.span().input(),
+                );
                 parser.next_token();
                 Ok(Delimiter::LParen { position })
             }
@@ -58,13 +61,8 @@ impl ParseOperation for MethodCallExpr {
 
                 Ok(Expression::MethodCall(expr))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_paren);
-                parser.log_missing_token("`)`");
-                Err(ErrorsEmitted)
-            }
             _ => {
-                parser.log_unexpected_token("`)`");
+                parser.log_unmatched_delimiter(&open_paren);
                 Err(ErrorsEmitted)
             }
         }

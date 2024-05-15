@@ -11,20 +11,31 @@ use crate::{
 
 impl ParseConstruct for ClosureExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let position = Position::new(parser.current, &parser.stream.span().input());
-        let open_pipe = Delimiter::Pipe { position };
-
         let closure_params = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
+                let position = Position::new(
+                    parser.current_token().unwrap().span().start(),
+                    &parser.stream.span().input(),
+                );
+                let open_pipe = Delimiter::Pipe { position };
                 parser.next_token();
 
                 let vec_opt = collection::get_collection(parser, parse_closure_param, &open_pipe)?;
 
-                if vec_opt.is_some() {
-                    Ok(ClosureParams::Some(vec_opt.unwrap()))
-                } else {
-                    parser.log_unexpected_token("closure parameters");
-                    Err(ErrorsEmitted)
+                match parser.current_token() {
+                    Some(Token::Pipe { .. }) => {
+                        if vec_opt.is_some() {
+                            parser.next_token();
+                            Ok(ClosureParams::Some(vec_opt.unwrap()))
+                        } else {
+                            parser.log_missing("patt", "closure parameters");
+                            Err(ErrorsEmitted)
+                        }
+                    }
+                    _ => {
+                        parser.log_unmatched_delimiter(&open_pipe);
+                        Err(ErrorsEmitted)
+                    }
                 }
             }
             Some(Token::DblPipe { .. }) => {
@@ -36,21 +47,6 @@ impl ParseConstruct for ClosureExpr {
                 Err(ErrorsEmitted)
             }
         }?;
-
-        match parser.current_token() {
-            Some(Token::Pipe { .. } | Token::DblPipe { .. }) => {
-                parser.next_token();
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_pipe);
-                parser.log_missing_token("`|`");
-                return Err(ErrorsEmitted);
-            }
-            _ => {
-                parser.log_unexpected_token("`|`");
-                return Err(ErrorsEmitted);
-            }
-        }
 
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
             parser.next_token();
@@ -88,7 +84,18 @@ impl ParseConstruct for ClosureExpr {
 }
 
 fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitted> {
-    let position = Position::new(parser.current, &parser.stream.span().input());
+    let position = Position::new(
+        parser
+            .current_token()
+            .ok_or_else(|| {
+                parser.log_missing("patt", "closure parameter name");
+                ErrorsEmitted
+            })?
+            .span()
+            .start(),
+        &parser.stream.span().input(),
+    );
+
     let open_pipe = Delimiter::Pipe { position };
 
     let param_name = match parser.current_token() {
@@ -117,7 +124,6 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
             }
             Some(Token::EOF { .. }) | None => {
                 parser.log_unmatched_delimiter(&open_pipe);
-                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 

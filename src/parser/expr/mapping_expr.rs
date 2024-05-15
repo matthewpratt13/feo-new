@@ -8,13 +8,19 @@ use crate::{
 
 impl ParseConstruct for MappingExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            let position = Position::new(parser.current, &parser.stream.span().input());
-            parser.next_token();
-            Ok(Delimiter::LBrace { position })
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+        let open_brace = match parser.current_token() {
+            Some(Token::LBrace { .. }) => {
+                let position = Position::new(
+                    parser.current_token().unwrap().span().start(),
+                    &parser.stream.span().input(),
+                );
+                parser.next_token();
+                Ok(Delimiter::LBrace { position })
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let pairs_opt = collection::get_collection(parser, parse_mapping_pair, &open_brace)?;
@@ -24,13 +30,8 @@ impl ParseConstruct for MappingExpr {
                 parser.next_token();
                 Ok(Expression::Mapping(MappingExpr { pairs_opt }))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
-            }
             _ => {
-                parser.log_unexpected_token("`}`");
+                parser.log_unmatched_delimiter(&open_brace);
                 Err(ErrorsEmitted)
             }
         }

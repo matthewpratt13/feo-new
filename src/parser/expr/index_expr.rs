@@ -13,13 +13,23 @@ impl ParseOperation for IndexExpr {
             ErrorsEmitted
         })?;
 
-        let open_bracket = if let Some(Token::LBracket { .. }) = parser.current_token() {
-            let position = Position::new(parser.current, &parser.stream.span().input());
-            parser.next_token();
-            Ok(Delimiter::LBracket { position })
-        } else {
-            parser.log_unexpected_token("`[`");
-            Err(ErrorsEmitted)
+        let open_bracket = match parser.current_token() {
+            Some(Token::LBracket { .. }) => {
+                let position = Position::new(
+                    parser.current_token().unwrap().span().start(),
+                    &parser.stream.span().input(),
+                );
+                parser.next_token();
+                Ok(Delimiter::LBracket { position })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`[`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
@@ -40,13 +50,8 @@ impl ParseOperation for IndexExpr {
 
                 Ok(Expression::Index(expr))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_bracket);
-                parser.log_missing_token("`]`");
-                Err(ErrorsEmitted)
-            }
             _ => {
-                parser.log_unexpected_token("`]`");
+                parser.log_unmatched_delimiter(&open_bracket);
                 Err(ErrorsEmitted)
             }
         }

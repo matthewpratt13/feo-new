@@ -1,6 +1,6 @@
 use crate::{
     ast::{AssigneeExpr, BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseConstruct, ParseControl, Parser, Precedence},
     span::Position,
     token::Token,
@@ -16,9 +16,12 @@ impl ParseControl for MatchExpr {
             Err(ErrorsEmitted)
         }?;
 
+        // notify the parser of the error, but let it try to parse anyway and return its own error
+        // i.e., do not `return Err(ErrorsEmitted);`
         if let Some(Token::LBrace { .. } | Token::Semicolon { .. }) = parser.current_token() {
-            parser.log_missing("expr", "scrutinee expression");
-            return Err(ErrorsEmitted);
+            parser.log_error(ParserErrorKind::MissingExpression {
+                expected: "scrutinee expression".to_string(),
+            });
         }
 
         let matched_expression = parser.parse_expression(Precedence::Lowest)?;
@@ -30,7 +33,10 @@ impl ParseControl for MatchExpr {
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
+                let position = Position::new(
+                    parser.current_token().unwrap().span().start(),
+                    &parser.stream.span().input(),
+                );
                 parser.next_token();
                 Ok(Delimiter::LBrace { position })
             }
@@ -83,13 +89,8 @@ impl ParseControl for MatchExpr {
 
                 Ok(Expression::Match(expr))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
-            }
             _ => {
-                parser.log_unexpected_token("`}`");
+                parser.log_unmatched_delimiter(&open_brace);
                 Err(ErrorsEmitted)
             }
         }
