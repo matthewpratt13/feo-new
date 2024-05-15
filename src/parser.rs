@@ -354,28 +354,6 @@ impl Parser {
                     }))
                 } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     {
-                        // let expr = self.parse_primary();
-                        // self.next_token();
-
-                        // match self.peek_ahead_by(2) {
-                        //     Some(Token::Colon { .. }) => {
-                        //         let path = PathExpr {
-                        //             root: PathPrefix::Identifier(Identifier(name)),
-                        //             tree_opt: None,
-                        //         };
-                        //         StructExpr::parse(self, path)
-                        //     }
-                        //     Some(Token::FatArrow { .. } | Token::If { .. }) => {
-                        //         if let Some(Token::LBrace { .. }) = self.current_token() {
-                        //             expr
-                        //         } else {
-                        //             self.log_unexpected_token("`{`");
-                        //             Err(ErrorsEmitted)
-                        //         }
-                        //     }
-                        //     _ => expr,
-                        // }
-
                         match &self.peek_behind_by(1) {
                             Some(
                                 Token::Equals { .. }
@@ -1344,7 +1322,6 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
     // ADDITIONAL HELPERS
     ///////////////////////////////////////////////////////////////////////////
-    ///
 
     fn current_position(&self) -> Position {
         Position::new(
