@@ -90,7 +90,7 @@ impl ParseOperation for TupleIndexExpr {
         }?;
 
         let expr = TupleIndexExpr {
-            operand: Box::new(assignee_expr),
+            tuple: Box::new(assignee_expr),
             index,
         };
 

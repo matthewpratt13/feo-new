@@ -119,20 +119,19 @@ impl fmt::Display for Hash {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct FunctionPtr {
-    pub(crate) function_name: Identifier,
-    pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
-    pub(crate) return_type_opt: Option<Box<Type>>,
+/// Wrapper for the `char` type.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Char(char);
+
+impl From<char> for Char {
+    fn from(value: char) -> Self {
+        Char(value)
+    }
 }
 
-impl fmt::Display for FunctionPtr {
+impl fmt::Display for Char {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}({:?}) [-> {:?}]",
-            self.function_name, self.params_opt, self.return_type_opt
-        )
+        write!(f, "{}", self.0)
     }
 }
 
@@ -152,22 +151,6 @@ impl fmt::Display for Str {
     }
 }
 
-/// Wrapper for the `char` type.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Char(char);
-
-impl From<char> for Char {
-    fn from(value: char) -> Self {
-        Char(value)
-    }
-}
-
-impl fmt::Display for Char {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 /// Wrapper for the `bool` type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Bool(bool);
@@ -184,13 +167,20 @@ impl fmt::Display for Bool {
     }
 }
 
-/// Unit struct that represents the unit type `()`.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Unit;
+pub struct FunctionPtr {
+    pub(crate) function_name: Identifier,
+    pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
+    pub(crate) return_type_opt: Option<Box<Type>>,
+}
 
-impl fmt::Display for Unit {
+impl fmt::Display for FunctionPtr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "()")
+        write!(
+            f,
+            "{}({:?}) [-> {:?}]",
+            self.function_name, self.params_opt, self.return_type_opt
+        )
     }
 }
 
@@ -201,6 +191,16 @@ pub struct SelfType;
 impl fmt::Display for SelfType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Self")
+    }
+}
+
+/// Unit struct that represents the unit type `()`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Unit;
+
+impl fmt::Display for Unit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "()")
     }
 }
 

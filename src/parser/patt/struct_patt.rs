@@ -22,7 +22,10 @@ impl StructPatt {
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
-                Ok(Pattern::StructPatt(StructPatt { path, fields_opt }))
+                Ok(Pattern::StructPatt(StructPatt {
+                    struct_path: path,
+                    fields_opt,
+                }))
             }
             Some(Token::EOF) | None => {
                 parser.log_unmatched_delimiter(&open_brace);

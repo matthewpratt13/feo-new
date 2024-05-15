@@ -107,7 +107,7 @@ impl ParseAssociatedItem for TraitDefItem {
                     });
                     Err(ErrorsEmitted)
                 } else {
-                    Ok(TraitDefItem::FunctionDef(function_def))
+                    Ok(TraitDefItem::FunctionItem(function_def))
                 }
             }
             _ => {

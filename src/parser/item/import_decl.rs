@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathExpr, PathPrefix,
+        Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathExpr, PathRoot,
         PathSegment, PathSubset, Separator, Visibility,
     },
     error::ErrorsEmitted,
@@ -24,7 +24,7 @@ impl ParseDeclaration for ImportDecl {
             Err(ErrorsEmitted)
         }?;
 
-        let tree = parse_import_tree(parser)?;
+        let import_tree = parse_import_tree(parser)?;
 
         match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
@@ -33,7 +33,7 @@ impl ParseDeclaration for ImportDecl {
                     attributes_opt,
                     visibility,
                     kw_import,
-                    tree,
+                    import_tree,
                 })
             }
             Some(Token::EOF) | None => {
@@ -92,12 +92,12 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
 
 fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted> {
     let root = match parser.next_token() {
-        Some(Token::Package { .. }) => PathExpr::parse(parser, PathPrefix::Package),
-        Some(Token::Super { .. }) => PathExpr::parse(parser, PathPrefix::Super),
-        Some(Token::SelfKeyword { .. }) => PathExpr::parse(parser, PathPrefix::SelfKeyword),
-        Some(Token::Identifier { .. }) => PathExpr::parse(parser, PathPrefix::Package),
+        Some(Token::Package { .. }) => PathExpr::parse(parser, PathRoot::Package),
+        Some(Token::Super { .. }) => PathExpr::parse(parser, PathRoot::Super),
+        Some(Token::SelfKeyword { .. }) => PathExpr::parse(parser, PathRoot::SelfKeyword),
+        Some(Token::Identifier { .. }) => PathExpr::parse(parser, PathRoot::Package),
         _ => {
-            parser.log_unexpected_token("`package`, `super`, `self` or identifier path prefix");
+            parser.log_unexpected_token("`package`, `super`, `self` or identifier path root");
             Err(ErrorsEmitted)
         }
     }?;
@@ -122,19 +122,19 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
         Err(ErrorsEmitted)
     }?;
 
-    let trees = if let Some(t) = collection::get_collection(parser, parse_import_tree, &open_brace)?
-    {
-        Ok(t)
-    } else {
-        parser.log_missing("path component", "import declaration path import tree");
-        Err(ErrorsEmitted)
-    }?;
+    let nested_trees =
+        if let Some(t) = collection::get_collection(parser, parse_import_tree, &open_brace)? {
+            Ok(t)
+        } else {
+            parser.log_missing("path component", "import declaration path import tree");
+            Err(ErrorsEmitted)
+        }?;
 
     match parser.current_token() {
         Some(Token::RBrace { .. }) => {
             parser.next_token();
 
-            Ok(PathSubset { trees })
+            Ok(PathSubset { nested_trees })
         }
         Some(Token::EOF) | None => {
             parser.log_unmatched_delimiter(&open_brace);

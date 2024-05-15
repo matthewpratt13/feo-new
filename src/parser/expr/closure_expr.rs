@@ -14,7 +14,7 @@ impl ParseConstruct for ClosureExpr {
         let position = Position::new(parser.current, &parser.stream.span().input());
         let open_pipe = Delimiter::Pipe { position };
 
-        let params = match parser.current_token() {
+        let closure_params = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
                 parser.next_token();
 
@@ -71,16 +71,16 @@ impl ParseConstruct for ClosureExpr {
             Ok(None)
         }?;
 
-        let expression = if return_type_opt.is_some() {
+        let body_expression = if return_type_opt.is_some() {
             Box::new(BlockExpr::parse(parser)?)
         } else {
             Box::new(parser.parse_expression(Precedence::Lowest)?)
         };
 
         let expr = ClosureExpr {
-            params,
+            closure_params,
             return_type_opt,
-            expression,
+            body_expression,
         };
 
         Ok(Expression::Closure(expr))

@@ -118,7 +118,7 @@ impl FunctionOrMethodParam {
     pub(crate) fn parse(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
         let token = parser.current_token();
 
-        let prefix_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = token {
+        let reference_op_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = token {
             parser.next_token();
 
             match token {
@@ -135,7 +135,7 @@ impl FunctionOrMethodParam {
                 parser.next_token();
 
                 let self_param = SelfParam {
-                    prefix_opt,
+                    reference_op_opt,
                     kw_self: Keyword::SelfKeyword,
                 };
 

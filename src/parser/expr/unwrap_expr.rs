@@ -15,7 +15,7 @@ impl ParseOperation for UnwrapExpr {
 
         let expr = UnwrapExpr {
             value_expr,
-            op: UnwrapOp,
+            unwrap_op: UnwrapOp,
         };
 
         Ok(Expression::Unwrap(expr))

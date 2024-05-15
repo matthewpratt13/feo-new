@@ -45,7 +45,7 @@ impl ParseControl for ForInExpr {
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        let iterable = match expression {
+        let iterator = match expression {
             Expression::Literal(l) => match l {
                 Literal::Int(_) => todo!(),
                 Literal::UInt(_) => todo!(),
@@ -101,7 +101,7 @@ impl ParseControl for ForInExpr {
             kw_for,
             pattern,
             kw_in,
-            iterable,
+            iterator,
             block,
         };
 

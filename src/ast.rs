@@ -316,8 +316,8 @@ impl fmt::Display for RangeOp {
 /// Enum representing the different separators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Separator {
-    Comma,
-    ColonColonAsterisk,
+    Comma,              // used in tuples
+    ColonColonAsterisk, // path wildcard terminator
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -393,11 +393,11 @@ impl fmt::Display for Expression {
             Expression::TypeCast(tc) => write!(f, "{:?}", tc),
             Expression::Binary(bin) => write!(f, "{:?}", bin),
             Expression::Comparison(cmp) => write!(f, "{:?}", cmp),
-            Expression::Grouped(grp) => write!(f, "{:?}", grp),
+            Expression::Grouped(grp) => write!(f, "({})", *grp.inner_expression),
             Expression::Range(rng) => write!(f, "{:?}", rng),
             Expression::Assignment(asn) => write!(f, "{:?}", asn),
             Expression::CompoundAssignment(casn) => write!(f, "{:?}", casn),
-            Expression::Return(ret) => write!(f, "{:?}", ret),
+            Expression::Return(ret) => write!(f, "return  {:?}", ret.expression_opt),
             Expression::Break(_) => write!(f, "break"),
             Expression::Continue(_) => write!(f, "continue"),
             Expression::Underscore(_) => write!(f, "_"),
@@ -508,7 +508,7 @@ pub(crate) enum AssigneeExpr {
     ReferenceExpr(ReferenceExpr),
     GroupedExpr(Box<AssigneeExpr>),
     UnderscoreExpr(UnderscoreExpr),
-    SliceExpr(Vec<AssigneeExpr>),
+    SliceExpr(Vec<AssigneeExpr>), // array expression
     TupleExpr(Vec<AssigneeExpr>),
     StructExpr(Vec<StructAssigneeExprField>),
     // TupleStructExpr(Vec<AssigneeExpr>),
@@ -527,7 +527,7 @@ impl TryFrom<Expression> for AssigneeExpr {
             Expression::TupleIndex(ti) => Ok(AssigneeExpr::TupleIndexExpr(ti)),
             Expression::Reference(b) => Ok(AssigneeExpr::ReferenceExpr(b)),
             Expression::Grouped(g) => {
-                let assignee_expression = AssigneeExpr::try_from(*g.expression)?;
+                let assignee_expression = AssigneeExpr::try_from(*g.inner_expression)?;
                 Ok(AssigneeExpr::GroupedExpr(Box::new(assignee_expression)))
             }
             Expression::Underscore(u) => Ok(AssigneeExpr::UnderscoreExpr(u)),
@@ -562,7 +562,7 @@ impl TryFrom<Expression> for AssigneeExpr {
             Expression::Struct(s) => {
                 let mut assignee_expressions: Vec<StructAssigneeExprField> = Vec::new();
 
-                s.fields_opt.map(|v| {
+                s.struct_fields_opt.map(|v| {
                     v.into_iter().for_each(|s| {
                         let attributes_opt = s.attributes_opt;
                         let field_value = AssigneeExpr::try_from(s.field_value).expect(
@@ -642,7 +642,7 @@ impl fmt::Display for Pattern {
             Pattern::IdentifierPatt(id) => write!(f, "{}", id.name),
             Pattern::PathPatt(pth) => write!(f, "{:?}", pth),
             Pattern::ReferencePatt(r) => write!(f, "{:?}", r),
-            Pattern::GroupedPatt(g) => write!(f, "{:?}", *g),
+            Pattern::GroupedPatt(g) => write!(f, "({})", *g.inner_pattern),
             Pattern::RangePatt(rng) => write!(f, "{:?}", rng),
             Pattern::TuplePatt(tup) => write!(f, "{:?}", tup),
             Pattern::StructPatt(s) => write!(f, "{:?}", s),
@@ -672,7 +672,7 @@ pub(crate) enum Item {
     ImportDecl(ImportDecl),
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
-    StaticItemDecl(StaticItemDecl),
+    StaticVarDecl(StaticVarDecl),
     ModuleItem(Box<ModuleItem>),
     TraitDef(TraitDef),
     EnumDef(EnumDef),
@@ -720,20 +720,24 @@ pub(crate) enum Type {
         element_type: Box<Type>,
         num_elements: UInt,
     },
+
     Tuple(Vec<Type>),
 
-    UserDefined(PathType), // struct, enum, trait, alias, constant (paths / items)
+    UserDefined(Expression), // struct, enum, trait, alias, constant (paths / items)
 
     FunctionPtr(FunctionPtr),
+
     Reference {
         reference_op: ReferenceOp, // `&` or `&mut`
         inner_type: Box<Type>,
     },
+
     SelfType(SelfType),
 
     InferredType(InferredType),
 
     Vec(Box<Type>),
+
     Mapping {
         key_type: Box<Type>,
         value_type: Box<Type>,
@@ -742,9 +746,10 @@ pub(crate) enum Type {
     Option {
         inner_type: Box<Type>,
     },
+
     Result {
-        ok: Box<Type>,
-        err: Box<Type>,
+        ok_type: Box<Type>,
+        err_type: Box<Type>,
     },
 }
 
@@ -785,8 +790,11 @@ impl fmt::Display for Type {
             Type::Reference {
                 reference_op,
                 inner_type,
-            } => write!(f, "{}{}", reference_op, *inner_type),
-            Type::SelfType(st) => write!(f, "{}", st),
+            } => match reference_op {
+                ReferenceOp::Borrow => write!(f, "{}{}", reference_op, *inner_type),
+                ReferenceOp::MutableBorrow => write!(f, "{} {}", reference_op, *inner_type),
+            },
+            Type::SelfType(_) => write!(f, "Self"),
             Type::InferredType(_) => write!(f, "_"),
             Type::Vec(v) => write!(f, "Vec<{}>", *v),
             Type::Mapping {
@@ -794,7 +802,7 @@ impl fmt::Display for Type {
                 value_type,
             } => write!(f, "Mapping<{}, {}>", *key_type, *value_type),
             Type::Option { inner_type } => write!(f, "Option<{}>", *inner_type),
-            Type::Result { ok, err } => write!(f, "Result<{}, {}>", *ok, *err),
+            Type::Result { ok_type, err_type } => write!(f, "Result<{}, {}>", *ok_type, *err_type),
         }
     }
 }

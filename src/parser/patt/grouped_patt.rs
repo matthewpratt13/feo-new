@@ -32,12 +32,12 @@ impl GroupedPatt {
                 },
             };
 
-            let pattern = Box::new(Pattern::TuplePatt(tuple_patt));
+            let inner_pattern = Box::new(Pattern::TuplePatt(tuple_patt));
 
-            return Ok(Pattern::GroupedPatt(GroupedPatt { pattern }));
+            return Ok(Pattern::GroupedPatt(GroupedPatt { inner_pattern }));
         }
 
-        let pattern = Box::new(parser.parse_pattern()?);
+        let inner_pattern = Box::new(parser.parse_pattern()?);
 
         match parser.current_token() {
             Some(Token::RParen { .. }) => {
@@ -49,7 +49,7 @@ impl GroupedPatt {
                 );
                 parser.log_current_token(false);
 
-                Ok(Pattern::GroupedPatt(GroupedPatt { pattern }))
+                Ok(Pattern::GroupedPatt(GroupedPatt { inner_pattern }))
             }
             Some(Token::EOF) | None => {
                 parser.log_unmatched_delimiter(&open_paren);

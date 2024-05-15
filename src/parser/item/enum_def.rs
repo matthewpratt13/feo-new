@@ -156,7 +156,7 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
         Err(ErrorsEmitted)
     }?;
 
-    let fields = if let Some(sdf) =
+    let struct_fields = if let Some(sdf) =
         collection::get_collection(parser, StructDefField::parse, &open_brace)?
     {
         Ok(sdf)
@@ -169,7 +169,7 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
         Some(Token::RBrace { .. }) => {
             parser.next_token();
 
-            Ok(EnumVariantStruct { fields })
+            Ok(EnumVariantStruct { struct_fields })
         }
         Some(Token::EOF) | None => {
             parser.log_unmatched_delimiter(&open_brace);

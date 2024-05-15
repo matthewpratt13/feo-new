@@ -60,14 +60,14 @@ impl RangePatt {
 
         let expr = match to.is_ok() {
             true => Ok(RangePatt {
-                from_opt: Some(Box::new(from)),
+                from_pattern_opt: Some(Box::new(from)),
                 range_op,
-                to_opt: Some(Box::new(to?)),
+                to_pattern_opt: Some(Box::new(to?)),
             }),
             false => Ok(RangePatt {
-                from_opt: Some(Box::new(from)),
+                from_pattern_opt: Some(Box::new(from)),
                 range_op: range_op.clone(),
-                to_opt: {
+                to_pattern_opt: {
                     if range_op == RangeOp::RangeInclusive {
                         parser.log_unexpected_token("exclusive range operator (`..`)");
                         return Err(ErrorsEmitted);
@@ -97,9 +97,9 @@ impl RangePatt {
 
         if parser.current_token().is_none() {
             let patt = RangePatt {
-                from_opt: None,
+                from_pattern_opt: None,
                 range_op: range_op.clone(),
-                to_opt: {
+                to_pattern_opt: {
                     if range_op == RangeOp::RangeInclusive {
                         parser.log_unexpected_token("exclusive range operator (`..`)");
                         return Err(ErrorsEmitted);
@@ -134,9 +134,9 @@ impl RangePatt {
         parser.next_token();
 
         let patt = RangePatt {
-            from_opt: None,
+            from_pattern_opt: None,
             range_op,
-            to_opt: Some(Box::new(to)),
+            to_pattern_opt: Some(Box::new(to)),
         };
 
         Ok(Pattern::RangePatt(patt))

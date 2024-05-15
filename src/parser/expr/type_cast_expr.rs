@@ -56,7 +56,7 @@ impl ParseOperation for TypeCastExpr {
         }?;
 
         let expr = TypeCastExpr {
-            operand: Box::new(value_expr),
+            value: Box::new(value_expr),
             kw_as,
             new_type,
         };

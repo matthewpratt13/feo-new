@@ -17,12 +17,16 @@ impl StructExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let fields_opt = collection::get_collection(parser, parse_struct_field, &open_brace)?;
+        let struct_fields_opt =
+            collection::get_collection(parser, parse_struct_field, &open_brace)?;
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
-                Ok(Expression::Struct(StructExpr { path, fields_opt }))
+                Ok(Expression::Struct(StructExpr {
+                    struct_path: path,
+                    struct_fields_opt,
+                }))
             }
             Some(Token::EOF) | None => {
                 parser.log_unmatched_delimiter(&open_brace);

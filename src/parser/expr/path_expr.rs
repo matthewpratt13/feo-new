@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Identifier, PathExpr, PathPrefix},
+    ast::{Expression, Identifier, PathExpr, PathRoot},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::Parser,
@@ -9,7 +9,7 @@ use crate::{
 impl PathExpr {
     pub(crate) fn parse(
         parser: &mut Parser,
-        root: PathPrefix,
+        root: PathRoot,
     ) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,

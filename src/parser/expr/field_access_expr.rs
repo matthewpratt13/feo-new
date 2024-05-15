@@ -18,7 +18,7 @@ impl ParseOperation for FieldAccessExpr {
 
                 Ok(FieldAccessExpr {
                     object: Box::new(assignee_expr),
-                    field: Identifier(name),
+                    field_name: Identifier(name),
                 })
             }
             Some(Token::EOF) | None => {

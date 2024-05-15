@@ -32,6 +32,7 @@ pub enum ParserErrorKind {
         token: Option<Token>,
         msg: String,
     },
+
     UnexpectedExpression {
         expected: String,
         found: String,
@@ -75,8 +76,8 @@ impl fmt::Display for ParserErrorKind {
             }
             ParserErrorKind::UnexpectedToken { expected, found } => write!(
                 f,
-                "unexpected token. Expected {}, found `{:?}`",
-                expected, found
+                "unexpected token. Expected {expected}, found `{:?}`",
+                found
             ),
             ParserErrorKind::MissingToken { expected } => {
                 write!(f, "token not found. Expected {expected}, found none")

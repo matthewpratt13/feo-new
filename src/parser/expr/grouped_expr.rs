@@ -35,12 +35,12 @@ impl ParseConstruct for GroupedExpr {
                 },
             };
 
-            let expression = Box::new(Expression::Tuple(tuple_expr));
+            let inner_expression = Box::new(Expression::Tuple(tuple_expr));
 
-            return Ok(Expression::Grouped(GroupedExpr { expression }));
+            return Ok(Expression::Grouped(GroupedExpr { inner_expression }));
         }
 
-        let expression = Box::new(parser.parse_expression(Precedence::Lowest)?);
+        let inner_expression = Box::new(parser.parse_expression(Precedence::Lowest)?);
 
         match parser.current_token() {
             Some(Token::RParen { .. }) => {
@@ -52,7 +52,7 @@ impl ParseConstruct for GroupedExpr {
                 );
                 parser.log_current_token(false);
 
-                Ok(Expression::Grouped(GroupedExpr { expression }))
+                Ok(Expression::Grouped(GroupedExpr { inner_expression }))
             }
             Some(Token::EOF) | None => {
                 parser.log_unmatched_delimiter(&open_paren);

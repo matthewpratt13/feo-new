@@ -54,7 +54,7 @@ use crate::{
         ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter, DereferenceExpr,
         DereferenceOp, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
         Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
-        MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, PathPrefix,
+        MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, PathRoot,
         Pattern, RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferenceOp, ReferencePatt,
         RestPatt, ResultExpr, ResultPatt, ReturnExpr, SelfType, SomeExpr, SomePatt, Statement,
         StructExpr, StructPatt, TupleExpr, TupleIndexExpr, TuplePatt, TypeCastExpr, UnaryExpr,
@@ -77,7 +77,7 @@ enum ParserContext {
     Closure,     // `|` or `||`
     LogicalOr,   // `||`
     BitwiseOr,   // `|`
-    Unary,       // `&` `*`, `-`
+    Unary,       // `&`, `*`, `-`
     TupleIndex,  // `.`
     FieldAccess, // `.`
     MethodCall,  // `.`
@@ -92,7 +92,7 @@ pub struct Parser {
     precedences: HashMap<Token, Precedence>, // map tokens to corresponding precedence levels
     context: ParserContext,                  // keep track of the current parsing context
     errors: Vec<CompilerError<ParserErrorKind>>, // store parser errors
-    logger: Logger,
+    logger: Logger,                          // leg events and errors for easy debugging
 }
 
 impl Parser {
@@ -194,7 +194,6 @@ impl Parser {
         let mut statements: Vec<Statement> = Vec::new();
 
         self.logger.clear_logs();
-
         self.logger
             .log(LogLevel::Info, LogMsg::from("starting to parse tokens"));
 
@@ -276,7 +275,7 @@ impl Parser {
 
         match &self.current_token() {
             Some(Token::Identifier { name, .. }) => {
-                let expr = PathExpr::parse(self, PathPrefix::Identifier(Identifier::from(name)));
+                let expr = PathExpr::parse(self, PathRoot::Identifier(Identifier::from(name)));
                 expr
             }
             Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(*value))),
@@ -389,7 +388,7 @@ impl Parser {
                             )
                             | None => {
                                 let path = PathExpr {
-                                    root: PathPrefix::Identifier(Identifier::from(name)),
+                                    root: PathRoot::Identifier(Identifier::from(name)),
                                     tree_opt: None,
                                 };
 
@@ -408,8 +407,7 @@ impl Parser {
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    let expr =
-                        PathExpr::parse(self, PathPrefix::Identifier(Identifier::from(name)));
+                    let expr = PathExpr::parse(self, PathRoot::Identifier(Identifier::from(name)));
                     self.next_token();
                     expr
                 } else {
@@ -421,7 +419,7 @@ impl Parser {
             Some(Token::SelfType { .. }) => {
                 if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     let path = PathExpr {
-                        root: PathPrefix::SelfType(SelfType),
+                        root: PathRoot::SelfType(SelfType),
                         tree_opt: None,
                     };
 
@@ -429,20 +427,20 @@ impl Parser {
                     StructExpr::parse(self, path)
                 } else {
                     self.next_token();
-                    PathExpr::parse(self, PathPrefix::SelfType(SelfType))
+                    PathExpr::parse(self, PathRoot::SelfType(SelfType))
                 }
             }
             Some(Token::SelfKeyword { .. }) => {
                 self.next_token();
-                PathExpr::parse(self, PathPrefix::SelfKeyword)
+                PathExpr::parse(self, PathRoot::SelfKeyword)
             }
             Some(Token::Package { .. }) => {
                 self.next_token();
-                PathExpr::parse(self, PathPrefix::Package)
+                PathExpr::parse(self, PathRoot::Package)
             }
             Some(Token::Super { .. }) => {
                 self.next_token();
-                PathExpr::parse(self, PathPrefix::Super)
+                PathExpr::parse(self, PathRoot::Super)
             }
             Some(Token::Minus { .. }) => {
                 if self.context == ParserContext::Unary {
@@ -534,9 +532,9 @@ impl Parser {
             Some(Token::DblDot { .. }) => match (self.peek_behind_by(1), self.peek_ahead_by(1)) {
                 (None, Some(Token::Semicolon { .. } | Token::EOF) | None) => {
                     let expr = RangeExpr {
-                        from_opt: None,
+                        from_expr_opt: None,
                         range_op: RangeOp::RangeExclusive,
-                        to_opt: None,
+                        to_expr_opt: None,
                     };
                     self.next_token();
                     Ok(Expression::Range(expr))
@@ -954,7 +952,7 @@ impl Parser {
                         )
                         | None => {
                             let path = PathPatt {
-                                root: PathPrefix::Identifier(Identifier::from(name)),
+                                root: PathRoot::Identifier(Identifier::from(name)),
                                 tree_opt: None,
                             };
 
@@ -964,10 +962,8 @@ impl Parser {
                         }
 
                         _ => {
-                            let patt = PathPatt::parse(
-                                self,
-                                PathPrefix::Identifier(Identifier::from(name)),
-                            );
+                            let patt =
+                                PathPatt::parse(self, PathRoot::Identifier(Identifier::from(name)));
                             self.next_token();
                             patt
                         }
@@ -975,15 +971,13 @@ impl Parser {
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    let patt =
-                        PathPatt::parse(self, PathPrefix::Identifier(Identifier::from(name)));
+                    let patt = PathPatt::parse(self, PathRoot::Identifier(Identifier::from(name)));
                     self.next_token();
                     patt
                 } else if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    let patt =
-                        PathPatt::parse(self, PathPrefix::Identifier(Identifier::from(name)))?;
+                    let patt = PathPatt::parse(self, PathRoot::Identifier(Identifier::from(name)))?;
                     self.next_token();
                     RangePatt::parse(self, patt)
                 } else {
@@ -997,7 +991,7 @@ impl Parser {
             Some(Token::SelfType { .. }) => {
                 if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     let path = PathPatt {
-                        root: PathPrefix::SelfType(SelfType),
+                        root: PathRoot::SelfType(SelfType),
                         tree_opt: None,
                     };
 
@@ -1005,20 +999,20 @@ impl Parser {
                     StructPatt::parse(self, path)
                 } else {
                     self.next_token();
-                    PathPatt::parse(self, PathPrefix::SelfType(SelfType))
+                    PathPatt::parse(self, PathRoot::SelfType(SelfType))
                 }
             }
             Some(Token::SelfKeyword { .. }) => {
                 self.next_token();
-                PathPatt::parse(self, PathPrefix::SelfKeyword)
+                PathPatt::parse(self, PathRoot::SelfKeyword)
             }
             Some(Token::Package { .. }) => {
                 self.next_token();
-                PathPatt::parse(self, PathPrefix::Package)
+                PathPatt::parse(self, PathRoot::Package)
             }
             Some(Token::Super { .. }) => {
                 self.next_token();
-                PathPatt::parse(self, PathPrefix::Super)
+                PathPatt::parse(self, PathRoot::Super)
             }
 
             Some(Token::Ampersand { .. }) => ReferencePatt::parse(self, ReferenceOp::Borrow),
@@ -1048,9 +1042,9 @@ impl Parser {
 
                 (Some(Token::None { .. }), Some(Token::EOF) | None) => {
                     let patt = RangePatt {
-                        from_opt: None,
+                        from_pattern_opt: None,
                         range_op: RangeOp::RangeExclusive,
-                        to_opt: None,
+                        to_pattern_opt: None,
                     };
                     self.next_token();
                     Ok(Pattern::RangePatt(patt))

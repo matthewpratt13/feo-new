@@ -1,7 +1,7 @@
 use super::{
-    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, Delimiter,
-    DereferenceOp, Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp,
-    ReferenceOp, SelfType, Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr,
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, DereferenceOp,
+    Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType,
+    Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -11,13 +11,13 @@ use super::{
 /// Enum representing whether or not a closure has parameters in its definition.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum ClosureParams {
-    Some(Vec<ClosureParam>), // `| params |`
+    Some(Vec<ClosureParam>), // `| param [: Type], .. |`
     None,                    // `||`
 }
 
 /// Enum representing the different path root options.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum PathPrefix {
+pub(crate) enum PathRoot {
     Package,
     Super,
     SelfKeyword,
@@ -42,9 +42,9 @@ pub(crate) struct MappingPair {
 /// Struct representing a single arm in a match statement.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct MatchArm {
-    pub(crate) pattern: Pattern,
-    pub(crate) guard_opt: Option<(Keyword, Box<Expression>)>, // `if (..)`
-    pub(crate) body: Box<Expression>,
+    pub(crate) matched_pattern: Pattern,
+    pub(crate) guard_opt: Option<(Keyword, Box<Expression>)>, // (`if`, `{ .. }`)
+    pub(crate) arm_expression: Box<Expression>,
 }
 
 /// Struct representing a single field in a struct expression, with a name, value
@@ -66,7 +66,7 @@ pub(crate) struct StructAssigneeExprField {
 /// Struct representing a collection of elements in a tuple expression.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct TupleElements {
-    pub(crate) elements: Vec<(Expression, Separator)>, // single-element tuple must have trailing comma
+    pub(crate) elements: Vec<(Expression, Separator)>, // one-element tuple must have trailing comma
     pub(crate) final_element_opt: Option<Box<Expression>>,
 }
 
@@ -76,7 +76,7 @@ pub(crate) struct TupleElements {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArrayExpr {
-    pub(crate) elements_opt: Option<Vec<Expression>>,
+    pub(crate) elements_opt: Option<Vec<Expression>>, // arrays can be empty, hence optional
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -107,27 +107,21 @@ pub struct BlockExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ReferenceExpr {
-    pub(crate) reference_op: ReferenceOp,
-    pub(crate) expression: Box<Expression>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct BreakExpr {
     pub(crate) kw_break: Keyword,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpr {
-    pub(crate) callee: AssigneeExpr,
+    pub(crate) callee: AssigneeExpr, // function being called
     pub(crate) args_opt: Option<Vec<Expression>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClosureExpr {
-    pub(crate) params: ClosureParams,
+    pub(crate) closure_params: ClosureParams,
     pub(crate) return_type_opt: Option<Box<Type>>,
-    pub(crate) expression: Box<Expression>,
+    pub(crate) body_expression: Box<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -151,7 +145,7 @@ pub struct DereferenceExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldAccessExpr {
     pub(crate) object: Box<AssigneeExpr>,
-    pub(crate) field: Identifier,
+    pub(crate) field_name: Identifier,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -159,13 +153,13 @@ pub struct ForInExpr {
     pub(crate) kw_for: Keyword,
     pub(crate) pattern: Pattern,
     pub(crate) kw_in: Keyword,
-    pub(crate) iterable: Box<Expression>,
+    pub(crate) iterator: Box<Expression>,
     pub(crate) block: Box<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupedExpr {
-    pub(crate) expression: Box<Expression>,
+    pub(crate) inner_expression: Box<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -173,8 +167,8 @@ pub struct IfExpr {
     pub(crate) kw_if: Keyword,
     pub(crate) condition: Box<Expression>,
     pub(crate) if_block: Box<Expression>,
-    pub(crate) else_if_blocks_opt: Option<Vec<(Keyword, Box<Expression>)>>, // `else`, `if { .. }`
-    pub(crate) trailing_else_block_opt: Option<(Keyword, Box<Expression>)>, // `else { .. }`
+    pub(crate) else_if_blocks_opt: Option<Vec<(Keyword, Box<Expression>)>>, // (`else`, `if { .. }`)
+    pub(crate) trailing_else_block_opt: Option<(Keyword, Box<Expression>)>, // (`else`, `{ .. }`)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -210,15 +204,21 @@ pub struct NoneExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathExpr {
-    pub(crate) root: PathPrefix,
+    pub(crate) root: PathRoot,
     pub(crate) tree_opt: Option<Vec<Identifier>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RangeExpr {
-    pub(crate) from_opt: Option<Box<AssigneeExpr>>,
+    pub(crate) from_expr_opt: Option<Box<AssigneeExpr>>,
     pub(crate) range_op: RangeOp, // `..` or `..=`
-    pub(crate) to_opt: Option<Box<AssigneeExpr>>,
+    pub(crate) to_expr_opt: Option<Box<AssigneeExpr>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReferenceExpr {
+    pub(crate) reference_op: ReferenceOp,
+    pub(crate) expression: Box<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -241,8 +241,8 @@ pub struct SomeExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructExpr {
-    pub(crate) path: PathExpr,
-    pub(crate) fields_opt: Option<Vec<StructField>>,
+    pub(crate) struct_path: PathExpr,
+    pub(crate) struct_fields_opt: Option<Vec<StructField>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -252,21 +252,21 @@ pub struct TupleExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleIndexExpr {
-    pub(crate) operand: Box<AssigneeExpr>,
+    pub(crate) tuple: Box<AssigneeExpr>,
     pub(crate) index: UInt,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TupleStructExpr {
-    pub(crate) path: PathExpr,
-    pub(crate) open_paren: Delimiter,
-    pub(crate) elements_opt: Option<Vec<Expression>>,
-    pub(crate) close_paren: Delimiter,
-}
+// #[derive(Debug, Clone, PartialEq)]
+// pub struct TupleStructExpr {
+//     pub(crate) tuple_struct_path: PathExpr,
+//     pub(crate) open_paren: Delimiter,
+//     pub(crate) elements_opt: Option<Vec<Expression>>,
+//     pub(crate) close_paren: Delimiter,
+// }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeCastExpr {
-    pub(crate) operand: Box<ValueExpr>,
+    pub(crate) value: Box<ValueExpr>,
     pub(crate) kw_as: Keyword,
     pub(crate) new_type: Box<Type>,
 }
@@ -285,7 +285,7 @@ pub struct UnaryExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnwrapExpr {
     pub(crate) value_expr: Box<ValueExpr>,
-    pub(crate) op: UnwrapOp,
+    pub(crate) unwrap_op: UnwrapOp,
 }
 
 #[derive(Debug, Clone, PartialEq)]

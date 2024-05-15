@@ -97,7 +97,7 @@ impl ParseControl for MatchExpr {
 }
 
 fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
-    let pattern = parser.parse_pattern()?;
+    let matched_pattern = parser.parse_pattern()?;
 
     let guard_opt = if let Some(Token::If { .. }) = parser.current_token() {
         parser.next_token();
@@ -121,7 +121,7 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         }
     }
 
-    let body = if let Some(Token::LBrace { .. }) = parser.current_token() {
+    let arm_expression = if let Some(Token::LBrace { .. }) = parser.current_token() {
         Ok(Box::new(BlockExpr::parse(parser)?))
     } else {
         let expr = Box::new(parser.parse_expression(Precedence::Lowest)?);
@@ -143,9 +143,9 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
     }?;
 
     let arm = MatchArm {
-        pattern,
+        matched_pattern,
         guard_opt,
-        body,
+        arm_expression,
     };
 
     Ok(arm)

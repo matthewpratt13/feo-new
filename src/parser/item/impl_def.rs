@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InherentImplDef,
-        InherentImplItem, Keyword, OuterAttr, PathExpr, PathPrefix, TraitImplDef, TraitImplItem,
+        InherentImplItem, Keyword, OuterAttr, PathExpr, PathRoot, TraitImplDef, TraitImplItem,
         Type, Visibility,
     },
     error::ErrorsEmitted,
@@ -88,7 +88,7 @@ impl ParseDefinition for TraitImplDef {
 
         let implemented_trait_path = match token {
             Some(Token::Identifier { name, .. }) => {
-                let path = PathExpr::parse(parser, PathPrefix::Identifier(Identifier(name)));
+                let path = PathExpr::parse(parser, PathRoot::Identifier(Identifier(name)));
                 parser.next_token();
                 path
             }
@@ -185,7 +185,7 @@ impl ParseAssociatedItem for InherentImplItem {
                     parser.log_missing("item", "implementation associated item");
                     Err(ErrorsEmitted)
                 } else {
-                    Ok(InherentImplItem::FunctionDef(function_def))
+                    Ok(InherentImplItem::FunctionItem(function_def))
                 }
             }
             _ => {
@@ -225,7 +225,7 @@ impl ParseAssociatedItem for TraitImplItem {
                     parser.log_missing("item", "trait implementation associated item");
                     Err(ErrorsEmitted)
                 } else {
-                    Ok(TraitImplItem::FunctionDef(function_def))
+                    Ok(TraitImplItem::FunctionItem(function_def))
                 }
             }
             _ => {

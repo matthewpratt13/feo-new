@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Identifier, PathPatt, PathPrefix, Pattern},
+    ast::{Identifier, PathPatt, PathRoot, Pattern},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::Parser,
@@ -7,7 +7,7 @@ use crate::{
 };
 
 impl PathPatt {
-    pub(crate) fn parse(parser: &mut Parser, root: PathPrefix) -> Result<Pattern, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser, root: PathRoot) -> Result<Pattern, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `PathPatt::parse()`"),
