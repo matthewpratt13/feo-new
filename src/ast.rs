@@ -325,7 +325,10 @@ pub(crate) enum Separator {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different types of expression in the AST.
-/// `Expression` nodes always produce or evaluate to a value and may have side effects.
+/// `Expression` nodes always produce or evaluate to a value and may have *side effects*.
+/// Expressions can function differently in various contexts; i.e., they can act both as values
+/// and as locations in memory. This distinction refers to **value expressions** 
+/// and **place expressions**. See additional expression type enumerations below for both cases.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Expression {
     Literal(Literal),
@@ -418,7 +421,9 @@ impl fmt::Display for Expression {
     }
 }
 
-/// Enum representing value type expressions, which are subsets of `Expression`.
+/// Enum representing expressions behaving in a **value expression** context.
+/// A **value expression** is an expression that represents an actual value, as opposed
+/// to a **place expression**, which represents a location in memory.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum ValueExpr {
     Literal(Literal),
@@ -456,6 +461,8 @@ pub(crate) enum ValueExpr {
 impl TryFrom<Expression> for ValueExpr {
     type Error = ParserErrorKind;
 
+    /// Check if an expression can act as a value expression and return the wrapped expression
+    /// or throw an error.
     fn try_from(value: Expression) -> Result<Self, Self::Error> {
         match value {
             Expression::Literal(l) => Ok(ValueExpr::Literal(l)),
@@ -496,7 +503,10 @@ impl TryFrom<Expression> for ValueExpr {
     }
 }
 
-/// Enum representing assignee type expressions, which are subsets of `Expression`.
+/// Enum representing expressions behaving in a place / assignee expression context.
+/// **Assignee expressions** usually occur on the left hand side of assignment expressions,
+/// and cover all **place expressions**, the underscore expression, plus arrays 
+/// of assignee expressions, tuples of assignee expressions, and structs of assignee expressions.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum AssigneeExpr {
     Literal(Literal),
@@ -508,7 +518,7 @@ pub(crate) enum AssigneeExpr {
     ReferenceExpr(ReferenceExpr),
     GroupedExpr(Box<AssigneeExpr>),
     UnderscoreExpr(UnderscoreExpr),
-    SliceExpr(Vec<AssigneeExpr>), // array expression
+    ArrayExpr(Vec<AssigneeExpr>), // (slice expression)
     TupleExpr(Vec<AssigneeExpr>),
     StructExpr(Vec<StructAssigneeExprField>),
     // TupleStructExpr(Vec<AssigneeExpr>),
@@ -517,6 +527,13 @@ pub(crate) enum AssigneeExpr {
 impl TryFrom<Expression> for AssigneeExpr {
     type Error = ParserErrorKind;
 
+    /// Check if an expression can act as an assignee expression and return the wrapped expression,
+    /// or else throw an error. 
+    /// Also tries to convert an `Expression` into an `AssigneeExpr`.
+    /// E.g., An array expression can act as an assignee expression *if it contains elements
+    /// of assignee expressions*. The same goes for struct and tuple assignee expressions.
+    /// This function tries to convert elements / fields into assignee expressions in order
+    /// to build collections of assignee expressions *that are assignee expressions themselves*.
     fn try_from(value: Expression) -> Result<Self, Self::Error> {
         match value {
             Expression::Literal(l) => Ok(AssigneeExpr::Literal(l)),
@@ -541,7 +558,7 @@ impl TryFrom<Expression> for AssigneeExpr {
                     })
                 });
 
-                Ok(AssigneeExpr::SliceExpr(assignee_expressions))
+                Ok(AssigneeExpr::ArrayExpr(assignee_expressions))
             }
 
             Expression::Tuple(t) => {
