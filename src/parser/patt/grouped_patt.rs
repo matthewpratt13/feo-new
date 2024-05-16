@@ -9,6 +9,7 @@ use crate::{
 
 impl GroupedPatt {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `GroupedPatt::parse()`"),
@@ -43,6 +44,7 @@ impl GroupedPatt {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
 
+                // **log event and current token** [REMOVE IN PROD]
                 parser.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("exiting `GroupedPatt::parse()`"),

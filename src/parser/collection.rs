@@ -102,6 +102,7 @@ pub(crate) fn get_expressions(
 ) -> Result<Option<Vec<Expression>>, ErrorsEmitted> {
     let mut expressions: Vec<Expression> = Vec::new();
 
+    // **log event and current token** [REMOVE IN PROD]
     parser.logger.log(
         LogLevel::Debug,
         LogMsg::from("entering `get_expressions()`"),
@@ -154,6 +155,7 @@ pub(crate) fn get_expressions(
         }
     }
 
+    // **log event, `expressions` status and current token** [REMOVE IN PROD]
     parser
         .logger
         .log(LogLevel::Debug, LogMsg::from("exiting `get_expressions()`"));
@@ -206,6 +208,7 @@ pub(crate) fn get_attributes<T>(
 ) -> Option<Vec<T>> {
     let mut attributes = Vec::new();
 
+    // **log event and current token** [REMOVE IN PROD]
     parser
         .logger
         .log(LogLevel::Debug, LogMsg::from("entering `get_attributes()`"));
@@ -216,6 +219,7 @@ pub(crate) fn get_attributes<T>(
         parser.next_token();
     }
 
+    // **log event, `attributes` status and current token** [REMOVE IN PROD]
     parser
         .logger
         .log(LogLevel::Debug, LogMsg::from("exiting `get_attributes()`"));

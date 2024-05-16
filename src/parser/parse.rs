@@ -17,7 +17,7 @@ pub(crate) trait ParseControl {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted>;
 }
 
-pub(crate) trait ParseSimple {
+pub(crate) trait ParseSimpleExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted>;
 }
 

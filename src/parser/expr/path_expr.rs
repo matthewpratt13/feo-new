@@ -2,12 +2,13 @@ use crate::{
     ast::{Expression, Identifier, PathExpr, PathRoot, SelfType},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
-    parser::Parser,
+    parser::{ParseSimpleExpr, Parser},
     token::Token,
 };
 
-impl PathExpr {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseSimpleExpr for PathExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `PathExpr::parse()`"),
@@ -64,6 +65,7 @@ impl PathExpr {
             },
         };
 
+        // **log event and current token** [REMOVE IN PROD]
         parser
             .logger
             .log(LogLevel::Debug, LogMsg::from("exiting `PathExpr::parse()`"));

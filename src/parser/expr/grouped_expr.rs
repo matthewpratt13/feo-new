@@ -8,6 +8,7 @@ use crate::{
 
 impl ParseConstruct for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `GroupedExpr::parse()`"),
@@ -45,6 +46,7 @@ impl ParseConstruct for GroupedExpr {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
 
+                // **log event and current token** [REMOVE IN PROD]
                 parser.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("exiting `GroupedExpr::parse()`"),

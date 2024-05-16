@@ -8,6 +8,7 @@ use crate::{
 
 impl PathPatt {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `PathPatt::parse()`"),
@@ -55,6 +56,7 @@ impl PathPatt {
             },
         };
 
+        // **log event and current token** [REMOVE IN PROD]
         parser
             .logger
             .log(LogLevel::Debug, LogMsg::from("exiting `PathPatt::parse()`"));

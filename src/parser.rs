@@ -40,12 +40,12 @@ mod expr;
 mod item;
 mod let_statement;
 mod parse;
+mod path_type;
 mod patt;
 mod precedence;
 mod test_utils;
 mod ty;
 mod visibility;
-mod path_type;
 
 use std::collections::HashMap;
 
@@ -67,8 +67,9 @@ use crate::{
     token::{Token, TokenStream, TokenType},
 };
 
-use self::parse::ParseSimple;
-pub(crate) use self::parse::{ParseConstruct, ParseControl, ParseOperation, ParseStatement};
+pub(crate) use self::parse::{
+    ParseConstruct, ParseControl, ParseOperation, ParseSimpleExpr, ParseStatement,
+};
 pub(crate) use self::precedence::Precedence;
 
 /// Enum representing the different parsing contexts in which tokens can be interpreted.
@@ -117,6 +118,7 @@ impl Parser {
 
     /// Define and initialize token precedence levels.
     fn init_precedences(&mut self, tokens: &[Token]) {
+        // **log event** [REMOVE IN PROD]
         self.logger
             .log(LogLevel::Debug, LogMsg::from("initializing precedences"));
 
@@ -170,8 +172,6 @@ impl Parser {
                     self.precedences.insert(t, Precedence::CompoundAssignment)
                 }
                 TokenType::Equals => self.precedences.insert(t, Precedence::Assignment),
-                // TokenType::Colon => self.precedences.insert(t, Precedence::Assignment),
-                // TokenType::FatArrow => self.precedences.insert(t, Precedence::Assignment),
                 _ => self.precedences.insert(t, Precedence::Lowest),
             };
         }
@@ -183,6 +183,8 @@ impl Parser {
     /// struct instances.
     fn set_context(&mut self, context: ParserContext) {
         self.context = context;
+
+        // **log debug info** [REMOVE IN PROD]
         self.logger.log(
             LogLevel::Debug,
             LogMsg::from(format!("set context: {:?}", context)),
@@ -196,12 +198,15 @@ impl Parser {
     fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
 
+        // clear logs and log status message
         self.logger.clear_logs();
         self.logger
             .log(LogLevel::Info, LogMsg::from("starting to parse tokens"));
 
         while self.current < self.stream.tokens().len() {
             let statement = self.parse_statement()?;
+
+            // log status message
             self.logger.log(
                 LogLevel::Info,
                 LogMsg::from(format!("parsed statement: {:?}", statement)),
@@ -209,6 +214,7 @@ impl Parser {
             statements.push(statement);
         }
 
+        // log status message
         self.logger
             .log(LogLevel::Info, LogMsg::from("reached end of file"));
         Ok(statements)
@@ -226,6 +232,7 @@ impl Parser {
     /// If an infix parsing function is found, it is called with the left expression to produce
     /// the next expression in the parse tree.
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         self.logger.log(
             LogLevel::Debug,
             LogMsg::from(format!(
@@ -233,10 +240,11 @@ impl Parser {
                 precedence
             )),
         );
-
         self.log_current_token(true);
 
         let mut left_expr = self.parse_prefix()?; // start with prefix expression
+
+        // **log event and current token** [REMOVE IN PROD]
         self.logger
             .log(LogLevel::Debug, LogMsg::from("exited `parse_prefix()`"));
         self.log_current_token(true);
@@ -244,6 +252,7 @@ impl Parser {
         // repeatedly call `parse_infix()` while the precedence of the current token is higher
         // than the input precedence
         while precedence < self.peek_precedence() {
+            // **log current token and precedence status** [REMOVE IN PROD]
             self.log_current_token(true);
             self.logger.log(
                 LogLevel::Debug,
@@ -252,6 +261,8 @@ impl Parser {
 
             if let Some(infix_parser) = self.parse_infix()? {
                 left_expr = infix_parser(self, left_expr)?; // parse infix expressions
+
+                // **log event and current token** [REMOVE IN PROD]
                 self.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("exited infix parsing function"),
@@ -260,27 +271,27 @@ impl Parser {
             }
         }
 
+        // **log event and current token** [REMOVE IN PROD]
         self.logger.log(
             LogLevel::Debug,
             LogMsg::from("exiting `parse_expression()`"),
         );
         self.log_current_token(true);
 
+        // return parsed expression
         Ok(left_expr)
     }
 
     /// Parse the basic building blocks of expressions (e.g., grouped expressions, identifiers
     /// and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         self.logger
             .log(LogLevel::Debug, LogMsg::from("entering `parse_primary()`"));
         self.log_current_token(true);
 
         match &self.current_token() {
-            Some(Token::Identifier { .. }) => {
-                let expr = PathExpr::parse(self);
-                expr
-            }
+            Some(Token::Identifier { .. }) => PathExpr::parse(self),
             Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(*value))),
             Some(Token::UIntLiteral { value, .. }) => {
                 Ok(Expression::Literal(Literal::UInt(*value)))
@@ -311,12 +322,9 @@ impl Parser {
                 self.next_token();
                 expr
             }
-            Some(_) => {
+            _ => {
+                // log the error and advance the parser, then return `Err(ErrorsEmitted)`
                 self.log_unexpected_token("literal, identifier or grouped expression");
-                Err(ErrorsEmitted)
-            }
-            None => {
-                self.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
         }
@@ -327,6 +335,7 @@ impl Parser {
     /// Where applicable, check the current token and set the parser context based on
     /// surrounding tokens.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         self.logger
             .log(LogLevel::Debug, LogMsg::from("entering `parse_prefix()`"));
         self.log_current_token(true);
@@ -369,23 +378,15 @@ impl Parser {
                             )
                             | None => StructExpr::parse(self),
 
-                            _ => {
-                                let expr = self.parse_primary();
-                                // self.next_token();
-                                expr
-                            }
+                            _ => self.parse_primary(),
                         }
                     }
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    let expr = PathExpr::parse(self);
-                    // self.next_token();
-                    expr
+                    PathExpr::parse(self)
                 } else {
-                    let expr = self.parse_primary();
-                    // self.next_token();
-                    expr
+                    self.parse_primary()
                 }
             }
             Some(Token::SelfType { .. }) => {
@@ -395,9 +396,9 @@ impl Parser {
                     PathExpr::parse(self)
                 }
             }
-            Some(Token::SelfKeyword { .. }) => PathExpr::parse(self),
-            Some(Token::Package { .. }) => PathExpr::parse(self),
-            Some(Token::Super { .. }) => PathExpr::parse(self),
+            Some(Token::SelfKeyword { .. } | Token::Package { .. } | Token::Super { .. }) => {
+                PathExpr::parse(self)
+            }
             Some(Token::Minus { .. }) => {
                 if self.context == ParserContext::Unary {
                     UnaryExpr::parse(self)
@@ -511,7 +512,6 @@ impl Parser {
 
             Some(Token::None { .. }) => {
                 self.next_token();
-
                 Ok(Expression::NoneExpr(NoneExpr {
                     kw_none: Keyword::None,
                 }))
@@ -536,16 +536,17 @@ impl Parser {
             Some(Token::Return { .. }) => ReturnExpr::parse(self),
 
             Some(Token::EOF) | None => {
+                // log the error and advance the parser, then return `Err(ErrorsEmitted)`
                 self.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 
             _ => {
-                self.next_token();
+                // log error and advance the parser, then return `Err(ErrorsEmitted)`
                 self.log_error(ParserErrorKind::InvalidTokenContext {
                     token: self.current_token(),
                 });
-
+                self.next_token();
                 Err(ErrorsEmitted)
             }
         }
@@ -559,6 +560,7 @@ impl Parser {
         &mut self,
     ) -> Result<Option<fn(&mut Self, Expression) -> Result<Expression, ErrorsEmitted>>, ErrorsEmitted>
     {
+        // **log event and current token** [REMOVE IN PROD]
         self.logger
             .log(LogLevel::Debug, LogMsg::from("entering `parse_infix()`"));
         self.log_current_token(true);
@@ -597,7 +599,7 @@ impl Parser {
 
                     _ => {
                         self.log_unexpected_token(
-                            "identifier or tuple index (unsigned decimal integer",
+                            "identifier or tuple index (unsigned decimal integer)",
                         );
                         Err(ErrorsEmitted)
                     }
@@ -689,6 +691,7 @@ impl Parser {
             Some(Token::Equals { .. }) => Ok(Some(AssignmentExpr::parse)),
 
             Some(Token::EOF) | None => {
+                // **log event** [REMOVE IN PROD]
                 self.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("no infix parsing function found"),
@@ -713,6 +716,7 @@ impl Parser {
 
     /// Parse a statement (i.e., let statement, item or expression).
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         self.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `parse_statement()`"),
@@ -787,6 +791,7 @@ impl Parser {
 
     /// Parse a `Pattern` – used in match expressions, function call expression and elsewhere.
     fn parse_pattern(&mut self) -> Result<Pattern, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         self.logger
             .log(LogLevel::Debug, LogMsg::from("entering `parse_pattern()`"));
         self.log_current_token(true);
@@ -906,24 +911,19 @@ impl Parser {
                         )
                         | None => StructPatt::parse(self),
 
-                        _ => {
-                            let patt = PathPatt::parse(self);
-                            patt
-                        }
+                        _ => PathPatt::parse(self),
                     }
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    let patt = PathPatt::parse(self);
-                    patt
+                    PathPatt::parse(self)
                 } else if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
                 {
                     let patt = PathPatt::parse(self)?;
                     RangePatt::parse(self, patt)
                 } else {
-                    let patt = IdentifierPatt::parse(self);
-                    patt
+                    IdentifierPatt::parse(self)
                 }
             }
 
@@ -936,9 +936,9 @@ impl Parser {
                     PathPatt::parse(self)
                 }
             }
-            Some(Token::SelfKeyword { .. }) => PathPatt::parse(self),
-            Some(Token::Package { .. }) => PathPatt::parse(self),
-            Some(Token::Super { .. }) => PathPatt::parse(self),
+            Some(Token::SelfKeyword { .. } | Token::Package { .. } | Token::Super { .. }) => {
+                PathPatt::parse(self)
+            }
             Some(Token::Ampersand { .. }) => ReferencePatt::parse(self, ReferenceOp::Borrow),
             Some(Token::AmpersandMut { .. }) => {
                 ReferencePatt::parse(self, ReferenceOp::MutableBorrow)
@@ -983,7 +983,6 @@ impl Parser {
 
             Some(Token::None { .. }) => {
                 self.next_token();
-
                 Ok(Pattern::NonePatt(NonePatt {
                     kw_none: Keyword::None,
                 }))
@@ -992,15 +991,17 @@ impl Parser {
             Some(Token::Ok { .. } | Token::Err { .. }) => ResultPatt::parse(self),
 
             Some(Token::EOF) | None => {
+                // log the error, then return `Err(ErrorsEmitted)`
                 self.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 
             _ => {
-                self.next_token();
+                // log the error and advance the parser, then return `Err(ErrorsEmitted)`
                 self.log_error(ParserErrorKind::InvalidTokenContext {
                     token: self.current_token(),
                 });
+                self.next_token();
 
                 Err(ErrorsEmitted)
             }
@@ -1018,15 +1019,18 @@ impl Parser {
         if self.current < self.stream.tokens().len() {
             self.current += 1;
 
+            // **log event** [REMOVE IN PROD]
             self.logger
                 .log(LogLevel::Debug, LogMsg::from("consumed token"));
         } else {
+            // log warning
             self.logger.log(
                 LogLevel::Warning,
                 LogMsg::from("WARNING: reached end of tokens"),
             );
         }
 
+        // **log current token** [REMOVE IN PROD]
         self.log_current_token(true);
 
         token
@@ -1077,9 +1081,11 @@ impl Parser {
             _ => 0,
         };
 
+        // create a new `CompilerError` and push it to the `errors` vector
         let error = CompilerError::new(error_kind, pos, &self.stream.span().input());
         self.errors.push(error.clone());
 
+        // log the error as a message
         self.logger
             .log(LogLevel::Error, LogMsg::from(error.to_string()));
     }
@@ -1172,7 +1178,7 @@ impl Parser {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // PRECEDENCE RETRIEVAL
+    // PRECEDENCE AND POSITION GETTERS
     ///////////////////////////////////////////////////////////////////////////
 
     /// Retrieve the precedence for a given token (operator), considering the current context.
@@ -1253,8 +1259,6 @@ impl Parser {
             | Token::SlashEquals { .. }
             | Token::PercentEquals { .. } => Precedence::CompoundAssignment,
             Token::Equals { .. } => Precedence::Assignment,
-            // Token::Colon { .. } => Precedence::Assignment,
-            // Token::FatArrow { .. } => Precedence::Assignment,
             _ => *self.precedences.get(token).unwrap_or(&Precedence::Lowest),
         }
     }
@@ -1264,16 +1268,16 @@ impl Parser {
         self.get_precedence(&self.current_token().unwrap())
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-    // ADDITIONAL HELPERS
-    ///////////////////////////////////////////////////////////////////////////
-
     fn current_position(&self) -> Position {
         Position::new(
             self.current_token().unwrap().span().start(),
             &self.stream.span().input(),
         )
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // ADDITIONAL HELPERS
+    ///////////////////////////////////////////////////////////////////////////
 
     /// Determine if `Token::Dot` token indicates a tuple index operator (followed by a digit).
     fn is_tuple_index(&self) -> bool {

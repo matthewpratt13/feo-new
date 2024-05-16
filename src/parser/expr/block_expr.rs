@@ -8,6 +8,7 @@ use crate::{
 
 impl ParseConstruct for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `BlockExpr::parse()`"),
@@ -38,16 +39,18 @@ impl ParseConstruct for BlockExpr {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
 
+                let expr = BlockExpr {
+                    attributes_opt,
+                    statements_opt,
+                };
+
+                // **log event and current token** [REMOVE IN PROD]
                 parser.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("exiting `BlockExpr::parse()`"),
                 );
                 parser.log_current_token(true);
 
-                let expr = BlockExpr {
-                    attributes_opt,
-                    statements_opt,
-                };
                 Ok(Expression::Block(expr))
             }
 
@@ -62,6 +65,7 @@ impl ParseConstruct for BlockExpr {
 fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, ErrorsEmitted> {
     let mut statements: Vec<Statement> = Vec::new();
 
+    // **log event and current token** [REMOVE IN PROD]
     parser.logger.log(
         LogLevel::Debug,
         LogMsg::from("entering `parse_statements()`"),
@@ -76,6 +80,7 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
         statements.push(statement);
     }
 
+    // **log event, `statements` status and current token** [REMOVE IN PROD]
     parser.logger.log(
         LogLevel::Debug,
         LogMsg::from("exiting `parse_statements()`"),

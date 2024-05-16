@@ -12,6 +12,7 @@ impl PathType {
         parser: &mut Parser,
         token: Option<Token>,
     ) -> Result<PathType, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `PathType::parse()`"),
@@ -43,8 +44,10 @@ impl PathType {
             | Token::RBrace { .. }
             | Token::Semicolon { .. }
             | Token::GreaterThan { .. }
-            | Token::For { .. },
-        ) = parser.current_token()
+            | Token::For { .. }
+            | Token::EOF,
+        )
+        | None = parser.current_token()
         {
             return Ok(PathType {
                 path_root,
@@ -89,6 +92,7 @@ impl PathType {
             },
         };
 
+        // **log event and current token** [REMOVE IN PROD]
         parser
             .logger
             .log(LogLevel::Debug, LogMsg::from("exiting `PathType::parse()`"));

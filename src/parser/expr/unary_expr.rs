@@ -4,12 +4,12 @@ use crate::{
         UnaryExpr, UnaryOp, ValueExpr,
     },
     error::ErrorsEmitted,
-    parser::{parse::ParseSimple, Parser, Precedence},
+    parser::{ParseSimpleExpr, Parser, Precedence},
     token::Token,
 };
 
 /// Parse a unary operation, specifically NOT (`!`) and negate (`-`), based on the input operator.
-impl ParseSimple for UnaryExpr {
+impl ParseSimpleExpr for UnaryExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let unary_op = match parser.current_token() {
             Some(Token::Minus { .. }) => Ok(UnaryOp::Negate),
@@ -38,7 +38,7 @@ impl ParseSimple for UnaryExpr {
     }
 }
 
-impl ParseSimple for ReferenceExpr {
+impl ParseSimpleExpr for ReferenceExpr {
     /// Parse a unary reference operation – i.e., borrow (`&`) or mutable reference (`&mut`) –
     /// based on the input operator.
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
@@ -64,7 +64,7 @@ impl ParseSimple for ReferenceExpr {
     }
 }
 
-impl ParseSimple for DereferenceExpr {
+impl ParseSimpleExpr for DereferenceExpr {
     /// Parse a unary dereference operation with the operator `*`.
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let dereference_op = match parser.current_token() {
