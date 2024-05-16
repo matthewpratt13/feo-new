@@ -58,9 +58,7 @@ fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted>
 
     let value = parser.parse_expression(Precedence::Lowest)?;
 
-    let pair = MappingPair { key, value };
-
-    Ok(pair)
+    Ok(MappingPair { key, value })
 }
 
 #[cfg(test)]
