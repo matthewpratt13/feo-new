@@ -2,10 +2,7 @@ use crate::{
     ast::{
         Delimiter, Identifier, Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef,
         TupleStructDefField, Type, Visibility,
-    },
-    error::ErrorsEmitted,
-    span::Position,
-    token::Token,
+    }, error::ErrorsEmitted, logger::{LogLevel, LogMsg}, span::Position, token::Token
 };
 
 use super::{collection, ParseDefinition, Parser};
@@ -162,6 +159,12 @@ impl StructDefField {
     pub(crate) fn parse(parser: &mut Parser) -> Result<StructDefField, ErrorsEmitted> {
         let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg::from(format!("entering `StructDefField::parse()`")),
+        );
+        parser.log_current_token(true);
+
         let visibility = Visibility::visibility(parser)?;
 
         let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
@@ -188,6 +191,12 @@ impl StructDefField {
         }
 
         let field_type = Box::new(Type::parse(parser)?);
+
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg::from(format!("exiting `StructDefField::parse()`")),
+        );
+        parser.log_current_token(true);
 
         let field = StructDefField {
             attributes_opt,

@@ -88,7 +88,6 @@ impl ParseDefinition for TraitImplDef {
         let implemented_trait_path = match token {
             Some(Token::Identifier { .. }) => {
                 let path = PathType::parse(parser, token);
-                parser.next_token();
                 path
             }
             Some(Token::EOF) | None => {

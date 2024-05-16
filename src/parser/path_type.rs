@@ -36,7 +36,26 @@ impl PathType {
             }
         }?;
 
-        parser.next_token();
+        if let Some(
+            Token::Comma { .. }
+            | Token::LBrace { .. }
+            | Token::RParen { .. }
+            | Token::RBrace { .. }
+            | Token::Semicolon { .. }
+            | Token::GreaterThan { .. }
+            | Token::For { .. },
+        ) = parser.current_token()
+        {
+            return Ok(PathType {
+                path_root,
+                tree_opt: {
+                    match tree.is_empty() {
+                        true => None,
+                        false => Some(tree),
+                    }
+                },
+            });
+        }
 
         while let Some(Token::DblColon { .. }) = parser.current_token() {
             match parser.peek_ahead_by(1) {
@@ -58,6 +77,7 @@ impl PathType {
             }
         }
 
+        parser.next_token();
 
         let path_type = PathType {
             path_root,
@@ -71,7 +91,7 @@ impl PathType {
 
         parser
             .logger
-            .log(LogLevel::Debug, LogMsg::from("exiting `PathExpr::parse()`"));
+            .log(LogLevel::Debug, LogMsg::from("exiting `PathType::parse()`"));
         parser.log_current_token(false);
 
         Ok(path_type)
