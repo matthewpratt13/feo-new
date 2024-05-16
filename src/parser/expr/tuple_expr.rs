@@ -37,7 +37,7 @@ impl ParseConstruct for TupleExpr {
 }
 
 fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmitted> {
-    let mut elements = Vec::new();
+    let mut elements: Vec<(Expression, Separator)> = Vec::new();
     let mut final_element_opt = None::<Box<Expression>>;
 
     while !matches!(
@@ -65,7 +65,7 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
 
 impl ParseOperation for TupleIndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
+        let tuple = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
@@ -74,7 +74,7 @@ impl ParseOperation for TupleIndexExpr {
             Some(Token::UIntLiteral { value, .. }) => {
                 parser.next_token();
                 Ok(value)
-            }
+            } 
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
@@ -86,7 +86,7 @@ impl ParseOperation for TupleIndexExpr {
         }?;
 
         let expr = TupleIndexExpr {
-            tuple: Box::new(assignee_expr),
+            tuple: Box::new(tuple),
             index,
         };
 
