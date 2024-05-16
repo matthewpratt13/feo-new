@@ -36,7 +36,7 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "ERROR: {} [Ln {}, Col {}]",
+            "ERROR: {} [error position: Ln {}, Col {}]",
             self.error_kind, self.position.line, self.position.col
         )
     }

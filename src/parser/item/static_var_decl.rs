@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, Identifier, Keyword, OuterAttr, StaticItemDecl, Type, Visibility},
+    ast::{AssigneeExpr, Identifier, Keyword, OuterAttr, StaticVarDecl, Type, Visibility},
     error::ErrorsEmitted,
     parser::Precedence,
     token::Token,
@@ -7,12 +7,12 @@ use crate::{
 
 use super::{ParseDeclaration, Parser};
 
-impl ParseDeclaration for StaticItemDecl {
+impl ParseDeclaration for StaticVarDecl {
     fn parse(
         parser: &mut Parser,
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
-    ) -> Result<StaticItemDecl, ErrorsEmitted> {
+    ) -> Result<StaticVarDecl, ErrorsEmitted> {
         let kw_static = if let Some(Token::Static { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::Static)
@@ -28,14 +28,14 @@ impl ParseDeclaration for StaticItemDecl {
             None
         };
 
-        let item_name = match parser.next_token() {
+        let var_name = match parser.next_token() {
             Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("static item identifier");
+                parser.log_unexpected_token("static variable identifier");
                 Err(ErrorsEmitted)
             }
         }?;
@@ -54,7 +54,7 @@ impl ParseDeclaration for StaticItemDecl {
             }
         }
 
-        let item_type = Type::parse(parser)?;
+        let var_type = Type::parse(parser)?;
 
         let assignee_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
             parser.next_token();
@@ -79,13 +79,13 @@ impl ParseDeclaration for StaticItemDecl {
             Some(Token::Semicolon { .. }) => {
                 parser.next_token();
 
-                Ok(StaticItemDecl {
+                Ok(StaticVarDecl {
                     attributes_opt,
                     visibility,
                     kw_static,
                     kw_mut_opt,
-                    item_name,
-                    item_type,
+                    var_name,
+                    var_type,
                     assignee_opt,
                 })
             }
@@ -117,7 +117,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

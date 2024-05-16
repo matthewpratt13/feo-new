@@ -24,7 +24,6 @@ pub(crate) fn get_collection<T>(
                 Some(Token::RParen { .. } | Token::EOF),
             ) {
                 let item = f(parser)?;
-
                 collection.push(item);
 
                 if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
@@ -45,7 +44,6 @@ pub(crate) fn get_collection<T>(
                 Some(Token::RBrace { .. } | Token::EOF),
             ) {
                 let item = f(parser)?;
-
                 collection.push(item);
 
                 if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
@@ -71,7 +69,6 @@ pub(crate) fn get_collection<T>(
                 if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
                     parser.next_token();
                 } else if let Some(Token::Pipe { .. }) = parser.current_token().as_ref() {
-                    parser.next_token();
                     break;
                 } else if !matches!(
                     parser.current_token().as_ref(),
@@ -105,6 +102,7 @@ pub(crate) fn get_expressions(
 ) -> Result<Option<Vec<Expression>>, ErrorsEmitted> {
     let mut expressions: Vec<Expression> = Vec::new();
 
+    // **log event and current token** [REMOVE IN PROD]
     parser.logger.log(
         LogLevel::Debug,
         LogMsg::from("entering `get_expressions()`"),
@@ -118,7 +116,6 @@ pub(crate) fn get_expressions(
                 Some(Token::RParen { .. } | Token::EOF),
             ) {
                 let expr = parser.parse_expression(precedence)?;
-
                 expressions.push(expr);
 
                 if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
@@ -138,7 +135,6 @@ pub(crate) fn get_expressions(
                 Some(Token::RBracket { .. } | Token::EOF),
             ) {
                 let expr = parser.parse_expression(precedence)?;
-
                 expressions.push(expr);
 
                 if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
@@ -159,6 +155,7 @@ pub(crate) fn get_expressions(
         }
     }
 
+    // **log event, `expressions` status and current token** [REMOVE IN PROD]
     parser
         .logger
         .log(LogLevel::Debug, LogMsg::from("exiting `get_expressions()`"));
@@ -211,6 +208,7 @@ pub(crate) fn get_attributes<T>(
 ) -> Option<Vec<T>> {
     let mut attributes = Vec::new();
 
+    // **log event and current token** [REMOVE IN PROD]
     parser
         .logger
         .log(LogLevel::Debug, LogMsg::from("entering `get_attributes()`"));
@@ -221,6 +219,7 @@ pub(crate) fn get_attributes<T>(
         parser.next_token();
     }
 
+    // **log event, `attributes` status and current token** [REMOVE IN PROD]
     parser
         .logger
         .log(LogLevel::Debug, LogMsg::from("exiting `get_attributes()`"));

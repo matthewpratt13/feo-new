@@ -56,7 +56,7 @@ impl ParseOperation for TypeCastExpr {
         }?;
 
         let expr = TypeCastExpr {
-            operand: Box::new(value_expr),
+            value: Box::new(value_expr),
             kw_as,
             new_type,
         };
@@ -79,7 +79,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -92,7 +92,7 @@ mod tests {
 
         parser.parse().expect(&format!(
             "unable to parse input. Log output: {:#?}",
-            parser.logger.logs()
+            parser.logger.messages()
         ));
     }
 }

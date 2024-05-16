@@ -8,11 +8,12 @@ use crate::{
 
 impl IdentifierPatt {
     pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `IdentifierPatt:parse()`"),
         );
-        parser.log_current_token(true);
+        parser.log_current_token(false);
 
         let kw_ref_opt = if let Some(Token::Ref { .. }) = parser.current_token() {
             parser.next_token();
@@ -36,17 +37,18 @@ impl IdentifierPatt {
             Err(ErrorsEmitted)
         }?;
 
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("exiting `IdentifierPatt::parse()`"),
-        );
-        parser.log_current_token(false);
-
         let patt = IdentifierPatt {
             kw_ref_opt,
             kw_mut_opt,
             name,
         };
+
+        // **log event and current token** [REMOVE IN PROD]
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg::from("exiting `IdentifierPatt::parse()`"),
+        );
+        parser.log_current_token(false);
 
         Ok(Pattern::IdentifierPatt(patt))
     }

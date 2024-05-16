@@ -107,7 +107,7 @@ impl ParseAssociatedItem for TraitDefItem {
                     });
                     Err(ErrorsEmitted)
                 } else {
-                    Ok(TraitDefItem::FunctionDef(function_def))
+                    Ok(TraitDefItem::FunctionItem(function_def))
                 }
             }
             _ => {
@@ -145,7 +145,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

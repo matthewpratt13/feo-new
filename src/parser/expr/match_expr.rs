@@ -1,8 +1,7 @@
 use crate::{
     ast::{AssigneeExpr, BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseConstruct, ParseControl, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
@@ -16,9 +15,12 @@ impl ParseControl for MatchExpr {
             Err(ErrorsEmitted)
         }?;
 
+        // notify the parser of the error, but let it try to parse anyway and return its own error
+        // i.e., do not `return Err(ErrorsEmitted);`
         if let Some(Token::LBrace { .. } | Token::Semicolon { .. }) = parser.current_token() {
-            parser.log_missing("expr", "scrutinee expression");
-            return Err(ErrorsEmitted);
+            parser.log_error(ParserErrorKind::MissingExpression {
+                expected: "scrutinee expression".to_string(),
+            });
         }
 
         let matched_expression = parser.parse_expression(Precedence::Lowest)?;
@@ -30,7 +32,7 @@ impl ParseControl for MatchExpr {
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
+                let position = parser.current_position();
                 parser.next_token();
                 Ok(Delimiter::LBrace { position })
             }
@@ -44,21 +46,21 @@ impl ParseControl for MatchExpr {
             }
         }?;
 
-        let mut arms = Vec::new();
+        let mut match_arms: Vec<MatchArm> = Vec::new();
 
         while !matches!(
             parser.current_token(),
             Some(Token::RBrace { .. } | Token::EOF)
         ) {
             let arm = parse_match_arm(parser)?;
-            arms.push(arm);
+            match_arms.push(arm);
 
             if let Some(Token::Comma { .. }) = parser.current_token() {
                 parser.next_token();
             }
         }
 
-        let final_arm = if let Some(a) = arms.pop() {
+        let final_arm = if let Some(a) = match_arms.pop() {
             Ok(Box::new(a))
         } else {
             parser.log_missing("patt", "match arm");
@@ -72,10 +74,10 @@ impl ParseControl for MatchExpr {
                 let expr = MatchExpr {
                     kw_match,
                     scrutinee,
-                    arms_opt: {
-                        match arms.is_empty() {
+                    match_arms_opt: {
+                        match match_arms.is_empty() {
                             true => None,
-                            false => Some(arms),
+                            false => Some(match_arms),
                         }
                     },
                     final_arm,
@@ -83,13 +85,8 @@ impl ParseControl for MatchExpr {
 
                 Ok(Expression::Match(expr))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
-            }
             _ => {
-                parser.log_unexpected_token("`}`");
+                parser.log_unmatched_delimiter(&open_brace);
                 Err(ErrorsEmitted)
             }
         }
@@ -97,7 +94,7 @@ impl ParseControl for MatchExpr {
 }
 
 fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
-    let pattern = parser.parse_pattern()?;
+    let matched_pattern = parser.parse_pattern()?;
 
     let guard_opt = if let Some(Token::If { .. }) = parser.current_token() {
         parser.next_token();
@@ -121,7 +118,7 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         }
     }
 
-    let body = if let Some(Token::LBrace { .. }) = parser.current_token() {
+    let arm_expression = if let Some(Token::LBrace { .. }) = parser.current_token() {
         Ok(Box::new(BlockExpr::parse(parser)?))
     } else {
         let expr = Box::new(parser.parse_expression(Precedence::Lowest)?);
@@ -142,13 +139,11 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         }
     }?;
 
-    let arm = MatchArm {
-        pattern,
+    Ok(MatchArm {
+        matched_pattern,
         guard_opt,
-        body,
-    };
-
-    Ok(arm)
+        arm_expression,
+    })
 }
 
 #[cfg(test)]
@@ -170,7 +165,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

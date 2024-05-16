@@ -3,12 +3,12 @@ use crate::{
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::{collection, ParseConstruct, Parser},
-    span::Position,
     token::Token,
 };
 
 impl ParseConstruct for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `BlockExpr::parse()`"),
@@ -19,7 +19,7 @@ impl ParseConstruct for BlockExpr {
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
+                let position = parser.current_position();
                 parser.next_token();
                 Ok(Delimiter::LBrace { position })
             }
@@ -39,25 +39,23 @@ impl ParseConstruct for BlockExpr {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
 
+                let expr = BlockExpr {
+                    attributes_opt,
+                    statements_opt,
+                };
+
+                // **log event and current token** [REMOVE IN PROD]
                 parser.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("exiting `BlockExpr::parse()`"),
                 );
                 parser.log_current_token(true);
 
-                let expr = BlockExpr {
-                    attributes_opt,
-                    statements_opt,
-                };
                 Ok(Expression::Block(expr))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
-            }
+
             _ => {
-                parser.log_unexpected_token("`}`");
+                parser.log_unmatched_delimiter(&open_brace);
                 Err(ErrorsEmitted)
             }
         }
@@ -67,6 +65,7 @@ impl ParseConstruct for BlockExpr {
 fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, ErrorsEmitted> {
     let mut statements: Vec<Statement> = Vec::new();
 
+    // **log event and current token** [REMOVE IN PROD]
     parser.logger.log(
         LogLevel::Debug,
         LogMsg::from("entering `parse_statements()`"),
@@ -81,6 +80,7 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
         statements.push(statement);
     }
 
+    // **log event, `statements` status and current token** [REMOVE IN PROD]
     parser.logger.log(
         LogLevel::Debug,
         LogMsg::from("exiting `parse_statements()`"),
@@ -104,7 +104,8 @@ mod tests {
     #[test]
     fn parse_block_expr() -> Result<(), ()> {
         let input = r#" 
-        #![unsafe] {
+        #![unsafe] 
+        {
             x + 5;
             y
         }"#;
@@ -115,7 +116,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

@@ -2,7 +2,6 @@ use crate::{
     ast::{ArrayExpr, Delimiter, Expression},
     error::ErrorsEmitted,
     parser::{collection, ParseConstruct, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
@@ -10,7 +9,7 @@ impl ParseConstruct for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         let open_bracket = match parser.current_token() {
             Some(Token::LBracket { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
+                let position = parser.current_position();
                 parser.next_token();
                 Ok(Delimiter::LBracket { position })
             }
@@ -27,13 +26,8 @@ impl ParseConstruct for ArrayExpr {
                 parser.next_token();
                 Ok(Expression::Array(ArrayExpr { elements_opt }))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_bracket);
-                parser.log_missing_token("`]`");
-                Err(ErrorsEmitted)
-            }
             _ => {
-                parser.log_unexpected_token("`]`");
+                parser.log_unmatched_delimiter(&open_bracket);
                 Err(ErrorsEmitted)
             }
         }
@@ -54,12 +48,11 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
     #[test]
-
     fn parse_array_expr_with_elements() -> Result<(), ()> {
         let input = r#"[1, 2, 3]"#;
 
@@ -69,7 +62,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

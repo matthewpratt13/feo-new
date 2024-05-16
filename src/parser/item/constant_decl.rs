@@ -21,7 +21,7 @@ impl ParseDeclaration for ConstantDecl {
             Err(ErrorsEmitted)
         }?;
 
-        let item_name = match parser.next_token() {
+        let constant_name = match parser.next_token() {
             Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
@@ -47,7 +47,7 @@ impl ParseDeclaration for ConstantDecl {
             }
         }
 
-        let item_type = Box::new(Type::parse(parser)?);
+        let constant_type = Box::new(Type::parse(parser)?);
 
         let value_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
             parser.next_token();
@@ -76,8 +76,8 @@ impl ParseDeclaration for ConstantDecl {
                     attributes_opt,
                     visibility,
                     kw_const,
-                    item_name,
-                    item_type,
+                    constant_name,
+                    constant_type,
                     value_opt,
                 })
             }
@@ -109,7 +109,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

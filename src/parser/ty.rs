@@ -1,8 +1,7 @@
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Delimiter, FunctionOrMethodParam, FunctionPtr, Hash,
-        Identifier, InferredType, Int, PathExpr, PathPrefix, ReferenceOp, SelfType, Str, Type,
-        UInt, Unit,
+        Identifier, InferredType, Int, PathType, ReferenceOp, SelfType, Str, Type, UInt, Unit,
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
@@ -16,6 +15,7 @@ use super::{collection, Parser};
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         parser
             .logger
             .log(LogLevel::Debug, LogMsg::from("entering `Type::parse()`"));
@@ -200,7 +200,7 @@ impl Type {
                         return Err(ErrorsEmitted);
                     }
                 }
-                let ok = Box::new(Type::parse(parser)?);
+                let ok_type = Box::new(Type::parse(parser)?);
 
                 match parser.current_token().as_ref() {
                     Some(Token::Comma { .. }) => {
@@ -215,12 +215,12 @@ impl Type {
                         return Err(ErrorsEmitted);
                     }
                 }
-                let err = Box::new(Type::parse(parser)?);
+                let err_type = Box::new(Type::parse(parser)?);
 
                 match parser.current_token().as_ref() {
                     Some(Token::GreaterThan { .. }) => {
                         parser.next_token();
-                        Ok(Type::Result { ok, err })
+                        Ok(Type::Result { ok_type, err_type })
                     }
                     Some(Token::EOF) | None => {
                         parser.log_missing_token("`>`");
@@ -241,30 +241,29 @@ impl Type {
 
                     Ok(Type::InferredType(ty))
                 } else {
-                    let path =
-                        PathExpr::parse(parser, PathPrefix::Identifier(Identifier::from(name)))?;
+                    let path = PathType::parse(parser, token)?;
                     Ok(Type::UserDefined(path))
                 }
             }
 
             Some(Token::Package { .. }) => {
-                let path = PathExpr::parse(parser, PathPrefix::Package)?;
+                let path = PathType::parse(parser, token)?;
                 Ok(Type::UserDefined(path))
             }
 
             Some(Token::Super { .. }) => {
-                let path = PathExpr::parse(parser, PathPrefix::Super)?;
+                let path = PathType::parse(parser, token)?;
                 Ok(Type::UserDefined(path))
             }
 
             Some(Token::SelfKeyword { .. }) => {
-                let path = PathExpr::parse(parser, PathPrefix::SelfKeyword)?;
+                let path = PathType::parse(parser, token)?;
                 Ok(Type::UserDefined(path))
             }
 
             Some(Token::SelfType { .. }) => match parser.peek_ahead_by(1) {
                 Some(Token::DblColon { .. }) => {
-                    let path = PathExpr::parse(parser, PathPrefix::SelfType(SelfType))?;
+                    let path = PathType::parse(parser, token)?;
                     Ok(Type::UserDefined(path))
                 }
                 _ => Ok(Type::SelfType(SelfType)),

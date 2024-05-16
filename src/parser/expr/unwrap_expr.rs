@@ -2,6 +2,7 @@ use crate::{
     ast::{Expression, UnwrapExpr, UnwrapOp, ValueExpr},
     error::ErrorsEmitted,
     parser::{ParseOperation, Parser},
+    token::Token,
 };
 
 impl ParseOperation for UnwrapExpr {
@@ -11,14 +12,25 @@ impl ParseOperation for UnwrapExpr {
             ErrorsEmitted
         })?);
 
-        parser.next_token();
+        match parser.current_token() {
+            Some(Token::QuestionMark { .. }) => {
+                parser.next_token();
+                let expr = UnwrapExpr {
+                    value_expr,
+                    unwrap_op: UnwrapOp,
+                };
 
-        let expr = UnwrapExpr {
-            value_expr,
-            op: UnwrapOp,
-        };
-
-        Ok(Expression::Unwrap(expr))
+                Ok(Expression::Unwrap(expr))
+            }
+            Some(Token::EOF) | None => {
+                parser.log_missing_token("unwrap operator (`?`)");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("unwrap operator (`?`)");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 
@@ -36,7 +48,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

@@ -5,26 +5,33 @@ use crate::{
     },
     error::ErrorsEmitted,
     parser::{collection, ParseConstruct, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
 impl ParseConstruct for ClosureExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let params = match parser.current_token() {
+        let closure_params = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                
+                let position = parser.current_position();
                 let open_pipe = Delimiter::Pipe { position };
+                parser.next_token();
 
                 let vec_opt = collection::get_collection(parser, parse_closure_param, &open_pipe)?;
 
-                if vec_opt.is_some() {
-                    Ok(ClosureParams::Some(vec_opt.unwrap()))
-                } else {
-                    parser.log_unexpected_token("closure parameters");
-                    Err(ErrorsEmitted)
+                match parser.current_token() {
+                    Some(Token::Pipe { .. }) => {
+                        if vec_opt.is_some() {
+                            parser.next_token();
+                            Ok(ClosureParams::Some(vec_opt.unwrap()))
+                        } else {
+                            parser.log_missing("patt", "closure parameters");
+                            Err(ErrorsEmitted)
+                        }
+                    }
+                    _ => {
+                        parser.log_unmatched_delimiter(&open_pipe);
+                        Err(ErrorsEmitted)
+                    }
                 }
             }
             Some(Token::DblPipe { .. }) => {
@@ -56,16 +63,16 @@ impl ParseConstruct for ClosureExpr {
             Ok(None)
         }?;
 
-        let expression = if return_type_opt.is_some() {
+        let body_expression = if return_type_opt.is_some() {
             Box::new(BlockExpr::parse(parser)?)
         } else {
             Box::new(parser.parse_expression(Precedence::Lowest)?)
         };
 
         let expr = ClosureExpr {
-            params,
+            closure_params,
             return_type_opt,
-            expression,
+            body_expression,
         };
 
         Ok(Expression::Closure(expr))
@@ -73,6 +80,9 @@ impl ParseConstruct for ClosureExpr {
 }
 
 fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitted> {
+    let position = parser.current_position();
+    let open_pipe = Delimiter::Pipe { position };
+
     let param_name = match parser.current_token() {
         Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
             IdentifierPatt::parse(parser)
@@ -93,16 +103,16 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
         parser.next_token();
 
         match parser.current_token() {
-            Some(Token::Pipe { .. } | Token::Comma { .. }) => {
+            Some(Token::Comma { .. } | Token::Pipe { .. }) => {
                 parser.log_missing("type", "closure parameter type annotation");
                 Err(ErrorsEmitted)
             }
             Some(Token::EOF { .. }) | None => {
-                parser.log_unexpected_eoi();
+                parser.log_unmatched_delimiter(&open_pipe);
                 Err(ErrorsEmitted)
             }
 
-            _ => Ok(Some(Type::parse(parser)?)),
+            _ => Ok(Some(Box::new(Type::parse(parser)?))),
         }
     } else {
         Ok(None)
@@ -130,7 +140,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -146,7 +156,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

@@ -2,13 +2,12 @@ use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr},
     error::ErrorsEmitted,
     parser::{collection, ParseOperation, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
 impl ParseOperation for MethodCallExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
+        let receiver = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
@@ -30,7 +29,7 @@ impl ParseOperation for MethodCallExpr {
 
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
+                let position = parser.current_position();
                 parser.next_token();
                 Ok(Delimiter::LParen { position })
             }
@@ -51,20 +50,15 @@ impl ParseOperation for MethodCallExpr {
                 parser.next_token();
 
                 let expr = MethodCallExpr {
-                    receiver: Box::new(assignee_expr),
+                    receiver: Box::new(receiver),
                     method_name,
                     args_opt,
                 };
 
                 Ok(Expression::MethodCall(expr))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_paren);
-                parser.log_missing_token("`)`");
-                Err(ErrorsEmitted)
-            }
             _ => {
-                parser.log_unexpected_token("`)`");
+                parser.log_unmatched_delimiter(&open_paren);
                 Err(ErrorsEmitted)
             }
         }
@@ -85,7 +79,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -99,7 +93,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

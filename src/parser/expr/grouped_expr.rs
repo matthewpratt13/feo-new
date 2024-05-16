@@ -3,12 +3,12 @@ use crate::{
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::{ParseConstruct, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
 impl ParseConstruct for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `GroupedExpr::parse()`"),
@@ -17,7 +17,7 @@ impl ParseConstruct for GroupedExpr {
 
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
+                let position = parser.current_position();
                 parser.next_token();
                 Ok(Delimiter::LParen { position })
             }
@@ -35,32 +35,29 @@ impl ParseConstruct for GroupedExpr {
                 },
             };
 
-            let expression = Box::new(Expression::Tuple(tuple_expr));
+            let inner_expression = Box::new(Expression::Tuple(tuple_expr));
 
-            return Ok(Expression::Grouped(GroupedExpr { expression }));
+            return Ok(Expression::Grouped(GroupedExpr { inner_expression }));
         }
 
-        let expression = Box::new(parser.parse_expression(Precedence::Lowest)?);
+        let inner_expression = Box::new(parser.parse_expression(Precedence::Lowest)?);
 
         match parser.current_token() {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
 
+                // **log event and current token** [REMOVE IN PROD]
                 parser.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("exiting `GroupedExpr::parse()`"),
                 );
                 parser.log_current_token(false);
 
-                Ok(Expression::Grouped(GroupedExpr { expression }))
+                Ok(Expression::Grouped(GroupedExpr { inner_expression }))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_paren);
-                parser.log_missing_token("`)`");
-                Err(ErrorsEmitted)
-            }
+
             _ => {
-                parser.log_unexpected_token("`)`");
+                parser.log_unmatched_delimiter(&open_paren);
                 Err(ErrorsEmitted)
             }
         }
@@ -81,7 +78,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

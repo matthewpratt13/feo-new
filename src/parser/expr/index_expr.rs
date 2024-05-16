@@ -2,29 +2,35 @@ use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, IndexExpr, ValueExpr},
     error::ErrorsEmitted,
     parser::{ParseOperation, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
 impl ParseOperation for IndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
+        let array = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        let open_bracket = if let Some(Token::LBracket { .. }) = parser.current_token() {
-            let position = Position::new(parser.current, &parser.stream.span().input());
-            parser.next_token();
-            Ok(Delimiter::LBracket { position })
-        } else {
-            parser.log_unexpected_token("`[`");
-            Err(ErrorsEmitted)
+        let open_bracket = match parser.current_token() {
+            Some(Token::LBracket { .. }) => {
+                let position = parser.current_position();
+                parser.next_token();
+                Ok(Delimiter::LBracket { position })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`[`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        let value_expr = ValueExpr::try_from(expression).map_err(|e| {
+        let index = ValueExpr::try_from(expression).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
@@ -34,19 +40,14 @@ impl ParseOperation for IndexExpr {
                 parser.next_token();
 
                 let expr = IndexExpr {
-                    array: Box::new(assignee_expr),
-                    index: Box::new(value_expr),
+                    array: Box::new(array),
+                    index: Box::new(index),
                 };
 
                 Ok(Expression::Index(expr))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_bracket);
-                parser.log_missing_token("`]`");
-                Err(ErrorsEmitted)
-            }
             _ => {
-                parser.log_unexpected_token("`]`");
+                parser.log_unmatched_delimiter(&open_bracket);
                 Err(ErrorsEmitted)
             }
         }
@@ -67,7 +68,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -81,7 +82,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

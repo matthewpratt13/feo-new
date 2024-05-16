@@ -1,5 +1,7 @@
 use crate::{
-    ast::{Delimiter, Identifier, PathPatt, Pattern, StructPatt, StructPattField},
+    ast::{
+        Delimiter, Identifier, PathPatt, PathRoot, Pattern, SelfType, StructPatt, StructPattField,
+    },
     error::ErrorsEmitted,
     parser::{collection, Parser},
     span::Position,
@@ -7,7 +9,25 @@ use crate::{
 };
 
 impl StructPatt {
-    pub(crate) fn parse(parser: &mut Parser, path: PathPatt) -> Result<Pattern, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+        let path_root = match parser.current_token() {
+            Some(Token::Identifier { name, .. }) => {
+                Ok(PathRoot::Identifier(Identifier::from(&name)))
+            }
+            Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
+            _ => {
+                parser.log_unexpected_token("identifier or `Self`");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        let struct_path = PathPatt {
+            path_root,
+            tree_opt: None,
+        };
+
+        parser.next_token();
+
         let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
             let position = Position::new(parser.current, &parser.stream.span().input());
             parser.next_token();
@@ -22,7 +42,10 @@ impl StructPatt {
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
-                Ok(Pattern::StructPatt(StructPatt { path, fields_opt }))
+                Ok(Pattern::StructPatt(StructPatt {
+                    struct_path,
+                    fields_opt,
+                }))
             }
             Some(Token::EOF) | None => {
                 parser.log_unmatched_delimiter(&open_brace);

@@ -2,7 +2,7 @@ use core::fmt;
 
 pub use crate::{B16, B2, B32, B4, B8, H160, H256, H512, U256, U512};
 
-use super::{FunctionOrMethodParam, Identifier, Type};
+use super::{FunctionOrMethodParam, Identifier, PathRoot, Type};
 
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]
@@ -119,20 +119,19 @@ impl fmt::Display for Hash {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct FunctionPtr {
-    pub(crate) function_name: Identifier,
-    pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
-    pub(crate) return_type_opt: Option<Box<Type>>,
+/// Wrapper for the `char` type.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Char(char);
+
+impl From<char> for Char {
+    fn from(value: char) -> Self {
+        Char(value)
+    }
 }
 
-impl fmt::Display for FunctionPtr {
+impl fmt::Display for Char {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}({:?}) [-> {:?}]",
-            self.function_name, self.params_opt, self.return_type_opt
-        )
+        write!(f, "{}", self.0)
     }
 }
 
@@ -152,22 +151,6 @@ impl fmt::Display for Str {
     }
 }
 
-/// Wrapper for the `char` type.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Char(char);
-
-impl From<char> for Char {
-    fn from(value: char) -> Self {
-        Char(value)
-    }
-}
-
-impl fmt::Display for Char {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 /// Wrapper for the `bool` type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Bool(bool);
@@ -184,13 +167,20 @@ impl fmt::Display for Bool {
     }
 }
 
-/// Unit struct that represents the unit type `()`.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Unit;
+pub struct FunctionPtr {
+    pub(crate) function_name: Identifier,
+    pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
+    pub(crate) return_type_opt: Option<Box<Type>>,
+}
 
-impl fmt::Display for Unit {
+impl fmt::Display for FunctionPtr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "()")
+        write!(
+            f,
+            "{}({:?}) [-> {:?}]",
+            self.function_name, self.params_opt, self.return_type_opt
+        )
     }
 }
 
@@ -204,6 +194,16 @@ impl fmt::Display for SelfType {
     }
 }
 
+/// Unit struct that represents the unit type `()`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Unit;
+
+impl fmt::Display for Unit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "()")
+    }
+}
+
 /// Struct that represents an inferred type.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InferredType {
@@ -214,4 +214,10 @@ impl fmt::Display for InferredType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "_")
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PathType {
+    pub(crate) path_root: PathRoot,
+    pub(crate) tree_opt: Option<Vec<Identifier>>,
 }

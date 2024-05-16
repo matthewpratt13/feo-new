@@ -12,7 +12,7 @@ impl ParseOperation for RangeExpr {
             ErrorsEmitted
         })?;
 
-        let operator_token = parser.current_token().unwrap();
+        let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let range_op = match operator_token.token_type() {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
@@ -35,7 +35,7 @@ impl ParseOperation for RangeExpr {
 
         if let Some(Token::EOF) = parser.current_token() {
             let expr = RangeExpr {
-                from_opt: Some(Box::new(from_assignee_expr)),
+                from_expr_opt: Some(Box::new(from_assignee_expr)),
                 range_op: {
                     if range_op == RangeOp::RangeInclusive {
                         parser.log_error(ParserErrorKind::UnexpectedRangeOp {
@@ -47,7 +47,7 @@ impl ParseOperation for RangeExpr {
                         range_op
                     }
                 },
-                to_opt: None,
+                to_expr_opt: None,
             };
 
             return Ok(Expression::Range(expr));
@@ -63,9 +63,9 @@ impl ParseOperation for RangeExpr {
         })?;
 
         let expr = Ok(RangeExpr {
-            from_opt: Some(Box::new(from_assignee_expr)),
+            from_expr_opt: Some(Box::new(from_assignee_expr)),
             range_op,
-            to_opt: Some(Box::new(to_assignee_expr)),
+            to_expr_opt: Some(Box::new(to_assignee_expr)),
         })?;
 
         Ok(Expression::Range(expr))
@@ -74,7 +74,7 @@ impl ParseOperation for RangeExpr {
 
 impl RangeExpr {
     pub(crate) fn parse_prefix(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let operator_token = parser.current_token().unwrap();
+        let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let range_op = match operator_token {
             Token::DblDot { .. } => Ok(RangeOp::RangeExclusive),
@@ -93,9 +93,9 @@ impl RangeExpr {
 
         if parser.current_token().is_none() {
             let expr = RangeExpr {
-                from_opt: None,
+                from_expr_opt: None,
                 range_op: range_op.clone(),
-                to_opt: {
+                to_expr_opt: {
                     if range_op == RangeOp::RangeInclusive {
                         parser.log_error(ParserErrorKind::UnexpectedRangeOp {
                             expected: RangeOp::RangeExclusive.to_string(),
@@ -123,9 +123,9 @@ impl RangeExpr {
         parser.next_token();
 
         let expr = RangeExpr {
-            from_opt: None,
+            from_expr_opt: None,
             range_op,
-            to_opt: Some(Box::new(to_assignee_expr)),
+            to_expr_opt: Some(Box::new(to_assignee_expr)),
         };
 
         Ok(Expression::Range(expr))
@@ -146,7 +146,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -160,7 +160,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -174,7 +174,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

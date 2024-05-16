@@ -17,6 +17,10 @@ pub(crate) trait ParseControl {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted>;
 }
 
+pub(crate) trait ParseSimpleExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted>;
+}
+
 /// Trait that defines a shared interface for declaration type `Item`.
 /// E.g., `ConstantDecl` and `ImportDecl`.
 pub(crate) trait ParseDeclaration

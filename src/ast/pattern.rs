@@ -1,6 +1,6 @@
 use core::fmt;
 
-use super::{Identifier, Keyword, PathPrefix, Pattern, RangeOp, ReferenceOp, Separator};
+use super::{Identifier, Keyword, PathRoot, Pattern, RangeOp, ReferenceOp, Separator};
 
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES
@@ -27,7 +27,7 @@ pub(crate) struct StructPattField {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupedPatt {
-    pub(crate) pattern: Box<Pattern>,
+    pub(crate) inner_pattern: Box<Pattern>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -39,7 +39,11 @@ pub struct IdentifierPatt {
 
 impl fmt::Display for IdentifierPatt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}{:?}{}", self.kw_ref_opt, self.kw_mut_opt, self.name)
+        write!(
+            f,
+            "{:?} {:?} {}",
+            self.kw_ref_opt, self.kw_mut_opt, self.name
+        )
     }
 }
 
@@ -50,15 +54,15 @@ pub struct NonePatt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathPatt {
-    pub(crate) root: PathPrefix,
+    pub(crate) path_root: PathRoot,
     pub(crate) tree_opt: Option<Vec<Identifier>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RangePatt {
-    pub(crate) from_opt: Option<Box<Pattern>>,
+    pub(crate) from_pattern_opt: Option<Box<Pattern>>,
     pub(crate) range_op: RangeOp, // `..` or `..=`
-    pub(crate) to_opt: Option<Box<Pattern>>,
+    pub(crate) to_pattern_opt: Option<Box<Pattern>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -86,7 +90,7 @@ pub struct SomePatt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructPatt {
-    pub(crate) path: PathPatt,
+    pub(crate) struct_path: PathPatt,
     pub(crate) fields_opt: Option<Vec<StructPattField>>,
 }
 

@@ -1,12 +1,13 @@
 use core::fmt;
 
+use super::{
+    AssigneeExpr, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathType, Pattern,
+    ReferenceOp, Separator, Type, ValueExpr,
+};
+
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
-use super::{
-    AssigneeExpr, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, Pattern,
-    ReferenceOp, Separator, Type, ValueExpr,
-};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum EnumVariantType {
@@ -32,36 +33,36 @@ impl fmt::Display for FunctionOrMethodParam {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum InherentImplItem {
     ConstantDecl(ConstantDecl),
-    FunctionDef(FunctionItem),
+    FunctionItem(FunctionItem),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum TraitDefItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
-    FunctionDef(FunctionItem),
+    FunctionItem(FunctionItem),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum TraitImplItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
-    FunctionDef(FunctionItem),
+    FunctionItem(FunctionItem),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Visibility {
     Private,                   // default
     PubPackage(PubPackageVis), // `pub(package)`
-    Pub,                       // `pub`
+    Pub,                       // accessible everywhere
 }
 
 /// Type alias representing a path to an `Item` or local variable.
-pub(crate) type PathType = Expression;
+// pub(crate) type PathType = Expression;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct EnumVariantStruct {
-    pub(crate) fields: Vec<StructDefField>,
+    pub(crate) struct_fields: Vec<StructDefField>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -92,19 +93,19 @@ impl fmt::Display for FunctionParam {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ImportTree {
     pub(crate) path_segments: Vec<PathSegment>,
-    pub(crate) wildcard_opt: Option<Separator>,
-    pub(crate) as_clause_opt: Option<(Keyword, Identifier)>,
+    pub(crate) wildcard_opt: Option<Separator>, // trailing `::*`
+    pub(crate) as_clause_opt: Option<(Keyword, Identifier)>, // (`as`, `new_name`)
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct PathSegment {
-    pub(crate) root: Expression,
-    pub(crate) subset_opt: Option<PathSubset>,
+    pub(crate) root: PathType, // e.g., `PathRoot::Identifier(_)`, `package::module::Object`
+    pub(crate) subset_opt: Option<PathSubset>, // e.g., `::{ Foo, Bar, .. }` (basic)
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct PathSubset {
-    pub(crate) trees: Vec<ImportTree>,
+    pub(crate) nested_trees: Vec<ImportTree>, // e.g., `::{ Foo, bar::baz{ FooBar, BAZ, .. }, .. }`
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -115,13 +116,13 @@ pub(crate) struct PubPackageVis {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct SelfParam {
-    pub(crate) prefix_opt: Option<ReferenceOp>,
+    pub(crate) reference_op_opt: Option<ReferenceOp>,
     pub(crate) kw_self: Keyword,
 }
 
 impl fmt::Display for SelfParam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}{}", self.prefix_opt, self.kw_self)
+        write!(f, "{:?}{}", self.reference_op_opt, self.kw_self)
     }
 }
 
@@ -158,8 +159,8 @@ pub struct ConstantDecl {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
     pub(crate) kw_const: Keyword,
-    pub(crate) item_name: Identifier,
-    pub(crate) item_type: Box<Type>,
+    pub(crate) constant_name: Identifier,
+    pub(crate) constant_type: Box<Type>,
     pub(crate) value_opt: Option<ValueExpr>,
 }
 
@@ -188,14 +189,14 @@ pub struct ImportDecl {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
     pub(crate) kw_import: Keyword,
-    pub(crate) tree: ImportTree,
+    pub(crate) import_tree: ImportTree,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct InherentImplDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) kw_impl: Keyword,
-    pub(crate) nominal_type: Type,
+    pub(crate) nominal_type: PathType,
     pub(crate) associated_items_opt: Option<Vec<InherentImplItem>>,
 }
 
@@ -210,13 +211,13 @@ pub struct ModuleItem {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct StaticItemDecl {
+pub struct StaticVarDecl {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
     pub(crate) kw_static: Keyword,
     pub(crate) kw_mut_opt: Option<Keyword>,
-    pub(crate) item_name: Identifier,
-    pub(crate) item_type: Type,
+    pub(crate) var_name: Identifier,
+    pub(crate) var_type: Type,
     pub(crate) assignee_opt: Option<Box<AssigneeExpr>>,
 }
 
@@ -235,7 +236,7 @@ pub struct TupleStructDef {
     pub(crate) visibility: Visibility,
     pub(crate) kw_struct: Keyword,
     pub(crate) struct_name: Identifier,
-    pub(crate) fields_opt: Option<Vec<TupleStructDefField>>,
+    pub(crate) tuple_struct_fields_opt: Option<Vec<TupleStructDefField>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

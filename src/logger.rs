@@ -34,20 +34,26 @@ impl Logger {
     }
 
     /// Log a message if its verbosity level exceeds the initialized one.
+    /// E.g., if the initialized verbosity (`self.level`) is `LogLevel::Debug`, all messages
+    /// will be pushed to `self.messages`. Or if `self.level` is `LogLevel::Warning`
+    /// and the input level is `LogLevel::Error`, only warnings, errors and critical messages
+    /// will be pushed.
     pub fn log(&mut self, level: LogLevel, msg: LogMsg) {
         if self.level <= level {
             self.messages.push(msg);
+        } else {
+            self.messages.push(LogMsg::from(format!("tried to log message and failed. Input verbosity level is lower than the initialized one: {:?}.", self.level)));
         }
     }
 
     /// Retrieve the log messages.
     #[allow(dead_code)]
-    pub fn logs(&self) -> Vec<LogMsg> {
-        self.messages.clone()
+    pub fn messages(&self) -> &[LogMsg] {
+        &self.messages
     }
 
     /// Clear all log messages.
-    pub fn clear_logs(&mut self) {
+    pub fn clear_messages(&mut self) {
         self.messages.clear()
     }
 }

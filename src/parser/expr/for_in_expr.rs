@@ -17,7 +17,7 @@ impl ParseControl for ForInExpr {
 
         let pattern = match parser.current_token() {
             Some(Token::In { .. }) => {
-                parser.log_missing("patt", "iterator element pattern");
+                parser.log_missing("patt", "iterator element");
                 Err(ErrorsEmitted)
             }
             Some(Token::EOF) | None => {
@@ -45,7 +45,7 @@ impl ParseControl for ForInExpr {
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        let iterable = match expression {
+        let iterator = match expression {
             Expression::Literal(l) => match l {
                 Literal::Int(_) => todo!(),
                 Literal::UInt(_) => todo!(),
@@ -101,7 +101,7 @@ impl ParseControl for ForInExpr {
             kw_for,
             pattern,
             kw_in,
-            iterable,
+            iterator,
             block,
         };
 
@@ -132,7 +132,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

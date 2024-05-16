@@ -117,7 +117,7 @@ impl ParseDefinition for TupleStructDef {
             }
         }?;
 
-        let fields_opt =
+        let tuple_struct_fields_opt =
             collection::get_collection(parser, parse_tuple_struct_def_field, &open_paren)?;
 
         match parser.current_token() {
@@ -143,7 +143,7 @@ impl ParseDefinition for TupleStructDef {
                     visibility,
                     kw_struct,
                     struct_name,
-                    fields_opt,
+                    tuple_struct_fields_opt,
                 })
             }
             Some(Token::EOF) | None => {
@@ -237,7 +237,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -257,7 +257,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

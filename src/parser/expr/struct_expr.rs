@@ -1,36 +1,62 @@
 use crate::{
-    ast::{Delimiter, Expression, Identifier, OuterAttr, PathExpr, StructExpr, StructField},
+    ast::{
+        Delimiter, Expression, Identifier, OuterAttr, PathExpr, PathRoot, SelfType, StructExpr,
+        StructField,
+    },
     error::ErrorsEmitted,
-    parser::{collection, Parser, Precedence},
-    span::Position,
+    parser::{collection, ParseConstruct, Parser, Precedence},
     token::Token,
 };
 
-impl StructExpr {
-    pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<Expression, ErrorsEmitted> {
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            let position = Position::new(parser.current, &parser.stream.span().input());
-            parser.next_token();
-            Ok(Delimiter::LBrace { position })
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
+impl ParseConstruct for StructExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let root = match parser.current_token() {
+            Some(Token::Identifier { name, .. }) => {
+                Ok(PathRoot::Identifier(Identifier::from(&name)))
+            }
+            Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
+            _ => {
+                parser.log_unexpected_token("identifier or `Self`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
-        let fields_opt = collection::get_collection(parser, parse_struct_field, &open_brace)?;
+        let struct_path = PathExpr {
+            path_root: root,
+            tree_opt: None,
+        };
+
+        parser.next_token();
+
+        let open_brace = match parser.current_token() {
+            Some(Token::LBrace { .. }) => {
+                let position = parser.current_position();
+                parser.next_token();
+                Ok(Delimiter::LBrace { position })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        let struct_fields_opt =
+            collection::get_collection(parser, parse_struct_field, &open_brace)?;
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
-                Ok(Expression::Struct(StructExpr { path, fields_opt }))
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
+                Ok(Expression::Struct(StructExpr {
+                    struct_path,
+                    struct_fields_opt,
+                }))
             }
             _ => {
-                parser.log_unexpected_token("`}`");
+                parser.log_unmatched_delimiter(&open_brace);
                 Err(ErrorsEmitted)
             }
         }
@@ -59,7 +85,7 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
         Some(Token::Colon { .. }) => {
             parser.next_token();
 
-            if let Some(Token::RBrace { .. } | Token::Comma { .. }) = parser.current_token() {
+            if let Some(Token::Comma { .. } | Token::RBrace { .. }) = parser.current_token() {
                 parser.log_missing("expr", "value for struct field name");
                 return Err(ErrorsEmitted);
             }
@@ -151,7 +177,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

@@ -10,39 +10,44 @@ use crate::{
 
 impl ParseOperation for AssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        {
-            let operator_token = parser.current_token().unwrap_or(Token::EOF);
+        let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
-            let assignment_op = if let Token::Equals { .. } = operator_token {
+        let assignment_op = match operator_token {
+            Token::Equals { .. } => {
                 parser.next_token();
                 Ok(AssignmentOp)
-            } else {
+            }
+            Token::EOF => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
                 parser.log_unexpected_token("assignment operator (`=`)");
                 Err(ErrorsEmitted)
-            }?;
+            }
+        }?;
 
-            let precedence = parser.get_precedence(&operator_token);
+        let precedence = parser.get_precedence(&operator_token);
 
-            let right_expr = parser.parse_expression(precedence)?;
+        let right_expr = parser.parse_expression(precedence)?;
 
-            let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
-                parser.log_error(e);
-                ErrorsEmitted
-            })?;
+        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
-            let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
-                parser.log_error(e);
-                ErrorsEmitted
-            })?;
+        let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
-            let expr = AssignmentExpr {
-                lhs,
-                assignment_op,
-                rhs,
-            };
+        let expr = AssignmentExpr {
+            lhs,
+            assignment_op,
+            rhs,
+        };
 
-            Ok(Expression::Assignment(expr))
-        }
+        Ok(Expression::Assignment(expr))
     }
 }
 
@@ -104,7 +109,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -118,7 +123,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

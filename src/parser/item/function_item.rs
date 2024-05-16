@@ -118,24 +118,25 @@ impl FunctionOrMethodParam {
     pub(crate) fn parse(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
         let token = parser.current_token();
 
-        let prefix_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = token {
-            parser.next_token();
+        let reference_op_opt =
+            if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = token {
+                parser.next_token();
 
-            match token {
-                Some(Token::Ampersand { .. }) => Some(ReferenceOp::Borrow),
-                Some(Token::AmpersandMut { .. }) => Some(ReferenceOp::MutableBorrow),
-                _ => None,
-            }
-        } else {
-            None
-        };
+                match token {
+                    Some(Token::Ampersand { .. }) => Some(ReferenceOp::Borrow),
+                    Some(Token::AmpersandMut { .. }) => Some(ReferenceOp::MutableBorrow),
+                    _ => None,
+                }
+            } else {
+                None
+            };
 
         match parser.current_token() {
             Some(Token::SelfKeyword { .. }) => {
                 parser.next_token();
 
                 let self_param = SelfParam {
-                    prefix_opt,
+                    reference_op_opt,
                     kw_self: Keyword::SelfKeyword,
                 };
 
@@ -198,7 +199,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -236,7 +237,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

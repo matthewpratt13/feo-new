@@ -4,19 +4,21 @@ use crate::{
     },
     error::ErrorsEmitted,
     parser::{ParseConstruct, ParseOperation, Parser, Precedence},
-    span::Position,
     token::Token,
 };
 
 impl ParseConstruct for TupleExpr {
     fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
-            let position = Position::new(parser.current, &parser.stream.span().input());
-            parser.next_token();
-            Ok(Delimiter::LParen { position })
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
+        let open_paren = match parser.current_token() {
+            Some(Token::LParen { .. }) => {
+                let position = parser.current_position();
+                parser.next_token();
+                Ok(Delimiter::LParen { position })
+            }
+            _ => {
+                parser.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let tuple_elements = parse_tuple_elements(parser)?;
@@ -24,16 +26,10 @@ impl ParseConstruct for TupleExpr {
         match parser.current_token() {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
-
                 Ok(Expression::Tuple(TupleExpr { tuple_elements }))
             }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_paren);
-                parser.log_missing_token("`)`");
-                Err(ErrorsEmitted)
-            }
             _ => {
-                parser.log_unexpected_token("`)`");
+                parser.log_unmatched_delimiter(&open_paren);
                 Err(ErrorsEmitted)
             }
         }
@@ -41,7 +37,7 @@ impl ParseConstruct for TupleExpr {
 }
 
 fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmitted> {
-    let mut elements = Vec::new();
+    let mut elements: Vec<(Expression, Separator)> = Vec::new();
     let mut final_element_opt = None::<Box<Expression>>;
 
     while !matches!(
@@ -69,7 +65,7 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
 
 impl ParseOperation for TupleIndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
+        let tuple = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
@@ -90,7 +86,7 @@ impl ParseOperation for TupleIndexExpr {
         }?;
 
         let expr = TupleIndexExpr {
-            operand: Box::new(assignee_expr),
+            tuple: Box::new(tuple),
             index,
         };
 
@@ -112,7 +108,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -126,7 +122,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }
