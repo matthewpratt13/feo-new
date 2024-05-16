@@ -46,21 +46,21 @@ impl ParseControl for MatchExpr {
             }
         }?;
 
-        let mut arms = Vec::new();
+        let mut match_arms: Vec<MatchArm> = Vec::new();
 
         while !matches!(
             parser.current_token(),
             Some(Token::RBrace { .. } | Token::EOF)
         ) {
             let arm = parse_match_arm(parser)?;
-            arms.push(arm);
+            match_arms.push(arm);
 
             if let Some(Token::Comma { .. }) = parser.current_token() {
                 parser.next_token();
             }
         }
 
-        let final_arm = if let Some(a) = arms.pop() {
+        let final_arm = if let Some(a) = match_arms.pop() {
             Ok(Box::new(a))
         } else {
             parser.log_missing("patt", "match arm");
@@ -74,10 +74,10 @@ impl ParseControl for MatchExpr {
                 let expr = MatchExpr {
                     kw_match,
                     scrutinee,
-                    arms_opt: {
-                        match arms.is_empty() {
+                    match_arms_opt: {
+                        match match_arms.is_empty() {
                             true => None,
-                            false => Some(arms),
+                            false => Some(match_arms),
                         }
                     },
                     final_arm,
@@ -139,13 +139,11 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         }
     }?;
 
-    let arm = MatchArm {
+    Ok(MatchArm {
         matched_pattern,
         guard_opt,
         arm_expression,
-    };
-
-    Ok(arm)
+    })
 }
 
 #[cfg(test)]

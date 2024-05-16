@@ -186,7 +186,7 @@ pub struct MappingExpr {
 pub struct MatchExpr {
     pub(crate) kw_match: Keyword,
     pub(crate) scrutinee: AssigneeExpr,
-    pub(crate) arms_opt: Option<Vec<MatchArm>>,
+    pub(crate) match_arms_opt: Option<Vec<MatchArm>>,
     pub(crate) final_arm: Box<MatchArm>, // default case
 }
 
