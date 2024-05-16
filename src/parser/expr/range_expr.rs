@@ -12,7 +12,7 @@ impl ParseOperation for RangeExpr {
             ErrorsEmitted
         })?;
 
-        let operator_token = parser.current_token().unwrap();
+        let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let range_op = match operator_token.token_type() {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
@@ -74,7 +74,7 @@ impl ParseOperation for RangeExpr {
 
 impl RangeExpr {
     pub(crate) fn parse_prefix(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let operator_token = parser.current_token().unwrap();
+        let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let range_op = match operator_token {
             Token::DblDot { .. } => Ok(RangeOp::RangeExclusive),
