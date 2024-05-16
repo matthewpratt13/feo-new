@@ -54,7 +54,7 @@ pub struct NonePatt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathPatt {
-    pub(crate) root: PathRoot,
+    pub(crate) path_root: PathRoot,
     pub(crate) tree_opt: Option<Vec<Identifier>>,
 }
 

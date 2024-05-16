@@ -112,7 +112,7 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
                 Err(ErrorsEmitted)
             }
 
-            _ => Ok(Some(Type::parse(parser)?)),
+            _ => Ok(Some(Box::new(Type::parse(parser)?))),
         }
     } else {
         Ok(None)

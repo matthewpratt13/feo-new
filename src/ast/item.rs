@@ -1,7 +1,7 @@
 use core::fmt;
 
 use super::{
-    AssigneeExpr, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, Pattern,
+    AssigneeExpr, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathType, Pattern,
     ReferenceOp, Separator, Type, ValueExpr,
 };
 
@@ -58,7 +58,7 @@ pub(crate) enum Visibility {
 }
 
 /// Type alias representing a path to an `Item` or local variable.
-pub(crate) type PathType = Expression;
+// pub(crate) type PathType = Expression;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct EnumVariantStruct {
@@ -196,7 +196,7 @@ pub struct ImportDecl {
 pub struct InherentImplDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) kw_impl: Keyword,
-    pub(crate) nominal_type: Type,
+    pub(crate) nominal_type: PathType,
     pub(crate) associated_items_opt: Option<Vec<InherentImplItem>>,
 }
 

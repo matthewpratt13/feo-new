@@ -2,7 +2,7 @@ use core::fmt;
 
 pub use crate::{B16, B2, B32, B4, B8, H160, H256, H512, U256, U512};
 
-use super::{FunctionOrMethodParam, Identifier, Type};
+use super::{FunctionOrMethodParam, Identifier, PathRoot, Type};
 
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]
@@ -214,4 +214,10 @@ impl fmt::Display for InferredType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "_")
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PathType {
+    pub(crate) path_root: PathRoot,
+    pub(crate) tree_opt: Option<Vec<Identifier>>,
 }

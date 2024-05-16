@@ -1,8 +1,7 @@
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InherentImplDef,
-        InherentImplItem, Keyword, OuterAttr, PathExpr, PathRoot, TraitImplDef, TraitImplItem,
-        Type, Visibility,
+        AliasDecl, ConstantDecl, Delimiter, FunctionItem, InherentImplDef, InherentImplItem,
+        Keyword, OuterAttr, PathType, TraitImplDef, TraitImplItem, Type, Visibility,
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
@@ -26,7 +25,7 @@ impl ParseDefinition for InherentImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let nominal_type = Type::parse(parser)?;
+        let nominal_type = PathType::parse(parser, parser.current_token())?;
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
@@ -87,8 +86,8 @@ impl ParseDefinition for TraitImplDef {
         let token = parser.current_token();
 
         let implemented_trait_path = match token {
-            Some(Token::Identifier { name, .. }) => {
-                let path = PathExpr::parse(parser, PathRoot::Identifier(Identifier(name)));
+            Some(Token::Identifier { .. }) => {
+                let path = PathType::parse(parser, token);
                 parser.next_token();
                 path
             }

@@ -45,6 +45,7 @@ mod precedence;
 mod test_utils;
 mod ty;
 mod visibility;
+mod path_type;
 
 use std::collections::HashMap;
 
@@ -52,13 +53,13 @@ use crate::{
     ast::{
         ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
         ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter, DereferenceExpr,
-        DereferenceOp, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
-        Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
-        MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, PathRoot,
-        Pattern, RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferenceOp, ReferencePatt,
-        RestPatt, ResultExpr, ResultPatt, ReturnExpr, SelfType, SomeExpr, SomePatt, Statement,
-        StructExpr, StructPatt, TupleExpr, TupleIndexExpr, TuplePatt, TypeCastExpr, UnaryExpr,
-        UnaryOp, UnderscoreExpr, UnwrapExpr, WhileExpr, WildcardPatt,
+        Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt, Identifier,
+        IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal, MappingExpr, MatchExpr,
+        MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, Pattern, RangeExpr, RangeOp,
+        RangePatt, ReferenceExpr, ReferenceOp, ReferencePatt, RestPatt, ResultExpr, ResultPatt,
+        ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt, TupleExpr,
+        TupleIndexExpr, TuplePatt, TypeCastExpr, UnaryExpr, UnderscoreExpr, UnwrapExpr, WhileExpr,
+        WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
@@ -66,6 +67,7 @@ use crate::{
     token::{Token, TokenStream, TokenType},
 };
 
+use self::parse::ParseSimple;
 pub(crate) use self::parse::{ParseConstruct, ParseControl, ParseOperation, ParseStatement};
 pub(crate) use self::precedence::Precedence;
 
@@ -275,8 +277,8 @@ impl Parser {
         self.log_current_token(true);
 
         match &self.current_token() {
-            Some(Token::Identifier { name, .. }) => {
-                let expr = PathExpr::parse(self, PathRoot::Identifier(Identifier::from(name)));
+            Some(Token::Identifier { .. }) => {
+                let expr = PathExpr::parse(self);
                 expr
             }
             Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(*value))),
@@ -369,7 +371,7 @@ impl Parser {
 
                             _ => {
                                 let expr = self.parse_primary();
-                                self.next_token();
+                                // self.next_token();
                                 expr
                             }
                         }
@@ -377,12 +379,12 @@ impl Parser {
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    let expr = PathExpr::parse(self, PathRoot::Identifier(Identifier::from(name)));
-                    self.next_token();
+                    let expr = PathExpr::parse(self);
+                    // self.next_token();
                     expr
                 } else {
                     let expr = self.parse_primary();
-                    self.next_token();
+                    // self.next_token();
                     expr
                 }
             }
@@ -390,49 +392,37 @@ impl Parser {
                 if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     StructExpr::parse(self)
                 } else {
-                    self.next_token();
-                    PathExpr::parse(self, PathRoot::SelfType(SelfType))
+                    PathExpr::parse(self)
                 }
             }
-            Some(Token::SelfKeyword { .. }) => {
-                self.next_token();
-                PathExpr::parse(self, PathRoot::SelfKeyword)
-            }
-            Some(Token::Package { .. }) => {
-                self.next_token();
-                PathExpr::parse(self, PathRoot::Package)
-            }
-            Some(Token::Super { .. }) => {
-                self.next_token();
-                PathExpr::parse(self, PathRoot::Super)
-            }
+            Some(Token::SelfKeyword { .. }) => PathExpr::parse(self),
+            Some(Token::Package { .. }) => PathExpr::parse(self),
+            Some(Token::Super { .. }) => PathExpr::parse(self),
             Some(Token::Minus { .. }) => {
                 if self.context == ParserContext::Unary {
-                    UnaryExpr::parse(self, UnaryOp::Negate)
+                    UnaryExpr::parse(self)
                 } else {
                     self.set_context(ParserContext::Unary);
                     self.parse_expression(Precedence::Difference)
                 }
             }
 
-            Some(Token::Bang { .. }) => UnaryExpr::parse(self, UnaryOp::Not),
+            Some(Token::Bang { .. }) => UnaryExpr::parse(self),
 
             Some(Token::Ampersand { .. }) => {
                 if self.context == ParserContext::Unary {
-                    ReferenceExpr::parse(self, ReferenceOp::Borrow)
+                    ReferenceExpr::parse(self)
                 } else {
                     self.set_context(ParserContext::Unary);
                     self.parse_expression(Precedence::Unary)
                 }
             }
 
-            Some(Token::AmpersandMut { .. }) => {
-                ReferenceExpr::parse(self, ReferenceOp::MutableBorrow)
-            }
+            Some(Token::AmpersandMut { .. }) => ReferenceExpr::parse(self),
 
             Some(Token::Asterisk { .. }) => {
                 if self.context == ParserContext::Unary {
-                    DereferenceExpr::parse(self, DereferenceOp)
+                    DereferenceExpr::parse(self)
                 } else {
                     self.set_context(ParserContext::Unary);
                     self.parse_expression(Precedence::Product)
@@ -914,35 +904,22 @@ impl Parser {
                             | Token::Return { .. }
                             | Token::Semicolon { .. },
                         )
-                        | None => {
-                            let path = PathPatt {
-                                root: PathRoot::Identifier(Identifier::from(name)),
-                                tree_opt: None,
-                            };
-
-                            self.next_token();
-
-                            StructPatt::parse(self, path)
-                        }
+                        | None => StructPatt::parse(self),
 
                         _ => {
-                            let patt =
-                                PathPatt::parse(self, PathRoot::Identifier(Identifier::from(name)));
-                            self.next_token();
+                            let patt = PathPatt::parse(self);
                             patt
                         }
                     }
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    let patt = PathPatt::parse(self, PathRoot::Identifier(Identifier::from(name)));
-                    self.next_token();
+                    let patt = PathPatt::parse(self);
                     patt
                 } else if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    let patt = PathPatt::parse(self, PathRoot::Identifier(Identifier::from(name)))?;
-                    self.next_token();
+                    let patt = PathPatt::parse(self)?;
                     RangePatt::parse(self, patt)
                 } else {
                     let patt = IdentifierPatt::parse(self);
@@ -954,31 +931,14 @@ impl Parser {
 
             Some(Token::SelfType { .. }) => {
                 if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    let path = PathPatt {
-                        root: PathRoot::SelfType(SelfType),
-                        tree_opt: None,
-                    };
-
-                    self.next_token();
-                    StructPatt::parse(self, path)
+                    StructPatt::parse(self)
                 } else {
-                    self.next_token();
-                    PathPatt::parse(self, PathRoot::SelfType(SelfType))
+                    PathPatt::parse(self)
                 }
             }
-            Some(Token::SelfKeyword { .. }) => {
-                self.next_token();
-                PathPatt::parse(self, PathRoot::SelfKeyword)
-            }
-            Some(Token::Package { .. }) => {
-                self.next_token();
-                PathPatt::parse(self, PathRoot::Package)
-            }
-            Some(Token::Super { .. }) => {
-                self.next_token();
-                PathPatt::parse(self, PathRoot::Super)
-            }
-
+            Some(Token::SelfKeyword { .. }) => PathPatt::parse(self),
+            Some(Token::Package { .. }) => PathPatt::parse(self),
+            Some(Token::Super { .. }) => PathPatt::parse(self),
             Some(Token::Ampersand { .. }) => ReferencePatt::parse(self, ReferenceOp::Borrow),
             Some(Token::AmpersandMut { .. }) => {
                 ReferencePatt::parse(self, ReferenceOp::MutableBorrow)

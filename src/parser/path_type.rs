@@ -1,22 +1,26 @@
 use crate::{
-    ast::{Identifier, PathPatt, PathRoot, Pattern, SelfType},
+    ast::{Identifier, PathRoot, PathType, SelfType},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
-    parser::Parser,
     token::Token,
 };
 
-impl PathPatt {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+use super::Parser;
+
+impl PathType {
+    pub(crate) fn parse(
+        parser: &mut Parser,
+        token: Option<Token>,
+    ) -> Result<PathType, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
-            LogMsg::from("entering `PathPatt::parse()`"),
+            LogMsg::from("entering `PathType::parse()`"),
         );
         parser.log_current_token(false);
 
         let mut tree: Vec<Identifier> = Vec::new();
 
-        let path_root = match parser.current_token() {
+        let path_root = match token {
             Some(Token::Identifier { name, .. }) => {
                 Ok(PathRoot::Identifier(Identifier::from(&name)))
             }
@@ -35,17 +39,27 @@ impl PathPatt {
         parser.next_token();
 
         while let Some(Token::DblColon { .. }) = parser.current_token() {
-            if let Some(Token::Identifier { name, .. }) = parser.peek_ahead_by(1) {
-                parser.next_token();
-                parser.next_token();
+            match parser.peek_ahead_by(1) {
+                Some(Token::Identifier { name, .. }) => {
+                    parser.next_token();
+                    parser.next_token();
 
-                tree.push(Identifier(name));
-            } else {
-                break;
+                    tree.push(Identifier(name));
+                }
+                Some(Token::LBrace { .. }) => break,
+                Some(Token::EOF) | None => {
+                    parser.log_unexpected_eoi();
+                    return Err(ErrorsEmitted);
+                }
+                _ => {
+                    parser.log_unexpected_token("identifier");
+                    return Err(ErrorsEmitted);
+                }
             }
         }
 
-        let expr = PathPatt {
+
+        let path_type = PathType {
             path_root,
             tree_opt: {
                 match tree.is_empty() {
@@ -57,9 +71,9 @@ impl PathPatt {
 
         parser
             .logger
-            .log(LogLevel::Debug, LogMsg::from("exiting `PathPatt::parse()`"));
+            .log(LogLevel::Debug, LogMsg::from("exiting `PathExpr::parse()`"));
         parser.log_current_token(false);
 
-        Ok(Pattern::PathPatt(expr))
+        Ok(path_type)
     }
 }

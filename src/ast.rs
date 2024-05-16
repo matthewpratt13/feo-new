@@ -327,7 +327,7 @@ pub(crate) enum Separator {
 /// Enum representing the different types of expression in the AST.
 /// `Expression` nodes always produce or evaluate to a value and may have *side effects*.
 /// Expressions can function differently in various contexts; i.e., they can act both as values
-/// and as locations in memory. This distinction refers to **value expressions** 
+/// and as locations in memory. This distinction refers to **value expressions**
 /// and **place expressions**. See additional expression type enumerations below for both cases.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Expression {
@@ -505,7 +505,7 @@ impl TryFrom<Expression> for ValueExpr {
 
 /// Enum representing expressions behaving in a place / assignee expression context.
 /// **Assignee expressions** usually occur on the left hand side of assignment expressions,
-/// and cover all **place expressions**, the underscore expression, plus arrays 
+/// and cover all **place expressions**, the underscore expression, plus arrays
 /// of assignee expressions, tuples of assignee expressions, and structs of assignee expressions.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum AssigneeExpr {
@@ -528,7 +528,7 @@ impl TryFrom<Expression> for AssigneeExpr {
     type Error = ParserErrorKind;
 
     /// Check if an expression can act as an assignee expression and return the wrapped expression,
-    /// or else throw an error. 
+    /// or else throw an error.
     /// Also tries to convert an `Expression` into an `AssigneeExpr`.
     /// E.g., An array expression can act as an assignee expression *if it contains elements
     /// of assignee expressions*. The same goes for struct and tuple assignee expressions.
@@ -740,7 +740,7 @@ pub(crate) enum Type {
 
     Tuple(Vec<Type>),
 
-    UserDefined(Expression), // struct, enum, trait, alias, constant (paths / items)
+    UserDefined(PathType), // struct, enum, trait, alias, constant (paths / items)
 
     FunctionPtr(FunctionPtr),
 
@@ -802,7 +802,7 @@ impl fmt::Display for Type {
                 num_elements,
             } => write!(f, "[{}; {}]", *element_type, num_elements),
             Type::Tuple(t) => write!(f, "({:?})", t),
-            Type::UserDefined(ud) => write!(f, "{}", ud),
+            Type::UserDefined(ud) => write!(f, "{:?}", ud),
             Type::FunctionPtr(fp) => write!(f, "{}", fp),
             Type::Reference {
                 reference_op,

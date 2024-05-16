@@ -1,8 +1,7 @@
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Delimiter, FunctionOrMethodParam, FunctionPtr, Hash,
-        Identifier, InferredType, Int, PathExpr, PathRoot, ReferenceOp, SelfType, Str, Type, UInt,
-        Unit,
+        Identifier, InferredType, Int, PathType, ReferenceOp, SelfType, Str, Type, UInt, Unit,
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
@@ -241,30 +240,29 @@ impl Type {
 
                     Ok(Type::InferredType(ty))
                 } else {
-                    let path =
-                        PathExpr::parse(parser, PathRoot::Identifier(Identifier::from(name)))?;
+                    let path = PathType::parse(parser, token)?;
                     Ok(Type::UserDefined(path))
                 }
             }
 
             Some(Token::Package { .. }) => {
-                let path = PathExpr::parse(parser, PathRoot::Package)?;
+                let path = PathType::parse(parser, token)?;
                 Ok(Type::UserDefined(path))
             }
 
             Some(Token::Super { .. }) => {
-                let path = PathExpr::parse(parser, PathRoot::Super)?;
+                let path = PathType::parse(parser, token)?;
                 Ok(Type::UserDefined(path))
             }
 
             Some(Token::SelfKeyword { .. }) => {
-                let path = PathExpr::parse(parser, PathRoot::SelfKeyword)?;
+                let path = PathType::parse(parser, token)?;
                 Ok(Type::UserDefined(path))
             }
 
             Some(Token::SelfType { .. }) => match parser.peek_ahead_by(1) {
                 Some(Token::DblColon { .. }) => {
-                    let path = PathExpr::parse(parser, PathRoot::SelfType(SelfType))?;
+                    let path = PathType::parse(parser, token)?;
                     Ok(Type::UserDefined(path))
                 }
                 _ => Ok(Type::SelfType(SelfType)),

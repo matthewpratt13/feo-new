@@ -29,7 +29,7 @@ pub(crate) enum PathRoot {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ClosureParam {
     pub(crate) param_name: Pattern,
-    pub(crate) type_ann_opt: Option<Type>,
+    pub(crate) type_ann_opt: Option<Box<Type>>,
 }
 
 /// Struct representing a key-value pair in a mapping.
@@ -204,7 +204,7 @@ pub struct NoneExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathExpr {
-    pub(crate) root: PathRoot,
+    pub(crate) path_root: PathRoot,
     pub(crate) tree_opt: Option<Vec<Identifier>>,
 }
 

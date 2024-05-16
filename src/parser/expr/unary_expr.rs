@@ -4,15 +4,22 @@ use crate::{
         UnaryExpr, UnaryOp, ValueExpr,
     },
     error::ErrorsEmitted,
-    parser::{Parser, Precedence},
+    parser::{parse::ParseSimple, Parser, Precedence},
+    token::Token,
 };
 
 /// Parse a unary operation, specifically NOT (`!`) and negate (`-`), based on the input operator.
-impl UnaryExpr {
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        unary_op: UnaryOp,
-    ) -> Result<Expression, ErrorsEmitted> {
+impl ParseSimple for UnaryExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let unary_op = match parser.current_token() {
+            Some(Token::Minus { .. }) => Ok(UnaryOp::Negate),
+            Some(Token::Bang { .. }) => Ok(UnaryOp::Not),
+            _ => {
+                parser.log_unexpected_token("unary operator (`-` or `!`)");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
         parser.next_token();
 
         let operand = parser.parse_expression(Precedence::Unary)?;
@@ -31,13 +38,19 @@ impl UnaryExpr {
     }
 }
 
-impl ReferenceExpr {
+impl ParseSimple for ReferenceExpr {
     /// Parse a unary reference operation – i.e., borrow (`&`) or mutable reference (`&mut`) –
     /// based on the input operator.
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        reference_op: ReferenceOp,
-    ) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let reference_op = match parser.current_token() {
+            Some(Token::Ampersand { .. }) => Ok(ReferenceOp::Borrow),
+            Some(Token::AmpersandMut { .. }) => Ok(ReferenceOp::MutableBorrow),
+            _ => {
+                parser.log_unexpected_token("reference operator (`&` or `&mut`)");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
         parser.next_token();
 
         let operand = parser.parse_expression(Precedence::Unary)?;
@@ -51,12 +64,17 @@ impl ReferenceExpr {
     }
 }
 
-impl DereferenceExpr {
+impl ParseSimple for DereferenceExpr {
     /// Parse a unary dereference operation with the operator `*`.
-    pub(crate) fn parse(
-        parser: &mut Parser,
-        dereference_op: DereferenceOp,
-    ) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let dereference_op = match parser.current_token() {
+            Some(Token::Asterisk { .. }) => Ok(DereferenceOp),
+            _ => {
+                parser.log_unexpected_token("dereference operator (`*`)");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
         parser.next_token();
 
         let operand = parser.parse_expression(Precedence::Unary)?;

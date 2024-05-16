@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Identifier, PathExpr, PathRoot},
+    ast::{Expression, Identifier, PathExpr, PathRoot, SelfType},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::Parser,
@@ -7,7 +7,7 @@ use crate::{
 };
 
 impl PathExpr {
-    pub(crate) fn parse(parser: &mut Parser, root: PathRoot) -> Result<Expression, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `PathExpr::parse()`"),
@@ -15,6 +15,24 @@ impl PathExpr {
         parser.log_current_token(false);
 
         let mut tree: Vec<Identifier> = Vec::new();
+
+        let path_root = match parser.current_token() {
+            Some(Token::Identifier { name, .. }) => {
+                Ok(PathRoot::Identifier(Identifier::from(&name)))
+            }
+            Some(Token::SelfKeyword { .. }) => Ok(PathRoot::SelfKeyword),
+            Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
+            Some(Token::Package { .. }) => Ok(PathRoot::Package),
+            Some(Token::Super { .. }) => Ok(PathRoot::Super),
+            _ => {
+                parser.log_unexpected_token(
+                    "path root (identifier, `package`, `super`, `self` or `Self`)",
+                );
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        parser.next_token();
 
         while let Some(Token::DblColon { .. }) = parser.current_token() {
             match parser.peek_ahead_by(1) {
@@ -37,7 +55,7 @@ impl PathExpr {
         }
 
         let expr = PathExpr {
-            root,
+            path_root,
             tree_opt: {
                 match tree.is_empty() {
                     true => None,

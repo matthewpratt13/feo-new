@@ -22,7 +22,7 @@ impl ParseConstruct for StructExpr {
         }?;
 
         let struct_path = PathExpr {
-            root,
+            path_root: root,
             tree_opt: None,
         };
 
