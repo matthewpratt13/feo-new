@@ -7,7 +7,7 @@ use crate::{
 
 impl ParseOperation for MethodCallExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
+        let receiver = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
@@ -50,7 +50,7 @@ impl ParseOperation for MethodCallExpr {
                 parser.next_token();
 
                 let expr = MethodCallExpr {
-                    receiver: Box::new(assignee_expr),
+                    receiver: Box::new(receiver),
                     method_name,
                     args_opt,
                 };
