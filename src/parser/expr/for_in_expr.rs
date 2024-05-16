@@ -17,7 +17,7 @@ impl ParseControl for ForInExpr {
 
         let pattern = match parser.current_token() {
             Some(Token::In { .. }) => {
-                parser.log_missing("patt", "iterator element pattern");
+                parser.log_missing("patt", "iterator element");
                 Err(ErrorsEmitted)
             }
             Some(Token::EOF) | None => {
