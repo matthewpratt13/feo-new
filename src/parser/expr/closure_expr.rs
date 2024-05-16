@@ -103,7 +103,7 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
         parser.next_token();
 
         match parser.current_token() {
-            Some(Token::Pipe { .. } | Token::Comma { .. }) => {
+            Some(Token::Comma { .. } | Token::Pipe { .. }) => {
                 parser.log_missing("type", "closure parameter type annotation");
                 Err(ErrorsEmitted)
             }
