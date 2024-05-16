@@ -10,39 +10,37 @@ use crate::{
 
 impl ParseOperation for AssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        {
-            let operator_token = parser.current_token().unwrap_or(Token::EOF);
+        let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
-            let assignment_op = if let Token::Equals { .. } = operator_token {
-                parser.next_token();
-                Ok(AssignmentOp)
-            } else {
-                parser.log_unexpected_token("assignment operator (`=`)");
-                Err(ErrorsEmitted)
-            }?;
+        let assignment_op = if let Token::Equals { .. } = operator_token {
+            parser.next_token();
+            Ok(AssignmentOp)
+        } else {
+            parser.log_unexpected_token("assignment operator (`=`)");
+            Err(ErrorsEmitted)
+        }?;
 
-            let precedence = parser.get_precedence(&operator_token);
+        let precedence = parser.get_precedence(&operator_token);
 
-            let right_expr = parser.parse_expression(precedence)?;
+        let right_expr = parser.parse_expression(precedence)?;
 
-            let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
-                parser.log_error(e);
-                ErrorsEmitted
-            })?;
+        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
-            let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
-                parser.log_error(e);
-                ErrorsEmitted
-            })?;
+        let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
-            let expr = AssignmentExpr {
-                lhs,
-                assignment_op,
-                rhs,
-            };
+        let expr = AssignmentExpr {
+            lhs,
+            assignment_op,
+            rhs,
+        };
 
-            Ok(Expression::Assignment(expr))
-        }
+        Ok(Expression::Assignment(expr))
     }
 }
 
