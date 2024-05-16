@@ -199,7 +199,7 @@ impl Parser {
         let mut statements: Vec<Statement> = Vec::new();
 
         // clear logs and log status message
-        self.logger.clear_logs();
+        self.logger.clear_messages();
         self.logger
             .log(LogLevel::Info, LogMsg::from("starting to parse tokens"));
 
@@ -1092,8 +1092,8 @@ impl Parser {
 
     /// Utility function that is used to report the current token and its precedence for debugging.
     fn log_current_token(&mut self, log_precedence: bool) {
-        let token = self.current_token();
-        let precedence = self.get_precedence(token.as_ref().unwrap());
+        let token = self.current_token().unwrap();
+        let precedence = self.get_precedence(&token);
 
         self.logger.log(
             LogLevel::Debug,
@@ -1421,7 +1421,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -1435,7 +1435,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -1449,7 +1449,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

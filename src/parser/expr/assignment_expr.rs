@@ -12,12 +12,19 @@ impl ParseOperation for AssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
-        let assignment_op = if let Token::Equals { .. } = operator_token {
-            parser.next_token();
-            Ok(AssignmentOp)
-        } else {
-            parser.log_unexpected_token("assignment operator (`=`)");
-            Err(ErrorsEmitted)
+        let assignment_op = match operator_token {
+            Token::Equals { .. } => {
+                parser.next_token();
+                Ok(AssignmentOp)
+            }
+            Token::EOF => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("assignment operator (`=`)");
+                Err(ErrorsEmitted)
+            }
         }?;
 
         let precedence = parser.get_precedence(&operator_token);
@@ -102,7 +109,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -116,7 +123,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }

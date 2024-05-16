@@ -79,7 +79,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -92,7 +92,7 @@ mod tests {
 
         parser.parse().expect(&format!(
             "unable to parse input. Log output: {:#?}",
-            parser.logger.logs()
+            parser.logger.messages()
         ));
     }
 }

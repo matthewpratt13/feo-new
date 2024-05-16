@@ -74,7 +74,7 @@ impl ParseOperation for TupleIndexExpr {
             Some(Token::UIntLiteral { value, .. }) => {
                 parser.next_token();
                 Ok(value)
-            } 
+            }
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
@@ -108,7 +108,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 
@@ -122,7 +122,7 @@ mod tests {
 
         match statements {
             Ok(t) => Ok(println!("{:#?}", t)),
-            Err(_) => Err(println!("{:#?}", parser.logger.logs())),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
 }
