@@ -7,7 +7,7 @@ use crate::{
 
 impl ParseOperation for IndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
+        let array = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
@@ -30,7 +30,7 @@ impl ParseOperation for IndexExpr {
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 
-        let value_expr = ValueExpr::try_from(expression).map_err(|e| {
+        let index = ValueExpr::try_from(expression).map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
@@ -40,8 +40,8 @@ impl ParseOperation for IndexExpr {
                 parser.next_token();
 
                 let expr = IndexExpr {
-                    array: Box::new(assignee_expr),
-                    index: Box::new(value_expr),
+                    array: Box::new(array),
+                    index: Box::new(index),
                 };
 
                 Ok(Expression::Index(expr))
