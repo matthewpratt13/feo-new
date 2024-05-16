@@ -365,16 +365,7 @@ impl Parser {
                                 | Token::Return { .. }
                                 | Token::Semicolon { .. },
                             )
-                            | None => {
-                                let path = PathExpr {
-                                    root: PathRoot::Identifier(Identifier::from(name)),
-                                    tree_opt: None,
-                                };
-
-                                self.next_token();
-
-                                StructExpr::parse(self, path)
-                            }
+                            | None => StructExpr::parse(self),
 
                             _ => {
                                 let expr = self.parse_primary();
@@ -397,13 +388,7 @@ impl Parser {
             }
             Some(Token::SelfType { .. }) => {
                 if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    let path = PathExpr {
-                        root: PathRoot::SelfType(SelfType),
-                        tree_opt: None,
-                    };
-
-                    self.next_token();
-                    StructExpr::parse(self, path)
+                    StructExpr::parse(self)
                 } else {
                     self.next_token();
                     PathExpr::parse(self, PathRoot::SelfType(SelfType))

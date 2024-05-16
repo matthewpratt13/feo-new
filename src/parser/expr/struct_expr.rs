@@ -1,12 +1,33 @@
 use crate::{
-    ast::{Delimiter, Expression, Identifier, OuterAttr, PathExpr, StructExpr, StructField},
+    ast::{
+        Delimiter, Expression, Identifier, OuterAttr, PathExpr, PathRoot, SelfType, StructExpr,
+        StructField,
+    },
     error::ErrorsEmitted,
-    parser::{collection, Parser, Precedence},
+    parser::{collection, ParseConstruct, Parser, Precedence},
     token::Token,
 };
 
-impl StructExpr {
-    pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstruct for StructExpr {
+    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+        let root = match parser.current_token() {
+            Some(Token::Identifier { name, .. }) => {
+                Ok(PathRoot::Identifier(Identifier::from(&name)))
+            }
+            Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
+            _ => {
+                parser.log_unexpected_token("identifier or `Self`");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        let struct_path = PathExpr {
+            root,
+            tree_opt: None,
+        };
+
+        parser.next_token();
+
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 let position = parser.current_position();
@@ -30,7 +51,7 @@ impl StructExpr {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
                 Ok(Expression::Struct(StructExpr {
-                    struct_path: path,
+                    struct_path,
                     struct_fields_opt,
                 }))
             }
