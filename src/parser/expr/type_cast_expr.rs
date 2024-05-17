@@ -1,22 +1,19 @@
 use crate::{
-    ast::{Expression, Keyword, Type, TypeCastExpr, ValueExpr},
+    ast::{Expression, Type, TypeCastExpr, TypeCastOp},
     error::ErrorsEmitted,
-    parser::{ParseOperation, Parser},
+    parser::{ParseOperatorExpr, Parser},
     token::Token,
 };
 
-impl ParseOperation for TypeCastExpr {
+impl ParseOperatorExpr for TypeCastExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let value_expr = ValueExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let value_expr = left_expr.try_to_value_expr(parser)?;
 
-        let kw_as = if let Some(Token::As { .. }) = parser.current_token() {
+        let type_cast_op = if let Some(Token::As { .. }) = parser.current_token() {
             parser.next_token();
-            Ok(Keyword::As)
+            Ok(TypeCastOp)
         } else {
-            parser.log_unexpected_token("`as`");
+            parser.log_unexpected_token("type cast operator (`as`)");
             Err(ErrorsEmitted)
         }?;
 
@@ -57,7 +54,7 @@ impl ParseOperation for TypeCastExpr {
 
         let expr = TypeCastExpr {
             value: Box::new(value_expr),
-            kw_as,
+            type_cast_op,
             new_type,
         };
 

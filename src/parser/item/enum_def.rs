@@ -9,9 +9,9 @@ use crate::{
     token::Token,
 };
 
-use super::ParseDefinition;
+use super::ParseDefItem;
 
-impl ParseDefinition for EnumDef {
+impl ParseDefItem for EnumDef {
     fn parse(
         parser: &mut Parser,
         attributes_opt: Option<Vec<OuterAttr>>,

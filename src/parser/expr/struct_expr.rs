@@ -1,15 +1,14 @@
 use crate::{
     ast::{
-        Delimiter, Expression, Identifier, OuterAttr, PathExpr, PathRoot, SelfType, StructExpr,
-        StructField,
+        Delimiter, Identifier, OuterAttr, PathExpr, PathRoot, SelfType, StructExpr, StructField,
     },
     error::ErrorsEmitted,
-    parser::{collection, ParseConstruct, Parser, Precedence},
+    parser::{collection, ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
 
-impl ParseConstruct for StructExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstructExpr for StructExpr {
+    fn parse(parser: &mut Parser) -> Result<StructExpr, ErrorsEmitted> {
         let root = match parser.current_token() {
             Some(Token::Identifier { name, .. }) => {
                 Ok(PathRoot::Identifier(Identifier::from(&name)))
@@ -50,10 +49,10 @@ impl ParseConstruct for StructExpr {
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
-                Ok(Expression::Struct(StructExpr {
+                Ok(StructExpr {
                     struct_path,
                     struct_fields_opt,
-                }))
+                })
             }
             _ => {
                 parser.log_unmatched_delimiter(&open_brace);
@@ -100,7 +99,7 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
         }
     }
 
-    let field_value = parser.parse_expression(Precedence::Lowest)?;
+    let field_value = Box::new(parser.parse_expression(Precedence::Lowest)?);
 
     let struct_field = StructField {
         attributes_opt,

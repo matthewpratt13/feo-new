@@ -1,16 +1,13 @@
 use crate::{
-    ast::{AssigneeExpr, Expression, FieldAccessExpr, Identifier},
+    ast::{Expression, FieldAccessExpr, Identifier},
     error::ErrorsEmitted,
-    parser::{ParseOperation, Parser},
+    parser::{ParseOperatorExpr, Parser},
     token::Token,
 };
 
-impl ParseOperation for FieldAccessExpr {
+impl ParseOperatorExpr for FieldAccessExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let object = AssigneeExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let object = left_expr.try_to_assignee_expr(parser)?;
 
         let expr = match parser.current_token() {
             Some(Token::Identifier { name, .. }) => {

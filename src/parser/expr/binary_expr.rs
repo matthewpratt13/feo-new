@@ -1,14 +1,12 @@
 use crate::{
-    ast::{
-        AssigneeExpr, BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression, ValueExpr,
-    },
+    ast::{BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
-    parser::{ParseOperation, Parser},
+    parser::{ParseOperatorExpr, Parser},
     token::{Token, TokenType},
 };
 
-impl ParseOperation for BinaryExpr {
+impl ParseOperatorExpr for BinaryExpr {
     /// Parse a binary operation (e.g., arithmetic, logical and comparison expressions).
     /// This method parses the operator and calls `parse_expression()` recursively to handle
     /// the right-hand side of the expression.
@@ -20,10 +18,7 @@ impl ParseOperation for BinaryExpr {
         );
         parser.log_current_token(true);
 
-        let lhs = ValueExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let lhs = left_expr.try_to_value_expr(parser)?;
 
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
@@ -51,12 +46,7 @@ impl ParseOperation for BinaryExpr {
 
         parser.next_token();
 
-        let right_expr = parser.parse_expression(precedence)?;
-
-        let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let rhs = parser.parse_value_expr(precedence)?;
 
         let expr = BinaryExpr {
             lhs: Box::new(lhs),
@@ -75,7 +65,7 @@ impl ParseOperation for BinaryExpr {
     }
 }
 
-impl ParseOperation for ComparisonExpr {
+impl ParseOperatorExpr for ComparisonExpr {
     /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on
     /// the input operator.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
@@ -86,10 +76,7 @@ impl ParseOperation for ComparisonExpr {
         );
         parser.log_current_token(true);
 
-        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let lhs = left_expr.try_to_assignee_expr(parser)?;
 
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
@@ -112,12 +99,7 @@ impl ParseOperation for ComparisonExpr {
 
         parser.next_token();
 
-        let right_expr = parser.parse_expression(precedence)?;
-
-        let rhs = AssigneeExpr::try_from(right_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let rhs = parser.parse_assignee_expr(precedence)?;
 
         let expr = ComparisonExpr {
             lhs,

@@ -1,8 +1,5 @@
 use crate::{
-    ast::{
-        AssigneeExpr, DereferenceExpr, DereferenceOp, Expression, ReferenceExpr, ReferenceOp,
-        UnaryExpr, UnaryOp, ValueExpr,
-    },
+    ast::{DereferenceExpr, DereferenceOp, ReferenceExpr, ReferenceOp, UnaryExpr, UnaryOp},
     error::ErrorsEmitted,
     parser::{ParseSimpleExpr, Parser, Precedence},
     token::Token,
@@ -10,7 +7,7 @@ use crate::{
 
 /// Parse a unary operation, specifically NOT (`!`) and negate (`-`), based on the input operator.
 impl ParseSimpleExpr for UnaryExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser) -> Result<UnaryExpr, ErrorsEmitted> {
         let unary_op = match parser.current_token() {
             Some(Token::Minus { .. }) => Ok(UnaryOp::Negate),
             Some(Token::Bang { .. }) => Ok(UnaryOp::Not),
@@ -22,26 +19,21 @@ impl ParseSimpleExpr for UnaryExpr {
 
         parser.next_token();
 
-        let operand = parser.parse_expression(Precedence::Unary)?;
-
-        let value_expr = ValueExpr::try_from(operand).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let value_expr = parser.parse_value_expr(Precedence::Unary)?;
 
         let expr = UnaryExpr {
             unary_op,
             value_expr: Box::new(value_expr),
         };
 
-        Ok(Expression::Unary(expr))
+        Ok(expr)
     }
 }
 
 impl ParseSimpleExpr for ReferenceExpr {
     /// Parse a unary reference operation – i.e., borrow (`&`) or mutable reference (`&mut`) –
     /// based on the input operator.
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser) -> Result<ReferenceExpr, ErrorsEmitted> {
         let reference_op = match parser.current_token() {
             Some(Token::Ampersand { .. }) => Ok(ReferenceOp::Borrow),
             Some(Token::AmpersandMut { .. }) => Ok(ReferenceOp::MutableBorrow),
@@ -60,36 +52,29 @@ impl ParseSimpleExpr for ReferenceExpr {
             expression: Box::new(operand),
         };
 
-        Ok(Expression::Reference(expr))
+        Ok(expr)
     }
 }
 
 impl ParseSimpleExpr for DereferenceExpr {
     /// Parse a unary dereference operation with the operator `*`.
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
-        let dereference_op = match parser.current_token() {
-            Some(Token::Asterisk { .. }) => Ok(DereferenceOp),
-            _ => {
-                parser.log_unexpected_token("dereference operator (`*`)");
-                Err(ErrorsEmitted)
-            }
+    fn parse(parser: &mut Parser) -> Result<DereferenceExpr, ErrorsEmitted> {
+        let dereference_op = if let Some(Token::Asterisk { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(DereferenceOp)
+        } else {
+            parser.log_unexpected_token("dereference operator (`*`)");
+            Err(ErrorsEmitted)
         }?;
 
-        parser.next_token();
-
-        let operand = parser.parse_expression(Precedence::Unary)?;
-
-        let assignee_expr = AssigneeExpr::try_from(operand).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let assignee_expr = parser.parse_assignee_expr(Precedence::Unary)?;
 
         let expr = DereferenceExpr {
             dereference_op,
             assignee_expr,
         };
 
-        Ok(Expression::Dereference(expr))
+        Ok(expr)
     }
 }
 

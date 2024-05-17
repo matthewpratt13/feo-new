@@ -5,25 +5,34 @@ use crate::{
 
 use super::Parser;
 
-pub(crate) trait ParseOperation {
+pub(crate) trait ParseOperatorExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted>;
 }
 
-pub(crate) trait ParseConstruct {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted>;
+pub(crate) trait ParseConstructExpr
+where
+    Self: Sized,
+{
+    fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
 }
 
-pub(crate) trait ParseControl {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted>;
+pub(crate) trait ParseControlExpr
+where
+    Self: Sized,
+{
+    fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
 }
 
-pub(crate) trait ParseSimpleExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted>;
+pub(crate) trait ParseSimpleExpr
+where
+    Self: Sized,
+{
+    fn parse(parser: &mut Parser) -> Result<Self, ErrorsEmitted>;
 }
 
 /// Trait that defines a shared interface for declaration type `Item`.
 /// E.g., `ConstantDecl` and `ImportDecl`.
-pub(crate) trait ParseDeclaration
+pub(crate) trait ParseDeclItem
 where
     Self: Sized,
 {
@@ -36,7 +45,7 @@ where
 
 /// Trait that defines a shared interface for definition type `Item`.
 /// E.g., `StructDef` and `TraitDef`.
-pub(crate) trait ParseDefinition
+pub(crate) trait ParseDefItem
 where
     Self: Sized,
 {
@@ -59,6 +68,7 @@ where
         visibility: Visibility,
     ) -> Result<Self, ErrorsEmitted>;
 }
+
 pub trait ParseStatement {
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted>;
 }

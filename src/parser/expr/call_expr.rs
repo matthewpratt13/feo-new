@@ -1,16 +1,13 @@
 use crate::{
-    ast::{AssigneeExpr, CallExpr, Delimiter, Expression},
+    ast::{CallExpr, Delimiter, Expression},
     error::ErrorsEmitted,
-    parser::{collection, ParseOperation, Parser, Precedence},
+    parser::{collection, ParseOperatorExpr, Parser, Precedence},
     token::Token,
 };
 
-impl ParseOperation for CallExpr {
+impl ParseOperatorExpr for CallExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let callee = AssigneeExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let callee = left_expr.try_to_assignee_expr(parser)?;
 
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {

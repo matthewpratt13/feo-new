@@ -1,16 +1,13 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, IndexExpr, ValueExpr},
+    ast::{Delimiter, Expression, IndexExpr},
     error::ErrorsEmitted,
-    parser::{ParseOperation, Parser, Precedence},
+    parser::{ParseOperatorExpr, Parser, Precedence},
     token::Token,
 };
 
-impl ParseOperation for IndexExpr {
+impl ParseOperatorExpr for IndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let array = AssigneeExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let array = left_expr.try_to_assignee_expr(parser)?;
 
         let open_bracket = match parser.current_token() {
             Some(Token::LBracket { .. }) => {
@@ -28,12 +25,7 @@ impl ParseOperation for IndexExpr {
             }
         }?;
 
-        let expression = parser.parse_expression(Precedence::Lowest)?;
-
-        let index = ValueExpr::try_from(expression).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let index = parser.parse_value_expr(Precedence::Lowest)?;
 
         match parser.current_token() {
             Some(Token::RBracket { .. }) => {

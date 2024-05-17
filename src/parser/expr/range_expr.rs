@@ -1,16 +1,13 @@
 use crate::{
-    ast::{AssigneeExpr, Expression, RangeExpr, RangeOp},
+    ast::{Expression, RangeExpr, RangeOp},
     error::{ErrorsEmitted, ParserErrorKind},
-    parser::{ParseOperation, Parser},
+    parser::{ParseOperatorExpr, Parser},
     token::{Token, TokenType},
 };
 
-impl ParseOperation for RangeExpr {
+impl ParseOperatorExpr for RangeExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let from_assignee_expr = AssigneeExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let from_assignee_expr = left_expr.try_to_assignee_expr(parser)?;
 
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
@@ -55,12 +52,7 @@ impl ParseOperation for RangeExpr {
 
         let precedence = parser.get_precedence(&operator_token);
 
-        let expression = parser.parse_expression(precedence)?;
-
-        let to_assignee_expr = AssigneeExpr::try_from(expression).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let to_assignee_expr = parser.parse_assignee_expr(precedence)?;
 
         let expr = Ok(RangeExpr {
             from_expr_opt: Some(Box::new(from_assignee_expr)),
@@ -113,12 +105,7 @@ impl RangeExpr {
 
         let precedence = parser.get_precedence(&operator_token);
 
-        let expression = parser.parse_expression(precedence)?;
-
-        let to_assignee_expr = AssigneeExpr::try_from(expression).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let to_assignee_expr = parser.parse_assignee_expr(precedence)?;
 
         parser.next_token();
 

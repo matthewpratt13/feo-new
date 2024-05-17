@@ -5,9 +5,9 @@ use crate::{
     token::Token,
 };
 
-use super::{ParseDeclaration, Parser};
+use super::{ParseDeclItem, Parser};
 
-impl ParseDeclaration for StaticVarDecl {
+impl ParseDeclItem for StaticVarDecl {
     fn parse(
         parser: &mut Parser,
         attributes_opt: Option<Vec<OuterAttr>>,

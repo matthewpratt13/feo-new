@@ -1,12 +1,12 @@
 use crate::{
-    ast::{BlockExpr, Expression, GroupedExpr, IfExpr, Keyword},
+    ast::{BlockExpr, GroupedExpr, IfExpr, Keyword},
     error::ErrorsEmitted,
-    parser::{ParseConstruct, ParseControl, Parser},
+    parser::{ParseConstructExpr, ParseControlExpr, Parser},
     token::Token,
 };
 
-impl ParseControl for IfExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseControlExpr for IfExpr {
+    fn parse(parser: &mut Parser) -> Result<IfExpr, ErrorsEmitted> {
         let kw_if = if let Some(Token::If { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::If)
@@ -49,22 +49,16 @@ impl ParseControl for IfExpr {
             trailing_else_block_opt,
         };
 
-        Ok(Expression::If(expr))
+        Ok(expr)
     }
 }
 
 fn parse_else_blocks(
     parser: &mut Parser,
-) -> Result<
-    (
-        Option<Vec<(Keyword, Box<Expression>)>>,
-        Option<(Keyword, Box<Expression>)>,
-    ),
-    ErrorsEmitted,
-> {
-    let mut else_if_blocks: Vec<(Keyword, Box<Expression>)> = Vec::new();
+) -> Result<(Option<Vec<Box<IfExpr>>>, Option<BlockExpr>), ErrorsEmitted> {
+    let mut else_if_blocks: Vec<Box<IfExpr>> = Vec::new();
 
-    let mut trailing_else_block_opt: Option<(Keyword, Box<Expression>)> = None;
+    let mut trailing_else_block_opt: Option<BlockExpr> = None;
 
     while let Some(Token::Else { .. }) = parser.current_token() {
         parser.next_token();
@@ -72,11 +66,11 @@ fn parse_else_blocks(
         match parser.current_token() {
             Some(Token::If { .. }) => {
                 let if_expr = Box::new(IfExpr::parse(parser)?);
-                else_if_blocks.push((Keyword::Else, if_expr));
+                else_if_blocks.push(if_expr);
             }
             Some(Token::LBrace { .. }) => {
-                let block = Box::new(BlockExpr::parse(parser)?);
-                trailing_else_block_opt = Some((Keyword::Else, block));
+                let block = BlockExpr::parse(parser)?;
+                trailing_else_block_opt = Some(block);
                 break;
             }
             Some(Token::EOF) | None => {

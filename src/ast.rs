@@ -11,7 +11,11 @@ mod types;
 
 use core::fmt;
 
-use crate::{error::ParserErrorKind, span::Position};
+use crate::{
+    error::{ErrorsEmitted, ParserErrorKind},
+    parser::Parser,
+    span::Position,
+};
 
 pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*};
 
@@ -97,7 +101,6 @@ pub(crate) enum Keyword {
     Trait,
     Impl,
     If,
-    Else,
     Match,
     For,
     In,
@@ -132,7 +135,6 @@ impl fmt::Display for Keyword {
             Keyword::Trait => write!(f, "trait"),
             Keyword::Impl => write!(f, "impl"),
             Keyword::If => write!(f, "if"),
-            Keyword::Else => write!(f, "else"),
             Keyword::Match => write!(f, "match"),
             Keyword::For => write!(f, "for"),
             Keyword::In => write!(f, "in"),
@@ -223,32 +225,9 @@ impl fmt::Display for Delimiter {
 // PUNCTUATION
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different unary operators used in AST nodes.
+/// Unit struct representing the assignment operator (`=`) used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum UnaryOp {
-    Negate, // `-`
-    Not,    // `!`
-}
-
-/// Enum representing the different reference operators used in AST nodes (i.e., `&` and `&mut`).
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) enum ReferenceOp {
-    Borrow,        // `&`
-    MutableBorrow, // `&mut`
-}
-
-impl fmt::Display for ReferenceOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ReferenceOp::Borrow => write!(f, "&"),
-            ReferenceOp::MutableBorrow => write!(f, "&mut"),
-        }
-    }
-}
-
-/// Unit struct representing the dereference operator (`*`).
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct DereferenceOp;
+pub(crate) struct AssignmentOp;
 
 /// Enum representing the different binary operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
@@ -267,6 +246,10 @@ pub(crate) enum BinaryOp {
     ShiftRight,
     Exponentiation,
 }
+
+/// Unit struct representing the type cast operator (`as`).
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct TypeCastOp;
 
 /// Enum representing the different comparison operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
@@ -289,13 +272,9 @@ pub(crate) enum CompoundAssignmentOp {
     ModulusAssign,
 }
 
-/// Unit struct representing the assignment operator (`=`) used in AST nodes.
+/// Unit struct representing the dereference operator (`*`).
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct AssignmentOp;
-
-/// Unit struct representing the unwrap operator (`?`) used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct UnwrapOp;
+pub(crate) struct DereferenceOp;
 
 /// Enum representing the different range operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
@@ -313,12 +292,39 @@ impl fmt::Display for RangeOp {
     }
 }
 
+/// Enum representing the different reference operators used in AST nodes (i.e., `&` and `&mut`).
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum ReferenceOp {
+    Borrow,        // `&`
+    MutableBorrow, // `&mut`
+}
+
+impl fmt::Display for ReferenceOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ReferenceOp::Borrow => write!(f, "&"),
+            ReferenceOp::MutableBorrow => write!(f, "&mut"),
+        }
+    }
+}
+
 /// Enum representing the different separators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Separator {
     Comma,              // used in tuples
     ColonColonAsterisk, // path wildcard terminator
 }
+
+/// Enum representing the different unary operators used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum UnaryOp {
+    Negate, // `-`
+    Not,    // `!`
+}
+
+/// Unit struct representing the unwrap operator (`?`) used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct UnwrapOp;
 
 ///////////////////////////////////////////////////////////////////////////
 // NODE GROUPS
@@ -367,6 +373,25 @@ pub(crate) enum Expression {
     SomeExpr(SomeExpr),
     NoneExpr(NoneExpr),
     ResultExpr(ResultExpr),
+}
+
+impl Expression {
+    pub(crate) fn try_to_value_expr(self, parser: &mut Parser) -> Result<ValueExpr, ErrorsEmitted> {
+        self.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })
+    }
+
+    pub(crate) fn try_to_assignee_expr(
+        self,
+        parser: &mut Parser,
+    ) -> Result<AssigneeExpr, ErrorsEmitted> {
+        self.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })
+    }
 }
 
 impl fmt::Display for Expression {
@@ -567,7 +592,7 @@ impl TryFrom<Expression> for AssigneeExpr {
                     .elements
                     .into_iter()
                     .map(|te| {
-                        AssigneeExpr::try_from(te.0).expect(
+                        AssigneeExpr::try_from(te).expect(
                             "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         )
                     })
@@ -582,14 +607,14 @@ impl TryFrom<Expression> for AssigneeExpr {
                 s.struct_fields_opt.map(|v| {
                     v.into_iter().for_each(|s| {
                         let attributes_opt = s.attributes_opt;
-                        let field_value = AssigneeExpr::try_from(s.field_value).expect(
+                        let field_value = AssigneeExpr::try_from(*s.field_value).expect(
                             "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         );
 
                         let struct_assignee_expr_field = StructAssigneeExprField {
                             attributes_opt,
                             field_name: s.field_name,
-                            field_value,
+                            field_value: Box::new(field_value),
                         };
                         assignee_expressions.push(struct_assignee_expr_field);
                     })

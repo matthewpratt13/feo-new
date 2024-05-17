@@ -1,7 +1,7 @@
 use core::fmt;
 
 use super::{
-    AssigneeExpr, Expression, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathType, Pattern,
+    AssigneeExpr, BlockExpr, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathType, Pattern,
     ReferenceOp, Separator, Type, ValueExpr,
 };
 
@@ -181,7 +181,7 @@ pub struct FunctionItem {
     pub(crate) function_name: Identifier,
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
     pub(crate) return_type_opt: Option<Box<Type>>,
-    pub(crate) block_opt: Option<Expression>,
+    pub(crate) block_opt: Option<BlockExpr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

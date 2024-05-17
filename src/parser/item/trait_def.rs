@@ -9,9 +9,9 @@ use crate::{
     token::Token,
 };
 
-use super::{collection, ParseAssociatedItem, ParseDeclaration, ParseDefinition};
+use super::{collection, ParseAssociatedItem, ParseDeclItem, ParseDefItem};
 
-impl ParseDefinition for TraitDef {
+impl ParseDefItem for TraitDef {
     fn parse(
         parser: &mut Parser,
         outer_attributes_opt: Option<Vec<OuterAttr>>,

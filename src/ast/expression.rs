@@ -1,7 +1,7 @@
 use super::{
     AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, DereferenceOp,
     Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType,
-    Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr,
+    Statement, Type, TypeCastOp, UInt, UnaryOp, UnwrapOp, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -36,14 +36,14 @@ pub(crate) struct ClosureParam {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct MappingPair {
     pub(crate) key: Pattern,
-    pub(crate) value: Expression,
+    pub(crate) value: Box<Expression>,
 }
 
 /// Struct representing a single arm in a match statement.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct MatchArm {
     pub(crate) matched_pattern: Pattern,
-    pub(crate) guard_opt: Option<(Keyword, Box<Expression>)>, // (`if`, `{ .. }`)
+    pub(crate) guard_opt: Option<Box<Expression>>,
     pub(crate) arm_expression: Box<Expression>,
 }
 
@@ -53,20 +53,20 @@ pub(crate) struct MatchArm {
 pub(crate) struct StructField {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) field_name: Identifier,
-    pub(crate) field_value: Expression,
+    pub(crate) field_value: Box<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct StructAssigneeExprField {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) field_name: Identifier,
-    pub(crate) field_value: AssigneeExpr,
+    pub(crate) field_value: Box<AssigneeExpr>,
 }
 
 /// Struct representing a collection of elements in a tuple expression.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct TupleElements {
-    pub(crate) elements: Vec<(Expression, Separator)>, // one-element tuple must have trailing comma
+    pub(crate) elements: Vec<Expression>,
     pub(crate) final_element_opt: Option<Box<Expression>>,
 }
 
@@ -151,10 +151,10 @@ pub struct FieldAccessExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ForInExpr {
     pub(crate) kw_for: Keyword,
-    pub(crate) pattern: Pattern,
+    pub(crate) pattern: Box<Pattern>,
     pub(crate) kw_in: Keyword,
     pub(crate) iterator: Box<Expression>,
-    pub(crate) block: Box<Expression>,
+    pub(crate) block: BlockExpr,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -165,10 +165,10 @@ pub struct GroupedExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfExpr {
     pub(crate) kw_if: Keyword,
-    pub(crate) condition: Box<Expression>,
-    pub(crate) if_block: Box<Expression>,
-    pub(crate) else_if_blocks_opt: Option<Vec<(Keyword, Box<Expression>)>>, // (`else`, `if { .. }`)
-    pub(crate) trailing_else_block_opt: Option<(Keyword, Box<Expression>)>, // (`else`, `{ .. }`)
+    pub(crate) condition: Box<GroupedExpr>,
+    pub(crate) if_block: Box<BlockExpr>,
+    pub(crate) else_if_blocks_opt: Option<Vec<Box<IfExpr>>>,
+    pub(crate) trailing_else_block_opt: Option<BlockExpr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -224,7 +224,7 @@ pub struct ReferenceExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResultExpr {
     pub(crate) kw_ok_or_err: Keyword,
-    pub(crate) expression: Box<Expression>,
+    pub(crate) expression: Box<GroupedExpr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -236,7 +236,7 @@ pub struct ReturnExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SomeExpr {
     pub(crate) kw_some: Keyword,
-    pub(crate) expression: Box<Expression>,
+    pub(crate) expression: Box<GroupedExpr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -267,7 +267,7 @@ pub struct TupleIndexExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeCastExpr {
     pub(crate) value: Box<ValueExpr>,
-    pub(crate) kw_as: Keyword,
+    pub(crate) type_cast_op: TypeCastOp, // `as`
     pub(crate) new_type: Box<Type>,
 }
 
@@ -291,6 +291,6 @@ pub struct UnwrapExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct WhileExpr {
     pub(crate) kw_while: Keyword,
-    pub(crate) condition: Box<Expression>,
-    pub(crate) block: Box<Expression>,
+    pub(crate) condition: Box<GroupedExpr>,
+    pub(crate) block: BlockExpr,
 }
