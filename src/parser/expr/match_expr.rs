@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
+    ast::{BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseConstructExpr, ParseControlExpr, Parser, Precedence},
     token::Token,
@@ -23,12 +23,7 @@ impl ParseControlExpr for MatchExpr {
             });
         }
 
-        let matched_expression = parser.parse_expression(Precedence::Lowest)?;
-
-        let scrutinee = AssigneeExpr::try_from(matched_expression).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let scrutinee = parser.parse_assignee_expr(Precedence::Lowest)?;
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {

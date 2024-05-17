@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, TupleElements, TupleExpr, TupleIndexExpr},
+    ast::{Delimiter, Expression, TupleElements, TupleExpr, TupleIndexExpr},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParseOperatorExpr, Parser, Precedence},
     token::Token,
@@ -63,10 +63,7 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
 
 impl ParseOperatorExpr for TupleIndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let tuple = AssigneeExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let tuple = left_expr.try_to_assignee_expr(parser)?;
 
         let index = match parser.current_token() {
             Some(Token::UIntLiteral { value, .. }) => {

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Type, TypeCastExpr, TypeCastOp, ValueExpr},
+    ast::{Expression, Type, TypeCastExpr, TypeCastOp},
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser},
     token::Token,
@@ -7,10 +7,7 @@ use crate::{
 
 impl ParseOperatorExpr for TypeCastExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let value_expr = ValueExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let value_expr = left_expr.try_to_value_expr(parser)?;
 
         let type_cast_op = if let Some(Token::As { .. }) = parser.current_token() {
             parser.next_token();

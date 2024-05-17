@@ -1,8 +1,5 @@
 use crate::{
-    ast::{
-        AssigneeExpr, AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp,
-        Expression, ValueExpr,
-    },
+    ast::{AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp, Expression},
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser},
     token::{Token, TokenType},
@@ -10,6 +7,8 @@ use crate::{
 
 impl ParseOperatorExpr for AssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let lhs = left_expr.try_to_assignee_expr(parser)?;
+
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let assignment_op = match operator_token {
@@ -29,17 +28,7 @@ impl ParseOperatorExpr for AssignmentExpr {
 
         let precedence = parser.get_precedence(&operator_token);
 
-        let right_expr = parser.parse_expression(precedence)?;
-
-        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
-
-        let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let rhs = parser.parse_value_expr(precedence)?;
 
         let expr = AssignmentExpr {
             lhs,
@@ -53,6 +42,8 @@ impl ParseOperatorExpr for AssignmentExpr {
 
 impl ParseOperatorExpr for CompoundAssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let lhs = left_expr.try_to_assignee_expr(parser)?;
+        
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let compound_assignment_op = match operator_token.token_type() {
@@ -73,17 +64,7 @@ impl ParseOperatorExpr for CompoundAssignmentExpr {
 
         let precedence = parser.get_precedence(&operator_token);
 
-        let right_expr = parser.parse_expression(precedence)?;
-
-        let lhs = AssigneeExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
-
-        let rhs = ValueExpr::try_from(right_expr).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let rhs = parser.parse_value_expr(precedence)?;
 
         let expr = CompoundAssignmentExpr {
             lhs,

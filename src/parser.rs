@@ -51,15 +51,15 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        ArrayExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr, ClosureExpr,
-        ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter, DereferenceExpr,
-        Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt, Identifier,
-        IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal, MappingExpr, MatchExpr,
-        MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, Pattern, RangeExpr, RangeOp,
-        RangePatt, ReferenceExpr, ReferenceOp, ReferencePatt, RestPatt, ResultExpr, ResultPatt,
-        ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt, TupleExpr,
-        TupleIndexExpr, TuplePatt, TypeCastExpr, UnaryExpr, UnderscoreExpr, UnwrapExpr, WhileExpr,
-        WildcardPatt,
+        ArrayExpr, AssigneeExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr,
+        ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter,
+        DereferenceExpr, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
+        Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
+        MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, Pattern,
+        RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferenceOp, ReferencePatt, RestPatt,
+        ResultExpr, ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt,
+        TupleExpr, TupleIndexExpr, TuplePatt, TypeCastExpr, UnaryExpr, UnderscoreExpr, UnwrapExpr,
+        ValueExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
@@ -716,6 +716,20 @@ impl Parser {
         }
     }
 
+    /// Parse a value type expression.
+    fn parse_value_expr(&mut self, precedence: Precedence) -> Result<ValueExpr, ErrorsEmitted> {
+        self.parse_expression(precedence)?.try_to_value_expr(self)
+    }
+
+    /// Parse an assignee type expression.
+    fn parse_assignee_expr(
+        &mut self,
+        precedence: Precedence,
+    ) -> Result<AssigneeExpr, ErrorsEmitted> {
+        self.parse_expression(precedence)?
+            .try_to_assignee_expr(self)
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // STATEMENT PARSING
     ///////////////////////////////////////////////////////////////////////////
@@ -1077,7 +1091,7 @@ impl Parser {
 
     /// Log information about an error that occurred during parsing, by pushing the error
     /// to the `errors` vector and providing information about error kind and position.
-    fn log_error(&mut self, error_kind: ParserErrorKind) {
+    pub(crate) fn log_error(&mut self, error_kind: ParserErrorKind) {
         let current = self.current;
         let tokens = self.stream.tokens();
 

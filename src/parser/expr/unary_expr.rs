@@ -1,8 +1,5 @@
 use crate::{
-    ast::{
-        AssigneeExpr, DereferenceExpr, DereferenceOp, ReferenceExpr, ReferenceOp, UnaryExpr,
-        UnaryOp, ValueExpr,
-    },
+    ast::{DereferenceExpr, DereferenceOp, ReferenceExpr, ReferenceOp, UnaryExpr, UnaryOp},
     error::ErrorsEmitted,
     parser::{ParseSimpleExpr, Parser, Precedence},
     token::Token,
@@ -22,12 +19,7 @@ impl ParseSimpleExpr for UnaryExpr {
 
         parser.next_token();
 
-        let operand = parser.parse_expression(Precedence::Unary)?;
-
-        let value_expr = ValueExpr::try_from(operand).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let value_expr = parser.parse_value_expr(Precedence::Unary)?;
 
         let expr = UnaryExpr {
             unary_op,
@@ -75,12 +67,7 @@ impl ParseSimpleExpr for DereferenceExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let operand = parser.parse_expression(Precedence::Unary)?;
-
-        let assignee_expr = AssigneeExpr::try_from(operand).map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })?;
+        let assignee_expr = parser.parse_assignee_expr(Precedence::Unary)?;
 
         let expr = DereferenceExpr {
             dereference_op,

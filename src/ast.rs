@@ -11,7 +11,11 @@ mod types;
 
 use core::fmt;
 
-use crate::{error::ParserErrorKind, span::Position};
+use crate::{
+    error::{ErrorsEmitted, ParserErrorKind},
+    parser::Parser,
+    span::Position,
+};
 
 pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*};
 
@@ -369,6 +373,25 @@ pub(crate) enum Expression {
     SomeExpr(SomeExpr),
     NoneExpr(NoneExpr),
     ResultExpr(ResultExpr),
+}
+
+impl Expression {
+    pub(crate) fn try_to_value_expr(self, parser: &mut Parser) -> Result<ValueExpr, ErrorsEmitted> {
+        self.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })
+    }
+
+    pub(crate) fn try_to_assignee_expr(
+        self,
+        parser: &mut Parser,
+    ) -> Result<AssigneeExpr, ErrorsEmitted> {
+        self.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })
+    }
 }
 
 impl fmt::Display for Expression {
