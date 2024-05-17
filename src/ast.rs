@@ -586,14 +586,14 @@ impl TryFrom<Expression> for AssigneeExpr {
                 s.struct_fields_opt.map(|v| {
                     v.into_iter().for_each(|s| {
                         let attributes_opt = s.attributes_opt;
-                        let field_value = AssigneeExpr::try_from(s.field_value).expect(
+                        let field_value = AssigneeExpr::try_from(*s.field_value).expect(
                             "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         );
 
                         let struct_assignee_expr_field = StructAssigneeExprField {
                             attributes_opt,
                             field_name: s.field_name,
-                            field_value,
+                            field_value: Box::new(field_value),
                         };
                         assignee_expressions.push(struct_assignee_expr_field);
                     })

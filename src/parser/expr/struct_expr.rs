@@ -99,7 +99,7 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
         }
     }
 
-    let field_value = parser.parse_expression(Precedence::Lowest)?;
+    let field_value = Box::new(parser.parse_expression(Precedence::Lowest)?);
 
     let struct_field = StructField {
         attributes_opt,

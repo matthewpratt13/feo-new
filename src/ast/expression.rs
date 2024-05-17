@@ -51,14 +51,14 @@ pub(crate) struct MatchArm {
 pub(crate) struct StructField {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) field_name: Identifier,
-    pub(crate) field_value: Expression,
+    pub(crate) field_value: Box<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct StructAssigneeExprField {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) field_name: Identifier,
-    pub(crate) field_value: AssigneeExpr,
+    pub(crate) field_value: Box<AssigneeExpr>,
 }
 
 /// Struct representing a collection of elements in a tuple expression.
