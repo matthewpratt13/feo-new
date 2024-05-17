@@ -96,12 +96,12 @@ pub struct Parser {
     precedences: HashMap<Token, Precedence>, // map tokens to corresponding precedence levels
     context: ParserContext,                  // keep track of the current parsing context
     errors: Vec<CompilerError<ParserErrorKind>>, // store parser errors
-    logger: Logger,                          // leg events and errors for easy debugging
+    logger: Logger,                          // log events and errors for easy debugging
 }
 
 impl Parser {
     /// Create a new `Parser` instance.
-    /// Initialize an empty `Vec` to store potentials errors that occur during parsing.
+    /// Initialize an empty `Vec` to store potential errors that occur during parsing.
     fn new(stream: TokenStream, log_level: LogLevel) -> Self {
         let mut parser = Parser {
             stream: stream.clone(),
@@ -198,7 +198,7 @@ impl Parser {
     fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
 
-        // clear logs and log status message
+        // clear log messages, then log status info
         self.logger.clear_messages();
         self.logger
             .log(LogLevel::Info, LogMsg::from("starting to parse tokens"));
@@ -206,7 +206,7 @@ impl Parser {
         while self.current < self.stream.tokens().len() {
             let statement = self.parse_statement()?;
 
-            // log status message
+            // log status info
             self.logger.log(
                 LogLevel::Info,
                 LogMsg::from(format!("parsed statement: {:?}", statement)),
@@ -214,7 +214,7 @@ impl Parser {
             statements.push(statement);
         }
 
-        // log status message
+        // log status info
         self.logger
             .log(LogLevel::Info, LogMsg::from("reached end of file"));
         Ok(statements)
@@ -548,7 +548,7 @@ impl Parser {
             }
 
             _ => {
-                // log error and advance the parser, then return `Err(ErrorsEmitted)`
+                // log the error and advance the parser, then return `Err(ErrorsEmitted)`
                 self.log_error(ParserErrorKind::InvalidTokenContext {
                     token: self.current_token(),
                 });
@@ -809,7 +809,7 @@ impl Parser {
     // PATTERN PARSING
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Parse a `Pattern` – used in match expressions, function call expression and elsewhere.
+    /// Parse a `Pattern` – used in match expressions, function call expressions and elsewhere.
     fn parse_pattern(&mut self) -> Result<Pattern, ErrorsEmitted> {
         // **log event and current token** [REMOVE IN PROD]
         self.logger
@@ -1032,7 +1032,7 @@ impl Parser {
     // TOKEN RETRIEVAL
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Advance the parser to the next token (returns current token).
+    /// Advance the parser to the next token (returns the current token).
     fn next_token(&mut self) -> Option<Token> {
         let token = self.current_token();
 
@@ -1076,7 +1076,7 @@ impl Parser {
         }
     }
 
-    // Peek at the token `num_tokens` behind without consuming it
+    /// Peek at the token `num_tokens` behind without consuming it.
     fn peek_behind_by(&self, num_tokens: usize) -> Option<&Token> {
         if self.current < num_tokens {
             None
@@ -1283,11 +1283,13 @@ impl Parser {
         }
     }
 
-    /// Get the precedence of the next token
+    /// Get the precedence of the next token.
     fn peek_precedence(&self) -> Precedence {
         self.get_precedence(&self.current_token().unwrap())
     }
 
+    /// Get the current token's position in the token stream, formatted to include line 
+    /// and column data, and a snippet of the source code leading up to the current token.
     fn current_position(&self) -> Position {
         Position::new(
             self.current_token().unwrap().span().start(),
@@ -1299,7 +1301,8 @@ impl Parser {
     // ADDITIONAL HELPERS
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Determine if `Token::Dot` token indicates a tuple index operator (followed by a digit).
+    /// Determine if `Token::Dot` token indicates a tuple index operator (i.e., if it is 
+    /// followed by a digit).
     fn is_tuple_index(&self) -> bool {
         match (self.current_token(), self.peek_ahead_by(1)) {
             (Some(Token::Dot { .. }), Some(Token::UIntLiteral { .. })) => true,
@@ -1365,7 +1368,7 @@ impl Parser {
         }
     }
 
-    /// Determine if `Token::Pipe` indicates the bitwise OR operator.
+    /// Determine if `Token::Pipe` indicates the bitwise `OR` operator.
     fn is_bitwise_or(&self) -> bool {
         !self.is_closure_with_params()
     }
@@ -1419,7 +1422,7 @@ impl Parser {
         }
     }
 
-    /// Determine if `Token::DblPipe` indicates the logical OR operator.
+    /// Determine if `Token::DblPipe` indicates the logical `OR` operator.
     fn is_logical_or(&self) -> bool {
         !self.is_closure_without_params()
     }

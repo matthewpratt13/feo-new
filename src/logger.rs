@@ -17,7 +17,7 @@ pub enum LogLevel {
 #[derive(Debug, Clone)]
 pub struct LogMsg(String);
 
-/// Struct that keeps track of events and errors that occur doing some process.
+/// Struct that keeps track of events and errors that occur during some process.
 #[derive(Debug)]
 pub struct Logger {
     level: LogLevel,
