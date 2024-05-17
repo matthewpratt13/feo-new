@@ -58,13 +58,13 @@ fn parse_else_blocks(
 ) -> Result<
     (
         Option<Vec<(Keyword, Box<IfExpr>)>>,
-        Option<(Keyword, Box<BlockExpr>)>,
+        Option<(Keyword, BlockExpr)>,
     ),
     ErrorsEmitted,
 > {
     let mut else_if_blocks: Vec<(Keyword, Box<IfExpr>)> = Vec::new();
 
-    let mut trailing_else_block_opt: Option<(Keyword, Box<BlockExpr>)> = None;
+    let mut trailing_else_block_opt: Option<(Keyword, BlockExpr)> = None;
 
     while let Some(Token::Else { .. }) = parser.current_token() {
         parser.next_token();
@@ -75,7 +75,7 @@ fn parse_else_blocks(
                 else_if_blocks.push((Keyword::Else, if_expr));
             }
             Some(Token::LBrace { .. }) => {
-                let block = Box::new(BlockExpr::parse(parser)?);
+                let block = BlockExpr::parse(parser)?;
                 trailing_else_block_opt = Some((Keyword::Else, block));
                 break;
             }

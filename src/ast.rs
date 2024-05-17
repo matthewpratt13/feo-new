@@ -223,32 +223,9 @@ impl fmt::Display for Delimiter {
 // PUNCTUATION
 ///////////////////////////////////////////////////////////////////////////
 
-/// Enum representing the different unary operators used in AST nodes.
+/// Unit struct representing the assignment operator (`=`) used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum UnaryOp {
-    Negate, // `-`
-    Not,    // `!`
-}
-
-/// Enum representing the different reference operators used in AST nodes (i.e., `&` and `&mut`).
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) enum ReferenceOp {
-    Borrow,        // `&`
-    MutableBorrow, // `&mut`
-}
-
-impl fmt::Display for ReferenceOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ReferenceOp::Borrow => write!(f, "&"),
-            ReferenceOp::MutableBorrow => write!(f, "&mut"),
-        }
-    }
-}
-
-/// Unit struct representing the dereference operator (`*`).
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct DereferenceOp;
+pub(crate) struct AssignmentOp;
 
 /// Enum representing the different binary operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
@@ -267,6 +244,10 @@ pub(crate) enum BinaryOp {
     ShiftRight,
     Exponentiation,
 }
+
+/// Unit struct representing the type cast operator (`as`).
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct TypeCastOp;
 
 /// Enum representing the different comparison operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
@@ -289,13 +270,9 @@ pub(crate) enum CompoundAssignmentOp {
     ModulusAssign,
 }
 
-/// Unit struct representing the assignment operator (`=`) used in AST nodes.
+/// Unit struct representing the dereference operator (`*`).
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct AssignmentOp;
-
-/// Unit struct representing the unwrap operator (`?`) used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct UnwrapOp;
+pub(crate) struct DereferenceOp;
 
 /// Enum representing the different range operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
@@ -313,12 +290,39 @@ impl fmt::Display for RangeOp {
     }
 }
 
+/// Enum representing the different reference operators used in AST nodes (i.e., `&` and `&mut`).
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum ReferenceOp {
+    Borrow,        // `&`
+    MutableBorrow, // `&mut`
+}
+
+impl fmt::Display for ReferenceOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ReferenceOp::Borrow => write!(f, "&"),
+            ReferenceOp::MutableBorrow => write!(f, "&mut"),
+        }
+    }
+}
+
 /// Enum representing the different separators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Separator {
     Comma,              // used in tuples
     ColonColonAsterisk, // path wildcard terminator
 }
+
+/// Enum representing the different unary operators used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum UnaryOp {
+    Negate, // `-`
+    Not,    // `!`
+}
+
+/// Unit struct representing the unwrap operator (`?`) used in AST nodes.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct UnwrapOp;
 
 ///////////////////////////////////////////////////////////////////////////
 // NODE GROUPS

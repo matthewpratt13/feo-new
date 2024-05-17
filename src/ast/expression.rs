@@ -1,7 +1,5 @@
 use super::{
-    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, DereferenceOp,
-    Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType,
-    Separator, Statement, Type, UInt, UnaryOp, UnwrapOp, ValueExpr,
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, DereferenceOp, Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType, Separator, Statement, Type, TypeCastOp, UInt, UnaryOp, UnwrapOp, ValueExpr
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -151,10 +149,10 @@ pub struct FieldAccessExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ForInExpr {
     pub(crate) kw_for: Keyword,
-    pub(crate) pattern: Pattern,
+    pub(crate) pattern: Box<Pattern>,
     pub(crate) kw_in: Keyword,
     pub(crate) iterator: Box<Expression>,
-    pub(crate) block: Box<BlockExpr>,
+    pub(crate) block: BlockExpr,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -168,7 +166,7 @@ pub struct IfExpr {
     pub(crate) condition: Box<GroupedExpr>,
     pub(crate) if_block: Box<BlockExpr>,
     pub(crate) else_if_blocks_opt: Option<Vec<(Keyword, Box<IfExpr>)>>, // (`else`, `if { .. }`)
-    pub(crate) trailing_else_block_opt: Option<(Keyword, Box<BlockExpr>)>, // (`else`, `{ .. }`)
+    pub(crate) trailing_else_block_opt: Option<(Keyword, BlockExpr)>, // (`else`, `{ .. }`)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -267,7 +265,7 @@ pub struct TupleIndexExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeCastExpr {
     pub(crate) value: Box<ValueExpr>,
-    pub(crate) kw_as: Keyword,
+    pub(crate) type_cast_op: TypeCastOp, // `as`
     pub(crate) new_type: Box<Type>,
 }
 
@@ -292,5 +290,5 @@ pub struct UnwrapExpr {
 pub struct WhileExpr {
     pub(crate) kw_while: Keyword,
     pub(crate) condition: Box<GroupedExpr>,
-    pub(crate) block: Box<BlockExpr>,
+    pub(crate) block: BlockExpr,
 }

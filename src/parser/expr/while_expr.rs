@@ -28,7 +28,7 @@ impl ParseControlExpr for WhileExpr {
         }?;
 
         let block = match parser.current_token() {
-            Some(Token::LBrace { .. }) => Ok(Box::new(BlockExpr::parse(parser)?)),
+            Some(Token::LBrace { .. }) => Ok(BlockExpr::parse(parser)?),
             Some(Token::EOF) | None => {
                 parser.log_missing_token("`{`");
                 Err(ErrorsEmitted)

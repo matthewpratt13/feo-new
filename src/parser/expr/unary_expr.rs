@@ -67,15 +67,13 @@ impl ParseSimpleExpr for ReferenceExpr {
 impl ParseSimpleExpr for DereferenceExpr {
     /// Parse a unary dereference operation with the operator `*`.
     fn parse(parser: &mut Parser) -> Result<DereferenceExpr, ErrorsEmitted> {
-        let dereference_op = match parser.current_token() {
-            Some(Token::Asterisk { .. }) => Ok(DereferenceOp),
-            _ => {
-                parser.log_unexpected_token("dereference operator (`*`)");
-                Err(ErrorsEmitted)
-            }
+        let dereference_op = if let Some(Token::Asterisk { .. }) = parser.current_token() {
+            parser.next_token();
+            Ok(DereferenceOp)
+        } else {
+            parser.log_unexpected_token("dereference operator (`*`)");
+            Err(ErrorsEmitted)
         }?;
-
-        parser.next_token();
 
         let operand = parser.parse_expression(Precedence::Unary)?;
 
