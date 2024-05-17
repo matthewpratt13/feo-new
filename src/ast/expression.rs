@@ -154,7 +154,7 @@ pub struct ForInExpr {
     pub(crate) pattern: Pattern,
     pub(crate) kw_in: Keyword,
     pub(crate) iterator: Box<Expression>,
-    pub(crate) block: Box<Expression>,
+    pub(crate) block: Box<BlockExpr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -165,10 +165,10 @@ pub struct GroupedExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfExpr {
     pub(crate) kw_if: Keyword,
-    pub(crate) condition: Box<Expression>,
-    pub(crate) if_block: Box<Expression>,
-    pub(crate) else_if_blocks_opt: Option<Vec<(Keyword, Box<Expression>)>>, // (`else`, `if { .. }`)
-    pub(crate) trailing_else_block_opt: Option<(Keyword, Box<Expression>)>, // (`else`, `{ .. }`)
+    pub(crate) condition: Box<GroupedExpr>,
+    pub(crate) if_block: Box<BlockExpr>,
+    pub(crate) else_if_blocks_opt: Option<Vec<(Keyword, Box<IfExpr>)>>, // (`else`, `if { .. }`)
+    pub(crate) trailing_else_block_opt: Option<(Keyword, Box<BlockExpr>)>, // (`else`, `{ .. }`)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -224,7 +224,7 @@ pub struct ReferenceExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResultExpr {
     pub(crate) kw_ok_or_err: Keyword,
-    pub(crate) expression: Box<Expression>,
+    pub(crate) expression: Box<GroupedExpr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -236,7 +236,7 @@ pub struct ReturnExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SomeExpr {
     pub(crate) kw_some: Keyword,
-    pub(crate) expression: Box<Expression>,
+    pub(crate) expression: Box<GroupedExpr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -291,6 +291,6 @@ pub struct UnwrapExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct WhileExpr {
     pub(crate) kw_while: Keyword,
-    pub(crate) condition: Box<Expression>,
-    pub(crate) block: Box<Expression>,
+    pub(crate) condition: Box<GroupedExpr>,
+    pub(crate) block: Box<BlockExpr>,
 }

@@ -68,7 +68,7 @@ use crate::{
 };
 
 pub(crate) use self::parse::{
-    ParseConstruct, ParseControl, ParseOperation, ParseSimpleExpr, ParseStatement,
+    ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParseSimpleExpr, ParseStatement,
 };
 pub(crate) use self::precedence::Precedence;
 
@@ -291,7 +291,7 @@ impl Parser {
         self.log_current_token(true);
 
         match &self.current_token() {
-            Some(Token::Identifier { .. }) => PathExpr::parse(self),
+            Some(Token::Identifier { .. }) => Ok(Expression::Path(PathExpr::parse(self)?)),
             Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(*value))),
             Some(Token::UIntLiteral { value, .. }) => {
                 Ok(Expression::Literal(Literal::UInt(*value)))
@@ -318,9 +318,9 @@ impl Parser {
                 Ok(Expression::Literal(Literal::Bool(*value)))
             }
             Some(Token::LParen { .. }) => {
-                let expr = GroupedExpr::parse(self);
+                let expr = GroupedExpr::parse(self)?;
                 self.next_token();
-                expr
+                Ok(Expression::Grouped(expr))
             }
             _ => {
                 // log the error and advance the parser, then return `Err(ErrorsEmitted)`
@@ -376,7 +376,7 @@ impl Parser {
                                 | Token::Return { .. }
                                 | Token::Semicolon { .. },
                             )
-                            | None => StructExpr::parse(self),
+                            | None => Ok(Expression::Struct(StructExpr::parse(self)?)),
 
                             _ => self.parse_primary(),
                         }
@@ -384,76 +384,80 @@ impl Parser {
                 } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    PathExpr::parse(self)
+                    Ok(Expression::Path(PathExpr::parse(self)?))
                 } else {
                     self.parse_primary()
                 }
             }
             Some(Token::SelfType { .. }) => {
                 if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    StructExpr::parse(self)
+                    Ok(Expression::Struct(StructExpr::parse(self)?))
                 } else {
-                    PathExpr::parse(self)
+                    Ok(Expression::Path(PathExpr::parse(self)?))
                 }
             }
             Some(Token::SelfKeyword { .. } | Token::Package { .. } | Token::Super { .. }) => {
-                PathExpr::parse(self)
+                Ok(Expression::Path(PathExpr::parse(self)?))
             }
             Some(Token::Minus { .. }) => {
                 if self.context == ParserContext::Unary {
-                    UnaryExpr::parse(self)
+                    Ok(Expression::Unary(UnaryExpr::parse(self)?))
                 } else {
                     self.set_context(ParserContext::Unary);
                     self.parse_expression(Precedence::Difference)
                 }
             }
 
-            Some(Token::Bang { .. }) => UnaryExpr::parse(self),
+            Some(Token::Bang { .. }) => Ok(Expression::Unary(UnaryExpr::parse(self)?)),
 
             Some(Token::Ampersand { .. }) => {
                 if self.context == ParserContext::Unary {
-                    ReferenceExpr::parse(self)
+                    Ok(Expression::Reference(ReferenceExpr::parse(self)?))
                 } else {
                     self.set_context(ParserContext::Unary);
                     self.parse_expression(Precedence::Unary)
                 }
             }
 
-            Some(Token::AmpersandMut { .. }) => ReferenceExpr::parse(self),
+            Some(Token::AmpersandMut { .. }) => {
+                Ok(Expression::Reference(ReferenceExpr::parse(self)?))
+            }
 
             Some(Token::Asterisk { .. }) => {
                 if self.context == ParserContext::Unary {
-                    DereferenceExpr::parse(self)
+                    Ok(Expression::Dereference(DereferenceExpr::parse(self)?))
                 } else {
                     self.set_context(ParserContext::Unary);
                     self.parse_expression(Precedence::Product)
                 }
             }
 
-            Some(Token::Unsafe { .. }) => BlockExpr::parse(self),
+            Some(Token::Unsafe { .. }) => Ok(Expression::Block(BlockExpr::parse(self)?)),
 
             Some(Token::LParen { .. }) => {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
-                    TupleExpr::parse(self)
+                    Ok(Expression::Tuple(TupleExpr::parse(self)?))
                 } else {
                     self.parse_primary()
                 }
             }
 
             Some(Token::LBrace { .. }) => match self.peek_ahead_by(2) {
-                Some(Token::Colon { .. }) => MappingExpr::parse(self),
+                Some(Token::Colon { .. }) => Ok(Expression::Mapping(MappingExpr::parse(self)?)),
                 _ => match self.peek_ahead_by(1) {
-                    Some(Token::RBrace { .. }) => MappingExpr::parse(self),
-                    _ => BlockExpr::parse(self),
+                    Some(Token::RBrace { .. }) => {
+                        Ok(Expression::Mapping(MappingExpr::parse(self)?))
+                    }
+                    _ => Ok(Expression::Block(BlockExpr::parse(self)?)),
                 },
             },
 
-            Some(Token::LBracket { .. }) => ArrayExpr::parse(self),
+            Some(Token::LBracket { .. }) => Ok(Expression::Array(ArrayExpr::parse(self)?)),
 
             Some(Token::Pipe { .. }) => {
                 if self.is_closure_with_params() {
                     self.set_context(ParserContext::Closure);
-                    ClosureExpr::parse(self)
+                    Ok(Expression::Closure(ClosureExpr::parse(self)?))
                 } else if self.is_bitwise_or() {
                     self.set_context(ParserContext::BitwiseOr);
                     self.next_token();
@@ -470,7 +474,7 @@ impl Parser {
             Some(Token::DblPipe { .. }) => {
                 if self.is_closure_without_params() {
                     self.set_context(ParserContext::Closure);
-                    ClosureExpr::parse(self)
+                    Ok(Expression::Closure(ClosureExpr::parse(self)?))
                 } else if self.is_logical_or() {
                     self.set_context(ParserContext::LogicalOr);
                     self.next_token();
@@ -500,15 +504,15 @@ impl Parser {
 
             Some(Token::DotDotEquals { .. }) => RangeExpr::parse_prefix(self),
 
-            Some(Token::If { .. }) => IfExpr::parse(self),
+            Some(Token::If { .. }) => Ok(Expression::If(IfExpr::parse(self)?)),
 
-            Some(Token::Match { .. }) => MatchExpr::parse(self),
+            Some(Token::Match { .. }) => Ok(Expression::Match(MatchExpr::parse(self)?)),
 
-            Some(Token::For { .. }) => ForInExpr::parse(self),
+            Some(Token::For { .. }) => Ok(Expression::ForIn(ForInExpr::parse(self)?)),
 
-            Some(Token::While { .. }) => WhileExpr::parse(self),
+            Some(Token::While { .. }) => Ok(Expression::While(WhileExpr::parse(self)?)),
 
-            Some(Token::Some { .. }) => SomeExpr::parse(self),
+            Some(Token::Some { .. }) => Ok(Expression::SomeExpr(SomeExpr::parse(self)?)),
 
             Some(Token::None { .. }) => {
                 self.next_token();
@@ -517,7 +521,9 @@ impl Parser {
                 }))
             }
 
-            Some(Token::Ok { .. } | Token::Err { .. }) => ResultExpr::parse(self),
+            Some(Token::Ok { .. } | Token::Err { .. }) => {
+                Ok(Expression::ResultExpr(ResultExpr::parse(self)?))
+            }
 
             Some(Token::Break { .. }) => {
                 self.next_token();
@@ -533,7 +539,7 @@ impl Parser {
                 }))
             }
 
-            Some(Token::Return { .. }) => ReturnExpr::parse(self),
+            Some(Token::Return { .. }) => Ok(Expression::Return(ReturnExpr::parse(self)?)),
 
             Some(Token::EOF) | None => {
                 // log the error and advance the parser, then return `Err(ErrorsEmitted)`

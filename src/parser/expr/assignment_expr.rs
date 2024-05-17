@@ -4,11 +4,11 @@ use crate::{
         Expression, ValueExpr,
     },
     error::ErrorsEmitted,
-    parser::{ParseOperation, Parser},
+    parser::{ParseOperatorExpr, Parser},
     token::{Token, TokenType},
 };
 
-impl ParseOperation for AssignmentExpr {
+impl ParseOperatorExpr for AssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
@@ -51,7 +51,7 @@ impl ParseOperation for AssignmentExpr {
     }
 }
 
-impl ParseOperation for CompoundAssignmentExpr {
+impl ParseOperatorExpr for CompoundAssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 

@@ -20,7 +20,7 @@ use crate::{
     token::Token,
 };
 
-pub(crate) use super::parse::{ParseAssociatedItem, ParseDeclaration, ParseDefinition};
+pub(crate) use super::parse::{ParseAssociatedItem, ParseDeclItem, ParseDefItem};
 use super::{collection, ParseStatement, Parser};
 
 impl Item {

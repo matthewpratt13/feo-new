@@ -3,12 +3,12 @@ use crate::{
         AssigneeExpr, Delimiter, Expression, Separator, TupleElements, TupleExpr, TupleIndexExpr,
     },
     error::ErrorsEmitted,
-    parser::{ParseConstruct, ParseOperation, Parser, Precedence},
+    parser::{ParseConstructExpr, ParseOperatorExpr, Parser, Precedence},
     token::Token,
 };
 
-impl ParseConstruct for TupleExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstructExpr for TupleExpr {
+    fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
                 let position = parser.current_position();
@@ -26,7 +26,7 @@ impl ParseConstruct for TupleExpr {
         match parser.current_token() {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
-                Ok(Expression::Tuple(TupleExpr { tuple_elements }))
+                Ok(TupleExpr { tuple_elements })
             }
             _ => {
                 parser.log_unmatched_delimiter(&open_paren);
@@ -63,7 +63,7 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
     })
 }
 
-impl ParseOperation for TupleIndexExpr {
+impl ParseOperatorExpr for TupleIndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let tuple = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);

@@ -1,11 +1,11 @@
 use crate::{
     ast::{Expression, Keyword, Type, TypeCastExpr, ValueExpr},
     error::ErrorsEmitted,
-    parser::{ParseOperation, Parser},
+    parser::{ParseOperatorExpr, Parser},
     token::Token,
 };
 
-impl ParseOperation for TypeCastExpr {
+impl ParseOperatorExpr for TypeCastExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let value_expr = ValueExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);

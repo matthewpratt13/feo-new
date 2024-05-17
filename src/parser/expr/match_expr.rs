@@ -1,12 +1,12 @@
 use crate::{
     ast::{AssigneeExpr, BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
     error::{ErrorsEmitted, ParserErrorKind},
-    parser::{ParseConstruct, ParseControl, Parser, Precedence},
+    parser::{ParseConstructExpr, ParseControlExpr, Parser, Precedence},
     token::Token,
 };
 
-impl ParseControl for MatchExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseControlExpr for MatchExpr {
+    fn parse(parser: &mut Parser) -> Result<MatchExpr, ErrorsEmitted> {
         let kw_match = if let Some(Token::Match { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::Match)
@@ -83,7 +83,7 @@ impl ParseControl for MatchExpr {
                     final_arm,
                 };
 
-                Ok(Expression::Match(expr))
+                Ok(expr)
             }
             _ => {
                 parser.log_unmatched_delimiter(&open_brace);
@@ -119,7 +119,7 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
     }
 
     let arm_expression = if let Some(Token::LBrace { .. }) = parser.current_token() {
-        Ok(Box::new(BlockExpr::parse(parser)?))
+        Ok(Box::new(Expression::Block(BlockExpr::parse(parser)?)))
     } else {
         let expr = Box::new(parser.parse_expression(Precedence::Lowest)?);
         match parser.current_token() {

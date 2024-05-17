@@ -1,12 +1,12 @@
 use crate::{
-    ast::{Expression, Keyword, ReturnExpr},
+    ast::{Keyword, ReturnExpr},
     error::ErrorsEmitted,
-    parser::{ParseConstruct, Parser, Precedence},
+    parser::{ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
 
-impl ParseConstruct for ReturnExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstructExpr for ReturnExpr {
+    fn parse(parser: &mut Parser) -> Result<ReturnExpr, ErrorsEmitted> {
         let kw_return = if let Some(Token::Return { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::Return)
@@ -29,7 +29,7 @@ impl ParseConstruct for ReturnExpr {
             expression_opt,
         };
 
-        Ok(Expression::Return(expr))
+        Ok(expr)
     }
 }
 

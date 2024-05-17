@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        AssigneeExpr, DereferenceExpr, DereferenceOp, Expression, ReferenceExpr, ReferenceOp,
-        UnaryExpr, UnaryOp, ValueExpr,
+        AssigneeExpr, DereferenceExpr, DereferenceOp, ReferenceExpr, ReferenceOp, UnaryExpr,
+        UnaryOp, ValueExpr,
     },
     error::ErrorsEmitted,
     parser::{ParseSimpleExpr, Parser, Precedence},
@@ -10,7 +10,7 @@ use crate::{
 
 /// Parse a unary operation, specifically NOT (`!`) and negate (`-`), based on the input operator.
 impl ParseSimpleExpr for UnaryExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser) -> Result<UnaryExpr, ErrorsEmitted> {
         let unary_op = match parser.current_token() {
             Some(Token::Minus { .. }) => Ok(UnaryOp::Negate),
             Some(Token::Bang { .. }) => Ok(UnaryOp::Not),
@@ -34,14 +34,14 @@ impl ParseSimpleExpr for UnaryExpr {
             value_expr: Box::new(value_expr),
         };
 
-        Ok(Expression::Unary(expr))
+        Ok(expr)
     }
 }
 
 impl ParseSimpleExpr for ReferenceExpr {
     /// Parse a unary reference operation – i.e., borrow (`&`) or mutable reference (`&mut`) –
     /// based on the input operator.
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser) -> Result<ReferenceExpr, ErrorsEmitted> {
         let reference_op = match parser.current_token() {
             Some(Token::Ampersand { .. }) => Ok(ReferenceOp::Borrow),
             Some(Token::AmpersandMut { .. }) => Ok(ReferenceOp::MutableBorrow),
@@ -60,13 +60,13 @@ impl ParseSimpleExpr for ReferenceExpr {
             expression: Box::new(operand),
         };
 
-        Ok(Expression::Reference(expr))
+        Ok(expr)
     }
 }
 
 impl ParseSimpleExpr for DereferenceExpr {
     /// Parse a unary dereference operation with the operator `*`.
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+    fn parse(parser: &mut Parser) -> Result<DereferenceExpr, ErrorsEmitted> {
         let dereference_op = match parser.current_token() {
             Some(Token::Asterisk { .. }) => Ok(DereferenceOp),
             _ => {
@@ -89,7 +89,7 @@ impl ParseSimpleExpr for DereferenceExpr {
             assignee_expr,
         };
 
-        Ok(Expression::Dereference(expr))
+        Ok(expr)
     }
 }
 

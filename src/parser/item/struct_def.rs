@@ -8,9 +8,9 @@ use crate::{
     token::Token,
 };
 
-use super::{collection, ParseDefinition, Parser};
+use super::{collection, ParseDefItem, Parser};
 
-impl ParseDefinition for StructDef {
+impl ParseDefItem for StructDef {
     fn parse(
         parser: &mut Parser,
         attributes_opt: Option<Vec<OuterAttr>>,
@@ -80,7 +80,7 @@ impl ParseDefinition for StructDef {
     }
 }
 
-impl ParseDefinition for TupleStructDef {
+impl ParseDefItem for TupleStructDef {
     fn parse(
         parser: &mut Parser,
         attributes_opt: Option<Vec<OuterAttr>>,

@@ -5,9 +5,9 @@ use crate::{
     token::Token,
 };
 
-use super::{collection, ParseDefinition, Parser};
+use super::{collection, ParseDefItem, Parser};
 
-impl ParseDefinition for ModuleItem {
+impl ParseDefItem for ModuleItem {
     fn parse(
         parser: &mut Parser,
         outer_attributes_opt: Option<Vec<OuterAttr>>,

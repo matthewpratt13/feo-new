@@ -4,12 +4,12 @@ use crate::{
         Type,
     },
     error::ErrorsEmitted,
-    parser::{collection, ParseConstruct, Parser, Precedence},
+    parser::{collection, ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
 
-impl ParseConstruct for ClosureExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstructExpr for ClosureExpr {
+    fn parse(parser: &mut Parser) -> Result<ClosureExpr, ErrorsEmitted> {
         let closure_params = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
                 let position = parser.current_position();
@@ -64,7 +64,7 @@ impl ParseConstruct for ClosureExpr {
         }?;
 
         let body_expression = if return_type_opt.is_some() {
-            Box::new(BlockExpr::parse(parser)?)
+            Box::new(Expression::Block(BlockExpr::parse(parser)?))
         } else {
             Box::new(parser.parse_expression(Precedence::Lowest)?)
         };
@@ -75,7 +75,7 @@ impl ParseConstruct for ClosureExpr {
             body_expression,
         };
 
-        Ok(Expression::Closure(expr))
+        Ok(expr)
     }
 }
 

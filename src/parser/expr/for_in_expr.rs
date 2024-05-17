@@ -1,12 +1,12 @@
 use crate::{
     ast::{BlockExpr, Expression, ForInExpr, Keyword, Literal},
     error::{ErrorsEmitted, ParserErrorKind},
-    parser::{ParseConstruct, ParseControl, Parser, Precedence},
+    parser::{ParseConstructExpr, ParseControlExpr, Parser, Precedence},
     token::Token,
 };
 
-impl ParseControl for ForInExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseControlExpr for ForInExpr {
+    fn parse(parser: &mut Parser) -> Result<ForInExpr, ErrorsEmitted> {
         let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::For)
@@ -105,7 +105,7 @@ impl ParseControl for ForInExpr {
             block,
         };
 
-        Ok(Expression::ForIn(expr))
+        Ok(expr)
     }
 }
 

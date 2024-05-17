@@ -4,11 +4,11 @@ use crate::{
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
-    parser::{ParseOperation, Parser},
+    parser::{ParseOperatorExpr, Parser},
     token::{Token, TokenType},
 };
 
-impl ParseOperation for BinaryExpr {
+impl ParseOperatorExpr for BinaryExpr {
     /// Parse a binary operation (e.g., arithmetic, logical and comparison expressions).
     /// This method parses the operator and calls `parse_expression()` recursively to handle
     /// the right-hand side of the expression.
@@ -75,7 +75,7 @@ impl ParseOperation for BinaryExpr {
     }
 }
 
-impl ParseOperation for ComparisonExpr {
+impl ParseOperatorExpr for ComparisonExpr {
     /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on
     /// the input operator.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {

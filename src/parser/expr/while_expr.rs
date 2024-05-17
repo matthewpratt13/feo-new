@@ -1,12 +1,12 @@
 use crate::{
-    ast::{BlockExpr, Expression, GroupedExpr, Keyword, WhileExpr},
+    ast::{BlockExpr, GroupedExpr, Keyword, WhileExpr},
     error::ErrorsEmitted,
-    parser::{ParseConstruct, ParseControl, Parser},
+    parser::{ParseConstructExpr, ParseControlExpr, Parser},
     token::Token,
 };
 
-impl ParseControl for WhileExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseControlExpr for WhileExpr {
+    fn parse(parser: &mut Parser) -> Result<WhileExpr, ErrorsEmitted> {
         let kw_while = if let Some(Token::While { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::While)
@@ -45,7 +45,7 @@ impl ParseControl for WhileExpr {
             block,
         };
 
-        Ok(Expression::While(expr))
+        Ok(expr)
     }
 }
 

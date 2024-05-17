@@ -2,12 +2,12 @@ use crate::{
     ast::{Delimiter, Expression, GroupedExpr, TupleElements, TupleExpr},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
-    parser::{ParseConstruct, Parser, Precedence},
+    parser::{ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
 
-impl ParseConstruct for GroupedExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstructExpr for GroupedExpr {
+    fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {
         // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
@@ -37,7 +37,7 @@ impl ParseConstruct for GroupedExpr {
 
             let inner_expression = Box::new(Expression::Tuple(tuple_expr));
 
-            return Ok(Expression::Grouped(GroupedExpr { inner_expression }));
+            return Ok(GroupedExpr { inner_expression });
         }
 
         let inner_expression = Box::new(parser.parse_expression(Precedence::Lowest)?);
@@ -53,7 +53,7 @@ impl ParseConstruct for GroupedExpr {
                 );
                 parser.log_current_token(false);
 
-                Ok(Expression::Grouped(GroupedExpr { inner_expression }))
+                Ok(GroupedExpr { inner_expression })
             }
 
             _ => {

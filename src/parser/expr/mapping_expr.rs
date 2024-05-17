@@ -1,12 +1,12 @@
 use crate::{
-    ast::{Delimiter, Expression, MappingExpr, MappingPair},
+    ast::{Delimiter, MappingExpr, MappingPair},
     error::ErrorsEmitted,
-    parser::{collection, ParseConstruct, Parser, Precedence},
+    parser::{collection, ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
 
-impl ParseConstruct for MappingExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstructExpr for MappingExpr {
+    fn parse(parser: &mut Parser) -> Result<MappingExpr, ErrorsEmitted> {
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 let position = parser.current_position();
@@ -24,7 +24,7 @@ impl ParseConstruct for MappingExpr {
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
-                Ok(Expression::Mapping(MappingExpr { pairs_opt }))
+                Ok(MappingExpr { pairs_opt })
             }
             _ => {
                 parser.log_unmatched_delimiter(&open_brace);

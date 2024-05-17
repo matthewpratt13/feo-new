@@ -4,14 +4,14 @@ use crate::{
         IdentifierPatt, Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
     },
     error::ErrorsEmitted,
-    parser::ParseConstruct,
+    parser::ParseConstructExpr,
     span::Position,
     token::Token,
 };
 
-use super::{collection, ParseDefinition, Parser};
+use super::{collection, ParseDefItem, Parser};
 
-impl ParseDefinition for FunctionItem {
+impl ParseDefItem for FunctionItem {
     fn parse(
         parser: &mut Parser,
         attributes_opt: Option<Vec<OuterAttr>>,

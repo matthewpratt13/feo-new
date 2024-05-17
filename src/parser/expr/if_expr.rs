@@ -1,12 +1,12 @@
 use crate::{
-    ast::{BlockExpr, Expression, GroupedExpr, IfExpr, Keyword},
+    ast::{BlockExpr, GroupedExpr, IfExpr, Keyword},
     error::ErrorsEmitted,
-    parser::{ParseConstruct, ParseControl, Parser},
+    parser::{ParseConstructExpr, ParseControlExpr, Parser},
     token::Token,
 };
 
-impl ParseControl for IfExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseControlExpr for IfExpr {
+    fn parse(parser: &mut Parser) -> Result<IfExpr, ErrorsEmitted> {
         let kw_if = if let Some(Token::If { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::If)
@@ -49,7 +49,7 @@ impl ParseControl for IfExpr {
             trailing_else_block_opt,
         };
 
-        Ok(Expression::If(expr))
+        Ok(expr)
     }
 }
 
@@ -57,14 +57,14 @@ fn parse_else_blocks(
     parser: &mut Parser,
 ) -> Result<
     (
-        Option<Vec<(Keyword, Box<Expression>)>>,
-        Option<(Keyword, Box<Expression>)>,
+        Option<Vec<(Keyword, Box<IfExpr>)>>,
+        Option<(Keyword, Box<BlockExpr>)>,
     ),
     ErrorsEmitted,
 > {
-    let mut else_if_blocks: Vec<(Keyword, Box<Expression>)> = Vec::new();
+    let mut else_if_blocks: Vec<(Keyword, Box<IfExpr>)> = Vec::new();
 
-    let mut trailing_else_block_opt: Option<(Keyword, Box<Expression>)> = None;
+    let mut trailing_else_block_opt: Option<(Keyword, Box<BlockExpr>)> = None;
 
     while let Some(Token::Else { .. }) = parser.current_token() {
         parser.next_token();

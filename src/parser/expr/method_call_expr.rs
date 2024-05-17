@@ -1,11 +1,11 @@
 use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr},
     error::ErrorsEmitted,
-    parser::{collection, ParseOperation, Parser, Precedence},
+    parser::{collection, ParseOperatorExpr, Parser, Precedence},
     token::Token,
 };
 
-impl ParseOperation for MethodCallExpr {
+impl ParseOperatorExpr for MethodCallExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let receiver = AssigneeExpr::try_from(left_expr).map_err(|e| {
             parser.log_error(e);

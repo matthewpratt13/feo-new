@@ -1,13 +1,13 @@
 use crate::{
-    ast::{BlockExpr, Delimiter, Expression, InnerAttr, Statement},
+    ast::{BlockExpr, Delimiter, InnerAttr, Statement},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
-    parser::{collection, ParseConstruct, Parser},
+    parser::{collection, ParseConstructExpr, Parser},
     token::Token,
 };
 
-impl ParseConstruct for BlockExpr {
-    fn parse(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+impl ParseConstructExpr for BlockExpr {
+    fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
         // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
@@ -51,7 +51,7 @@ impl ParseConstruct for BlockExpr {
                 );
                 parser.log_current_token(true);
 
-                Ok(Expression::Block(expr))
+                Ok(expr)
             }
 
             _ => {

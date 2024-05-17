@@ -8,9 +8,9 @@ use crate::{
     token::Token,
 };
 
-use super::{collection, ParseDeclaration, Parser};
+use super::{collection, ParseDeclItem, Parser};
 
-impl ParseDeclaration for ImportDecl {
+impl ParseDeclItem for ImportDecl {
     fn parse(
         parser: &mut Parser,
         attributes_opt: Option<Vec<OuterAttr>>,

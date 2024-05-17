@@ -5,9 +5,9 @@ use crate::{
     token::Token,
 };
 
-use super::ParseDeclaration;
+use super::ParseDeclItem;
 
-impl ParseDeclaration for ConstantDecl {
+impl ParseDeclItem for ConstantDecl {
     fn parse(
         parser: &mut Parser,
         attributes_opt: Option<Vec<OuterAttr>>,
