@@ -43,7 +43,7 @@ pub(crate) struct MappingPair {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct MatchArm {
     pub(crate) matched_pattern: Pattern,
-    pub(crate) guard_opt: Option<(Keyword, Box<Expression>)>, // (`if`, `{ .. }`)
+    pub(crate) guard_opt: Option<Box<Expression>>, // (`if`, `{ .. }`)
     pub(crate) arm_expression: Box<Expression>,
 }
 

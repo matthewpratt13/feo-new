@@ -99,7 +99,7 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
     let guard_opt = if let Some(Token::If { .. }) = parser.current_token() {
         parser.next_token();
         let expr = parser.parse_expression(Precedence::Lowest)?;
-        Some((Keyword::If, Box::new(expr)))
+        Some(Box::new(expr))
     } else {
         None
     };
