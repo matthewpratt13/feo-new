@@ -55,16 +55,10 @@ impl ParseControlExpr for IfExpr {
 
 fn parse_else_blocks(
     parser: &mut Parser,
-) -> Result<
-    (
-        Option<Vec<(Keyword, Box<IfExpr>)>>,
-        Option<(Keyword, BlockExpr)>,
-    ),
-    ErrorsEmitted,
-> {
-    let mut else_if_blocks: Vec<(Keyword, Box<IfExpr>)> = Vec::new();
+) -> Result<(Option<Vec<Box<IfExpr>>>, Option<BlockExpr>), ErrorsEmitted> {
+    let mut else_if_blocks: Vec<Box<IfExpr>> = Vec::new();
 
-    let mut trailing_else_block_opt: Option<(Keyword, BlockExpr)> = None;
+    let mut trailing_else_block_opt: Option<BlockExpr> = None;
 
     while let Some(Token::Else { .. }) = parser.current_token() {
         parser.next_token();
@@ -72,11 +66,11 @@ fn parse_else_blocks(
         match parser.current_token() {
             Some(Token::If { .. }) => {
                 let if_expr = Box::new(IfExpr::parse(parser)?);
-                else_if_blocks.push((Keyword::Else, if_expr));
+                else_if_blocks.push(if_expr);
             }
             Some(Token::LBrace { .. }) => {
                 let block = BlockExpr::parse(parser)?;
-                trailing_else_block_opt = Some((Keyword::Else, block));
+                trailing_else_block_opt = Some(block);
                 break;
             }
             Some(Token::EOF) | None => {

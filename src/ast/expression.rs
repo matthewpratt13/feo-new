@@ -1,5 +1,7 @@
 use super::{
-    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, DereferenceOp, Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType, Separator, Statement, Type, TypeCastOp, UInt, UnaryOp, UnwrapOp, ValueExpr
+    AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, DereferenceOp,
+    Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType,
+    Separator, Statement, Type, TypeCastOp, UInt, UnaryOp, UnwrapOp, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -165,8 +167,8 @@ pub struct IfExpr {
     pub(crate) kw_if: Keyword,
     pub(crate) condition: Box<GroupedExpr>,
     pub(crate) if_block: Box<BlockExpr>,
-    pub(crate) else_if_blocks_opt: Option<Vec<(Keyword, Box<IfExpr>)>>, // (`else`, `if { .. }`)
-    pub(crate) trailing_else_block_opt: Option<(Keyword, BlockExpr)>, // (`else`, `{ .. }`)
+    pub(crate) else_if_blocks_opt: Option<Vec<Box<IfExpr>>>,
+    pub(crate) trailing_else_block_opt: Option<BlockExpr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
