@@ -56,7 +56,7 @@ fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted>
         }
     }
 
-    let value = parser.parse_expression(Precedence::Lowest)?;
+    let value = Box::new(parser.parse_expression(Precedence::Lowest)?);
 
     Ok(MappingPair { key, value })
 }
