@@ -569,7 +569,7 @@ impl TryFrom<Expression> for AssigneeExpr {
                     .elements
                     .into_iter()
                     .map(|te| {
-                        AssigneeExpr::try_from(te.0).expect(
+                        AssigneeExpr::try_from(te).expect(
                             "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         )
                     })

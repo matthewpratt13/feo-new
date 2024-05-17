@@ -1,7 +1,5 @@
 use crate::{
-    ast::{
-        AssigneeExpr, Delimiter, Expression, Separator, TupleElements, TupleExpr, TupleIndexExpr,
-    },
+    ast::{AssigneeExpr, Delimiter, Expression, TupleElements, TupleExpr, TupleIndexExpr},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParseOperatorExpr, Parser, Precedence},
     token::Token,
@@ -37,7 +35,7 @@ impl ParseConstructExpr for TupleExpr {
 }
 
 fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmitted> {
-    let mut elements: Vec<(Expression, Separator)> = Vec::new();
+    let mut elements: Vec<Expression> = Vec::new();
     let mut final_element_opt = None::<Box<Expression>>;
 
     while !matches!(
@@ -47,7 +45,7 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
         let element = parser.parse_expression(Precedence::Lowest)?;
 
         if let Some(Token::Comma { .. }) = parser.current_token() {
-            elements.push((element, Separator::Comma));
+            elements.push(element);
             parser.next_token();
         } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
             parser.log_unexpected_token("`,` or `)`");

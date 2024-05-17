@@ -1,7 +1,7 @@
 use super::{
     AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, DereferenceOp,
     Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType,
-    Separator, Statement, Type, TypeCastOp, UInt, UnaryOp, UnwrapOp, ValueExpr,
+    Statement, Type, TypeCastOp, UInt, UnaryOp, UnwrapOp, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -66,7 +66,7 @@ pub(crate) struct StructAssigneeExprField {
 /// Struct representing a collection of elements in a tuple expression.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct TupleElements {
-    pub(crate) elements: Vec<(Expression, Separator)>, // one-element tuple must have trailing comma
+    pub(crate) elements: Vec<Expression>,
     pub(crate) final_element_opt: Option<Box<Expression>>,
 }
 
