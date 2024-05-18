@@ -959,7 +959,7 @@ impl Parser {
                 Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
             }
 
-            Some(Token::Some { .. }) => SomePatt::parse(self),
+            Some(Token::Some { .. }) => Ok(Pattern::SomePatt(SomePatt::parse_patt(self)?)),
 
             Some(Token::None { .. }) => {
                 self.next_token();
