@@ -56,10 +56,10 @@ use crate::{
         DereferenceExpr, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
         Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
         MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, Pattern,
-        RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferenceOp, ReferencePatt, RestPatt,
-        ResultExpr, ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt,
-        TupleExpr, TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr,
-        UnderscoreExpr, UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
+        RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferencePatt, RestPatt, ResultExpr,
+        ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt, TupleExpr,
+        TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr, UnderscoreExpr,
+        UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
@@ -944,10 +944,10 @@ impl Parser {
             Some(Token::SelfKeyword { .. } | Token::Package { .. } | Token::Super { .. }) => {
                 Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?))
             }
-            Some(Token::Ampersand { .. }) => ReferencePatt::parse(self, ReferenceOp::Borrow),
-            Some(Token::AmpersandMut { .. }) => {
-                ReferencePatt::parse(self, ReferenceOp::MutableBorrow)
+            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => {
+                Ok(Pattern::ReferencePatt(ReferencePatt::parse_patt(self)?))
             }
+
             Some(Token::DblDot { .. }) => {
                 self.next_token();
                 Ok(Pattern::RestPatt(RestPatt {
