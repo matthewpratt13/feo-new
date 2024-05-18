@@ -914,10 +914,10 @@ impl Parser {
                 } else {
                     match self.peek_ahead_by(1) {
                         Some(Token::LBrace { .. }) => {
-                            Ok(Pattern::StructPatt(StructPatt::parse(self)?))
+                            Ok(Pattern::StructPatt(StructPatt::parse_patt(self)?))
                         }
                         Some(Token::LParen { .. }) => {
-                            Ok(Pattern::TupleStructPatt(TupleStructPatt::parse(self)?))
+                            Ok(Pattern::TupleStructPatt(TupleStructPatt::parse_patt(self)?))
                         }
                         Some(Token::DblColon { .. }) => {
                             Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?))
@@ -935,9 +935,11 @@ impl Parser {
             }
 
             Some(Token::SelfType { .. }) => match self.peek_ahead_by(1) {
-                Some(Token::LBrace { .. }) => Ok(Pattern::StructPatt(StructPatt::parse(self)?)),
+                Some(Token::LBrace { .. }) => {
+                    Ok(Pattern::StructPatt(StructPatt::parse_patt(self)?))
+                }
                 Some(Token::LParen { .. }) => {
-                    Ok(Pattern::TupleStructPatt(TupleStructPatt::parse(self)?))
+                    Ok(Pattern::TupleStructPatt(TupleStructPatt::parse_patt(self)?))
                 }
                 _ => Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?)),
             },
