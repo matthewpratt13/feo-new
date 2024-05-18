@@ -1,6 +1,7 @@
 use crate::{
     ast::{
         Delimiter, Identifier, PathPatt, PathRoot, Pattern, SelfType, StructPatt, StructPattField,
+        TupleStructPatt,
     },
     error::ErrorsEmitted,
     parser::{collection, Parser},
@@ -9,7 +10,7 @@ use crate::{
 };
 
 impl StructPatt {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<StructPatt, ErrorsEmitted> {
         let path_root = match parser.current_token() {
             Some(Token::Identifier { name, .. }) => {
                 Ok(PathRoot::Identifier(Identifier::from(&name)))
@@ -42,10 +43,10 @@ impl StructPatt {
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
-                Ok(Pattern::StructPatt(StructPatt {
+                Ok(StructPatt {
                     struct_path,
                     fields_opt,
-                }))
+                })
             }
             Some(Token::EOF) | None => {
                 parser.log_unmatched_delimiter(&open_brace);
@@ -91,4 +92,83 @@ fn parse_struct_patt_field(parser: &mut Parser) -> Result<StructPattField, Error
     };
 
     Ok(field)
+}
+
+impl TupleStructPatt {
+    pub(crate) fn parse(parser: &mut Parser) -> Result<TupleStructPatt, ErrorsEmitted> {
+        let path_root = match parser.current_token() {
+            Some(Token::Identifier { name, .. }) => {
+                Ok(PathRoot::Identifier(Identifier::from(&name)))
+            }
+            Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
+            _ => {
+                parser.log_unexpected_token("identifier or `Self`");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        let tuple_struct_path = PathPatt {
+            path_root,
+            tree_opt: None,
+        };
+
+        parser.next_token();
+
+        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
+            let position = Position::new(parser.current, &parser.stream.span().input());
+            parser.next_token();
+            Ok(Delimiter::LParen { position })
+        } else {
+            parser.log_unexpected_token("`(`");
+            Err(ErrorsEmitted)
+        }?;
+
+        let elements_opt = parse_tuple_struct_patterns(parser)?;
+
+        match parser.current_token() {
+            Some(Token::RParen { .. }) => {
+                parser.next_token();
+                Ok(TupleStructPatt {
+                    tuple_struct_path,
+                    elements_opt,
+                })
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unmatched_delimiter(&open_paren);
+                parser.log_missing_token("`)`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token("`)`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+}
+
+fn parse_tuple_struct_patterns(parser: &mut Parser) -> Result<Option<Vec<Pattern>>, ErrorsEmitted> {
+    let mut patterns: Vec<Pattern> = Vec::new();
+
+    while !matches!(
+        parser.current_token().as_ref(),
+        Some(Token::RParen { .. } | Token::EOF),
+    ) {
+        let pattern = parser.parse_pattern()?;
+        patterns.push(pattern);
+
+        if let Some(Token::Comma { .. }) = parser.current_token().as_ref() {
+            parser.next_token();
+        } else if !matches!(
+            parser.current_token().as_ref(),
+            Some(Token::RParen { .. } | Token::EOF)
+        ) {
+            parser.log_unexpected_token("`,` or `)`");
+            return Err(ErrorsEmitted);
+        }
+    }
+
+    match patterns.is_empty() {
+        true => Ok(None),
+        false => Ok(Some(patterns)),
+    }
 }
