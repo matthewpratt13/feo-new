@@ -898,7 +898,7 @@ impl Parser {
             }
             Some(Token::LParen { .. }) => {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
-                    TuplePatt::parse(self)
+                    Ok(Pattern::TuplePatt(TuplePatt::parse_patt(self)?))
                 } else {
                     let patt = GroupedPatt::parse_patt(self)?;
                     self.next_token();
