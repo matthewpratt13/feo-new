@@ -11,7 +11,7 @@ use super::{
 /// Enum representing whether or not a closure has parameters in its definition.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum ClosureParams {
-    Some(Vec<ClosureParam>), // `| param [: Type], .. |`
+    Some(Vec<ClosureParam>), // `| <param [: <Type>]>, .. |`
     None,                    // `||`
 }
 
@@ -43,8 +43,17 @@ pub(crate) struct MappingPair {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct MatchArm {
     pub(crate) matched_pattern: Pattern,
-    pub(crate) guard_opt: Option<Box<Expression>>,
+    pub(crate) guard_opt: Option<Box<Expression>>, // `<case> if <expr>`
     pub(crate) arm_expression: Box<Expression>,
+}
+
+/// Struct representing a single field in a struct assignee expression, with a name, assignee
+/// and optional attributes.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct StructAssigneeExprField {
+    pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
+    pub(crate) field_name: Identifier,
+    pub(crate) field_value: Box<AssigneeExpr>,
 }
 
 /// Struct representing a single field in a struct expression, with a name, value
@@ -54,13 +63,6 @@ pub(crate) struct StructField {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) field_name: Identifier,
     pub(crate) field_value: Box<Expression>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct StructAssigneeExprField {
-    pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
-    pub(crate) field_name: Identifier,
-    pub(crate) field_value: Box<AssigneeExpr>,
 }
 
 /// Struct representing a collection of elements in a tuple expression.
@@ -185,7 +187,7 @@ pub struct MappingExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchExpr {
     pub(crate) kw_match: Keyword,
-    pub(crate) scrutinee: AssigneeExpr,
+    pub(crate) scrutinee: AssigneeExpr, // expression to be matched against
     pub(crate) match_arms_opt: Option<Vec<MatchArm>>,
     pub(crate) final_arm: Box<MatchArm>, // default case
 }

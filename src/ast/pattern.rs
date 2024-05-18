@@ -6,19 +6,19 @@ use super::{Identifier, Keyword, PathRoot, Pattern, RangeOp, ReferenceOp, Separa
 // HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 
-/// Struct representing a collection of elements in a tuple pattern.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct TuplePattElements {
-    pub(crate) elements: Vec<(Pattern, Separator)>, // single-element tuple must have trailing comma
-    pub(crate) final_element_opt: Option<Box<Pattern>>,
-}
-
 /// Struct representing a single field in a struct pattern, with a name and value
 /// and optional attributes.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct StructPattField {
     pub(crate) field_name: Identifier,
     pub(crate) field_value: Pattern,
+}
+
+/// Struct representing a collection of elements in a tuple pattern.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct TuplePattElements {
+    pub(crate) elements: Vec<(Pattern, Separator)>, // single-element tuple must have trailing comma
+    pub(crate) final_element_opt: Option<Box<Pattern>>,
 }
 
 ///////////////////////////////////////////////////////////////////////////

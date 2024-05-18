@@ -1,6 +1,6 @@
 use core::fmt;
 
-/// Enum representing different log levels, which controls the verbosity of the logs,
+/// Enum representing different log levels, which control the verbosity of the logs,
 /// from the most to the least verbose.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -25,7 +25,7 @@ pub struct Logger {
 }
 
 impl Logger {
-    /// Instantiate a new `Logger`.
+    /// Construct a new `Logger`.
     pub fn new(level: LogLevel) -> Self {
         Self {
             level,

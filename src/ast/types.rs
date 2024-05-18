@@ -63,7 +63,9 @@ impl fmt::Display for BigUInt {
     }
 }
 
-/// Struct that wraps a `u8` into a `Byte` type that is usually treated as a single text character.
+/// Struct that wraps a `u8` into a `Byte` type that is treated as a single ASCII character
+/// in a byte string type. This is different to the native Unicode `char` type, which is 
+/// a UTF-8 encoded character of one (`u8`) to four bytes (`u32`) – i.e., variable length.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Byte(u8);
 
@@ -80,6 +82,7 @@ impl fmt::Display for Byte {
 }
 
 /// Wrappers for the different static byte array (`Bytes`) types.
+/// Analogous to `[u8; 2]`, `[u8; 4]`, `[u8; 8]`, `[u8; 16]` and `[u8; 32]`
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Bytes {
     B2(B2),
@@ -167,6 +170,7 @@ impl fmt::Display for Bool {
     }
 }
 
+/// Function pointer type: `func([<param>]) [-> <Type>]`
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionPtr {
     pub(crate) function_name: Identifier,
@@ -216,6 +220,7 @@ impl fmt::Display for InferredType {
     }
 }
 
+/// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathType {
     pub(crate) path_root: PathRoot,
