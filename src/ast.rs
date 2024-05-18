@@ -555,7 +555,7 @@ pub(crate) enum AssigneeExpr {
     ReferenceExpr(ReferenceExpr),
     GroupedExpr(Box<AssigneeExpr>),
     UnderscoreExpr(UnderscoreExpr),
-    ArrayExpr(Vec<AssigneeExpr>), // (slice expression)
+    ArrayExpr(Vec<AssigneeExpr>),
     TupleExpr(Vec<AssigneeExpr>),
     StructExpr(Vec<StructAssigneeExprField>),
 }
