@@ -63,7 +63,7 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
 
 impl ParseOperatorExpr for TupleIndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let tuple = left_expr.try_to_assignee_expr(parser)?;
+        let tuple = left_expr.try_into_assignee_expr(parser)?;
 
         let index = match parser.current_token() {
             Some(Token::UIntLiteral { value, .. }) => {

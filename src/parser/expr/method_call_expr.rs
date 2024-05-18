@@ -7,7 +7,7 @@ use crate::{
 
 impl ParseOperatorExpr for MethodCallExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let receiver = left_expr.try_to_assignee_expr(parser)?;
+        let receiver = left_expr.try_into_assignee_expr(parser)?;
 
         let method_name = match parser.current_token() {
             Some(Token::Identifier { name, .. }) => {

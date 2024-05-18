@@ -7,7 +7,7 @@ use crate::{
 
 impl ParseOperatorExpr for FieldAccessExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let object = left_expr.try_to_assignee_expr(parser)?;
+        let object = left_expr.try_into_assignee_expr(parser)?;
 
         let expr = match parser.current_token() {
             Some(Token::Identifier { name, .. }) => {

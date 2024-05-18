@@ -7,7 +7,7 @@ use crate::{
 
 impl ParseOperatorExpr for IndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let array = left_expr.try_to_assignee_expr(parser)?;
+        let array = left_expr.try_into_assignee_expr(parser)?;
 
         let open_bracket = match parser.current_token() {
             Some(Token::LBracket { .. }) => {

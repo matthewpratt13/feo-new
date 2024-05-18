@@ -7,7 +7,7 @@ use crate::{
 
 impl ParseOperatorExpr for AssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let lhs = left_expr.try_to_assignee_expr(parser)?;
+        let lhs = left_expr.try_into_assignee_expr(parser)?;
 
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
@@ -42,8 +42,8 @@ impl ParseOperatorExpr for AssignmentExpr {
 
 impl ParseOperatorExpr for CompoundAssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let lhs = left_expr.try_to_assignee_expr(parser)?;
-        
+        let lhs = left_expr.try_into_assignee_expr(parser)?;
+
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let compound_assignment_op = match operator_token.token_type() {

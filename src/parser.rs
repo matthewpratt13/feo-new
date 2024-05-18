@@ -716,7 +716,7 @@ impl Parser {
 
     /// Parse a value type expression.
     fn parse_value_expr(&mut self, precedence: Precedence) -> Result<ValueExpr, ErrorsEmitted> {
-        self.parse_expression(precedence)?.try_to_value_expr(self)
+        self.parse_expression(precedence)?.try_into_value_expr(self)
     }
 
     /// Parse an assignee type expression.
@@ -725,7 +725,7 @@ impl Parser {
         precedence: Precedence,
     ) -> Result<AssigneeExpr, ErrorsEmitted> {
         self.parse_expression(precedence)?
-            .try_to_assignee_expr(self)
+            .try_into_assignee_expr(self)
     }
 
     ///////////////////////////////////////////////////////////////////////////

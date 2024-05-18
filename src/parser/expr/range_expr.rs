@@ -7,7 +7,7 @@ use crate::{
 
 impl ParseOperatorExpr for RangeExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let from_assignee_expr = left_expr.try_to_assignee_expr(parser)?;
+        let from_assignee_expr = left_expr.try_into_assignee_expr(parser)?;
 
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 

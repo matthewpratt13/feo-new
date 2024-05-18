@@ -18,7 +18,7 @@ impl ParseOperatorExpr for BinaryExpr {
         );
         parser.log_current_token(true);
 
-        let lhs = left_expr.try_to_value_expr(parser)?;
+        let lhs = left_expr.try_into_value_expr(parser)?;
 
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
@@ -76,7 +76,7 @@ impl ParseOperatorExpr for ComparisonExpr {
         );
         parser.log_current_token(true);
 
-        let lhs = left_expr.try_to_assignee_expr(parser)?;
+        let lhs = left_expr.try_into_assignee_expr(parser)?;
 
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
