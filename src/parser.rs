@@ -968,7 +968,9 @@ impl Parser {
                 }))
             }
 
-            Some(Token::Ok { .. } | Token::Err { .. }) => ResultPatt::parse(self),
+            Some(Token::Ok { .. } | Token::Err { .. }) => {
+                Ok(Pattern::ResultPatt(ResultPatt::parse_patt(self)?))
+            }
 
             Some(Token::EOF) | None => {
                 // log the error, then return `Err(ErrorsEmitted)`
