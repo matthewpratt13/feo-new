@@ -58,8 +58,8 @@ use crate::{
         MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, Pattern,
         RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferenceOp, ReferencePatt, RestPatt,
         ResultExpr, ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt,
-        TupleExpr, TupleIndexExpr, TuplePatt, TypeCastExpr, UnaryExpr, UnderscoreExpr, UnwrapExpr,
-        ValueExpr, WhileExpr, WildcardPatt,
+        TupleExpr, TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr,
+        UnderscoreExpr, UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
@@ -363,9 +363,9 @@ impl Parser {
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Identifier::from(name),
                     }))
-                } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    {
-                        match &self.peek_behind_by(1) {
+                } else {
+                    match self.peek_ahead_by(1) {
+                        Some(Token::LBrace { .. }) => match &self.peek_behind_by(1) {
                             Some(
                                 Token::Equals { .. }
                                 | Token::LParen { .. }
@@ -379,14 +379,12 @@ impl Parser {
                             | None => Ok(Expression::Struct(StructExpr::parse(self)?)),
 
                             _ => self.parse_primary(),
+                        },
+                        Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
+                            Ok(Expression::Path(PathExpr::parse(self)?))
                         }
+                        _ => self.parse_primary(),
                     }
-                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_ahead_by(1)
-                {
-                    Ok(Expression::Path(PathExpr::parse(self)?))
-                } else {
-                    self.parse_primary()
                 }
             }
             Some(Token::SelfType { .. }) => {
@@ -917,45 +915,35 @@ impl Parser {
                     Ok(Pattern::WildcardPatt(WildcardPatt {
                         underscore: Identifier::from(name),
                     }))
-                } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    match &self.peek_behind_by(1) {
-                        Some(
-                            Token::Equals { .. }
-                            | Token::LParen { .. }
-                            | Token::LBracket { .. }
-                            | Token::LBrace { .. }
-                            | Token::Comma { .. }
-                            | Token::RBrace { .. }
-                            | Token::Return { .. }
-                            | Token::Semicolon { .. },
-                        )
-                        | None => StructPatt::parse(self),
-
-                        _ => PathPatt::parse(self),
-                    }
-                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_ahead_by(1)
-                {
-                    PathPatt::parse(self)
-                } else if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
-                {
-                    let patt = PathPatt::parse(self)?;
-                    RangePatt::parse(self, patt)
                 } else {
-                    IdentifierPatt::parse(self)
+                    match self.peek_ahead_by(1) {
+                        Some(Token::LBrace { .. }) => {
+                            Ok(Pattern::StructPatt(StructPatt::parse(self)?))
+                        }
+                        Some(Token::LParen { .. }) => {
+                            Ok(Pattern::TupleStructPatt(TupleStructPatt::parse(self)?))
+                        }
+                        Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
+                            PathPatt::parse(self)
+                        }
+                        Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
+                            let patt = PathPatt::parse(self)?;
+                            RangePatt::parse(self, patt)
+                        }
+                        _ => IdentifierPatt::parse(self),
+                    }
                 }
             }
 
             Some(Token::Ref { .. } | Token::Mut { .. }) => IdentifierPatt::parse(self),
 
-            Some(Token::SelfType { .. }) => {
-                if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    StructPatt::parse(self)
-                } else {
-                    PathPatt::parse(self)
+            Some(Token::SelfType { .. }) => match self.peek_ahead_by(1) {
+                Some(Token::LBrace { .. }) => Ok(Pattern::StructPatt(StructPatt::parse(self)?)),
+                Some(Token::LParen { .. }) => {
+                    Ok(Pattern::TupleStructPatt(TupleStructPatt::parse(self)?))
                 }
-            }
+                _ => PathPatt::parse(self),
+            },
             Some(Token::SelfKeyword { .. } | Token::Package { .. } | Token::Super { .. }) => {
                 PathPatt::parse(self)
             }
@@ -1288,7 +1276,7 @@ impl Parser {
         self.get_precedence(&self.current_token().unwrap())
     }
 
-    /// Get the current token's position in the token stream, formatted to include line 
+    /// Get the current token's position in the token stream, formatted to include line
     /// and column data, and a snippet of the source code leading up to the current token.
     fn current_position(&self) -> Position {
         Position::new(
@@ -1301,7 +1289,7 @@ impl Parser {
     // ADDITIONAL HELPERS
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Determine if `Token::Dot` token indicates a tuple index operator (i.e., if it is 
+    /// Determine if `Token::Dot` token indicates a tuple index operator (i.e., if it is
     /// followed by a digit).
     fn is_tuple_index(&self) -> bool {
         match (self.current_token(), self.peek_ahead_by(1)) {

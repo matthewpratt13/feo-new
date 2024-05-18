@@ -100,6 +100,12 @@ pub struct TuplePatt {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct TupleStructPatt {
+    pub(crate) tuple_struct_path: PathPatt,
+    pub(crate) elements_opt: Option<Vec<Pattern>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct WildcardPatt {
     pub(crate) underscore: Identifier,
 }

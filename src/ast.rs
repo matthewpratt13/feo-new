@@ -363,7 +363,6 @@ pub(crate) enum Expression {
     Array(ArrayExpr),
     Tuple(TupleExpr),
     Struct(StructExpr),
-    // TupleStruct(TupleStructExpr),
     Mapping(MappingExpr),
     Block(BlockExpr),
     If(IfExpr),       // condition, true, false
@@ -471,7 +470,6 @@ pub(crate) enum ValueExpr {
     ArrayExpr(ArrayExpr),
     TupleExpr(TupleExpr),
     StructExpr(StructExpr),
-    // TupleStructExpr(TupleStructExpr),
     MappingExpr(MappingExpr),
     BlockExpr(BlockExpr),
     IfExpr(IfExpr),
@@ -511,7 +509,6 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::Tuple(t) => Ok(ValueExpr::TupleExpr(t)),
             Expression::Struct(s) => Ok(ValueExpr::StructExpr(s)),
             Expression::Mapping(m) => Ok(ValueExpr::MappingExpr(m)),
-            // Expression::TupleStruct(ts) => Ok(ValueExpr::TupleStructExpr(ts)),
             Expression::Block(b) => Ok(ValueExpr::BlockExpr(b)),
             Expression::If(i) => Ok(ValueExpr::IfExpr(i)),
             Expression::Match(m) => Ok(ValueExpr::MatchExpr(m)),
@@ -546,7 +543,6 @@ pub(crate) enum AssigneeExpr {
     ArrayExpr(Vec<AssigneeExpr>), // (slice expression)
     TupleExpr(Vec<AssigneeExpr>),
     StructExpr(Vec<StructAssigneeExprField>),
-    // TupleStructExpr(Vec<AssigneeExpr>),
 }
 
 impl TryFrom<Expression> for AssigneeExpr {
@@ -623,18 +619,6 @@ impl TryFrom<Expression> for AssigneeExpr {
                 Ok(AssigneeExpr::StructExpr(assignee_expressions))
             }
 
-            // Expression::TupleStruct(ts) => {
-            //     let mut assignee_expressions: Vec<AssigneeExpr> = Vec::new();
-            //     ts.elements_opt.map(|v| {
-            //         v.into_iter().for_each(|e| {
-            //             assignee_expressions.push(AssigneeExpr::try_from(e).expect(
-            //                 "conversion error: unable to convert `Expression` into `AssigneeExpr`",
-            //             ))
-            //         })
-            //     });
-
-            //     Ok(AssigneeExpr::TupleStructExpr(assignee_expressions))
-            // }
             _ => Err(ParserErrorKind::UnexpectedExpression {
                 expected: "assignee expression".to_string(),
                 found: format!("{}", value),
@@ -656,10 +640,7 @@ pub(crate) enum Pattern {
     RangePatt(RangePatt),
     TuplePatt(TuplePatt),
     StructPatt(StructPatt),
-    // TupleStructPatt {
-    //     name: Identifier,
-    //     elements_opt: Option<Vec<Pattern>>,
-    // },
+    TupleStructPatt(TupleStructPatt),
     WildcardPatt(WildcardPatt),
     RestPatt(RestPatt),
     SomePatt(SomePatt),
@@ -688,6 +669,7 @@ impl fmt::Display for Pattern {
             Pattern::RangePatt(rng) => write!(f, "{:?}", rng),
             Pattern::TuplePatt(tup) => write!(f, "{:?}", tup),
             Pattern::StructPatt(s) => write!(f, "{:?}", s),
+            Pattern::TupleStructPatt(ts) => write!(f, "{:?}", ts),
             Pattern::WildcardPatt(_) => write!(f, "*"),
             Pattern::RestPatt(_) => write!(f, ".."),
             Pattern::SomePatt(som) => write!(f, "{:?}", som),
