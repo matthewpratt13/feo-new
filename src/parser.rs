@@ -929,12 +929,14 @@ impl Parser {
                             let patt = PathPatt::parse(self)?;
                             RangePatt::parse(self, patt)
                         }
-                        _ => IdentifierPatt::parse(self),
+                        _ => Ok(Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?)),
                     }
                 }
             }
 
-            Some(Token::Ref { .. } | Token::Mut { .. }) => IdentifierPatt::parse(self),
+            Some(Token::Ref { .. } | Token::Mut { .. }) => {
+                Ok(Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?))
+            }
 
             Some(Token::SelfType { .. }) => match self.peek_ahead_by(1) {
                 Some(Token::LBrace { .. }) => Ok(Pattern::StructPatt(StructPatt::parse(self)?)),

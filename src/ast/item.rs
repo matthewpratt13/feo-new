@@ -1,8 +1,8 @@
 use core::fmt;
 
 use super::{
-    AssigneeExpr, BlockExpr, Identifier, InnerAttr, Item, Keyword, OuterAttr, PathType, Pattern,
-    ReferenceOp, Separator, Type, ValueExpr,
+    AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,
+    PathType, ReferenceOp, Separator, Type, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -80,7 +80,7 @@ pub(crate) struct EnumVariant {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct FunctionParam {
-    pub(crate) param_name: Pattern,
+    pub(crate) param_name: IdentifierPatt,
     pub(crate) param_type: Box<Type>,
 }
 

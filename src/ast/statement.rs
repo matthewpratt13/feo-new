@@ -1,4 +1,4 @@
-use super::{Expression, Keyword, Pattern, Type};
+use super::{Expression, IdentifierPatt, Keyword, Type};
 
 ///////////////////////////////////////////////////////////////////////////
 // AST NODE STRUCTURES
@@ -7,7 +7,7 @@ use super::{Expression, Keyword, Pattern, Type};
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetStmt {
     pub(crate) kw_let: Keyword,
-    pub(crate) assignee: Pattern,
+    pub(crate) assignee: IdentifierPatt,
     pub(crate) type_ann_opt: Option<Type>,
     pub(crate) value_opt: Option<Expression>,
 }

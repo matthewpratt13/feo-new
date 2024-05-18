@@ -4,7 +4,7 @@ use crate::{
         IdentifierPatt, Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
     },
     error::ErrorsEmitted,
-    parser::ParseConstructExpr,
+    parser::{ParseConstructExpr, ParsePattern},
     span::Position,
     token::Token,
 };
@@ -143,7 +143,7 @@ impl FunctionOrMethodParam {
                 Ok(FunctionOrMethodParam::MethodParam(self_param))
             }
             Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
-                let param_name = IdentifierPatt::parse(parser)?;
+                let param_name = IdentifierPatt::parse_patt(parser)?;
 
                 match parser.current_token() {
                     Some(Token::Colon { .. }) => {
