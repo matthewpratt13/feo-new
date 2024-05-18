@@ -2,13 +2,13 @@ use crate::{
     ast::{Delimiter, GroupedPatt, Pattern, TuplePatt, TuplePattElements},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
-    parser::Parser,
+    parser::{ParsePattern, Parser},
     span::Position,
     token::Token,
 };
 
-impl GroupedPatt {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+impl ParsePattern for GroupedPatt {
+    fn parse_patt(parser: &mut Parser) -> Result<GroupedPatt, ErrorsEmitted> {
         // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
@@ -35,7 +35,7 @@ impl GroupedPatt {
 
             let inner_pattern = Box::new(Pattern::TuplePatt(tuple_patt));
 
-            return Ok(Pattern::GroupedPatt(GroupedPatt { inner_pattern }));
+            return Ok(GroupedPatt { inner_pattern });
         }
 
         let inner_pattern = Box::new(parser.parse_pattern()?);
@@ -51,7 +51,7 @@ impl GroupedPatt {
                 );
                 parser.log_current_token(false);
 
-                Ok(Pattern::GroupedPatt(GroupedPatt { inner_pattern }))
+                Ok(GroupedPatt { inner_pattern })
             }
             Some(Token::EOF) | None => {
                 parser.log_unmatched_delimiter(&open_paren);

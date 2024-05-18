@@ -68,7 +68,8 @@ use crate::{
 };
 
 pub(crate) use self::parse::{
-    ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParseSimpleExpr, ParseStatement,
+    ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParsePattern, ParseSimpleExpr,
+    ParseStatement,
 };
 pub(crate) use self::precedence::Precedence;
 
@@ -904,9 +905,9 @@ impl Parser {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     TuplePatt::parse(self)
                 } else {
-                    let patt = GroupedPatt::parse(self);
+                    let patt = GroupedPatt::parse_patt(self)?;
                     self.next_token();
-                    patt
+                    Ok(Pattern::GroupedPatt(patt))
                 }
             }
             Some(Token::Identifier { name, .. }) => {
@@ -1048,7 +1049,7 @@ impl Parser {
             self.stream.tokens().get(self.current).cloned()
         } else {
             // return `Token::EOF` instead of `None` to prevent unwrap errors
-            Some(Token::EOF) 
+            Some(Token::EOF)
         }
     }
 

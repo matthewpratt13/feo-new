@@ -79,13 +79,13 @@ pub struct RestPatt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResultPatt {
     pub(crate) kw_ok_or_err: Keyword,
-    pub(crate) pattern: Box<Pattern>,
+    pub(crate) pattern: Box<GroupedPatt>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SomePatt {
     pub(crate) kw_some: Keyword,
-    pub(crate) pattern: Box<Pattern>,
+    pub(crate) pattern: Box<GroupedPatt>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
