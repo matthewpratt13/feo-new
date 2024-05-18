@@ -65,7 +65,7 @@ impl ParseOperatorExpr for RangeExpr {
 }
 
 impl RangeExpr {
-    pub(crate) fn parse_prefix(parser: &mut Parser) -> Result<Expression, ErrorsEmitted> {
+    pub(crate) fn parse_prefix(parser: &mut Parser) -> Result<RangeExpr, ErrorsEmitted> {
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let range_op = match operator_token {
@@ -100,7 +100,7 @@ impl RangeExpr {
                 },
             };
 
-            return Ok(Expression::Range(expr));
+            return Ok(expr);
         }
 
         let precedence = parser.get_precedence(&operator_token);
@@ -109,13 +109,11 @@ impl RangeExpr {
 
         parser.next_token();
 
-        let expr = RangeExpr {
+        Ok(RangeExpr {
             from_expr_opt: None,
             range_op,
             to_expr_opt: Some(Box::new(to_assignee_expr)),
-        };
-
-        Ok(Expression::Range(expr))
+        })
     }
 }
 

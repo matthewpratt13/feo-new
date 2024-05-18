@@ -497,10 +497,12 @@ impl Parser {
                     Ok(Expression::Range(expr))
                 }
 
-                _ => RangeExpr::parse_prefix(self),
+                _ => Ok(Expression::Range(RangeExpr::parse_prefix(self)?)),
             },
 
-            Some(Token::DotDotEquals { .. }) => RangeExpr::parse_prefix(self),
+            Some(Token::DotDotEquals { .. }) => {
+                Ok(Expression::Range(RangeExpr::parse_prefix(self)?))
+            }
 
             Some(Token::If { .. }) => Ok(Expression::If(IfExpr::parse(self)?)),
 
@@ -540,7 +542,7 @@ impl Parser {
             Some(Token::Return { .. }) => Ok(Expression::Return(ReturnExpr::parse(self)?)),
 
             Some(Token::EOF) | None => {
-                // log the error and advance the parser, then return `Err(ErrorsEmitted)`
+                // log the error, then return `Err(ErrorsEmitted)`
                 self.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
@@ -557,7 +559,7 @@ impl Parser {
     }
 
     /// Map the current token to the appropriate infix parsing function.
-    /// Return this function, which is based on the current context and the token's precedence.
+    /// Return the function, which is based on the current context and the token's precedence.
     /// The function should take a `&mut Parser` and a left `Expression` as input,
     /// and should combine the left expression with the operator and a right expression.
     fn parse_infix(
@@ -708,18 +710,18 @@ impl Parser {
                 self.log_error(ParserErrorKind::InvalidTokenContext {
                     token: self.current_token(),
                 });
-                self.log_current_token(true);
+                self.log_current_token(true); // **[REMOVE IN PROD]**
                 Err(ErrorsEmitted)
             }
         }
     }
 
-    /// Parse a value type expression.
+    /// Parse an expression and attempt to convert it to a value expression.
     fn parse_value_expr(&mut self, precedence: Precedence) -> Result<ValueExpr, ErrorsEmitted> {
         self.parse_expression(precedence)?.try_into_value_expr(self)
     }
 
-    /// Parse an assignee type expression.
+    /// Parse an expression and attempt to convert it to an assignee expression.
     fn parse_assignee_expr(
         &mut self,
         precedence: Precedence,
@@ -807,7 +809,7 @@ impl Parser {
     // PATTERN PARSING
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Parse a `Pattern` – used in match expressions, function call expressions and elsewhere.
+    /// Parse a `Pattern` – used in match expressions, function definitions and elsewhere.
     fn parse_pattern(&mut self) -> Result<Pattern, ErrorsEmitted> {
         // **log event and current token** [REMOVE IN PROD]
         self.logger
@@ -870,12 +872,10 @@ impl Parser {
             }
             Some(Token::BytesLiteral { value, .. }) => {
                 self.next_token();
-
                 Ok(Pattern::Literal(Literal::Bytes(*value)))
             }
             Some(Token::HashLiteral { value, .. }) => {
                 self.next_token();
-
                 Ok(Pattern::Literal(Literal::Hash(*value)))
             }
             Some(Token::StrLiteral { value, .. }) => {
@@ -923,9 +923,7 @@ impl Parser {
                         Some(Token::LParen { .. }) => {
                             Ok(Pattern::TupleStructPatt(TupleStructPatt::parse(self)?))
                         }
-                        Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
-                            PathPatt::parse(self)
-                        }
+                        Some(Token::DblColon { .. }) => PathPatt::parse(self),
                         Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
                             let patt = PathPatt::parse(self)?;
                             RangePatt::parse(self, patt)
@@ -1049,7 +1047,8 @@ impl Parser {
         if self.current < self.stream.tokens().len() {
             self.stream.tokens().get(self.current).cloned()
         } else {
-            Some(Token::EOF)
+            // return `Token::EOF` instead of `None` to prevent unwrap errors
+            Some(Token::EOF) 
         }
     }
 
@@ -1271,7 +1270,7 @@ impl Parser {
         }
     }
 
-    /// Get the precedence of the next token.
+    /// Get the precedence of the current token to be compared and consumed.
     fn peek_precedence(&self) -> Precedence {
         self.get_precedence(&self.current_token().unwrap())
     }
