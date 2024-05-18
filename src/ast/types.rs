@@ -64,7 +64,7 @@ impl fmt::Display for BigUInt {
 }
 
 /// Struct that wraps a `u8` into a `Byte` type that is treated as a single ASCII character
-/// in a byte string type. This is different to the native Unicode `char` type, which is 
+/// in a byte string type. This is different to the native Unicode `char` type, which is
 /// a UTF-8 encoded character of one (`u8`) to four bytes (`u32`) – i.e., variable length.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Byte(u8);
@@ -140,11 +140,25 @@ impl fmt::Display for Char {
 
 /// Struct that wraps a `Vec<u8>` into a dynamic byte array (string literal).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Str(Vec<u8>);
+pub struct Str(Vec<Byte>);
 
 impl From<&str> for Str {
     fn from(value: &str) -> Self {
-        Str(value.as_bytes().to_vec())
+        Str::from(value.as_bytes())
+    }
+}
+
+impl From<&[u8]> for Str {
+    fn from(value: &[u8]) -> Self {
+        let mut bytes: Vec<Byte> = Vec::new();
+        value.into_iter().for_each(|b| bytes.push(Byte::from(*b)));
+        Str(bytes)
+    }
+}
+
+impl From<Vec<Byte>> for Str {
+    fn from(value: Vec<Byte>) -> Self {
+       Str(value)
     }
 }
 
