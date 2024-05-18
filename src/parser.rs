@@ -363,9 +363,9 @@ impl Parser {
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Identifier::from(name),
                     }))
-                } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
-                    {
-                        match &self.peek_behind_by(1) {
+                } else {
+                    match self.peek_ahead_by(1) {
+                        Some(Token::LBrace { .. }) => match &self.peek_behind_by(1) {
                             Some(
                                 Token::Equals { .. }
                                 | Token::LParen { .. }
@@ -379,14 +379,12 @@ impl Parser {
                             | None => Ok(Expression::Struct(StructExpr::parse(self)?)),
 
                             _ => self.parse_primary(),
+                        },
+                        Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
+                            Ok(Expression::Path(PathExpr::parse(self)?))
                         }
+                        _ => self.parse_primary(),
                     }
-                } else if let Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) =
-                    self.peek_ahead_by(1)
-                {
-                    Ok(Expression::Path(PathExpr::parse(self)?))
-                } else {
-                    self.parse_primary()
                 }
             }
             Some(Token::SelfType { .. }) => {
