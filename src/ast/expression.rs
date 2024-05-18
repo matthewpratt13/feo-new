@@ -256,14 +256,6 @@ pub struct TupleIndexExpr {
     pub(crate) index: UInt,
 }
 
-// #[derive(Debug, Clone, PartialEq)]
-// pub struct TupleStructExpr {
-//     pub(crate) tuple_struct_path: PathExpr,
-//     pub(crate) open_paren: Delimiter,
-//     pub(crate) elements_opt: Option<Vec<Expression>>,
-//     pub(crate) close_paren: Delimiter,
-// }
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeCastExpr {
     pub(crate) value: Box<ValueExpr>,
