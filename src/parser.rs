@@ -56,10 +56,10 @@ use crate::{
         DereferenceExpr, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
         Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
         MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, Pattern,
-        RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferenceOp, ReferencePatt, RestPatt,
-        ResultExpr, ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt,
-        TupleExpr, TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr,
-        UnderscoreExpr, UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
+        RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferencePatt, RestPatt, ResultExpr,
+        ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt, TupleExpr,
+        TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr, UnderscoreExpr,
+        UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
@@ -68,7 +68,8 @@ use crate::{
 };
 
 pub(crate) use self::parse::{
-    ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParseSimpleExpr, ParseStatement,
+    ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParsePattern, ParseSimpleExpr,
+    ParseStatement,
 };
 pub(crate) use self::precedence::Precedence;
 
@@ -823,8 +824,7 @@ impl Parser {
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    self.next_token();
-                    RangePatt::parse(self, patt)
+                    Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
                     self.next_token();
                     Ok(patt)
@@ -836,8 +836,7 @@ impl Parser {
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    self.next_token();
-                    RangePatt::parse(self, patt)
+                    Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
                     self.next_token();
                     Ok(patt)
@@ -850,8 +849,7 @@ impl Parser {
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    self.next_token();
-                    RangePatt::parse(self, patt)
+                    Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
                     self.next_token();
                     Ok(patt)
@@ -863,8 +861,7 @@ impl Parser {
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    self.next_token();
-                    RangePatt::parse(self, patt)
+                    Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
                     self.next_token();
                     Ok(patt)
@@ -889,8 +886,7 @@ impl Parser {
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
                 {
-                    self.next_token();
-                    RangePatt::parse(self, patt)
+                    Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
                     self.next_token();
                     Ok(patt)
@@ -902,11 +898,11 @@ impl Parser {
             }
             Some(Token::LParen { .. }) => {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
-                    TuplePatt::parse(self)
+                    Ok(Pattern::TuplePatt(TuplePatt::parse_patt(self)?))
                 } else {
-                    let patt = GroupedPatt::parse(self);
+                    let patt = GroupedPatt::parse_patt(self)?;
                     self.next_token();
-                    patt
+                    Ok(Pattern::GroupedPatt(patt))
                 }
             }
             Some(Token::Identifier { name, .. }) => {
@@ -918,74 +914,54 @@ impl Parser {
                 } else {
                     match self.peek_ahead_by(1) {
                         Some(Token::LBrace { .. }) => {
-                            Ok(Pattern::StructPatt(StructPatt::parse(self)?))
+                            Ok(Pattern::StructPatt(StructPatt::parse_patt(self)?))
                         }
                         Some(Token::LParen { .. }) => {
-                            Ok(Pattern::TupleStructPatt(TupleStructPatt::parse(self)?))
+                            Ok(Pattern::TupleStructPatt(TupleStructPatt::parse_patt(self)?))
                         }
-                        Some(Token::DblColon { .. }) => PathPatt::parse(self),
+                        Some(Token::DblColon { .. }) => {
+                            Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?))
+                        }
                         Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
-                            let patt = PathPatt::parse(self)?;
-                            RangePatt::parse(self, patt)
+                            Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                         }
-                        _ => IdentifierPatt::parse(self),
+                        _ => Ok(Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?)),
                     }
                 }
             }
 
-            Some(Token::Ref { .. } | Token::Mut { .. }) => IdentifierPatt::parse(self),
+            Some(Token::Ref { .. } | Token::Mut { .. }) => {
+                Ok(Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?))
+            }
 
             Some(Token::SelfType { .. }) => match self.peek_ahead_by(1) {
-                Some(Token::LBrace { .. }) => Ok(Pattern::StructPatt(StructPatt::parse(self)?)),
-                Some(Token::LParen { .. }) => {
-                    Ok(Pattern::TupleStructPatt(TupleStructPatt::parse(self)?))
+                Some(Token::LBrace { .. }) => {
+                    Ok(Pattern::StructPatt(StructPatt::parse_patt(self)?))
                 }
-                _ => PathPatt::parse(self),
+                Some(Token::LParen { .. }) => {
+                    Ok(Pattern::TupleStructPatt(TupleStructPatt::parse_patt(self)?))
+                }
+                _ => Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?)),
             },
             Some(Token::SelfKeyword { .. } | Token::Package { .. } | Token::Super { .. }) => {
-                PathPatt::parse(self)
+                Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?))
             }
-            Some(Token::Ampersand { .. }) => ReferencePatt::parse(self, ReferenceOp::Borrow),
-            Some(Token::AmpersandMut { .. }) => {
-                ReferencePatt::parse(self, ReferenceOp::MutableBorrow)
+            Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => {
+                Ok(Pattern::ReferencePatt(ReferencePatt::parse_patt(self)?))
             }
 
-            Some(Token::DblDot { .. }) => match (self.peek_behind_by(1), self.peek_ahead_by(1)) {
-                (
-                    Some(Token::LParen { .. } | Token::Comma { .. }),
-                    Some(Token::RParen { .. } | Token::Comma { .. }),
-                )
-                | (
-                    Some(Token::LBracket { .. } | Token::Comma { .. }),
-                    Some(Token::RBracket { .. } | Token::Comma { .. }),
-                )
-                | (
-                    Some(Token::LBrace { .. } | Token::Comma { .. }),
-                    Some(Token::RBrace { .. } | Token::Comma { .. }),
-                ) => {
-                    let patt = RestPatt {
-                        dbl_dot: RangeOp::RangeExclusive,
-                    };
-                    self.next_token();
-                    Ok(Pattern::RestPatt(patt))
-                }
+            Some(Token::DblDot { .. }) => {
+                self.next_token();
+                Ok(Pattern::RestPatt(RestPatt {
+                    dbl_dot: RangeOp::RangeExclusive,
+                }))
+            }
 
-                (Some(Token::None { .. }), Some(Token::EOF) | None) => {
-                    let patt = RangePatt {
-                        from_pattern_opt: None,
-                        range_op: RangeOp::RangeExclusive,
-                        to_pattern_opt: None,
-                    };
-                    self.next_token();
-                    Ok(Pattern::RangePatt(patt))
-                }
+            Some(Token::DotDotEquals { .. }) => {
+                Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
+            }
 
-                _ => RangePatt::parse_prefix(self),
-            },
-
-            Some(Token::DotDotEquals { .. }) => RangePatt::parse_prefix(self),
-
-            Some(Token::Some { .. }) => SomePatt::parse(self),
+            Some(Token::Some { .. }) => Ok(Pattern::SomePatt(SomePatt::parse_patt(self)?)),
 
             Some(Token::None { .. }) => {
                 self.next_token();
@@ -994,7 +970,9 @@ impl Parser {
                 }))
             }
 
-            Some(Token::Ok { .. } | Token::Err { .. }) => ResultPatt::parse(self),
+            Some(Token::Ok { .. } | Token::Err { .. }) => {
+                Ok(Pattern::ResultPatt(ResultPatt::parse_patt(self)?))
+            }
 
             Some(Token::EOF) | None => {
                 // log the error, then return `Err(ErrorsEmitted)`
@@ -1048,7 +1026,7 @@ impl Parser {
             self.stream.tokens().get(self.current).cloned()
         } else {
             // return `Token::EOF` instead of `None` to prevent unwrap errors
-            Some(Token::EOF) 
+            Some(Token::EOF)
         }
     }
 
@@ -1139,17 +1117,6 @@ impl Parser {
         self.log_error(ParserErrorKind::UnmatchedDelimiter {
             delim: format!("{}", *expected),
             position: expected.position(),
-        });
-
-        self.next_token();
-    }
-
-    /// Log error information on encountering an unexpected pattern by naming the expected pattern
-    /// and providing what was found, without advancing the parser.
-    fn log_unexpected_patt(&mut self, expected: &str, patt: Pattern) {
-        self.log_error(ParserErrorKind::UnexpectedPattern {
-            expected: expected.to_string(),
-            found: format!("{}", patt),
         });
 
         self.next_token();

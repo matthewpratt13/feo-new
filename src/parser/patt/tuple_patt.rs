@@ -1,13 +1,13 @@
 use crate::{
     ast::{Delimiter, Pattern, Separator, TuplePatt, TuplePattElements},
     error::ErrorsEmitted,
-    parser::Parser,
+    parser::{ParsePattern, Parser},
     span::Position,
     token::Token,
 };
 
-impl TuplePatt {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+impl ParsePattern for TuplePatt {
+    fn parse_patt(parser: &mut Parser) -> Result<TuplePatt, ErrorsEmitted> {
         let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
             let position = Position::new(parser.current, &parser.stream.span().input());
             parser.next_token();
@@ -23,9 +23,9 @@ impl TuplePatt {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
 
-                Ok(Pattern::TuplePatt(TuplePatt {
+                Ok(TuplePatt {
                     tuple_patt_elements,
-                }))
+                })
             }
             Some(Token::EOF) | None => {
                 parser.log_unmatched_delimiter(&open_paren);

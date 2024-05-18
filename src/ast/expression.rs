@@ -1,7 +1,7 @@
 use super::{
     AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, DereferenceOp,
-    Expression, Identifier, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType,
-    Statement, Type, TypeCastOp, UInt, UnaryOp, UnwrapOp, ValueExpr,
+    Expression, Identifier, IdentifierPatt, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp,
+    ReferenceOp, SelfType, Statement, Type, TypeCastOp, UInt, UnaryOp, UnwrapOp, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -28,7 +28,7 @@ pub(crate) enum PathRoot {
 /// Struct representing a closure parameter.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ClosureParam {
-    pub(crate) param_name: Pattern,
+    pub(crate) param_name: IdentifierPatt,
     pub(crate) type_ann_opt: Option<Box<Type>>,
 }
 

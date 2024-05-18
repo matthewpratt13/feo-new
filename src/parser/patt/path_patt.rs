@@ -1,13 +1,13 @@
 use crate::{
-    ast::{Identifier, PathPatt, PathRoot, Pattern, SelfType},
+    ast::{Identifier, PathPatt, PathRoot, SelfType},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
-    parser::Parser,
+    parser::{ParsePattern, Parser},
     token::Token,
 };
 
-impl PathPatt {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+impl ParsePattern for PathPatt {
+    fn parse_patt(parser: &mut Parser) -> Result<PathPatt, ErrorsEmitted> {
         // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
@@ -46,7 +46,7 @@ impl PathPatt {
             }
         }
 
-        let expr = PathPatt {
+        let patt = PathPatt {
             path_root,
             tree_opt: {
                 match tree.is_empty() {
@@ -62,6 +62,6 @@ impl PathPatt {
             .log(LogLevel::Debug, LogMsg::from("exiting `PathPatt::parse()`"));
         parser.log_current_token(false);
 
-        Ok(Pattern::PathPatt(expr))
+        Ok(patt)
     }
 }

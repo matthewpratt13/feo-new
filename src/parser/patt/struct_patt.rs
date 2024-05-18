@@ -4,13 +4,13 @@ use crate::{
         TupleStructPatt,
     },
     error::ErrorsEmitted,
-    parser::{collection, Parser},
+    parser::{collection, ParsePattern, Parser},
     span::Position,
     token::Token,
 };
 
-impl StructPatt {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<StructPatt, ErrorsEmitted> {
+impl ParsePattern for StructPatt {
+    fn parse_patt(parser: &mut Parser) -> Result<StructPatt, ErrorsEmitted> {
         let path_root = match parser.current_token() {
             Some(Token::Identifier { name, .. }) => {
                 Ok(PathRoot::Identifier(Identifier::from(&name)))
@@ -94,8 +94,8 @@ fn parse_struct_patt_field(parser: &mut Parser) -> Result<StructPattField, Error
     Ok(field)
 }
 
-impl TupleStructPatt {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<TupleStructPatt, ErrorsEmitted> {
+impl ParsePattern for TupleStructPatt {
+    fn parse_patt(parser: &mut Parser) -> Result<TupleStructPatt, ErrorsEmitted> {
         let path_root = match parser.current_token() {
             Some(Token::Identifier { name, .. }) => {
                 Ok(PathRoot::Identifier(Identifier::from(&name)))

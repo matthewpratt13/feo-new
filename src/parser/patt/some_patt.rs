@@ -1,12 +1,12 @@
 use crate::{
-    ast::{GroupedPatt, Keyword, Pattern, SomePatt},
+    ast::{GroupedPatt, Keyword, SomePatt},
     error::ErrorsEmitted,
-    parser::Parser,
+    parser::{ParsePattern, Parser},
     token::Token,
 };
 
-impl SomePatt {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+impl ParsePattern for SomePatt {
+    fn parse_patt(parser: &mut Parser) -> Result<SomePatt, ErrorsEmitted> {
         let kw_some = if let Some(Token::Some { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::Some)
@@ -16,7 +16,7 @@ impl SomePatt {
         }?;
 
         let pattern = match parser.current_token() {
-            Some(Token::LParen { .. }) => Ok(Box::new(GroupedPatt::parse(parser)?)),
+            Some(Token::LParen { .. }) => Ok(Box::new(GroupedPatt::parse_patt(parser)?)),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
@@ -27,8 +27,6 @@ impl SomePatt {
             }
         }?;
 
-        let patt = SomePatt { kw_some, pattern };
-
-        Ok(Pattern::SomePatt(patt))
+        Ok(SomePatt { kw_some, pattern })
     }
 }

@@ -1,13 +1,13 @@
 use crate::{
-    ast::{Identifier, IdentifierPatt, Keyword, Pattern},
+    ast::{Identifier, IdentifierPatt, Keyword},
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
-    parser::Parser,
+    parser::{ParsePattern, Parser},
     token::Token,
 };
 
-impl IdentifierPatt {
-    pub(crate) fn parse(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
+impl ParsePattern for IdentifierPatt {
+    fn parse_patt(parser: &mut Parser) -> Result<IdentifierPatt, ErrorsEmitted> {
         // **log event and current token** [REMOVE IN PROD]
         parser.logger.log(
             LogLevel::Debug,
@@ -50,6 +50,6 @@ impl IdentifierPatt {
         );
         parser.log_current_token(false);
 
-        Ok(Pattern::IdentifierPatt(patt))
+        Ok(patt)
     }
 }

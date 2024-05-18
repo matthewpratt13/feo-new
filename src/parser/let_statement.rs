@@ -4,7 +4,7 @@ use crate::{
     token::Token,
 };
 
-use super::{parse::ParseStatement, Parser, Precedence};
+use super::{parse::ParseStatement, ParsePattern, Parser, Precedence};
 
 impl ParseStatement for LetStmt {
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {
@@ -16,7 +16,7 @@ impl ParseStatement for LetStmt {
             Err(ErrorsEmitted)
         }?;
 
-        let assignee = IdentifierPatt::parse(parser)?;
+        let assignee = IdentifierPatt::parse_patt(parser)?;
 
         let type_ann_opt = if let Some(Token::Colon { .. }) = parser.current_token() {
             parser.next_token();

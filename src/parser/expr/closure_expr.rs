@@ -4,7 +4,7 @@ use crate::{
         Type,
     },
     error::ErrorsEmitted,
-    parser::{collection, ParseConstructExpr, Parser, Precedence},
+    parser::{collection, ParseConstructExpr, ParsePattern, Parser, Precedence},
     token::Token,
 };
 
@@ -85,7 +85,7 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
 
     let param_name = match parser.current_token() {
         Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
-            IdentifierPatt::parse(parser)
+            IdentifierPatt::parse_patt(parser)
         }
 
         Some(Token::EOF) | None => {
