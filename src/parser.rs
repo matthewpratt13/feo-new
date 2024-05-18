@@ -924,9 +924,11 @@ impl Parser {
                         Some(Token::LParen { .. }) => {
                             Ok(Pattern::TupleStructPatt(TupleStructPatt::parse(self)?))
                         }
-                        Some(Token::DblColon { .. }) => PathPatt::parse(self),
+                        Some(Token::DblColon { .. }) => {
+                            Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?))
+                        }
                         Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
-                            let patt = PathPatt::parse(self)?;
+                            let patt = Pattern::PathPatt(PathPatt::parse_patt(self)?);
                             RangePatt::parse(self, patt)
                         }
                         _ => Ok(Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?)),
@@ -943,10 +945,10 @@ impl Parser {
                 Some(Token::LParen { .. }) => {
                     Ok(Pattern::TupleStructPatt(TupleStructPatt::parse(self)?))
                 }
-                _ => PathPatt::parse(self),
+                _ => Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?)),
             },
             Some(Token::SelfKeyword { .. } | Token::Package { .. } | Token::Super { .. }) => {
-                PathPatt::parse(self)
+                Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?))
             }
             Some(Token::Ampersand { .. }) => ReferencePatt::parse(self, ReferenceOp::Borrow),
             Some(Token::AmpersandMut { .. }) => {
