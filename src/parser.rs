@@ -746,6 +746,11 @@ impl Parser {
         })
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // ITEM PARSING
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// Parse an item (e.g., import declaration, function definition and struct definition).
     fn parse_item(&mut self) -> Result<Item, ErrorsEmitted> {
         // **log event and current token** [REMOVE IN PROD]
         self.logger
@@ -830,7 +835,7 @@ impl Parser {
     // STATEMENT PARSING
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Parse a statement (i.e., let statement, item or expression).
+    /// Parse a statement (i.e., let statement, item declaration / definition or expression).
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         // **log event and current token** [REMOVE IN PROD]
         self.logger.log(
