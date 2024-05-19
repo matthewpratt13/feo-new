@@ -674,7 +674,7 @@ pub(crate) enum Item {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     StaticVarDecl(StaticVarDecl),
-    ModuleItem(Box<ModuleItem>),
+    ModuleItem(ModuleItem),
     TraitDef(TraitDef),
     EnumDef(EnumDef),
     StructDef(StructDef),

@@ -56,11 +56,11 @@ impl Item {
                 attributes_opt,
                 visibility,
             )?)),
-            Some(Token::Module { .. }) => Ok(Item::ModuleItem(Box::new(ModuleItem::parse(
+            Some(Token::Module { .. }) => Ok(Item::ModuleItem(ModuleItem::parse(
                 parser,
                 attributes_opt,
                 visibility,
-            )?))),
+            )?)),
             Some(Token::Trait { .. }) => Ok(Item::TraitDef(TraitDef::parse(
                 parser,
                 attributes_opt,
@@ -137,9 +137,11 @@ impl ParseStatement for Item {
             Some(Token::Static { .. }) => Ok(Statement::Item(Item::StaticVarDecl(
                 StaticVarDecl::parse(parser, attributes_opt, visibility)?,
             ))),
-            Some(Token::Module { .. }) => Ok(Statement::Item(Item::ModuleItem(Box::new(
-                ModuleItem::parse(parser, attributes_opt, visibility)?,
-            )))),
+            Some(Token::Module { .. }) => Ok(Statement::Item(Item::ModuleItem(ModuleItem::parse(
+                parser,
+                attributes_opt,
+                visibility,
+            )?))),
             Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
                 parser,
                 attributes_opt,

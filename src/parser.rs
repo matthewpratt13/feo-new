@@ -780,7 +780,7 @@ impl Parser {
             }
             Some(Token::Module { .. }) => {
                 let module_item = ModuleItem::parse(self, attributes_opt, visibility)?;
-                Ok(Item::ModuleItem(Box::new(module_item)))
+                Ok(Item::ModuleItem(module_item))
             }
             Some(Token::Trait { .. }) => {
                 let trait_def = TraitDef::parse(self, attributes_opt, visibility)?;
