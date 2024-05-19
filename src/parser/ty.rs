@@ -83,7 +83,9 @@ impl Type {
                 match parser.current_token().as_ref() {
                     Some(Token::GreaterThan { .. }) => {
                         parser.next_token();
-                        Ok(Type::Vec(Box::new(ty)))
+                        Ok(Type::Vec {
+                            element_type: Box::new(ty),
+                        })
                     }
                     Some(Token::EOF) | None => {
                         parser.log_missing_token("`>`");

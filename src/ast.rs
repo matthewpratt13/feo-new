@@ -737,7 +737,9 @@ pub(crate) enum Type {
 
     InferredType(InferredType),
 
-    Vec(Box<Type>),
+    Vec {
+        element_type: Box<Type>,
+    },
 
     Mapping {
         key_type: Box<Type>,
@@ -797,7 +799,7 @@ impl fmt::Display for Type {
             },
             Type::SelfType(_) => write!(f, "Self"),
             Type::InferredType(_) => write!(f, "_"),
-            Type::Vec(v) => write!(f, "Vec<{}>", *v),
+            Type::Vec { element_type } => write!(f, "Vec<{}>", *element_type),
             Type::Mapping {
                 key_type,
                 value_type,
