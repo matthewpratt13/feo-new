@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Expression, TupleElements, TupleExpr, TupleIndexExpr},
+    ast::{AssigneeExpr, Delimiter, Expression, TupleElements, TupleExpr, TupleIndexExpr},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParseOperatorExpr, Parser, Precedence},
     token::Token,
@@ -63,7 +63,10 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
 
 impl ParseOperatorExpr for TupleIndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let tuple = left_expr.try_into_assignee_expr(parser)?;
+        let tuple: AssigneeExpr = left_expr.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         let index = match parser.current_token() {
             Some(Token::UIntLiteral { value, .. }) => {
@@ -91,7 +94,10 @@ impl ParseOperatorExpr for TupleIndexExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::{logger::LogLevel, parser::test_utils};
+    use crate::{
+        logger::LogLevel,
+        parser::{test_utils, Precedence},
+    };
 
     #[test]
     fn parse_tuple_expr() -> Result<(), ()> {
@@ -99,10 +105,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -113,10 +119,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

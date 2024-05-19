@@ -110,57 +110,12 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
     Ok(struct_field)
 }
 
-// impl TupleStructExpr {
-//     pub(crate) fn parse(parser: &mut Parser, path: PathExpr) -> Result<Expression, ErrorsEmitted> {
-//         let open_paren = if let Some(Token::LParen { .. }) = parser.next_token() {
-//             Ok(Delimiter::LParen)
-//         } else {
-//             parser.log_unexpected_token(TokenType::LParen);
-//             Err(ErrorsEmitted)
-//         }?;
-
-//         let mut elements: Vec<Expression> = Vec::new();
-
-//         loop {
-//             if let Some(Token::RParen { .. }) = parser.current_token() {
-//                 break;
-//             }
-
-//             let element = parser.parse_expression(Precedence::Lowest)?;
-//             elements.push(element);
-
-//             match parser.current_token() {
-//                 Some(Token::Comma { .. }) => {
-//                     parser.next_token();
-//                     continue;
-//                 }
-//                 Some(Token::RParen { .. }) => break,
-//                 _ => break,
-//             }
-//         }
-
-//         let close_paren = parser.expect_delimiter(TokenType::RParen)?;
-
-//         let expr = TupleStructExpr {
-//             path,
-//             open_paren,
-//             elements_opt: {
-//                 if elements.is_empty() {
-//                     None
-//                 } else {
-//                     Some(elements)
-//                 }
-//             },
-//             close_paren,
-//         };
-
-//         Ok(Expression::TupleStruct(expr))
-//     }
-// }
-
 #[cfg(test)]
 mod tests {
-    use crate::{logger::LogLevel, parser::test_utils};
+    use crate::{
+        logger::LogLevel,
+        parser::{test_utils, Precedence},
+    };
 
     #[test]
     fn parse_struct_expr() -> Result<(), ()> {
@@ -172,10 +127,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

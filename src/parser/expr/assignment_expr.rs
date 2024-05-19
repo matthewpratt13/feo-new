@@ -1,5 +1,8 @@
 use crate::{
-    ast::{AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp, Expression},
+    ast::{
+        AssigneeExpr, AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp,
+        Expression,
+    },
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser},
     token::{Token, TokenType},
@@ -7,7 +10,10 @@ use crate::{
 
 impl ParseOperatorExpr for AssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let lhs = left_expr.try_into_assignee_expr(parser)?;
+        let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
@@ -42,8 +48,11 @@ impl ParseOperatorExpr for AssignmentExpr {
 
 impl ParseOperatorExpr for CompoundAssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let lhs = left_expr.try_into_assignee_expr(parser)?;
-
+        let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
+        
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let compound_assignment_op = match operator_token.token_type() {
@@ -78,7 +87,10 @@ impl ParseOperatorExpr for CompoundAssignmentExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::{logger::LogLevel, parser::test_utils};
+    use crate::{
+        logger::LogLevel,
+        parser::{test_utils, Precedence},
+    };
 
     #[test]
     fn parse_assignment_expr() -> Result<(), ()> {
@@ -86,10 +98,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -100,10 +112,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

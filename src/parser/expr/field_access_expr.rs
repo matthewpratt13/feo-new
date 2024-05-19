@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, FieldAccessExpr, Identifier},
+    ast::{AssigneeExpr, Expression, FieldAccessExpr, Identifier},
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser},
     token::Token,
@@ -7,7 +7,10 @@ use crate::{
 
 impl ParseOperatorExpr for FieldAccessExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let object = left_expr.try_into_assignee_expr(parser)?;
+        let object: AssigneeExpr = left_expr.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         let expr = match parser.current_token() {
             Some(Token::Identifier { name, .. }) => {
@@ -34,7 +37,10 @@ impl ParseOperatorExpr for FieldAccessExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::{logger::LogLevel, parser::test_utils};
+    use crate::{
+        logger::LogLevel,
+        parser::{test_utils, Precedence},
+    };
 
     #[test]
     fn parse_field_access_expr() -> Result<(), ()> {
@@ -42,10 +48,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

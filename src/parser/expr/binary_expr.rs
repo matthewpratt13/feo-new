@@ -1,5 +1,7 @@
 use crate::{
-    ast::{BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression},
+    ast::{
+        AssigneeExpr, BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression, ValueExpr,
+    },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::{ParseOperatorExpr, Parser},
@@ -18,7 +20,10 @@ impl ParseOperatorExpr for BinaryExpr {
         );
         parser.log_current_token(true);
 
-        let lhs = left_expr.try_into_value_expr(parser)?;
+        let lhs: ValueExpr = left_expr.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
@@ -76,7 +81,10 @@ impl ParseOperatorExpr for ComparisonExpr {
         );
         parser.log_current_token(true);
 
-        let lhs = left_expr.try_into_assignee_expr(parser)?;
+        let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
@@ -120,7 +128,10 @@ impl ParseOperatorExpr for ComparisonExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::{logger::LogLevel, parser::test_utils};
+    use crate::{
+        logger::LogLevel,
+        parser::{test_utils, Precedence},
+    };
 
     #[test]
     fn parse_binary_expr_add() -> Result<(), ()> {
@@ -128,10 +139,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -143,10 +154,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -158,10 +169,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -172,10 +183,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -186,10 +197,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -201,10 +212,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -216,10 +227,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -231,10 +242,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -245,10 +256,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -259,10 +270,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -273,10 +284,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -287,10 +298,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -301,10 +312,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -316,10 +327,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

@@ -51,15 +51,17 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        ArrayExpr, AssigneeExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr,
-        ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter,
-        DereferenceExpr, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
-        Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
-        MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, Pattern,
-        RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferencePatt, RestPatt, ResultExpr,
-        ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt, TupleExpr,
-        TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr, UnderscoreExpr,
-        UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
+        AliasDecl, ArrayExpr, AssigneeExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr,
+        CallExpr, ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr,
+        Delimiter, DereferenceExpr, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionItem,
+        GroupedExpr, GroupedPatt, Identifier, IdentifierPatt, IfExpr, ImportDecl, IndexExpr,
+        InherentImplDef, Item, Keyword, LetStmt, Literal, MappingExpr, MatchExpr, MethodCallExpr,
+        ModuleItem, NoneExpr, NonePatt, OuterAttr, PathExpr, PathPatt, Pattern, RangeExpr, RangeOp,
+        RangePatt, ReferenceExpr, ReferencePatt, RestPatt, ResultExpr, ResultPatt, ReturnExpr,
+        SomeExpr, SomePatt, Statement, StaticVarDecl, StructDef, StructExpr, StructPatt, TraitDef,
+        TraitImplDef, TupleExpr, TupleIndexExpr, TuplePatt, TupleStructDef, TupleStructPatt,
+        TypeCastExpr, UnaryExpr, UnderscoreExpr, UnwrapExpr, ValueExpr, Visibility, WhileExpr,
+        WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
@@ -67,6 +69,7 @@ use crate::{
     token::{Token, TokenStream, TokenType},
 };
 
+use self::item::{ParseDeclItem, ParseDefItem};
 pub(crate) use self::parse::{
     ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParsePattern, ParseSimpleExpr,
     ParseStatement,
@@ -88,10 +91,15 @@ enum ParserContext {
     MethodCall,  // `.`
 }
 
+#[allow(dead_code)]
+struct Module {
+    items: Vec<Item>,
+}
+
 /// Parser struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling functionality.
 #[derive(Debug)]
-pub struct Parser {
+pub(crate) struct Parser {
     stream: TokenStream,
     current: usize,
     precedences: HashMap<Token, Precedence>, // map tokens to corresponding precedence levels
@@ -194,10 +202,10 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Main parsing function that returns the parsed tokens as a `Vec<Statement>`.
+    /// Main parsing function that returns the parsed tokens as a `Module`.
     #[allow(dead_code)]
-    fn parse(&mut self) -> Result<Vec<Statement>, ErrorsEmitted> {
-        let mut statements: Vec<Statement> = Vec::new();
+    fn parse_module(&mut self) -> Result<Module, ErrorsEmitted> {
+        let mut items: Vec<Item> = Vec::new();
 
         // clear log messages, then log status info
         self.logger.clear_messages();
@@ -205,20 +213,22 @@ impl Parser {
             .log(LogLevel::Info, LogMsg::from("starting to parse tokens"));
 
         while self.current < self.stream.tokens().len() {
-            let statement = self.parse_statement()?;
+            let item = self.parse_item()?;
 
             // log status info
             self.logger.log(
                 LogLevel::Info,
-                LogMsg::from(format!("parsed statement: {:?}", statement)),
+                LogMsg::from(format!("parsed item: {:?}", item)),
             );
-            statements.push(statement);
+
+            items.push(item);
         }
 
         // log status info
         self.logger
             .log(LogLevel::Info, LogMsg::from("reached end of file"));
-        Ok(statements)
+
+        Ok(Module { items })
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -719,7 +729,10 @@ impl Parser {
 
     /// Parse an expression and attempt to convert it to a value expression.
     fn parse_value_expr(&mut self, precedence: Precedence) -> Result<ValueExpr, ErrorsEmitted> {
-        self.parse_expression(precedence)?.try_into_value_expr(self)
+        self.parse_expression(precedence)?.try_into().map_err(|e| {
+            self.log_error(e);
+            ErrorsEmitted
+        })
     }
 
     /// Parse an expression and attempt to convert it to an assignee expression.
@@ -727,8 +740,90 @@ impl Parser {
         &mut self,
         precedence: Precedence,
     ) -> Result<AssigneeExpr, ErrorsEmitted> {
-        self.parse_expression(precedence)?
-            .try_into_assignee_expr(self)
+        self.parse_expression(precedence)?.try_into().map_err(|e| {
+            self.log_error(e);
+            ErrorsEmitted
+        })
+    }
+
+    fn parse_item(&mut self) -> Result<Item, ErrorsEmitted> {
+        // **log event and current token** [REMOVE IN PROD]
+        self.logger
+            .log(LogLevel::Debug, LogMsg::from("entering `parse_item()`"));
+        self.log_current_token(false);
+
+        let attributes_opt = collection::get_attributes(self, OuterAttr::outer_attr);
+
+        let visibility = Visibility::visibility(self)?;
+
+        match self.current_token() {
+            Some(Token::Import { .. }) => {
+                let import_decl = ImportDecl::parse(self, attributes_opt, visibility)?;
+                Ok(Item::ImportDecl(import_decl))
+            }
+            Some(Token::Alias { .. }) => {
+                let alias_decl = AliasDecl::parse(self, attributes_opt, visibility)?;
+                Ok(Item::AliasDecl(alias_decl))
+            }
+            Some(Token::Const { .. }) => {
+                let constant_decl = ConstantDecl::parse(self, attributes_opt, visibility)?;
+                Ok(Item::ConstantDecl(constant_decl))
+            }
+            Some(Token::Static { .. }) => {
+                let static_var_decl = StaticVarDecl::parse(self, attributes_opt, visibility)?;
+                Ok(Item::StaticVarDecl(static_var_decl))
+            }
+            Some(Token::Module { .. }) => {
+                let module_item = ModuleItem::parse(self, attributes_opt, visibility)?;
+                Ok(Item::ModuleItem(Box::new(module_item)))
+            }
+            Some(Token::Trait { .. }) => {
+                let trait_def = TraitDef::parse(self, attributes_opt, visibility)?;
+                Ok(Item::TraitDef(trait_def))
+            }
+            Some(Token::Enum { .. }) => {
+                let enum_def = EnumDef::parse(self, attributes_opt, visibility)?;
+                Ok(Item::EnumDef(enum_def))
+            }
+            Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
+                Some(Token::LBrace { .. }) => {
+                    let struct_def = StructDef::parse(self, attributes_opt, visibility)?;
+                    Ok(Item::StructDef(struct_def))
+                }
+                Some(Token::LParen { .. }) => {
+                    let tuple_struct_def = TupleStructDef::parse(self, attributes_opt, visibility)?;
+                    Ok(Item::TupleStructDef(tuple_struct_def))
+                }
+                _ => {
+                    self.log_unexpected_token("`{` or `(`");
+                    Err(ErrorsEmitted)
+                }
+            },
+            Some(Token::Impl { .. }) => {
+                if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
+                    Ok(Item::TraitImplDef(TraitImplDef::parse(
+                        self,
+                        attributes_opt,
+                        visibility,
+                    )?))
+                } else {
+                    Ok(Item::InherentImplDef(InherentImplDef::parse(
+                        self,
+                        attributes_opt,
+                        visibility,
+                    )?))
+                }
+            }
+            Some(Token::Func { .. }) => Ok(Item::FunctionItem(FunctionItem::parse(
+                self,
+                attributes_opt,
+                visibility,
+            )?)),
+            _ => {
+                self.log_unexpected_token("item declaration or definition");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1386,7 +1481,7 @@ impl Parser {
 mod tests {
     use crate::logger::LogLevel;
 
-    use super::test_utils;
+    use super::{test_utils, Precedence};
 
     #[test]
     fn parse_break_expr() -> Result<(), ()> {
@@ -1394,10 +1489,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -1408,10 +1503,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -1422,10 +1517,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
