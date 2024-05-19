@@ -66,7 +66,10 @@ impl ParseConstructExpr for GroupedExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::{logger::LogLevel, parser::{test_utils, Precedence}};
+    use crate::{
+        logger::LogLevel,
+        parser::{test_utils, Precedence},
+    };
 
     #[test]
     fn parse_grouped_expr() -> Result<(), ()> {

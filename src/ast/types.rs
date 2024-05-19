@@ -158,7 +158,7 @@ impl From<&[u8]> for Str {
 
 impl From<Vec<Byte>> for Str {
     fn from(value: Vec<Byte>) -> Self {
-       Str(value)
+        Str(value)
     }
 }
 

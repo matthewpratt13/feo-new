@@ -4,7 +4,7 @@ use crate::{
     token::Token,
 };
 
-use super::{parse::ParseStatement, ParsePattern, Parser, Precedence};
+use super::{ParsePattern, ParseStatement, Parser, Precedence};
 
 impl ParseStatement for LetStmt {
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {

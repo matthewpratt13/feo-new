@@ -52,7 +52,7 @@ impl ParseOperatorExpr for CompoundAssignmentExpr {
             parser.log_error(e);
             ErrorsEmitted
         })?;
-        
+
         let operator_token = parser.current_token().unwrap_or(Token::EOF);
 
         let compound_assignment_op = match operator_token.token_type() {
