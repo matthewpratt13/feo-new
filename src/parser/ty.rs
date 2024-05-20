@@ -15,11 +15,12 @@ use super::{collection, Parser};
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser
             .logger
             .log(LogLevel::Debug, LogMsg::from("entering `Type::parse()`"));
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let token = parser.next_token();
 
@@ -284,7 +285,10 @@ impl Type {
     }
 }
 
-fn parse_function_ptr_type(token: Option<Token>, parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
+fn parse_function_ptr_type(
+    token: Option<Token>,
+    parser: &mut Parser,
+) -> Result<Type, ErrorsEmitted> {
     let mut params: Vec<FunctionOrMethodParam> = Vec::new();
 
     let function_name = if let Some(Token::Identifier { name, .. }) = token {

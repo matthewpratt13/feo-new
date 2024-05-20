@@ -8,12 +8,13 @@ use crate::{
 
 impl ParseConstructExpr for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `GroupedExpr::parse()`"),
         );
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
@@ -46,12 +47,13 @@ impl ParseConstructExpr for GroupedExpr {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
 
-                // **log event and current token** [REMOVE IN PROD]
+                ////////////////////////////////////////////////////////////////////////////////
                 parser.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("exiting `GroupedExpr::parse()`"),
                 );
                 parser.log_current_token(false);
+                ////////////////////////////////////////////////////////////////////////////////
 
                 Ok(GroupedExpr { inner_expression })
             }

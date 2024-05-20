@@ -8,12 +8,13 @@ use crate::{
 
 impl ParseSimpleExpr for PathExpr {
     fn parse(parser: &mut Parser) -> Result<PathExpr, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `PathExpr::parse()`"),
         );
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let mut tree: Vec<Identifier> = Vec::new();
 
@@ -65,11 +66,12 @@ impl ParseSimpleExpr for PathExpr {
             },
         };
 
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser
             .logger
             .log(LogLevel::Debug, LogMsg::from("exiting `PathExpr::parse()`"));
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         Ok(expr)
     }

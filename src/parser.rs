@@ -98,7 +98,6 @@ struct Module {
 
 /// Parser struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling functionality.
-#[derive(Debug)]
 pub(crate) struct Parser {
     stream: TokenStream,
     current: usize,
@@ -127,10 +126,6 @@ impl Parser {
 
     /// Define and initialize token precedence levels.
     fn init_precedences(&mut self, tokens: &[Token]) {
-        // **log event** [REMOVE IN PROD]
-        self.logger
-            .log(LogLevel::Debug, LogMsg::from("initializing precedences"));
-
         for t in tokens.to_vec() {
             match &t.token_type() {
                 TokenType::DblColon | TokenType::ColonColonAsterisk => {
@@ -192,12 +187,6 @@ impl Parser {
     /// struct instances.
     fn set_context(&mut self, context: ParserContext) {
         self.context = context;
-
-        // **log debug info** [REMOVE IN PROD]
-        self.logger.log(
-            LogLevel::Debug,
-            LogMsg::from(format!("set context: {:?}", context)),
-        );
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -243,7 +232,7 @@ impl Parser {
     /// If an infix parsing function is found, it is called with the left expression to produce
     /// the next expression in the parse tree.
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         self.logger.log(
             LogLevel::Debug,
             LogMsg::from(format!(
@@ -252,42 +241,31 @@ impl Parser {
             )),
         );
         self.log_current_token(true);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let mut left_expr = self.parse_prefix()?; // start with prefix expression
 
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         self.logger
             .log(LogLevel::Debug, LogMsg::from("exited `parse_prefix()`"));
         self.log_current_token(true);
+        ////////////////////////////////////////////////////////////////////////////////
 
         // repeatedly call `parse_infix()` while the precedence of the current token is higher
         // than the input precedence
         while precedence < self.peek_precedence() {
-            // **log current token and precedence status** [REMOVE IN PROD]
-            self.log_current_token(true);
-            self.logger.log(
-                LogLevel::Debug,
-                LogMsg::from("current precedence >= input precedence"),
-            );
-
             if let Some(infix_parser) = self.parse_infix()? {
                 left_expr = infix_parser(self, left_expr)?; // parse infix expressions
-
-                // **log event and current token** [REMOVE IN PROD]
-                self.logger.log(
-                    LogLevel::Debug,
-                    LogMsg::from("exited infix parsing function"),
-                );
-                self.log_current_token(true);
             }
         }
 
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         self.logger.log(
             LogLevel::Debug,
             LogMsg::from("exiting `parse_expression()`"),
         );
         self.log_current_token(true);
+        ////////////////////////////////////////////////////////////////////////////////
 
         // return parsed expression
         Ok(left_expr)
@@ -296,10 +274,11 @@ impl Parser {
     /// Parse the basic building blocks of expressions (e.g., grouped expressions, identifiers
     /// and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         self.logger
             .log(LogLevel::Debug, LogMsg::from("entering `parse_primary()`"));
         self.log_current_token(true);
+        ////////////////////////////////////////////////////////////////////////////////
 
         match &self.current_token() {
             Some(Token::Identifier { .. }) => Ok(Expression::Path(PathExpr::parse(self)?)),
@@ -346,10 +325,11 @@ impl Parser {
     /// Where applicable, check the current token and set the parser context based on
     /// surrounding tokens.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         self.logger
             .log(LogLevel::Debug, LogMsg::from("entering `parse_prefix()`"));
         self.log_current_token(true);
+        ////////////////////////////////////////////////////////////////////////////////
 
         match &self.current_token() {
             Some(
@@ -577,10 +557,11 @@ impl Parser {
         &mut self,
     ) -> Result<Option<fn(&mut Self, Expression) -> Result<Expression, ErrorsEmitted>>, ErrorsEmitted>
     {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         self.logger
             .log(LogLevel::Debug, LogMsg::from("entering `parse_infix()`"));
         self.log_current_token(true);
+        ////////////////////////////////////////////////////////////////////////////////
 
         match &self.current_token() {
             Some(Token::Dot { .. }) => {
@@ -708,11 +689,13 @@ impl Parser {
             Some(Token::Equals { .. }) => Ok(Some(AssignmentExpr::parse)),
 
             Some(Token::EOF) | None => {
-                // **log event** [REMOVE IN PROD]
+                ////////////////////////////////////////////////////////////////////////////////
                 self.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("no infix parsing function found"),
                 );
+                ////////////////////////////////////////////////////////////////////////////////
+
                 Ok(None)
             }
 
@@ -721,7 +704,10 @@ impl Parser {
                 self.log_error(ParserErrorKind::InvalidTokenContext {
                     token: self.current_token(),
                 });
-                self.log_current_token(true); // **[REMOVE IN PROD]**
+                ////////////////////////////////////////////////////////////////////////////////
+                self.log_current_token(true);
+                ////////////////////////////////////////////////////////////////////////////////
+
                 Err(ErrorsEmitted)
             }
         }
@@ -752,10 +738,11 @@ impl Parser {
 
     /// Parse an item (e.g., import declaration, function definition and struct definition).
     fn parse_item(&mut self) -> Result<Item, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         self.logger
             .log(LogLevel::Debug, LogMsg::from("entering `parse_item()`"));
         self.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let attributes_opt = collection::get_attributes(self, OuterAttr::outer_attr);
 
@@ -837,12 +824,13 @@ impl Parser {
 
     /// Parse a statement (i.e., let statement, item declaration / definition or expression).
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         self.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `parse_statement()`"),
         );
-        self.log_current_token(true);
+        self.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let token = self.current_token();
 
@@ -912,10 +900,11 @@ impl Parser {
 
     /// Parse a `Pattern` – used in match expressions, function definitions and elsewhere.
     fn parse_pattern(&mut self) -> Result<Pattern, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         self.logger
             .log(LogLevel::Debug, LogMsg::from("entering `parse_pattern()`"));
-        self.log_current_token(true);
+        self.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         match &self.current_token() {
             Some(Token::IntLiteral { value, .. }) => {
@@ -1103,9 +1092,10 @@ impl Parser {
         if self.current < self.stream.tokens().len() {
             self.current += 1;
 
-            // **log event** [REMOVE IN PROD]
+            ////////////////////////////////////////////////////////////////////////////////
             self.logger
                 .log(LogLevel::Debug, LogMsg::from("consumed token"));
+            ////////////////////////////////////////////////////////////////////////////////
         } else {
             // log warning
             self.logger.log(
@@ -1114,8 +1104,9 @@ impl Parser {
             );
         }
 
-        // **log current token** [REMOVE IN PROD]
-        self.log_current_token(true);
+        ////////////////////////////////////////////////////////////////////////////////
+        self.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         token
     }

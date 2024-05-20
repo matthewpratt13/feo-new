@@ -13,12 +13,13 @@ impl ParseOperatorExpr for BinaryExpr {
     /// This method parses the operator and calls `parse_expression()` recursively to handle
     /// the right-hand side of the expression.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `BinaryExpr::parse()`"),
         );
         parser.log_current_token(true);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let lhs: ValueExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
@@ -59,13 +60,6 @@ impl ParseOperatorExpr for BinaryExpr {
             rhs: Box::new(rhs),
         };
 
-        // **log event and current token** [REMOVE IN PROD]
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("exiting `BinaryExpr::parse()`"),
-        );
-        parser.log_current_token(false);
-
         Ok(Expression::Binary(expr))
     }
 }
@@ -74,12 +68,13 @@ impl ParseOperatorExpr for ComparisonExpr {
     /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on
     /// the input operator.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `ComparisonExpr::parse()`"),
         );
         parser.log_current_token(true);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
@@ -114,13 +109,6 @@ impl ParseOperatorExpr for ComparisonExpr {
             comparison_op,
             rhs,
         };
-
-        // **log event and current token** [REMOVE IN PROD]
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("exiting `ComparisonExpr::parse()`"),
-        );
-        parser.log_current_token(false);
 
         Ok(Expression::Comparison(expr))
     }

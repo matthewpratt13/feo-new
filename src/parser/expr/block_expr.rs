@@ -8,12 +8,13 @@ use crate::{
 
 impl ParseConstructExpr for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `BlockExpr::parse()`"),
         );
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
@@ -44,12 +45,13 @@ impl ParseConstructExpr for BlockExpr {
                     statements_opt,
                 };
 
-                // **log event and current token** [REMOVE IN PROD]
+                ////////////////////////////////////////////////////////////////////////////////
                 parser.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("exiting `BlockExpr::parse()`"),
                 );
-                parser.log_current_token(true);
+                parser.log_current_token(false);
+                ////////////////////////////////////////////////////////////////////////////////
 
                 Ok(expr)
             }
@@ -65,12 +67,13 @@ impl ParseConstructExpr for BlockExpr {
 fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, ErrorsEmitted> {
     let mut statements: Vec<Statement> = Vec::new();
 
-    // **log event and current token** [REMOVE IN PROD]
+    ////////////////////////////////////////////////////////////////////////////////
     parser.logger.log(
         LogLevel::Debug,
         LogMsg::from("entering `parse_statements()`"),
     );
-    parser.log_current_token(true);
+    parser.log_current_token(false);
+    ////////////////////////////////////////////////////////////////////////////////
 
     while !matches!(
         parser.current_token(),
@@ -80,7 +83,7 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
         statements.push(statement);
     }
 
-    // **log event, `statements` status and current token** [REMOVE IN PROD]
+    ////////////////////////////////////////////////////////////////////////////////
     parser.logger.log(
         LogLevel::Debug,
         LogMsg::from("exiting `parse_statements()`"),
@@ -90,6 +93,7 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
         LogMsg::from(format!("statements.is_empty(): {}", statements.is_empty())),
     );
     parser.log_current_token(false);
+    ////////////////////////////////////////////////////////////////////////////////
 
     match statements.is_empty() {
         true => Ok(None),

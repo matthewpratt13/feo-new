@@ -12,12 +12,13 @@ impl PathType {
         parser: &mut Parser,
         token: Option<Token>,
     ) -> Result<PathType, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `PathType::parse()`"),
         );
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let mut tree: Vec<Identifier> = Vec::new();
 
@@ -92,11 +93,12 @@ impl PathType {
             },
         };
 
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser
             .logger
             .log(LogLevel::Debug, LogMsg::from("exiting `PathType::parse()`"));
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         Ok(path_type)
     }
