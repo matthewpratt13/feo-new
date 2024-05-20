@@ -48,7 +48,7 @@ impl Type {
             Some(Token::BoolType { .. }) => Ok(Type::Bool(Bool::from(bool::default()))),
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
-            Some(Token::Func { .. }) => parse_function_type(token, parser),
+            Some(Token::Func { .. }) => parse_function_ptr_type(token, parser),
             Some(Token::Ampersand { .. }) => {
                 let inner_type = Box::new(Type::parse(parser)?);
                 Ok(Type::Reference {
@@ -284,7 +284,7 @@ impl Type {
     }
 }
 
-fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
+fn parse_function_ptr_type(token: Option<Token>, parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     let mut params: Vec<FunctionOrMethodParam> = Vec::new();
 
     let function_name = if let Some(Token::Identifier { name, .. }) = token {
