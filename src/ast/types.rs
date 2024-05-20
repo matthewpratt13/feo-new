@@ -225,7 +225,7 @@ impl fmt::Display for Unit {
 /// Struct that represents an inferred type.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InferredType {
-    pub underscore: Identifier,
+    pub(crate) underscore: Identifier,
 }
 
 impl fmt::Display for InferredType {
