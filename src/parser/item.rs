@@ -29,11 +29,12 @@ impl Item {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<Item, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser
             .logger
             .log(LogLevel::Debug, LogMsg::from("entering `Item::parse()`"));
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         match parser.current_token() {
             Some(Token::Import { .. }) => Ok(Item::ImportDecl(ImportDecl::parse(
@@ -56,11 +57,11 @@ impl Item {
                 attributes_opt,
                 visibility,
             )?)),
-            Some(Token::Module { .. }) => Ok(Item::ModuleItem(Box::new(ModuleItem::parse(
+            Some(Token::Module { .. }) => Ok(Item::ModuleItem(ModuleItem::parse(
                 parser,
                 attributes_opt,
                 visibility,
-            )?))),
+            )?)),
             Some(Token::Trait { .. }) => Ok(Item::TraitDef(TraitDef::parse(
                 parser,
                 attributes_opt,
@@ -107,12 +108,13 @@ impl Item {
 impl ParseStatement for Item {
     /// Parse the current token and convert it from an `Item` to a `Statement`.
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `Item::parse_statement()`"),
         );
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
@@ -137,9 +139,11 @@ impl ParseStatement for Item {
             Some(Token::Static { .. }) => Ok(Statement::Item(Item::StaticVarDecl(
                 StaticVarDecl::parse(parser, attributes_opt, visibility)?,
             ))),
-            Some(Token::Module { .. }) => Ok(Statement::Item(Item::ModuleItem(Box::new(
-                ModuleItem::parse(parser, attributes_opt, visibility)?,
-            )))),
+            Some(Token::Module { .. }) => Ok(Statement::Item(Item::ModuleItem(ModuleItem::parse(
+                parser,
+                attributes_opt,
+                visibility,
+            )?))),
             Some(Token::Trait { .. }) => Ok(Statement::Item(Item::TraitDef(TraitDef::parse(
                 parser,
                 attributes_opt,

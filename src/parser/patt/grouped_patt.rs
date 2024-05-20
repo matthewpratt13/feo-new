@@ -9,12 +9,13 @@ use crate::{
 
 impl ParsePattern for GroupedPatt {
     fn parse_patt(parser: &mut Parser) -> Result<GroupedPatt, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `GroupedPatt::parse()`"),
         );
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
             let position = Position::new(parser.current, &parser.stream.span().input());
@@ -44,12 +45,13 @@ impl ParsePattern for GroupedPatt {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
 
-                // **log event and current token** [REMOVE IN PROD]
+                ////////////////////////////////////////////////////////////////////////////////
                 parser.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("exiting `GroupedPatt::parse()`"),
                 );
                 parser.log_current_token(false);
+                ////////////////////////////////////////////////////////////////////////////////
 
                 Ok(GroupedPatt { inner_pattern })
             }

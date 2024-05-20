@@ -8,12 +8,13 @@ use crate::{
 
 impl ParsePattern for PathPatt {
     fn parse_patt(parser: &mut Parser) -> Result<PathPatt, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `PathPatt::parse()`"),
         );
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let mut tree: Vec<Identifier> = Vec::new();
 
@@ -56,11 +57,12 @@ impl ParsePattern for PathPatt {
             },
         };
 
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser
             .logger
             .log(LogLevel::Debug, LogMsg::from("exiting `PathPatt::parse()`"));
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         Ok(patt)
     }

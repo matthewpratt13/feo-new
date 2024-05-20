@@ -15,11 +15,12 @@ use super::{collection, Parser};
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser
             .logger
             .log(LogLevel::Debug, LogMsg::from("entering `Type::parse()`"));
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let token = parser.next_token();
 
@@ -48,7 +49,7 @@ impl Type {
             Some(Token::BoolType { .. }) => Ok(Type::Bool(Bool::from(bool::default()))),
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
-            Some(Token::Func { .. }) => parse_function_type(token, parser),
+            Some(Token::Func { .. }) => parse_function_ptr_type(token, parser),
             Some(Token::Ampersand { .. }) => {
                 let inner_type = Box::new(Type::parse(parser)?);
                 Ok(Type::Reference {
@@ -83,7 +84,9 @@ impl Type {
                 match parser.current_token().as_ref() {
                     Some(Token::GreaterThan { .. }) => {
                         parser.next_token();
-                        Ok(Type::Vec(Box::new(ty)))
+                        Ok(Type::Vec {
+                            element_type: Box::new(ty),
+                        })
                     }
                     Some(Token::EOF) | None => {
                         parser.log_missing_token("`>`");
@@ -282,7 +285,10 @@ impl Type {
     }
 }
 
-fn parse_function_type(token: Option<Token>, parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
+fn parse_function_ptr_type(
+    token: Option<Token>,
+    parser: &mut Parser,
+) -> Result<Type, ErrorsEmitted> {
     let mut params: Vec<FunctionOrMethodParam> = Vec::new();
 
     let function_name = if let Some(Token::Identifier { name, .. }) = token {

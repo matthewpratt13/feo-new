@@ -102,12 +102,13 @@ pub(crate) fn get_expressions(
 ) -> Result<Option<Vec<Expression>>, ErrorsEmitted> {
     let mut expressions: Vec<Expression> = Vec::new();
 
-    // **log event and current token** [REMOVE IN PROD]
+    ////////////////////////////////////////////////////////////////////////////////
     parser.logger.log(
         LogLevel::Debug,
         LogMsg::from("entering `get_expressions()`"),
     );
     parser.log_current_token(true);
+    ////////////////////////////////////////////////////////////////////////////////
 
     match open_delimiter {
         Delimiter::LParen { .. } => {
@@ -155,7 +156,7 @@ pub(crate) fn get_expressions(
         }
     }
 
-    // **log event, `expressions` status and current token** [REMOVE IN PROD]
+    ////////////////////////////////////////////////////////////////////////////////
     parser
         .logger
         .log(LogLevel::Debug, LogMsg::from("exiting `get_expressions()`"));
@@ -167,6 +168,7 @@ pub(crate) fn get_expressions(
         )),
     );
     parser.log_current_token(false);
+    ////////////////////////////////////////////////////////////////////////////////
 
     match expressions.is_empty() {
         true => Ok(None),
@@ -208,18 +210,19 @@ pub(crate) fn get_attributes<T>(
 ) -> Option<Vec<T>> {
     let mut attributes = Vec::new();
 
-    // **log event and current token** [REMOVE IN PROD]
+    ////////////////////////////////////////////////////////////////////////////////
     parser
         .logger
         .log(LogLevel::Debug, LogMsg::from("entering `get_attributes()`"));
     parser.log_current_token(false);
+    ////////////////////////////////////////////////////////////////////////////////
 
     while let Some(a) = f(parser) {
         attributes.push(a);
         parser.next_token();
     }
 
-    // **log event, `attributes` status and current token** [REMOVE IN PROD]
+    ////////////////////////////////////////////////////////////////////////////////
     parser
         .logger
         .log(LogLevel::Debug, LogMsg::from("exiting `get_attributes()`"));
@@ -228,6 +231,7 @@ pub(crate) fn get_attributes<T>(
         LogMsg::from(format!("attributes.is_empty(): {}", attributes.is_empty())),
     );
     parser.log_current_token(false);
+    ////////////////////////////////////////////////////////////////////////////////
 
     match attributes.is_empty() {
         true => None,

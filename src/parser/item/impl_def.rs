@@ -265,10 +265,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let item = parser.parse_item();
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match item {
+            Ok(i) => Ok(println!("{:#?}", i)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -294,11 +294,10 @@ mod tests {
         }"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+        let item = parser.parse_item();
 
-        let statements = parser.parse();
-
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match item {
+            Ok(i) => Ok(println!("{:#?}", i)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

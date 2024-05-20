@@ -158,7 +158,7 @@ impl From<&[u8]> for Str {
 
 impl From<Vec<Byte>> for Str {
     fn from(value: Vec<Byte>) -> Self {
-       Str(value)
+        Str(value)
     }
 }
 
@@ -225,7 +225,7 @@ impl fmt::Display for Unit {
 /// Struct that represents an inferred type.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InferredType {
-    pub underscore: Identifier,
+    pub(crate) underscore: Identifier,
 }
 
 impl fmt::Display for InferredType {

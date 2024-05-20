@@ -50,7 +50,7 @@ impl ParseDefItem for ModuleItem {
             }
         }?;
 
-        let (inner_attributes_opt, items_opt) = parse_item(parser)?;
+        let (inner_attributes_opt, items_opt) = parse_items(parser)?;
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
@@ -78,7 +78,7 @@ impl ParseDefItem for ModuleItem {
     }
 }
 
-fn parse_item(
+fn parse_items(
     parser: &mut Parser,
 ) -> Result<(Option<Vec<InnerAttr>>, Option<Vec<Item>>), ErrorsEmitted> {
     let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
@@ -172,10 +172,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let item = parser.parse_item();
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match item {
+            Ok(i) => Ok(println!("{:#?}", i)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

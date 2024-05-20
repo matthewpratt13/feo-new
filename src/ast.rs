@@ -11,11 +11,7 @@ mod types;
 
 use core::fmt;
 
-use crate::{
-    error::{ErrorsEmitted, ParserErrorKind},
-    parser::Parser,
-    span::Position,
-};
+use crate::{error::ParserErrorKind, span::Position};
 
 pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*};
 
@@ -374,40 +370,6 @@ pub(crate) enum Expression {
     ResultExpr(ResultExpr),
 }
 
-impl Expression {
-    /// Attempt to convert an `Expression` into a `ValueExpr`. Similar to `ValueExpr::try_into()`
-    /// below, but returns the correct error type. Used in parsing functions that take in
-    /// an `Expression`, but whose corresponding node requires a `ValueExpr`
-    /// (e.g., `BinaryExpr::parse()`).
-    /// Also used in `Parser::parse_value_expr()` to allow external functions to easily
-    /// parse `Expression` as `ValueExpr`, instead of converting each time.
-    pub(crate) fn try_into_value_expr(
-        self,
-        parser: &mut Parser,
-    ) -> Result<ValueExpr, ErrorsEmitted> {
-        self.try_into().map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })
-    }
-
-    /// Attempt to convert an `Expression` into an `AssigneeExpr`. Similar to
-    /// `AssigneeExpr::try_into()` below,but returns the correct error type.
-    /// Used in parsing functions that take in an `Expression`, but whose corresponding node
-    /// requires an `AssigneeExpr` (e.g., `AssignmentExpr::parse()`).
-    /// Also used in `Parser::parse_assignee_expr()` to allow external functions to easily
-    /// parse `Expression` as `AssigneeExpr`, instead of converting each time.
-    pub(crate) fn try_into_assignee_expr(
-        self,
-        parser: &mut Parser,
-    ) -> Result<AssigneeExpr, ErrorsEmitted> {
-        self.try_into().map_err(|e| {
-            parser.log_error(e);
-            ErrorsEmitted
-        })
-    }
-}
-
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -712,7 +674,7 @@ pub(crate) enum Item {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     StaticVarDecl(StaticVarDecl),
-    ModuleItem(Box<ModuleItem>),
+    ModuleItem(ModuleItem),
     TraitDef(TraitDef),
     EnumDef(EnumDef),
     StructDef(StructDef),
@@ -775,7 +737,9 @@ pub(crate) enum Type {
 
     InferredType(InferredType),
 
-    Vec(Box<Type>),
+    Vec {
+        element_type: Box<Type>,
+    },
 
     Mapping {
         key_type: Box<Type>,
@@ -835,7 +799,7 @@ impl fmt::Display for Type {
             },
             Type::SelfType(_) => write!(f, "Self"),
             Type::InferredType(_) => write!(f, "_"),
-            Type::Vec(v) => write!(f, "Vec<{}>", *v),
+            Type::Vec { element_type } => write!(f, "Vec<{}>", *element_type),
             Type::Mapping {
                 key_type,
                 value_type,

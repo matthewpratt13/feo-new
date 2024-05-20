@@ -1,5 +1,5 @@
 use crate::{
-    ast::{CallExpr, Delimiter, Expression},
+    ast::{AssigneeExpr, CallExpr, Delimiter, Expression},
     error::ErrorsEmitted,
     parser::{collection, ParseOperatorExpr, Parser, Precedence},
     token::Token,
@@ -7,7 +7,10 @@ use crate::{
 
 impl ParseOperatorExpr for CallExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let callee = left_expr.try_into_assignee_expr(parser)?;
+        let callee: AssigneeExpr = left_expr.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
@@ -42,7 +45,10 @@ impl ParseOperatorExpr for CallExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::{logger::LogLevel, parser::test_utils};
+    use crate::{
+        logger::LogLevel,
+        parser::{test_utils, Precedence},
+    };
 
     #[test]
     fn parse_call_expr() -> Result<(), ()> {
@@ -50,10 +56,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

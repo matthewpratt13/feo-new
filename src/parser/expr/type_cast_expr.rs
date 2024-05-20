@@ -7,7 +7,10 @@ use crate::{
 
 impl ParseOperatorExpr for TypeCastExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        let value_expr = left_expr.try_into_value_expr(parser)?;
+        let value_expr = left_expr.try_into().map_err(|e| {
+            parser.log_error(e);
+            ErrorsEmitted
+        })?;
 
         let type_cast_op = if let Some(Token::As { .. }) = parser.current_token() {
             parser.next_token();
@@ -64,7 +67,10 @@ impl ParseOperatorExpr for TypeCastExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::{logger::LogLevel, parser::test_utils};
+    use crate::{
+        logger::LogLevel,
+        parser::{test_utils, Precedence},
+    };
 
     #[test]
     fn parse_type_cast_expr_numeric() -> Result<(), ()> {
@@ -72,10 +78,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -87,7 +93,7 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        parser.parse().expect(&format!(
+        parser.parse_expression(Precedence::Lowest).expect(&format!(
             "unable to parse input. Log output: {:#?}",
             parser.logger.messages()
         ));

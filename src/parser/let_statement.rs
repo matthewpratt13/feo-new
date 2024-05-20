@@ -4,7 +4,7 @@ use crate::{
     token::Token,
 };
 
-use super::{parse::ParseStatement, ParsePattern, Parser, Precedence};
+use super::{ParsePattern, ParseStatement, Parser, Precedence};
 
 impl ParseStatement for LetStmt {
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {
@@ -73,10 +73,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let statement = parser.parse_statement();
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match statement {
+            Ok(s) => Ok(println!("{:#?}", s)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

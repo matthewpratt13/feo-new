@@ -8,12 +8,13 @@ use crate::{
 
 impl ParseConstructExpr for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {
-        // **log event and current token** [REMOVE IN PROD]
+        ////////////////////////////////////////////////////////////////////////////////
         parser.logger.log(
             LogLevel::Debug,
             LogMsg::from("entering `GroupedExpr::parse()`"),
         );
         parser.log_current_token(false);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
@@ -46,12 +47,13 @@ impl ParseConstructExpr for GroupedExpr {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
 
-                // **log event and current token** [REMOVE IN PROD]
+                ////////////////////////////////////////////////////////////////////////////////
                 parser.logger.log(
                     LogLevel::Debug,
                     LogMsg::from("exiting `GroupedExpr::parse()`"),
                 );
                 parser.log_current_token(false);
+                ////////////////////////////////////////////////////////////////////////////////
 
                 Ok(GroupedExpr { inner_expression })
             }
@@ -66,7 +68,10 @@ impl ParseConstructExpr for GroupedExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::{logger::LogLevel, parser::test_utils};
+    use crate::{
+        logger::LogLevel,
+        parser::{test_utils, Precedence},
+    };
 
     #[test]
     fn parse_grouped_expr() -> Result<(), ()> {
@@ -74,10 +79,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let statements = parser.parse();
+        let expression = parser.parse_expression(Precedence::Lowest);
 
-        match statements {
-            Ok(t) => Ok(println!("{:#?}", t)),
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
