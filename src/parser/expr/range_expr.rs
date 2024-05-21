@@ -12,7 +12,7 @@ impl ParseOperatorExpr for RangeExpr {
             ErrorsEmitted
         })?;
 
-        let operator_token = parser.current_token().unwrap_or(Token::EOF);
+        let operator_token = &parser.current_token().cloned().unwrap_or(Token::EOF);
 
         let range_op = match operator_token.token_type() {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
@@ -33,7 +33,7 @@ impl ParseOperatorExpr for RangeExpr {
 
         parser.next_token();
 
-        if let Some(Token::EOF) = parser.current_token() {
+        if let Some(Token::EOF) = &parser.current_token() {
             let expr = RangeExpr {
                 from_expr_opt: Some(Box::new(from_assignee_expr)),
                 range_op: {
@@ -53,7 +53,7 @@ impl ParseOperatorExpr for RangeExpr {
             return Ok(Expression::Range(expr));
         }
 
-        let precedence = parser.get_precedence(&operator_token);
+        let precedence = parser.get_precedence(operator_token);
 
         let to_assignee_expr = parser.parse_assignee_expr(precedence)?;
 
@@ -69,7 +69,7 @@ impl ParseOperatorExpr for RangeExpr {
 
 impl RangeExpr {
     pub(crate) fn parse_prefix(parser: &mut Parser) -> Result<RangeExpr, ErrorsEmitted> {
-        let operator_token = parser.current_token().unwrap_or(Token::EOF);
+        let operator_token = &parser.current_token().cloned().unwrap_or(Token::EOF);
 
         let range_op = match operator_token {
             Token::DblDot { .. } => Ok(RangeOp::RangeExclusive),
@@ -106,7 +106,7 @@ impl RangeExpr {
             return Ok(expr);
         }
 
-        let precedence = parser.get_precedence(&operator_token);
+        let precedence = parser.get_precedence(operator_token);
 
         let to_assignee_expr = parser.parse_assignee_expr(precedence)?;
 

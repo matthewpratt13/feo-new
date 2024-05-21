@@ -17,7 +17,7 @@ impl ParseDefItem for InherentImplDef {
         attributes_opt: Option<Vec<OuterAttr>>,
         _visibility: Visibility,
     ) -> Result<InherentImplDef, ErrorsEmitted> {
-        let kw_impl = if let Some(Token::Impl { .. }) = parser.current_token() {
+        let kw_impl = if let Some(Token::Impl { .. }) = &parser.current_token() {
             parser.next_token();
             Ok(Keyword::Impl)
         } else {
@@ -25,9 +25,9 @@ impl ParseDefItem for InherentImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let nominal_type = PathType::parse(parser, parser.current_token())?;
+        let nominal_type = PathType::parse(parser, parser.current_token().cloned())?;
 
-        let open_brace = match parser.current_token() {
+        let open_brace = match &parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());
                 parser.next_token();
@@ -45,7 +45,7 @@ impl ParseDefItem for InherentImplDef {
 
         let associated_items_opt = collection::get_associated_items::<InherentImplItem>(parser)?;
 
-        match parser.current_token() {
+        match &parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
 
@@ -75,7 +75,7 @@ impl ParseDefItem for TraitImplDef {
         attributes_opt: Option<Vec<OuterAttr>>,
         _visibility: Visibility,
     ) -> Result<TraitImplDef, ErrorsEmitted> {
-        let kw_impl = if let Some(Token::Impl { .. }) = parser.current_token() {
+        let kw_impl = if let Some(Token::Impl { .. }) = &parser.current_token() {
             parser.next_token();
             Ok(Keyword::Impl)
         } else {
@@ -83,9 +83,9 @@ impl ParseDefItem for TraitImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let token = parser.current_token();
+        let token = parser.current_token().cloned();
 
-        let implemented_trait_path = match token {
+        let implemented_trait_path = match &token {
             Some(Token::Identifier { .. }) => {
                 let path = PathType::parse(parser, token);
                 path
@@ -103,7 +103,7 @@ impl ParseDefItem for TraitImplDef {
             }
         }?;
 
-        let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
+        let kw_for = if let Some(Token::For { .. }) = &parser.current_token() {
             parser.next_token();
             Ok(Keyword::For)
         } else {
@@ -113,7 +113,7 @@ impl ParseDefItem for TraitImplDef {
 
         let implementing_type = Type::parse(parser)?;
 
-        let open_brace = match parser.current_token() {
+        let open_brace = match &parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());
                 parser.next_token();
@@ -131,7 +131,7 @@ impl ParseDefItem for TraitImplDef {
 
         let associated_items_opt = collection::get_associated_items::<TraitImplItem>(parser)?;
 
-        match parser.current_token() {
+        match &parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
 
@@ -163,7 +163,7 @@ impl ParseAssociatedItem for InherentImplItem {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<InherentImplItem, ErrorsEmitted> {
-        match parser.current_token() {
+        match &parser.current_token() {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
                 if constant_decl.value_opt.is_none() {
@@ -200,7 +200,7 @@ impl ParseAssociatedItem for TraitImplItem {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<TraitImplItem, ErrorsEmitted> {
-        match parser.current_token() {
+        match &parser.current_token() {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
                 if constant_decl.value_opt.is_none() {

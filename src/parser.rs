@@ -207,7 +207,7 @@ impl Parser {
             // log status info
             self.logger.log(
                 LogLevel::Info,
-                LogMsg::from(format!("parsed item: {:?}", item)),
+                LogMsg::from(format!("parsed item: {:?}", &item)),
             );
 
             items.push(item);
@@ -331,7 +331,9 @@ impl Parser {
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
-        match &self.current_token() {
+        let token = self.current_token().cloned();
+
+        match &token {
             Some(
                 Token::IntLiteral { .. }
                 | Token::UIntLiteral { .. }
@@ -355,7 +357,7 @@ impl Parser {
                         underscore: Identifier::from(name),
                     }))
                 } else {
-                    match self.peek_ahead_by(1) {
+                    match &self.peek_ahead_by(1) {
                         Some(Token::LBrace { .. }) => match &self.peek_behind_by(1) {
                             Some(
                                 Token::Equals { .. }
@@ -379,7 +381,7 @@ impl Parser {
                 }
             }
             Some(Token::SelfType { .. }) => {
-                if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
+                if let Some(Token::LBrace { .. }) = &self.peek_ahead_by(1) {
                     Ok(Expression::Struct(StructExpr::parse(self)?))
                 } else {
                     Ok(Expression::Path(PathExpr::parse(self)?))
@@ -424,16 +426,16 @@ impl Parser {
             Some(Token::Unsafe { .. }) => Ok(Expression::Block(BlockExpr::parse(self)?)),
 
             Some(Token::LParen { .. }) => {
-                if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
+                if let Some(Token::Comma { .. }) = &self.peek_ahead_by(2) {
                     Ok(Expression::Tuple(TupleExpr::parse(self)?))
                 } else {
                     self.parse_primary()
                 }
             }
 
-            Some(Token::LBrace { .. }) => match self.peek_ahead_by(2) {
+            Some(Token::LBrace { .. }) => match &self.peek_ahead_by(2) {
                 Some(Token::Colon { .. }) => Ok(Expression::Mapping(MappingExpr::parse(self)?)),
-                _ => match self.peek_ahead_by(1) {
+                _ => match &self.peek_ahead_by(1) {
                     Some(Token::RBrace { .. }) => {
                         Ok(Expression::Mapping(MappingExpr::parse(self)?))
                     }
@@ -453,9 +455,7 @@ impl Parser {
                     let left = self.parse_prefix()?;
                     BinaryExpr::parse(self, left)
                 } else {
-                    self.log_error(ParserErrorKind::InvalidTokenContext {
-                        token: self.current_token(),
-                    });
+                    self.log_error(ParserErrorKind::InvalidTokenContext { token });
                     Err(ErrorsEmitted)
                 }
             }
@@ -470,14 +470,12 @@ impl Parser {
                     let left = self.parse_prefix()?;
                     BinaryExpr::parse(self, left)
                 } else {
-                    self.log_error(ParserErrorKind::InvalidTokenContext {
-                        token: self.current_token(),
-                    });
+                    self.log_error(ParserErrorKind::InvalidTokenContext { token });
                     Err(ErrorsEmitted)
                 }
             }
 
-            Some(Token::DblDot { .. }) => match (self.peek_behind_by(1), self.peek_ahead_by(1)) {
+            Some(Token::DblDot { .. }) => match (&self.peek_behind_by(1), &self.peek_ahead_by(1)) {
                 (None, Some(Token::Semicolon { .. } | Token::EOF) | None) => {
                     let expr = RangeExpr {
                         from_expr_opt: None,
@@ -540,9 +538,7 @@ impl Parser {
 
             _ => {
                 // log the error and advance the parser, then return `Err(ErrorsEmitted)`
-                self.log_error(ParserErrorKind::InvalidTokenContext {
-                    token: self.current_token(),
-                });
+                self.log_error(ParserErrorKind::InvalidTokenContext { token });
                 self.next_token();
                 Err(ErrorsEmitted)
             }
@@ -563,7 +559,9 @@ impl Parser {
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
-        match &self.current_token() {
+        let token = self.current_token().cloned();
+
+        match &token {
             Some(Token::Dot { .. }) => {
                 if self.is_tuple_index() {
                     self.set_context(ParserContext::TupleIndex);
@@ -572,9 +570,7 @@ impl Parser {
                 } else if self.is_field_access() {
                     self.set_context(ParserContext::FieldAccess);
                 } else {
-                    self.log_error(ParserErrorKind::InvalidTokenContext {
-                        token: self.current_token(),
-                    });
+                    self.log_error(ParserErrorKind::InvalidTokenContext { token });
                     self.set_context(ParserContext::Default)
                 }
 
@@ -587,7 +583,7 @@ impl Parser {
                     }
 
                     Some(Token::Identifier { .. } | Token::UIntLiteral { .. }) => {
-                        match &self.context {
+                        match self.context {
                             ParserContext::FieldAccess => Ok(Some(FieldAccessExpr::parse)),
                             ParserContext::MethodCall => Ok(Some(MethodCallExpr::parse)),
                             ParserContext::TupleIndex => Ok(Some(TupleIndexExpr::parse)),
@@ -700,10 +696,9 @@ impl Parser {
             }
 
             _ => {
+                self.log_error(ParserErrorKind::InvalidTokenContext { token });
                 self.next_token();
-                self.log_error(ParserErrorKind::InvalidTokenContext {
-                    token: self.current_token(),
-                });
+
                 ////////////////////////////////////////////////////////////////////////////////
                 self.log_current_token(true);
                 ////////////////////////////////////////////////////////////////////////////////
@@ -748,7 +743,7 @@ impl Parser {
 
         let visibility = Visibility::visibility(self)?;
 
-        match self.current_token() {
+        match &self.current_token() {
             Some(Token::Import { .. }) => {
                 let import_decl = ImportDecl::parse(self, attributes_opt, visibility)?;
                 Ok(Item::ImportDecl(import_decl))
@@ -777,7 +772,7 @@ impl Parser {
                 let enum_def = EnumDef::parse(self, attributes_opt, visibility)?;
                 Ok(Item::EnumDef(enum_def))
             }
-            Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
+            Some(Token::Struct { .. }) => match &self.peek_ahead_by(2) {
                 Some(Token::LBrace { .. }) => {
                     let struct_def = StructDef::parse(self, attributes_opt, visibility)?;
                     Ok(Item::StructDef(struct_def))
@@ -792,7 +787,7 @@ impl Parser {
                 }
             },
             Some(Token::Impl { .. }) => {
-                if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
+                if let Some(Token::For { .. }) = &self.peek_ahead_by(2) {
                     Ok(Item::TraitImplDef(TraitImplDef::parse(
                         self,
                         attributes_opt,
@@ -832,9 +827,7 @@ impl Parser {
         self.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
-        let token = self.current_token();
-
-        match token.as_ref() {
+        match &self.current_token() {
             Some(Token::Let { .. }) => LetStmt::parse_statement(self),
 
             Some(
@@ -906,12 +899,14 @@ impl Parser {
         self.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
-        match &self.current_token() {
+        let token = self.current_token().cloned();
+
+        match &token {
             Some(Token::IntLiteral { value, .. }) => {
                 let patt = Pattern::Literal(Literal::Int(*value));
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
+                    &self.peek_ahead_by(1)
                 {
                     Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
@@ -923,7 +918,7 @@ impl Parser {
                 let patt = Pattern::Literal(Literal::UInt(*value));
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
+                    &self.peek_ahead_by(1)
                 {
                     Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
@@ -936,7 +931,7 @@ impl Parser {
                 let patt = Pattern::Literal(Literal::BigUInt(*value));
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
+                    &self.peek_ahead_by(1)
                 {
                     Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
@@ -948,7 +943,7 @@ impl Parser {
                 let patt = Pattern::Literal(Literal::Byte(*value));
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
+                    &self.peek_ahead_by(1)
                 {
                     Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
@@ -973,7 +968,7 @@ impl Parser {
                 let patt = Pattern::Literal(Literal::Char(*value));
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
+                    &self.peek_ahead_by(1)
                 {
                     Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
@@ -986,7 +981,7 @@ impl Parser {
                 Ok(Pattern::Literal(Literal::Bool(*value)))
             }
             Some(Token::LParen { .. }) => {
-                if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
+                if let Some(Token::Comma { .. }) = &self.peek_ahead_by(2) {
                     Ok(Pattern::TuplePatt(TuplePatt::parse_patt(self)?))
                 } else {
                     let patt = GroupedPatt::parse_patt(self)?;
@@ -1001,7 +996,7 @@ impl Parser {
                         underscore: Identifier::from(name),
                     }))
                 } else {
-                    match self.peek_ahead_by(1) {
+                    match &self.peek_ahead_by(1) {
                         Some(Token::LBrace { .. }) => {
                             Ok(Pattern::StructPatt(StructPatt::parse_patt(self)?))
                         }
@@ -1023,7 +1018,7 @@ impl Parser {
                 Ok(Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?))
             }
 
-            Some(Token::SelfType { .. }) => match self.peek_ahead_by(1) {
+            Some(Token::SelfType { .. }) => match &self.peek_ahead_by(1) {
                 Some(Token::LBrace { .. }) => {
                     Ok(Pattern::StructPatt(StructPatt::parse_patt(self)?))
                 }
@@ -1071,9 +1066,7 @@ impl Parser {
 
             _ => {
                 // log the error and advance the parser, then return `Err(ErrorsEmitted)`
-                self.log_error(ParserErrorKind::InvalidTokenContext {
-                    token: self.current_token(),
-                });
+                self.log_error(ParserErrorKind::InvalidTokenContext { token });
                 self.next_token();
 
                 Err(ErrorsEmitted)
@@ -1087,7 +1080,7 @@ impl Parser {
 
     /// Advance the parser to the next token (returns the current token).
     fn next_token(&mut self) -> Option<Token> {
-        let token = self.current_token();
+        let token = self.current_token().cloned();
 
         if self.current < self.stream.tokens().len() {
             self.current += 1;
@@ -1112,21 +1105,21 @@ impl Parser {
     }
 
     /// Get the token at the current index in the `TokenStream`.
-    fn current_token(&self) -> Option<Token> {
+    fn current_token(&self) -> Option<&Token> {
         if self.current < self.stream.tokens().len() {
-            self.stream.tokens().get(self.current).cloned()
+            self.stream.tokens().get(self.current)
         } else {
             // return `Token::EOF` instead of `None` to prevent unwrap errors
-            Some(Token::EOF)
+            Some(&Token::EOF)
         }
     }
 
     /// Peek at the token `num_tokens` ahead of the token at the current index in the `TokenStream`.
-    fn peek_ahead_by(&self, num_tokens: usize) -> Option<Token> {
+    fn peek_ahead_by(&self, num_tokens: usize) -> Option<&Token> {
         let i = self.current + num_tokens;
 
         if i < self.stream.tokens().len() {
-            self.stream.tokens().get(i).cloned()
+            self.stream.tokens().get(i)
         } else {
             None
         }
@@ -1169,7 +1162,7 @@ impl Parser {
     /// Utility function that is used to report the current token and its precedence for debugging.
     fn log_current_token(&mut self, log_precedence: bool) {
         let token = self.current_token().unwrap();
-        let precedence = self.get_precedence(&token);
+        let precedence = self.get_precedence(token);
 
         self.logger.log(
             LogLevel::Debug,
@@ -1188,7 +1181,7 @@ impl Parser {
     fn log_unexpected_token(&mut self, expected: &str) {
         self.log_error(ParserErrorKind::UnexpectedToken {
             expected: expected.to_string(),
-            found: self.current_token(),
+            found: self.current_token().cloned(),
         });
 
         self.next_token();

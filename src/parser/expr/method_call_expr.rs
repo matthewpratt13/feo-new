@@ -12,10 +12,10 @@ impl ParseOperatorExpr for MethodCallExpr {
             ErrorsEmitted
         })?;
 
-        let method_name = match parser.current_token() {
+        let method_name = match &parser.current_token().cloned() {
             Some(Token::Identifier { name, .. }) => {
                 parser.next_token();
-                Ok(Identifier(name))
+                Ok(Identifier::from(name))
             }
             Some(Token::EOF) | None => {
                 parser.log_missing_token("identifier");
@@ -27,7 +27,7 @@ impl ParseOperatorExpr for MethodCallExpr {
             }
         }?;
 
-        let open_paren = match parser.current_token() {
+        let open_paren = match &parser.current_token() {
             Some(Token::LParen { .. }) => {
                 let position = parser.current_position();
                 parser.next_token();
@@ -45,7 +45,7 @@ impl ParseOperatorExpr for MethodCallExpr {
 
         let args_opt = collection::get_expressions(parser, Precedence::Lowest, &open_paren)?;
 
-        match parser.current_token() {
+        match &parser.current_token() {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
 

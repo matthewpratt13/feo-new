@@ -18,9 +18,9 @@ impl ParsePattern for PathPatt {
 
         let mut tree: Vec<Identifier> = Vec::new();
 
-        let path_root = match parser.current_token() {
+        let path_root = match &parser.current_token() {
             Some(Token::Identifier { name, .. }) => {
-                Ok(PathRoot::Identifier(Identifier::from(&name)))
+                Ok(PathRoot::Identifier(Identifier::from(name)))
             }
             Some(Token::SelfKeyword { .. }) => Ok(PathRoot::SelfKeyword),
             Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
@@ -36,12 +36,12 @@ impl ParsePattern for PathPatt {
 
         parser.next_token();
 
-        while let Some(Token::DblColon { .. }) = parser.current_token() {
-            if let Some(Token::Identifier { name, .. }) = parser.peek_ahead_by(1) {
+        while let Some(Token::DblColon { .. }) = &parser.current_token() {
+            if let Some(Token::Identifier { name, .. }) = &parser.peek_ahead_by(1).cloned() {
                 parser.next_token();
                 parser.next_token();
 
-                tree.push(Identifier(name));
+                tree.push(Identifier::from(name));
             } else {
                 break;
             }

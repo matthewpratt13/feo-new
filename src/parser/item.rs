@@ -36,7 +36,7 @@ impl Item {
         parser.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
-        match parser.current_token() {
+        match &parser.current_token() {
             Some(Token::Import { .. }) => Ok(Item::ImportDecl(ImportDecl::parse(
                 parser,
                 attributes_opt,
@@ -78,7 +78,7 @@ impl Item {
                 visibility,
             )?)),
             Some(Token::Impl { .. }) => {
-                if let Some(Token::For { .. }) = parser.peek_ahead_by(2) {
+                if let Some(Token::For { .. }) = &parser.peek_ahead_by(2) {
                     Ok(Item::TraitImplDef(TraitImplDef::parse(
                         parser,
                         attributes_opt,
@@ -120,9 +120,7 @@ impl ParseStatement for Item {
 
         let visibility = Visibility::visibility(parser)?;
 
-        let token = parser.current_token();
-
-        match token {
+        match &parser.current_token() {
             Some(Token::Import { .. }) => Ok(Statement::Item(Item::ImportDecl(ImportDecl::parse(
                 parser,
                 attributes_opt,
@@ -154,7 +152,7 @@ impl ParseStatement for Item {
                 attributes_opt,
                 visibility,
             )?))),
-            Some(Token::Struct { .. }) => match parser.peek_ahead_by(2) {
+            Some(Token::Struct { .. }) => match &parser.peek_ahead_by(2) {
                 Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::StructDef(
                     StructDef::parse(parser, attributes_opt, visibility)?,
                 ))),
@@ -172,7 +170,7 @@ impl ParseStatement for Item {
             Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionItem(
                 FunctionItem::parse(parser, attributes_opt, visibility)?,
             ))),
-            Some(Token::Impl { .. }) => match parser.peek_ahead_by(2) {
+            Some(Token::Impl { .. }) => match &parser.peek_ahead_by(2) {
                 Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
                     TraitImplDef::parse(parser, attributes_opt, visibility)?,
                 ))),

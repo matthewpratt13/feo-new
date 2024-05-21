@@ -16,7 +16,7 @@ impl ParseDeclItem for ImportDecl {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ImportDecl, ErrorsEmitted> {
-        let kw_import = if let Some(Token::Import { .. }) = parser.current_token() {
+        let kw_import = if let Some(Token::Import { .. }) = &parser.current_token() {
             parser.next_token();
             Ok(Keyword::Import)
         } else {
@@ -26,7 +26,7 @@ impl ParseDeclItem for ImportDecl {
 
         let import_tree = parse_import_tree(parser)?;
 
-        match parser.current_token() {
+        match &parser.current_token() {
             Some(Token::Semicolon { .. }) => {
                 parser.next_token();
                 Ok(ImportDecl {
@@ -54,25 +54,25 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
     let first_segment = parse_path_segment(parser)?;
     path_segments.push(first_segment);
 
-    while let Some(Token::DblColon { .. }) = parser.current_token() {
+    while let Some(Token::DblColon { .. }) = &parser.current_token() {
         parser.next_token();
         let next_segment = parse_path_segment(parser)?;
         path_segments.push(next_segment);
     }
 
-    let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.current_token() {
+    let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = &parser.current_token() {
         parser.next_token();
         Some(Separator::ColonColonAsterisk)
     } else {
         None
     };
 
-    let as_clause_opt = if let Some(Token::As { .. }) = parser.current_token() {
+    let as_clause_opt = if let Some(Token::As { .. }) = &parser.current_token() {
         let kw_as = Keyword::As;
         parser.next_token();
 
-        let id = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
+        let id = if let Some(Token::Identifier { name, .. }) = &parser.next_token() {
+            Ok(Identifier::from(name))
         } else {
             parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
@@ -91,9 +91,9 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
 }
 
 fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted> {
-    let root = PathType::parse(parser, parser.current_token())?;
+    let root = PathType::parse(parser, parser.current_token().cloned())?;
 
-    let subset_opt = if let Some(Token::LBrace { .. }) = parser.peek_ahead_by(1) {
+    let subset_opt = if let Some(Token::LBrace { .. }) = &parser.peek_ahead_by(1) {
         parser.next_token();
         Some(parse_path_subset(parser)?)
     } else {
@@ -104,7 +104,7 @@ fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted>
 }
 
 fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
-    let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
+    let open_brace = if let Some(Token::LBrace { .. }) = &parser.current_token() {
         let position = Position::new(parser.current, &parser.stream.span().input());
         parser.next_token();
         Ok(Delimiter::LBrace { position })
@@ -121,7 +121,7 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
             Err(ErrorsEmitted)
         }?;
 
-    match parser.current_token() {
+    match &parser.current_token() {
         Some(Token::RBrace { .. }) => {
             parser.next_token();
 

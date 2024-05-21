@@ -17,7 +17,7 @@ impl ParseDefItem for FunctionItem {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<FunctionItem, ErrorsEmitted> {
-        let kw_func = if let Some(Token::Func { .. }) = parser.current_token() {
+        let kw_func = if let Some(Token::Func { .. }) = &parser.current_token() {
             parser.next_token();
             Ok(Keyword::Func)
         } else {
@@ -37,7 +37,7 @@ impl ParseDefItem for FunctionItem {
             }
         }?;
 
-        let open_paren = match parser.current_token() {
+        let open_paren = match &parser.current_token() {
             Some(Token::LParen { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());
                 parser.next_token();
@@ -56,7 +56,7 @@ impl ParseDefItem for FunctionItem {
         let params_opt =
             collection::get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
 
-        match parser.current_token() {
+        match &parser.current_token() {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
             }
@@ -71,7 +71,7 @@ impl ParseDefItem for FunctionItem {
             }
         }
 
-        let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
+        let return_type_opt = if let Some(Token::ThinArrow { .. }) = &parser.current_token() {
             parser.next_token();
 
             if parser.current_token().is_some() {
@@ -84,7 +84,7 @@ impl ParseDefItem for FunctionItem {
             Ok(None)
         }?;
 
-        let block_opt = if let Some(Token::LBrace { .. }) = parser.current_token() {
+        let block_opt = if let Some(Token::LBrace { .. }) = &parser.current_token() {
             match parser.peek_ahead_by(1) {
                 Some(Token::RBrace { .. }) => {
                     parser.next_token();
@@ -116,22 +116,21 @@ impl ParseDefItem for FunctionItem {
 
 impl FunctionOrMethodParam {
     pub(crate) fn parse(parser: &mut Parser) -> Result<FunctionOrMethodParam, ErrorsEmitted> {
-        let token = parser.current_token();
+        let reference_op_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
+            &parser.current_token()
+        {
+            parser.next_token();
 
-        let reference_op_opt =
-            if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = token {
-                parser.next_token();
+            match &parser.current_token() {
+                Some(Token::Ampersand { .. }) => Some(ReferenceOp::Borrow),
+                Some(Token::AmpersandMut { .. }) => Some(ReferenceOp::MutableBorrow),
+                _ => None,
+            }
+        } else {
+            None
+        };
 
-                match token {
-                    Some(Token::Ampersand { .. }) => Some(ReferenceOp::Borrow),
-                    Some(Token::AmpersandMut { .. }) => Some(ReferenceOp::MutableBorrow),
-                    _ => None,
-                }
-            } else {
-                None
-            };
-
-        match parser.current_token() {
+        match &parser.current_token() {
             Some(Token::SelfKeyword { .. }) => {
                 parser.next_token();
 
@@ -145,7 +144,7 @@ impl FunctionOrMethodParam {
             Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
                 let param_name = IdentifierPatt::parse_patt(parser)?;
 
-                match parser.current_token() {
+                match &parser.current_token() {
                     Some(Token::Colon { .. }) => {
                         parser.next_token();
                     }

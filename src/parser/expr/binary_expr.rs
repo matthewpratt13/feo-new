@@ -26,7 +26,7 @@ impl ParseOperatorExpr for BinaryExpr {
             ErrorsEmitted
         })?;
 
-        let operator_token = parser.current_token().unwrap_or(Token::EOF);
+        let operator_token = &parser.current_token().cloned().unwrap_or(Token::EOF);
 
         let binary_op = match operator_token.token_type() {
             TokenType::Plus => Ok(BinaryOp::Add),
@@ -48,7 +48,7 @@ impl ParseOperatorExpr for BinaryExpr {
             }
         }?;
 
-        let precedence = parser.get_precedence(&operator_token);
+        let precedence = parser.get_precedence(operator_token);
 
         parser.next_token();
 
@@ -81,7 +81,7 @@ impl ParseOperatorExpr for ComparisonExpr {
             ErrorsEmitted
         })?;
 
-        let operator_token = parser.current_token().unwrap_or(Token::EOF);
+        let operator_token = &parser.current_token().cloned().unwrap_or(Token::EOF);
 
         let comparison_op = match operator_token.token_type() {
             TokenType::DblEquals => Ok(ComparisonOp::Equal),
@@ -98,7 +98,7 @@ impl ParseOperatorExpr for ComparisonExpr {
             }
         }?;
 
-        let precedence = parser.get_precedence(&operator_token);
+        let precedence = parser.get_precedence(operator_token);
 
         parser.next_token();
 
