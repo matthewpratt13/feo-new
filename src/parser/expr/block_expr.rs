@@ -90,7 +90,7 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
     );
     parser.logger.log(
         LogLevel::Debug,
-        LogMsg::from(format!("statements.is_empty(): {}", statements.is_empty())),
+        LogMsg::from(format!("statements.is_empty(): {}", &statements.is_empty())),
     );
     parser.log_current_token(false);
     ////////////////////////////////////////////////////////////////////////////////

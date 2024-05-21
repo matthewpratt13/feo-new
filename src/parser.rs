@@ -237,7 +237,7 @@ impl Parser {
             LogLevel::Debug,
             LogMsg::from(format!(
                 "entering `parse_expression()` with precedence: {:?}",
-                precedence
+                &precedence
             )),
         );
         self.log_current_token(true);
