@@ -12,13 +12,13 @@ impl ParseOperatorExpr for FieldAccessExpr {
             ErrorsEmitted
         })?;
 
-        let expr = match &parser.current_token().cloned() {
+        let expr = match parser.current_token().cloned() {
             Some(Token::Identifier { name, .. }) => {
                 parser.next_token();
 
                 Ok(FieldAccessExpr {
                     object: Box::new(object),
-                    field_name: Identifier::from(name),
+                    field_name: Identifier(name),
                 })
             }
             Some(Token::EOF) | None => {

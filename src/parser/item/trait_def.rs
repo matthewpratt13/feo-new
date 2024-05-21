@@ -17,7 +17,7 @@ impl ParseDefItem for TraitDef {
         outer_attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<TraitDef, ErrorsEmitted> {
-        let kw_trait = if let Some(Token::Trait { .. }) = &parser.current_token() {
+        let kw_trait = if let Some(Token::Trait { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::Trait)
         } else {
@@ -25,8 +25,8 @@ impl ParseDefItem for TraitDef {
             Err(ErrorsEmitted)
         }?;
 
-        let trait_name = match &parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(name)),
+        let trait_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
@@ -37,7 +37,7 @@ impl ParseDefItem for TraitDef {
             }
         }?;
 
-        let open_brace = match &parser.current_token() {
+        let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());
                 parser.next_token();
@@ -57,7 +57,7 @@ impl ParseDefItem for TraitDef {
 
         let trait_items_opt = collection::get_associated_items::<TraitDefItem>(parser)?;
 
-        match &parser.current_token() {
+        match parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
 
@@ -89,7 +89,7 @@ impl ParseAssociatedItem for TraitDefItem {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<TraitDefItem, ErrorsEmitted> {
-        match &parser.current_token() {
+        match parser.current_token() {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
                 Ok(TraitDefItem::ConstantDecl(constant_decl))

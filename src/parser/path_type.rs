@@ -48,7 +48,7 @@ impl PathType {
             | Token::For { .. }
             | Token::EOF,
         )
-        | None = &parser.current_token()
+        | None = parser.current_token()
         {
             return Ok(PathType {
                 path_root,
@@ -61,13 +61,13 @@ impl PathType {
             });
         }
 
-        while let Some(Token::DblColon { .. }) = &parser.current_token() {
-            match &parser.peek_ahead_by(1).cloned() {
+        while let Some(Token::DblColon { .. }) = parser.current_token() {
+            match parser.peek_ahead_by(1).cloned() {
                 Some(Token::Identifier { name, .. }) => {
                     parser.next_token();
                     parser.next_token();
 
-                    tree.push(Identifier::from(name));
+                    tree.push(Identifier(name));
                 }
                 Some(Token::LBrace { .. }) => break,
                 Some(Token::EOF) | None => {

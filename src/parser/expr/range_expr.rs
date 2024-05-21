@@ -33,7 +33,7 @@ impl ParseOperatorExpr for RangeExpr {
 
         parser.next_token();
 
-        if let Some(Token::EOF) = &parser.current_token() {
+        if let Some(Token::EOF) = parser.current_token() {
             let expr = RangeExpr {
                 from_expr_opt: Some(Box::new(from_assignee_expr)),
                 range_op: {

@@ -7,7 +7,7 @@ use crate::{
 
 impl ParseConstructExpr for TupleExpr {
     fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
-        let open_paren = match &parser.current_token() {
+        let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
                 let position = parser.current_position();
                 parser.next_token();
@@ -21,7 +21,7 @@ impl ParseConstructExpr for TupleExpr {
 
         let tuple_elements = parse_tuple_elements(parser)?;
 
-        match &parser.current_token() {
+        match parser.current_token() {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
                 Ok(TupleExpr { tuple_elements })
@@ -39,17 +39,17 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
     let mut final_element_opt = None::<Box<Expression>>;
 
     while !matches!(
-        &parser.current_token(),
+        parser.current_token(),
         Some(Token::RParen { .. } | Token::EOF)
     ) {
         let element = parser.parse_expression(Precedence::Lowest)?;
 
-        if let Some(Token::Comma { .. }) = &parser.current_token() {
+        if let Some(Token::Comma { .. }) = parser.current_token() {
             elements.push(element);
             parser.next_token();
-        } else if !matches!(&parser.current_token(), Some(Token::RParen { .. })) {
+        } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
             parser.log_unexpected_token("`,` or `)`");
-        } else if matches!(&parser.current_token(), Some(Token::RParen { .. })) {
+        } else if matches!(parser.current_token(), Some(Token::RParen { .. })) {
             final_element_opt = Some(Box::new(element));
             break;
         }
@@ -68,10 +68,10 @@ impl ParseOperatorExpr for TupleIndexExpr {
             ErrorsEmitted
         })?;
 
-        let index = match &parser.current_token().cloned() {
+        let index = match parser.current_token().cloned() {
             Some(Token::UIntLiteral { value, .. }) => {
                 parser.next_token();
-                Ok(*value)
+                Ok(value)
             }
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();

@@ -280,7 +280,7 @@ impl Parser {
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
-        match &self.current_token() {
+        match self.current_token() {
             Some(Token::Identifier { .. }) => Ok(Expression::Path(PathExpr::parse(self)?)),
             Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(*value))),
             Some(Token::UIntLiteral { value, .. }) => {
@@ -357,8 +357,8 @@ impl Parser {
                         underscore: Identifier::from(name),
                     }))
                 } else {
-                    match &self.peek_ahead_by(1) {
-                        Some(Token::LBrace { .. }) => match &self.peek_behind_by(1) {
+                    match self.peek_ahead_by(1) {
+                        Some(Token::LBrace { .. }) => match self.peek_behind_by(1) {
                             Some(
                                 Token::Equals { .. }
                                 | Token::LParen { .. }
@@ -381,7 +381,7 @@ impl Parser {
                 }
             }
             Some(Token::SelfType { .. }) => {
-                if let Some(Token::LBrace { .. }) = &self.peek_ahead_by(1) {
+                if let Some(Token::LBrace { .. }) = self.peek_ahead_by(1) {
                     Ok(Expression::Struct(StructExpr::parse(self)?))
                 } else {
                     Ok(Expression::Path(PathExpr::parse(self)?))
@@ -426,16 +426,16 @@ impl Parser {
             Some(Token::Unsafe { .. }) => Ok(Expression::Block(BlockExpr::parse(self)?)),
 
             Some(Token::LParen { .. }) => {
-                if let Some(Token::Comma { .. }) = &self.peek_ahead_by(2) {
+                if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     Ok(Expression::Tuple(TupleExpr::parse(self)?))
                 } else {
                     self.parse_primary()
                 }
             }
 
-            Some(Token::LBrace { .. }) => match &self.peek_ahead_by(2) {
+            Some(Token::LBrace { .. }) => match self.peek_ahead_by(2) {
                 Some(Token::Colon { .. }) => Ok(Expression::Mapping(MappingExpr::parse(self)?)),
-                _ => match &self.peek_ahead_by(1) {
+                _ => match self.peek_ahead_by(1) {
                     Some(Token::RBrace { .. }) => {
                         Ok(Expression::Mapping(MappingExpr::parse(self)?))
                     }
@@ -475,7 +475,7 @@ impl Parser {
                 }
             }
 
-            Some(Token::DblDot { .. }) => match (&self.peek_behind_by(1), &self.peek_ahead_by(1)) {
+            Some(Token::DblDot { .. }) => match (self.peek_behind_by(1), self.peek_ahead_by(1)) {
                 (None, Some(Token::Semicolon { .. } | Token::EOF) | None) => {
                     let expr = RangeExpr {
                         from_expr_opt: None,
@@ -576,7 +576,7 @@ impl Parser {
 
                 self.next_token();
 
-                match &self.current_token() {
+                match self.current_token() {
                     Some(Token::EOF) | None => {
                         self.log_unexpected_eoi();
                         return Err(ErrorsEmitted);
@@ -743,7 +743,7 @@ impl Parser {
 
         let visibility = Visibility::visibility(self)?;
 
-        match &self.current_token() {
+        match self.current_token() {
             Some(Token::Import { .. }) => {
                 let import_decl = ImportDecl::parse(self, attributes_opt, visibility)?;
                 Ok(Item::ImportDecl(import_decl))
@@ -772,7 +772,7 @@ impl Parser {
                 let enum_def = EnumDef::parse(self, attributes_opt, visibility)?;
                 Ok(Item::EnumDef(enum_def))
             }
-            Some(Token::Struct { .. }) => match &self.peek_ahead_by(2) {
+            Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
                 Some(Token::LBrace { .. }) => {
                     let struct_def = StructDef::parse(self, attributes_opt, visibility)?;
                     Ok(Item::StructDef(struct_def))
@@ -787,7 +787,7 @@ impl Parser {
                 }
             },
             Some(Token::Impl { .. }) => {
-                if let Some(Token::For { .. }) = &self.peek_ahead_by(2) {
+                if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
                     Ok(Item::TraitImplDef(TraitImplDef::parse(
                         self,
                         attributes_opt,
@@ -827,7 +827,7 @@ impl Parser {
         self.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
-        match &self.current_token() {
+        match self.current_token() {
             Some(Token::Let { .. }) => LetStmt::parse_statement(self),
 
             Some(
@@ -870,7 +870,7 @@ impl Parser {
                     self.parse_expression(Precedence::Lowest)?,
                 ));
 
-                match &self.current_token() {
+                match self.current_token() {
                     Some(Token::Semicolon { .. }) => {
                         self.next_token();
                     }
@@ -906,7 +906,7 @@ impl Parser {
                 let patt = Pattern::Literal(Literal::Int(*value));
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    &self.peek_ahead_by(1)
+                    self.peek_ahead_by(1)
                 {
                     Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
@@ -918,7 +918,7 @@ impl Parser {
                 let patt = Pattern::Literal(Literal::UInt(*value));
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    &self.peek_ahead_by(1)
+                    self.peek_ahead_by(1)
                 {
                     Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
@@ -931,7 +931,7 @@ impl Parser {
                 let patt = Pattern::Literal(Literal::BigUInt(*value));
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    &self.peek_ahead_by(1)
+                    self.peek_ahead_by(1)
                 {
                     Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
@@ -943,7 +943,7 @@ impl Parser {
                 let patt = Pattern::Literal(Literal::Byte(*value));
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    &self.peek_ahead_by(1)
+                    self.peek_ahead_by(1)
                 {
                     Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
@@ -968,7 +968,7 @@ impl Parser {
                 let patt = Pattern::Literal(Literal::Char(*value));
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    &self.peek_ahead_by(1)
+                    self.peek_ahead_by(1)
                 {
                     Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
                 } else {
@@ -981,7 +981,7 @@ impl Parser {
                 Ok(Pattern::Literal(Literal::Bool(*value)))
             }
             Some(Token::LParen { .. }) => {
-                if let Some(Token::Comma { .. }) = &self.peek_ahead_by(2) {
+                if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     Ok(Pattern::TuplePatt(TuplePatt::parse_patt(self)?))
                 } else {
                     let patt = GroupedPatt::parse_patt(self)?;
@@ -996,7 +996,7 @@ impl Parser {
                         underscore: Identifier::from(name),
                     }))
                 } else {
-                    match &self.peek_ahead_by(1) {
+                    match self.peek_ahead_by(1) {
                         Some(Token::LBrace { .. }) => {
                             Ok(Pattern::StructPatt(StructPatt::parse_patt(self)?))
                         }
@@ -1018,7 +1018,7 @@ impl Parser {
                 Ok(Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?))
             }
 
-            Some(Token::SelfType { .. }) => match &self.peek_ahead_by(1) {
+            Some(Token::SelfType { .. }) => match self.peek_ahead_by(1) {
                 Some(Token::LBrace { .. }) => {
                     Ok(Pattern::StructPatt(StructPatt::parse_patt(self)?))
                 }
@@ -1323,7 +1323,7 @@ impl Parser {
 
     /// Get the precedence of the current token to be compared and consumed.
     fn peek_precedence(&self) -> Precedence {
-        self.get_precedence(&self.current_token().unwrap())
+        self.get_precedence(self.current_token().unwrap())
     }
 
     /// Get the current token's position in the token stream, formatted to include line

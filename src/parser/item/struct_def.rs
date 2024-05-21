@@ -16,7 +16,7 @@ impl ParseDefItem for StructDef {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<StructDef, ErrorsEmitted> {
-        let kw_struct = if let Some(Token::Struct { .. }) = &parser.current_token() {
+        let kw_struct = if let Some(Token::Struct { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::Struct)
         } else {
@@ -24,8 +24,8 @@ impl ParseDefItem for StructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = match &parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(name)),
+        let struct_name = match parser.next_token() {
+            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
@@ -37,7 +37,7 @@ impl ParseDefItem for StructDef {
             }
         }?;
 
-        let open_brace = match &parser.current_token() {
+        let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());
                 parser.next_token();
@@ -55,7 +55,7 @@ impl ParseDefItem for StructDef {
 
         let fields_opt = collection::get_collection(parser, StructDefField::parse, &open_brace)?;
 
-        match &parser.current_token() {
+        match parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 parser.next_token();
 
@@ -86,7 +86,7 @@ impl ParseDefItem for TupleStructDef {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<TupleStructDef, ErrorsEmitted> {
-        let kw_struct = if let Some(Token::Struct { .. }) = &parser.current_token() {
+        let kw_struct = if let Some(Token::Struct { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::Struct)
         } else {
@@ -94,14 +94,14 @@ impl ParseDefItem for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = if let Some(Token::Identifier { name, .. }) = &parser.next_token() {
-            Ok(Identifier::from(name))
+        let struct_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
+            Ok(Identifier(name))
         } else {
             parser.log_unexpected_token("struct name");
             Err(ErrorsEmitted)
         }?;
 
-        let open_paren = match &parser.current_token() {
+        let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());
                 parser.next_token();
@@ -120,7 +120,7 @@ impl ParseDefItem for TupleStructDef {
         let tuple_struct_fields_opt =
             collection::get_collection(parser, parse_tuple_struct_def_field, &open_paren)?;
 
-        match &parser.current_token() {
+        match parser.current_token() {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
             }
@@ -135,7 +135,7 @@ impl ParseDefItem for TupleStructDef {
             }
         }
 
-        match &parser.current_token() {
+        match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
                 parser.next_token();
                 Ok(TupleStructDef {
@@ -164,15 +164,15 @@ impl StructDefField {
 
         let visibility = Visibility::visibility(parser)?;
 
-        let field_name = if let Some(Token::Identifier { name, .. }) = &parser.current_token().cloned() {
+        let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
             parser.next_token();
-            Ok(Identifier::from(name))
+            Ok(Identifier(name))
         } else {
             parser.log_missing_token("struct field identifier");
             Err(ErrorsEmitted)
         }?;
 
-        match &parser.current_token() {
+        match parser.current_token() {
             Some(Token::Colon { .. }) => {
                 parser.next_token();
             }
