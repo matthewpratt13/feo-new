@@ -184,11 +184,8 @@ pub(crate) enum OuterAttr {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Delimiter {
     LParen { position: Position },
-    // RParen { position: Position },
     LBracket { position: Position },
-    // RBracket { position: Position },
     LBrace { position: Position },
-    // RBrace { position: Position },
     Pipe { position: Position },
 }
 
@@ -207,11 +204,8 @@ impl fmt::Display for Delimiter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Delimiter::LParen { .. } => write!(f, "("),
-            // Delimiter::RParen { .. } => write!(f, ")"),
             Delimiter::LBracket { .. } => write!(f, "["),
-            // Delimiter::RBracket { .. } => write!(f, "]"),
             Delimiter::LBrace { .. } => write!(f, "{{"),
-            // Delimiter::RBrace { .. } => write!(f, "}}"),
             Delimiter::Pipe { .. } => write!(f, "|"),
         }
     }

@@ -121,11 +121,11 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::MissingPattern { expected } => {
                 write!(f, "pattern not found. Expected {expected}, found none")
             }
-            ParserErrorKind::UnknownError => write!(f, "unknown parsing error"),
             ParserErrorKind::UnexpectedRangeOp { expected, found } => write!(
                 f,
                 "unexpected range operator. Expected {expected}, found {found}"
             ),
+            ParserErrorKind::UnknownError => write!(f, "unknown parsing error"),
         }
     }
 }
