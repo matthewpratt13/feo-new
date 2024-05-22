@@ -25,7 +25,7 @@ impl ParseDefItem for InherentImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let nominal_type = PathType::parse(parser, parser.current_token())?;
+        let nominal_type = PathType::parse(parser, parser.current_token().cloned())?;
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
@@ -83,9 +83,9 @@ impl ParseDefItem for TraitImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let token = parser.current_token();
+        let token = parser.current_token().cloned();
 
-        let implemented_trait_path = match token {
+        let implemented_trait_path = match &token {
             Some(Token::Identifier { .. }) => {
                 let path = PathType::parse(parser, token);
                 path

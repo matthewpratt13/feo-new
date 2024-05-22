@@ -20,7 +20,7 @@ impl ParseSimpleExpr for PathExpr {
 
         let path_root = match parser.current_token() {
             Some(Token::Identifier { name, .. }) => {
-                Ok(PathRoot::Identifier(Identifier::from(&name)))
+                Ok(PathRoot::Identifier(Identifier::from(name)))
             }
             Some(Token::SelfKeyword { .. }) => Ok(PathRoot::SelfKeyword),
             Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
@@ -37,7 +37,7 @@ impl ParseSimpleExpr for PathExpr {
         parser.next_token();
 
         while let Some(Token::DblColon { .. }) = parser.current_token() {
-            match parser.peek_ahead_by(1) {
+            match parser.peek_ahead_by(1).cloned() {
                 Some(Token::Identifier { name, .. }) => {
                     parser.next_token();
                     parser.next_token();

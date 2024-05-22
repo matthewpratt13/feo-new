@@ -30,7 +30,7 @@ impl ParsePattern for IdentifierPatt {
             None
         };
 
-        let name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
+        let name = if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
             parser.next_token();
             Ok(Identifier(name))
         } else {

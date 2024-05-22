@@ -164,7 +164,7 @@ impl StructDefField {
 
         let visibility = Visibility::visibility(parser)?;
 
-        let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token() {
+        let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
             parser.next_token();
             Ok(Identifier(name))
         } else {

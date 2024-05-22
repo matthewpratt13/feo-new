@@ -62,7 +62,7 @@ impl PathType {
         }
 
         while let Some(Token::DblColon { .. }) = parser.current_token() {
-            match parser.peek_ahead_by(1) {
+            match parser.peek_ahead_by(1).cloned() {
                 Some(Token::Identifier { name, .. }) => {
                     parser.next_token();
                     parser.next_token();

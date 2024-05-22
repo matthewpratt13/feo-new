@@ -120,9 +120,7 @@ impl ParseStatement for Item {
 
         let visibility = Visibility::visibility(parser)?;
 
-        let token = parser.current_token();
-
-        match token {
+        match parser.current_token() {
             Some(Token::Import { .. }) => Ok(Statement::Item(Item::ImportDecl(ImportDecl::parse(
                 parser,
                 attributes_opt,

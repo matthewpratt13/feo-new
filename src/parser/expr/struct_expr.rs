@@ -11,7 +11,7 @@ impl ParseConstructExpr for StructExpr {
     fn parse(parser: &mut Parser) -> Result<StructExpr, ErrorsEmitted> {
         let root = match parser.current_token() {
             Some(Token::Identifier { name, .. }) => {
-                Ok(PathRoot::Identifier(Identifier::from(&name)))
+                Ok(PathRoot::Identifier(Identifier::from(name)))
             }
             Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
             _ => {
@@ -65,7 +65,7 @@ impl ParseConstructExpr for StructExpr {
 fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted> {
     let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
-    let field_name = match parser.current_token() {
+    let field_name = match parser.current_token().cloned() {
         Some(Token::Identifier { name, .. }) => {
             parser.next_token();
             Ok(Identifier(name))

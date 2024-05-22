@@ -9,18 +9,18 @@ use super::Parser;
 
 impl Visibility {
     pub(crate) fn visibility(parser: &mut Parser) -> Result<Visibility, ErrorsEmitted> {
-        match parser.current_token().as_ref() {
+        match parser.current_token() {
             Some(Token::Pub { .. }) => {
                 parser.next_token();
 
-                match parser.current_token().as_ref() {
+                match parser.current_token() {
                     Some(Token::LParen { .. }) => {
                         let open_paren = Delimiter::LParen {
                             position: Position::new(parser.current, &parser.stream.span().input()),
                         };
                         parser.next_token();
 
-                        let kw_package = match parser.current_token().as_ref() {
+                        let kw_package = match parser.current_token() {
                             Some(Token::Package { .. }) => {
                                 parser.next_token();
                                 Ok(Keyword::Package)

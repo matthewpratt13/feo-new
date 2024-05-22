@@ -12,7 +12,7 @@ impl ParseOperatorExpr for MethodCallExpr {
             ErrorsEmitted
         })?;
 
-        let method_name = match parser.current_token() {
+        let method_name = match parser.current_token().cloned() {
             Some(Token::Identifier { name, .. }) => {
                 parser.next_token();
                 Ok(Identifier(name))

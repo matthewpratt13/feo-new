@@ -12,7 +12,7 @@ impl ParseOperatorExpr for FieldAccessExpr {
             ErrorsEmitted
         })?;
 
-        let expr = match parser.current_token() {
+        let expr = match parser.current_token().cloned() {
             Some(Token::Identifier { name, .. }) => {
                 parser.next_token();
 

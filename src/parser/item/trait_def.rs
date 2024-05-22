@@ -102,7 +102,7 @@ impl ParseAssociatedItem for TraitDefItem {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_some() {
                     parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
-                        token: parser.current_token(),
+                        token: parser.current_token().cloned(),
                         msg: "Functions in trait definitions cannot have bodies".to_string(),
                     });
                     Err(ErrorsEmitted)

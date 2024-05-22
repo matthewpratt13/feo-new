@@ -24,7 +24,7 @@ impl Type {
 
         let token = parser.next_token();
 
-        match token.as_ref() {
+        match &token {
             Some(Token::I32Type { .. }) => Ok(Type::I32(Int::I32(i32::default()))),
             Some(Token::I64Type { .. }) => Ok(Type::I64(Int::I64(i64::default()))),
             Some(Token::I128Type { .. }) => Ok(Type::I128(Int::I128(i128::default()))),
@@ -49,7 +49,7 @@ impl Type {
             Some(Token::BoolType { .. }) => Ok(Type::Bool(Bool::from(bool::default()))),
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
-            Some(Token::Func { .. }) => parse_function_ptr_type(token, parser),
+            Some(Token::Func { .. }) => parse_function_ptr_type(&token, parser),
             Some(Token::Ampersand { .. }) => {
                 let inner_type = Box::new(Type::parse(parser)?);
                 Ok(Type::Reference {
@@ -65,7 +65,7 @@ impl Type {
                 })
             }
             Some(Token::VecType { .. }) => {
-                match parser.current_token().as_ref() {
+                match parser.current_token() {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
@@ -81,7 +81,7 @@ impl Type {
 
                 let ty = Type::parse(parser)?;
 
-                match parser.current_token().as_ref() {
+                match parser.current_token() {
                     Some(Token::GreaterThan { .. }) => {
                         parser.next_token();
                         Ok(Type::Vec {
@@ -100,7 +100,7 @@ impl Type {
             }
 
             Some(Token::MappingType { .. }) => {
-                match parser.current_token().as_ref() {
+                match parser.current_token() {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
@@ -116,7 +116,7 @@ impl Type {
 
                 let key_type = Box::new(Type::parse(parser)?);
 
-                match parser.current_token().as_ref() {
+                match parser.current_token() {
                     Some(Token::Comma { .. }) => {
                         parser.next_token();
                     }
@@ -132,7 +132,7 @@ impl Type {
 
                 let value_type = Box::new(Type::parse(parser)?);
 
-                match parser.current_token().as_ref() {
+                match parser.current_token() {
                     Some(Token::GreaterThan { .. }) => {
                         parser.next_token();
 
@@ -153,7 +153,7 @@ impl Type {
             }
 
             Some(Token::OptionType { .. }) => {
-                match parser.current_token().as_ref() {
+                match parser.current_token() {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
@@ -169,7 +169,7 @@ impl Type {
 
                 let ty = Type::parse(parser)?;
 
-                match parser.current_token().as_ref() {
+                match parser.current_token() {
                     Some(Token::GreaterThan { .. }) => {
                         parser.next_token();
 
@@ -190,7 +190,7 @@ impl Type {
             }
 
             Some(Token::ResultType { .. }) => {
-                match parser.current_token().as_ref() {
+                match parser.current_token() {
                     Some(Token::LessThan { .. }) => {
                         parser.next_token();
                     }
@@ -205,7 +205,7 @@ impl Type {
                 }
                 let ok_type = Box::new(Type::parse(parser)?);
 
-                match parser.current_token().as_ref() {
+                match parser.current_token() {
                     Some(Token::Comma { .. }) => {
                         parser.next_token();
                     }
@@ -220,7 +220,7 @@ impl Type {
                 }
                 let err_type = Box::new(Type::parse(parser)?);
 
-                match parser.current_token().as_ref() {
+                match parser.current_token() {
                     Some(Token::GreaterThan { .. }) => {
                         parser.next_token();
                         Ok(Type::Result { ok_type, err_type })
@@ -286,19 +286,19 @@ impl Type {
 }
 
 fn parse_function_ptr_type(
-    token: Option<Token>,
+    token: &Option<Token>,
     parser: &mut Parser,
 ) -> Result<Type, ErrorsEmitted> {
     let mut params: Vec<FunctionOrMethodParam> = Vec::new();
 
     let function_name = if let Some(Token::Identifier { name, .. }) = token {
-        Ok(Identifier(name))
+        Ok(Identifier::from(name))
     } else {
         parser.log_unexpected_token("function name");
         Err(ErrorsEmitted)
     }?;
 
-    let open_paren = match parser.current_token().as_ref() {
+    let open_paren = match parser.current_token() {
         Some(Token::LParen { .. }) => {
             let position = Position::new(parser.current, &parser.stream.span().input());
             parser.next_token();
@@ -391,7 +391,7 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         }
     }?;
 
-    match parser.current_token().as_ref() {
+    match parser.current_token() {
         Some(Token::RBracket { .. }) => {
             parser.next_token();
 
@@ -433,7 +433,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     } else {
         let ty = Type::parse(parser)?;
 
-        match parser.current_token().as_ref() {
+        match parser.current_token() {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
                 Ok(Type::GroupedType(Box::new(ty)))

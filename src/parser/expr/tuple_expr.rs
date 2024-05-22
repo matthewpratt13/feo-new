@@ -68,7 +68,7 @@ impl ParseOperatorExpr for TupleIndexExpr {
             ErrorsEmitted
         })?;
 
-        let index = match parser.current_token() {
+        let index = match parser.current_token().cloned() {
             Some(Token::UIntLiteral { value, .. }) => {
                 parser.next_token();
                 Ok(value)
