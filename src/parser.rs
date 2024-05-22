@@ -40,7 +40,6 @@ mod expr;
 mod item;
 mod let_statement;
 mod parse;
-mod path_type;
 mod patt;
 mod precedence;
 mod test_utils;

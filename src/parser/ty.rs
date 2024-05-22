@@ -1,3 +1,5 @@
+mod path_type;
+
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Delimiter, FunctionOrMethodParam, FunctionPtr, Hash,
