@@ -65,7 +65,7 @@ impl From<&str> for Identifier {
 
 impl From<&String> for Identifier {
     fn from(value: &String) -> Self {
-        Self(value.to_string())
+        Self(value.to_owned())
     }
 }
 
