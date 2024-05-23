@@ -57,9 +57,6 @@ pub(crate) enum Visibility {
     Pub,                       // accessible everywhere
 }
 
-/// Type alias representing a path to an `Item` or local variable.
-// pub(crate) type PathType = Expression;
-
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct EnumVariantStruct {
     pub(crate) struct_fields: Vec<StructDefField>,

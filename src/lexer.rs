@@ -94,7 +94,7 @@ impl<'a> Lexer<'a> {
                     tokens.push(self.tokenize_delimiter()?);
                 }
 
-                '"' => tokens.push(self.tokenize_string()?),
+                '"' => tokens.push(self.tokenize_str()?),
 
                 '\'' => tokens.push(self.tokenize_char()?),
 
@@ -693,7 +693,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenize a string literal, handling escape sequences where applicable.
-    fn tokenize_string(&mut self) -> Result<Token, ErrorsEmitted> {
+    fn tokenize_str(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut buf = String::new();
 
         let start_pos = self.pos;
@@ -734,7 +734,7 @@ impl<'a> Lexer<'a> {
         Err(ErrorsEmitted)
     }
 
-    /// Tokenize a static byte array literal (`Bytes`), handling escape sequences where applicable.
+    /// Tokenize a fixed-length byte string (`Bytes`), handling escape sequences where applicable.
     fn tokenize_bytes(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut value = String::new();
 
@@ -955,8 +955,9 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize a numeric value (i.e., `i128` or `u128`).
+    /// Tokenize a numeric value (i.e., `f64`, `i128` or `u128`).
     /// Parse to `u128` unless a `-` is encountered, in which case parse to `i128`.
+    /// If a `.` is encountered, try to parse to `f64`.
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut is_float = false;
         let mut is_negative = false;
@@ -1223,15 +1224,15 @@ fn get_bytes(value: &[u8]) -> Bytes {
     bytes
 }
 
-/// Pads an input byte slice with zeroes to turn it into a fixed size array.
-/// Useful when converting a byte string literal into a `Bytes` literal.
+/// Pads an input byte slice with zeroes to turn it into a fixed-length array.
+/// Useful when converting a byte slice into a fixed-length byte string (`Bytes`).
 #[track_caller]
 fn pad_zeroes<const A: usize, const B: usize>(slice: &[u8]) -> [u8; B] {
     assert!(B >= A, "input size is greater than target size");
 
     let arr: [u8; A] = slice
         .try_into()
-        .expect("unable to convert slice into fixed size byte array");
+        .expect("unable to convert slice into fixed-length byte array");
     let mut target = [0; B];
 
     target[..A].copy_from_slice(&arr);

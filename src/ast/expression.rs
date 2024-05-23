@@ -11,7 +11,7 @@ use super::{
 /// Enum representing whether or not a closure has parameters in its definition.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum ClosureParams {
-    Some(Vec<ClosureParam>), // `| <param [: <Type>]>, .. |`
+    Some(Vec<ClosureParam>), // `| <param>: <Type>, .. |`
     None,                    // `||`
 }
 

@@ -98,7 +98,7 @@ impl fmt::Display for Byte {
     }
 }
 
-/// Wrappers for the different static byte array (`Bytes`) types.
+/// Wrappers for the different fixed-length byte string (`Bytes`) types.
 /// Analogous to `[u8; 2]`, `[u8; 4]`, `[u8; 8]`, `[u8; 16]` and `[u8; 32]`
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Bytes {
@@ -122,6 +122,7 @@ impl fmt::Display for Bytes {
 }
 
 /// Wrappers for the different hash types.
+/// Analogous to `[u8; 20]`, `[u8; 32]` and `[u8; 64]`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Hash {
     H160(H160),
@@ -155,7 +156,9 @@ impl fmt::Display for Char {
     }
 }
 
-/// Struct that wraps a `Vec<u8>` into a dynamic byte array (string literal).
+/// Struct that wraps a `Vec<Byte>` into a string literal of arbitrary length.
+/// This type should be treated as static (i.e., not be growable / updatable), despite having
+/// a dynamic inner type.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Str(Vec<Byte>);
 
@@ -167,7 +170,7 @@ impl From<&str> for Str {
 
 impl From<&[u8]> for Str {
     fn from(value: &[u8]) -> Self {
-        let mut bytes: Vec<Byte> = Vec::new();
+        let mut bytes: Vec<Byte> = Vec::with_capacity(value.len());
         value.into_iter().for_each(|b| bytes.push(Byte::from(*b)));
         Str(bytes)
     }
@@ -201,7 +204,7 @@ impl fmt::Display for Bool {
     }
 }
 
-/// Function pointer type: `func([<param>]) [-> <Type>]`
+/// Function pointer type: `func(<param>) -> <Type>`
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionPtr {
     pub(crate) function_name: Identifier,
