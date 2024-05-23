@@ -8,7 +8,7 @@
 use core::{iter::Peekable, str::Chars};
 
 use crate::{
-    ast::{BigUInt, Bool, Byte, Bytes, Char, Hash, Int, Str, UInt},
+    ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{DocCommentType, Token, TokenStream},
@@ -958,6 +958,7 @@ impl<'a> Lexer<'a> {
     /// Tokenize a numeric value (i.e., `i128` or `u128`).
     /// Parse to `u128` unless a `-` is encountered, in which case parse to `i128`.
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorsEmitted> {
+        let mut is_float = false;
         let mut is_negative = false;
 
         // check for `-` before the number to decide which type of integer to parse to
@@ -974,8 +975,32 @@ impl<'a> Lexer<'a> {
         while let Some(c) = self.peek_current() {
             if c.is_digit(10) || c == '_' {
                 self.advance();
+            } else if c == '.' && !is_float && self.peek_next() != Some('.') {
+                is_float = true;
+                self.advance();
             } else {
                 break;
+            }
+        }
+
+        if is_float {
+            // remove the `_` separators before parsing (if they exist)
+            let value = self.input[start_pos..self.pos]
+                .split('_')
+                .collect::<Vec<&str>>()
+                .concat()
+                .parse::<f64>();
+
+            let span = Span::new(self.input, start_pos, self.pos);
+
+            if let Ok(v) = value {
+                return Ok(Token::FloatLiteral {
+                    value: Float::F64(ordered_float::OrderedFloat(v)),
+                    span,
+                });
+            } else {
+                self.log_error(LexErrorKind::LexFloatError);
+                return Err(ErrorsEmitted);
             }
         }
 
@@ -1220,8 +1245,8 @@ fn is_keyword(value: &str) -> bool {
         "for", "func", "if", "impl", "import", "in", "let", "loop", "match", "module", "mut",
         "None", "Ok", "package", "pub", "ref", "return", "self", "Some", "static", "struct",
         "super", "trait", "true", "while", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128",
-        "u256", "u512", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256", "h512", "String",
-        "str", "char", "bool", "Self", "Option", "Result", "Vec", "Mapping",
+        "u256", "u512", "f32", "f64", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256",
+        "h512", "String", "str", "char", "bool", "Self", "Option", "Result", "Vec", "Mapping",
     ]
     .contains(&value)
 }

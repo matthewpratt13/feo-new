@@ -9,6 +9,7 @@ pub enum LexErrorKind {
     LexIntError,
     LexUIntError,
     LexBigUIntError,
+    LexFloatError,
     LexBoolError,
     LexHashError,
 
@@ -73,6 +74,9 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::LexUIntError => write!(f, "error tokenizing unsigned integer literal"),
             LexErrorKind::LexBigUIntError => {
                 write!(f, "error tokenizing large unsigned integer literal")
+            }
+            LexErrorKind::LexFloatError => {
+                write!(f, "error tokenizing floating-point number literal")
             }
             LexErrorKind::LexBoolError => write!(f, "error tokenizing boolean literal"),
             LexErrorKind::LexHashError => write!(f, "error tokenizing hash literal"),
