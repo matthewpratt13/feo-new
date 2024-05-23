@@ -1,38 +1,70 @@
 //! # Parser
 //!
-//! Implements a combination of the recursive descent algorithm and Pratt parsing
-//! (also known as top-down operator precedence parsing), where each operator is associated
-//! with a precedence level, and the parsing functions recursively parse expressions based
-//! on the precedence of the next token.
+//! Constructs an abstract syntax tree (AST) using Pratt parsing (also known as top-down operator 
+//! precedence parsing), where each operator is associated with a precedence level, and the parsing 
+//! functions recursively parse expressions based on the precedence of the next token.
+//! 
+//! ## Pratt Parsing: Overview
 //!
-//! Here are the benefits of Pratt parsing:
+//! Pratt parsing is a parsing technique that was introduced by Vaughan Pratt in the 1970s and has 
+//! become popular due to its simplicity and flexibility. The core idea is to use a recursive descent
+//! approach where each token is parsed according to its precedence level, making it easy to handle 
+//! infix, prefix and postfix operators.
 //!
-//! - **Simplicity and Readability**: Pratt parsing is relatively simple to implement compared to
-//! other parsing techniques like recursive descent or LR parsing. Its structure closely mirrors
-//! the grammar rules and operator precedence hierarchy, making the parser code intuitive and easy
-//! to understand.
+//! ## How Pratt Parsing Works
 //!
-//! - **Efficiency**: Pratt parsing is typically more efficient than traditional recursive descent
-//! parsing for expression parsing because it avoids the overhead of recursive function calls.
-//! Instead, it uses a loop to iteratively parse the input tokens, resulting in faster parsing
-//! times, especially for complex expressions.
+//! 1. **Token Handling**:
+//!   - Tokens are handled based on their type and position in the expression.
+//!   - Two main functions, `parse_prefix()` and `parse_infix()`, are used to handle tokens
+//!     that appear at the beginning of an expression (prefix) and those that appear between
+//!     expressions (infix).
 //!
-//! - **Modularity**: Pratt parsing encourages modular code design. Each operator is associated with
-//! a parsing function, allowing easy addition or modification of operators without affecting other
-//! parts of the parser. This modularity facilitates maintainability and extensibility of the parser.
+//! 2. **Precedence Levels**:
+//!   - Each operator has an associated precedence level, which determines the order in which
+//!     operations are performed.
+//!   - Higher precedence operators are parsed first.
 //!
-//! - **Customization**: Pratt parsing allows fine-grained control over operator precedence and
-//! associativity. Parser developers can easily define custom precedence levels and
-//! associativity rules for different operators, providing flexibility to support a wide range
-//! of grammars and language constructs.
+//! 3. **Recursive Descent**:
+//!   - The parser recursively processes tokens, respecting the precedence rules to build the correct
+//!     abstract syntax tree (AST).
 //!
-//! - **Error Reporting**: Pratt parsing naturally supports good error reporting. Since it parses
-//! expressions incrementally and detects syntax errors as soon as they occur, it can provide
-//! precise error messages pinpointing the location of errors in the input expression.
+//! ## Steps in Pratt Parsing
 //!
-//! - **Ease of Debugging**: Pratt parsing simplifies debugging due to its clear separation of
-//! parsing functions for different operators. Developers can easily trace the parsing process
-//! and identify any issues by inspecting the individual parsing functions.
+//! 1. **Initialize Parsing**:
+//!   - Start with the first token.
+//!   - Call `parse_expression()` with an initial precedence level (typically the lowest).
+//!
+//! 2. **Prefix Parsing**:
+//!   - In `parse_expression()`, handle the current token using `parse_prefix()`.
+//!   - If the token is a prefix operator, recursively parse the next token(s).
+//!
+//! 3. **Infix Parsing**:
+//!   - After parsing the prefix part, loop to handle infix operators.
+//!   - Check the precedence of the current infix operator against the current precedence level.
+//!   - If the infix operator has higher precedence, parse it and its right-hand side expression
+//!     recursively.
+//!
+//! 4. **Continue Until Complete**:
+//!   - Continue this process until all tokens are consumed, gradually building the AST.
+//!
+//! ## Benefits of Pratt Parsing
+//!
+//! 1. **Simplicity**:
+//!   - The Pratt parsing technique is relatively simple to implement, especially for languages
+//!     with complex operator precedence rules.
+//!
+//! 2. **Flexibility**:
+//!   - It can handle a wide variety of operators and precedence levels without needing a complex
+//!     grammar or parsing table.
+//!   - Easily extendable to support new operators or change precedence rules.
+//!
+//! 3. **Efficiency**:
+//!   - Pratt parsers are typically efficient in terms of both time and space, as they parse
+//!     expressions in a single pass and construct the AST on the fly.
+//!
+//! 4. **Readability**:
+//!   - The structure of Pratt parsers tends to be straightforward and easy to read, making maintenance
+//!     and debugging simpler.
 
 mod attribute;
 mod collection;
