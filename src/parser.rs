@@ -288,6 +288,9 @@ impl Parser {
             Some(Token::BigUIntLiteral { value, .. }) => {
                 Ok(Expression::Literal(Literal::BigUInt(*value)))
             }
+            Some(Token::FloatLiteral { value, .. }) => {
+                Ok(Expression::Literal(Literal::Float(*value)))
+            }
             Some(Token::ByteLiteral { value, .. }) => {
                 Ok(Expression::Literal(Literal::Byte(*value)))
             }
@@ -337,6 +340,7 @@ impl Parser {
                 Token::IntLiteral { .. }
                 | Token::UIntLiteral { .. }
                 | Token::BigUIntLiteral { .. }
+                | Token::FloatLiteral { .. }
                 | Token::HashLiteral { .. }
                 | Token::ByteLiteral { .. }
                 | Token::BytesLiteral { .. }
@@ -925,7 +929,6 @@ impl Parser {
                     Ok(patt)
                 }
             }
-
             Some(Token::BigUIntLiteral { value, .. }) => {
                 let patt = Pattern::Literal(Literal::BigUInt(*value));
 
@@ -1435,6 +1438,7 @@ impl Parser {
                     | Token::IntLiteral { .. }
                     | Token::UIntLiteral { .. }
                     | Token::BigUIntLiteral { .. }
+                    | Token::FloatLiteral { .. }
                     | Token::HashLiteral { .. }
                     | Token::ByteLiteral { .. }
                     | Token::BytesLiteral { .. }

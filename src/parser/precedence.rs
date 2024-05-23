@@ -1,6 +1,6 @@
 /// Enum representing the different precedence levels of operators, from lowest to highest.
 /// Operations with higher precedences get evaluated first, and vice versa.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub(crate) enum Precedence {
     Lowest,             // `return`, `break`, closure
     Assignment,         // `=`

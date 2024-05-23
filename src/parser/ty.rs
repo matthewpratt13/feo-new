@@ -2,14 +2,15 @@ mod path_type;
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, Delimiter, FunctionOrMethodParam, FunctionPtr, Hash,
-        Identifier, InferredType, Int, PathType, ReferenceOp, SelfType, Str, Type, UInt, Unit,
+        BigUInt, Bool, Byte, Bytes, Char, Delimiter, Float, FunctionOrMethodParam, FunctionPtr,
+        Hash, Identifier, InferredType, Int, PathType, ReferenceOp, SelfType, Str, Type, UInt,
+        Unit,
     },
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     span::Position,
     token::Token,
-    B16, B2, B32, B4, B8, H160, H256, H512, U256, U512,
+    B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
 use super::{collection, Parser};
@@ -36,6 +37,8 @@ impl Type {
             Some(Token::U64Type { .. }) => Ok(Type::U64(UInt::U64(u64::default()))),
             Some(Token::U128Type { .. }) => Ok(Type::U128(UInt::U128(u128::default()))),
             Some(Token::U256Type { .. }) => Ok(Type::U256(BigUInt::U256(U256::default()))),
+            Some(Token::F32Type { .. }) => Ok(Type::F32(Float::F32(F32::default()))),
+            Some(Token::F64Type { .. }) => Ok(Type::F64(Float::F64(F64::default()))),
             Some(Token::U512Type { .. }) => Ok(Type::U512(BigUInt::U512(U512::default()))),
             Some(Token::ByteType { .. }) => Ok(Type::Byte(Byte::from(u8::default()))),
             Some(Token::B2Type { .. }) => Ok(Type::B2(Bytes::B2(B2::default()))),

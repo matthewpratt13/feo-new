@@ -338,6 +338,8 @@ impl<'a> Lexer<'a> {
                 "u128" => Ok(Token::U128Type { name, span }),
                 "u256" => Ok(Token::U256Type { name, span }),
                 "u512" => Ok(Token::U512Type { name, span }),
+                "f32" => Ok(Token::F32Type { name, span }),
+                "f64" => Ok(Token::F64Type { name, span }),
                 "byte" => Ok(Token::ByteType { name, span }),
                 "b2" => Ok(Token::B2Type { name, span }),
                 "b4" => Ok(Token::B4Type { name, span }),
