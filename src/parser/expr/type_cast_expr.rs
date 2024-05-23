@@ -36,6 +36,8 @@ impl ParseOperatorExpr for TypeCastExpr {
                 | Token::U128Type { .. }
                 | Token::U256Type { .. }
                 | Token::U512Type { .. }
+                | Token::F32Type { .. }
+                | Token::F64Type { .. }
                 | Token::ByteType { .. }
                 | Token::B2Type { .. }
                 | Token::B4Type { .. }

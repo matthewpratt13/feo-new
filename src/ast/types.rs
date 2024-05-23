@@ -1,6 +1,6 @@
 use core::fmt;
 
-pub use crate::{B16, B2, B32, B4, B8, H160, H256, H512, U256, U512};
+pub use crate::{B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512};
 
 use super::{FunctionOrMethodParam, Identifier, PathRoot, Type};
 
@@ -59,6 +59,23 @@ impl fmt::Display for BigUInt {
         match self {
             BigUInt::U256(t) => write!(f, "{}", t),
             BigUInt::U512(t) => write!(f, "{}", t),
+        }
+    }
+}
+
+/// Wrappers for the different floating-point types.
+#[allow(dead_code)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Float {
+    F32(F32),
+    F64(F64),
+}
+
+impl fmt::Display for Float {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Float::F32(t) => write!(f, "{}", t),
+            Float::F64(t) => write!(f, "{}", t),
         }
     }
 }

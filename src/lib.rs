@@ -1,4 +1,5 @@
 use fixed_hash::{construct_fixed_hash, impl_fixed_hash_conversions};
+use ordered_float::OrderedFloat;
 use uint::construct_uint;
 
 mod ast;
@@ -9,6 +10,9 @@ mod logger;
 mod parser;
 mod span;
 mod token;
+
+pub type F32 = OrderedFloat<f32>;
+pub type F64 = OrderedFloat<f64>;
 
 // hexadecimal 256-bit (`[u64; 4]`) unsigned integer
 construct_uint! {

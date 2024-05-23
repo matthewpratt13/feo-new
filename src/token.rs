@@ -1,7 +1,7 @@
 use core::fmt;
 
 use crate::{
-    ast::{BigUInt, Bool, Byte, Bytes, Char, Hash, Int, Str, UInt},
+    ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
     span::Span,
 };
 
@@ -25,6 +25,10 @@ pub(crate) enum Token {
     },
     BigUIntLiteral {
         value: BigUInt,
+        span: Span,
+    },
+    FloatLiteral {
+        value: Float,
         span: Span,
     },
     ByteLiteral {
@@ -315,6 +319,14 @@ pub(crate) enum Token {
         name: String,
         span: Span,
     },
+    F32Type {
+        name: String,
+        span: Span,
+    },
+    F64Type {
+        name: String,
+        span: Span,
+    },
     H160Type {
         name: String,
         span: Span,
@@ -580,6 +592,7 @@ impl Token {
             Token::IntLiteral { value, .. } => TokenType::IntLit(value),
             Token::UIntLiteral { value, .. } => TokenType::UIntLit(value),
             Token::BigUIntLiteral { value, .. } => TokenType::BigUIntLit(value),
+            Token::FloatLiteral { value, .. } => TokenType::FloatLit(value),
             Token::ByteLiteral { value, .. } => TokenType::ByteLit(value),
             Token::BytesLiteral { value, .. } => TokenType::BytesLit(value),
             Token::HashLiteral { value, .. } => TokenType::HashLit(value),
@@ -645,6 +658,8 @@ impl Token {
             Token::U128Type { .. } => TokenType::U128Type,
             Token::U256Type { .. } => TokenType::U256Type,
             Token::U512Type { .. } => TokenType::U512Type,
+            Token::F32Type { .. } => TokenType::F32Type,
+            Token::F64Type { .. } => TokenType::F64Type,
             Token::ByteType { .. } => TokenType::ByteType,
             Token::B2Type { .. } => TokenType::B2Type,
             Token::B4Type { .. } => TokenType::B4Type,
@@ -723,6 +738,7 @@ impl Token {
             Token::IntLiteral { span, .. } => span,
             Token::UIntLiteral { span, .. } => span,
             Token::BigUIntLiteral { span, .. } => span,
+            Token::FloatLiteral { span, .. } => span,
             Token::ByteLiteral { span, .. } => span,
             Token::BytesLiteral { span, .. } => span,
             Token::HashLiteral { span, .. } => span,
@@ -788,6 +804,8 @@ impl Token {
             Token::U128Type { span, .. } => span,
             Token::U256Type { span, .. } => span,
             Token::U512Type { span, .. } => span,
+            Token::F32Type { span, .. } => span,
+            Token::F64Type { span, .. } => span,
             Token::ByteType { span, .. } => span,
             Token::B2Type { span, .. } => span,
             Token::B4Type { span, .. } => span,
@@ -876,6 +894,10 @@ impl fmt::Debug for Token {
                 .debug_struct("BigUIntLiteral")
                 .field("value", value)
                 .finish(),
+            Self::FloatLiteral { value, .. } => f
+                .debug_struct("FloatLiteral")
+                .field("value", value)
+                .finish(),
             Self::ByteLiteral { value, .. } => {
                 f.debug_struct("ByteLiteral").field("value", value).finish()
             }
@@ -960,6 +982,8 @@ impl fmt::Debug for Token {
             Self::U128Type { name, .. } => f.debug_struct("U128Type").field("name", name).finish(),
             Self::U256Type { name, .. } => f.debug_struct("U256Type").field("name", name).finish(),
             Self::U512Type { name, .. } => f.debug_struct("U512Type").field("name", name).finish(),
+            Self::F32Type { name, .. } => f.debug_struct("F32Type").field("name", name).finish(),
+            Self::F64Type { name, .. } => f.debug_struct("F64Type").field("name", name).finish(),
             Self::ByteType { name, .. } => f.debug_struct("ByteType").field("name", name).finish(),
             Self::B2Type { name, .. } => f.debug_struct("B2Type").field("name", name).finish(),
             Self::B4Type { name, .. } => f.debug_struct("B4Type").field("name", name).finish(),
@@ -1107,12 +1131,13 @@ pub(crate) enum DocCommentType {
 }
 
 /// Enum representing the different token types, without extra information (except for literals).
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub(crate) enum TokenType {
     Iden(String),
     IntLit(Int),
     UIntLit(UInt),
     BigUIntLit(BigUInt),
+    FloatLit(Float),
     ByteLit(Byte),
     BytesLit(Bytes),
     HashLit(Hash),
@@ -1178,6 +1203,8 @@ pub(crate) enum TokenType {
     U128Type,
     U256Type,
     U512Type,
+    F32Type,
+    F64Type,
     ByteType,
     B2Type,
     B4Type,
