@@ -1,4 +1,4 @@
-//! # Lexer
+//! ## Lexer
 //!
 //! Tokenizes identifiers (sequences of alphabetic characters), keywords, numbers,
 //! hash literals, static byte arrays, character and string literals, delimiters, doc comments

@@ -1,17 +1,17 @@
-//! # Parser
+//! ## Parser
 //!
 //! Constructs an abstract syntax tree (AST) using Pratt parsing (also known as top-down operator 
 //! precedence parsing), where each operator is associated with a precedence level, and the parsing 
 //! functions recursively parse expressions based on the precedence of the next token.
 //! 
-//! ## Pratt Parsing: Overview
+//! ### Pratt Parsing: Overview
 //!
 //! Pratt parsing is a parsing technique that was introduced by Vaughan Pratt in the 1970s and has 
 //! become popular due to its simplicity and flexibility. The core idea is to use a recursive descent
 //! approach where each token is parsed according to its precedence level, making it easy to handle 
 //! infix, prefix and postfix operators.
 //!
-//! ## How Pratt Parsing Works
+//! ### How Pratt Parsing Works
 //!
 //! 1. **Token Handling**:
 //!   - Tokens are handled based on their type and position in the expression.
@@ -28,7 +28,7 @@
 //!   - The parser recursively processes tokens, respecting the precedence rules to build the correct
 //!     abstract syntax tree (AST).
 //!
-//! ## Steps in Pratt Parsing
+//! ### Steps in Pratt Parsing
 //!
 //! 1. **Initialize Parsing**:
 //!   - Start with the first token.
@@ -47,7 +47,7 @@
 //! 4. **Continue Until Complete**:
 //!   - Continue this process until all tokens are consumed, gradually building the AST.
 //!
-//! ## Benefits of Pratt Parsing
+//! ### Benefits of Pratt Parsing
 //!
 //! 1. **Simplicity**:
 //!   - The Pratt parsing technique is relatively simple to implement, especially for languages
