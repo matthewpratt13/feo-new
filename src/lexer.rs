@@ -1311,8 +1311,8 @@ mod tests {
         let stream = lexer.lex();
 
         match stream {
-            Ok(t) => Ok(println!("{:?}", t)),
-            Err(_) => Err(println!("{:?}", lexer.errors())),
+            Ok(t) => Ok(println!("{:#?}", t.tokens())),
+            Err(_) => Err(println!("{:#?}", lexer.errors)),
         }
     }
 
@@ -1341,8 +1341,8 @@ mod tests {
         let stream = lexer.lex();
 
         match stream {
-            Ok(t) => Ok(println!("{:?}", t)),
-            Err(_) => Err(println!("{:?}", lexer.errors())),
+            Ok(t) => Ok(println!("{:#?}", t.tokens())),
+            Err(_) => Err(println!("{:#?}", lexer.errors)),
         }
     }
 
@@ -1357,8 +1357,8 @@ mod tests {
         let stream = lexer.lex();
 
         match stream {
-            Ok(t) => println!("{:?}", t),
-            Err(_) => println!("{:?}", lexer.errors()),
+            Ok(t) => println!("{:#?}", t.tokens()),
+            Err(_) => println!("{:#?}", lexer.errors),
         }
     }
 
@@ -1389,8 +1389,8 @@ mod tests {
         let stream = lexer.lex();
 
         match stream {
-            Ok(t) => Ok(println!("{:?}", t)),
-            Err(_) => Err(println!("{:?}", lexer.errors())),
+            Ok(t) => Ok(println!("{:#?}", t.tokens())),
+            Err(_) => Err(println!("{:#?}", lexer.errors)),
         }
     }
 
@@ -1403,8 +1403,8 @@ mod tests {
         let stream = lexer.lex();
 
         match stream {
-            Ok(t) => Ok(println!("{:?}", t)),
-            Err(_) => Err(println!("{:?}", lexer.errors())),
+            Ok(t) => Ok(println!("{:#?}", t.tokens())),
+            Err(_) => Err(println!("{:#?}", lexer.errors)),
         }
     }
 
@@ -1417,8 +1417,8 @@ mod tests {
         let stream = lexer.lex();
 
         match stream {
-            Ok(t) => Ok(println!("{:?}", t)),
-            Err(_) => Err(println!("{:?}", lexer.errors())),
+            Ok(t) => Ok(println!("{:#?}", t.tokens())),
+            Err(_) => Err(println!("{:#?}", lexer.errors)),
         }
     }
 
@@ -1437,8 +1437,8 @@ mod tests {
         let stream = lexer.lex();
 
         match stream {
-            Ok(t) => Ok(println!("{:?}", t)),
-            Err(_) => Err(println!("{:?}", lexer.errors())),
+            Ok(t) => Ok(println!("{:#?}", t.tokens())),
+            Err(_) => Err(println!("{:#?}", lexer.errors)),
         }
     }
 
@@ -1554,6 +1554,8 @@ mod tests {
                 let array: [u8; 4] = [1, 2, 3, 4];
                 let mut vec: Vec<u256> = Vec::new();
 
+                let _unused_float: f64 = -12.34;
+
                 for num in array {
                     vec.push(num as u256);
                 }
@@ -1576,8 +1578,8 @@ mod tests {
         let stream = lexer.lex();
 
         match stream {
-            Ok(t) => Ok(println!("{:?}", t)),
-            Err(_) => Err(println!("{:?}", lexer.errors())),
+            Ok(t) => Ok(println!("{:#?}", t.tokens())),
+            Err(_) => Err(println!("{:#?}", lexer.errors)),
         }
     }
 }
