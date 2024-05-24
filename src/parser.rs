@@ -1,14 +1,14 @@
 //! ## Parser
 //!
-//! Constructs an abstract syntax tree (AST) using Pratt parsing (also known as top-down operator 
-//! precedence parsing), where each operator is associated with a precedence level, and the parsing 
+//! Constructs an abstract syntax tree (AST) using Pratt parsing (also known as top-down operator
+//! precedence parsing), where each operator is associated with a precedence level, and the parsing
 //! functions recursively parse expressions based on the precedence of the next token.
-//! 
+//!
 //! ### Pratt Parsing: Overview
 //!
-//! Pratt parsing is a parsing technique that was introduced by Vaughan Pratt in the 1970s and has 
+//! Pratt parsing is a parsing technique that was introduced by Vaughan Pratt in the 1970s and has
 //! become popular due to its simplicity and flexibility. The core idea is to use a recursive descent
-//! approach where each token is parsed according to its precedence level, making it easy to handle 
+//! approach where each token is parsed according to its precedence level, making it easy to handle
 //! infix, prefix and postfix operators.
 //!
 //! ### How Pratt Parsing Works
@@ -124,7 +124,7 @@ enum ParserContext {
 
 #[allow(dead_code)]
 struct Module {
-    items: Vec<Item>,
+    statements: Vec<Statement>,
 }
 
 /// Parser struct that stores a stream of tokens and contains methods to parse expressions,
@@ -225,7 +225,7 @@ impl Parser {
     /// Main parsing function that returns the parsed tokens as a `Module`.
     #[allow(dead_code)]
     fn parse_module(&mut self) -> Result<Module, ErrorsEmitted> {
-        let mut items: Vec<Item> = Vec::new();
+        let mut statements: Vec<Statement> = Vec::new();
 
         // clear log messages, then log status info
         self.logger.clear_messages();
@@ -233,22 +233,22 @@ impl Parser {
             .log(LogLevel::Info, LogMsg::from("starting to parse tokens"));
 
         while self.current < self.stream.tokens().len() {
-            let item = self.parse_item()?;
+            let statement = self.parse_statement()?;
 
             // log status info
             self.logger.log(
                 LogLevel::Info,
-                LogMsg::from(format!("parsed item: {:?}", &item)),
+                LogMsg::from(format!("parsed statement: {:?}", &statement)),
             );
 
-            items.push(item);
+            statements.push(statement);
         }
 
         // log status info
         self.logger
             .log(LogLevel::Info, LogMsg::from("reached end of file"));
 
-        Ok(Module { items })
+        Ok(Module { statements })
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -767,86 +767,86 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Parse an item (e.g., import declaration, function definition and struct definition).
-    fn parse_item(&mut self) -> Result<Item, ErrorsEmitted> {
-        ////////////////////////////////////////////////////////////////////////////////
-        self.logger
-            .log(LogLevel::Debug, LogMsg::from("entering `parse_item()`"));
-        self.log_current_token(false);
-        ////////////////////////////////////////////////////////////////////////////////
+    // fn parse_item(&mut self) -> Result<Item, ErrorsEmitted> {
+    //     ////////////////////////////////////////////////////////////////////////////////
+    //     self.logger
+    //         .log(LogLevel::Debug, LogMsg::from("entering `parse_item()`"));
+    //     self.log_current_token(false);
+    //     ////////////////////////////////////////////////////////////////////////////////
 
-        let attributes_opt = collection::get_attributes(self, OuterAttr::outer_attr);
+    //     let attributes_opt = collection::get_attributes(self, OuterAttr::outer_attr);
 
-        let visibility = Visibility::visibility(self)?;
+    //     let visibility = Visibility::visibility(self)?;
 
-        match self.current_token() {
-            Some(Token::Import { .. }) => {
-                let import_decl = ImportDecl::parse(self, attributes_opt, visibility)?;
-                Ok(Item::ImportDecl(import_decl))
-            }
-            Some(Token::Alias { .. }) => {
-                let alias_decl = AliasDecl::parse(self, attributes_opt, visibility)?;
-                Ok(Item::AliasDecl(alias_decl))
-            }
-            Some(Token::Const { .. }) => {
-                let constant_decl = ConstantDecl::parse(self, attributes_opt, visibility)?;
-                Ok(Item::ConstantDecl(constant_decl))
-            }
-            Some(Token::Static { .. }) => {
-                let static_var_decl = StaticVarDecl::parse(self, attributes_opt, visibility)?;
-                Ok(Item::StaticVarDecl(static_var_decl))
-            }
-            Some(Token::Module { .. }) => {
-                let module_item = ModuleItem::parse(self, attributes_opt, visibility)?;
-                Ok(Item::ModuleItem(module_item))
-            }
-            Some(Token::Trait { .. }) => {
-                let trait_def = TraitDef::parse(self, attributes_opt, visibility)?;
-                Ok(Item::TraitDef(trait_def))
-            }
-            Some(Token::Enum { .. }) => {
-                let enum_def = EnumDef::parse(self, attributes_opt, visibility)?;
-                Ok(Item::EnumDef(enum_def))
-            }
-            Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
-                Some(Token::LBrace { .. }) => {
-                    let struct_def = StructDef::parse(self, attributes_opt, visibility)?;
-                    Ok(Item::StructDef(struct_def))
-                }
-                Some(Token::LParen { .. }) => {
-                    let tuple_struct_def = TupleStructDef::parse(self, attributes_opt, visibility)?;
-                    Ok(Item::TupleStructDef(tuple_struct_def))
-                }
-                _ => {
-                    self.log_unexpected_token("`{` or `(`");
-                    Err(ErrorsEmitted)
-                }
-            },
-            Some(Token::Impl { .. }) => {
-                if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
-                    Ok(Item::TraitImplDef(TraitImplDef::parse(
-                        self,
-                        attributes_opt,
-                        visibility,
-                    )?))
-                } else {
-                    Ok(Item::InherentImplDef(InherentImplDef::parse(
-                        self,
-                        attributes_opt,
-                        visibility,
-                    )?))
-                }
-            }
-            Some(Token::Func { .. }) => Ok(Item::FunctionItem(FunctionItem::parse(
-                self,
-                attributes_opt,
-                visibility,
-            )?)),
-            _ => {
-                self.log_unexpected_token("item declaration or definition");
-                Err(ErrorsEmitted)
-            }
-        }
-    }
+    //     match self.current_token() {
+    //         Some(Token::Import { .. }) => {
+    //             let import_decl = ImportDecl::parse(self, attributes_opt, visibility)?;
+    //             Ok(Item::ImportDecl(import_decl))
+    //         }
+    //         Some(Token::Alias { .. }) => {
+    //             let alias_decl = AliasDecl::parse(self, attributes_opt, visibility)?;
+    //             Ok(Item::AliasDecl(alias_decl))
+    //         }
+    //         Some(Token::Const { .. }) => {
+    //             let constant_decl = ConstantDecl::parse(self, attributes_opt, visibility)?;
+    //             Ok(Item::ConstantDecl(constant_decl))
+    //         }
+    //         Some(Token::Static { .. }) => {
+    //             let static_var_decl = StaticVarDecl::parse(self, attributes_opt, visibility)?;
+    //             Ok(Item::StaticVarDecl(static_var_decl))
+    //         }
+    //         Some(Token::Module { .. }) => {
+    //             let module_item = ModuleItem::parse(self, attributes_opt, visibility)?;
+    //             Ok(Item::ModuleItem(module_item))
+    //         }
+    //         Some(Token::Trait { .. }) => {
+    //             let trait_def = TraitDef::parse(self, attributes_opt, visibility)?;
+    //             Ok(Item::TraitDef(trait_def))
+    //         }
+    //         Some(Token::Enum { .. }) => {
+    //             let enum_def = EnumDef::parse(self, attributes_opt, visibility)?;
+    //             Ok(Item::EnumDef(enum_def))
+    //         }
+    //         Some(Token::Struct { .. }) => match self.peek_ahead_by(2) {
+    //             Some(Token::LBrace { .. }) => {
+    //                 let struct_def = StructDef::parse(self, attributes_opt, visibility)?;
+    //                 Ok(Item::StructDef(struct_def))
+    //             }
+    //             Some(Token::LParen { .. }) => {
+    //                 let tuple_struct_def = TupleStructDef::parse(self, attributes_opt, visibility)?;
+    //                 Ok(Item::TupleStructDef(tuple_struct_def))
+    //             }
+    //             _ => {
+    //                 self.log_unexpected_token("`{` or `(`");
+    //                 Err(ErrorsEmitted)
+    //             }
+    //         },
+    //         Some(Token::Impl { .. }) => {
+    //             if let Some(Token::For { .. }) = self.peek_ahead_by(2) {
+    //                 Ok(Item::TraitImplDef(TraitImplDef::parse(
+    //                     self,
+    //                     attributes_opt,
+    //                     visibility,
+    //                 )?))
+    //             } else {
+    //                 Ok(Item::InherentImplDef(InherentImplDef::parse(
+    //                     self,
+    //                     attributes_opt,
+    //                     visibility,
+    //                 )?))
+    //             }
+    //         }
+    //         Some(Token::Func { .. }) => Ok(Item::FunctionItem(FunctionItem::parse(
+    //             self,
+    //             attributes_opt,
+    //             visibility,
+    //         )?)),
+    //         _ => {
+    //             self.log_unexpected_token("item declaration or definition");
+    //             Err(ErrorsEmitted)
+    //         }
+    //     }
+    // }
 
     ///////////////////////////////////////////////////////////////////////////
     // STATEMENT PARSING

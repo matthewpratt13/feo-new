@@ -164,13 +164,14 @@ impl StructDefField {
 
         let visibility = Visibility::visibility(parser)?;
 
-        let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
-            parser.next_token();
-            Ok(Identifier(name))
-        } else {
-            parser.log_missing_token("struct field identifier");
-            Err(ErrorsEmitted)
-        }?;
+        let field_name =
+            if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
+                parser.next_token();
+                Ok(Identifier(name))
+            } else {
+                parser.log_missing_token("struct field identifier");
+                Err(ErrorsEmitted)
+            }?;
 
         match parser.current_token() {
             Some(Token::Colon { .. }) => {
@@ -233,10 +234,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let item = parser.parse_item();
+        let statement = parser.parse_statement();
 
-        match item {
-            Ok(i) => Ok(println!("{:#?}", i)),
+        match statement {
+            Ok(s) => Ok(println!("{:#?}", s)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -253,10 +254,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let item = parser.parse_item();
+        let statement = parser.parse_statement();
 
-        match item {
-            Ok(i) => Ok(println!("{:#?}", i)),
+        match statement {
+            Ok(s) => Ok(println!("{:#?}", s)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
