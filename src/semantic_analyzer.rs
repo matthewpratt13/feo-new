@@ -1,5 +1,8 @@
 use crate::{
-    ast::{BigUInt, Bytes, Expression, Float, Hash, Int, Literal, Statement, Type, UInt},
+    ast::{
+        BigUInt, Bytes, Expression, Float, Hash, Identifier, Int, Literal, PathRoot, Statement,
+        Type, UInt,
+    },
     parser::Module,
 };
 
@@ -43,19 +46,25 @@ impl SemanticAnalyzer {
 
     fn analyze_expr(&mut self, expression: &Expression) -> Result<Type, String> {
         match expression {
-            // Expression::Variable(name) => match self.symbol_table.get(name) {
-            //     Some(var_type) => Ok(var_type.clone()),
-            //     None => Err(format!("Undefined variable '{}'", name)),
-            // },
-            // Expression::BinaryOp(lhs, op, rhs) => {
-            //     let lhs_type = self.analyze_expr(lhs)?;
-            //     let rhs_type = self.analyze_expr(rhs)?;
-            //     if lhs_type == Type::Integer && rhs_type == Type::Integer {
-            //         Ok(Type::Integer)
-            //     } else {
-            //         Err(format!("Type error in binary operation"))
-            //     }
-            // }
+            Expression::Path(p) => {
+                let name = match p.tree_opt {
+                    Some(v) => match v.last() {
+                        Some(i) => *i,
+                        None => match p.path_root {
+                            PathRoot::SelfType(_) => Identifier::from("Self"),
+                            PathRoot::Identifier(i) => i,
+                            _ => return Err(format!("invalid path identifier")),
+                        },
+                    },
+
+                    _ => Identifier::from(""),
+                };
+
+                match self.symbol_table.get(&name) {
+                    Some(t) => Ok(*t),
+                    None => Err(format!("undefined path: `{}`", name)),
+                }
+            }
             Expression::Literal(l) => match l {
                 Literal::Int(i) => match i {
                     Int::I32(_) => Ok(Type::I32(*i)),
@@ -94,7 +103,6 @@ impl SemanticAnalyzer {
                 Literal::Char(c) => Ok(Type::Char(*c)),
                 Literal::Bool(b) => Ok(Type::Bool(*b)),
             },
-            Expression::Path(_) => todo!(),
             Expression::MethodCall(_) => todo!(),
             Expression::FieldAccess(_) => todo!(),
             Expression::Call(_) => todo!(),
