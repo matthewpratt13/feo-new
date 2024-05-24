@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Statement, Type},
+    ast::{BigUInt, Bytes, Expression, Float, Hash, Int, Literal, Statement, Type, UInt},
     parser::Module,
 };
 
@@ -57,7 +57,44 @@ impl SemanticAnalyzer {
             //         Err(format!("Type error in binary operation"))
             //     }
             // }
-            Expression::Literal(l) => todo!(),
+            Expression::Literal(l) => match l {
+                Literal::Int(i) => match i {
+                    Int::I32(_) => Ok(Type::I32(*i)),
+                    Int::I64(_) => Ok(Type::I64(*i)),
+                    Int::I128(_) => Ok(Type::I128(*i)),
+                },
+                Literal::UInt(ui) => match ui {
+                    UInt::U8(_) => Ok(Type::U8(*ui)),
+                    UInt::U16(_) => Ok(Type::U16(*ui)),
+                    UInt::U32(_) => Ok(Type::U32(*ui)),
+                    UInt::U64(_) => Ok(Type::U64(*ui)),
+                    UInt::U128(_) => Ok(Type::U128(*ui)),
+                },
+                Literal::BigUInt(bui) => match bui {
+                    BigUInt::U256(_) => Ok(Type::U256(*bui)),
+                    BigUInt::U512(_) => Ok(Type::U512(*bui)),
+                },
+                Literal::Float(f) => match f {
+                    Float::F32(_) => Ok(Type::F32(*f)),
+                    Float::F64(_) => Ok(Type::F64(*f)),
+                },
+                Literal::Byte(by) => Ok(Type::Byte(*by)),
+                Literal::Bytes(bb) => match bb {
+                    Bytes::B2(_) => Ok(Type::B2(*bb)),
+                    Bytes::B4(_) => Ok(Type::B4(*bb)),
+                    Bytes::B8(_) => Ok(Type::B8(*bb)),
+                    Bytes::B16(_) => Ok(Type::B16(*bb)),
+                    Bytes::B32(_) => Ok(Type::B32(*bb)),
+                },
+                Literal::Hash(h) => match h {
+                    Hash::H160(_) => Ok(Type::H160(*h)),
+                    Hash::H256(_) => Ok(Type::H256(*h)),
+                    Hash::H512(_) => Ok(Type::H512(*h)),
+                },
+                Literal::Str(s) => Ok(Type::Str(s.clone())),
+                Literal::Char(c) => Ok(Type::Char(*c)),
+                Literal::Bool(b) => Ok(Type::Bool(*b)),
+            },
             Expression::Path(_) => todo!(),
             Expression::MethodCall(_) => todo!(),
             Expression::FieldAccess(_) => todo!(),
