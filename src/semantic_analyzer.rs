@@ -22,8 +22,8 @@ impl SemanticAnalyzer {
     }
 
     fn analyze(&mut self, module: &Module) -> Result<(), String> {
-        for Statement in &module.statements {
-            self.analyze_stmt(Statement)?;
+        for s in &module.statements {
+            self.analyze_stmt(s)?;
         }
         Ok(())
     }
@@ -118,15 +118,17 @@ impl SemanticAnalyzer {
                 let rhs_type = self.analyze_expr(*b.rhs)?;
                 match (lhs_type, rhs_type) {
                     (
-                        Type::I32(_) | Type::I64(_) | Type::I128(_),
-                        Type::I32(_) | Type::I64(_) | Type::I128(_),
-                    ) => todo!(),
+                        Type::I32(i) | Type::I64(i) | Type::I128(i),
+                        Type::I32(j) | Type::I64(j) | Type::I128(j),
+                    ) => Ok(Type::I128(i)),
                     (
-                        Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) | Type::U128(_),
-                        Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) | Type::U128(_),
-                    ) => todo!(),
-                    (Type::U256(_) | Type::U512(_), Type::U256(_) | Type::U512(_)) => todo!(),
-                    (Type::F32(_) | Type::F64(_), Type::F32(_) | Type::F64(_)) => todo!(),
+                        Type::U8(u) | Type::U16(u) | Type::U32(u) | Type::U64(u) | Type::U128(u),
+                        Type::U8(v) | Type::U16(v) | Type::U32(v) | Type::U64(v) | Type::U128(v),
+                    ) => Ok(Type::U128(u)),
+                    (Type::U256(ui) | Type::U512(ui), Type::U256(uj) | Type::U512(uj)) => {
+                        Ok(Type::U512(ui))
+                    }
+                    (Type::F32(f) | Type::F64(f), Type::F32(g) | Type::F64(g)) => Ok(Type::F64(f)),
                     _ => Err(format!("type error in binary operation")),
                 }
             }
