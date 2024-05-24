@@ -56,7 +56,7 @@ impl fmt::Display for Literal {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Wrapper type, turning a `String` into an `Identifier`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub(crate) struct Identifier(pub String);
 
 impl From<&str> for Identifier {

@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use crate::ast::Type;
+use crate::ast::{Identifier, Type};
 
 #[derive(Debug)]
 pub(crate) struct SymbolTable {
-    variables: HashMap<String, Type>,
+    variables: HashMap<Identifier, Type>,
 }
 
 impl SymbolTable {
@@ -14,11 +14,11 @@ impl SymbolTable {
         }
     }
 
-    pub(crate) fn insert(&mut self, name: String, var_type: Type) {
+    pub(crate) fn insert(&mut self, name: Identifier, var_type: Type) {
         self.variables.insert(name, var_type);
     }
 
-    pub(crate) fn get(&self, name: &str) -> Option<&Type> {
+    pub(crate) fn get(&self, name: &Identifier) -> Option<&Type> {
         self.variables.get(name)
     }
 }
