@@ -82,17 +82,15 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        AliasDecl, ArrayExpr, AssigneeExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr,
-        CallExpr, ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ConstantDecl, ContinueExpr,
-        Delimiter, DereferenceExpr, EnumDef, Expression, FieldAccessExpr, ForInExpr, FunctionItem,
-        GroupedExpr, GroupedPatt, Identifier, IdentifierPatt, IfExpr, ImportDecl, IndexExpr,
-        InherentImplDef, Item, Keyword, LetStmt, Literal, MappingExpr, MatchExpr, MethodCallExpr,
-        ModuleItem, NoneExpr, NonePatt, OuterAttr, PathExpr, PathPatt, Pattern, RangeExpr, RangeOp,
-        RangePatt, ReferenceExpr, ReferencePatt, RestPatt, ResultExpr, ResultPatt, ReturnExpr,
-        SomeExpr, SomePatt, Statement, StaticVarDecl, StructDef, StructExpr, StructPatt, TraitDef,
-        TraitImplDef, TupleExpr, TupleIndexExpr, TuplePatt, TupleStructDef, TupleStructPatt,
-        TypeCastExpr, UnaryExpr, UnderscoreExpr, UnwrapExpr, ValueExpr, Visibility, WhileExpr,
-        WildcardPatt,
+        ArrayExpr, AssigneeExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr,
+        ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter,
+        DereferenceExpr, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
+        Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
+        MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, Pattern,
+        RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferencePatt, RestPatt, ResultExpr,
+        ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt, TupleExpr,
+        TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr, UnderscoreExpr,
+        UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
@@ -100,7 +98,6 @@ use crate::{
     token::{Token, TokenStream, TokenType},
 };
 
-use self::item::{ParseDeclItem, ParseDefItem};
 pub(crate) use self::parse::{
     ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParsePattern, ParseSimpleExpr,
     ParseStatement,
