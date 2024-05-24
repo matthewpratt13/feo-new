@@ -499,6 +499,15 @@ impl TryFrom<Expression> for ValueExpr {
     }
 }
 
+impl TryFrom<ValueExpr> for Expression {
+    // TODO: map error to `ParserErrorKind::ConversionError`
+    type Error = String;
+
+    fn try_from(value: ValueExpr) -> Result<Self, Self::Error> {
+        value.try_into()
+    }
+}
+
 /// Enum representing expressions behaving in a place / assignee expression context.
 /// **Assignee expressions** usually occur on the left hand side of assignment expressions,
 /// and cover all **place expressions**, the underscore expression, plus arrays
@@ -598,6 +607,15 @@ impl TryFrom<Expression> for AssigneeExpr {
                 found: format!("{}", value),
             }),
         }
+    }
+}
+
+impl TryFrom<AssigneeExpr> for Expression {
+    type Error = ParserErrorKind;
+
+    fn try_from(value: AssigneeExpr) -> Result<Self, Self::Error> {
+        // TODO: map error to `ParserErrorKind::ConversionError`
+        value.try_into()
     }
 }
 

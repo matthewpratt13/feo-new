@@ -12,6 +12,7 @@ mod symbol_table;
 
 struct SemanticAnalyzer {
     symbol_table: SymbolTable,
+    // errors: Vec<CompilerError<SemanticError>> // TODO: create `SemanticError`
 }
 
 impl SemanticAnalyzer {
@@ -21,6 +22,7 @@ impl SemanticAnalyzer {
         }
     }
 
+    // TODO: change error case type to `CompilerError<SemanticError>`
     fn analyze(&mut self, module: &Module) -> Result<(), String> {
         for s in &module.statements {
             self.analyze_stmt(s)?;
@@ -28,6 +30,7 @@ impl SemanticAnalyzer {
         Ok(())
     }
 
+    // TODO: change error case type to `CompilerError<SemanticError>`
     fn analyze_stmt(&mut self, statement: &Statement) -> Result<(), String> {
         match statement {
             Statement::Let(s) => {
@@ -44,15 +47,16 @@ impl SemanticAnalyzer {
         Ok(())
     }
 
+    // TODO: change error case type to `CompilerError<SemanticError>`
     fn analyze_expr(&mut self, expression: &Expression) -> Result<Type, String> {
         match expression {
             Expression::Path(p) => {
-                let name = match p.tree_opt {
+                let name = match &p.tree_opt {
                     Some(v) => match v.last() {
-                        Some(i) => *i,
-                        None => match p.path_root {
+                        Some(i) => i.clone(),
+                        None => match &p.path_root {
                             PathRoot::SelfType(_) => Identifier::from("Self"),
-                            PathRoot::Identifier(i) => i,
+                            PathRoot::Identifier(i) => i.clone(),
                             _ => return Err(format!("invalid path identifier")),
                         },
                     },
@@ -61,7 +65,7 @@ impl SemanticAnalyzer {
                 };
 
                 match self.symbol_table.get(&name) {
-                    Some(t) => Ok(*t),
+                    Some(t) => Ok(t.clone()),
                     None => Err(format!("undefined path: `{}`", name)),
                 }
             }
@@ -114,21 +118,21 @@ impl SemanticAnalyzer {
             Expression::Dereference(_) => todo!(),
             Expression::TypeCast(_) => todo!(),
             Expression::Binary(b) => {
-                let lhs_type = self.analyze_expr(*b.lhs)?;
-                let rhs_type = self.analyze_expr(*b.rhs)?;
+                let lhs_type = self.analyze_expr(&Expression::try_from(*b.lhs.clone())?)?;
+                let rhs_type = self.analyze_expr(&Expression::try_from(*b.rhs.clone())?)?;
                 match (lhs_type, rhs_type) {
                     (
                         Type::I32(i) | Type::I64(i) | Type::I128(i),
-                        Type::I32(j) | Type::I64(j) | Type::I128(j),
+                        Type::I32(_) | Type::I64(_) | Type::I128(_),
                     ) => Ok(Type::I128(i)),
                     (
                         Type::U8(u) | Type::U16(u) | Type::U32(u) | Type::U64(u) | Type::U128(u),
-                        Type::U8(v) | Type::U16(v) | Type::U32(v) | Type::U64(v) | Type::U128(v),
+                        Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) | Type::U128(_),
                     ) => Ok(Type::U128(u)),
-                    (Type::U256(ui) | Type::U512(ui), Type::U256(uj) | Type::U512(uj)) => {
+                    (Type::U256(ui) | Type::U512(ui), Type::U256(_) | Type::U512(_)) => {
                         Ok(Type::U512(ui))
                     }
-                    (Type::F32(f) | Type::F64(f), Type::F32(g) | Type::F64(g)) => Ok(Type::F64(f)),
+                    (Type::F32(f) | Type::F64(f), Type::F32(_) | Type::F64(_)) => Ok(Type::F64(f)),
                     _ => Err(format!("type error in binary operation")),
                 }
             }

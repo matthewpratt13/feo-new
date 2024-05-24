@@ -742,7 +742,12 @@ impl Parser {
 
     /// Parse an expression and attempt to convert it to a value expression.
     fn parse_value_expr(&mut self, precedence: Precedence) -> Result<ValueExpr, ErrorsEmitted> {
-        self.parse_expression(precedence)?.try_into().map_err(|e| {
+        // self.parse_expression(precedence)?.try_into().map_err(|e| {
+        //     self.log_error(e);
+        //     ErrorsEmitted
+        // })
+
+        ValueExpr::try_from(self.parse_expression(precedence)?).map_err(|e| {
             self.log_error(e);
             ErrorsEmitted
         })
@@ -753,7 +758,12 @@ impl Parser {
         &mut self,
         precedence: Precedence,
     ) -> Result<AssigneeExpr, ErrorsEmitted> {
-        self.parse_expression(precedence)?.try_into().map_err(|e| {
+        // self.parse_expression(precedence)?.try_into().map_err(|e| {
+        //     self.log_error(e);
+        //     ErrorsEmitted
+        // })
+
+        AssigneeExpr::try_from(self.parse_expression(precedence)?).map_err(|e| {
             self.log_error(e);
             ErrorsEmitted
         })
