@@ -43,7 +43,6 @@ impl SemanticAnalyzer {
 
     fn analyze_expr(&mut self, expression: &Expression) -> Result<Type, String> {
         match expression {
-            // Expression::(_) => Ok(Type::Integer),
             // Expression::Variable(name) => match self.symbol_table.get(name) {
             //     Some(var_type) => Ok(var_type.clone()),
             //     None => Err(format!("Undefined variable '{}'", name)),
@@ -106,7 +105,23 @@ impl SemanticAnalyzer {
             Expression::Reference(_) => todo!(),
             Expression::Dereference(_) => todo!(),
             Expression::TypeCast(_) => todo!(),
-            Expression::Binary(_) => todo!(),
+            Expression::Binary(b) => {
+                let lhs_type = self.analyze_expr(*b.lhs)?;
+                let rhs_type = self.analyze_expr(*b.rhs)?;
+                match (lhs_type, rhs_type) {
+                    (
+                        Type::I32(_) | Type::I64(_) | Type::I128(_),
+                        Type::I32(_) | Type::I64(_) | Type::I128(_),
+                    ) => todo!(),
+                    (
+                        Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) | Type::U128(_),
+                        Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) | Type::U128(_),
+                    ) => todo!(),
+                    (Type::U256(_) | Type::U512(_), Type::U256(_) | Type::U512(_)) => todo!(),
+                    (Type::F32(_) | Type::F64(_), Type::F32(_) | Type::F64(_)) => todo!(),
+                    _ => Err(format!("type error in binary operation")),
+                }
+            }
             Expression::Comparison(_) => todo!(),
             Expression::Grouped(_) => todo!(),
             Expression::Range(_) => todo!(),
