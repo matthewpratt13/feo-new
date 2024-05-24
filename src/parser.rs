@@ -120,8 +120,8 @@ enum ParserContext {
 }
 
 #[allow(dead_code)]
-struct Module {
-    statements: Vec<Statement>,
+pub(crate) struct Module {
+    pub(crate) statements: Vec<Statement>,
 }
 
 /// Parser struct that stores a stream of tokens and contains methods to parse expressions,
