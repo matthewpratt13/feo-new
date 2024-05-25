@@ -72,42 +72,42 @@ impl SemanticAnalyzer {
                 }
             }
             Expression::Literal(l) => match l {
-                Literal::Int(i) => match i {
-                    Int::I32(_) => Ok(Type::I32(*i)),
-                    Int::I64(_) => Ok(Type::I64(*i)),
-                    Int::I128(_) => Ok(Type::I128(*i)),
+                Literal::Int { value, .. } => match value {
+                    Int::I32(_) => Ok(Type::I32(*value)),
+                    Int::I64(_) => Ok(Type::I64(*value)),
+                    Int::I128(_) => Ok(Type::I128(*value)),
                 },
-                Literal::UInt(ui) => match ui {
-                    UInt::U8(_) => Ok(Type::U8(*ui)),
-                    UInt::U16(_) => Ok(Type::U16(*ui)),
-                    UInt::U32(_) => Ok(Type::U32(*ui)),
-                    UInt::U64(_) => Ok(Type::U64(*ui)),
-                    UInt::U128(_) => Ok(Type::U128(*ui)),
+                Literal::UInt { value, .. } => match value {
+                    UInt::U8(_) => Ok(Type::U8(*value)),
+                    UInt::U16(_) => Ok(Type::U16(*value)),
+                    UInt::U32(_) => Ok(Type::U32(*value)),
+                    UInt::U64(_) => Ok(Type::U64(*value)),
+                    UInt::U128(_) => Ok(Type::U128(*value)),
                 },
-                Literal::BigUInt(bui) => match bui {
-                    BigUInt::U256(_) => Ok(Type::U256(*bui)),
-                    BigUInt::U512(_) => Ok(Type::U512(*bui)),
+                Literal::BigUInt { value, .. } => match value {
+                    BigUInt::U256(_) => Ok(Type::U256(*value)),
+                    BigUInt::U512(_) => Ok(Type::U512(*value)),
                 },
-                Literal::Float(f) => match f {
-                    Float::F32(_) => Ok(Type::F32(*f)),
-                    Float::F64(_) => Ok(Type::F64(*f)),
+                Literal::Float { value, .. } => match value {
+                    Float::F32(_) => Ok(Type::F32(*value)),
+                    Float::F64(_) => Ok(Type::F64(*value)),
                 },
-                Literal::Byte(by) => Ok(Type::Byte(*by)),
-                Literal::Bytes(bb) => match bb {
-                    Bytes::B2(_) => Ok(Type::B2(*bb)),
-                    Bytes::B4(_) => Ok(Type::B4(*bb)),
-                    Bytes::B8(_) => Ok(Type::B8(*bb)),
-                    Bytes::B16(_) => Ok(Type::B16(*bb)),
-                    Bytes::B32(_) => Ok(Type::B32(*bb)),
+                Literal::Byte { value, .. } => Ok(Type::Byte(*value)),
+                Literal::Bytes { value, .. } => match value {
+                    Bytes::B2(_) => Ok(Type::B2(*value)),
+                    Bytes::B4(_) => Ok(Type::B4(*value)),
+                    Bytes::B8(_) => Ok(Type::B8(*value)),
+                    Bytes::B16(_) => Ok(Type::B16(*value)),
+                    Bytes::B32(_) => Ok(Type::B32(*value)),
                 },
-                Literal::Hash(h) => match h {
-                    Hash::H160(_) => Ok(Type::H160(*h)),
-                    Hash::H256(_) => Ok(Type::H256(*h)),
-                    Hash::H512(_) => Ok(Type::H512(*h)),
+                Literal::Hash { value, .. } => match value {
+                    Hash::H160(_) => Ok(Type::H160(*value)),
+                    Hash::H256(_) => Ok(Type::H256(*value)),
+                    Hash::H512(_) => Ok(Type::H512(*value)),
                 },
-                Literal::Str(s) => Ok(Type::Str(s.clone())),
-                Literal::Char(c) => Ok(Type::Char(*c)),
-                Literal::Bool(b) => Ok(Type::Bool(*b)),
+                Literal::Str { value, .. } => Ok(Type::Str(value.clone())),
+                Literal::Char { value, .. } => Ok(Type::Char(*value)),
+                Literal::Bool { value, .. } => Ok(Type::Bool(*value)),
             },
             Expression::MethodCall(_) => todo!(),
             Expression::FieldAccess(_) => todo!(),
