@@ -1,5 +1,6 @@
 mod lex_error;
 mod parser_error;
+mod semantic_error;
 
 use std::{error::Error, fmt};
 
