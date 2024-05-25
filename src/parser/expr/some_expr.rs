@@ -7,7 +7,9 @@ use crate::{
 
 impl ParseConstructExpr for SomeExpr {
     fn parse(parser: &mut Parser) -> Result<SomeExpr, ErrorsEmitted> {
-        let kw_some = if let Some(Token::Some { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_some = if let Some(Token::Some { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Some)
         } else {
@@ -16,7 +18,7 @@ impl ParseConstructExpr for SomeExpr {
         }?;
 
         let expression = match parser.current_token() {
-            Some(Token::LParen { .. }) => Ok(Box::new(GroupedExpr::parse(parser)?)),
+            Some(Token::LParen { .. }) => Ok(GroupedExpr::parse(parser)?),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
@@ -27,9 +29,12 @@ impl ParseConstructExpr for SomeExpr {
             }
         }?;
 
+        let span = parser.get_span(&first_token.unwrap().span(), &expression.span);
+
         let expr = SomeExpr {
             kw_some,
-            expression,
+            expression: Box::new(expression),
+            span,
         };
 
         Ok(expr)
