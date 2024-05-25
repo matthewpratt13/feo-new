@@ -5,6 +5,7 @@ use crate::{
     },
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser},
+    span::{Span, Spanned},
     token::{Token, TokenType},
 };
 
@@ -14,6 +15,8 @@ impl ParseOperatorExpr for AssignmentExpr {
             parser.log_error(e);
             ErrorsEmitted
         })?;
+
+        let start_pos = left_expr.span().start();
 
         let operator_token = &parser.current_token().cloned().unwrap_or(Token::EOF);
 
@@ -36,10 +39,15 @@ impl ParseOperatorExpr for AssignmentExpr {
 
         let rhs = parser.parse_value_expr(precedence)?;
 
+        let end_pos = rhs.span().end();
+
+        let span = Span::new(&parser.stream.span().input(), start_pos, end_pos);
+
         let expr = AssignmentExpr {
             lhs,
             assignment_op,
             rhs,
+            span,
         };
 
         Ok(Expression::Assignment(expr))

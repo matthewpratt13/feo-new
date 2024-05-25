@@ -517,6 +517,42 @@ pub(crate) enum ValueExpr {
     ResultExpr(ResultExpr),
 }
 
+impl Spanned for ValueExpr {
+    fn span(&self) -> Span {
+        match self.clone() {
+            ValueExpr::Literal(l) => l.span(),
+            ValueExpr::PathExpr(_) => todo!(),
+            ValueExpr::MethodCallExpr(_) => todo!(),
+            ValueExpr::FieldAccessExpr(_) => todo!(),
+            ValueExpr::CallExpr(_) => todo!(),
+            ValueExpr::IndexExpr(_) => todo!(),
+            ValueExpr::TupleIndexExpr(_) => todo!(),
+            ValueExpr::UnwrapExpr(_) => todo!(),
+            ValueExpr::UnaryExpr(_) => todo!(),
+            ValueExpr::ReferenceExpr(_) => todo!(),
+            ValueExpr::DereferenceExpr(_) => todo!(),
+            ValueExpr::TypeCastExpr(_) => todo!(),
+            ValueExpr::BinaryExpr(_) => todo!(),
+            ValueExpr::GroupedExpr(_) => todo!(),
+            ValueExpr::RangeExpr(_) => todo!(),
+            ValueExpr::ClosureExpr(_) => todo!(),
+            ValueExpr::UnderscoreExpr(_) => todo!(),
+            ValueExpr::ArrayExpr(_) => todo!(),
+            ValueExpr::TupleExpr(_) => todo!(),
+            ValueExpr::StructExpr(_) => todo!(),
+            ValueExpr::MappingExpr(_) => todo!(),
+            ValueExpr::BlockExpr(_) => todo!(),
+            ValueExpr::IfExpr(_) => todo!(),
+            ValueExpr::MatchExpr(_) => todo!(),
+            ValueExpr::ForInExpr(_) => todo!(),
+            ValueExpr::WhileExpr(_) => todo!(),
+            ValueExpr::SomeExpr(_) => todo!(),
+            ValueExpr::NoneExpr(_) => todo!(),
+            ValueExpr::ResultExpr(_) => todo!(),
+        }
+    }
+}
+
 impl TryFrom<Expression> for ValueExpr {
     type Error = ParserErrorKind;
 
