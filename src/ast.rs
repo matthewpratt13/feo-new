@@ -11,7 +11,10 @@ mod types;
 
 use core::fmt;
 
-use crate::{error::ParserErrorKind, span::Position};
+use crate::{
+    error::ParserErrorKind,
+    span::{Position, Span, Spanned},
+};
 
 pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*};
 
@@ -22,31 +25,48 @@ pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*
 /// Enum representing the different literals used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Literal {
-    Int(Int),
-    UInt(UInt),
-    BigUInt(BigUInt),
-    Float(Float),
-    Byte(Byte),
-    Bytes(Bytes),
-    Hash(Hash),
-    Str(Str),
-    Char(Char),
-    Bool(Bool),
+    Int { value: Int, span: Span },
+    UInt { value: UInt, span: Span },
+    BigUInt { value: BigUInt, span: Span },
+    Float { value: Float, span: Span },
+    Byte { value: Byte, span: Span },
+    Bytes { value: Bytes, span: Span },
+    Hash { value: Hash, span: Span },
+    Str { value: Str, span: Span },
+    Char { value: Char, span: Span },
+    Bool { value: Bool, span: Span },
+}
+
+impl Spanned for Literal {
+    fn span(&self) -> Span {
+        match self.clone() {
+            Literal::Int { span, .. } => span,
+            Literal::UInt { span, .. } => span,
+            Literal::BigUInt { span, .. } => span,
+            Literal::Float { span, .. } => span,
+            Literal::Byte { span, .. } => span,
+            Literal::Bytes { span, .. } => span,
+            Literal::Hash { span, .. } => span,
+            Literal::Str { span, .. } => span,
+            Literal::Char { span, .. } => span,
+            Literal::Bool { span, .. } => span,
+        }
+    }
 }
 
 impl fmt::Display for Literal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Literal::Int(i) => write!(f, "{}", i),
-            Literal::UInt(ui) => write!(f, "{}", ui),
-            Literal::BigUInt(bui) => write!(f, "{}", bui),
-            Literal::Float(flt) => write!(f, "{}", flt),
-            Literal::Byte(by) => write!(f, "{}", by),
-            Literal::Bytes(bb) => write!(f, "{}", bb),
-            Literal::Hash(h) => write!(f, "{}", h),
-            Literal::Str(s) => write!(f, "{}", s),
-            Literal::Char(c) => write!(f, "{}", c),
-            Literal::Bool(b) => write!(f, "{}", b),
+            Literal::Int { value, .. } => write!(f, "{}", value),
+            Literal::UInt { value, .. } => write!(f, "{}", value),
+            Literal::BigUInt { value, .. } => write!(f, "{}", value),
+            Literal::Float { value, .. } => write!(f, "{}", value),
+            Literal::Byte { value, .. } => write!(f, "{}", value),
+            Literal::Bytes { value, .. } => write!(f, "{}", value),
+            Literal::Hash { value, .. } => write!(f, "{}", value),
+            Literal::Str { value, .. } => write!(f, "{}", value),
+            Literal::Char { value, .. } => write!(f, "{}", value),
+            Literal::Bool { value, .. } => write!(f, "{}", value),
         }
     }
 }
@@ -366,20 +386,62 @@ pub(crate) enum Expression {
     ResultExpr(ResultExpr),
 }
 
+impl Spanned for Expression {
+    fn span(&self) -> crate::span::Span {
+        match self.clone() {
+            Expression::Literal(l) => l.span(),
+            Expression::Path(p) => p.span,
+            Expression::MethodCall(mc) => mc.span,
+            Expression::FieldAccess(fa) => fa.span,
+            Expression::Call(c) => c.span,
+            Expression::Index(i) => i.span,
+            Expression::TupleIndex(ti) => ti.span,
+            Expression::Unwrap(unw) => unw.span,
+            Expression::Unary(una) => una.span,
+            Expression::Reference(r) => r.span,
+            Expression::Dereference(de) => de.span,
+            Expression::TypeCast(tc) => tc.span,
+            Expression::Binary(b) => b.span,
+            Expression::Comparison(c) => c.span,
+            Expression::Grouped(g) => g.span,
+            Expression::Range(r) => r.span,
+            Expression::Assignment(a) => a.span,
+            Expression::CompoundAssignment(ca) => ca.span,
+            Expression::Return(r) => r.span,
+            Expression::Break(b) => b.span,
+            Expression::Continue(c) => c.span,
+            Expression::Underscore(u) => u.span,
+            Expression::Closure(c) => c.span,
+            Expression::Array(a) => a.span,
+            Expression::Tuple(t) => t.span,
+            Expression::Struct(s) => s.span,
+            Expression::Mapping(m) => m.span,
+            Expression::Block(b) => b.span,
+            Expression::If(i) => i.span,
+            Expression::Match(m) => m.span,
+            Expression::ForIn(fi) => fi.span,
+            Expression::While(w) => w.span,
+            Expression::SomeExpr(s) => s.span,
+            Expression::NoneExpr(n) => n.span,
+            Expression::ResultExpr(r) => r.span,
+        }
+    }
+}
+
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expression::Literal(l) => match l {
-                Literal::Int(i) => write!(f, "{}", i),
-                Literal::UInt(ui) => write!(f, "{}", ui),
-                Literal::BigUInt(bui) => write!(f, "{}", bui),
-                Literal::Float(flt) => write!(f, "{}", flt),
-                Literal::Byte(by) => write!(f, "{}", by),
-                Literal::Bytes(bb) => write!(f, "{}", bb),
-                Literal::Hash(h) => write!(f, "{}", h),
-                Literal::Str(s) => write!(f, "{}", s),
-                Literal::Char(c) => write!(f, "{}", c),
-                Literal::Bool(b) => write!(f, "{}", b),
+                Literal::Int { value, .. } => write!(f, "{}", value),
+                Literal::UInt { value, .. } => write!(f, "{}", value),
+                Literal::BigUInt { value, .. } => write!(f, "{}", value),
+                Literal::Float { value, .. } => write!(f, "{}", value),
+                Literal::Byte { value, .. } => write!(f, "{}", value),
+                Literal::Bytes { value, .. } => write!(f, "{}", value),
+                Literal::Hash { value, .. } => write!(f, "{}", value),
+                Literal::Str { value, .. } => write!(f, "{}", value),
+                Literal::Char { value, .. } => write!(f, "{}", value),
+                Literal::Bool { value, .. } => write!(f, "{}", value),
             },
             Expression::Path(pth) => write!(f, "{:?}", pth),
             Expression::MethodCall(mc) => write!(f, "{:?}", mc),
@@ -644,16 +706,16 @@ impl fmt::Display for Pattern {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Pattern::Literal(l) => match l {
-                Literal::Int(i) => write!(f, "{}", i),
-                Literal::UInt(ui) => write!(f, "{}", ui),
-                Literal::BigUInt(bui) => write!(f, "{}", bui),
-                Literal::Float(flt) => write!(f, "{}", flt),
-                Literal::Byte(by) => write!(f, "{}", by),
-                Literal::Bytes(bb) => write!(f, "{}", bb),
-                Literal::Hash(h) => write!(f, "{}", h),
-                Literal::Str(s) => write!(f, "{}", s),
-                Literal::Char(c) => write!(f, "{}", c),
-                Literal::Bool(b) => write!(f, "{}", b),
+                Literal::Int { value, .. } => write!(f, "{}", value),
+                Literal::UInt { value, .. } => write!(f, "{}", value),
+                Literal::BigUInt { value, .. } => write!(f, "{}", value),
+                Literal::Float { value, .. } => write!(f, "{}", value),
+                Literal::Byte { value, .. } => write!(f, "{}", value),
+                Literal::Bytes { value, .. } => write!(f, "{}", value),
+                Literal::Hash { value, .. } => write!(f, "{}", value),
+                Literal::Str { value, .. } => write!(f, "{}", value),
+                Literal::Char { value, .. } => write!(f, "{}", value),
+                Literal::Bool { value, .. } => write!(f, "{}", value),
             },
             Pattern::IdentifierPatt(id) => write!(f, "{}", id.name),
             Pattern::PathPatt(pth) => write!(f, "{:?}", pth),

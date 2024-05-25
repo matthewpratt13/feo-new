@@ -310,33 +310,95 @@ impl Parser {
 
         match self.current_token() {
             Some(Token::Identifier { .. }) => Ok(Expression::Path(PathExpr::parse(self)?)),
-            Some(Token::IntLiteral { value, .. }) => Ok(Expression::Literal(Literal::Int(*value))),
+            Some(Token::IntLiteral { value, .. }) => {
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                Ok(Expression::Literal(Literal::Int {
+                    value: *value,
+                    span,
+                }))
+            }
             Some(Token::UIntLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::UInt(*value)))
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                Ok(Expression::Literal(Literal::UInt {
+                    value: *value,
+                    span,
+                }))
             }
             Some(Token::BigUIntLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::BigUInt(*value)))
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                Ok(Expression::Literal(Literal::BigUInt {
+                    value: *value,
+                    span,
+                }))
             }
             Some(Token::FloatLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::Float(*value)))
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                Ok(Expression::Literal(Literal::Float {
+                    value: *value,
+                    span,
+                }))
             }
             Some(Token::ByteLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::Byte(*value)))
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                Ok(Expression::Literal(Literal::Byte {
+                    value: *value,
+                    span,
+                }))
             }
             Some(Token::BytesLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::Bytes(*value)))
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                Ok(Expression::Literal(Literal::Bytes {
+                    value: *value,
+                    span,
+                }))
             }
             Some(Token::HashLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::Hash(*value)))
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                Ok(Expression::Literal(Literal::Hash {
+                    value: *value,
+                    span,
+                }))
             }
             Some(Token::StrLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::Str(value.clone())))
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                Ok(Expression::Literal(Literal::Str {
+                    value: value.clone(),
+                    span,
+                }))
             }
             Some(Token::CharLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::Char(*value)))
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                Ok(Expression::Literal(Literal::Char {
+                    value: *value,
+                    span,
+                }))
             }
             Some(Token::BoolLiteral { value, .. }) => {
-                Ok(Expression::Literal(Literal::Bool(*value)))
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                Ok(Expression::Literal(Literal::Bool {
+                    value: *value,
+                    span,
+                }))
             }
             Some(Token::LParen { .. }) => {
                 let expr = GroupedExpr::parse(self)?;
@@ -880,7 +942,13 @@ impl Parser {
 
         match &token {
             Some(Token::IntLiteral { value, .. }) => {
-                let patt = Pattern::Literal(Literal::Int(*value));
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                let patt = Pattern::Literal(Literal::Int {
+                    value: *value,
+                    span,
+                });
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
@@ -892,7 +960,13 @@ impl Parser {
                 }
             }
             Some(Token::UIntLiteral { value, .. }) => {
-                let patt = Pattern::Literal(Literal::UInt(*value));
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                let patt = Pattern::Literal(Literal::UInt {
+                    value: *value,
+                    span,
+                });
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
@@ -904,7 +978,13 @@ impl Parser {
                 }
             }
             Some(Token::BigUIntLiteral { value, .. }) => {
-                let patt = Pattern::Literal(Literal::BigUInt(*value));
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                let patt = Pattern::Literal(Literal::BigUInt {
+                    value: *value,
+                    span,
+                });
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
@@ -916,7 +996,13 @@ impl Parser {
                 }
             }
             Some(Token::ByteLiteral { value, .. }) => {
-                let patt = Pattern::Literal(Literal::Byte(*value));
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                let patt = Pattern::Literal(Literal::Byte {
+                    value: *value,
+                    span,
+                });
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
@@ -928,20 +1014,44 @@ impl Parser {
                 }
             }
             Some(Token::BytesLiteral { value, .. }) => {
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
                 self.next_token();
-                Ok(Pattern::Literal(Literal::Bytes(*value)))
+                Ok(Pattern::Literal(Literal::Bytes {
+                    value: *value,
+                    span,
+                }))
             }
             Some(Token::HashLiteral { value, .. }) => {
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
                 self.next_token();
-                Ok(Pattern::Literal(Literal::Hash(*value)))
+                Ok(Pattern::Literal(Literal::Hash {
+                    value: *value,
+                    span,
+                }))
             }
             Some(Token::StrLiteral { value, .. }) => {
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
                 self.next_token();
-                Ok(Pattern::Literal(Literal::Str(value.clone())))
+                Ok(Pattern::Literal(Literal::Str {
+                    value: value.clone(),
+                    span,
+                }))
             }
 
             Some(Token::CharLiteral { value, .. }) => {
-                let patt = Pattern::Literal(Literal::Char(*value));
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
+                let patt = Pattern::Literal(Literal::Char {
+                    value: *value,
+                    span,
+                });
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
                     self.peek_ahead_by(1)
@@ -953,8 +1063,14 @@ impl Parser {
                 }
             }
             Some(Token::BoolLiteral { value, .. }) => {
+                let first_token = self.current_token().unwrap();
+                let span = self.get_span(first_token);
+
                 self.next_token();
-                Ok(Pattern::Literal(Literal::Bool(*value)))
+                Ok(Pattern::Literal(Literal::Bool {
+                    value: *value,
+                    span,
+                }))
             }
             Some(Token::LParen { .. }) => {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {

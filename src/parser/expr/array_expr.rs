@@ -2,7 +2,6 @@ use crate::{
     ast::{ArrayExpr, Delimiter},
     error::ErrorsEmitted,
     parser::{collection, ParseConstructExpr, Parser, Precedence},
-    span::{Span, Spanned},
     token::Token,
 };
 
@@ -35,12 +34,6 @@ impl ParseConstructExpr for ArrayExpr {
                 Err(ErrorsEmitted)
             }
         }
-    }
-}
-
-impl Spanned for ArrayExpr {
-    fn span(&self) -> Span {
-        self.span.clone()
     }
 }
 
