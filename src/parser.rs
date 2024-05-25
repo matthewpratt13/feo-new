@@ -94,7 +94,7 @@ use crate::{
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
-    span::{Position, Span},
+    span::{Position, Span, Spanned},
     token::{Token, TokenStream, TokenType},
 };
 
@@ -312,7 +312,7 @@ impl Parser {
             Some(Token::Identifier { .. }) => Ok(Expression::Path(PathExpr::parse(self)?)),
             Some(Token::IntLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 Ok(Expression::Literal(Literal::Int {
                     value: *value,
@@ -321,7 +321,7 @@ impl Parser {
             }
             Some(Token::UIntLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 Ok(Expression::Literal(Literal::UInt {
                     value: *value,
@@ -330,7 +330,7 @@ impl Parser {
             }
             Some(Token::BigUIntLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 Ok(Expression::Literal(Literal::BigUInt {
                     value: *value,
@@ -339,7 +339,7 @@ impl Parser {
             }
             Some(Token::FloatLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 Ok(Expression::Literal(Literal::Float {
                     value: *value,
@@ -348,7 +348,7 @@ impl Parser {
             }
             Some(Token::ByteLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 Ok(Expression::Literal(Literal::Byte {
                     value: *value,
@@ -357,7 +357,7 @@ impl Parser {
             }
             Some(Token::BytesLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 Ok(Expression::Literal(Literal::Bytes {
                     value: *value,
@@ -366,7 +366,7 @@ impl Parser {
             }
             Some(Token::HashLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 Ok(Expression::Literal(Literal::Hash {
                     value: *value,
@@ -375,7 +375,7 @@ impl Parser {
             }
             Some(Token::StrLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 Ok(Expression::Literal(Literal::Str {
                     value: value.clone(),
@@ -384,7 +384,7 @@ impl Parser {
             }
             Some(Token::CharLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 Ok(Expression::Literal(Literal::Char {
                     value: *value,
@@ -393,7 +393,7 @@ impl Parser {
             }
             Some(Token::BoolLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 Ok(Expression::Literal(Literal::Bool {
                     value: *value,
@@ -447,7 +447,7 @@ impl Parser {
             Some(Token::Identifier { name, .. }) => {
                 if name == "_" {
                     let first_token = self.current_token().unwrap();
-                    let span = self.get_span(first_token);
+                    let span = self.get_span_from_token(first_token);
 
                     self.next_token();
                     Ok(Expression::Underscore(UnderscoreExpr {
@@ -576,7 +576,7 @@ impl Parser {
             Some(Token::DblDot { .. }) => match (self.peek_behind_by(1), self.peek_ahead_by(1)) {
                 (None, Some(Token::Semicolon { .. } | Token::EOF) | None) => {
                     let first_token = self.current_token().cloned().unwrap();
-                    let span = self.get_span(&first_token);
+                    let span = self.get_span_from_token(&first_token);
 
                     let expr = RangeExpr {
                         from_expr_opt: None,
@@ -608,7 +608,7 @@ impl Parser {
 
             Some(Token::None { .. }) => {
                 let first_token = self.current_token().cloned().unwrap();
-                let span = self.get_span(&first_token);
+                let span = self.get_span_from_token(&first_token);
 
                 self.next_token();
                 Ok(Expression::NoneExpr(NoneExpr {
@@ -623,7 +623,7 @@ impl Parser {
 
             Some(Token::Break { .. }) => {
                 let first_token = self.current_token().cloned().unwrap();
-                let span = self.get_span(&first_token);
+                let span = self.get_span_from_token(&first_token);
 
                 self.next_token();
                 Ok(Expression::Break(BreakExpr {
@@ -634,7 +634,7 @@ impl Parser {
 
             Some(Token::Continue { .. }) => {
                 let first_token = self.current_token().cloned().unwrap();
-                let span = self.get_span(&first_token);
+                let span = self.get_span_from_token(&first_token);
 
                 self.next_token();
                 Ok(Expression::Continue(ContinueExpr {
@@ -943,7 +943,7 @@ impl Parser {
         match &token {
             Some(Token::IntLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 let patt = Pattern::Literal(Literal::Int {
                     value: *value,
@@ -961,7 +961,7 @@ impl Parser {
             }
             Some(Token::UIntLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 let patt = Pattern::Literal(Literal::UInt {
                     value: *value,
@@ -979,7 +979,7 @@ impl Parser {
             }
             Some(Token::BigUIntLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 let patt = Pattern::Literal(Literal::BigUInt {
                     value: *value,
@@ -997,7 +997,7 @@ impl Parser {
             }
             Some(Token::ByteLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 let patt = Pattern::Literal(Literal::Byte {
                     value: *value,
@@ -1015,7 +1015,7 @@ impl Parser {
             }
             Some(Token::BytesLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 self.next_token();
                 Ok(Pattern::Literal(Literal::Bytes {
@@ -1025,7 +1025,7 @@ impl Parser {
             }
             Some(Token::HashLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 self.next_token();
                 Ok(Pattern::Literal(Literal::Hash {
@@ -1035,7 +1035,7 @@ impl Parser {
             }
             Some(Token::StrLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 self.next_token();
                 Ok(Pattern::Literal(Literal::Str {
@@ -1046,7 +1046,7 @@ impl Parser {
 
             Some(Token::CharLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 let patt = Pattern::Literal(Literal::Char {
                     value: *value,
@@ -1064,7 +1064,7 @@ impl Parser {
             }
             Some(Token::BoolLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
-                let span = self.get_span(first_token);
+                let span = self.get_span_from_token(first_token);
 
                 self.next_token();
                 Ok(Pattern::Literal(Literal::Bool {
@@ -1430,9 +1430,16 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
     // ADDITIONAL HELPERS
     ///////////////////////////////////////////////////////////////////////////
-    ///
 
-    fn get_span(&self, first_token: &Token) -> Span {
+    fn get_span(&self, start_span: &Span, end_span: &Span) -> Span {
+        Span::new(
+            &self.stream.span().input(),
+            start_span.start(),
+            end_span.end(),
+        )
+    }
+
+    fn get_span_from_token(&self, first_token: &Token) -> Span {
         Span::new(
             &self.stream.span().input(),
             first_token.span().start(),

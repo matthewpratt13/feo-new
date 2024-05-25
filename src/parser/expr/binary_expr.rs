@@ -5,7 +5,7 @@ use crate::{
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::{ParseOperatorExpr, Parser},
-    span::{Span, Spanned},
+    span::Spanned,
     token::{Token, TokenType},
 };
 
@@ -22,7 +22,7 @@ impl ParseOperatorExpr for BinaryExpr {
         parser.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
-        let start_pos = &left_expr.span().start();
+        let left_expr_span = &left_expr.span();
 
         let lhs: ValueExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
@@ -57,9 +57,7 @@ impl ParseOperatorExpr for BinaryExpr {
 
         let rhs = parser.parse_value_expr(precedence)?;
 
-        let end_pos = rhs.span().end();
-
-        let span = Span::new(&parser.stream.span().input(), *start_pos, end_pos);
+        let span = parser.get_span(left_expr_span, &rhs.span());
 
         let expr = BinaryExpr {
             lhs: Box::new(lhs),
@@ -84,7 +82,7 @@ impl ParseOperatorExpr for ComparisonExpr {
         parser.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
-        let start_pos = &left_expr.span().start();
+        let left_expr_span = &left_expr.span();
 
         let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
@@ -114,9 +112,7 @@ impl ParseOperatorExpr for ComparisonExpr {
 
         let rhs = parser.parse_assignee_expr(precedence)?;
 
-        let end_pos = rhs.span().end();
-
-        let span = Span::new(&parser.stream.span().input(), *start_pos, end_pos);
+        let span = parser.get_span(left_expr_span, &rhs.span());
 
         let expr = ComparisonExpr {
             lhs,
