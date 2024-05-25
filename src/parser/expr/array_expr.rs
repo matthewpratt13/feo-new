@@ -2,12 +2,15 @@ use crate::{
     ast::{ArrayExpr, Delimiter},
     error::ErrorsEmitted,
     parser::{collection, ParseConstructExpr, Parser, Precedence},
+    span::{Span, Spanned},
     token::Token,
 };
 
 impl ParseConstructExpr for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<ArrayExpr, ErrorsEmitted> {
-        let open_bracket = match parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let open_bracket = match &first_token {
             Some(Token::LBracket { .. }) => {
                 let position = parser.current_position();
                 parser.next_token();
@@ -23,14 +26,21 @@ impl ParseConstructExpr for ArrayExpr {
 
         match parser.current_token() {
             Some(Token::RBracket { .. }) => {
+                let span = parser.get_span(&first_token.unwrap());
                 parser.next_token();
-                Ok(ArrayExpr { elements_opt })
+                Ok(ArrayExpr { elements_opt, span })
             }
             _ => {
                 parser.log_unmatched_delimiter(&open_bracket);
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl Spanned for ArrayExpr {
+    fn span(&self) -> Span {
+        self.span.clone()
     }
 }
 

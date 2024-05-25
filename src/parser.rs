@@ -94,7 +94,7 @@ use crate::{
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, LogMsg, Logger},
-    span::Position,
+    span::{Position, Span},
     token::{Token, TokenStream, TokenType},
 };
 
@@ -384,9 +384,13 @@ impl Parser {
 
             Some(Token::Identifier { name, .. }) => {
                 if name == "_" {
+                    let first_token = self.current_token().unwrap();
+                    let span = self.get_span(first_token);
+
                     self.next_token();
                     Ok(Expression::Underscore(UnderscoreExpr {
                         underscore: Identifier::from(name),
+                        span,
                     }))
                 } else {
                     match self.peek_ahead_by(1) {
@@ -509,11 +513,16 @@ impl Parser {
 
             Some(Token::DblDot { .. }) => match (self.peek_behind_by(1), self.peek_ahead_by(1)) {
                 (None, Some(Token::Semicolon { .. } | Token::EOF) | None) => {
+                    let first_token = self.current_token().cloned().unwrap();
+                    let span = self.get_span(&first_token);
+
                     let expr = RangeExpr {
                         from_expr_opt: None,
                         range_op: RangeOp::RangeExclusive,
                         to_expr_opt: None,
+                        span,
                     };
+
                     self.next_token();
                     Ok(Expression::Range(expr))
                 }
@@ -536,9 +545,13 @@ impl Parser {
             Some(Token::Some { .. }) => Ok(Expression::SomeExpr(SomeExpr::parse(self)?)),
 
             Some(Token::None { .. }) => {
+                let first_token = self.current_token().cloned().unwrap();
+                let span = self.get_span(&first_token);
+
                 self.next_token();
                 Ok(Expression::NoneExpr(NoneExpr {
                     kw_none: Keyword::None,
+                    span,
                 }))
             }
 
@@ -547,16 +560,24 @@ impl Parser {
             }
 
             Some(Token::Break { .. }) => {
+                let first_token = self.current_token().cloned().unwrap();
+                let span = self.get_span(&first_token);
+
                 self.next_token();
                 Ok(Expression::Break(BreakExpr {
                     kw_break: Keyword::Break,
+                    span,
                 }))
             }
 
             Some(Token::Continue { .. }) => {
+                let first_token = self.current_token().cloned().unwrap();
+                let span = self.get_span(&first_token);
+
                 self.next_token();
                 Ok(Expression::Continue(ContinueExpr {
                     kw_continue: Keyword::Continue,
+                    span,
                 }))
             }
 
@@ -1293,6 +1314,15 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
     // ADDITIONAL HELPERS
     ///////////////////////////////////////////////////////////////////////////
+    ///
+
+    fn get_span(&self, first_token: &Token) -> Span {
+        Span::new(
+            &self.stream.span().input(),
+            first_token.span().start(),
+            self.current_token().unwrap().span().end(),
+        )
+    }
 
     /// Determine if `Token::Dot` token indicates a tuple index operator (i.e., if it is
     /// followed by a digit).

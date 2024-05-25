@@ -1,3 +1,5 @@
+use crate::span::Span;
+
 use super::{
     AssigneeExpr, AssignmentOp, BinaryOp, ComparisonOp, CompoundAssignmentOp, DereferenceOp,
     Expression, Identifier, IdentifierPatt, InnerAttr, Keyword, OuterAttr, Pattern, RangeOp,
@@ -79,6 +81,7 @@ pub(crate) struct TupleElements {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArrayExpr {
     pub(crate) elements_opt: Option<Vec<Expression>>, // arrays can be empty, hence optional
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -86,6 +89,7 @@ pub struct AssignmentExpr {
     pub(crate) lhs: AssigneeExpr,
     pub(crate) assignment_op: AssignmentOp,
     pub(crate) rhs: ValueExpr,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -93,6 +97,7 @@ pub struct BinaryExpr {
     pub(crate) lhs: Box<ValueExpr>,
     pub(crate) binary_op: BinaryOp,
     pub(crate) rhs: Box<ValueExpr>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -100,23 +105,27 @@ pub struct ComparisonExpr {
     pub(crate) lhs: AssigneeExpr,
     pub(crate) comparison_op: ComparisonOp,
     pub(crate) rhs: AssigneeExpr,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BlockExpr {
     pub(crate) attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) statements_opt: Option<Vec<Statement>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BreakExpr {
     pub(crate) kw_break: Keyword,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpr {
     pub(crate) callee: AssigneeExpr, // function being called
     pub(crate) args_opt: Option<Vec<Expression>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -124,6 +133,7 @@ pub struct ClosureExpr {
     pub(crate) closure_params: ClosureParams,
     pub(crate) return_type_opt: Option<Box<Type>>,
     pub(crate) body_expression: Box<Expression>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -131,23 +141,27 @@ pub struct CompoundAssignmentExpr {
     pub(crate) lhs: AssigneeExpr,
     pub(crate) compound_assignment_op: CompoundAssignmentOp,
     pub(crate) rhs: ValueExpr,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ContinueExpr {
     pub(crate) kw_continue: Keyword,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DereferenceExpr {
     pub(crate) dereference_op: DereferenceOp,
     pub(crate) assignee_expr: AssigneeExpr,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldAccessExpr {
     pub(crate) object: Box<AssigneeExpr>,
     pub(crate) field_name: Identifier,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -157,11 +171,13 @@ pub struct ForInExpr {
     pub(crate) kw_in: Keyword,
     pub(crate) iterator: Box<Expression>,
     pub(crate) block: BlockExpr,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupedExpr {
     pub(crate) inner_expression: Box<Expression>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -171,17 +187,20 @@ pub struct IfExpr {
     pub(crate) if_block: Box<BlockExpr>,
     pub(crate) else_if_blocks_opt: Option<Vec<Box<IfExpr>>>,
     pub(crate) trailing_else_block_opt: Option<BlockExpr>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IndexExpr {
     pub(crate) array: Box<AssigneeExpr>,
     pub(crate) index: Box<ValueExpr>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MappingExpr {
     pub(crate) pairs_opt: Option<Vec<MappingPair>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -190,6 +209,7 @@ pub struct MatchExpr {
     pub(crate) scrutinee: AssigneeExpr, // expression to be matched against
     pub(crate) match_arms_opt: Option<Vec<MatchArm>>,
     pub(crate) final_arm: Box<MatchArm>, // default case
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -197,17 +217,20 @@ pub struct MethodCallExpr {
     pub(crate) receiver: Box<AssigneeExpr>,
     pub(crate) method_name: Identifier,
     pub(crate) args_opt: Option<Vec<Expression>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NoneExpr {
     pub(crate) kw_none: Keyword,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathExpr {
     pub(crate) path_root: PathRoot,
     pub(crate) tree_opt: Option<Vec<Identifier>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -215,47 +238,55 @@ pub struct RangeExpr {
     pub(crate) from_expr_opt: Option<Box<AssigneeExpr>>,
     pub(crate) range_op: RangeOp, // `..` or `..=`
     pub(crate) to_expr_opt: Option<Box<AssigneeExpr>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReferenceExpr {
     pub(crate) reference_op: ReferenceOp,
     pub(crate) expression: Box<Expression>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResultExpr {
     pub(crate) kw_ok_or_err: Keyword,
     pub(crate) expression: Box<GroupedExpr>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReturnExpr {
     pub(crate) kw_return: Keyword,
     pub(crate) expression_opt: Option<Box<Expression>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SomeExpr {
     pub(crate) kw_some: Keyword,
     pub(crate) expression: Box<GroupedExpr>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructExpr {
     pub(crate) struct_path: PathExpr,
     pub(crate) struct_fields_opt: Option<Vec<StructField>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleExpr {
     pub(crate) tuple_elements: TupleElements,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleIndexExpr {
     pub(crate) tuple: Box<AssigneeExpr>,
     pub(crate) index: UInt,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -263,23 +294,27 @@ pub struct TypeCastExpr {
     pub(crate) value: Box<ValueExpr>,
     pub(crate) type_cast_op: TypeCastOp, // `as`
     pub(crate) new_type: Box<Type>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnderscoreExpr {
     pub(crate) underscore: Identifier,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnaryExpr {
     pub(crate) unary_op: UnaryOp,
     pub(crate) value_expr: Box<ValueExpr>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnwrapExpr {
     pub(crate) value_expr: Box<ValueExpr>,
     pub(crate) unwrap_op: UnwrapOp,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -287,4 +322,5 @@ pub struct WhileExpr {
     pub(crate) kw_while: Keyword,
     pub(crate) condition: Box<GroupedExpr>,
     pub(crate) block: BlockExpr,
+    pub(crate) span: Span,
 }
