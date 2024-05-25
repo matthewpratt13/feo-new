@@ -619,11 +619,23 @@ pub(crate) enum AssigneeExpr {
     IndexExpr(IndexExpr),           // when on the LHS
     TupleIndexExpr(TupleIndexExpr), // when on the LHS
     ReferenceExpr(ReferenceExpr),
-    GroupedExpr(Box<AssigneeExpr>),
+    GroupedExpr {
+        inner_expression: Box<AssigneeExpr>,
+        span: Span,
+    },
     UnderscoreExpr(UnderscoreExpr),
-    ArrayExpr(Vec<AssigneeExpr>),
-    TupleExpr(Vec<AssigneeExpr>),
-    StructExpr(Vec<StructAssigneeExprField>),
+    ArrayExpr {
+        elements: Vec<AssigneeExpr>,
+        span: Span,
+    },
+    TupleExpr {
+        elements: Vec<AssigneeExpr>,
+        span: Span,
+    },
+    StructExpr {
+        fields: Vec<StructAssigneeExprField>,
+        span: Span,
+    },
 }
 
 impl TryFrom<Expression> for AssigneeExpr {
@@ -646,25 +658,31 @@ impl TryFrom<Expression> for AssigneeExpr {
             Expression::TupleIndex(ti) => Ok(AssigneeExpr::TupleIndexExpr(ti)),
             Expression::Reference(b) => Ok(AssigneeExpr::ReferenceExpr(b)),
             Expression::Grouped(g) => {
-                let assignee_expression = AssigneeExpr::try_from(*g.inner_expression)?;
-                Ok(AssigneeExpr::GroupedExpr(Box::new(assignee_expression)))
+                let inner_expression = AssigneeExpr::try_from(*g.inner_expression)?;
+                Ok(AssigneeExpr::GroupedExpr {
+                    inner_expression: Box::new(inner_expression),
+                    span: g.span,
+                })
             }
             Expression::Underscore(u) => Ok(AssigneeExpr::UnderscoreExpr(u)),
             Expression::Array(a) => {
-                let mut assignee_expressions: Vec<AssigneeExpr> = Vec::new();
+                let mut elements: Vec<AssigneeExpr> = Vec::new();
                 a.elements_opt.map(|v| {
                     v.into_iter().for_each(|e| {
-                        assignee_expressions.push(AssigneeExpr::try_from(e).expect(
+                        elements.push(AssigneeExpr::try_from(e).expect(
                             "conversion error: unable to convert `Expression` into `AssigneeExpr`",
                         ))
                     })
                 });
 
-                Ok(AssigneeExpr::ArrayExpr(assignee_expressions))
+                Ok(AssigneeExpr::ArrayExpr {
+                    elements,
+                    span: a.span,
+                })
             }
 
             Expression::Tuple(t) => {
-                let assignee_expressions = t
+                let elements = t
                     .tuple_elements
                     .elements
                     .into_iter()
@@ -675,11 +693,14 @@ impl TryFrom<Expression> for AssigneeExpr {
                     })
                     .collect::<Vec<AssigneeExpr>>();
 
-                Ok(AssigneeExpr::TupleExpr(assignee_expressions))
+                Ok(AssigneeExpr::TupleExpr {
+                    elements,
+                    span: t.span,
+                })
             }
 
             Expression::Struct(s) => {
-                let mut assignee_expressions: Vec<StructAssigneeExprField> = Vec::new();
+                let mut fields: Vec<StructAssigneeExprField> = Vec::new();
 
                 s.struct_fields_opt.map(|v| {
                     v.into_iter().for_each(|s| {
@@ -693,17 +714,39 @@ impl TryFrom<Expression> for AssigneeExpr {
                             field_name: s.field_name,
                             field_value: Box::new(field_value),
                         };
-                        assignee_expressions.push(struct_assignee_expr_field);
+                        fields.push(struct_assignee_expr_field);
                     })
                 });
 
-                Ok(AssigneeExpr::StructExpr(assignee_expressions))
+                Ok(AssigneeExpr::StructExpr {
+                    fields,
+                    span: s.span,
+                })
             }
 
             _ => Err(ParserErrorKind::UnexpectedExpression {
                 expected: "assignee expression".to_string(),
                 found: format!("{}", value),
             }),
+        }
+    }
+}
+
+impl Spanned for AssigneeExpr {
+    fn span(&self) -> Span {
+        match self.clone() {
+            AssigneeExpr::Literal(l) => l.span(),
+            AssigneeExpr::PathExpr(p) => p.span,
+            AssigneeExpr::MethodCallExpr(mc) => mc.span,
+            AssigneeExpr::FieldAccessExpr(fa) => fa.span,
+            AssigneeExpr::IndexExpr(i) => i.span,
+            AssigneeExpr::TupleIndexExpr(ti) => ti.span,
+            AssigneeExpr::ReferenceExpr(r) => r.span,
+            AssigneeExpr::GroupedExpr { span, .. } => span,
+            AssigneeExpr::UnderscoreExpr(u) => u.span,
+            AssigneeExpr::ArrayExpr { span, .. } => span,
+            AssigneeExpr::TupleExpr { span, .. } => span,
+            AssigneeExpr::StructExpr { span, .. } => span,
         }
     }
 }
