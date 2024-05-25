@@ -9,7 +9,9 @@ use crate::{
 
 impl ParseConstructExpr for StructExpr {
     fn parse(parser: &mut Parser) -> Result<StructExpr, ErrorsEmitted> {
-        let root = match parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let root = match &first_token {
             Some(Token::Identifier { name, .. }) => {
                 Ok(PathRoot::Identifier(Identifier::from(name)))
             }
@@ -20,9 +22,12 @@ impl ParseConstructExpr for StructExpr {
             }
         }?;
 
+        let span = parser.get_span_by_token(&first_token.clone().unwrap());
+
         let struct_path = PathExpr {
             path_root: root,
             tree_opt: None,
+            span,
         };
 
         parser.next_token();
@@ -48,10 +53,14 @@ impl ParseConstructExpr for StructExpr {
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
+
                 Ok(StructExpr {
                     struct_path,
                     struct_fields_opt,
+                    span,
                 })
             }
             _ => {
