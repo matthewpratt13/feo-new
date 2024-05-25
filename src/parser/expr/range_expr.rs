@@ -2,11 +2,14 @@ use crate::{
     ast::{AssigneeExpr, Expression, RangeExpr, RangeOp},
     error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseOperatorExpr, Parser},
+    span::Spanned,
     token::{Token, TokenType},
 };
 
 impl ParseOperatorExpr for RangeExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let left_expr_span = &left_expr.span();
+
         let from_assignee_expr: AssigneeExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -34,6 +37,10 @@ impl ParseOperatorExpr for RangeExpr {
         parser.next_token();
 
         if let Some(Token::EOF) = parser.current_token() {
+            let last_token = parser.peek_behind_by(1);
+
+            let span = parser.get_span(left_expr_span, &last_token.unwrap().span());
+
             let expr = RangeExpr {
                 from_expr_opt: Some(Box::new(from_assignee_expr)),
                 range_op: {
@@ -48,6 +55,7 @@ impl ParseOperatorExpr for RangeExpr {
                     }
                 },
                 to_expr_opt: None,
+                span,
             };
 
             return Ok(Expression::Range(expr));
@@ -57,10 +65,13 @@ impl ParseOperatorExpr for RangeExpr {
 
         let to_assignee_expr = parser.parse_assignee_expr(precedence)?;
 
+        let span = parser.get_span(left_expr_span, &to_assignee_expr.span());
+
         let expr = Ok(RangeExpr {
             from_expr_opt: Some(Box::new(from_assignee_expr)),
             range_op,
             to_expr_opt: Some(Box::new(to_assignee_expr)),
+            span,
         })?;
 
         Ok(Expression::Range(expr))
@@ -87,6 +98,9 @@ impl RangeExpr {
         parser.next_token();
 
         if parser.current_token().is_none() {
+            let last_token = parser.peek_behind_by(1);
+            let span = parser.get_span(&operator_token.span(), &last_token.unwrap().span());
+
             let expr = RangeExpr {
                 from_expr_opt: None,
                 range_op: range_op.clone(),
@@ -101,6 +115,7 @@ impl RangeExpr {
                         None
                     }
                 },
+                span,
             };
 
             return Ok(expr);
@@ -110,12 +125,15 @@ impl RangeExpr {
 
         let to_assignee_expr = parser.parse_assignee_expr(precedence)?;
 
+        let span = parser.get_span(&operator_token.span(), &to_assignee_expr.span());
+
         parser.next_token();
 
         Ok(RangeExpr {
             from_expr_opt: None,
             range_op,
             to_expr_opt: Some(Box::new(to_assignee_expr)),
+            span,
         })
     }
 }
