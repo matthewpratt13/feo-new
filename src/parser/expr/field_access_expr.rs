@@ -2,23 +2,33 @@ use crate::{
     ast::{AssigneeExpr, Expression, FieldAccessExpr, Identifier},
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser},
+    span::Spanned,
     token::Token,
 };
 
 impl ParseOperatorExpr for FieldAccessExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let left_expr_span = &left_expr.span();
+
         let object: AssigneeExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        let expr = match parser.current_token().cloned() {
+        let token = parser.current_token();
+
+        let expr = match &token {
             Some(Token::Identifier { name, .. }) => {
+                let field_name = Identifier::from(name);
+
+                let span = parser.get_span(left_expr_span, &token.unwrap().span());
+
                 parser.next_token();
 
                 Ok(FieldAccessExpr {
                     object: Box::new(object),
-                    field_name: Identifier(name),
+                    field_name,
+                    span,
                 })
             }
             Some(Token::EOF) | None => {
