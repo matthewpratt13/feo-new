@@ -11,12 +11,12 @@ use crate::{
 
 impl ParseOperatorExpr for AssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let start_pos = &left_expr.span().start();
+
         let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
-
-        let start_pos = left_expr.span().start();
 
         let operator_token = &parser.current_token().cloned().unwrap_or(Token::EOF);
 
@@ -41,7 +41,7 @@ impl ParseOperatorExpr for AssignmentExpr {
 
         let end_pos = rhs.span().end();
 
-        let span = Span::new(&parser.stream.span().input(), start_pos, end_pos);
+        let span = Span::new(&parser.stream.span().input(), *start_pos, end_pos);
 
         let expr = AssignmentExpr {
             lhs,
@@ -56,6 +56,8 @@ impl ParseOperatorExpr for AssignmentExpr {
 
 impl ParseOperatorExpr for CompoundAssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let start_pos = &left_expr.span().start();
+
         let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -83,10 +85,15 @@ impl ParseOperatorExpr for CompoundAssignmentExpr {
 
         let rhs = parser.parse_value_expr(precedence)?;
 
+        let end_pos = rhs.span().end();
+
+        let span = Span::new(&parser.stream.span().input(), *start_pos, end_pos);
+
         let expr = CompoundAssignmentExpr {
             lhs,
             compound_assignment_op,
             rhs,
+            span,
         };
 
         Ok(Expression::CompoundAssignment(expr))
