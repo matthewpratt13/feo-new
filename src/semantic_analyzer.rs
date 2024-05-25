@@ -3,6 +3,7 @@ use crate::{
         BigUInt, Bytes, Expression, Float, Hash, Identifier, Int, Literal, PathRoot, Statement,
         Type, UInt,
     },
+    error::{CompilerError, SemanticErrorKind},
     parser::Module,
 };
 
@@ -12,13 +13,14 @@ mod symbol_table;
 
 struct SemanticAnalyzer {
     symbol_table: SymbolTable,
-    // errors: Vec<CompilerError<SemanticError>> // TODO: create `SemanticError`
+    errors: Vec<CompilerError<SemanticErrorKind>>,
 }
 
 impl SemanticAnalyzer {
     fn new() -> Self {
         SemanticAnalyzer {
             symbol_table: SymbolTable::new(),
+            errors: Vec::new(),
         }
     }
 

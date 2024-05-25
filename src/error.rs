@@ -8,6 +8,7 @@ use crate::span::Position;
 
 pub(crate) use self::lex_error::LexErrorKind;
 pub(crate) use self::parser_error::ParserErrorKind;
+pub(crate) use self::semantic_error::SemanticErrorKind;
 
 /// Generic error struct that encapsulates custom error kinds and provides the precise location
 /// of the error in the source code.
