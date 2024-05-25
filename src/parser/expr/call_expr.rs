@@ -2,11 +2,14 @@ use crate::{
     ast::{AssigneeExpr, CallExpr, Delimiter, Expression},
     error::ErrorsEmitted,
     parser::{collection, ParseOperatorExpr, Parser, Precedence},
+    span::{Span, Spanned},
     token::Token,
 };
 
 impl ParseOperatorExpr for CallExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let start_pos = &left_expr.span().start();
+
         let callee: AssigneeExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -30,10 +33,20 @@ impl ParseOperatorExpr for CallExpr {
 
         let args_opt = collection::get_expressions(parser, Precedence::Lowest, &open_paren)?;
 
-        match parser.current_token() {
+        let last_token = parser.current_token();
+
+        match &last_token {
             Some(Token::RParen { .. }) => {
+                let end_pos = last_token.unwrap().span().end();
+                let span = Span::new(&parser.stream.span().input(), *start_pos, end_pos);
+
                 parser.next_token();
-                Ok(Expression::Call(CallExpr { callee, args_opt }))
+
+                Ok(Expression::Call(CallExpr {
+                    callee,
+                    args_opt,
+                    span,
+                }))
             }
             _ => {
                 parser.log_unmatched_delimiter(&open_paren);
