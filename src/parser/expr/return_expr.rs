@@ -7,7 +7,9 @@ use crate::{
 
 impl ParseConstructExpr for ReturnExpr {
     fn parse(parser: &mut Parser) -> Result<ReturnExpr, ErrorsEmitted> {
-        let kw_return = if let Some(Token::Return { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_return = if let Some(Token::Return { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Return)
         } else {
@@ -20,6 +22,8 @@ impl ParseConstructExpr for ReturnExpr {
             _ => Some(Box::new(parser.parse_expression(Precedence::Lowest)?)),
         };
 
+        let span = parser.get_span_by_token(&first_token.unwrap());
+
         if let Some(Token::Semicolon { .. }) = parser.current_token() {
             parser.next_token();
         }
@@ -27,6 +31,7 @@ impl ParseConstructExpr for ReturnExpr {
         let expr = ReturnExpr {
             kw_return,
             expression_opt,
+            span,
         };
 
         Ok(expr)
