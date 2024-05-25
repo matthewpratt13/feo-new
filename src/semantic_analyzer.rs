@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{
     ast::{
         BigUInt, Bytes, Expression, Float, Hash, Identifier, Int, Literal, PathRoot, Statement,
