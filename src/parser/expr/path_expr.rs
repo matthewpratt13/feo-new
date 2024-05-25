@@ -18,7 +18,9 @@ impl ParseSimpleExpr for PathExpr {
 
         let mut tree: Vec<Identifier> = Vec::new();
 
-        let path_root = match parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let path_root = match &first_token {
             Some(Token::Identifier { name, .. }) => {
                 Ok(PathRoot::Identifier(Identifier::from(name)))
             }
@@ -56,6 +58,10 @@ impl ParseSimpleExpr for PathExpr {
             }
         }
 
+        let last_token = parser.peek_behind_by(1);
+
+        let span = parser.get_span(&first_token.unwrap().span(), &last_token.unwrap().span());
+
         let expr = PathExpr {
             path_root,
             tree_opt: {
@@ -64,6 +70,7 @@ impl ParseSimpleExpr for PathExpr {
                     false => Some(tree),
                 }
             },
+            span,
         };
 
         ////////////////////////////////////////////////////////////////////////////////
