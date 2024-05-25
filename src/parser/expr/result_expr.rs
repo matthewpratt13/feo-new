@@ -7,7 +7,9 @@ use crate::{
 
 impl ParseConstructExpr for ResultExpr {
     fn parse(parser: &mut Parser) -> Result<ResultExpr, ErrorsEmitted> {
-        let kw_ok_or_err = match parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_ok_or_err = match &first_token {
             Some(Token::Ok { .. }) => Ok(Keyword::Ok),
             Some(Token::Err { .. }) => Ok(Keyword::Err),
             _ => {
@@ -19,7 +21,7 @@ impl ParseConstructExpr for ResultExpr {
         parser.next_token();
 
         let expression = match parser.current_token() {
-            Some(Token::LParen { .. }) => Ok(Box::new(GroupedExpr::parse(parser)?)),
+            Some(Token::LParen { .. }) => Ok(GroupedExpr::parse(parser)?),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
@@ -30,9 +32,12 @@ impl ParseConstructExpr for ResultExpr {
             }
         }?;
 
+        let span = parser.get_span(&first_token.unwrap().span(), &expression.span);
+
         let expr = ResultExpr {
             kw_ok_or_err,
-            expression,
+            expression: Box::new(expression),
+            span,
         };
 
         Ok(expr)
