@@ -40,7 +40,7 @@ impl ParseConstructExpr for BlockExpr {
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_from_token(&first_token.unwrap());
+                let span = parser.get_span_by_token(&first_token.unwrap());
                 parser.next_token();
 
                 let expr = BlockExpr {

@@ -34,7 +34,7 @@ impl ParseConstructExpr for GroupedExpr {
         if let Some(Token::RParen { .. }) = parser.current_token() {
             let token = first_token.unwrap();
 
-            let span = parser.get_span_from_token(&token);
+            let span = parser.get_span_by_token(&token);
 
             let tuple_expr = TupleExpr {
                 tuple_elements: TupleElements {
@@ -60,7 +60,7 @@ impl ParseConstructExpr for GroupedExpr {
 
         match parser.current_token() {
             Some(Token::RParen { .. }) => {
-                let span = parser.get_span_from_token(&first_token.unwrap());
+                let span = parser.get_span_by_token(&first_token.unwrap());
 
                 parser.next_token();
 

@@ -7,7 +7,9 @@ use crate::{
 
 impl ParseControlExpr for IfExpr {
     fn parse(parser: &mut Parser) -> Result<IfExpr, ErrorsEmitted> {
-        let kw_if = if let Some(Token::If { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_if = if let Some(Token::If { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::If)
         } else {
@@ -41,12 +43,26 @@ impl ParseControlExpr for IfExpr {
 
         let (else_if_blocks_opt, trailing_else_block_opt) = parse_else_blocks(parser)?;
 
+        let span = match (&else_if_blocks_opt, &trailing_else_block_opt) {
+            (None, None) => parser.get_span_by_token(&first_token.unwrap()),
+            (None, Some(b)) => parser.get_span(&first_token.unwrap().span(), &b.span),
+            (Some(v), None) => match v.last().clone() {
+                Some(i) => {
+                    let expr = *i.clone();
+                    parser.get_span(&first_token.unwrap().span(), &expr.span)
+                }
+                None => parser.get_span_by_token(&first_token.unwrap()),
+            },
+            (Some(_), Some(b)) => parser.get_span(&first_token.unwrap().span(), &b.span),
+        };
+
         let expr = IfExpr {
             kw_if,
             condition,
             if_block,
             else_if_blocks_opt,
             trailing_else_block_opt,
+            span,
         };
 
         Ok(expr)
