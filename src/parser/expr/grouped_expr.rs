@@ -48,8 +48,6 @@ impl ParseConstructExpr for GroupedExpr {
 
             let span = parser.get_span(&token.span(), &inner_expression.span());
 
-            parser.next_token();
-
             return Ok(GroupedExpr {
                 inner_expression: Box::new(inner_expression),
                 span,
