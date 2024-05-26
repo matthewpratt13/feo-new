@@ -609,7 +609,16 @@ impl SemanticAnalyzer {
                 },
                 None => Ok(Type::UnitType(Unit)),
             },
-            Expression::Tuple(_) => todo!(),
+            Expression::Tuple(t) => {
+                let mut element_types: Vec<Type> = Vec::new();
+
+                for expr in t.tuple_elements.elements.iter() {
+                    let ty = self.analyze_expr(expr)?;
+                    element_types.push(ty)
+                }
+
+                Ok(Type::Tuple(element_types))
+            }
             Expression::Struct(_) => todo!(),
             Expression::Mapping(_) => todo!(),
             Expression::Block(_) => todo!(),
