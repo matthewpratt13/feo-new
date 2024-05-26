@@ -166,7 +166,7 @@ impl SemanticAnalyzer {
                     }
                 })?)
             }
-            Expression::TypeCast(_) => todo!(),
+            Expression::TypeCast(tc) => Ok(*tc.new_type.clone()),
             Expression::Binary(b) => {
                 let lhs_clone = *b.lhs.clone();
                 let rhs_clone = *b.rhs.clone();
