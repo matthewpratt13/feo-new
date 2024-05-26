@@ -859,7 +859,8 @@ impl SemanticAnalyzer {
                     Some(v) => match v.first() {
                         Some(_) => {
                             for block in v.iter() {
-                                let block_type = self.analyze_expr(&Expression::If(*block.clone()))?;
+                                let block_type =
+                                    self.analyze_expr(&Expression::If(*block.clone()))?;
 
                                 if block_type != if_block_type {
                                     return Err(SemanticErrorKind::TypeMismatch {
@@ -898,7 +899,54 @@ impl SemanticAnalyzer {
                 Ok(if_block_type)
             }
 
-            Expression::Match(_) => todo!(),
+            Expression::Match(m) => {
+                let scrutinee_type =
+                    self.analyze_expr(&Expression::try_from(m.scrutinee.clone()).map_err(
+                        |_| SemanticErrorKind::ConversionError {
+                            from: format!("`{:?}`", &m.scrutinee),
+                            into: "Expression".to_string(),
+                        },
+                    )?)?;
+
+                let match_arms_type = match &m.match_arms_opt {
+                    Some(v) => match v.first() {
+                        Some(ma) => {
+                            for arm in v.iter() {
+                                let arm_type: Type = todo!();
+
+                                if arm_type != scrutinee_type {
+                                    return Err(SemanticErrorKind::TypeMismatch {
+                                        expected: scrutinee_type.to_string(),
+                                        found: arm_type.to_string(),
+                                    });
+                                }
+                            }
+
+                            scrutinee_type.clone()
+                        }
+                        None => Type::UnitType(Unit),
+                    },
+                    None => Type::UnitType(Unit),
+                };
+
+                let final_arm_type: Type = todo!();
+
+                if match_arms_type != scrutinee_type {
+                    return Err(SemanticErrorKind::TypeMismatch {
+                        expected: scrutinee_type.to_string(),
+                        found: match_arms_type.to_string(),
+                    });
+                }
+
+                if final_arm_type != scrutinee_type {
+                    return Err(SemanticErrorKind::TypeMismatch {
+                        expected: scrutinee_type.to_string(),
+                        found: final_arm_type.to_string(),
+                    });
+                }
+
+                Ok(scrutinee_type)
+            }
 
             Expression::ForIn(_) => todo!(),
 
