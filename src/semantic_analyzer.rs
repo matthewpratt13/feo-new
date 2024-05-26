@@ -69,7 +69,7 @@ impl SemanticAnalyzer {
                             let value = Expression::try_from(v.clone()).map_err(|_| {
                                 self.log_error(
                                     SemanticErrorKind::ConversionError {
-                                        from: format!("{:?}", v),
+                                        from: format!("`{:?}`", v),
                                         into: "`Expression`".to_string(),
                                     },
                                     &v.span(),
@@ -102,7 +102,45 @@ impl SemanticAnalyzer {
                     self.symbol_table
                         .insert(c.constant_name.clone(), *c.constant_type.clone());
                 }
-                Item::StaticVarDecl(_) => todo!(),
+                Item::StaticVarDecl(s) => {
+                    let assignee_type = match &s.assignee_opt {
+                        Some(a) => {
+                            let assignee = Expression::try_from(*a.clone()).map_err(|_| {
+                                self.log_error(
+                                    SemanticErrorKind::ConversionError {
+                                        from: format!("`{:?}`", a),
+                                        into: "`Expression`".to_string(),
+                                    },
+                                    &a.span(),
+                                );
+                                ErrorsEmitted
+                            })?;
+
+                            self.analyze_expr(&assignee).map_err(|e| {
+                                self.log_error(e, &a.span());
+                                ErrorsEmitted
+                            })?
+                        }
+
+                        None => Type::UnitType(Unit),
+                    };
+
+                    let var_type = s.var_type.clone();
+
+                    if assignee_type != var_type {
+                        self.log_error(
+                            SemanticErrorKind::TypeMismatch {
+                                expected: var_type.to_string(),
+                                found: assignee_type.to_string(),
+                            },
+                            &s.assignee_opt.clone().unwrap().span(),
+                        );
+                        return Err(ErrorsEmitted);
+                    }
+
+                    self.symbol_table
+                        .insert(s.var_name.clone(), s.var_type.clone());
+                }
                 Item::ModuleItem(m) => {
                     let ty = PathType {
                         path_root: PathRoot::Identifier(m.module_name.clone()),
