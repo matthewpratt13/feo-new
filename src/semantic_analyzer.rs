@@ -570,7 +570,45 @@ impl SemanticAnalyzer {
                 underscore: Identifier::from("_"),
             })),
             Expression::Closure(_) => todo!(),
-            Expression::Array(_) => todo!(),
+            Expression::Array(a) => match &a.elements_opt {
+                Some(v) => match v.first() {
+                    Some(e) => {
+                        let mut elem_count = 0u128;
+
+                        let first_elem_type = self.analyze_expr(e)?;
+
+                        elem_count += 1;
+
+                        for elem in v.iter().skip(1) {
+                            let elem_type = self.analyze_expr(elem)?;
+
+                            elem_count += 1;
+
+                            if elem_type != first_elem_type {
+                                return Err(SemanticErrorKind::TypeMismatch {
+                                    expected: first_elem_type.to_string(),
+                                    found: elem_type.to_string(),
+                                });
+                            }
+                        }
+
+                        Ok(Type::Array {
+                            element_type: Box::new(first_elem_type),
+                            num_elements: UInt::U128(elem_count),
+                        })
+                    }
+
+                    None => {
+                        let element_type = Type::UnitType(Unit);
+                        let array = Type::Array {
+                            element_type: Box::new(element_type),
+                            num_elements: UInt::U128(0u128),
+                        };
+                        return Ok(array);
+                    }
+                },
+                None => Ok(Type::UnitType(Unit)),
+            },
             Expression::Tuple(_) => todo!(),
             Expression::Struct(_) => todo!(),
             Expression::Mapping(_) => todo!(),
