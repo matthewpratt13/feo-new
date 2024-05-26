@@ -5,7 +5,7 @@ mod symbol_table;
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Expression, Float, Hash, Identifier, InferredType, Int,
-        Literal, PathRoot, Statement, Str, Type, UInt, Unit,
+        Item, Literal, PathRoot, Statement, Str, Type, UInt, Unit,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
@@ -49,7 +49,25 @@ impl SemanticAnalyzer {
                 self.symbol_table.insert(name, expr_type);
             }
 
-            Statement::Item(_) => (),
+            Statement::Item(i) => match i {
+                Item::ImportDecl(_) => todo!(),
+                Item::AliasDecl(a) => match &a.original_type_opt {
+                    Some(t) => self.symbol_table.insert(a.alias_name.clone(), t.clone()),
+                    None => self
+                        .symbol_table
+                        .insert(a.alias_name.clone(), Type::UnitType(Unit)),
+                },
+                Item::ConstantDecl(_) => todo!(),
+                Item::StaticVarDecl(_) => todo!(),
+                Item::ModuleItem(_) => todo!(),
+                Item::TraitDef(_) => todo!(),
+                Item::EnumDef(_) => todo!(),
+                Item::StructDef(_) => todo!(),
+                Item::TupleStructDef(_) => todo!(),
+                Item::InherentImplDef(_) => todo!(),
+                Item::TraitImplDef(_) => todo!(),
+                Item::FunctionItem(_) => todo!(),
+            },
 
             Statement::Expression(expr) => match self.analyze_expr(expr) {
                 Ok(_) => (),
