@@ -1,7 +1,7 @@
 use crate::{
-    ast::{Delimiter, MappingExpr, MappingPair},
+    ast::{Delimiter, IdentifierPatt, MappingExpr, MappingPair},
     error::ErrorsEmitted,
-    parser::{collection, ParseConstructExpr, Parser, Precedence},
+    parser::{collection, ParseConstructExpr, ParsePattern, Parser, Precedence},
     token::Token,
 };
 
@@ -40,7 +40,7 @@ impl ParseConstructExpr for MappingExpr {
 }
 
 fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted> {
-    let key = parser.parse_pattern()?;
+    let key = IdentifierPatt::parse_patt(parser)?;
 
     match parser.current_token() {
         Some(Token::Colon { .. }) => {

@@ -624,24 +624,37 @@ impl SemanticAnalyzer {
             Expression::Mapping(m) => match &m.pairs_opt {
                 Some(v) => match v.first() {
                     Some(p) => {
-                        let key_type = p.key;
+                        let key_type = match self.symbol_table.get(&p.key.name.clone()) {
+                            Some(t) => Ok(t.clone()),
+                            _ => Err(SemanticErrorKind::UndefinedVariable {
+                                name: p.key.name.clone(),
+                            }),
+                        }?;
+
                         let value_type = self.analyze_expr(&*p.value.clone())?;
 
                         for pair in v.iter().skip(1) {
-                            let pair_key = pair.key;
-                            let pair_value = self.analyze_expr(&*pair.value.clone())?;
+                            let pair_key_type = match self.symbol_table.get(&pair.key.name.clone())
+                            {
+                                Some(t) => Ok(t.clone()),
+                                _ => Err(SemanticErrorKind::UndefinedVariable {
+                                    name: p.key.name.clone(),
+                                }),
+                            }?;
 
-                            if (pair_key, pair_value) != (key_type, value_type) {
+                            let pair_value_type = self.analyze_expr(&*pair.value.clone())?;
+
+                            if (&pair_key_type, &pair_value_type) != (&key_type, &value_type) {
                                 return Err(SemanticErrorKind::TypeMismatch {
                                     expected: format!(
-                                        "{{ key: {}, value: {} }}",
-                                        key_type.to_string(),
-                                        value_type.to_string()
+                                        "{{ key: `{}`, value: `{}` }}",
+                                        &key_type.to_string(),
+                                        &value_type.to_string()
                                     ),
                                     found: format!(
-                                        "{{ key: {}, value: {} }}",
-                                        pair_key.to_string(),
-                                        pair_value.to_string()
+                                        "{{ key: `{}`, value: `{}` }}",
+                                        &pair_key_type.to_string(),
+                                        &pair_value_type.to_string()
                                     ),
                                 });
                             }
