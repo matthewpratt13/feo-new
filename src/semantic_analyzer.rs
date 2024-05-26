@@ -64,7 +64,7 @@ impl SemanticAnalyzer {
                 let name = match &p.tree_opt {
                     Some(v) => match v.last() {
                         Some(i) => i.clone(),
-                        None => match &p.path_root {
+                        _ => match &p.path_root {
                             PathRoot::Identifier(i) => i.clone(),
                             PathRoot::SelfType(_) => Identifier::from("Self"),
                             PathRoot::SelfKeyword => Identifier::from("self"),
@@ -81,7 +81,21 @@ impl SemanticAnalyzer {
                         },
                     },
 
-                    _ => Identifier::from(""),
+                    _ => match &p.path_root {
+                        PathRoot::Identifier(i) => i.clone(),
+                        PathRoot::SelfType(_) => Identifier::from("Self"),
+                        PathRoot::SelfKeyword => Identifier::from("self"),
+                        PathRoot::Package => {
+                            return Err(SemanticErrorKind::InvalidPathIdentifier {
+                                name: Identifier::from("package"),
+                            })
+                        }
+                        PathRoot::Super => {
+                            return Err(SemanticErrorKind::InvalidPathIdentifier {
+                                name: Identifier::from("super"),
+                            })
+                        }
+                    },
                 };
 
                 match self.symbol_table.get(&name) {
@@ -144,55 +158,91 @@ impl SemanticAnalyzer {
                 let lhs_type =
                     self.analyze_expr(&Expression::try_from(*b.lhs.clone()).map_err(|_| {
                         SemanticErrorKind::ConversionError {
-                            from: format!("{:?}", lhs_clone),
+                            from: format!("{:?}", &lhs_clone),
                             into: "`Expression`".to_string(),
                         }
                     })?)?;
                 let rhs_type =
                     self.analyze_expr(&Expression::try_from(*b.rhs.clone()).map_err(|_| {
                         SemanticErrorKind::ConversionError {
-                            from: format!("{:?}", rhs_clone),
+                            from: format!("{:?}", &rhs_clone),
                             into: "`Expression`".to_string(),
                         }
                     })?)?;
                 match (&lhs_type, &rhs_type) {
                     (Type::I32(i), Type::I32(_)) => Ok(Type::I32(*i)),
-                    (Type::I32(_), _) => todo!(),
+                    (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "i32".to_string(),
+                        found: t.to_string(),
+                    }),
                     (Type::I64(i), Type::I32(_) | Type::I64(_)) => Ok(Type::I64(*i)),
-                    (Type::I64(_), _) => todo!(),
+                    (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "i64".to_string(),
+                        found: t.to_string(),
+                    }),
                     (Type::I128(i), Type::I32(_) | Type::I64(_) | Type::I128(_)) => {
                         Ok(Type::I128(*i))
                     }
-                    (Type::I128(_), _) => todo!(),
+                    (Type::I128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "i128".to_string(),
+                        found: t.to_string(),
+                    }),
 
                     (Type::U8(u), Type::U8(_)) => Ok(Type::U8(*u)),
-                    (Type::U8(_), _) => todo!(),
+                    (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "u8".to_string(),
+                        found: t.to_string(),
+                    }),
                     (Type::U16(u), Type::U8(_) | Type::U16(_)) => Ok(Type::U16(*u)),
-                    (Type::U16(_), _) => todo!(),
+                    (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "u16".to_string(),
+                        found: t.to_string(),
+                    }),
                     (Type::U32(u), Type::U8(_) | Type::U16(_) | Type::U32(_)) => Ok(Type::U32(*u)),
-                    (Type::U32(_), _) => todo!(),
+                    (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "u32".to_string(),
+                        found: t.to_string(),
+                    }),
                     (Type::U64(u), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
                         Ok(Type::U64(*u))
                     }
-                    (Type::U64(_), _) => todo!(),
+                    (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "u64".to_string(),
+                        found: t.to_string(),
+                    }),
                     (
                         Type::U128(u),
                         Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) | Type::U128(_),
                     ) => Ok(Type::U128(*u)),
-                    (Type::U128(_), _) => todo!(),
+                    (Type::U128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "u128".to_string(),
+                        found: t.to_string(),
+                    }),
                     (Type::U256(u), Type::U256(_)) => Ok(Type::U256(*u)),
-                    (Type::U256(_), _) => todo!(),
+                    (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "u256".to_string(),
+                        found: t.to_string(),
+                    }),
                     (Type::U512(u), Type::U256(_) | Type::U512(_)) => Ok(Type::U512(*u)),
-                    (Type::U512(_), _) => todo!(),
+                    (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "u512".to_string(),
+                        found: t.to_string(),
+                    }),
 
                     (Type::F32(f), Type::F32(_)) => Ok(Type::F32(*f)),
-                    (Type::F32(_), _) => todo!(),
+                    (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "f32".to_string(),
+                        found: t.to_string(),
+                    }),
                     (Type::F64(f), Type::F32(_) | Type::F64(_)) => Ok(Type::F64(*f)),
-                    (Type::F64(_), _) => todo!(),
+                    (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        expected: "f64".to_string(),
+                        found: t.to_string(),
+                    }),
 
                     _ => Err(SemanticErrorKind::TypeMismatch {
                         expected: "matching numeric operands".to_string(),
-                        found: format!("`({:?}, {:?})`", lhs_type, rhs_type),
+                        found: format!("`({:?}, {:?})`", &lhs_type, &rhs_type),
                     }),
                 }
             }
