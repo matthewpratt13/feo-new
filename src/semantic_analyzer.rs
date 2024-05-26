@@ -852,7 +852,51 @@ impl SemanticAnalyzer {
                 None => Ok(Type::UnitType(Unit)),
             },
 
-            Expression::If(_) => todo!(),
+            Expression::If(i) => {
+                let if_block_type = self.analyze_expr(&Expression::Block(*i.if_block.clone()))?;
+
+                let else_if_blocks_type = match &i.else_if_blocks_opt {
+                    Some(v) => match v.first() {
+                        Some(_) => {
+                            for block in v.iter() {
+                                let block_type = self.analyze_expr(&Expression::If(*block.clone()))?;
+
+                                if block_type != if_block_type {
+                                    return Err(SemanticErrorKind::TypeMismatch {
+                                        expected: if_block_type.to_string(),
+                                        found: block_type.to_string(),
+                                    });
+                                }
+                            }
+
+                            if_block_type.clone()
+                        }
+                        None => Type::UnitType(Unit),
+                    },
+                    None => Type::UnitType(Unit),
+                };
+
+                let trailing_else_block_type = match &i.trailing_else_block_opt {
+                    Some(b) => self.analyze_expr(&Expression::Block(b.clone()))?,
+                    None => Type::UnitType(Unit),
+                };
+
+                if else_if_blocks_type != if_block_type {
+                    return Err(SemanticErrorKind::TypeMismatch {
+                        expected: if_block_type.to_string(),
+                        found: else_if_blocks_type.to_string(),
+                    });
+                }
+
+                if trailing_else_block_type != if_block_type {
+                    return Err(SemanticErrorKind::TypeMismatch {
+                        expected: if_block_type.to_string(),
+                        found: trailing_else_block_type.to_string(),
+                    });
+                }
+
+                Ok(if_block_type)
+            }
 
             Expression::Match(_) => todo!(),
 
