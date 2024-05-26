@@ -46,7 +46,7 @@ impl SemanticAnalyzer {
                 })?;
                 self.symbol_table.insert(name, expr_type);
             }
-            Statement::Item(_) => todo!(),
+            Statement::Item(_) => (),
             Statement::Expression(expr) => match self.analyze_expr(expr) {
                 Ok(_) => (),
                 Err(err) => {
@@ -678,7 +678,20 @@ impl SemanticAnalyzer {
                 },
                 None => Ok(Type::UnitType(Unit)),
             },
-            Expression::Block(_) => todo!(),
+            Expression::Block(b) => match &b.statements_opt {
+                Some(v) => match v.last() {
+                    Some(s) => match s {
+                        Statement::Let(ls) => match &ls.value_opt {
+                            Some(e) => self.analyze_expr(e),
+                            None => Ok(Type::UnitType(Unit)),
+                        },
+                        Statement::Item(_) => Ok(Type::UnitType(Unit)),
+                        Statement::Expression(e) => self.analyze_expr(e),
+                    },
+                    None => Ok(Type::UnitType(Unit)),
+                },
+                None => Ok(Type::UnitType(Unit)),
+            },
             Expression::If(_) => todo!(),
             Expression::Match(_) => todo!(),
             Expression::ForIn(_) => todo!(),
