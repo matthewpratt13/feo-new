@@ -604,7 +604,8 @@ impl SemanticAnalyzer {
                             element_type: Box::new(element_type),
                             num_elements: UInt::U128(0u128),
                         };
-                        return Ok(array);
+
+                        Ok(array)
                     }
                 },
                 None => Ok(Type::UnitType(Unit)),
@@ -620,7 +621,50 @@ impl SemanticAnalyzer {
                 Ok(Type::Tuple(element_types))
             }
             Expression::Struct(_) => todo!(),
-            Expression::Mapping(_) => todo!(),
+            Expression::Mapping(m) => match &m.pairs_opt {
+                Some(v) => match v.first() {
+                    Some(p) => {
+                        let key_type = p.key;
+                        let value_type = self.analyze_expr(&*p.value.clone())?;
+
+                        for pair in v.iter().skip(1) {
+                            let pair_key = pair.key;
+                            let pair_value = self.analyze_expr(&*pair.value.clone())?;
+
+                            if (pair_key, pair_value) != (key_type, value_type) {
+                                return Err(SemanticErrorKind::TypeMismatch {
+                                    expected: format!(
+                                        "{{ key: {}, value: {} }}",
+                                        key_type.to_string(),
+                                        value_type.to_string()
+                                    ),
+                                    found: format!(
+                                        "{{ key: {}, value: {} }}",
+                                        pair_key.to_string(),
+                                        pair_value.to_string()
+                                    ),
+                                });
+                            }
+                        }
+
+                        Ok(Type::Mapping {
+                            key_type: Box::new(key_type),
+                            value_type: Box::new(value_type),
+                        })
+                    }
+
+                    None => {
+                        let key_type = Box::new(Type::UnitType(Unit));
+                        let value_type = Box::new(Type::UnitType(Unit));
+
+                        Ok(Type::Mapping {
+                            key_type,
+                            value_type,
+                        })
+                    }
+                },
+                None => Ok(Type::UnitType(Unit)),
+            },
             Expression::Block(_) => todo!(),
             Expression::If(_) => todo!(),
             Expression::Match(_) => todo!(),
