@@ -9,7 +9,7 @@ use crate::{
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
-    span::Spanned,
+    span::{Span, Spanned},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
@@ -42,7 +42,7 @@ impl SemanticAnalyzer {
                 let value = s.value_opt.clone().unwrap();
 
                 let expr_type = self.analyze_expr(&value).map_err(|e| {
-                    self.log_error(e, &value);
+                    self.log_error(e, &value.span());
                     ErrorsEmitted
                 })?;
 
@@ -58,12 +58,50 @@ impl SemanticAnalyzer {
                             path_root: PathRoot::Identifier(a.alias_name.clone()),
                             tree_opt: None,
                         };
-    
-                        self.symbol_table.insert(a.alias_name.clone(), Type::UserDefined(ty));
 
-                    },
+                        self.symbol_table
+                            .insert(a.alias_name.clone(), Type::UserDefined(ty));
+                    }
                 },
-                Item::ConstantDecl(_) => todo!(),
+                Item::ConstantDecl(c) => {
+                    let value_type = match &c.value_opt {
+                        Some(v) => {
+                            let value = Expression::try_from(v.clone()).map_err(|_| {
+                                self.log_error(
+                                    SemanticErrorKind::ConversionError {
+                                        from: format!("{:?}", v),
+                                        into: "`Expression`".to_string(),
+                                    },
+                                    &v.span(),
+                                );
+                                ErrorsEmitted
+                            })?;
+
+                            self.analyze_expr(&value).map_err(|e| {
+                                self.log_error(e, &v.span());
+                                ErrorsEmitted
+                            })?
+                        }
+
+                        None => Type::UnitType(Unit),
+                    };
+
+                    let constant_type = *c.constant_type.clone();
+
+                    if value_type != constant_type {
+                        self.log_error(
+                            SemanticErrorKind::TypeMismatch {
+                                expected: constant_type.to_string(),
+                                found: value_type.to_string(),
+                            },
+                            &c.value_opt.clone().unwrap().span(),
+                        );
+                        return Err(ErrorsEmitted);
+                    }
+
+                    self.symbol_table
+                        .insert(c.constant_name.clone(), *c.constant_type.clone());
+                }
                 Item::StaticVarDecl(_) => todo!(),
                 Item::ModuleItem(m) => {
                     let ty = PathType {
@@ -71,21 +109,62 @@ impl SemanticAnalyzer {
                         tree_opt: None,
                     };
 
-                    self.symbol_table.insert(m.module_name.clone(), Type::UserDefined(ty));
+                    self.symbol_table
+                        .insert(m.module_name.clone(), Type::UserDefined(ty));
                 }
-                Item::TraitDef(_) => todo!(),
-                Item::EnumDef(_) => todo!(),
-                Item::StructDef(_) => todo!(),
-                Item::TupleStructDef(_) => todo!(),
+                Item::TraitDef(t) => {
+                    let ty = PathType {
+                        path_root: PathRoot::Identifier(t.trait_name.clone()),
+                        tree_opt: None,
+                    };
+
+                    self.symbol_table
+                        .insert(t.trait_name.clone(), Type::UserDefined(ty));
+                }
+                Item::EnumDef(e) => {
+                    let ty = PathType {
+                        path_root: PathRoot::Identifier(e.enum_name.clone()),
+                        tree_opt: None,
+                    };
+
+                    self.symbol_table
+                        .insert(e.enum_name.clone(), Type::UserDefined(ty));
+                }
+                Item::StructDef(s) => {
+                    let ty = PathType {
+                        path_root: PathRoot::Identifier(s.struct_name.clone()),
+                        tree_opt: None,
+                    };
+
+                    self.symbol_table
+                        .insert(s.struct_name.clone(), Type::UserDefined(ty));
+                }
+                Item::TupleStructDef(ts) => {
+                    let ty = PathType {
+                        path_root: PathRoot::Identifier(ts.struct_name.clone()),
+                        tree_opt: None,
+                    };
+
+                    self.symbol_table
+                        .insert(ts.struct_name.clone(), Type::UserDefined(ty));
+                }
                 Item::InherentImplDef(_) => todo!(),
                 Item::TraitImplDef(_) => todo!(),
-                Item::FunctionItem(_) => todo!(),
+                Item::FunctionItem(f) => {
+                    let ty = PathType {
+                        path_root: PathRoot::Identifier(f.function_name.clone()),
+                        tree_opt: None,
+                    };
+
+                    self.symbol_table
+                        .insert(f.function_name.clone(), Type::UserDefined(ty));
+                }
             },
 
             Statement::Expression(expr) => match self.analyze_expr(expr) {
                 Ok(_) => (),
                 Err(err) => {
-                    self.log_error(err, expr);
+                    self.log_error(err, &expr.span());
                     return Err(ErrorsEmitted);
                 }
             },
@@ -984,9 +1063,7 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn log_error(&mut self, error_kind: SemanticErrorKind, expression: &Expression) {
-        let span = expression.span();
-
+    fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {
         let error = CompilerError::new(error_kind, span.start(), &span.input());
 
         self.errors.push(error);
