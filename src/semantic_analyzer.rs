@@ -150,7 +150,14 @@ impl SemanticAnalyzer {
             Expression::Unwrap(_) => todo!(),
             Expression::Unary(_) => todo!(),
             Expression::Reference(_) => todo!(),
-            Expression::Dereference(_) => todo!(),
+            Expression::Dereference(d) => {
+                self.analyze_expr(&Expression::try_from(d.assignee_expr.clone()).map_err(|_| {
+                    SemanticErrorKind::ConversionError {
+                        from: format!("`{:?}`", d),
+                        into: "`Expression`".to_string(),
+                    }
+                })?)
+            }
             Expression::TypeCast(_) => todo!(),
             Expression::Binary(b) => {
                 let lhs_clone = *b.lhs.clone();
