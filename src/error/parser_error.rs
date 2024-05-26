@@ -59,6 +59,11 @@ pub enum ParserErrorKind {
         found: String,
     },
 
+    ConversionError {
+        from: String,
+        into: String,
+    },
+
     #[default]
     UnknownError,
 }
@@ -126,6 +131,10 @@ impl fmt::Display for ParserErrorKind {
                 "unexpected range operator. Expected {expected}, found {found}"
             ),
             ParserErrorKind::UnknownError => write!(f, "unknown parsing error"),
+
+            ParserErrorKind::ConversionError { from, into } => {
+                write!(f, "conversion error. Unable to convert {from} into {into}")
+            }
         }
     }
 }

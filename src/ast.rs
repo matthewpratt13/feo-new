@@ -598,11 +598,18 @@ impl TryFrom<Expression> for ValueExpr {
 }
 
 impl TryFrom<ValueExpr> for Expression {
-    // TODO: map error to `ParserErrorKind::ConversionError`
-    type Error = String;
+    type Error = ParserErrorKind;
 
     fn try_from(value: ValueExpr) -> Result<Self, Self::Error> {
-        value.try_into()
+        let value_clone = value.clone();
+
+        match <ValueExpr as TryInto<Expression>>::try_into(value) {
+            Ok(expr) => Ok(expr),
+            Err(_) => Err(ParserErrorKind::ConversionError {
+                from: format!("`{:?}`", value_clone),
+                into: "`Expression`".to_string(),
+            }),
+        }
     }
 }
 
@@ -755,8 +762,15 @@ impl TryFrom<AssigneeExpr> for Expression {
     type Error = ParserErrorKind;
 
     fn try_from(value: AssigneeExpr) -> Result<Self, Self::Error> {
-        // TODO: map error to `ParserErrorKind::ConversionError`
-        value.try_into()
+        let value_clone = value.clone();
+
+        match <AssigneeExpr as TryInto<Expression>>::try_into(value) {
+            Ok(expr) => Ok(expr),
+            Err(_) => Err(ParserErrorKind::ConversionError {
+                from: format!("{:?}", value_clone),
+                into: "`Expression`".to_string(),
+            }),
+        }
     }
 }
 

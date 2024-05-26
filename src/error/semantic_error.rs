@@ -13,11 +13,21 @@ pub enum SemanticErrorKind {
 
     TypeMismatch {
         expected: String,
-        found: Identifier,
+        found: String,
+    },
+
+    TypeMismatchBinaryExpr {
+        expected: String,
+        found: String,
     },
 
     UndefinedVariable {
         name: Identifier,
+    },
+
+    UnexpectedType {
+        expected: String,
+        found: String,
     },
 
     InvalidPathIdentifier {
@@ -26,6 +36,11 @@ pub enum SemanticErrorKind {
 
     UndefinedPath {
         name: Identifier,
+    },
+
+    ConversionError {
+        from: String,
+        into: String,
     },
 
     #[default]
@@ -41,6 +56,15 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::TypeMismatch { expected, found } => {
                 write!(f, "type mismatch. Expected {expected}, found {found}")
             }
+            SemanticErrorKind::TypeMismatchBinaryExpr { expected, found } => write!(
+                f,
+                "type mismatch in binary expression. Expected `{expected}`, found: `{found}`"
+            ),
+
+            SemanticErrorKind::UnexpectedType { expected, found } => {
+                write!(f, "unexpected type. Expected {expected}, found {found}")
+            }
+
             SemanticErrorKind::UndefinedVariable { name } => {
                 write!(f, "undefined variable: {name}",)
             }
@@ -48,6 +72,10 @@ impl fmt::Display for SemanticErrorKind {
                 write!(f, "invalid path identifier: {name}")
             }
             SemanticErrorKind::UndefinedPath { name } => write!(f, "undefined path: {name}"),
+
+            SemanticErrorKind::ConversionError { from, into } => {
+                write!(f, "conversion error. Unable to convert {from} into {into}")
+            }
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
         }

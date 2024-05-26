@@ -5,8 +5,9 @@ use crate::{
         BigUInt, Bytes, Expression, Float, Hash, Identifier, Int, Literal, PathRoot, Statement,
         Type, UInt,
     },
-    error::{CompilerError, SemanticErrorKind},
+    error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
+    span::Spanned,
 };
 
 use self::symbol_table::SymbolTable;
@@ -26,42 +27,57 @@ impl SemanticAnalyzer {
         }
     }
 
-    // TODO: change error case type to `CompilerError<SemanticError>`
-    fn analyze(&mut self, module: &Module) -> Result<(), String> {
+    fn analyze(&mut self, module: &Module) -> Result<(), ErrorsEmitted> {
         for s in &module.statements {
             self.analyze_stmt(s)?;
         }
         Ok(())
     }
 
-    // TODO: change error case type to `CompilerError<SemanticError>`
-    fn analyze_stmt(&mut self, statement: &Statement) -> Result<(), String> {
+    fn analyze_stmt(&mut self, statement: &Statement) -> Result<(), ErrorsEmitted> {
         match statement {
             Statement::Let(s) => {
                 let name = s.assignee.name.clone();
                 let value = s.value_opt.clone().unwrap();
-                let expr_type = self.analyze_expr(&value)?;
+                let expr_type = self.analyze_expr(&value).map_err(|e| {
+                    self.log_error(e, &value);
+                    ErrorsEmitted
+                })?;
                 self.symbol_table.insert(name, expr_type);
             }
-            Statement::Item(i) => todo!(),
-            Statement::Expression(e) => {
-                self.analyze_expr(e)?;
-            }
+            Statement::Item(_) => todo!(),
+            Statement::Expression(expr) => match self.analyze_expr(expr) {
+                Ok(_) => (),
+                Err(err) => {
+                    self.log_error(err, expr);
+                    return Err(ErrorsEmitted);
+                }
+            },
         }
+
         Ok(())
     }
 
-    // TODO: change error case type to `CompilerError<SemanticError>`
-    fn analyze_expr(&mut self, expression: &Expression) -> Result<Type, String> {
+    fn analyze_expr(&mut self, expression: &Expression) -> Result<Type, SemanticErrorKind> {
         match expression {
             Expression::Path(p) => {
                 let name = match &p.tree_opt {
                     Some(v) => match v.last() {
                         Some(i) => i.clone(),
                         None => match &p.path_root {
-                            PathRoot::SelfType(_) => Identifier::from("Self"),
                             PathRoot::Identifier(i) => i.clone(),
-                            _ => return Err(format!("invalid path identifier")),
+                            PathRoot::SelfType(_) => Identifier::from("Self"),
+                            PathRoot::SelfKeyword => Identifier::from("self"),
+                            PathRoot::Package => {
+                                return Err(SemanticErrorKind::InvalidPathIdentifier {
+                                    name: Identifier::from("package"),
+                                })
+                            }
+                            PathRoot::Super => {
+                                return Err(SemanticErrorKind::InvalidPathIdentifier {
+                                    name: Identifier::from("super"),
+                                })
+                            }
                         },
                     },
 
@@ -70,7 +86,7 @@ impl SemanticAnalyzer {
 
                 match self.symbol_table.get(&name) {
                     Some(t) => Ok(t.clone()),
-                    None => Err(format!("undefined path: `{}`", name)),
+                    None => Err(SemanticErrorKind::UndefinedPath { name }),
                 }
             }
             Expression::Literal(l) => match l {
@@ -122,22 +138,41 @@ impl SemanticAnalyzer {
             Expression::Dereference(_) => todo!(),
             Expression::TypeCast(_) => todo!(),
             Expression::Binary(b) => {
-                let lhs_type = self.analyze_expr(&Expression::try_from(*b.lhs.clone())?)?;
-                let rhs_type = self.analyze_expr(&Expression::try_from(*b.rhs.clone())?)?;
-                match (lhs_type, rhs_type) {
+                let lhs_clone = *b.lhs.clone();
+                let rhs_clone = *b.rhs.clone();
+
+                let lhs_type =
+                    self.analyze_expr(&Expression::try_from(*b.lhs.clone()).map_err(|_| {
+                        SemanticErrorKind::ConversionError {
+                            from: format!("{:?}", lhs_clone),
+                            into: "`Expression`".to_string(),
+                        }
+                    })?)?;
+                let rhs_type =
+                    self.analyze_expr(&Expression::try_from(*b.rhs.clone()).map_err(|_| {
+                        SemanticErrorKind::ConversionError {
+                            from: format!("{:?}", rhs_clone),
+                            into: "`Expression`".to_string(),
+                        }
+                    })?)?;
+                match (&lhs_type, &rhs_type) {
                     (
                         Type::I32(i) | Type::I64(i) | Type::I128(i),
                         Type::I32(_) | Type::I64(_) | Type::I128(_),
-                    ) => Ok(Type::I128(i)),
+                    ) => Ok(Type::I128(*i)),
                     (
                         Type::U8(u) | Type::U16(u) | Type::U32(u) | Type::U64(u) | Type::U128(u),
                         Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) | Type::U128(_),
-                    ) => Ok(Type::U128(u)),
+                    ) => Ok(Type::U128(*u)),
                     (Type::U256(ui) | Type::U512(ui), Type::U256(_) | Type::U512(_)) => {
-                        Ok(Type::U512(ui))
+                        Ok(Type::U512(*ui))
                     }
-                    (Type::F32(f) | Type::F64(f), Type::F32(_) | Type::F64(_)) => Ok(Type::F64(f)),
-                    _ => Err(format!("type error in binary operation")),
+                    (Type::F32(f) | Type::F64(f), Type::F32(_) | Type::F64(_)) => Ok(Type::F64(*f)),
+
+                    _ => Err(SemanticErrorKind::TypeMismatch {
+                        expected: "matching numeric operands".to_string(),
+                        found: format!("`({:?}, {:?})`", lhs_type, rhs_type),
+                    }),
                 }
             }
             Expression::Comparison(_) => todo!(),
@@ -163,5 +198,13 @@ impl SemanticAnalyzer {
             Expression::NoneExpr(_) => todo!(),
             Expression::ResultExpr(_) => todo!(),
         }
+    }
+
+    fn log_error(&mut self, error_kind: SemanticErrorKind, expression: &Expression) {
+        let span = expression.span();
+
+        let error = CompilerError::new(error_kind, span.start(), &span.input());
+
+        self.errors.push(error);
     }
 }
