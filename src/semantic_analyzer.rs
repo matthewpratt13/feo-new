@@ -2,8 +2,8 @@
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, Expression, Float, Hash, Identifier, Int, Literal,
-        PathRoot, Statement, Str, Type, UInt,
+        BigUInt, Bool, Byte, Bytes, Char, Expression, Float, Hash, Identifier, InferredType, Int,
+        Literal, PathRoot, Statement, Str, Type, UInt, Unit,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
@@ -539,9 +539,11 @@ impl SemanticAnalyzer {
             }
 
             Expression::Return(_) => todo!(),
-            Expression::Break(_) => todo!(),
-            Expression::Continue(_) => todo!(),
-            Expression::Underscore(_) => todo!(),
+            Expression::Break(_) => Ok(Type::UnitType(Unit)),
+            Expression::Continue(_) => Ok(Type::UnitType(Unit)),
+            Expression::Underscore(_) => Ok(Type::InferredType(InferredType {
+                underscore: Identifier::from("_"),
+            })),
             Expression::Closure(_) => todo!(),
             Expression::Array(_) => todo!(),
             Expression::Tuple(_) => todo!(),
@@ -553,7 +555,7 @@ impl SemanticAnalyzer {
             Expression::ForIn(_) => todo!(),
             Expression::While(_) => todo!(),
             Expression::SomeExpr(_) => todo!(),
-            Expression::NoneExpr(_) => todo!(),
+            Expression::NoneExpr(_) => Ok(Type::UnitType(Unit)),
             Expression::ResultExpr(_) => todo!(),
         }
     }
