@@ -147,7 +147,14 @@ impl SemanticAnalyzer {
             Expression::Call(_) => todo!(),
             Expression::Index(_) => todo!(),
             Expression::TupleIndex(_) => todo!(),
-            Expression::Unwrap(_) => todo!(),
+            Expression::Unwrap(u) => {
+                self.analyze_expr(&Expression::try_from(*u.value_expr.clone()).map_err(|_| {
+                    SemanticErrorKind::ConversionError {
+                        from: format!("{:?}", u),
+                        into: "`Expression`".to_string(),
+                    }
+                })?)
+            }
             Expression::Unary(_) => todo!(),
             Expression::Reference(r) => {
                 let reference_op = r.reference_op.clone();
