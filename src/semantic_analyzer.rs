@@ -351,7 +351,7 @@ impl SemanticAnalyzer {
                     }),
                 }
             }
-            Expression::Grouped(_) => todo!(),
+            Expression::Grouped(g) => self.analyze_expr(&g.inner_expression),
             Expression::Range(_) => todo!(),
             Expression::Assignment(a) => {
                 let lhs_clone = a.lhs.clone();
@@ -538,7 +538,10 @@ impl SemanticAnalyzer {
                 }
             }
 
-            Expression::Return(_) => todo!(),
+            Expression::Return(r) => match &r.expression_opt {
+                Some(e) => self.analyze_expr(&*e.clone()),
+                None => Ok(Type::UnitType(Unit)),
+            },
             Expression::Break(_) => Ok(Type::UnitType(Unit)),
             Expression::Continue(_) => Ok(Type::UnitType(Unit)),
             Expression::Underscore(_) => Ok(Type::InferredType(InferredType {
@@ -554,9 +557,9 @@ impl SemanticAnalyzer {
             Expression::Match(_) => todo!(),
             Expression::ForIn(_) => todo!(),
             Expression::While(_) => todo!(),
-            Expression::SomeExpr(_) => todo!(),
+            Expression::SomeExpr(s) => self.analyze_expr(&*s.expression.clone().inner_expression),
             Expression::NoneExpr(_) => Ok(Type::UnitType(Unit)),
-            Expression::ResultExpr(_) => todo!(),
+            Expression::ResultExpr(r) => self.analyze_expr(&*r.expression.clone().inner_expression),
         }
     }
 
