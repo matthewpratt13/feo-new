@@ -156,18 +156,39 @@ impl SemanticAnalyzer {
                         }
                     })?)?;
                 match (&lhs_type, &rhs_type) {
+                    (Type::I32(i), Type::I32(_)) => Ok(Type::I32(*i)),
+                    (Type::I32(_), _) => todo!(),
+                    (Type::I64(i), Type::I32(_) | Type::I64(_)) => Ok(Type::I64(*i)),
+                    (Type::I64(_), _) => todo!(),
+                    (Type::I128(i), Type::I32(_) | Type::I64(_) | Type::I128(_)) => {
+                        Ok(Type::I128(*i))
+                    }
+                    (Type::I128(_), _) => todo!(),
+
+                    (Type::U8(u), Type::U8(_)) => Ok(Type::U8(*u)),
+                    (Type::U8(_), _) => todo!(),
+                    (Type::U16(u), Type::U8(_) | Type::U16(_)) => Ok(Type::U16(*u)),
+                    (Type::U16(_), _) => todo!(),
+                    (Type::U32(u), Type::U8(_) | Type::U16(_) | Type::U32(_)) => Ok(Type::U32(*u)),
+                    (Type::U32(_), _) => todo!(),
+                    (Type::U64(u), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
+                        Ok(Type::U64(*u))
+                    }
+                    (Type::U64(_), _) => todo!(),
                     (
-                        Type::I32(i) | Type::I64(i) | Type::I128(i),
-                        Type::I32(_) | Type::I64(_) | Type::I128(_),
-                    ) => Ok(Type::I128(*i)),
-                    (
-                        Type::U8(u) | Type::U16(u) | Type::U32(u) | Type::U64(u) | Type::U128(u),
+                        Type::U128(u),
                         Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) | Type::U128(_),
                     ) => Ok(Type::U128(*u)),
-                    (Type::U256(ui) | Type::U512(ui), Type::U256(_) | Type::U512(_)) => {
-                        Ok(Type::U512(*ui))
-                    }
-                    (Type::F32(f) | Type::F64(f), Type::F32(_) | Type::F64(_)) => Ok(Type::F64(*f)),
+                    (Type::U128(_), _) => todo!(),
+                    (Type::U256(u), Type::U256(_)) => Ok(Type::U256(*u)),
+                    (Type::U256(_), _) => todo!(),
+                    (Type::U512(u), Type::U256(_) | Type::U512(_)) => Ok(Type::U512(*u)),
+                    (Type::U512(_), _) => todo!(),
+
+                    (Type::F32(f), Type::F32(_)) => Ok(Type::F32(*f)),
+                    (Type::F32(_), _) => todo!(),
+                    (Type::F64(f), Type::F32(_) | Type::F64(_)) => Ok(Type::F64(*f)),
+                    (Type::F64(_), _) => todo!(),
 
                     _ => Err(SemanticErrorKind::TypeMismatch {
                         expected: "matching numeric operands".to_string(),
