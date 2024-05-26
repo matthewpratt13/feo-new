@@ -326,7 +326,7 @@ impl SemanticAnalyzer {
             Expression::Unwrap(u) => {
                 self.analyze_expr(&Expression::try_from(*u.value_expr.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
-                        from: format!("{:?}", u),
+                        from: format!("`{:?}`", u),
                         into: "`Expression`".to_string(),
                     }
                 })?)
