@@ -948,9 +948,9 @@ impl SemanticAnalyzer {
                 Ok(scrutinee_type)
             }
 
-            Expression::ForIn(_) => todo!(),
+            Expression::ForIn(fi) => self.analyze_expr(&Expression::Block(fi.block.clone())),
 
-            Expression::While(_) => todo!(),
+            Expression::While(w) =>  self.analyze_expr(&Expression::Block(w.block.clone())),
 
             Expression::SomeExpr(s) => self.analyze_expr(&*s.expression.clone().inner_expression),
 
