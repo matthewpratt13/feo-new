@@ -2,12 +2,13 @@
 
 use crate::{
     ast::{
-        BigUInt, Bytes, Expression, Float, Hash, Identifier, Int, Literal, PathRoot, Statement,
-        Type, UInt,
+        BigUInt, Bool, Byte, Bytes, Char, Expression, Float, Hash, Identifier, Int, Literal,
+        PathRoot, Statement, Str, Type, UInt,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
     span::Spanned,
+    B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
 use self::symbol_table::SymbolTable;
@@ -105,41 +106,41 @@ impl SemanticAnalyzer {
             }
             Expression::Literal(l) => match l {
                 Literal::Int { value, .. } => match value {
-                    Int::I32(_) => Ok(Type::I32(*value)),
-                    Int::I64(_) => Ok(Type::I64(*value)),
-                    Int::I128(_) => Ok(Type::I128(*value)),
+                    Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
+                    Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
+                    Int::I128(_) => Ok(Type::I128(Int::I128(i128::default()))),
                 },
                 Literal::UInt { value, .. } => match value {
-                    UInt::U8(_) => Ok(Type::U8(*value)),
-                    UInt::U16(_) => Ok(Type::U16(*value)),
-                    UInt::U32(_) => Ok(Type::U32(*value)),
-                    UInt::U64(_) => Ok(Type::U64(*value)),
-                    UInt::U128(_) => Ok(Type::U128(*value)),
+                    UInt::U8(_) => Ok(Type::U8(UInt::U8(u8::default()))),
+                    UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
+                    UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
+                    UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
+                    UInt::U128(_) => Ok(Type::U128(UInt::U128(u128::default()))),
                 },
                 Literal::BigUInt { value, .. } => match value {
-                    BigUInt::U256(_) => Ok(Type::U256(*value)),
-                    BigUInt::U512(_) => Ok(Type::U512(*value)),
+                    BigUInt::U256(_) => Ok(Type::U256(BigUInt::U256(U256::default()))),
+                    BigUInt::U512(_) => Ok(Type::U512(BigUInt::U512(U512::default()))),
                 },
                 Literal::Float { value, .. } => match value {
-                    Float::F32(_) => Ok(Type::F32(*value)),
-                    Float::F64(_) => Ok(Type::F64(*value)),
+                    Float::F32(_) => Ok(Type::F32(Float::F32(F32::default()))),
+                    Float::F64(_) => Ok(Type::F64(Float::F64(F64::default()))),
                 },
-                Literal::Byte { value, .. } => Ok(Type::Byte(*value)),
+                Literal::Byte { .. } => Ok(Type::Byte(Byte::from(u8::default()))),
                 Literal::Bytes { value, .. } => match value {
-                    Bytes::B2(_) => Ok(Type::B2(*value)),
-                    Bytes::B4(_) => Ok(Type::B4(*value)),
-                    Bytes::B8(_) => Ok(Type::B8(*value)),
-                    Bytes::B16(_) => Ok(Type::B16(*value)),
-                    Bytes::B32(_) => Ok(Type::B32(*value)),
+                    Bytes::B2(_) => Ok(Type::B2(Bytes::B2(B2::default()))),
+                    Bytes::B4(_) => Ok(Type::B4(Bytes::B4(B4::default()))),
+                    Bytes::B8(_) => Ok(Type::B8(Bytes::B8(B8::default()))),
+                    Bytes::B16(_) => Ok(Type::B16(Bytes::B16(B16::default()))),
+                    Bytes::B32(_) => Ok(Type::B32(Bytes::B32(B32::default()))),
                 },
                 Literal::Hash { value, .. } => match value {
-                    Hash::H160(_) => Ok(Type::H160(*value)),
-                    Hash::H256(_) => Ok(Type::H256(*value)),
-                    Hash::H512(_) => Ok(Type::H512(*value)),
+                    Hash::H160(_) => Ok(Type::H160(Hash::H160(H160::default()))),
+                    Hash::H256(_) => Ok(Type::H256(Hash::H256(H256::default()))),
+                    Hash::H512(_) => Ok(Type::H512(Hash::H512(H512::default()))),
                 },
-                Literal::Str { value, .. } => Ok(Type::Str(value.clone())),
-                Literal::Char { value, .. } => Ok(Type::Char(*value)),
-                Literal::Bool { value, .. } => Ok(Type::Bool(*value)),
+                Literal::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
+                Literal::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
+                Literal::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
             },
             Expression::MethodCall(_) => todo!(),
             Expression::FieldAccess(_) => todo!(),
@@ -170,71 +171,83 @@ impl SemanticAnalyzer {
                         }
                     })?)?;
                 match (&lhs_type, &rhs_type) {
-                    (Type::I32(i), Type::I32(_)) => Ok(Type::I32(*i)),
+                    (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
                     (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "i32".to_string(),
                         found: t.to_string(),
                     }),
-                    (Type::I64(i), Type::I32(_) | Type::I64(_)) => Ok(Type::I64(*i)),
+                    (Type::I64(_), Type::I32(_) | Type::I64(_)) => {
+                        Ok(Type::I64(Int::I64(i64::default())))
+                    }
                     (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "i64".to_string(),
                         found: t.to_string(),
                     }),
-                    (Type::I128(i), Type::I32(_) | Type::I64(_) | Type::I128(_)) => {
-                        Ok(Type::I128(*i))
+                    (Type::I128(_), Type::I32(_) | Type::I64(_) | Type::I128(_)) => {
+                        Ok(Type::I128(Int::I128(i128::default())))
                     }
                     (Type::I128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "i128".to_string(),
                         found: t.to_string(),
                     }),
 
-                    (Type::U8(u), Type::U8(_)) => Ok(Type::U8(*u)),
+                    (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
                     (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "u8".to_string(),
                         found: t.to_string(),
                     }),
-                    (Type::U16(u), Type::U8(_) | Type::U16(_)) => Ok(Type::U16(*u)),
+                    (Type::U16(_), Type::U8(_) | Type::U16(_)) => {
+                        Ok(Type::U16(UInt::U16(u16::default())))
+                    }
                     (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "u16".to_string(),
                         found: t.to_string(),
                     }),
-                    (Type::U32(u), Type::U8(_) | Type::U16(_) | Type::U32(_)) => Ok(Type::U32(*u)),
+                    (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
+                        Ok(Type::U32(UInt::U32(u32::default())))
+                    }
                     (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "u32".to_string(),
                         found: t.to_string(),
                     }),
-                    (Type::U64(u), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
-                        Ok(Type::U64(*u))
+                    (Type::U64(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
+                        Ok(Type::U64(UInt::U64(u64::default())))
                     }
                     (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "u64".to_string(),
                         found: t.to_string(),
                     }),
                     (
-                        Type::U128(u),
+                        Type::U128(_),
                         Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) | Type::U128(_),
-                    ) => Ok(Type::U128(*u)),
+                    ) => Ok(Type::U128(UInt::U128(u128::default()))),
                     (Type::U128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "u128".to_string(),
                         found: t.to_string(),
                     }),
-                    (Type::U256(u), Type::U256(_)) => Ok(Type::U256(*u)),
+                    (Type::U256(_), Type::U256(_)) => {
+                        Ok(Type::U256(BigUInt::U256(U256::default())))
+                    }
                     (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "u256".to_string(),
                         found: t.to_string(),
                     }),
-                    (Type::U512(u), Type::U256(_) | Type::U512(_)) => Ok(Type::U512(*u)),
+                    (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
+                        Ok(Type::U512(BigUInt::U512(U512::default())))
+                    }
                     (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "u512".to_string(),
                         found: t.to_string(),
                     }),
 
-                    (Type::F32(f), Type::F32(_)) => Ok(Type::F32(*f)),
+                    (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
                     (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "f32".to_string(),
                         found: t.to_string(),
                     }),
-                    (Type::F64(f), Type::F32(_) | Type::F64(_)) => Ok(Type::F64(*f)),
+                    (Type::F64(_), Type::F32(_) | Type::F64(_)) => {
+                        Ok(Type::F64(Float::F64(F64::default())))
+                    }
                     (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "f64".to_string(),
                         found: t.to_string(),
