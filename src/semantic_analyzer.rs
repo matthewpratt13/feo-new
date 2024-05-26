@@ -569,7 +569,10 @@ impl SemanticAnalyzer {
             Expression::Underscore(_) => Ok(Type::InferredType(InferredType {
                 underscore: Identifier::from("_"),
             })),
-            Expression::Closure(_) => todo!(),
+            Expression::Closure(c) => match &c.return_type_opt {
+                Some(t) => Ok(*t.clone()),
+                None => Ok(Type::UnitType(Unit)),
+            },
             Expression::Array(a) => match &a.elements_opt {
                 Some(v) => match v.first() {
                     Some(e) => {
