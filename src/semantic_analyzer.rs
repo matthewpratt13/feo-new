@@ -569,10 +569,23 @@ impl SemanticAnalyzer {
             Expression::Underscore(_) => Ok(Type::InferredType(InferredType {
                 underscore: Identifier::from("_"),
             })),
-            Expression::Closure(c) => match &c.return_type_opt {
-                Some(t) => Ok(*t.clone()),
-                None => Ok(Type::UnitType(Unit)),
-            },
+            Expression::Closure(c) => {
+                let return_type = match &c.return_type_opt {
+                    Some(t) => Ok(*t.clone()),
+                    None => Ok(Type::UnitType(Unit)),
+                }?;
+
+                let expression_type = self.analyze_expr(&*c.body_expression)?;
+
+                if return_type != expression_type {
+                    return Err(SemanticErrorKind::TypeMismatch {
+                        expected: return_type.to_string(),
+                        found: expression_type.to_string(),
+                    });
+                }
+
+                Ok(return_type)
+            }
             Expression::Array(a) => match &a.elements_opt {
                 Some(v) => match v.first() {
                     Some(e) => {
