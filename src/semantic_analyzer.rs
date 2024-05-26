@@ -778,23 +778,14 @@ impl SemanticAnalyzer {
             Expression::Mapping(m) => match &m.pairs_opt {
                 Some(v) => match v.first() {
                     Some(p) => {
-                        let key_type = match self.symbol_table.get(&p.key.name.clone()) {
-                            Some(t) => Ok(t.clone()),
-                            _ => Err(SemanticErrorKind::UndefinedVariable {
-                                name: p.key.name.clone(),
-                            }),
-                        }?;
+                        // TODO: get `Pattern` type
+                        let key_type: Type = todo!();
 
                         let value_type = self.analyze_expr(&*p.value.clone())?;
 
                         for pair in v.iter().skip(1) {
-                            let pair_key_type = match self.symbol_table.get(&pair.key.name.clone())
-                            {
-                                Some(t) => Ok(t.clone()),
-                                _ => Err(SemanticErrorKind::UndefinedVariable {
-                                    name: p.key.name.clone(),
-                                }),
-                            }?;
+                            // TODO: get `Pattern` type
+                            let pair_key_type: Type = todo!();
 
                             let pair_value_type = self.analyze_expr(&*pair.value.clone())?;
 
@@ -910,8 +901,9 @@ impl SemanticAnalyzer {
 
                 let match_arms_type = match &m.match_arms_opt {
                     Some(v) => match v.first() {
-                        Some(ma) => {
+                        Some(_) => {
                             for arm in v.iter() {
+                                // TODO: get `Pattern` type
                                 let arm_type: Type = todo!();
 
                                 if arm_type != scrutinee_type {
@@ -929,6 +921,7 @@ impl SemanticAnalyzer {
                     None => Type::UnitType(Unit),
                 };
 
+                // TODO: get `Pattern` type
                 let final_arm_type: Type = todo!();
 
                 if match_arms_type != scrutinee_type {
@@ -950,7 +943,7 @@ impl SemanticAnalyzer {
 
             Expression::ForIn(fi) => self.analyze_expr(&Expression::Block(fi.block.clone())),
 
-            Expression::While(w) =>  self.analyze_expr(&Expression::Block(w.block.clone())),
+            Expression::While(w) => self.analyze_expr(&Expression::Block(w.block.clone())),
 
             Expression::SomeExpr(s) => self.analyze_expr(&*s.expression.clone().inner_expression),
 
