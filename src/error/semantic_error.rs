@@ -58,7 +58,7 @@ impl fmt::Display for SemanticErrorKind {
             }
             SemanticErrorKind::TypeMismatchBinaryExpr { expected, found } => write!(
                 f,
-                "type mismatch in binary expression. Expected `{expected}`, found: `{found}`"
+                "type mismatch in binary expression. Expected {expected}, found: `{found}`"
             ),
 
             SemanticErrorKind::UnexpectedType { expected, found } => {

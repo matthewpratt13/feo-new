@@ -101,14 +101,6 @@ pub struct BinaryExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ComparisonExpr {
-    pub(crate) lhs: AssigneeExpr,
-    pub(crate) comparison_op: ComparisonOp,
-    pub(crate) rhs: AssigneeExpr,
-    pub(crate) span: Span,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct BlockExpr {
     pub(crate) attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) statements_opt: Option<Vec<Statement>>,
@@ -133,6 +125,14 @@ pub struct ClosureExpr {
     pub(crate) closure_params: ClosureParams,
     pub(crate) return_type_opt: Option<Box<Type>>,
     pub(crate) body_expression: Box<Expression>,
+    pub(crate) span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ComparisonExpr {
+    pub(crate) lhs: AssigneeExpr,
+    pub(crate) comparison_op: ComparisonOp,
+    pub(crate) rhs: AssigneeExpr,
     pub(crate) span: Span,
 }
 

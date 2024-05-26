@@ -767,7 +767,7 @@ impl TryFrom<AssigneeExpr> for Expression {
         match <AssigneeExpr as TryInto<Expression>>::try_into(value) {
             Ok(expr) => Ok(expr),
             Err(_) => Err(ParserErrorKind::ConversionError {
-                from: format!("{:?}", value_clone),
+                from: format!("`{:?}`", value_clone),
                 into: "`Expression`".to_string(),
             }),
         }
