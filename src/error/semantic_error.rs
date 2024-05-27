@@ -7,11 +7,24 @@ use crate::ast::Identifier;
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {
+    ConversionError {
+        from: String,
+        into: String,
+    },
+
     DuplicateVariable {
         name: Identifier,
     },
 
-    TypeMismatch {
+    InvalidPathIdentifier {
+        name: Identifier,
+    },
+
+    MissingStructField {
+        expected: String,
+    },
+
+    TypeMismatchArray {
         expected: String,
         found: String,
     },
@@ -19,6 +32,30 @@ pub enum SemanticErrorKind {
     TypeMismatchBinaryExpr {
         expected: String,
         found: String,
+    },
+
+    TypeMismatchReturnType {
+        expected: String,
+        found: String,
+    },
+
+    TypeMismatchValues {
+        expected: String,
+        found: String,
+    },
+
+    TypeMismatchVariable {
+        name: Identifier,
+        expected: String,
+        found: String,
+    },
+
+    UndefinedPath {
+        name: Identifier,
+    },
+
+    UndefinedStruct {
+        name: Identifier,
     },
 
     UndefinedVariable {
@@ -30,19 +67,6 @@ pub enum SemanticErrorKind {
         found: String,
     },
 
-    InvalidPathIdentifier {
-        name: Identifier,
-    },
-
-    UndefinedPath {
-        name: Identifier,
-    },
-
-    ConversionError {
-        from: String,
-        into: String,
-    },
-
     #[default]
     UnknownError,
 }
@@ -50,31 +74,55 @@ pub enum SemanticErrorKind {
 impl fmt::Display for SemanticErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            SemanticErrorKind::ConversionError { from, into } => {
+                write!(f, "conversion error. Unable to convert {from} into {into}")
+            }
             SemanticErrorKind::DuplicateVariable { name } => {
                 write!(f, "duplicate variable: `{name}`")
             }
-            SemanticErrorKind::TypeMismatch { expected, found } => {
-                write!(f, "type mismatch. Expected {expected}, found {found}")
+            SemanticErrorKind::InvalidPathIdentifier { name } => {
+                write!(f, "invalid path identifier: `{name}`")
             }
+            SemanticErrorKind::MissingStructField { expected } => {
+                write!(f, "struct field not found. Expected {expected}, found none")
+            }
+            SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
+                f,
+                "array element types do not match. Expected {expected}, found {found}"
+            ),
             SemanticErrorKind::TypeMismatchBinaryExpr { expected, found } => write!(
                 f,
-                "type mismatch in binary expression. Expected {expected}, found: `{found}`"
+                "type mismatch in binary expression. Expected {expected}, found {found}"
+            ),
+            SemanticErrorKind::TypeMismatchReturnType { expected, found } => write!(
+                f,
+                "value type does not match return type. Expected {expected}, found {found}"
             ),
 
-            SemanticErrorKind::UnexpectedType { expected, found } => {
-                write!(f, "unexpected type. Expected {expected}, found {found}")
+            SemanticErrorKind::TypeMismatchValues { expected, found } => write!(
+                f,
+                "type mismatch between values. Expected {expected}, found {found}"
+            ),
+
+            SemanticErrorKind::TypeMismatchVariable {
+                name,
+                expected,
+                found,
+            } => {
+                write!(
+                    f,
+                    "type mismatch for `{name}`. Expected {expected}, found {found}"
+                )
             }
 
+            SemanticErrorKind::UndefinedPath { name } => write!(f, "undefined path: `{name}`"),
+
+            SemanticErrorKind::UndefinedStruct { name } => write!(f, "undefined struct: `{name}`"),
             SemanticErrorKind::UndefinedVariable { name } => {
-                write!(f, "undefined variable: {name}",)
+                write!(f, "undefined variable: `{name}`",)
             }
-            SemanticErrorKind::InvalidPathIdentifier { name } => {
-                write!(f, "invalid path identifier: {name}")
-            }
-            SemanticErrorKind::UndefinedPath { name } => write!(f, "undefined path: {name}"),
-
-            SemanticErrorKind::ConversionError { from, into } => {
-                write!(f, "conversion error. Unable to convert {from} into {into}")
+            SemanticErrorKind::UnexpectedType { expected, found } => {
+                write!(f, "unexpected type(s). Expected {expected}, found {found}")
             }
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),

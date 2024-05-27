@@ -48,7 +48,13 @@ impl SemanticAnalyzer {
                 let expr_type = self.analyze_expr(&value)?;
 
                 self.symbol_table
-                    .insert(name, Symbol::Variable(expr_type))?;
+                    .insert(name.clone(), Symbol::Variable(expr_type.clone()))
+                    .map_err(|e| match e {
+                        SemanticErrorKind::DuplicateVariable { .. } => {
+                            SemanticErrorKind::DuplicateVariable { name: name.clone() }
+                        }
+                        _ => e,
+                    })?;
             }
 
             Statement::Item(i) => match i {
@@ -90,7 +96,8 @@ impl SemanticAnalyzer {
 
                     if value_type != constant_type {
                         self.log_error(
-                            SemanticErrorKind::TypeMismatch {
+                            SemanticErrorKind::TypeMismatchVariable {
+                                name: c.constant_name.clone(),
                                 expected: constant_type.to_string(),
                                 found: value_type.to_string(),
                             },
@@ -122,7 +129,8 @@ impl SemanticAnalyzer {
                     let var_type = s.var_type.clone();
 
                     if assignee_type != var_type {
-                        return Err(SemanticErrorKind::TypeMismatch {
+                        return Err(SemanticErrorKind::TypeMismatchVariable {
+                            name: s.var_name.clone(),
                             expected: var_type.to_string(),
                             found: assignee_type.to_string(),
                         });
@@ -509,7 +517,7 @@ impl SemanticAnalyzer {
                         found: t.to_string(),
                     }),
 
-                    _ => Err(SemanticErrorKind::TypeMismatch {
+                    _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "matching numeric types".to_string(),
                         found: format!("`({:?}, {:?})`", &lhs_type, &rhs_type),
                     }),
@@ -625,7 +633,7 @@ impl SemanticAnalyzer {
                         found: t.to_string(),
                     }),
 
-                    _ => Err(SemanticErrorKind::TypeMismatch {
+                    _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "matching numeric types".to_string(),
                         found: format!("`({:?}, {:?})`", &lhs_type, &rhs_type),
                     }),
@@ -637,118 +645,25 @@ impl SemanticAnalyzer {
             Expression::Range(_) => todo!(),
 
             Expression::Assignment(a) => {
-                let lhs_clone = a.lhs.clone();
-                let rhs_clone = a.rhs.clone();
-
-                let lhs_type =
-                    self.analyze_expr(&Expression::try_from(a.lhs.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &lhs_clone),
-                            into: "`Expression`".to_string(),
-                        }
-                    })?)?;
-
-                let rhs_type =
+                let expr_type =
                     self.analyze_expr(&Expression::try_from(a.rhs.clone()).map_err(|_| {
                         SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &rhs_clone),
+                            from: format!("`{:?}`", a.rhs.clone()),
                             into: "`Expression`".to_string(),
                         }
                     })?)?;
 
-                match (&lhs_type, &rhs_type) {
-                    (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
+                let name = Identifier(format!("{:?}", a.lhs.clone()));
 
-                    (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i32`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::I64(_), Type::I64(_)) => Ok(Type::I64(Int::I64(i64::default()))),
-
-                    (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i64`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::I128(_), Type::I128(_)) => Ok(Type::I128(Int::I128(i128::default()))),
-
-                    (Type::I128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i128`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
-
-                    (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u8`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::U16(_), Type::U16(_)) => Ok(Type::U16(UInt::U16(u16::default()))),
-
-                    (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u16`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::U32(_), Type::U32(_)) => Ok(Type::U32(UInt::U32(u32::default()))),
-
-                    (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u32`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::U64(_), Type::U64(_)) => Ok(Type::U64(UInt::U64(u64::default()))),
-
-                    (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u64`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::U128(_), Type::U128(_)) => Ok(Type::U128(UInt::U128(u128::default()))),
-
-                    (Type::U128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u128`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::U256(_), Type::U256(_)) => {
-                        Ok(Type::U256(BigUInt::U256(U256::default())))
+                match self.symbol_table.get(&name) {
+                    Some(Symbol::Variable(var_type)) if *var_type == expr_type => {
+                        Ok(var_type.clone())
                     }
-
-                    (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u256`".to_string(),
-                        found: t.to_string(),
+                    Some(t) => Err(SemanticErrorKind::UnexpectedType {
+                        expected: expr_type.to_string(),
+                        found: format!("{:?}", t),
                     }),
-
-                    (Type::U512(_), Type::U512(_)) => {
-                        Ok(Type::U512(BigUInt::U512(U512::default())))
-                    }
-
-                    (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u512`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
-
-                    (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`f32`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::F64(_), Type::F64(_)) => Ok(Type::F64(Float::F64(F64::default()))),
-
-                    (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`f64`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    _ => Err(SemanticErrorKind::TypeMismatch {
-                        expected: "matching numeric types".to_string(),
-                        found: format!("`({:?}, {:?})`", &lhs_type, &rhs_type),
-                    }),
+                    None => Err(SemanticErrorKind::UndefinedVariable { name }),
                 }
             }
 
@@ -861,7 +776,7 @@ impl SemanticAnalyzer {
                         found: t.to_string(),
                     }),
 
-                    _ => Err(SemanticErrorKind::TypeMismatch {
+                    _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "matching numeric types".to_string(),
                         found: format!("`({:?}, {:?})`", &lhs_type, &rhs_type),
                     }),
@@ -890,7 +805,7 @@ impl SemanticAnalyzer {
                 let expression_type = self.analyze_expr(&*c.body_expression)?;
 
                 if return_type != expression_type {
-                    return Err(SemanticErrorKind::TypeMismatch {
+                    return Err(SemanticErrorKind::TypeMismatchReturnType {
                         expected: return_type.to_string(),
                         found: expression_type.to_string(),
                     });
@@ -914,7 +829,7 @@ impl SemanticAnalyzer {
                             element_count += 1;
 
                             if element_type != first_element_type {
-                                return Err(SemanticErrorKind::TypeMismatch {
+                                return Err(SemanticErrorKind::TypeMismatchArray {
                                     expected: first_element_type.to_string(),
                                     found: element_type.to_string(),
                                 });
@@ -993,14 +908,19 @@ impl SemanticAnalyzer {
                                 match field_map.get(&sdf.field_name) {
                                     Some(expr_type) if *expr_type == *sdf.field_type => (),
                                     Some(t) => {
-                                        return Err(SemanticErrorKind::TypeMismatch {
+                                        return Err(SemanticErrorKind::TypeMismatchVariable {
+                                            name: name.clone(),
                                             expected: sdf.field_type.clone().to_string(),
                                             found: t.to_string(),
                                         })
                                     }
                                     None => {
-                                        // missing field
-                                        todo!()
+                                        return Err(SemanticErrorKind::MissingStructField {
+                                            expected: format!(
+                                                "`{}: {}`",
+                                                sdf.field_name, *sdf.field_type
+                                            ),
+                                        })
                                     }
                                 }
                             }
@@ -1013,10 +933,7 @@ impl SemanticAnalyzer {
 
                         Ok(Type::UserDefined(path_type))
                     }
-                    _ => {
-                        // undefined struct
-                        todo!()
-                    }
+                    _ => Err(SemanticErrorKind::UndefinedStruct { name: name.clone() }),
                 }
             }
 
@@ -1035,7 +952,7 @@ impl SemanticAnalyzer {
                             let pair_value_type = self.analyze_expr(&*pair.value.clone())?;
 
                             if (&pair_key_type, &pair_value_type) != (&key_type, &value_type) {
-                                return Err(SemanticErrorKind::TypeMismatch {
+                                return Err(SemanticErrorKind::UnexpectedType {
                                     expected: format!(
                                         "{{ key: `{}`, value: `{}` }}",
                                         &key_type.to_string(),
@@ -1099,7 +1016,7 @@ impl SemanticAnalyzer {
                                     self.analyze_expr(&Expression::If(*block.clone()))?;
 
                                 if block_type != if_block_type {
-                                    return Err(SemanticErrorKind::TypeMismatch {
+                                    return Err(SemanticErrorKind::TypeMismatchValues {
                                         expected: if_block_type.to_string(),
                                         found: block_type.to_string(),
                                     });
@@ -1119,14 +1036,14 @@ impl SemanticAnalyzer {
                 };
 
                 if else_if_blocks_type != if_block_type {
-                    return Err(SemanticErrorKind::TypeMismatch {
+                    return Err(SemanticErrorKind::TypeMismatchValues {
                         expected: if_block_type.to_string(),
                         found: else_if_blocks_type.to_string(),
                     });
                 }
 
                 if trailing_else_block_type != if_block_type {
-                    return Err(SemanticErrorKind::TypeMismatch {
+                    return Err(SemanticErrorKind::TypeMismatchValues {
                         expected: if_block_type.to_string(),
                         found: trailing_else_block_type.to_string(),
                     });
@@ -1152,7 +1069,7 @@ impl SemanticAnalyzer {
                                 let arm_type: Type = todo!();
 
                                 if arm_type != scrutinee_type {
-                                    return Err(SemanticErrorKind::TypeMismatch {
+                                    return Err(SemanticErrorKind::UnexpectedType {
                                         expected: scrutinee_type.to_string(),
                                         found: arm_type.to_string(),
                                     });
@@ -1170,14 +1087,14 @@ impl SemanticAnalyzer {
                 let final_arm_type: Type = todo!();
 
                 if match_arms_type != scrutinee_type {
-                    return Err(SemanticErrorKind::TypeMismatch {
+                    return Err(SemanticErrorKind::UnexpectedType {
                         expected: scrutinee_type.to_string(),
                         found: match_arms_type.to_string(),
                     });
                 }
 
                 if final_arm_type != scrutinee_type {
-                    return Err(SemanticErrorKind::TypeMismatch {
+                    return Err(SemanticErrorKind::UnexpectedType {
                         expected: scrutinee_type.to_string(),
                         found: final_arm_type.to_string(),
                     });
