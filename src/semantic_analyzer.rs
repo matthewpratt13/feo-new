@@ -901,29 +901,29 @@ impl SemanticAnalyzer {
 
             Expression::Array(a) => match &a.elements_opt {
                 Some(v) => match v.first() {
-                    Some(e) => {
-                        let mut elem_count = 0u128;
+                    Some(expr) => {
+                        let mut element_count = 0u128;
 
-                        let first_elem_type = self.analyze_expr(e)?;
+                        let first_element_type = self.analyze_expr(expr)?;
 
-                        elem_count += 1;
+                        element_count += 1;
 
                         for elem in v.iter().skip(1) {
-                            let elem_type = self.analyze_expr(elem)?;
+                            let element_type = self.analyze_expr(elem)?;
 
-                            elem_count += 1;
+                            element_count += 1;
 
-                            if elem_type != first_elem_type {
+                            if element_type != first_element_type {
                                 return Err(SemanticErrorKind::TypeMismatch {
-                                    expected: first_elem_type.to_string(),
-                                    found: elem_type.to_string(),
+                                    expected: first_element_type.to_string(),
+                                    found: element_type.to_string(),
                                 });
                             }
                         }
 
                         Ok(Type::Array {
-                            element_type: Box::new(first_elem_type),
-                            num_elements: UInt::U128(elem_count),
+                            element_type: Box::new(first_element_type),
+                            num_elements: UInt::U128(element_count),
                         })
                     }
 
