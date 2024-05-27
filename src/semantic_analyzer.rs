@@ -13,7 +13,7 @@ use crate::{
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
-use self::symbol_table::SymbolTable;
+use self::symbol_table::{Symbol, SymbolTable};
 
 struct SemanticAnalyzer {
     symbol_table: SymbolTable,
@@ -46,21 +46,26 @@ impl SemanticAnalyzer {
                     ErrorsEmitted
                 })?;
 
-                self.symbol_table.insert(name, expr_type);
+                self.symbol_table.insert(name, Symbol::Variable(expr_type));
             }
 
             Statement::Item(i) => match i {
                 Item::ImportDecl(_) => todo!(),
                 Item::AliasDecl(a) => match &a.original_type_opt {
-                    Some(t) => self.symbol_table.insert(a.alias_name.clone(), t.clone()),
+                    Some(t) => {
+                        self.symbol_table
+                            .insert(a.alias_name.clone(), Symbol::Variable(t.clone()));
+                    }
                     None => {
                         let ty = PathType {
                             path_root: PathRoot::Identifier(a.alias_name.clone()),
                             tree_opt: None,
                         };
 
-                        self.symbol_table
-                            .insert(a.alias_name.clone(), Type::UserDefined(ty));
+                        self.symbol_table.insert(
+                            a.alias_name.clone(),
+                            Symbol::Variable(Type::UserDefined(ty)),
+                        );
                     }
                 },
                 Item::ConstantDecl(c) => {
@@ -99,8 +104,10 @@ impl SemanticAnalyzer {
                         return Err(ErrorsEmitted);
                     }
 
-                    self.symbol_table
-                        .insert(c.constant_name.clone(), *c.constant_type.clone());
+                    self.symbol_table.insert(
+                        c.constant_name.clone(),
+                        Symbol::Variable(*c.constant_type.clone()),
+                    );
                 }
                 Item::StaticVarDecl(s) => {
                     let assignee_type = match &s.assignee_opt {
@@ -139,63 +146,33 @@ impl SemanticAnalyzer {
                     }
 
                     self.symbol_table
-                        .insert(s.var_name.clone(), s.var_type.clone());
+                        .insert(s.var_name.clone(), Symbol::Variable(s.var_type.clone()));
                 }
                 Item::ModuleItem(m) => {
-                    let ty = PathType {
-                        path_root: PathRoot::Identifier(m.module_name.clone()),
-                        tree_opt: None,
-                    };
-
                     self.symbol_table
-                        .insert(m.module_name.clone(), Type::UserDefined(ty));
+                        .insert(m.module_name.clone(), Symbol::Module(m.clone()));
                 }
                 Item::TraitDef(t) => {
-                    let ty = PathType {
-                        path_root: PathRoot::Identifier(t.trait_name.clone()),
-                        tree_opt: None,
-                    };
-
                     self.symbol_table
-                        .insert(t.trait_name.clone(), Type::UserDefined(ty));
+                        .insert(t.trait_name.clone(), Symbol::Trait(t.clone()));
                 }
                 Item::EnumDef(e) => {
-                    let ty = PathType {
-                        path_root: PathRoot::Identifier(e.enum_name.clone()),
-                        tree_opt: None,
-                    };
-
                     self.symbol_table
-                        .insert(e.enum_name.clone(), Type::UserDefined(ty));
+                        .insert(e.enum_name.clone(), Symbol::Enum(e.clone()));
                 }
                 Item::StructDef(s) => {
-                    let ty = PathType {
-                        path_root: PathRoot::Identifier(s.struct_name.clone()),
-                        tree_opt: None,
-                    };
-
                     self.symbol_table
-                        .insert(s.struct_name.clone(), Type::UserDefined(ty));
+                        .insert(s.struct_name.clone(), Symbol::Struct(s.clone()));
                 }
                 Item::TupleStructDef(ts) => {
-                    let ty = PathType {
-                        path_root: PathRoot::Identifier(ts.struct_name.clone()),
-                        tree_opt: None,
-                    };
-
                     self.symbol_table
-                        .insert(ts.struct_name.clone(), Type::UserDefined(ty));
+                        .insert(ts.struct_name.clone(), Symbol::TupleStruct(ts.clone()));
                 }
                 Item::InherentImplDef(_) => todo!(),
                 Item::TraitImplDef(_) => todo!(),
                 Item::FunctionItem(f) => {
-                    let ty = PathType {
-                        path_root: PathRoot::Identifier(f.function_name.clone()),
-                        tree_opt: None,
-                    };
-
                     self.symbol_table
-                        .insert(f.function_name.clone(), Type::UserDefined(ty));
+                        .insert(f.function_name.clone(), Symbol::Function(f.clone()));
                 }
             },
 
@@ -260,7 +237,7 @@ impl SemanticAnalyzer {
                 };
 
                 match self.symbol_table.get(&name) {
-                    Some(t) => Ok(t.clone()),
+                    Some(s) => Ok(Type::UnitType(Unit)),
                     _ => Err(SemanticErrorKind::UndefinedPath { name }),
                 }
             }
