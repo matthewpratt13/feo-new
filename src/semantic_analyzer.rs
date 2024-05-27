@@ -951,7 +951,67 @@ impl SemanticAnalyzer {
                 Ok(Type::Tuple(element_types))
             }
 
-            Expression::Struct(_) => todo!(),
+            Expression::Struct(s) => {
+                let name = match s.struct_path.tree_opt {
+                    Some(v) => match v.last() {
+                        Some(i) => i,
+                        None => match &s.struct_path.path_root {
+                            PathRoot::Identifier(i) => i,
+                            _ => todo!(),
+                        },
+                    },
+                    None => match &s.struct_path.path_root {
+                        PathRoot::Identifier(i) => i,
+                        _ => todo!(),
+                    },
+                };
+
+                match self.symbol_table.get(name) {
+                    Some(Symbol::Struct(struct_def)) => {
+                        let mut field_map = std::collections::HashMap::new();
+
+                        let struct_fields = s.struct_fields_opt.clone();
+
+                        if struct_fields.is_some() {
+                            for f in &struct_fields.unwrap() {
+                                let field_type = self.analyze_expr(&f.field_value.clone())?;
+                                field_map.insert(f.field_name.clone(), field_type);
+                            }
+                        }
+
+                        let struct_def_fields = struct_def.fields_opt.clone();
+
+                        if struct_def_fields.is_some() {
+                            for f in &struct_def_fields.unwrap() {
+                                match &field_map.get(&f.field_name) {
+                                    Some(expr_type) if **expr_type == *f.field_type => (),
+                                    Some(t) => {
+                                        return Err(SemanticErrorKind::TypeMismatch {
+                                            expected: f.field_type.clone().to_string(),
+                                            found: t.to_string(),
+                                        })
+                                    }
+                                    None => {
+                                        // missing field
+                                        todo!()
+                                    }
+                                }
+                            }
+                        }
+
+                        let path_type = PathType {
+                            path_root: PathRoot::Identifier(name.clone()),
+                            tree_opt: None,
+                        };
+
+                        Ok(Type::UserDefined(path_type))
+                    }
+                    _ => {
+                        // undefined struct
+                        todo!()
+                    }
+                }
+            }
 
             Expression::Mapping(m) => match &m.pairs_opt {
                 Some(v) => match v.first() {
