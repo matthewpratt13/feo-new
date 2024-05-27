@@ -837,6 +837,12 @@ pub(crate) enum Statement {
     Expression(Expression),
 }
 
+impl Spanned for Statement {
+    fn span(&self) -> Span {
+        todo!()
+    }
+}
+
 /// Enum representing the different item nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
 #[derive(Debug, Clone, PartialEq)]

@@ -4,8 +4,9 @@ mod symbol_table;
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, Expression, Float, Hash, Identifier, InferredType, Int,
-        Item, Literal, PathRoot, PathType, Statement, Str, Type, UInt, Unit,
+        BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, FunctionOrMethodParam,
+        Hash, Identifier, InferredType, Int, Item, Literal, PathRoot, PathType, Statement, Str,
+        TraitDefItem, Type, UInt, Unit,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
@@ -30,23 +31,24 @@ impl SemanticAnalyzer {
 
     fn analyze(&mut self, module: &Module) -> Result<(), ErrorsEmitted> {
         for s in &module.statements {
-            self.analyze_stmt(s)?;
+            self.analyze_stmt(s).map_err(|e| {
+                self.log_error(e, &s.span());
+                ErrorsEmitted
+            })?
         }
         Ok(())
     }
 
-    fn analyze_stmt(&mut self, statement: &Statement) -> Result<(), ErrorsEmitted> {
+    fn analyze_stmt(&mut self, statement: &Statement) -> Result<(), SemanticErrorKind> {
         match statement {
             Statement::Let(s) => {
                 let name = s.assignee.name.clone();
                 let value = s.value_opt.clone().unwrap();
 
-                let expr_type = self.analyze_expr(&value).map_err(|e| {
-                    self.log_error(e, &value.span());
-                    ErrorsEmitted
-                })?;
+                let expr_type = self.analyze_expr(&value)?;
 
-                self.symbol_table.insert(name, Symbol::Variable(expr_type));
+                self.symbol_table
+                    .insert(name, Symbol::Variable(expr_type))?;
             }
 
             Statement::Item(i) => match i {
@@ -54,7 +56,7 @@ impl SemanticAnalyzer {
                 Item::AliasDecl(a) => match &a.original_type_opt {
                     Some(t) => {
                         self.symbol_table
-                            .insert(a.alias_name.clone(), Symbol::Variable(t.clone()));
+                            .insert(a.alias_name.clone(), Symbol::Variable(t.clone()))?;
                     }
                     None => {
                         let ty = PathType {
@@ -65,27 +67,20 @@ impl SemanticAnalyzer {
                         self.symbol_table.insert(
                             a.alias_name.clone(),
                             Symbol::Variable(Type::UserDefined(ty)),
-                        );
+                        )?;
                     }
                 },
                 Item::ConstantDecl(c) => {
                     let value_type = match &c.value_opt {
                         Some(v) => {
                             let value = Expression::try_from(v.clone()).map_err(|_| {
-                                self.log_error(
-                                    SemanticErrorKind::ConversionError {
-                                        from: format!("`{:?}`", v),
-                                        into: "`Expression`".to_string(),
-                                    },
-                                    &v.span(),
-                                );
-                                ErrorsEmitted
+                                SemanticErrorKind::ConversionError {
+                                    from: format!("`{:?}`", v),
+                                    into: "`Expression`".to_string(),
+                                }
                             })?;
 
-                            self.analyze_expr(&value).map_err(|e| {
-                                self.log_error(e, &v.span());
-                                ErrorsEmitted
-                            })?
+                            self.analyze_expr(&value)?
                         }
 
                         None => Type::UnitType(Unit),
@@ -101,32 +96,24 @@ impl SemanticAnalyzer {
                             },
                             &c.value_opt.clone().unwrap().span(),
                         );
-                        return Err(ErrorsEmitted);
                     }
 
                     self.symbol_table.insert(
                         c.constant_name.clone(),
                         Symbol::Variable(*c.constant_type.clone()),
-                    );
+                    )?;
                 }
                 Item::StaticVarDecl(s) => {
                     let assignee_type = match &s.assignee_opt {
                         Some(a) => {
                             let assignee = Expression::try_from(*a.clone()).map_err(|_| {
-                                self.log_error(
-                                    SemanticErrorKind::ConversionError {
-                                        from: format!("`{:?}`", a),
-                                        into: "`Expression`".to_string(),
-                                    },
-                                    &a.span(),
-                                );
-                                ErrorsEmitted
+                                SemanticErrorKind::ConversionError {
+                                    from: format!("`{:?}`", a),
+                                    into: "`Expression`".to_string(),
+                                }
                             })?;
 
-                            self.analyze_expr(&assignee).map_err(|e| {
-                                self.log_error(e, &a.span());
-                                ErrorsEmitted
-                            })?
+                            self.analyze_expr(&assignee)?
                         }
 
                         None => Type::UnitType(Unit),
@@ -135,54 +122,120 @@ impl SemanticAnalyzer {
                     let var_type = s.var_type.clone();
 
                     if assignee_type != var_type {
-                        self.log_error(
-                            SemanticErrorKind::TypeMismatch {
-                                expected: var_type.to_string(),
-                                found: assignee_type.to_string(),
-                            },
-                            &s.assignee_opt.clone().unwrap().span(),
-                        );
-                        return Err(ErrorsEmitted);
+                        return Err(SemanticErrorKind::TypeMismatch {
+                            expected: var_type.to_string(),
+                            found: assignee_type.to_string(),
+                        });
                     }
 
                     self.symbol_table
-                        .insert(s.var_name.clone(), Symbol::Variable(s.var_type.clone()));
+                        .insert(s.var_name.clone(), Symbol::Variable(s.var_type.clone()))?;
                 }
                 Item::ModuleItem(m) => {
-                    self.symbol_table
-                        .insert(m.module_name.clone(), Symbol::Module(m.clone()));
+                    let module_symbol_table = SymbolTable::with_parent(self.symbol_table.clone());
+                    let mut analyzer = SemanticAnalyzer {
+                        symbol_table: module_symbol_table,
+                        errors: Vec::new(),
+                    };
+
+                    let mut vec: Vec<Statement> = Vec::new();
+
+                    let statements = match &m.items_opt {
+                        Some(v) => {
+                            for item in v.iter() {
+                                vec.push(Statement::Item(item.clone()));
+                            }
+
+                            vec
+                        }
+                        None => vec,
+                    };
+
+                    let _ = analyzer.analyze(&Module { statements });
+                    self.errors.extend(analyzer.errors);
                 }
                 Item::TraitDef(t) => {
                     self.symbol_table
-                        .insert(t.trait_name.clone(), Symbol::Trait(t.clone()));
+                        .insert(t.trait_name.clone(), Symbol::Trait(t.clone()))
+                        .map_err(|e| match e {
+                            SemanticErrorKind::DuplicateVariable { .. } => {
+                                SemanticErrorKind::DuplicateVariable {
+                                    name: t.trait_name.clone(),
+                                }
+                            }
+                            _ => e,
+                        })?;
+
+                    let trait_items = t.trait_items_opt.clone();
+
+                    if trait_items.is_some() {
+                        for item in &trait_items.unwrap() {
+                            match item {
+                                TraitDefItem::FunctionItem(f) => {
+                                    self.analyze_function_def(f)?;
+                                }
+                                _ => todo!(),
+                            }
+                        }
+                    }
                 }
                 Item::EnumDef(e) => {
                     self.symbol_table
-                        .insert(e.enum_name.clone(), Symbol::Enum(e.clone()));
+                        .insert(e.enum_name.clone(), Symbol::Enum(e.clone()))
+                        .map_err(|err| match err {
+                            SemanticErrorKind::DuplicateVariable { .. } => {
+                                SemanticErrorKind::DuplicateVariable {
+                                    name: e.enum_name.clone(),
+                                }
+                            }
+                            _ => err,
+                        })?;
                 }
                 Item::StructDef(s) => {
                     self.symbol_table
-                        .insert(s.struct_name.clone(), Symbol::Struct(s.clone()));
+                        .insert(s.struct_name.clone(), Symbol::Struct(s.clone()))
+                        .map_err(|e| match e {
+                            SemanticErrorKind::DuplicateVariable { .. } => {
+                                SemanticErrorKind::DuplicateVariable {
+                                    name: s.struct_name.clone(),
+                                }
+                            }
+                            _ => e,
+                        })?;
                 }
                 Item::TupleStructDef(ts) => {
                     self.symbol_table
-                        .insert(ts.struct_name.clone(), Symbol::TupleStruct(ts.clone()));
+                        .insert(ts.struct_name.clone(), Symbol::TupleStruct(ts.clone()))
+                        .map_err(|e| match e {
+                            SemanticErrorKind::DuplicateVariable { .. } => {
+                                SemanticErrorKind::DuplicateVariable {
+                                    name: ts.struct_name.clone(),
+                                }
+                            }
+                            _ => e,
+                        })?;
                 }
                 Item::InherentImplDef(_) => todo!(),
                 Item::TraitImplDef(_) => todo!(),
                 Item::FunctionItem(f) => {
                     self.symbol_table
-                        .insert(f.function_name.clone(), Symbol::Function(f.clone()));
+                        .insert(f.function_name.clone(), Symbol::Function(f.clone()))
+                        .map_err(|e| match e {
+                            SemanticErrorKind::DuplicateVariable { .. } => {
+                                SemanticErrorKind::DuplicateVariable {
+                                    name: f.function_name.clone(),
+                                }
+                            }
+                            _ => e,
+                        })?;
+
+                    self.analyze_function_def(f)?;
                 }
             },
 
-            Statement::Expression(expr) => match self.analyze_expr(expr) {
-                Ok(_) => (),
-                Err(err) => {
-                    self.log_error(err, &expr.span());
-                    return Err(ErrorsEmitted);
-                }
-            },
+            Statement::Expression(expr) => {
+                self.analyze_expr(expr)?;
+            }
         }
 
         Ok(())
@@ -237,7 +290,7 @@ impl SemanticAnalyzer {
                 };
 
                 match self.symbol_table.get(&name) {
-                    Some(s) => Ok(Type::UnitType(Unit)),
+                    Some(_) => Ok(Type::UnitType(Unit)),
                     _ => Err(SemanticErrorKind::UndefinedPath { name }),
                 }
             }
@@ -1076,6 +1129,43 @@ impl SemanticAnalyzer {
 
             Expression::ResultExpr(r) => self.analyze_expr(&*r.expression.clone().inner_expression),
         }
+    }
+
+    fn analyze_function_def(&mut self, func: &FunctionItem) -> Result<(), SemanticErrorKind> {
+        let mut local_table = SymbolTable::with_parent(self.symbol_table.clone());
+
+        if func.params_opt.is_some() {
+            for param in &func.params_opt.clone().unwrap() {
+                match param {
+                    FunctionOrMethodParam::FunctionParam(f) => {
+                        local_table.insert(
+                            f.param_name.name.clone(),
+                            Symbol::Variable(*f.param_type.clone()),
+                        )?;
+                    }
+                    _ => todo!(),
+                }
+            }
+        }
+
+        let mut analyzer = SemanticAnalyzer {
+            symbol_table: local_table,
+            errors: Vec::new(),
+        };
+
+        if func.block_opt.is_some() {
+            let statements = func.block_opt.clone().unwrap().statements_opt;
+
+            if statements.is_some() {
+                for stmt in &statements.unwrap() {
+                    if let Err(e) = analyzer.analyze_stmt(stmt) {
+                        analyzer.log_error(e, &stmt.span())
+                    }
+                }
+            }
+        }
+        self.errors.extend(analyzer.errors);
+        Ok(())
     }
 
     fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {

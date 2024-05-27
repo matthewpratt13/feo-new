@@ -7,7 +7,7 @@ use crate::{
     error::SemanticErrorKind,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum Symbol {
     Variable(Type),
     Struct(StructDef),
@@ -18,7 +18,7 @@ pub(crate) enum Symbol {
     Module(ModuleItem),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct SymbolTable {
     symbols: HashMap<Identifier, Symbol>,
     parent: Option<Box<SymbolTable>>, // For nested scopes
