@@ -952,42 +952,49 @@ impl SemanticAnalyzer {
             }
 
             Expression::Struct(s) => {
-                let name = match s.struct_path.tree_opt {
+                let struct_path_root = s.struct_path.path_root.clone();
+                let struct_tree_opt = s.struct_path.tree_opt.clone();
+
+                let name = match &struct_tree_opt {
                     Some(v) => match v.last() {
                         Some(i) => i,
-                        None => match &s.struct_path.path_root {
+                        None => match &struct_path_root {
                             PathRoot::Identifier(i) => i,
                             _ => todo!(),
                         },
                     },
-                    None => match &s.struct_path.path_root {
+                    None => match &struct_path_root {
                         PathRoot::Identifier(i) => i,
                         _ => todo!(),
                     },
                 };
 
-                match self.symbol_table.get(name) {
+                let symbol_table = self.symbol_table.clone();
+
+                match symbol_table.get(name) {
                     Some(Symbol::Struct(struct_def)) => {
                         let mut field_map = std::collections::HashMap::new();
 
                         let struct_fields = s.struct_fields_opt.clone();
 
                         if struct_fields.is_some() {
-                            for f in &struct_fields.unwrap() {
-                                let field_type = self.analyze_expr(&f.field_value.clone())?;
-                                field_map.insert(f.field_name.clone(), field_type);
+                            for sf in &struct_fields.unwrap() {
+                                let field_name = sf.field_name.clone();
+                                let field_value = *sf.field_value.clone();
+                                let field_type = self.analyze_expr(&field_value)?;
+                                field_map.insert(field_name, field_type);
                             }
                         }
 
                         let struct_def_fields = struct_def.fields_opt.clone();
 
                         if struct_def_fields.is_some() {
-                            for f in &struct_def_fields.unwrap() {
-                                match &field_map.get(&f.field_name) {
-                                    Some(expr_type) if **expr_type == *f.field_type => (),
+                            for sdf in &struct_def_fields.unwrap() {
+                                match field_map.get(&sdf.field_name) {
+                                    Some(expr_type) if *expr_type == *sdf.field_type => (),
                                     Some(t) => {
                                         return Err(SemanticErrorKind::TypeMismatch {
-                                            expected: f.field_type.clone().to_string(),
+                                            expected: sdf.field_type.clone().to_string(),
                                             found: t.to_string(),
                                         })
                                     }
