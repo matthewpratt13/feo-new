@@ -5,7 +5,7 @@ mod symbol_table;
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, FunctionOrMethodParam,
-        Hash, Identifier, InferredType, Int, Item, Literal, PathRoot, PathType, SelfType,
+        Hash, Identifier, InferredType, Int, Item, Literal, PathRoot, PathType, Pattern, SelfType,
         Statement, Str, TraitDefItem, Type, UInt, Unit,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
@@ -1142,6 +1142,158 @@ impl SemanticAnalyzer {
             Expression::NoneExpr(_) => Ok(Type::UnitType(Unit)),
 
             Expression::ResultExpr(r) => self.analyze_expr(&*r.expression.clone().inner_expression),
+        }
+    }
+
+    fn analyze_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
+        match pattern {
+            Pattern::IdentifierPatt(i) => match self.symbol_table.get(&i.name) {
+                Some(Symbol::Variable(var_type)) => Ok(var_type.clone()),
+                Some(s) => Err(SemanticErrorKind::UnexpectedType {
+                    expected: "variable type".to_string(),
+                    found: s.to_string(),
+                }),
+                None => Err(SemanticErrorKind::UndefinedVariable {
+                    name: i.name.clone(),
+                }),
+            },
+
+            Pattern::PathPatt(p) => {
+                let name = match &p.tree_opt {
+                    Some(v) => match v.last() {
+                        Some(i) => i.clone(),
+                        _ => match &p.path_root {
+                            PathRoot::Identifier(i) => i.clone(),
+
+                            PathRoot::SelfType(_) => Identifier::from("Self"),
+
+                            PathRoot::SelfKeyword => Identifier::from("self"),
+
+                            PathRoot::Package => {
+                                return Err(SemanticErrorKind::InvalidPathIdentifier {
+                                    name: Identifier::from("package"),
+                                })
+                            }
+
+                            PathRoot::Super => {
+                                return Err(SemanticErrorKind::InvalidPathIdentifier {
+                                    name: Identifier::from("super"),
+                                })
+                            }
+                        },
+                    },
+
+                    _ => match &p.path_root {
+                        PathRoot::Identifier(i) => i.clone(),
+
+                        PathRoot::SelfType(_) => Identifier::from("Self"),
+
+                        PathRoot::SelfKeyword => Identifier::from("self"),
+
+                        PathRoot::Package => {
+                            return Err(SemanticErrorKind::InvalidPathIdentifier {
+                                name: Identifier::from("package"),
+                            })
+                        }
+
+                        PathRoot::Super => {
+                            return Err(SemanticErrorKind::InvalidPathIdentifier {
+                                name: Identifier::from("super"),
+                            })
+                        }
+                    },
+                };
+
+                match self.symbol_table.get(&name) {
+                    Some(_) => Ok(Type::UnitType(Unit)),
+                    _ => Err(SemanticErrorKind::UndefinedPath { name }),
+                }
+            }
+
+            Pattern::Literal(l) => match l {
+                Literal::Int { value, .. } => match value {
+                    Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
+                    Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
+                    Int::I128(_) => Ok(Type::I128(Int::I128(i128::default()))),
+                },
+
+                Literal::UInt { value, .. } => match value {
+                    UInt::U8(_) => Ok(Type::U8(UInt::U8(u8::default()))),
+                    UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
+                    UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
+                    UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
+                    UInt::U128(_) => Ok(Type::U128(UInt::U128(u128::default()))),
+                },
+
+                Literal::BigUInt { value, .. } => match value {
+                    BigUInt::U256(_) => Ok(Type::U256(BigUInt::U256(U256::default()))),
+                    BigUInt::U512(_) => Ok(Type::U512(BigUInt::U512(U512::default()))),
+                },
+
+                Literal::Float { value, .. } => match value {
+                    Float::F32(_) => Ok(Type::F32(Float::F32(F32::default()))),
+                    Float::F64(_) => Ok(Type::F64(Float::F64(F64::default()))),
+                },
+
+                Literal::Byte { .. } => Ok(Type::Byte(Byte::from(u8::default()))),
+
+                Literal::Bytes { value, .. } => match value {
+                    Bytes::B2(_) => Ok(Type::B2(Bytes::B2(B2::default()))),
+                    Bytes::B4(_) => Ok(Type::B4(Bytes::B4(B4::default()))),
+                    Bytes::B8(_) => Ok(Type::B8(Bytes::B8(B8::default()))),
+                    Bytes::B16(_) => Ok(Type::B16(Bytes::B16(B16::default()))),
+                    Bytes::B32(_) => Ok(Type::B32(Bytes::B32(B32::default()))),
+                },
+
+                Literal::Hash { value, .. } => match value {
+                    Hash::H160(_) => Ok(Type::H160(Hash::H160(H160::default()))),
+                    Hash::H256(_) => Ok(Type::H256(Hash::H256(H256::default()))),
+                    Hash::H512(_) => Ok(Type::H512(Hash::H512(H512::default()))),
+                },
+
+                Literal::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
+
+                Literal::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
+
+                Literal::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
+            },
+
+            Pattern::ReferencePatt(r) => Ok(Type::Reference {
+                reference_op: r.reference_op,
+                inner_type: Box::new(self.analyze_patt(&*r.pattern)?),
+            }),
+            Pattern::GroupedPatt(g) => self.analyze_patt(&g.inner_pattern),
+
+            Pattern::RangePatt(_) => todo!(),
+
+            Pattern::TuplePatt(t) => {
+                let mut element_types: Vec<Type> = Vec::new();
+
+                for (patt, _) in t.tuple_patt_elements.elements.iter() {
+                    let ty = self.analyze_patt(patt)?;
+                    element_types.push(ty)
+                }
+
+                Ok(Type::Tuple(element_types))
+            }
+
+            Pattern::StructPatt(_) => todo!(),
+
+            Pattern::TupleStructPatt(_) => todo!(),
+
+            Pattern::WildcardPatt(_) => Ok(Type::InferredType(InferredType {
+                underscore: Identifier::from("_"),
+            })),
+
+            Pattern::RestPatt(_) => Ok(Type::InferredType(InferredType {
+                underscore: Identifier::from("_"),
+            })),
+
+            Pattern::SomePatt(s) => self.analyze_patt(&*s.pattern.clone().inner_pattern),
+
+            Pattern::NonePatt(_) => Ok(Type::UnitType(Unit)),
+
+            Pattern::ResultPatt(r) => self.analyze_patt(&*r.pattern.clone().inner_pattern),
         }
     }
 

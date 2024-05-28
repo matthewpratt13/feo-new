@@ -305,7 +305,7 @@ impl fmt::Display for RangeOp {
 }
 
 /// Enum representing the different reference operators used in AST nodes (i.e., `&` and `&mut`).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub(crate) enum ReferenceOp {
     Borrow,        // `&`
     MutableBorrow, // `&mut`

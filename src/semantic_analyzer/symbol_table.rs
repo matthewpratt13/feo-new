@@ -1,3 +1,4 @@
+use core::fmt;
 use std::collections::HashMap;
 
 use crate::{
@@ -16,6 +17,20 @@ pub(crate) enum Symbol {
     Trait(TraitDef),
     Function(FunctionItem),
     Module(ModuleItem),
+}
+
+impl fmt::Display for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Symbol::Variable(v) => write!(f, "{}", v),
+            Symbol::Struct(s) => write!(f, "{:?}", s),
+            Symbol::TupleStruct(ts) => write!(f, "{:?}", ts),
+            Symbol::Enum(e) => write!(f, "{:?}", e),
+            Symbol::Trait(t) => write!(f, "{:?}", t),
+            Symbol::Function(func) => write!(f, "{:?}", func),
+            Symbol::Module(m) => write!(f, "{:?}", m),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
