@@ -1097,8 +1097,7 @@ impl SemanticAnalyzer {
                     Some(v) => match v.first() {
                         Some(_) => {
                             for arm in v.iter() {
-                                // TODO: get `Pattern` type
-                                let arm_type: Type = todo!();
+                                let arm_type = self.analyze_patt(&arm.matched_pattern)?;
 
                                 if arm_type != scrutinee_type {
                                     return Err(SemanticErrorKind::UnexpectedType {
@@ -1115,8 +1114,7 @@ impl SemanticAnalyzer {
                     None => Type::UnitType(Unit),
                 };
 
-                // TODO: get `Pattern` type
-                let final_arm_type: Type = todo!();
+                let final_arm_type = self.analyze_patt(&m.final_arm.matched_pattern.clone())?;
 
                 if match_arms_type != scrutinee_type {
                     return Err(SemanticErrorKind::UnexpectedType {
