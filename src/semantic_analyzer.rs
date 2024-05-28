@@ -972,14 +972,14 @@ impl SemanticAnalyzer {
             Expression::Mapping(m) => match &m.pairs_opt {
                 Some(v) => match v.first() {
                     Some(p) => {
-                        // TODO: get `Pattern` type
-                        let key_type: Type = todo!();
+                        let key_type =
+                            self.analyze_patt(&Pattern::IdentifierPatt(p.key.clone()))?;
 
                         let value_type = self.analyze_expr(&*p.value.clone())?;
 
                         for pair in v.iter().skip(1) {
-                            // TODO: get `Pattern` type
-                            let pair_key_type: Type = todo!();
+                            let pair_key_type =
+                                self.analyze_patt(&Pattern::IdentifierPatt(pair.key.clone()))?;
 
                             let pair_value_type = self.analyze_expr(&*pair.value.clone())?;
 
@@ -1264,6 +1264,7 @@ impl SemanticAnalyzer {
                 reference_op: r.reference_op,
                 inner_type: Box::new(self.analyze_patt(&*r.pattern)?),
             }),
+
             Pattern::GroupedPatt(g) => self.analyze_patt(&g.inner_pattern),
 
             Pattern::RangePatt(_) => todo!(),
