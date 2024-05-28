@@ -872,21 +872,51 @@ impl SemanticAnalyzer {
 
                 let name = match &struct_tree_opt {
                     Some(v) => match v.last() {
-                        Some(i) => i,
+                        Some(i) => i.clone(),
                         None => match &struct_path_root {
-                            PathRoot::Identifier(i) => i,
-                            _ => todo!(),
+                            PathRoot::Identifier(i) => i.clone(),
+                            PathRoot::SelfType(_) => Identifier::from("Self"),
+                            PathRoot::Package => {
+                                return Err(SemanticErrorKind::InvalidStructName {
+                                    name: Identifier::from("package"),
+                                })
+                            }
+                            PathRoot::Super => {
+                                return Err(SemanticErrorKind::InvalidStructName {
+                                    name: Identifier::from("super"),
+                                })
+                            }
+                            PathRoot::SelfKeyword => {
+                                return Err(SemanticErrorKind::InvalidStructName {
+                                    name: Identifier::from("self"),
+                                })
+                            }
                         },
                     },
                     None => match &struct_path_root {
-                        PathRoot::Identifier(i) => i,
-                        _ => todo!(),
+                        PathRoot::Identifier(i) => i.clone(),
+                        PathRoot::SelfType(_) => Identifier::from("Self"),
+                        PathRoot::Package => {
+                            return Err(SemanticErrorKind::InvalidStructName {
+                                name: Identifier::from("package"),
+                            })
+                        }
+                        PathRoot::Super => {
+                            return Err(SemanticErrorKind::InvalidStructName {
+                                name: Identifier::from("super"),
+                            })
+                        }
+                        PathRoot::SelfKeyword => {
+                            return Err(SemanticErrorKind::InvalidStructName {
+                                name: Identifier::from("self"),
+                            })
+                        }
                     },
                 };
 
                 let symbol_table = self.symbol_table.clone();
 
-                match symbol_table.get(name) {
+                match symbol_table.get(&name) {
                     Some(Symbol::Struct(struct_def)) => {
                         let mut field_map = std::collections::HashMap::new();
 

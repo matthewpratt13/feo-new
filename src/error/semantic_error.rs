@@ -20,6 +20,10 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
+    InvalidStructName {
+        name: Identifier,
+    },
+
     MissingStructField {
         expected: String,
     },
@@ -82,6 +86,10 @@ impl fmt::Display for SemanticErrorKind {
             }
             SemanticErrorKind::InvalidPathIdentifier { name } => {
                 write!(f, "invalid path identifier: `{name}`")
+            }
+
+            SemanticErrorKind::InvalidStructName { name } => {
+                write!(f, "invalid struct name: `{name}`")
             }
             SemanticErrorKind::MissingStructField { expected } => {
                 write!(f, "struct field not found. Expected {expected}, found none")
