@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         Delimiter, Identifier, Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef,
-        TupleStructDefField, Type, Visibility,
+        TupleStructDefElement, Type, Visibility,
     },
     error::ErrorsEmitted,
     span::Position,
@@ -143,7 +143,7 @@ impl ParseDefItem for TupleStructDef {
                     visibility,
                     kw_struct,
                     struct_name,
-                    tuple_struct_fields_opt,
+                    elements_opt: tuple_struct_fields_opt,
                 })
             }
             Some(Token::EOF) | None => {
@@ -201,17 +201,19 @@ impl StructDefField {
     }
 }
 
-fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefField, ErrorsEmitted> {
+fn parse_tuple_struct_def_field(
+    parser: &mut Parser,
+) -> Result<TupleStructDefElement, ErrorsEmitted> {
     let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
     let visibility = Visibility::visibility(parser)?;
 
     let field_type = Box::new(Type::parse(parser)?);
 
-    let field = TupleStructDefField {
+    let field = TupleStructDefElement {
         attributes_opt,
         visibility,
-        field_type,
+        element_type: field_type,
     };
 
     Ok(field)

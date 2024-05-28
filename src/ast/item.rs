@@ -132,10 +132,10 @@ pub(crate) struct StructDefField {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct TupleStructDefField {
+pub(crate) struct TupleStructDefElement {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
-    pub(crate) field_type: Box<Type>,
+    pub(crate) element_type: Box<Type>,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -233,7 +233,7 @@ pub struct TupleStructDef {
     pub(crate) visibility: Visibility,
     pub(crate) kw_struct: Keyword,
     pub(crate) struct_name: Identifier,
-    pub(crate) tuple_struct_fields_opt: Option<Vec<TupleStructDefField>>,
+    pub(crate) elements_opt: Option<Vec<TupleStructDefElement>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

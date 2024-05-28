@@ -2,6 +2,8 @@
 
 mod symbol_table;
 
+use std::collections::HashMap;
+
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, FunctionOrMethodParam,
@@ -918,7 +920,7 @@ impl SemanticAnalyzer {
 
                 match symbol_table.get(&name) {
                     Some(Symbol::Struct(struct_def)) => {
-                        let mut field_map = std::collections::HashMap::new();
+                        let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
                         let struct_fields = s.struct_fields_opt.clone();
 
@@ -1277,9 +1279,207 @@ impl SemanticAnalyzer {
                 Ok(Type::Tuple(element_types))
             }
 
-            Pattern::StructPatt(_) => todo!(),
+            Pattern::StructPatt(s) => {
+                let struct_path_root = s.struct_path.path_root.clone();
+                let struct_tree_opt = s.struct_path.tree_opt.clone();
 
-            Pattern::TupleStructPatt(_) => todo!(),
+                let name = match &struct_tree_opt {
+                    Some(v) => match v.last() {
+                        Some(i) => i.clone(),
+                        None => match &struct_path_root {
+                            PathRoot::Identifier(i) => i.clone(),
+                            PathRoot::SelfType(_) => Identifier::from("Self"),
+                            PathRoot::Package => {
+                                return Err(SemanticErrorKind::InvalidStructName {
+                                    name: Identifier::from("package"),
+                                })
+                            }
+                            PathRoot::Super => {
+                                return Err(SemanticErrorKind::InvalidStructName {
+                                    name: Identifier::from("super"),
+                                })
+                            }
+                            PathRoot::SelfKeyword => {
+                                return Err(SemanticErrorKind::InvalidStructName {
+                                    name: Identifier::from("self"),
+                                })
+                            }
+                        },
+                    },
+                    None => match &struct_path_root {
+                        PathRoot::Identifier(i) => i.clone(),
+                        PathRoot::SelfType(_) => Identifier::from("Self"),
+                        PathRoot::Package => {
+                            return Err(SemanticErrorKind::InvalidStructName {
+                                name: Identifier::from("package"),
+                            })
+                        }
+                        PathRoot::Super => {
+                            return Err(SemanticErrorKind::InvalidStructName {
+                                name: Identifier::from("super"),
+                            })
+                        }
+                        PathRoot::SelfKeyword => {
+                            return Err(SemanticErrorKind::InvalidStructName {
+                                name: Identifier::from("self"),
+                            })
+                        }
+                    },
+                };
+
+                let symbol_table = self.symbol_table.clone();
+
+                match symbol_table.get(&name) {
+                    Some(Symbol::Struct(struct_def)) => {
+                        let mut field_map: HashMap<Identifier, Type> = HashMap::new();
+
+                        let struct_fields = s.struct_fields_opt.clone();
+
+                        if struct_fields.is_some() {
+                            for spf in &struct_fields.unwrap() {
+                                let field_name = spf.field_name.clone();
+                                let field_value = spf.field_value.clone();
+                                let field_type = self.analyze_patt(&field_value)?;
+                                field_map.insert(field_name, field_type);
+                            }
+                        }
+
+                        let struct_def_fields = struct_def.fields_opt.clone();
+
+                        if struct_def_fields.is_some() {
+                            for sdf in &struct_def_fields.unwrap() {
+                                match field_map.get(&sdf.field_name) {
+                                    Some(patt_type) if *patt_type == *sdf.field_type => (),
+                                    Some(t) => {
+                                        return Err(SemanticErrorKind::TypeMismatchVariable {
+                                            name: name.clone(),
+                                            expected: sdf.field_type.clone().to_string(),
+                                            found: t.to_string(),
+                                        })
+                                    }
+                                    None => {
+                                        return Err(SemanticErrorKind::MissingStructField {
+                                            expected: format!(
+                                                "`{}: {}`",
+                                                sdf.field_name, *sdf.field_type
+                                            ),
+                                        })
+                                    }
+                                }
+                            }
+                        }
+
+                        let path_type = PathType {
+                            path_root: PathRoot::Identifier(name.clone()),
+                            tree_opt: None,
+                        };
+
+                        Ok(Type::UserDefined(path_type))
+                    }
+                    _ => Err(SemanticErrorKind::UndefinedStruct { name: name.clone() }),
+                }
+            }
+
+            Pattern::TupleStructPatt(ts) => {
+                let struct_path_root = ts.struct_path.path_root.clone();
+                let struct_tree_opt = ts.struct_path.tree_opt.clone();
+
+                let name = match &struct_tree_opt {
+                    Some(v) => match v.last() {
+                        Some(i) => i.clone(),
+                        None => match &struct_path_root {
+                            PathRoot::Identifier(i) => i.clone(),
+                            PathRoot::SelfType(_) => Identifier::from("Self"),
+                            PathRoot::Package => {
+                                return Err(SemanticErrorKind::InvalidStructName {
+                                    name: Identifier::from("package"),
+                                })
+                            }
+                            PathRoot::Super => {
+                                return Err(SemanticErrorKind::InvalidStructName {
+                                    name: Identifier::from("super"),
+                                })
+                            }
+                            PathRoot::SelfKeyword => {
+                                return Err(SemanticErrorKind::InvalidStructName {
+                                    name: Identifier::from("self"),
+                                })
+                            }
+                        },
+                    },
+                    None => match &struct_path_root {
+                        PathRoot::Identifier(i) => i.clone(),
+                        PathRoot::SelfType(_) => Identifier::from("Self"),
+                        PathRoot::Package => {
+                            return Err(SemanticErrorKind::InvalidStructName {
+                                name: Identifier::from("package"),
+                            })
+                        }
+                        PathRoot::Super => {
+                            return Err(SemanticErrorKind::InvalidStructName {
+                                name: Identifier::from("super"),
+                            })
+                        }
+                        PathRoot::SelfKeyword => {
+                            return Err(SemanticErrorKind::InvalidStructName {
+                                name: Identifier::from("self"),
+                            })
+                        }
+                    },
+                };
+
+                let symbol_table = self.symbol_table.clone();
+
+                match symbol_table.get(&name) {
+                    Some(Symbol::TupleStruct(tuple_struct_def)) => {
+                        let mut element_map: HashMap<usize, Type> = HashMap::new();
+                        let mut element_counter = 0usize;
+
+                        let tuple_struct_elements = ts.struct_elements_opt.clone();
+
+                        if tuple_struct_elements.is_some() {
+                            for tse in &tuple_struct_elements.unwrap() {
+                                let element_type = self.analyze_patt(&tse)?;
+                                element_map.insert(element_counter, element_type);
+                                element_counter += 1;
+                            }
+                        }
+
+                        let tuple_struct_def_elements = tuple_struct_def.elements_opt.clone();
+
+                        if tuple_struct_def_elements.is_some() {
+                            for (i, tsde) in tuple_struct_def_elements.unwrap().iter().enumerate() {
+                                match element_map.get(&i) {
+                                    Some(patt_type) if *patt_type == *tsde.element_type => (),
+                                    Some(t) => {
+                                        return Err(SemanticErrorKind::TypeMismatchVariable {
+                                            name: name.clone(),
+                                            expected: tsde.element_type.clone().to_string(),
+                                            found: t.to_string(),
+                                        })
+                                    }
+                                    None => {
+                                        return Err(SemanticErrorKind::MissingTupleStructElement {
+                                            expected: format!(
+                                                "`{}.{}: {}`",
+                                                &name, i, *tsde.element_type
+                                            ),
+                                        })
+                                    }
+                                }
+                            }
+                        }
+
+                        let path_type = PathType {
+                            path_root: PathRoot::Identifier(name.clone()),
+                            tree_opt: None,
+                        };
+
+                        Ok(Type::UserDefined(path_type))
+                    }
+                    _ => Err(SemanticErrorKind::UndefinedStruct { name: name.clone() }),
+                }
+            }
 
             Pattern::WildcardPatt(_) => Ok(Type::InferredType(InferredType {
                 underscore: Identifier::from("_"),

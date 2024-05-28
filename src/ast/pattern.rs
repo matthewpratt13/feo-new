@@ -91,7 +91,7 @@ pub struct SomePatt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructPatt {
     pub(crate) struct_path: PathPatt,
-    pub(crate) fields_opt: Option<Vec<StructPattField>>,
+    pub(crate) struct_fields_opt: Option<Vec<StructPattField>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -101,8 +101,8 @@ pub struct TuplePatt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleStructPatt {
-    pub(crate) tuple_struct_path: PathPatt,
-    pub(crate) elements_opt: Option<Vec<Pattern>>,
+    pub(crate) struct_path: PathPatt,
+    pub(crate) struct_elements_opt: Option<Vec<Pattern>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -28,6 +28,10 @@ pub enum SemanticErrorKind {
         expected: String,
     },
 
+    MissingTupleStructElement {
+        expected: String,
+    },
+
     TypeMismatchArray {
         expected: String,
         found: String,
@@ -94,6 +98,17 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::MissingStructField { expected } => {
                 write!(f, "struct field not found. Expected {expected}, found none")
             }
+
+            SemanticErrorKind::MissingStructField { expected } => {
+                write!(f, "struct field not found. Expected {expected}, found none")
+            }
+            SemanticErrorKind::MissingTupleStructElement { expected } => {
+                write!(
+                    f,
+                    "tuple struct element not found. Expected {expected}, found none"
+                )
+            }
+
             SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
                 f,
                 "array element types do not match. Expected {expected}, found {found}"
