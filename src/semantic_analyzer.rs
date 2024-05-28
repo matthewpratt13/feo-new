@@ -5,8 +5,8 @@ mod symbol_table;
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, FunctionOrMethodParam,
-        Hash, Identifier, InferredType, Int, Item, Literal, PathRoot, PathType, Statement, Str,
-        TraitDefItem, Type, UInt, Unit,
+        Hash, Identifier, InferredType, Int, Item, Literal, PathRoot, PathType, SelfType,
+        Statement, Str, TraitDefItem, Type, UInt, Unit,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
@@ -1157,7 +1157,12 @@ impl SemanticAnalyzer {
                             Symbol::Variable(*f.param_type.clone()),
                         )?;
                     }
-                    _ => todo!(),
+                    FunctionOrMethodParam::MethodParam(_) => {
+                        local_table.insert(
+                            Identifier::from("self"),
+                            Symbol::Variable(Type::SelfType(SelfType)),
+                        )?;
+                    }
                 }
             }
         }
