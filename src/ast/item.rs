@@ -235,15 +235,7 @@ pub struct StructDef {
     pub(crate) kw_struct: Keyword,
     pub(crate) struct_name: Identifier,
     pub(crate) fields_opt: Option<Vec<StructDefField>>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TupleStructDef {
-    pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
-    pub(crate) visibility: Visibility,
-    pub(crate) kw_struct: Keyword,
-    pub(crate) struct_name: Identifier,
-    pub(crate) elements_opt: Option<Vec<TupleStructDefElement>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -264,5 +256,15 @@ pub struct TraitImplDef {
     pub(crate) kw_for: Keyword,
     pub(crate) implementing_type: Type,
     pub(crate) associated_items_opt: Option<Vec<TraitImplItem>>,
+    pub(crate) span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TupleStructDef {
+    pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
+    pub(crate) visibility: Visibility,
+    pub(crate) kw_struct: Keyword,
+    pub(crate) struct_name: Identifier,
+    pub(crate) elements_opt: Option<Vec<TupleStructDefElement>>,
     pub(crate) span: Span,
 }
