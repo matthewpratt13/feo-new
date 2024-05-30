@@ -172,6 +172,7 @@ pub struct EnumDef {
     pub(crate) kw_enum: Keyword,
     pub(crate) enum_name: Identifier,
     pub(crate) variants: Vec<EnumVariant>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]

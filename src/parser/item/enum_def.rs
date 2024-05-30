@@ -17,7 +17,9 @@ impl ParseDefItem for EnumDef {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<EnumDef, ErrorsEmitted> {
-        let kw_enum = if let Some(Token::Enum { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_enum = if let Some(Token::Enum { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Enum)
         } else {
@@ -57,6 +59,8 @@ impl ParseDefItem for EnumDef {
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
 
                 Ok(EnumDef {
@@ -65,6 +69,7 @@ impl ParseDefItem for EnumDef {
                     kw_enum,
                     enum_name,
                     variants,
+                    span,
                 })
             }
             Some(Token::EOF) | None => {
