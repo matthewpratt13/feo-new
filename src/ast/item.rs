@@ -1,5 +1,7 @@
 use core::fmt;
 
+use crate::span::Span;
+
 use super::{
     AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,
     PathType, ReferenceOp, Separator, Type, ValueExpr,
@@ -149,6 +151,7 @@ pub struct AliasDecl {
     pub(crate) kw_alias: Keyword,
     pub(crate) alias_name: Identifier,
     pub(crate) original_type_opt: Option<Type>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
