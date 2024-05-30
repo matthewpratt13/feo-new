@@ -246,6 +246,7 @@ pub struct TraitDef {
     pub(crate) trait_name: Identifier,
     pub(crate) inner_attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) trait_items_opt: Option<Vec<TraitDefItem>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]

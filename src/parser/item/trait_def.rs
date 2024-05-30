@@ -17,7 +17,9 @@ impl ParseDefItem for TraitDef {
         outer_attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<TraitDef, ErrorsEmitted> {
-        let kw_trait = if let Some(Token::Trait { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_trait = if let Some(Token::Trait { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Trait)
         } else {
@@ -59,6 +61,8 @@ impl ParseDefItem for TraitDef {
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+                
                 parser.next_token();
 
                 Ok(TraitDef {
@@ -68,6 +72,7 @@ impl ParseDefItem for TraitDef {
                     trait_name,
                     inner_attributes_opt,
                     trait_items_opt,
+                    span,
                 })
             }
             Some(Token::EOF) | None => {
