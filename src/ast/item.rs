@@ -213,6 +213,7 @@ pub struct ModuleItem {
     pub(crate) module_name: Identifier,
     pub(crate) inner_attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) items_opt: Option<Vec<Item>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
