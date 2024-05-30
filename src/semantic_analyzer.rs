@@ -61,6 +61,7 @@ impl SemanticAnalyzer {
 
             Statement::Item(i) => match i {
                 Item::ImportDecl(_) => todo!(),
+
                 Item::AliasDecl(a) => match &a.original_type_opt {
                     Some(t) => {
                         self.symbol_table
@@ -78,6 +79,7 @@ impl SemanticAnalyzer {
                         )?;
                     }
                 },
+
                 Item::ConstantDecl(c) => {
                     let value_type = match &c.value_opt {
                         Some(v) => {
@@ -112,6 +114,7 @@ impl SemanticAnalyzer {
                         Symbol::Variable(*c.constant_type.clone()),
                     )?;
                 }
+
                 Item::StaticVarDecl(s) => {
                     let assignee_type = match &s.assignee_opt {
                         Some(a) => {
@@ -141,6 +144,7 @@ impl SemanticAnalyzer {
                     self.symbol_table
                         .insert(s.var_name.clone(), Symbol::Variable(s.var_type.clone()))?;
                 }
+
                 Item::ModuleItem(m) => {
                     let module_symbol_table = SymbolTable::with_parent(self.symbol_table.clone());
                     let mut analyzer = SemanticAnalyzer {
@@ -164,6 +168,7 @@ impl SemanticAnalyzer {
                     let _ = analyzer.analyze(&Module { statements });
                     self.errors.extend(analyzer.errors);
                 }
+
                 Item::TraitDef(t) => {
                     self.symbol_table
                         .insert(t.trait_name.clone(), Symbol::Trait(t.clone()))
@@ -189,6 +194,7 @@ impl SemanticAnalyzer {
                         }
                     }
                 }
+
                 Item::EnumDef(e) => {
                     self.symbol_table
                         .insert(e.enum_name.clone(), Symbol::Enum(e.clone()))
@@ -201,6 +207,7 @@ impl SemanticAnalyzer {
                             _ => err,
                         })?;
                 }
+
                 Item::StructDef(s) => {
                     self.symbol_table
                         .insert(s.struct_name.clone(), Symbol::Struct(s.clone()))
@@ -213,6 +220,7 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
                 }
+
                 Item::TupleStructDef(ts) => {
                     self.symbol_table
                         .insert(ts.struct_name.clone(), Symbol::TupleStruct(ts.clone()))
@@ -225,8 +233,11 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
                 }
+
                 Item::InherentImplDef(_) => todo!(),
+
                 Item::TraitImplDef(_) => todo!(),
+
                 Item::FunctionItem(f) => {
                     self.symbol_table
                         .insert(f.function_name.clone(), Symbol::Function(f.clone()))
