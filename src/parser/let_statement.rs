@@ -1,6 +1,7 @@
 use crate::{
     ast::{IdentifierPatt, Keyword, LetStmt, Statement, Type},
     error::ErrorsEmitted,
+    span::Spanned,
     token::Token,
 };
 
@@ -8,7 +9,9 @@ use super::{ParsePattern, ParseStatement, Parser, Precedence};
 
 impl ParseStatement for LetStmt {
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {
-        let kw_let = if let Some(Token::Let { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_let = if let Some(Token::Let { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Let)
         } else {
@@ -41,12 +44,16 @@ impl ParseStatement for LetStmt {
 
         match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
+                let span =
+                    parser.get_span(&first_token.unwrap().span(), &value_opt.as_ref().unwrap().span());
+
                 parser.next_token();
                 let stmt = LetStmt {
                     kw_let,
                     assignee,
                     type_ann_opt,
                     value_opt,
+                    span,
                 };
 
                 Ok(Statement::Let(stmt))

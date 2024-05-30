@@ -1,3 +1,5 @@
+use crate::span::Span;
+
 use super::{Expression, IdentifierPatt, Keyword, Type};
 
 ///////////////////////////////////////////////////////////////////////////
@@ -10,4 +12,5 @@ pub struct LetStmt {
     pub(crate) assignee: IdentifierPatt,
     pub(crate) type_ann_opt: Option<Type>,
     pub(crate) value_opt: Option<Expression>,
+    pub(crate) span: Span,
 }
