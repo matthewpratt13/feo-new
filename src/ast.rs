@@ -839,7 +839,24 @@ pub(crate) enum Statement {
 
 impl Spanned for Statement {
     fn span(&self) -> Span {
-        todo!()
+        match self {
+            Statement::Let(l) => l.span,
+            Statement::Item(i) => match i {
+                Item::ImportDecl(id) => id.span,
+                Item::AliasDecl(ad) => ad.span,
+                Item::ConstantDecl(cd) => cd.span,
+                Item::StaticVarDecl(svd) => svd.span,
+                Item::ModuleItem(mi) => mi.span,
+                Item::TraitDef(td) => td.span,
+                Item::EnumDef(ed) => ed.span,
+                Item::StructDef(sd) => sd.span,
+                Item::TupleStructDef(tsd) => tsd.span,
+                Item::InherentImplDef(iid) => iid.span,
+                Item::TraitImplDef(tid) => tid.span,
+                Item::FunctionItem(fi) => fi.span,
+            },
+            Statement::Expression(e) => e.span(),
+        }
     }
 }
 
