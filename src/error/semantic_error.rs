@@ -98,10 +98,6 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::MissingStructField { expected } => {
                 write!(f, "struct field not found. Expected {expected}, found none")
             }
-
-            SemanticErrorKind::MissingStructField { expected } => {
-                write!(f, "struct field not found. Expected {expected}, found none")
-            }
             SemanticErrorKind::MissingTupleStructElement { expected } => {
                 write!(
                     f,
