@@ -184,6 +184,7 @@ pub struct FunctionItem {
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
     pub(crate) return_type_opt: Option<Box<Type>>,
     pub(crate) block_opt: Option<BlockExpr>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
