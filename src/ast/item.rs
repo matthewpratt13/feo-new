@@ -202,6 +202,7 @@ pub struct InherentImplDef {
     pub(crate) kw_impl: Keyword,
     pub(crate) nominal_type: PathType,
     pub(crate) associated_items_opt: Option<Vec<InherentImplItem>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -261,4 +262,5 @@ pub struct TraitImplDef {
     pub(crate) kw_for: Keyword,
     pub(crate) implementing_type: Type,
     pub(crate) associated_items_opt: Option<Vec<TraitImplItem>>,
+    pub(crate) span: Span,
 }

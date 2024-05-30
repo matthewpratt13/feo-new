@@ -17,7 +17,9 @@ impl ParseDefItem for InherentImplDef {
         attributes_opt: Option<Vec<OuterAttr>>,
         _visibility: Visibility,
     ) -> Result<InherentImplDef, ErrorsEmitted> {
-        let kw_impl = if let Some(Token::Impl { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_impl = if let Some(Token::Impl { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Impl)
         } else {
@@ -47,6 +49,8 @@ impl ParseDefItem for InherentImplDef {
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
 
                 Ok(InherentImplDef {
@@ -54,6 +58,7 @@ impl ParseDefItem for InherentImplDef {
                     kw_impl,
                     nominal_type,
                     associated_items_opt,
+                    span,
                 })
             }
             Some(Token::EOF) | None => {
@@ -75,6 +80,8 @@ impl ParseDefItem for TraitImplDef {
         attributes_opt: Option<Vec<OuterAttr>>,
         _visibility: Visibility,
     ) -> Result<TraitImplDef, ErrorsEmitted> {
+        let first_token = parser.current_token().cloned();
+
         let kw_impl = if let Some(Token::Impl { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::Impl)
@@ -133,6 +140,8 @@ impl ParseDefItem for TraitImplDef {
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
 
                 Ok(TraitImplDef {
@@ -142,6 +151,7 @@ impl ParseDefItem for TraitImplDef {
                     kw_for,
                     implementing_type,
                     associated_items_opt,
+                    span,
                 })
             }
             Some(Token::EOF) | None => {
