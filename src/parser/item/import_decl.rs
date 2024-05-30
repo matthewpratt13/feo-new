@@ -16,7 +16,9 @@ impl ParseDeclItem for ImportDecl {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ImportDecl, ErrorsEmitted> {
-        let kw_import = if let Some(Token::Import { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_import = if let Some(Token::Import { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Import)
         } else {
@@ -28,12 +30,16 @@ impl ParseDeclItem for ImportDecl {
 
         match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
+
                 Ok(ImportDecl {
                     attributes_opt,
                     visibility,
                     kw_import,
                     import_tree,
+                    span,
                 })
             }
             Some(Token::EOF) | None => {

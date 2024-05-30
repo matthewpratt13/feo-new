@@ -193,6 +193,7 @@ pub struct ImportDecl {
     pub(crate) visibility: Visibility,
     pub(crate) kw_import: Keyword,
     pub(crate) import_tree: ImportTree,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
