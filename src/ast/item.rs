@@ -162,6 +162,7 @@ pub struct ConstantDecl {
     pub(crate) constant_name: Identifier,
     pub(crate) constant_type: Box<Type>,
     pub(crate) value_opt: Option<ValueExpr>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
