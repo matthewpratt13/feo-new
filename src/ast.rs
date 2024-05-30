@@ -839,7 +839,7 @@ pub(crate) enum Statement {
 
 impl Spanned for Statement {
     fn span(&self) -> Span {
-        match self {
+        match self.clone() {
             Statement::Let(l) => l.span,
             Statement::Item(i) => match i {
                 Item::ImportDecl(id) => id.span,
