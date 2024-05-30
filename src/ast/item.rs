@@ -225,6 +225,7 @@ pub struct StaticVarDecl {
     pub(crate) var_name: Identifier,
     pub(crate) var_type: Type,
     pub(crate) assignee_opt: Option<Box<AssigneeExpr>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]

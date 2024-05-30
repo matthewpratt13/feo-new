@@ -13,7 +13,9 @@ impl ParseDeclItem for StaticVarDecl {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<StaticVarDecl, ErrorsEmitted> {
-        let kw_static = if let Some(Token::Static { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_static = if let Some(Token::Static { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Static)
         } else {
@@ -77,6 +79,8 @@ impl ParseDeclItem for StaticVarDecl {
 
         match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
 
                 Ok(StaticVarDecl {
@@ -87,6 +91,7 @@ impl ParseDeclItem for StaticVarDecl {
                     var_name,
                     var_type,
                     assignee_opt,
+                    span,
                 })
             }
             Some(Token::EOF) | None => {
