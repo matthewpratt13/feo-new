@@ -47,7 +47,7 @@ fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted>
             parser.next_token();
 
             if let Some(Token::Comma { .. } | Token::RBrace { .. }) = parser.current_token() {
-                parser.log_missing("expr", &format!("value for key: \"{}\"", key));
+                parser.log_missing("expr", &format!("value for key: \"{}\"", &key));
                 return Err(ErrorsEmitted);
             }
         }

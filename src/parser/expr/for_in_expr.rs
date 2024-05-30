@@ -81,7 +81,7 @@ impl ParseControlExpr for ForInExpr {
             _ => {
                 parser.log_error(ParserErrorKind::UnexpectedExpression {
                     expected: "iterable expression".to_string(),
-                    found: format!("{}", expression),
+                    found: format!("{}", &expression),
                 });
                 Err(ErrorsEmitted)
             }

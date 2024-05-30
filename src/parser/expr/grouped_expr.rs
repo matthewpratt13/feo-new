@@ -3,7 +3,6 @@ use crate::{
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::{ParseConstructExpr, Parser, Precedence},
-    span::Spanned,
     token::Token,
 };
 
@@ -41,12 +40,10 @@ impl ParseConstructExpr for GroupedExpr {
                     elements: Vec::new(),
                     final_element_opt: None,
                 },
-                span,
+                span: span.clone(),
             };
 
             let inner_expression = Expression::Tuple(tuple_expr);
-
-            let span = parser.get_span(&token.span(), &inner_expression.span());
 
             return Ok(GroupedExpr {
                 inner_expression: Box::new(inner_expression),
@@ -58,7 +55,7 @@ impl ParseConstructExpr for GroupedExpr {
 
         match parser.current_token() {
             Some(Token::RParen { .. }) => {
-                let span = parser.get_span(&first_token.unwrap().span(), &inner_expression.span());
+                let span = parser.get_span_by_token(&first_token.unwrap());
 
                 parser.next_token();
 
