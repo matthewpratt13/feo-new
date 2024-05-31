@@ -150,6 +150,26 @@ impl SemanticAnalyzer {
                         for item in m.items_opt.as_ref().unwrap() {
                             let _ = self.analyze_stmt(&Statement::Item(item.clone()));
                         }
+                    } else {
+                        let outer_attributes = m.outer_attributes_opt.as_ref();
+
+                        let inner_attributes = m.inner_attributes_opt.as_ref();
+
+                        if outer_attributes.is_some() {
+                            return Err(SemanticErrorKind::UnexpectedAttribute {
+                                name: format!("{:?}", outer_attributes.unwrap()),
+                                msg: format!(
+                                    "Outer attributes out of context – expected module items"
+                                ),
+                            });
+                        } else if inner_attributes.is_some() {
+                            return Err(SemanticErrorKind::UnexpectedAttribute {
+                                name: format!("{:?}", inner_attributes.unwrap()),
+                                msg: format!(
+                                    "Inner attributes out of context – expected module items"
+                                ),
+                            });
+                        }
                     }
                 }
 

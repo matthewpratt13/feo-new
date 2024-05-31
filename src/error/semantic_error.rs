@@ -70,6 +70,11 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
+    UnexpectedAttribute {
+        name: String,
+        msg: String,
+    },
+
     UnexpectedType {
         expected: String,
         found: String,
@@ -140,6 +145,11 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UndefinedVariable { name } => {
                 write!(f, "undefined variable: `{name}`",)
             }
+
+            SemanticErrorKind::UnexpectedAttribute { name, msg } => {
+                write!(f, "unexpected attributes(s): `{name}`. {msg}")
+            }
+
             SemanticErrorKind::UnexpectedType { expected, found } => {
                 write!(f, "unexpected type(s). Expected {expected}, found {found}")
             }
