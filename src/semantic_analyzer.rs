@@ -151,28 +151,6 @@ impl SemanticAnalyzer {
                             let _ = self.analyze_stmt(&Statement::Item(item.clone()));
                         }
                     }
-
-                    // let module_symbol_table = SymbolTable::with_parent(self.symbol_table.clone());
-                    // let mut analyzer = SemanticAnalyzer {
-                    //     symbol_table: module_symbol_table,
-                    //     errors: Vec::new(),
-                    // };
-
-                    // let mut vec: Vec<Statement> = Vec::new();
-
-                    // let statements = match &m.items_opt {
-                    //     Some(v) => {
-                    //         for item in v.iter() {
-                    //             vec.push(Statement::Item(item.clone()));
-                    //         }
-
-                    //         vec
-                    //     }
-                    //     None => vec,
-                    // };
-
-                    // let _ = analyzer.analyze(&Module { statements });
-                    // self.errors.extend(analyzer.errors);
                 }
 
                 Item::TraitDef(t) => {
