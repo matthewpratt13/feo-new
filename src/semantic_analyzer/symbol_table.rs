@@ -3,7 +3,8 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        EnumDef, FunctionItem, Identifier, ModuleItem, StructDef, TraitDef, TupleStructDef, Type,
+        EnumDef, FunctionItem, Identifier, ModuleItem, PathType, StructDef, TraitDef,
+        TupleStructDef, Type,
     },
     error::SemanticErrorKind,
 };
@@ -17,6 +18,7 @@ pub(crate) enum Symbol {
     Trait(TraitDef),
     Function(FunctionItem),
     Module(ModuleItem),
+    Import(Vec<PathType>),
 }
 
 impl fmt::Display for Symbol {
@@ -29,6 +31,17 @@ impl fmt::Display for Symbol {
             Symbol::Trait(t) => write!(f, "{:?}", t),
             Symbol::Function(func) => write!(f, "{:?}", func),
             Symbol::Module(m) => write!(f, "{:?}", m),
+            Symbol::Import(i) => {
+                let mut segment_strings: Vec<String> = Vec::new();
+
+                for pt in i {
+                    segment_strings.push(format!("{:?}", pt.path_root));
+                }
+
+                let full_path = segment_strings.join("::");
+
+                write!(f, "{}", full_path)
+            }
         }
     }
 }

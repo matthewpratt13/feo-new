@@ -7,8 +7,8 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, FunctionOrMethodParam,
-        Hash, Identifier, InferredType, Int, Item, Literal, PathRoot, PathType, Pattern, SelfType,
-        Statement, Str, TraitDefItem, Type, UInt, Unit,
+        Hash, Identifier, ImportTree, InferredType, Int, Item, Literal, PathRoot, PathType,
+        Pattern, SelfType, Statement, Str, TraitDefItem, Type, UInt, Unit,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
@@ -50,7 +50,7 @@ impl SemanticAnalyzer {
                 let expr_type = self.analyze_expr(&value)?;
 
                 self.symbol_table
-                    .insert(name.clone(), Symbol::Variable(expr_type.clone()))
+                    .insert(name.clone(), Symbol::Variable(expr_type))
                     .map_err(|e| match e {
                         SemanticErrorKind::DuplicateVariable { .. } => {
                             SemanticErrorKind::DuplicateVariable { name: name.clone() }
@@ -60,7 +60,7 @@ impl SemanticAnalyzer {
             }
 
             Statement::Item(i) => match i {
-                Item::ImportDecl(_) => todo!(),
+                Item::ImportDecl(id) => self.analyze_import(&id.import_tree)?,
 
                 Item::AliasDecl(a) => match &a.original_type_opt {
                     Some(t) => {
@@ -199,13 +199,13 @@ impl SemanticAnalyzer {
                     }
                 }
 
-                Item::EnumDef(e) => {
+                Item::EnumDef(ed) => {
                     self.symbol_table
-                        .insert(e.enum_name.clone(), Symbol::Enum(e.clone()))
+                        .insert(ed.enum_name.clone(), Symbol::Enum(ed.clone()))
                         .map_err(|err| match err {
                             SemanticErrorKind::DuplicateVariable { .. } => {
                                 SemanticErrorKind::DuplicateVariable {
-                                    name: e.enum_name.clone(),
+                                    name: ed.enum_name.clone(),
                                 }
                             }
                             _ => err,
@@ -1550,6 +1550,35 @@ impl SemanticAnalyzer {
             }
         }
         self.errors.extend(analyzer.errors);
+        Ok(())
+    }
+
+    fn analyze_import(&mut self, tree: &ImportTree) -> Result<(), SemanticErrorKind> {
+        let mut path: Vec<PathType> = Vec::new();
+
+        for ps in tree.path_segments.iter() {
+            path.push(ps.root.clone());
+        }
+
+        let name = match path.last() {
+            Some(pt) => match &pt.tree_opt {
+                Some(v) => match v.last() {
+                    Some(i) => i.clone(),
+                    None => Identifier(pt.path_root.to_string()),
+                },
+                None => Identifier(pt.path_root.to_string()),
+            },
+            None => Identifier::from(""),
+        };
+
+        self.symbol_table
+            .insert(name.clone(), Symbol::Import(path))
+            .map_err(|e| match e {
+                SemanticErrorKind::DuplicateVariable { .. } => {
+                    SemanticErrorKind::DuplicateVariable { name }
+                }
+                _ => e,
+            })?;
         Ok(())
     }
 

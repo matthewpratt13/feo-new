@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::span::Span;
 
 use super::{
@@ -25,6 +27,18 @@ pub(crate) enum PathRoot {
     SelfKeyword,
     SelfType(SelfType),
     Identifier(Identifier),
+}
+
+impl fmt::Display for PathRoot {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PathRoot::Package => write!(f, "package"),
+            PathRoot::Super => write!(f, "super"),
+            PathRoot::SelfKeyword => write!(f, "self"),
+            PathRoot::SelfType(_) => write!(f, "Self"),
+            PathRoot::Identifier(i) => write!(f, "{}", i.to_string()),
+        }
+    }
 }
 
 /// Struct representing a closure parameter.
