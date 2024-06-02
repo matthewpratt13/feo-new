@@ -45,15 +45,15 @@ impl SemanticAnalyzer {
         match statement {
             Statement::Let(s) => {
                 let name = s.assignee.name.clone();
-                let value = s.value_opt.clone().unwrap();
+                let value = s.value_opt.as_ref().unwrap();
 
-                let expr_type = self.analyze_expr(&value)?;
+                let expr_type = self.analyze_expr(value)?;
 
                 self.symbol_table
                     .insert(name.clone(), Symbol::Variable(expr_type))
                     .map_err(|e| match e {
                         SemanticErrorKind::DuplicateVariable { .. } => {
-                            SemanticErrorKind::DuplicateVariable { name: name.clone() }
+                            SemanticErrorKind::DuplicateVariable { name }
                         }
                         _ => e,
                     })?;
@@ -185,15 +185,19 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
 
-                    let trait_items = t.trait_items_opt.clone();
+                    let trait_items = t.trait_items_opt.as_ref();
 
                     if trait_items.is_some() {
-                        for item in &trait_items.unwrap() {
+                        for item in trait_items.unwrap() {
                             match item {
                                 TraitDefItem::FunctionItem(f) => {
                                     self.analyze_function_def(f)?;
                                 }
-                                _ => todo!(),
+                                TraitDefItem::AliasDecl(ad) => self
+                                    .analyze_stmt(&Statement::Item(Item::AliasDecl(ad.clone())))?,
+                                TraitDefItem::ConstantDecl(cd) => self.analyze_stmt(
+                                    &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                )?,
                             }
                         }
                     }
@@ -931,9 +935,9 @@ impl SemanticAnalyzer {
                     },
                 };
 
-                let symbol_table = self.symbol_table.clone();
+                let symbol_table_clone = self.symbol_table.clone();
 
-                match symbol_table.get(&name) {
+                match symbol_table_clone.get(&name) {
                     Some(Symbol::Struct(struct_def)) => {
                         let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
@@ -1554,6 +1558,8 @@ impl SemanticAnalyzer {
     }
 
     fn analyze_import(&mut self, tree: &ImportTree) -> Result<(), SemanticErrorKind> {
+        // TODO: check if module path exists and is accessible
+
         let mut path: Vec<PathType> = Vec::new();
 
         for ps in tree.path_segments.iter() {
@@ -1574,8 +1580,8 @@ impl SemanticAnalyzer {
         self.symbol_table
             .insert(name.clone(), Symbol::Import(path))
             .map_err(|e| match e {
-                SemanticErrorKind::DuplicateVariable { .. } => {
-                    SemanticErrorKind::DuplicateVariable { name }
+                SemanticErrorKind::DuplicateImport { .. } => {
+                    SemanticErrorKind::DuplicateImport { name }
                 }
                 _ => e,
             })?;
