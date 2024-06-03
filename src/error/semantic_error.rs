@@ -36,6 +36,10 @@ pub enum SemanticErrorKind {
         expected: String,
     },
 
+    MissingValue {
+        expected: String,
+    },
+
     TypeMismatchArray {
         expected: String,
         found: String,
@@ -116,7 +120,9 @@ impl fmt::Display for SemanticErrorKind {
                     "tuple struct element not found. Expected {expected}, found none"
                 )
             }
-
+            SemanticErrorKind::MissingValue { expected } => {
+                write!(f, "value not found. Expected {expected}, found none")
+            }
             SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
                 f,
                 "array element types do not match. Expected {expected}, found {found}"

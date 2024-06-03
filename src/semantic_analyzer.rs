@@ -43,17 +43,19 @@ impl SemanticAnalyzer {
 
     fn analyze_stmt(&mut self, statement: &Statement) -> Result<(), SemanticErrorKind> {
         match statement {
-            Statement::Let(s) => {
-                let name = s.assignee.name.clone();
-                let value = s.value_opt.as_ref().unwrap();
-
-                let expr_type = self.analyze_expr(value)?;
+            Statement::Let(ls) => {
+                let expr_type = match &ls.value_opt {
+                    Some(v) => self.analyze_expr(v)?,
+                    None => Type::UnitType(Unit),
+                };
 
                 self.symbol_table
-                    .insert(name.clone(), Symbol::Variable(expr_type))
+                    .insert(ls.assignee.name.clone(), Symbol::Variable(expr_type))
                     .map_err(|e| match e {
                         SemanticErrorKind::DuplicateVariable { .. } => {
-                            SemanticErrorKind::DuplicateVariable { name }
+                            SemanticErrorKind::DuplicateVariable {
+                                name: ls.assignee.name.clone(),
+                            }
                         }
                         _ => e,
                     })?;
@@ -62,30 +64,30 @@ impl SemanticAnalyzer {
             Statement::Item(i) => match i {
                 Item::ImportDecl(id) => self.analyze_import(&id.import_tree)?,
 
-                Item::AliasDecl(a) => match &a.original_type_opt {
+                Item::AliasDecl(ad) => match &ad.original_type_opt {
                     Some(t) => {
                         self.symbol_table
-                            .insert(a.alias_name.clone(), Symbol::Variable(t.clone()))?;
+                            .insert(ad.alias_name.clone(), Symbol::Variable(t.clone()))?;
                     }
                     None => {
                         let ty = PathType {
-                            path_root: PathRoot::Identifier(a.alias_name.clone()),
+                            path_root: PathRoot::Identifier(ad.alias_name.clone()),
                             tree_opt: None,
                         };
 
                         self.symbol_table.insert(
-                            a.alias_name.clone(),
+                            ad.alias_name.clone(),
                             Symbol::Variable(Type::UserDefined(ty)),
                         )?;
                     }
                 },
 
-                Item::ConstantDecl(c) => {
-                    let value_type = match &c.value_opt {
+                Item::ConstantDecl(cd) => {
+                    let value_type = match &cd.value_opt {
                         Some(v) => {
                             let value = Expression::try_from(v.clone()).map_err(|_| {
                                 SemanticErrorKind::ConversionError {
-                                    from: format!("`{:?}`", v),
+                                    from: format!("`{:?}`", &v),
                                     into: "`Expression`".to_string(),
                                 }
                             })?;
@@ -96,22 +98,22 @@ impl SemanticAnalyzer {
                         None => Type::UnitType(Unit),
                     };
 
-                    let constant_type = *c.constant_type.clone();
+                    let constant_type = *cd.constant_type.clone();
 
                     if value_type != constant_type {
                         self.log_error(
                             SemanticErrorKind::TypeMismatchVariable {
-                                name: c.constant_name.clone(),
+                                name: cd.constant_name.clone(),
                                 expected: constant_type.to_string(),
                                 found: value_type.to_string(),
                             },
-                            &c.value_opt.clone().unwrap().span(),
+                            &cd.value_opt.clone().unwrap().span(),
                         );
                     }
 
                     self.symbol_table.insert(
-                        c.constant_name.clone(),
-                        Symbol::Variable(*c.constant_type.clone()),
+                        cd.constant_name.clone(),
+                        Symbol::Variable(*cd.constant_type.clone()),
                     )?;
                 }
 
@@ -120,7 +122,7 @@ impl SemanticAnalyzer {
                         Some(a) => {
                             let assignee = Expression::try_from(*a.clone()).map_err(|_| {
                                 SemanticErrorKind::ConversionError {
-                                    from: format!("`{:?}`", a),
+                                    from: format!("`{:?}`", &a),
                                     into: "`Expression`".to_string(),
                                 }
                             })?;
@@ -157,14 +159,14 @@ impl SemanticAnalyzer {
 
                         if outer_attributes.is_some() {
                             return Err(SemanticErrorKind::UnexpectedAttribute {
-                                name: format!("{:?}", outer_attributes.unwrap()),
+                                name: format!("{:?}", &outer_attributes.unwrap()),
                                 msg: format!(
                                     "Outer attributes out of context – expected module items"
                                 ),
                             });
                         } else if inner_attributes.is_some() {
                             return Err(SemanticErrorKind::UnexpectedAttribute {
-                                name: format!("{:?}", inner_attributes.unwrap()),
+                                name: format!("{:?}", &inner_attributes.unwrap()),
                                 msg: format!(
                                     "Inner attributes out of context – expected module items"
                                 ),
@@ -385,7 +387,7 @@ impl SemanticAnalyzer {
             Expression::Unwrap(u) => {
                 self.analyze_expr(&Expression::try_from(*u.value_expr.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
-                        from: format!("`{:?}`", u),
+                        from: format!("`{:?}`", &u),
                         into: "`Expression`".to_string(),
                     }
                 })?)
@@ -406,7 +408,7 @@ impl SemanticAnalyzer {
             Expression::Dereference(d) => {
                 self.analyze_expr(&Expression::try_from(d.assignee_expr.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
-                        from: format!("`{:?}`", d),
+                        from: format!("`{:?}`", &d),
                         into: "`Expression`".to_string(),
                     }
                 })?)
@@ -669,7 +671,7 @@ impl SemanticAnalyzer {
                 let expr_type =
                     self.analyze_expr(&Expression::try_from(a.rhs.clone()).map_err(|_| {
                         SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", a.rhs.clone()),
+                            from: format!("`{:?}`", &a.rhs.clone()),
                             into: "`Expression`".to_string(),
                         }
                     })?)?;
@@ -682,7 +684,7 @@ impl SemanticAnalyzer {
                     }
                     Some(t) => Err(SemanticErrorKind::UnexpectedType {
                         expected: expr_type.to_string(),
-                        found: format!("{:?}", t),
+                        found: format!("{:?}", &t),
                     }),
                     None => Err(SemanticErrorKind::UndefinedVariable { name }),
                 }
@@ -969,7 +971,7 @@ impl SemanticAnalyzer {
                                         return Err(SemanticErrorKind::MissingStructField {
                                             expected: format!(
                                                 "`{}: {}`",
-                                                sdf.field_name, *sdf.field_type
+                                                &sdf.field_name, *sdf.field_type
                                             ),
                                         })
                                     }
@@ -1379,7 +1381,7 @@ impl SemanticAnalyzer {
                                         return Err(SemanticErrorKind::MissingStructField {
                                             expected: format!(
                                                 "`{}: {}`",
-                                                sdf.field_name, *sdf.field_type
+                                                &sdf.field_name, *sdf.field_type
                                             ),
                                         })
                                     }
