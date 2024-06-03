@@ -7,8 +7,8 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, FunctionOrMethodParam,
-        Hash, Identifier, ImportTree, InferredType, Int, Item, Literal, PathRoot, PathType,
-        Pattern, SelfType, Statement, Str, TraitDefItem, Type, UInt, Unit,
+        Hash, Identifier, ImportTree, InferredType, InherentImplItem, Int, Item, Literal, PathRoot,
+        PathType, Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, Unit,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
@@ -244,9 +244,59 @@ impl SemanticAnalyzer {
                         })?;
                 }
 
-                Item::InherentImplDef(_) => todo!(),
+                Item::InherentImplDef(i) => {
+                    if i.associated_items_opt.is_some() {
+                        for item in i.associated_items_opt.as_ref().unwrap() {
+                            match item {
+                                InherentImplItem::ConstantDecl(cd) => self.analyze_stmt(
+                                    &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                )?,
+                                InherentImplItem::FunctionItem(fi) => self.analyze_stmt(
+                                    &Statement::Item(Item::FunctionItem(fi.clone())),
+                                )?,
+                            }
+                        }
+                    } else {
+                        let attributes = i.attributes_opt.as_ref();
 
-                Item::TraitImplDef(_) => todo!(),
+                        if attributes.is_some() {
+                            return Err(SemanticErrorKind::UnexpectedAttribute {
+                                name: format!("{:?}", &attributes.unwrap()),
+                                msg: format!(
+                                    "Outer attributes out of context – expected associated items"
+                                ),
+                            });
+                        }
+                    }
+                }
+
+                Item::TraitImplDef(t) => {
+                    if t.associated_items_opt.is_some() {
+                        for item in t.associated_items_opt.as_ref().unwrap() {
+                            match item {
+                                TraitImplItem::AliasDecl(ad) => self
+                                    .analyze_stmt(&Statement::Item(Item::AliasDecl(ad.clone())))?,
+                                TraitImplItem::ConstantDecl(cd) => self.analyze_stmt(
+                                    &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                )?,
+                                TraitImplItem::FunctionItem(fi) => self.analyze_stmt(
+                                    &Statement::Item(Item::FunctionItem(fi.clone())),
+                                )?,
+                            }
+                        }
+                    } else {
+                        let attributes = t.attributes_opt.as_ref();
+
+                        if attributes.is_some() {
+                            return Err(SemanticErrorKind::UnexpectedAttribute {
+                                name: format!("{:?}", &attributes.unwrap()),
+                                msg: format!(
+                                    "Outer attributes out of context – expected associated items"
+                                ),
+                            });
+                        }
+                    }
+                }
 
                 Item::FunctionItem(f) => {
                     self.symbol_table
