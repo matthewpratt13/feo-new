@@ -7,6 +7,11 @@ use crate::ast::Identifier;
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {
+    ArgumentCountMismatch {
+        expected: usize,
+        found: usize,
+    },
+
     ConversionError {
         from: String,
         into: String,
@@ -40,6 +45,12 @@ pub enum SemanticErrorKind {
         expected: String,
     },
 
+    TypeMismatchArgument {
+        name: Identifier,
+        expected: String,
+        found: String,
+    },
+
     TypeMismatchArray {
         expected: String,
         found: String,
@@ -64,6 +75,10 @@ pub enum SemanticErrorKind {
         name: Identifier,
         expected: String,
         found: String,
+    },
+
+    UndefinedFunction {
+        name: Identifier,
     },
 
     UndefinedPath {
@@ -95,6 +110,13 @@ pub enum SemanticErrorKind {
 impl fmt::Display for SemanticErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            SemanticErrorKind::ArgumentCountMismatch { expected, found } => {
+                write!(
+                    f,
+                    "argument count mismatch. Expected {expected} arguments, found {found}"
+                )
+            }
+
             SemanticErrorKind::ConversionError { from, into } => {
                 write!(f, "conversion error. Unable to convert {from} into {into}")
             }
@@ -127,6 +149,10 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "array element types do not match. Expected {expected}, found {found}"
             ),
+            SemanticErrorKind::TypeMismatchArgument { name, expected, found } => write!(
+                f,
+                "`{name}` type does not match function definition parameter type. Expected {expected}, found {found}"
+            ),
             SemanticErrorKind::TypeMismatchBinaryExpr { expected, found } => write!(
                 f,
                 "type mismatch in binary expression. Expected {expected}, found {found}"
@@ -151,6 +177,8 @@ impl fmt::Display for SemanticErrorKind {
                     "type mismatch for `{name}`. Expected {expected}, found {found}"
                 )
             }
+
+            SemanticErrorKind::UndefinedFunction { name } => write!(f, "undefined function: `{name}`"),
 
             SemanticErrorKind::UndefinedPath { name } => write!(f, "undefined path: `{name}`"),
 

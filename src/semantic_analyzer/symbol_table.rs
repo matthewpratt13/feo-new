@@ -31,17 +31,7 @@ impl fmt::Display for Symbol {
             Symbol::Trait(t) => write!(f, "{:?}", t),
             Symbol::Function(func) => write!(f, "{:?}", func),
             Symbol::Module(m) => write!(f, "{:?}", m),
-            Symbol::Import(i) => {
-                let mut segment_strings: Vec<String> = Vec::new();
-
-                for pt in i {
-                    segment_strings.push(format!("{:?}", pt.path_root));
-                }
-
-                let full_path = segment_strings.join("::");
-
-                write!(f, "{}", full_path)
-            }
+            Symbol::Import(i) => write!(f, "{:?}", i),
         }
     }
 }

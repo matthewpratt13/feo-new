@@ -2,7 +2,7 @@ use core::fmt;
 
 pub use crate::{B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512};
 
-use super::{FunctionOrMethodParam, Identifier, PathRoot, Type};
+use super::{FunctionOrMethodParam, Identifier, PathExpr, Type};
 
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]
@@ -254,9 +254,62 @@ impl fmt::Display for InferredType {
     }
 }
 
+// /// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
+// #[derive(Debug, Clone, PartialEq)]
+// pub struct PathType {
+//     pub(crate) path_root: PathRoot,
+//     pub(crate) tree_opt: Option<Vec<Identifier>>,
+// }
+
 /// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathType {
-    pub(crate) path_root: PathRoot,
-    pub(crate) tree_opt: Option<Vec<Identifier>>,
+    pub(crate) associated_type_path_prefix_opt: Option<Vec<Identifier>>,
+    pub(crate) type_name: Identifier,
+}
+
+impl From<PathExpr> for PathType {
+    fn from(value: PathExpr) -> Self {
+        let mut path_segment_names: Vec<Identifier> = Vec::new();
+
+        path_segment_names.push(Identifier(value.path_root.to_string()));
+
+        match value.tree_opt {
+            Some(v) => {
+                v.into_iter().for_each(|i| path_segment_names.push(i));
+            }
+            None => (),
+        }
+
+        let type_name = path_segment_names.pop().expect("empty path expression");
+
+        Self {
+            associated_type_path_prefix_opt: {
+                if path_segment_names.is_empty() {
+                    None
+                } else {
+                    Some(path_segment_names)
+                }
+            },
+            type_name,
+        }
+    }
+}
+
+impl fmt::Display for PathType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut segments: Vec<String> = Vec::new();
+
+        if let Some(v) = &self.associated_type_path_prefix_opt {
+            for i in v {
+                segments.push(i.to_string());
+            }
+        }
+
+        segments.push(self.type_name.to_string());
+
+        let full_path = segments.join("::");
+
+        write!(f, "{}", full_path)
+    }
 }

@@ -97,6 +97,7 @@ impl Item {
                 attributes_opt,
                 visibility,
             )?)),
+
             _ => {
                 parser.log_unexpected_token("item declaration or definition");
                 Err(ErrorsEmitted)

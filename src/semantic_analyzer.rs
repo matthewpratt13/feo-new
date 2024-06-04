@@ -71,8 +71,8 @@ impl SemanticAnalyzer {
                     }
                     None => {
                         let ty = PathType {
-                            path_root: PathRoot::Identifier(ad.alias_name.clone()),
-                            tree_opt: None,
+                            associated_type_path_prefix_opt: None,
+                            type_name: ad.alias_name.clone(),
                         };
 
                         self.symbol_table.insert(
@@ -424,11 +424,70 @@ impl SemanticAnalyzer {
                 Literal::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
             },
 
-            Expression::MethodCall(_) => todo!(),
+            Expression::MethodCall(mc) => {
+                let receiver_type =
+                    self.analyze_expr(&Expression::try_from(*mc.receiver.clone()).map_err(
+                        |_| SemanticErrorKind::ConversionError {
+                            from: format!("`{:?}`", &mc),
+                            into: "`Expression`".to_string(),
+                        },
+                    )?)?;
+
+                match self.symbol_table.get(&Identifier(receiver_type.to_string())) {
+                    Some(Symbol::Function(f)) => todo!(),
+                    None => todo!(),
+                }
+            }
 
             Expression::FieldAccess(_) => todo!(),
 
-            Expression::Call(_) => todo!(),
+            Expression::Call(c) => {
+                let name = Identifier(format!("{:?}", c.callee));
+
+                match self.symbol_table.get(&name) {
+                    Some(Symbol::Function(f)) => {
+                        let args = c.args_opt.clone();
+                        let params = f.params_opt.clone();
+                        let return_type = f.return_type_opt.clone();
+
+                        match (&args, &params) {
+                            (None, None) => Ok(Type::UnitType(Unit)),
+                            (None, Some(_)) | (Some(_), None) => {
+                                return Err(SemanticErrorKind::ArgumentCountMismatch {
+                                    expected: params.unwrap().len(),
+                                    found: args.unwrap().len(),
+                                })
+                            }
+                            (Some(a), Some(p)) => {
+                                if a.len() != p.len() {
+                                    return Err(SemanticErrorKind::ArgumentCountMismatch {
+                                        expected: p.len(),
+                                        found: a.len(),
+                                    });
+                                }
+
+                                for (arg, param) in a.iter().zip(p) {
+                                    let arg_type = self.analyze_expr(&arg)?;
+                                    let param_type = param.param_type();
+                                    if arg_type != param_type {
+                                        return Err(SemanticErrorKind::TypeMismatchArgument {
+                                            name,
+                                            expected: param_type.to_string(),
+                                            found: arg_type.to_string(),
+                                        });
+                                    }
+                                }
+
+                                match return_type {
+                                    Some(t) => Ok(*t),
+                                    None => Ok(Type::UnitType(Unit)),
+                                }
+                            }
+                        }
+                    }
+                    _ => Err(SemanticErrorKind::UndefinedFunction { name }),
+                }
+            }
 
             Expression::Index(_) => todo!(),
 
@@ -732,6 +791,7 @@ impl SemanticAnalyzer {
                     Some(Symbol::Variable(var_type)) if *var_type == expr_type => {
                         Ok(var_type.clone())
                     }
+                    // TODO: add expression name (technically a type mismatch)
                     Some(t) => Err(SemanticErrorKind::UnexpectedType {
                         expected: expr_type.to_string(),
                         found: format!("{:?}", &t),
@@ -1030,13 +1090,13 @@ impl SemanticAnalyzer {
                         }
 
                         let path_type = PathType {
-                            path_root: PathRoot::Identifier(name.clone()),
-                            tree_opt: None,
+                            associated_type_path_prefix_opt: None,
+                            type_name: name,
                         };
 
                         Ok(Type::UserDefined(path_type))
                     }
-                    _ => Err(SemanticErrorKind::UndefinedStruct { name: name.clone() }),
+                    _ => Err(SemanticErrorKind::UndefinedStruct { name }),
                 }
             }
 
@@ -1619,13 +1679,7 @@ impl SemanticAnalyzer {
         }
 
         let name = match path.last() {
-            Some(pt) => match &pt.tree_opt {
-                Some(v) => match v.last() {
-                    Some(i) => i.clone(),
-                    None => Identifier(pt.path_root.to_string()),
-                },
-                None => Identifier(pt.path_root.to_string()),
-            },
+            Some(pt) => Identifier::from(&pt.to_string()),
             None => Identifier::from(""),
         };
 

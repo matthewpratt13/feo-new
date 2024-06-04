@@ -4,7 +4,7 @@ use crate::span::Span;
 
 use super::{
     AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,
-    PathType, ReferenceOp, Separator, Type, ValueExpr,
+    PathType, ReferenceOp, SelfType, Separator, Type, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -21,6 +21,15 @@ pub(crate) enum EnumVariantType {
 pub(crate) enum FunctionOrMethodParam {
     FunctionParam(FunctionParam),
     MethodParam(SelfParam),
+}
+
+impl FunctionOrMethodParam {
+    pub(crate) fn param_type(&self) -> Type {
+        match self {
+            FunctionOrMethodParam::FunctionParam(f) => *f.param_type.clone(),
+            FunctionOrMethodParam::MethodParam(_) => Type::SelfType(SelfType),
+        }
+    }
 }
 
 impl fmt::Display for FunctionOrMethodParam {
