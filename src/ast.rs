@@ -428,6 +428,20 @@ impl Spanned for Expression {
     }
 }
 
+impl TryFrom<Expression> for PathExpr {
+    type Error = ParserErrorKind;
+
+    fn try_from(value: Expression) -> Result<Self, Self::Error> {
+        match value {
+            Expression::Path(p) => Ok(p),
+            _ => Err(ParserErrorKind::ConversionError {
+                from: format!("`{:?}`", value),
+                into: "`PathExpr`".to_string(),
+            }),
+        }
+    }
+}
+
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -443,7 +457,7 @@ impl fmt::Display for Expression {
                 Literal::Char { value, .. } => write!(f, "{}", value),
                 Literal::Bool { value, .. } => write!(f, "{}", value),
             },
-            Expression::Path(pth) => write!(f, "{:?}", pth),
+            Expression::Path(pth) => write!(f, "{}", pth),
             Expression::MethodCall(mc) => write!(f, "{:?}", mc),
             Expression::FieldAccess(fa) => write!(f, "{:?}", fa),
             Expression::Call(cal) => write!(f, "{:?}", cal),
@@ -774,6 +788,20 @@ impl TryFrom<AssigneeExpr> for Expression {
     }
 }
 
+impl TryFrom<AssigneeExpr> for PathExpr {
+    type Error = ParserErrorKind;
+
+    fn try_from(value: AssigneeExpr) -> Result<Self, Self::Error> {
+        match value {
+            AssigneeExpr::PathExpr(p) => Ok(p),
+            _ => Err(ParserErrorKind::ConversionError {
+                from: format!("`{:?}`", value),
+                into: "`PathExpr`".to_string(),
+            }),
+        }
+    }
+}
+
 /// Enum representing patterns, which are syntactically similar to `Expression`.
 /// Patterns are used to match values against structures, as well as within
 /// variable declarations and as function parameters.
@@ -811,7 +839,7 @@ impl fmt::Display for Pattern {
                 Literal::Bool { value, .. } => write!(f, "{}", value),
             },
             Pattern::IdentifierPatt(id) => write!(f, "{}", id.name),
-            Pattern::PathPatt(pth) => write!(f, "{:?}", pth),
+            Pattern::PathPatt(pth) => write!(f, "{}", pth),
             Pattern::ReferencePatt(r) => write!(f, "{:?}", r),
             Pattern::GroupedPatt(g) => write!(f, "({})", *g.inner_pattern),
             Pattern::RangePatt(rng) => write!(f, "{:?}", rng),
@@ -986,7 +1014,7 @@ impl fmt::Display for Type {
                 num_elements,
             } => write!(f, "`[{}; {}]`", *element_type, num_elements),
             Type::Tuple(t) => write!(f, "`({:?})`", t),
-            Type::UserDefined(ud) => write!(f, "`{:?}`", ud),
+            Type::UserDefined(ud) => write!(f, "`{}`", ud),
             Type::FunctionPtr(fp) => write!(f, "`{}`", fp),
             Type::Reference {
                 reference_op,

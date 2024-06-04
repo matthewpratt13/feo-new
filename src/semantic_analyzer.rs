@@ -7,8 +7,9 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, FunctionOrMethodParam,
-        Hash, Identifier, ImportTree, InferredType, InherentImplItem, Int, Item, Literal, PathRoot,
-        PathType, Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, Unit,
+        Hash, Identifier, ImportTree, InferredType, InherentImplItem, Int, Item, Literal, PathExpr,
+        PathRoot, PathType, Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type,
+        UInt, Unit,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
@@ -433,7 +434,10 @@ impl SemanticAnalyzer {
                         },
                     )?)?;
 
-                match self.symbol_table.get(&Identifier(receiver_type.to_string())) {
+                match self
+                    .symbol_table
+                    .get(&Identifier(receiver_type.to_string()))
+                {
                     Some(Symbol::Function(f)) => todo!(),
                     None => todo!(),
                 }
@@ -777,24 +781,32 @@ impl SemanticAnalyzer {
             Expression::Range(_) => todo!(),
 
             Expression::Assignment(a) => {
-                let expr_type =
-                    self.analyze_expr(&Expression::try_from(a.rhs.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &a.rhs.clone()),
-                            into: "`Expression`".to_string(),
-                        }
-                    })?)?;
+                let expr = Expression::try_from(a.lhs.clone()).map_err(|_| {
+                    SemanticErrorKind::ConversionError {
+                        from: format!("`{:?}`", &a.lhs.clone()),
+                        into: "`Expression`".to_string(),
+                    }
+                })?;
 
-                let name = Identifier(format!("{:?}", a.lhs.clone()));
+                let path =
+                    PathExpr::try_from(expr).map_err(|_| SemanticErrorKind::ConversionError {
+                        from: expr.to_string(),
+                        into: "`PathExpr`".to_string(),
+                    })?;
+
+                let expr_type = self.analyze_expr(&expr)?;
+
+                let name = Identifier(path.path_root.to_string());
 
                 match self.symbol_table.get(&name) {
                     Some(Symbol::Variable(var_type)) if *var_type == expr_type => {
                         Ok(var_type.clone())
                     }
+
                     // TODO: add expression name (technically a type mismatch)
                     Some(t) => Err(SemanticErrorKind::UnexpectedType {
                         expected: expr_type.to_string(),
-                        found: format!("{:?}", &t),
+                        found: format!("`{}`", &t),
                     }),
                     None => Err(SemanticErrorKind::UndefinedVariable { name }),
                 }

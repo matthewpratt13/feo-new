@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Identifier, PathExpr, PathRoot, SelfType},
     error::ErrorsEmitted,
@@ -81,6 +83,24 @@ impl ParseSimpleExpr for PathExpr {
         ////////////////////////////////////////////////////////////////////////////////
 
         Ok(expr)
+    }
+}
+
+impl fmt::Display for PathExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut segments: Vec<String> = Vec::new();
+
+        if let Some(v) = &self.tree_opt {
+            for i in v {
+                segments.push(i.to_string());
+            }
+        }
+
+        segments.push(self.path_root.to_string());
+
+        let full_path = segments.join("::");
+
+        write!(f, "{}", full_path)
     }
 }
 
