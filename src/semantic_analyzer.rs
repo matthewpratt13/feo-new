@@ -540,7 +540,30 @@ impl SemanticAnalyzer {
                 }
             }
 
-            Expression::FieldAccess(_) => todo!(),
+            Expression::FieldAccess(fa) => {
+                let object_type =
+                    self.analyze_expr(&Expression::try_from(*fa.object.clone()).map_err(
+                        |_| SemanticErrorKind::ConversionError {
+                            from: format!("`{:?}`", &fa),
+                            into: "`Expression`".to_string(),
+                        },
+                    )?)?;
+
+                match self
+                    .symbol_table
+                    .get(&Identifier::from(&object_type.to_string()))
+                {
+                    Some(Symbol::Struct(s)) => match &s.fields_opt {
+                        Some(v) => match v.iter().find(|f| f.field_name == fa.field_name) {
+                            Some(sdf) => Ok(*sdf.field_type.clone()),
+                            _ => todo!(), // undefined field
+                        },
+                        None => Ok(Type::UnitType(Unit)),
+                    },
+
+                    _ => todo!(), // undefined type
+                }
+            }
 
             Expression::Call(c) => {
                 let callee = Expression::try_from(c.callee.clone()).map_err(|_| {
