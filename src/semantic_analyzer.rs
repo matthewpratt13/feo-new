@@ -9,7 +9,7 @@ use crate::{
         BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, FunctionOrMethodParam,
         Hash, Identifier, ImportTree, InferredType, InherentImplItem, Int, Item, Literal, PathExpr,
         PathRoot, PathType, Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type,
-        UInt, Unit,
+        UInt, UnderscoreExpr, Unit, ValueExpr,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
@@ -22,6 +22,7 @@ use self::symbol_table::{Symbol, SymbolTable};
 struct SemanticAnalyzer {
     symbol_table: SymbolTable,
     errors: Vec<CompilerError<SemanticErrorKind>>,
+    // TODO: add `Logger`
 }
 
 impl SemanticAnalyzer {
@@ -117,7 +118,13 @@ impl SemanticAnalyzer {
                                 expected: constant_type.to_string(),
                                 found: value_type.to_string(),
                             },
-                            &cd.value_opt.clone().unwrap().span(),
+                            &cd.value_opt
+                                .clone()
+                                .unwrap_or(ValueExpr::UnderscoreExpr(UnderscoreExpr {
+                                    underscore: Identifier::from("_"),
+                                    span: cd.span.clone(),
+                                }))
+                                .span(),
                         );
                     }
 
@@ -486,33 +493,46 @@ impl SemanticAnalyzer {
                     }
                 })?;
 
-                let path_expr = PathExpr::try_from(receiver).map_err(|_| {
+                let path_expr = PathExpr::try_from(receiver.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
                         from: receiver.to_string(),
                         into: "`PathExpr`".to_string(),
                     }
                 })?;
 
-                let receiver_type = self.analyze_expr(&receiver)?;
-
                 let type_name = PathType::from(path_expr).type_name;
 
                 match self.symbol_table.get(&type_name) {
                     Some(Symbol::Struct(s)) => {
                         if s.struct_name == type_name {
-                            todo!()
+                            self.analyze_call_or_method_call_expr(
+                                mc.method_name.clone(),
+                                mc.args_opt.clone(),
+                            )
+                        } else {
+                            todo!() // type mismatch (variable)
                         }
                     }
 
                     Some(Symbol::TupleStruct(ts)) => {
                         if ts.struct_name == type_name {
-                            todo!()
+                            self.analyze_call_or_method_call_expr(
+                                mc.method_name.clone(),
+                                mc.args_opt.clone(),
+                            )
+                        } else {
+                            todo!() // type mismatch (variable)
                         }
                     }
 
                     Some(Symbol::Enum(e)) => {
                         if e.enum_name == type_name {
-                            todo!()
+                            self.analyze_call_or_method_call_expr(
+                                mc.method_name.clone(),
+                                mc.args_opt.clone(),
+                            )
+                        } else {
+                            todo!() // type mismatch (variable)
                         }
                     }
 
@@ -523,51 +543,23 @@ impl SemanticAnalyzer {
             Expression::FieldAccess(_) => todo!(),
 
             Expression::Call(c) => {
-                let name = Identifier(format!("{:?}", c.callee));
-
-                match self.symbol_table.get(&name) {
-                    Some(Symbol::Function { function, .. }) => {
-                        let args = c.args_opt.clone();
-                        let params = function.params_opt.clone();
-                        let return_type = function.return_type_opt.clone();
-
-                        match (&args, &params) {
-                            (None, None) => Ok(Type::UnitType(Unit)),
-                            (None, Some(_)) | (Some(_), None) => {
-                                return Err(SemanticErrorKind::ArgumentCountMismatch {
-                                    expected: params.unwrap().len(),
-                                    found: args.unwrap().len(),
-                                })
-                            }
-                            (Some(a), Some(p)) => {
-                                if a.len() != p.len() {
-                                    return Err(SemanticErrorKind::ArgumentCountMismatch {
-                                        expected: p.len(),
-                                        found: a.len(),
-                                    });
-                                }
-
-                                for (arg, param) in a.iter().zip(p) {
-                                    let arg_type = self.analyze_expr(&arg)?;
-                                    let param_type = param.param_type();
-                                    if arg_type != param_type {
-                                        return Err(SemanticErrorKind::TypeMismatchArgument {
-                                            name,
-                                            expected: param_type.to_string(),
-                                            found: arg_type.to_string(),
-                                        });
-                                    }
-                                }
-
-                                match return_type {
-                                    Some(t) => Ok(*t),
-                                    None => Ok(Type::UnitType(Unit)),
-                                }
-                            }
-                        }
+                let callee = Expression::try_from(c.callee.clone()).map_err(|_| {
+                    SemanticErrorKind::ConversionError {
+                        from: format!("`{:?}`", &c),
+                        into: "`Expression`".to_string(),
                     }
-                    _ => Err(SemanticErrorKind::UndefinedFunction { name }),
-                }
+                })?;
+
+                let path_expr = PathExpr::try_from(callee.clone()).map_err(|_| {
+                    SemanticErrorKind::ConversionError {
+                        from: callee.to_string(),
+                        into: "`PathExpr`".to_string(),
+                    }
+                })?;
+
+                let name = PathType::from(path_expr).type_name;
+
+                self.analyze_call_or_method_call_expr(name, c.args_opt.clone())
             }
 
             Expression::Index(_) => todo!(),
@@ -865,11 +857,12 @@ impl SemanticAnalyzer {
                     }
                 })?;
 
-                let path =
-                    PathExpr::try_from(expr).map_err(|_| SemanticErrorKind::ConversionError {
+                let path = PathExpr::try_from(expr.clone()).map_err(|_| {
+                    SemanticErrorKind::ConversionError {
                         from: expr.to_string(),
                         into: "`PathExpr`".to_string(),
-                    })?;
+                    }
+                })?;
 
                 let expr_type = self.analyze_expr(&expr)?;
 
@@ -1365,6 +1358,56 @@ impl SemanticAnalyzer {
         }
     }
 
+    fn analyze_call_or_method_call_expr(
+        &mut self,
+        name: Identifier,
+        args_opt: Option<Vec<Expression>>,
+    ) -> Result<Type, SemanticErrorKind> {
+        match self.symbol_table.get(&name) {
+            Some(Symbol::Function { function, .. }) => {
+                let args = args_opt.clone();
+                let params = function.params_opt.clone();
+                let return_type = function.return_type_opt.clone();
+
+                match (&args, &params) {
+                    (None, None) => Ok(Type::UnitType(Unit)),
+                    (None, Some(_)) | (Some(_), None) => {
+                        return Err(SemanticErrorKind::ArgumentCountMismatch {
+                            expected: params.unwrap_or(Vec::new()).len(),
+                            found: args.unwrap_or(Vec::new()).len(),
+                        })
+                    }
+                    (Some(a), Some(p)) => {
+                        if a.len() != p.len() {
+                            return Err(SemanticErrorKind::ArgumentCountMismatch {
+                                expected: p.len(),
+                                found: a.len(),
+                            });
+                        }
+
+                        for (arg, param) in a.iter().zip(p) {
+                            let arg_type = self.analyze_expr(&arg)?;
+                            let param_type = param.param_type();
+                            if arg_type != param_type {
+                                return Err(SemanticErrorKind::TypeMismatchArgument {
+                                    name,
+                                    expected: param_type.to_string(),
+                                    found: arg_type.to_string(),
+                                });
+                            }
+                        }
+
+                        match return_type {
+                            Some(t) => Ok(*t),
+                            None => Ok(Type::UnitType(Unit)),
+                        }
+                    }
+                }
+            }
+            _ => Err(SemanticErrorKind::UndefinedFunction { name }),
+        }
+    }
+
     fn analyze_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
         match pattern {
             Pattern::IdentifierPatt(i) => match self.symbol_table.get(&i.name) {
@@ -1783,6 +1826,7 @@ impl SemanticAnalyzer {
         Ok(())
     }
 
+    // TODO: update to push error to `self.errors` AND log to `self.logger` (new)
     fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {
         let error = CompilerError::new(error_kind, span.start(), &span.input());
 
