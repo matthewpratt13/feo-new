@@ -619,7 +619,26 @@ impl SemanticAnalyzer {
                 }
             }
 
-            Expression::TupleIndex(_) => todo!(),
+            Expression::TupleIndex(ti) => {
+                let tuple_type =
+                    self.analyze_expr(&Expression::try_from(*ti.tuple.clone()).map_err(|_| {
+                        SemanticErrorKind::ConversionError {
+                            from: format!("`{:?}`", &ti),
+                            into: "`Expression`".to_string(),
+                        }
+                    })?)?;
+
+                match tuple_type {
+                    Type::Tuple(t) => {
+                        if ti.index < UInt::from(t.len()) {
+                            Ok(Type::Tuple(t))
+                        } else {
+                            todo!() // index out of bounds
+                        }
+                    }
+                    _ => todo!(), // unexpected type (expected tuple)
+                }
+            }
 
             Expression::Unwrap(u) => {
                 self.analyze_expr(&Expression::try_from(*u.value_expr.clone()).map_err(|_| {
@@ -651,6 +670,7 @@ impl SemanticAnalyzer {
                 })?)
             }
 
+            // TODO: check if original type can be cast as new type
             Expression::TypeCast(tc) => Ok(*tc.new_type.clone()),
 
             Expression::Binary(b) => {

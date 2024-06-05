@@ -34,6 +34,12 @@ pub enum UInt {
     U128(u128),
 }
 
+impl From<usize> for UInt {
+    fn from(value: usize) -> Self {
+        UInt::U128(value as u128)
+    }
+}
+
 impl fmt::Display for UInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
