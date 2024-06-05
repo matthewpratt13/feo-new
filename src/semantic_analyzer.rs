@@ -216,7 +216,7 @@ impl SemanticAnalyzer {
                         for item in trait_items.unwrap() {
                             match item {
                                 TraitDefItem::FunctionItem(fi) => {
-                                    self.analyze_function_def(&fi);
+                                    let _ = self.analyze_function_def(&fi);
                                 }
 
                                 // TODO: log info – function definition acknowledged, but not initialized
@@ -283,9 +283,9 @@ impl SemanticAnalyzer {
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
                                 )?,
                                 InherentImplItem::FunctionItem(fi) => {
-                                    self.analyze_function_def(&fi);
+                                    let _ = self.analyze_function_def(&fi);
 
-                                    self.symbol_table.insert(
+                                    let _ = self.symbol_table.insert(
                                         fi.function_name.clone(),
                                         Symbol::Function {
                                             associated_type_opt: Some(i.nominal_type.clone()),
@@ -321,9 +321,9 @@ impl SemanticAnalyzer {
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
                                 )?,
                                 TraitImplItem::FunctionItem(fi) => {
-                                    self.analyze_function_def(&fi);
+                                    let _ = self.analyze_function_def(&fi);
 
-                                    self.symbol_table.insert(
+                                    let _ = self.symbol_table.insert(
                                         fi.function_name.clone(),
                                         Symbol::Function {
                                             associated_type_opt: Some(
@@ -1707,8 +1707,8 @@ impl SemanticAnalyzer {
                         }
 
                         let path_type = PathType {
-                            path_root: PathRoot::Identifier(name.clone()),
-                            tree_opt: None,
+                            associated_type_path_prefix_opt: None,
+                            type_name: name,
                         };
 
                         Ok(Type::UserDefined(path_type))
@@ -1808,8 +1808,8 @@ impl SemanticAnalyzer {
                         }
 
                         let path_type = PathType {
-                            path_root: PathRoot::Identifier(name.clone()),
-                            tree_opt: None,
+                            associated_type_path_prefix_opt: None,
+                            type_name: name,
                         };
 
                         Ok(Type::UserDefined(path_type))
