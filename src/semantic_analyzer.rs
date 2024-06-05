@@ -2,6 +2,7 @@
 
 mod symbol_table;
 
+use core::fmt;
 use std::collections::HashMap;
 
 use crate::{
@@ -96,13 +97,7 @@ impl SemanticAnalyzer {
                 Item::ConstantDecl(cd) => {
                     let value_type = match &cd.value_opt {
                         Some(v) => {
-                            let value = Expression::try_from(v.clone()).map_err(|_| {
-                                SemanticErrorKind::ConversionError {
-                                    from: format!("`{:?}`", &v),
-                                    into: "`Expression`".to_string(),
-                                }
-                            })?;
-
+                            let value = wrap_into_expression(v.clone())?;
                             self.analyze_expr(&value)?
                         }
 
@@ -139,13 +134,7 @@ impl SemanticAnalyzer {
                 Item::StaticVarDecl(s) => {
                     let assignee_type = match &s.assignee_opt {
                         Some(a) => {
-                            let assignee = Expression::try_from(*a.clone()).map_err(|_| {
-                                SemanticErrorKind::ConversionError {
-                                    from: format!("`{:?}`", &a),
-                                    into: "`Expression`".to_string(),
-                                }
-                            })?;
-
+                            let assignee = wrap_into_expression(*a.clone())?;
                             self.analyze_expr(&assignee)?
                         }
 
@@ -486,12 +475,7 @@ impl SemanticAnalyzer {
             },
 
             Expression::MethodCall(mc) => {
-                let receiver = Expression::try_from(*mc.receiver.clone()).map_err(|_| {
-                    SemanticErrorKind::ConversionError {
-                        from: format!("`{:?}`", &mc),
-                        into: "`Expression`".to_string(),
-                    }
-                })?;
+                let receiver = wrap_into_expression(*mc.receiver.clone())?;
 
                 let path_expr = PathExpr::try_from(receiver.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
@@ -541,13 +525,7 @@ impl SemanticAnalyzer {
             }
 
             Expression::FieldAccess(fa) => {
-                let object_type =
-                    self.analyze_expr(&Expression::try_from(*fa.object.clone()).map_err(
-                        |_| SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &fa),
-                            into: "`Expression`".to_string(),
-                        },
-                    )?)?;
+                let object_type = self.analyze_expr(&wrap_into_expression(*fa.object.clone())?)?;
 
                 match self
                     .symbol_table
@@ -566,12 +544,7 @@ impl SemanticAnalyzer {
             }
 
             Expression::Call(c) => {
-                let callee = Expression::try_from(c.callee.clone()).map_err(|_| {
-                    SemanticErrorKind::ConversionError {
-                        from: format!("`{:?}`", &c),
-                        into: "`Expression`".to_string(),
-                    }
-                })?;
+                let callee = wrap_into_expression(c.callee.clone())?;
 
                 let path_expr = PathExpr::try_from(callee.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
@@ -586,21 +559,9 @@ impl SemanticAnalyzer {
             }
 
             Expression::Index(i) => {
-                let array_type =
-                    self.analyze_expr(&Expression::try_from(*i.array.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &i),
-                            into: "`Expression`".to_string(),
-                        }
-                    })?)?;
+                let array_type = self.analyze_expr(&wrap_into_expression(*i.array.clone())?)?;
 
-                let index_type =
-                    self.analyze_expr(&Expression::try_from(*i.index.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &i),
-                            into: "`Expression`".to_string(),
-                        }
-                    })?)?;
+                let index_type = self.analyze_expr(&wrap_into_expression(*i.index.clone())?)?;
 
                 match index_type {
                     Type::I32(_)
@@ -620,13 +581,7 @@ impl SemanticAnalyzer {
             }
 
             Expression::TupleIndex(ti) => {
-                let tuple_type =
-                    self.analyze_expr(&Expression::try_from(*ti.tuple.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &ti),
-                            into: "`Expression`".to_string(),
-                        }
-                    })?)?;
+                let tuple_type = self.analyze_expr(&wrap_into_expression(*ti.tuple.clone())?)?;
 
                 match tuple_type {
                     Type::Tuple(t) => {
@@ -641,12 +596,7 @@ impl SemanticAnalyzer {
             }
 
             Expression::Unwrap(u) => {
-                self.analyze_expr(&Expression::try_from(*u.value_expr.clone()).map_err(|_| {
-                    SemanticErrorKind::ConversionError {
-                        from: format!("`{:?}`", &u),
-                        into: "`Expression`".to_string(),
-                    }
-                })?)
+                self.analyze_expr(&wrap_into_expression(*u.value_expr.clone())?)
             }
 
             Expression::Unary(_) => todo!(),
@@ -662,36 +612,16 @@ impl SemanticAnalyzer {
             }
 
             Expression::Dereference(d) => {
-                self.analyze_expr(&Expression::try_from(d.assignee_expr.clone()).map_err(|_| {
-                    SemanticErrorKind::ConversionError {
-                        from: format!("`{:?}`", &d),
-                        into: "`Expression`".to_string(),
-                    }
-                })?)
+                self.analyze_expr(&wrap_into_expression(d.assignee_expr.clone())?)
             }
 
             // TODO: check if original type can be cast as new type
             Expression::TypeCast(tc) => Ok(*tc.new_type.clone()),
 
             Expression::Binary(b) => {
-                let lhs_clone = *b.lhs.clone();
-                let rhs_clone = *b.rhs.clone();
+                let lhs_type = self.analyze_expr(&wrap_into_expression(*b.lhs.clone())?)?;
 
-                let lhs_type =
-                    self.analyze_expr(&Expression::try_from(*b.lhs.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &lhs_clone),
-                            into: "`Expression`".to_string(),
-                        }
-                    })?)?;
-
-                let rhs_type =
-                    self.analyze_expr(&Expression::try_from(*b.rhs.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &rhs_clone),
-                            into: "`Expression`".to_string(),
-                        }
-                    })?)?;
+                let rhs_type = self.analyze_expr(&wrap_into_expression(*b.rhs.clone())?)?;
 
                 match (&lhs_type, &rhs_type) {
                     (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
@@ -805,24 +735,9 @@ impl SemanticAnalyzer {
             }
 
             Expression::Comparison(c) => {
-                let lhs_clone = c.lhs.clone();
-                let rhs_clone = c.rhs.clone();
+                let lhs_type = self.analyze_expr(&wrap_into_expression(c.lhs.clone())?)?;
 
-                let lhs_type =
-                    self.analyze_expr(&Expression::try_from(c.lhs.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &lhs_clone),
-                            into: "`Expression`".to_string(),
-                        }
-                    })?)?;
-
-                let rhs_type =
-                    self.analyze_expr(&Expression::try_from(c.rhs.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &rhs_clone),
-                            into: "`Expression`".to_string(),
-                        }
-                    })?)?;
+                let rhs_type = self.analyze_expr(&wrap_into_expression(c.rhs.clone())?)?;
 
                 match (&lhs_type, &rhs_type) {
                     (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
@@ -922,15 +837,81 @@ impl SemanticAnalyzer {
 
             Expression::Grouped(g) => self.analyze_expr(&g.inner_expression),
 
-            Expression::Range(_) => todo!(),
+            Expression::Range(r) => match (&r.from_expr_opt, &r.to_expr_opt) {
+                (None, None) => Ok(Type::UnitType(Unit)),
+                (None, Some(to)) => {
+                    let to_type = self.analyze_expr(&wrap_into_expression(*to.clone())?)?;
+
+                    match to_type {
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_) => Ok(to_type),
+                        _ => todo!(), // unexpected type
+                    }
+                }
+                (Some(from), None) => {
+                    let from_type = self.analyze_expr(&wrap_into_expression(*from.clone())?)?;
+
+                    match from_type {
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_) => Ok(from_type),
+                        _ => todo!(), // unexpected type
+                    }
+                }
+                (Some(from), Some(to)) => {
+                    let from_type = self.analyze_expr(&wrap_into_expression(*from.clone())?)?;
+
+                    match from_type {
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_) => (),
+                        _ => todo!(), // unexpected type
+                    }
+
+                    let to_type = self.analyze_expr(&wrap_into_expression(*to.clone())?)?;
+
+                    match to_type {
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_) => (),
+                        _ => todo!(), // unexpected type
+                    }
+
+                    if from_type == to_type {
+                        Ok(to_type)
+                    } else {
+                        todo!() // type mismatch (value)
+                    }
+                }
+            },
 
             Expression::Assignment(a) => {
-                let expr = Expression::try_from(a.lhs.clone()).map_err(|_| {
-                    SemanticErrorKind::ConversionError {
-                        from: format!("`{:?}`", &a.lhs.clone()),
-                        into: "`Expression`".to_string(),
-                    }
-                })?;
+                let expr = wrap_into_expression(a.lhs.clone())?;
 
                 let path = PathExpr::try_from(expr.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
@@ -958,24 +939,9 @@ impl SemanticAnalyzer {
             }
 
             Expression::CompoundAssignment(ca) => {
-                let lhs_clone = ca.lhs.clone();
-                let rhs_clone = ca.rhs.clone();
+                let lhs_type = self.analyze_expr(&wrap_into_expression(ca.lhs.clone())?)?;
 
-                let lhs_type =
-                    self.analyze_expr(&Expression::try_from(ca.lhs.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &lhs_clone),
-                            into: "`Expression`".to_string(),
-                        }
-                    })?)?;
-
-                let rhs_type =
-                    self.analyze_expr(&Expression::try_from(ca.rhs.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &rhs_clone),
-                            into: "`Expression`".to_string(),
-                        }
-                    })?)?;
+                let rhs_type = self.analyze_expr(&wrap_into_expression(ca.lhs.clone())?)?;
 
                 match (&lhs_type, &rhs_type) {
                     (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
@@ -1374,12 +1340,7 @@ impl SemanticAnalyzer {
 
             Expression::Match(m) => {
                 let scrutinee_type =
-                    self.analyze_expr(&Expression::try_from(m.scrutinee.clone()).map_err(
-                        |_| SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &m.scrutinee),
-                            into: "Expression".to_string(),
-                        },
-                    )?)?;
+                    self.analyze_expr(&wrap_into_expression(m.scrutinee.clone())?)?;
 
                 let match_arms_type = match &m.match_arms_opt {
                     Some(v) => match v.first() {
@@ -1907,4 +1868,15 @@ impl SemanticAnalyzer {
 
         self.errors.push(error);
     }
+}
+
+fn wrap_into_expression<T>(value: T) -> Result<Expression, SemanticErrorKind>
+where
+    T: Clone + fmt::Debug + TryFrom<Expression>,
+    Expression: TryFrom<T>,
+{
+    Expression::try_from(value.clone()).map_err(|_| SemanticErrorKind::ConversionError {
+        from: format!("`{:?}`", &value.clone()),
+        into: "`Expression`".to_string(),
+    })
 }
