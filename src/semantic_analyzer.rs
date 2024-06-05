@@ -10,7 +10,7 @@ use crate::{
         BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, FunctionOrMethodParam,
         Hash, Identifier, ImportTree, InferredType, InherentImplItem, Int, Item, Literal, PathExpr,
         PathRoot, PathType, Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type,
-        UInt, UnderscoreExpr, Unit, ValueExpr,
+        UInt, UnaryOp, UnderscoreExpr, Unit, ValueExpr,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     parser::Module,
@@ -599,7 +599,28 @@ impl SemanticAnalyzer {
                 self.analyze_expr(&wrap_into_expression(*u.value_expr.clone())?)
             }
 
-            Expression::Unary(_) => todo!(),
+            Expression::Unary(u) => {
+                let expr_type = self.analyze_expr(&wrap_into_expression(*u.value_expr.clone())?)?;
+
+                match u.unary_op {
+                    UnaryOp::Negate => match &expr_type {
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_) => Ok(expr_type),
+                        _ => todo!(), // unexpected type
+                    },
+                    UnaryOp::Not => match &expr_type {
+                        Type::Bool(_) => Ok(expr_type),
+                        _ => todo!(), // unexpected type
+                    },
+                }
+            }
 
             Expression::Reference(r) => {
                 let reference_op = r.reference_op.clone();
