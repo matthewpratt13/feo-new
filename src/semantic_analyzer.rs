@@ -585,7 +585,39 @@ impl SemanticAnalyzer {
                 self.analyze_call_or_method_call_expr(name, c.args_opt.clone())
             }
 
-            Expression::Index(_) => todo!(),
+            Expression::Index(i) => {
+                let array_type =
+                    self.analyze_expr(&Expression::try_from(*i.array.clone()).map_err(|_| {
+                        SemanticErrorKind::ConversionError {
+                            from: format!("`{:?}`", &i),
+                            into: "`Expression`".to_string(),
+                        }
+                    })?)?;
+
+                let index_type =
+                    self.analyze_expr(&Expression::try_from(*i.index.clone()).map_err(|_| {
+                        SemanticErrorKind::ConversionError {
+                            from: format!("`{:?}`", &i),
+                            into: "`Expression`".to_string(),
+                        }
+                    })?)?;
+
+                match index_type {
+                    Type::I32(_)
+                    | Type::I64(_)
+                    | Type::U8(_)
+                    | Type::U16(_)
+                    | Type::U32(_)
+                    | Type::U64(_)
+                    | Type::U128(_) => (),
+                    _ => todo!(), // type mismatch (variable)
+                }
+
+                match array_type {
+                    Type::Array { element_type, .. } => Ok(*element_type),
+                    _ => todo!(), // unexpected type (expected array)
+                }
+            }
 
             Expression::TupleIndex(_) => todo!(),
 
