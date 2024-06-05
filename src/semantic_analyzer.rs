@@ -252,9 +252,17 @@ impl SemanticAnalyzer {
                                 InherentImplItem::ConstantDecl(cd) => self.analyze_stmt(
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
                                 )?,
-                                InherentImplItem::FunctionItem(fi) => self.analyze_stmt(
-                                    &Statement::Item(Item::FunctionItem(fi.clone())),
-                                )?,
+                                InherentImplItem::FunctionItem(fi) => {
+                                    self.analyze_function_def(&fi);
+
+                                    self.symbol_table.insert(
+                                        fi.function_name.clone(),
+                                        Symbol::Function {
+                                            associated_type_opt: Some(i.nominal_type.clone()),
+                                            function: fi.clone(),
+                                        },
+                                    );
+                                }
                             }
                         }
                     } else {
@@ -280,9 +288,19 @@ impl SemanticAnalyzer {
                                 TraitImplItem::ConstantDecl(cd) => self.analyze_stmt(
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
                                 )?,
-                                TraitImplItem::FunctionItem(fi) => self.analyze_stmt(
-                                    &Statement::Item(Item::FunctionItem(fi.clone())),
-                                )?,
+                                TraitImplItem::FunctionItem(fi) => {
+                                    self.analyze_function_def(&fi);
+
+                                    self.symbol_table.insert(
+                                        fi.function_name.clone(),
+                                        Symbol::Function {
+                                            associated_type_opt: Some(
+                                                t.implemented_trait_path.clone(),
+                                            ),
+                                            function: fi.clone(),
+                                        },
+                                    );
+                                }
                             }
                         }
                     } else {
@@ -300,8 +318,16 @@ impl SemanticAnalyzer {
                 }
 
                 Item::FunctionItem(f) => {
+                    self.analyze_function_def(f)?;
+
                     self.symbol_table
-                        .insert(f.function_name.clone(), Symbol::Function(f.clone()))
+                        .insert(
+                            f.function_name.clone(),
+                            Symbol::Function {
+                                associated_type_opt: None,
+                                function: f.clone(),
+                            },
+                        )
                         .map_err(|e| match e {
                             SemanticErrorKind::DuplicateVariable { .. } => {
                                 SemanticErrorKind::DuplicateVariable {
@@ -310,8 +336,6 @@ impl SemanticAnalyzer {
                             }
                             _ => e,
                         })?;
-
-                    self.analyze_function_def(f)?;
                 }
             },
 
@@ -426,17 +450,27 @@ impl SemanticAnalyzer {
             },
 
             Expression::MethodCall(mc) => {
-                let receiver_type =
-                    self.analyze_expr(&Expression::try_from(*mc.receiver.clone()).map_err(
-                        |_| SemanticErrorKind::ConversionError {
-                            from: format!("`{:?}`", &mc),
-                            into: "`Expression`".to_string(),
-                        },
-                    )?)?;
+                let receiver = Expression::try_from(*mc.receiver.clone()).map_err(|_| {
+                    SemanticErrorKind::ConversionError {
+                        from: format!("`{:?}`", &mc),
+                        into: "`Expression`".to_string(),
+                    }
+                })?;
+
+                let path_expr = PathExpr::try_from(receiver).map_err(|_| {
+                    SemanticErrorKind::ConversionError {
+                        from: receiver.to_string(),
+                        into: "`PathExpr`".to_string(),
+                    }
+                })?;
+
+                let receiver_type = self.analyze_expr(&receiver)?;
+
+                let path_type = PathType::from(path_expr);
 
                 match self
                     .symbol_table
-                    .get(&Identifier(receiver_type.to_string()))
+                    .get(&Identifier::from(&path_type.to_string()))
                 {
                     Some(Symbol::Function(f)) => todo!(),
                     None => todo!(),

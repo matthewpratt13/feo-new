@@ -16,7 +16,10 @@ pub(crate) enum Symbol {
     TupleStruct(TupleStructDef),
     Enum(EnumDef),
     Trait(TraitDef),
-    Function(FunctionItem),
+    Function {
+        associated_type_opt: Option<PathType>,
+        function: FunctionItem,
+    },
     Module(ModuleItem),
     Import(Vec<PathType>),
 }
@@ -29,7 +32,10 @@ impl fmt::Display for Symbol {
             Symbol::TupleStruct(ts) => write!(f, "{:?}", ts),
             Symbol::Enum(e) => write!(f, "{:?}", e),
             Symbol::Trait(t) => write!(f, "{:?}", t),
-            Symbol::Function(func) => write!(f, "{:?}", func),
+            Symbol::Function {
+                associated_type_opt: associated_type,
+                ..
+            } => write!(f, "{:?}", associated_type),
             Symbol::Module(m) => write!(f, "{:?}", m),
             Symbol::Import(i) => write!(f, "{:?}", i),
         }
@@ -38,7 +44,7 @@ impl fmt::Display for Symbol {
 
 #[derive(Debug, Clone)]
 pub(crate) struct SymbolTable {
-    symbols: HashMap<Identifier, Symbol>,
+    pub(crate) symbols: HashMap<Identifier, Symbol>,
     parent: Option<Box<SymbolTable>>, // For nested scopes
 }
 
