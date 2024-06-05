@@ -33,12 +33,17 @@ impl SemanticAnalyzer {
     }
 
     fn analyze(&mut self, module: &Module) -> Result<(), ErrorsEmitted> {
+        // TODO: log info – starting semantic analysis
+
         for s in &module.statements {
             self.analyze_stmt(s).map_err(|e| {
                 self.log_error(e, &s.span());
                 ErrorsEmitted
             })?
         }
+
+        // TODO: log info – semantic analysis complete, no errors detected
+
         Ok(())
     }
 
@@ -69,6 +74,8 @@ impl SemanticAnalyzer {
                     Some(t) => {
                         self.symbol_table
                             .insert(ad.alias_name.clone(), Symbol::Variable(t.clone()))?;
+
+                        // TODO: log info – alias declaration initialized
                     }
                     None => {
                         let ty = PathType {
@@ -80,6 +87,8 @@ impl SemanticAnalyzer {
                             ad.alias_name.clone(),
                             Symbol::Variable(Type::UserDefined(ty)),
                         )?;
+
+                        // TODO: log info – alias declaration initialized
                     }
                 },
 
@@ -116,6 +125,8 @@ impl SemanticAnalyzer {
                         cd.constant_name.clone(),
                         Symbol::Variable(*cd.constant_type.clone()),
                     )?;
+
+                    // TODO: log info – constant declaration initialized
                 }
 
                 Item::StaticVarDecl(s) => {
@@ -146,6 +157,8 @@ impl SemanticAnalyzer {
 
                     self.symbol_table
                         .insert(s.var_name.clone(), Symbol::Variable(s.var_type.clone()))?;
+
+                    // TODO: log info – static variable declaration initialized
                 }
 
                 Item::ModuleItem(m) => {
@@ -188,14 +201,18 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
 
+                    // TODO: log info – trait definition initialized
+
                     let trait_items = t.trait_items_opt.as_ref();
 
                     if trait_items.is_some() {
                         for item in trait_items.unwrap() {
                             match item {
-                                TraitDefItem::FunctionItem(f) => {
-                                    self.analyze_function_def(f)?;
+                                TraitDefItem::FunctionItem(fi) => {
+                                    self.analyze_function_def(&fi);
                                 }
+
+                                // TODO: log info – function definition acknowledged, but not initialized
                                 TraitDefItem::AliasDecl(ad) => self
                                     .analyze_stmt(&Statement::Item(Item::AliasDecl(ad.clone())))?,
                                 TraitDefItem::ConstantDecl(cd) => self.analyze_stmt(
@@ -217,6 +234,8 @@ impl SemanticAnalyzer {
                             }
                             _ => err,
                         })?;
+
+                    // TODO: log info – enum definition initialized
                 }
 
                 Item::StructDef(s) => {
@@ -230,6 +249,8 @@ impl SemanticAnalyzer {
                             }
                             _ => e,
                         })?;
+
+                    // TODO: log info – struct definition initialized
                 }
 
                 Item::TupleStructDef(ts) => {
@@ -243,6 +264,8 @@ impl SemanticAnalyzer {
                             }
                             _ => e,
                         })?;
+
+                    // TODO: log info – struct definition initialized
                 }
 
                 Item::InherentImplDef(i) => {
@@ -262,6 +285,8 @@ impl SemanticAnalyzer {
                                             function: fi.clone(),
                                         },
                                     );
+
+                                    // TODO: log info – associated function definition initialized
                                 }
                             }
                         }
@@ -300,6 +325,8 @@ impl SemanticAnalyzer {
                                             function: fi.clone(),
                                         },
                                     );
+
+                                    // TODO: log info – associated function definition initialized
                                 }
                             }
                         }
@@ -336,6 +363,8 @@ impl SemanticAnalyzer {
                             }
                             _ => e,
                         })?;
+
+                    // TODO: log info – function definition initialized
                 }
             },
 
@@ -466,14 +495,28 @@ impl SemanticAnalyzer {
 
                 let receiver_type = self.analyze_expr(&receiver)?;
 
-                let path_type = PathType::from(path_expr);
+                let type_name = PathType::from(path_expr).type_name;
 
-                match self
-                    .symbol_table
-                    .get(&Identifier::from(&path_type.to_string()))
-                {
-                    Some(Symbol::Function(f)) => todo!(),
-                    None => todo!(),
+                match self.symbol_table.get(&type_name) {
+                    Some(Symbol::Struct(s)) => {
+                        if s.struct_name == type_name {
+                            todo!()
+                        }
+                    }
+
+                    Some(Symbol::TupleStruct(ts)) => {
+                        if ts.struct_name == type_name {
+                            todo!()
+                        }
+                    }
+
+                    Some(Symbol::Enum(e)) => {
+                        if e.enum_name == type_name {
+                            todo!()
+                        }
+                    }
+
+                    _ => todo!(), // undefined type (receiver type)
                 }
             }
 
@@ -483,10 +526,10 @@ impl SemanticAnalyzer {
                 let name = Identifier(format!("{:?}", c.callee));
 
                 match self.symbol_table.get(&name) {
-                    Some(Symbol::Function(f)) => {
+                    Some(Symbol::Function { function, .. }) => {
                         let args = c.args_opt.clone();
-                        let params = f.params_opt.clone();
-                        let return_type = f.return_type_opt.clone();
+                        let params = function.params_opt.clone();
+                        let return_type = function.return_type_opt.clone();
 
                         match (&args, &params) {
                             (None, None) => Ok(Type::UnitType(Unit)),
