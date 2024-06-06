@@ -492,6 +492,10 @@ impl SemanticAnalyzer {
             Expression::MethodCall(mc) => {
                 let receiver = wrap_into_expression(*mc.receiver.clone())?;
 
+                let receiver_type = self.analyze_expr(&receiver)?;
+
+                // convert receiver expression to path expression (i.e., check if receiver
+                // is a valid path)
                 let path_expr = PathExpr::try_from(receiver.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
                         from: receiver.to_string(),
@@ -499,8 +503,10 @@ impl SemanticAnalyzer {
                     }
                 })?;
 
+                // get path expression's type
                 let type_name = PathType::from(path_expr).type_name;
 
+                // check if path expression's type is that of an existing type and analyze
                 match self.symbol_table.get(&type_name) {
                     Some(Symbol::Struct(s)) => {
                         if s.struct_name == type_name {
@@ -509,7 +515,11 @@ impl SemanticAnalyzer {
                                 mc.args_opt.clone(),
                             )
                         } else {
-                            todo!() // type mismatch (variable)
+                            Err(SemanticErrorKind::TypeMismatchVariable {
+                                name: type_name,
+                                expected: format!("`{}`", s.struct_name),
+                                found: format!("`{}`", receiver_type),
+                            })
                         }
                     }
 
@@ -520,7 +530,11 @@ impl SemanticAnalyzer {
                                 mc.args_opt.clone(),
                             )
                         } else {
-                            todo!() // type mismatch (variable)
+                            Err(SemanticErrorKind::TypeMismatchVariable {
+                                name: type_name,
+                                expected: format!("`{}`", ts.struct_name),
+                                found: format!("`{}`", receiver_type),
+                            })
                         }
                     }
 
@@ -531,11 +545,15 @@ impl SemanticAnalyzer {
                                 mc.args_opt.clone(),
                             )
                         } else {
-                            todo!() // type mismatch (variable)
+                            Err(SemanticErrorKind::TypeMismatchVariable {
+                                name: type_name,
+                                expected: format!("`{}`", e.enum_name),
+                                found: format!("`{}`", receiver_type),
+                            })
                         }
                     }
 
-                    _ => todo!(), // undefined type (receiver type)
+                    _ => Err(SemanticErrorKind::UndefinedType { name: type_name }),
                 }
             }
 

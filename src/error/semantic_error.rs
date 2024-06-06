@@ -89,6 +89,10 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
+   UndefinedType {
+        name: Identifier,
+    },
+
     UndefinedVariable {
         name: Identifier,
     },
@@ -182,7 +186,10 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::UndefinedPath { name } => write!(f, "undefined path: `{name}`"),
 
-            SemanticErrorKind::UndefinedStruct { name } => write!(f, "undefined struct: `{name}`"),
+            SemanticErrorKind::UndefinedStruct { name } => write!(f, "undefined struct: `{name}`"),       
+            
+            SemanticErrorKind::UndefinedType { name } => write!(f, "undefined type: `{name}`"),
+            
             SemanticErrorKind::UndefinedVariable { name } => {
                 write!(f, "undefined variable: `{name}`",)
             }
