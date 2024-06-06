@@ -610,7 +610,8 @@ impl SemanticAnalyzer {
                     | Type::U128(_) => (),
                     _ => {
                         return Err(SemanticErrorKind::UnexpectedType {
-                            expected: "numeric type".to_string(),
+                            expected: "numeric type (excluding large unsigned integers)"
+                                .to_string(),
                             found: format!("`{}`", index_type),
                         })
                     }
@@ -665,7 +666,7 @@ impl SemanticAnalyzer {
                         | Type::U256(_)
                         | Type::U512(_) => Ok(expr_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
-                            expected: "numeric type".to_string(),
+                            expected: "numeric value".to_string(),
                             found: format!("`{}`", expr_type),
                         }),
                     },
@@ -930,7 +931,10 @@ impl SemanticAnalyzer {
                         | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_) => Ok(to_type),
-                        _ => todo!(), // unexpected type
+                        _ => Err(SemanticErrorKind::UnexpectedType {
+                            expected: "numeric type".to_string(),
+                            found: format!("`{}`", to_type),
+                        }),
                     }
                 }
                 (Some(from), None) => {
@@ -946,7 +950,10 @@ impl SemanticAnalyzer {
                         | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_) => Ok(from_type),
-                        _ => todo!(), // unexpected type
+                        _ => Err(SemanticErrorKind::UnexpectedType {
+                            expected: "numeric type".to_string(),
+                            found: format!("`{}`", from_type),
+                        }),
                     }
                 }
                 (Some(from), Some(to)) => {
@@ -962,7 +969,12 @@ impl SemanticAnalyzer {
                         | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_) => (),
-                        _ => todo!(), // unexpected type
+                        _ => {
+                            return Err(SemanticErrorKind::UnexpectedType {
+                                expected: "numeric type".to_string(),
+                                found: format!("`{}`", from_type),
+                            })
+                        }
                     }
 
                     let to_type = self.analyze_expr(&wrap_into_expression(*to.clone())?)?;
@@ -977,13 +989,21 @@ impl SemanticAnalyzer {
                         | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_) => (),
-                        _ => todo!(), // unexpected type
+                        _ => {
+                            return Err(SemanticErrorKind::UnexpectedType {
+                                expected: "numeric type".to_string(),
+                                found: format!("`{}`", to_type),
+                            })
+                        }
                     }
 
                     if from_type == to_type {
                         Ok(to_type)
                     } else {
-                        todo!() // type mismatch (value)
+                        Err(SemanticErrorKind::TypeMismatchValues {
+                            expected: format!("`{}`", from_type),
+                            found: format!("`{}`", to_type),
+                        })
                     }
                 }
             },
@@ -1659,7 +1679,10 @@ impl SemanticAnalyzer {
                         | Type::U512(_)
                         | Type::Byte(_)
                         | Type::Char(_) => Ok(to_type),
-                        _ => todo!(), // unexpected type
+                        _ => Err(SemanticErrorKind::UnexpectedType {
+                            expected: "numeric type, `byte` or `char`".to_string(),
+                            found: format!("`{}`", to_type),
+                        }),
                     }
                 }
                 (Some(from), None) => {
@@ -1677,7 +1700,10 @@ impl SemanticAnalyzer {
                         | Type::U512(_)
                         | Type::Byte(_)
                         | Type::Char(_) => Ok(from_type),
-                        _ => todo!(), // unexpected type
+                        _ => Err(SemanticErrorKind::UnexpectedType {
+                            expected: "numeric type, `byte` or `char`".to_string(),
+                            found: format!("`{}`", from_type),
+                        }),
                     }
                 }
                 (Some(from), Some(to)) => {
@@ -1695,7 +1721,12 @@ impl SemanticAnalyzer {
                         | Type::U512(_)
                         | Type::Byte(_)
                         | Type::Char(_) => (),
-                        _ => todo!(), // unexpected type
+                        _ => {
+                            return Err(SemanticErrorKind::UnexpectedType {
+                                expected: "numeric type, `byte` or `char`".to_string(),
+                                found: format!("`{}`", from_type),
+                            })
+                        }
                     }
 
                     let to_type = self.analyze_patt(&*to.clone())?;
@@ -1712,13 +1743,21 @@ impl SemanticAnalyzer {
                         | Type::U512(_)
                         | Type::Byte(_)
                         | Type::Char(_) => (),
-                        _ => todo!(), // unexpected type
+                        _ => {
+                            return Err(SemanticErrorKind::UnexpectedType {
+                                expected: "numeric type, `byte` or `char`".to_string(),
+                                found: format!("`{}`", from_type),
+                            })
+                        }
                     }
 
                     if from_type == to_type {
                         Ok(to_type)
                     } else {
-                        todo!() // type mismatch (value)
+                        Err(SemanticErrorKind::TypeMismatchValues {
+                            expected: format!("`{}`", from_type),
+                            found: format!("`{}`", to_type),
+                        })
                     }
                 }
             },
