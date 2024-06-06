@@ -330,12 +330,10 @@ impl<'a> Lexer<'a> {
                 "while" => Ok(Token::While { name, span }),
                 "i32" => Ok(Token::I32Type { name, span }),
                 "i64" => Ok(Token::I64Type { name, span }),
-                "i128" => Ok(Token::I128Type { name, span }),
                 "u8" => Ok(Token::U8Type { name, span }),
                 "u16" => Ok(Token::U16Type { name, span }),
                 "u32" => Ok(Token::U32Type { name, span }),
                 "u64" => Ok(Token::U64Type { name, span }),
-                "u128" => Ok(Token::U128Type { name, span }),
                 "u256" => Ok(Token::U256Type { name, span }),
                 "u512" => Ok(Token::U512Type { name, span }),
                 "f32" => Ok(Token::F32Type { name, span }),
@@ -955,8 +953,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Tokenize a numeric value (i.e., `f64`, `i128` or `u128`).
-    /// Parse to `u128` unless a `-` is encountered, in which case parse to `i128`.
+    /// Tokenize a numeric value (i.e., `f64`, `i64` or `u64`).
+    /// Parse to `u64` unless a `-` is encountered, in which case parse to `i64`.
     /// If a `.` is encountered, try to parse to `f64`.
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut is_float = false;
@@ -1011,13 +1009,13 @@ impl<'a> Lexer<'a> {
                 .split('_')
                 .collect::<Vec<&str>>()
                 .concat()
-                .parse::<i128>();
+                .parse::<i64>();
 
             let span = Span::new(self.input, start_pos, self.pos);
 
             if let Ok(v) = value {
                 Ok(Token::IntLiteral {
-                    value: Int::I128(v),
+                    value: Int::I64(v),
                     span,
                 })
             } else {
@@ -1030,13 +1028,13 @@ impl<'a> Lexer<'a> {
                 .split('_')
                 .collect::<Vec<&str>>()
                 .concat()
-                .parse::<u128>();
+                .parse::<u64>();
 
             let span = Span::new(self.input, start_pos, self.pos);
 
             if let Ok(v) = value {
                 Ok(Token::UIntLiteral {
-                    value: UInt::U128(v),
+                    value: UInt::U64(v),
                     span,
                 })
             } else {
@@ -1245,9 +1243,9 @@ fn is_keyword(value: &str) -> bool {
         "alias", "as", "break", "bytes", "const", "continue", "else", "enum", "Err", "false",
         "for", "func", "if", "impl", "import", "in", "let", "loop", "match", "module", "mut",
         "None", "Ok", "package", "pub", "ref", "return", "self", "Some", "static", "struct",
-        "super", "trait", "true", "while", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128",
-        "u256", "u512", "f32", "f64", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256",
-        "h512", "String", "str", "char", "bool", "Self", "Option", "Result", "Vec", "Mapping",
+        "super", "trait", "true", "while", "i32", "i64", "u8", "u16", "u32", "u64", "u256", "u512",
+        "f32", "f64", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256", "h512", "String",
+        "str", "char", "bool", "Self", "Option", "Result", "Vec", "Mapping",
     ]
     .contains(&value)
 }

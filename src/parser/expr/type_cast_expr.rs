@@ -31,12 +31,10 @@ impl ParseOperatorExpr for TypeCastExpr {
             Some(
                 Token::I32Type { .. }
                 | Token::I64Type { .. }
-                | Token::I128Type { .. }
                 | Token::U8Type { .. }
                 | Token::U16Type { .. }
                 | Token::U32Type { .. }
                 | Token::U64Type { .. }
-                | Token::U128Type { .. }
                 | Token::U256Type { .. }
                 | Token::U512Type { .. }
                 | Token::F32Type { .. }

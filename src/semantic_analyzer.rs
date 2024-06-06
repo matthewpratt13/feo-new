@@ -487,7 +487,6 @@ impl SemanticAnalyzer {
                 Literal::Int { value, .. } => match value {
                     Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
                     Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
-                    Int::I128(_) => Ok(Type::I128(Int::I128(i128::default()))),
                 },
 
                 Literal::UInt { value, .. } => match value {
@@ -495,7 +494,6 @@ impl SemanticAnalyzer {
                     UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
                     UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
                     UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
-                    UInt::U128(_) => Ok(Type::U128(UInt::U128(u128::default()))),
                 },
 
                 Literal::BigUInt { value, .. } => match value {
@@ -648,8 +646,7 @@ impl SemanticAnalyzer {
                     | Type::U8(_)
                     | Type::U16(_)
                     | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U128(_) => (),
+                    | Type::U64(_) => (),
                     _ => {
                         return Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type (excluding large unsigned integers)"
@@ -704,7 +701,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_) => Ok(expr_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
@@ -750,7 +746,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_)
                         | Type::F32(_)
@@ -763,7 +758,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_)
                         | Type::F32(_)
@@ -779,7 +773,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_)
                         | Type::F32(_)
@@ -787,14 +780,13 @@ impl SemanticAnalyzer {
                         | Type::Char(_),
                     )
                     | (
-                        Type::U64(_) | Type::U128(_),
+                        Type::U64(_),
                         Type::I32(_)
                         | Type::I64(_)
                         | Type::U8(_)
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_)
                         | Type::F32(_)
@@ -841,15 +833,6 @@ impl SemanticAnalyzer {
                         found: t.to_string(),
                     }),
 
-                    (Type::I128(_), Type::I32(_) | Type::I64(_) | Type::I128(_)) => {
-                        Ok(Type::I128(Int::I128(i128::default())))
-                    }
-
-                    (Type::I128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i128` or smaller signed integer".to_string(),
-                        found: t.to_string(),
-                    }),
-
                     (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
 
                     (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -881,16 +864,6 @@ impl SemanticAnalyzer {
 
                     (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u64` or smaller unsigned integer".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (
-                        Type::U128(_),
-                        Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) | Type::U128(_),
-                    ) => Ok(Type::U128(UInt::U128(u128::default()))),
-
-                    (Type::U128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u128` or smaller unsigned integer".to_string(),
                         found: t.to_string(),
                     }),
 
@@ -955,13 +928,6 @@ impl SemanticAnalyzer {
                         found: t.to_string(),
                     }),
 
-                    (Type::I128(_), Type::I128(_)) => Ok(Type::I128(Int::I128(i128::default()))),
-
-                    (Type::I128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i128`".to_string(),
-                        found: t.to_string(),
-                    }),
-
                     (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
 
                     (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -987,13 +953,6 @@ impl SemanticAnalyzer {
 
                     (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u64`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::U128(_), Type::U128(_)) => Ok(Type::U128(UInt::U128(u128::default()))),
-
-                    (Type::U128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u128`".to_string(),
                         found: t.to_string(),
                     }),
 
@@ -1050,7 +1009,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_) => Ok(to_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
@@ -1069,7 +1027,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_) => Ok(from_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
@@ -1088,7 +1045,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_) => (),
                         _ => {
@@ -1108,7 +1064,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_) => (),
                         _ => {
@@ -1178,13 +1133,6 @@ impl SemanticAnalyzer {
                         found: t.to_string(),
                     }),
 
-                    (Type::I128(_), Type::I128(_)) => Ok(Type::I128(Int::I128(i128::default()))),
-
-                    (Type::I128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i128`".to_string(),
-                        found: t.to_string(),
-                    }),
-
                     (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
 
                     (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1210,13 +1158,6 @@ impl SemanticAnalyzer {
 
                     (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u64`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::U128(_), Type::U128(_)) => Ok(Type::U128(UInt::U128(u128::default()))),
-
-                    (Type::U128(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u128`".to_string(),
                         found: t.to_string(),
                     }),
 
@@ -1293,7 +1234,7 @@ impl SemanticAnalyzer {
             Expression::Array(a) => match &a.elements_opt {
                 Some(v) => match v.first() {
                     Some(expr) => {
-                        let mut element_count = 0u128;
+                        let mut element_count = 0u64;
 
                         let first_element_type = self.analyze_expr(expr)?;
 
@@ -1314,7 +1255,7 @@ impl SemanticAnalyzer {
 
                         Ok(Type::Array {
                             element_type: Box::new(first_element_type),
-                            num_elements: UInt::U128(element_count),
+                            num_elements: UInt::U64(element_count),
                         })
                     }
 
@@ -1322,7 +1263,7 @@ impl SemanticAnalyzer {
                         let element_type = Type::UnitType(Unit);
                         let array = Type::Array {
                             element_type: Box::new(element_type),
-                            num_elements: UInt::U128(0u128),
+                            num_elements: UInt::U64(0u64),
                         };
 
                         Ok(array)
@@ -1733,7 +1674,6 @@ impl SemanticAnalyzer {
                 Literal::Int { value, .. } => match value {
                     Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
                     Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
-                    Int::I128(_) => Ok(Type::I128(Int::I128(i128::default()))),
                 },
 
                 Literal::UInt { value, .. } => match value {
@@ -1741,7 +1681,6 @@ impl SemanticAnalyzer {
                     UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
                     UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
                     UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
-                    UInt::U128(_) => Ok(Type::U128(UInt::U128(u128::default()))),
                 },
 
                 Literal::BigUInt { value, .. } => match value {
@@ -1796,7 +1735,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_)
                         | Type::Byte(_)
@@ -1817,7 +1755,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_)
                         | Type::Byte(_)
@@ -1838,7 +1775,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_)
                         | Type::Byte(_)
@@ -1860,7 +1796,6 @@ impl SemanticAnalyzer {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
-                        | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_)
                         | Type::Byte(_)
