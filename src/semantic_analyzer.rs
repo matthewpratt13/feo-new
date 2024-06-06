@@ -158,9 +158,18 @@ impl SemanticAnalyzer {
                 }
 
                 Item::ModuleItem(m) => {
+                    let module_symbol_table = SymbolTable::with_parent(self.symbol_table.clone());
+
+                    let mut analyzer = SemanticAnalyzer {
+                        symbol_table: module_symbol_table,
+                        errors: Vec::new(),
+                    };
+
+                    let mut statements: Vec<Statement> = Vec::new();
+
                     if m.items_opt.is_some() {
                         for item in m.items_opt.as_ref().unwrap() {
-                            let _ = self.analyze_stmt(&Statement::Item(item.clone()));
+                            statements.push(Statement::Item(item.clone()));
                         }
                     } else {
                         let outer_attributes = m.outer_attributes_opt.as_ref();
@@ -182,7 +191,13 @@ impl SemanticAnalyzer {
                                 ),
                             });
                         }
+
+                        return Ok(()); // don't need to analyze if there are no items
                     }
+
+                    let _ = analyzer.analyze(&Module { statements });
+
+                    self.errors.extend(analyzer.errors);
                 }
 
                 Item::TraitDef(t) => {
