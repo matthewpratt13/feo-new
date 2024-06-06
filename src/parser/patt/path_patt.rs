@@ -3,20 +3,14 @@ use core::fmt;
 use crate::{
     ast::{Identifier, PathPatt, PathRoot, SelfType},
     error::ErrorsEmitted,
-    logger::{LogLevel, LogMsg},
     parser::{ParsePattern, Parser},
     token::Token,
 };
 
 impl ParsePattern for PathPatt {
     fn parse_patt(parser: &mut Parser) -> Result<PathPatt, ErrorsEmitted> {
-        ////////////////////////////////////////////////////////////////////////////////
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("entering `PathPatt::parse()`"),
-        );
+        parser.logger.debug("entering `PathPatt::parse()`");
         parser.log_current_token(false);
-        ////////////////////////////////////////////////////////////////////////////////
 
         let mut tree: Vec<Identifier> = Vec::new();
 
@@ -59,17 +53,12 @@ impl ParsePattern for PathPatt {
             },
         };
 
-        ////////////////////////////////////////////////////////////////////////////////
-        parser
-            .logger
-            .log(LogLevel::Debug, LogMsg::from("exiting `PathPatt::parse()`"));
+        parser.logger.debug("exiting `PathPatt::parse()`");
         parser.log_current_token(false);
-        ////////////////////////////////////////////////////////////////////////////////
 
         Ok(patt)
     }
 }
-
 
 impl fmt::Display for PathPatt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

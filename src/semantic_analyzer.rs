@@ -13,7 +13,7 @@ use crate::{
         UInt, UnaryOp, UnderscoreExpr, Unit, ValueExpr,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
-    logger::{LogLevel, LogMsg, Logger},
+    logger::{LogLevel, Logger},
     parser::Module,
     span::{Span, Spanned},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
@@ -37,8 +37,7 @@ impl SemanticAnalyzer {
     }
 
     fn analyze(&mut self, module: &Module) -> Result<(), ErrorsEmitted> {
-        self.logger
-            .log(LogLevel::Info, LogMsg::from("starting semantic analysis"));
+        self.logger.info("starting semantic analysis");
 
         for s in &module.statements {
             self.analyze_stmt(s).map_err(|e| {
@@ -47,10 +46,8 @@ impl SemanticAnalyzer {
             })?
         }
 
-        self.logger.log(
-            LogLevel::Info,
-            LogMsg::from("semantic analysis complete, no errors detected"),
-        );
+        self.logger
+            .info("semantic analysis complete, no errors detected");
 
         Ok(())
     }
@@ -83,10 +80,7 @@ impl SemanticAnalyzer {
                         self.symbol_table
                             .insert(ad.alias_name.clone(), Symbol::Variable(t.clone()))?;
 
-                        self.logger.log(
-                            LogLevel::Info,
-                            LogMsg::from("alias declaration initialized"),
-                        );
+                        self.logger.info("alias declaration initialized");
                     }
                     None => {
                         let ty = PathType {
@@ -99,10 +93,7 @@ impl SemanticAnalyzer {
                             Symbol::Variable(Type::UserDefined(ty)),
                         )?;
 
-                        self.logger.log(
-                            LogLevel::Info,
-                            LogMsg::from("alias declaration initialized"),
-                        );
+                        self.logger.info("alias declaration initialized");
                     }
                 },
 
@@ -140,10 +131,7 @@ impl SemanticAnalyzer {
                         Symbol::Variable(*cd.constant_type.clone()),
                     )?;
 
-                    self.logger.log(
-                        LogLevel::Info,
-                        LogMsg::from("constant declaration initialized"),
-                    );
+                    self.logger.info("constant declaration initialized");
                 }
 
                 Item::StaticVarDecl(s) => {
@@ -169,10 +157,7 @@ impl SemanticAnalyzer {
                     self.symbol_table
                         .insert(s.var_name.clone(), Symbol::Variable(s.var_type.clone()))?;
 
-                    self.logger.log(
-                        LogLevel::Info,
-                        LogMsg::from("static variable declaration initialized"),
-                    );
+                    self.logger.info("static variable declaration initialized");
                 }
 
                 Item::ModuleItem(m) => {
@@ -231,8 +216,7 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
 
-                    self.logger
-                        .log(LogLevel::Info, LogMsg::from("trait definition initialized"));
+                    self.logger.info("trait definition initialized");
 
                     let trait_items = t.trait_items_opt.as_ref();
 
@@ -242,11 +226,8 @@ impl SemanticAnalyzer {
                                 TraitDefItem::FunctionItem(fi) => {
                                     let _ = self.analyze_function_def(&fi);
 
-                                    self.logger.log(
-                                        LogLevel::Info,
-                                        LogMsg::from(
-                                            "function definition acknowledged, but not initialized",
-                                        ),
+                                    self.logger.info(
+                                        "function definition acknowledged, but not initialized",
                                     );
                                 }
 
@@ -272,8 +253,7 @@ impl SemanticAnalyzer {
                             _ => err,
                         })?;
 
-                    self.logger
-                        .log(LogLevel::Info, LogMsg::from("enum definition initialized"));
+                    self.logger.info("enum definition initialized");
                 }
 
                 Item::StructDef(s) => {
@@ -288,10 +268,7 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
 
-                    self.logger.log(
-                        LogLevel::Info,
-                        LogMsg::from("struct definition initialized"),
-                    );
+                    self.logger.info("struct definition initialized");
                 }
 
                 Item::TupleStructDef(ts) => {
@@ -306,10 +283,7 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
 
-                    self.logger.log(
-                        LogLevel::Info,
-                        LogMsg::from("struct definition initialized"),
-                    );
+                    self.logger.info("struct definition initialized");
                 }
 
                 Item::InherentImplDef(i) => {
@@ -330,10 +304,7 @@ impl SemanticAnalyzer {
                                         },
                                     );
 
-                                    self.logger.log(
-                                        LogLevel::Info,
-                                        LogMsg::from("associated function initialized"),
-                                    );
+                                    self.logger.info("associated function initialized");
                                 }
                             }
                         }
@@ -373,10 +344,7 @@ impl SemanticAnalyzer {
                                         },
                                     );
 
-                                    self.logger.log(
-                                        LogLevel::Info,
-                                        LogMsg::from("associated function initialized"),
-                                    );
+                                    self.logger.info("associated function initialized");
                                 }
                             }
                         }
@@ -414,10 +382,7 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
 
-                    self.logger.log(
-                        LogLevel::Info,
-                        LogMsg::from("function definition initialized"),
-                    );
+                    self.logger.info("function definition initialized");
                 }
             },
 
@@ -2119,8 +2084,7 @@ impl SemanticAnalyzer {
     fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {
         let error = CompilerError::new(error_kind, span.start(), &span.input());
 
-        self.logger
-            .log(LogLevel::Error, LogMsg::from(error.to_string()));
+        self.logger.error(&error.to_string());
 
         self.errors.push(error);
     }

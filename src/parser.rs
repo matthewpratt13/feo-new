@@ -93,7 +93,7 @@ use crate::{
         UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
-    logger::{LogLevel, LogMsg, Logger},
+    logger::{LogLevel, Logger},
     span::{Position, Span},
     token::{Token, TokenStream, TokenType},
 };
@@ -119,7 +119,6 @@ enum ParserContext {
     MethodCall,  // `.`
 }
 
-#[allow(dead_code)]
 pub(crate) struct Module {
     pub(crate) statements: Vec<Statement>,
 }
@@ -226,24 +225,20 @@ impl Parser {
 
         // clear log messages, then log status info
         self.logger.clear_messages();
-        self.logger
-            .log(LogLevel::Info, LogMsg::from("starting to parse tokens"));
+        self.logger.info("starting to parse tokens");
 
         while self.current < self.stream.tokens().len() {
             let statement = self.parse_statement()?;
 
             // log status info
-            self.logger.log(
-                LogLevel::Info,
-                LogMsg::from(format!("parsed statement: {:?}", &statement)),
-            );
+            self.logger
+                .info(&format!("parsed statement: {:?}", &statement));
 
             statements.push(statement);
         }
 
         // log status info
-        self.logger
-            .log(LogLevel::Info, LogMsg::from("reached end of file"));
+        self.logger.info("reached end of file");
 
         Ok(Module { statements })
     }
@@ -261,21 +256,17 @@ impl Parser {
     /// the next expression in the parse tree.
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.log(
-            LogLevel::Debug,
-            LogMsg::from(format!(
-                "entering `parse_expression()` with precedence: {:?}",
-                &precedence
-            )),
-        );
+        self.logger.debug(&format!(
+            "entering `parse_expression()` with precedence: {:?}",
+            &precedence
+        ));
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
         let mut left_expr = self.parse_prefix()?; // start with prefix expression
 
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger
-            .log(LogLevel::Debug, LogMsg::from("exited `parse_prefix()`"));
+        self.logger.debug("exited `parse_prefix()`");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -288,10 +279,7 @@ impl Parser {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("exiting `parse_expression()`"),
-        );
+        self.logger.debug("exiting `parse_expression()`");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -303,8 +291,7 @@ impl Parser {
     /// and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger
-            .log(LogLevel::Debug, LogMsg::from("entering `parse_primary()`"));
+        self.logger.debug("entering `parse_primary()`");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -419,8 +406,7 @@ impl Parser {
     /// surrounding tokens.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger
-            .log(LogLevel::Debug, LogMsg::from("entering `parse_prefix()`"));
+        self.logger.debug("entering `parse_prefix()`");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -669,8 +655,7 @@ impl Parser {
     ) -> Result<Option<fn(&mut Self, Expression) -> Result<Expression, ErrorsEmitted>>, ErrorsEmitted>
     {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger
-            .log(LogLevel::Debug, LogMsg::from("entering `parse_infix()`"));
+        self.logger.debug("entering `parse_infix()`");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -801,10 +786,7 @@ impl Parser {
 
             Some(Token::EOF) | None => {
                 ////////////////////////////////////////////////////////////////////////////////
-                self.logger.log(
-                    LogLevel::Debug,
-                    LogMsg::from("no infix parsing function found"),
-                );
+                self.logger.debug("no infix parsing function found");
                 ////////////////////////////////////////////////////////////////////////////////
 
                 Ok(None)
@@ -859,10 +841,7 @@ impl Parser {
     /// Parse a statement (i.e., let statement, item declaration / definition or expression).
     fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("entering `parse_statement()`"),
-        );
+        self.logger.debug("entering `parse_statement()`");
         self.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -933,8 +912,7 @@ impl Parser {
     /// Parse a `Pattern` – used in match expressions, function definitions and elsewhere.
     fn parse_pattern(&mut self) -> Result<Pattern, ErrorsEmitted> {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger
-            .log(LogLevel::Debug, LogMsg::from("entering `parse_pattern()`"));
+        self.logger.debug("entering `parse_pattern()`");
         self.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -1178,15 +1156,11 @@ impl Parser {
             self.current += 1;
 
             ////////////////////////////////////////////////////////////////////////////////
-            self.logger
-                .log(LogLevel::Debug, LogMsg::from("consumed token"));
+            self.logger.debug("consumed token");
             ////////////////////////////////////////////////////////////////////////////////
         } else {
             // log warning
-            self.logger.log(
-                LogLevel::Warning,
-                LogMsg::from("WARNING: reached end of tokens"),
-            );
+            self.logger.warn("reached end of tokens");
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -1246,8 +1220,7 @@ impl Parser {
         let error = CompilerError::new(error_kind, pos, &self.stream.span().input());
 
         // log the error as a message
-        self.logger
-            .log(LogLevel::Error, LogMsg::from(error.to_string()));
+        self.logger.error(&error.to_string());
 
         // push the error to the `errors` vector
         self.errors.push(error);
@@ -1258,16 +1231,11 @@ impl Parser {
         let token = self.current_token().unwrap();
         let precedence = self.get_precedence(token);
 
-        self.logger.log(
-            LogLevel::Debug,
-            LogMsg::from(format!("current token: {:?}", token)),
-        );
+        self.logger.debug(&format!("current token: {:?}", token));
 
         if log_precedence {
-            self.logger.log(
-                LogLevel::Debug,
-                LogMsg::from(format!("current precedence: {:?}", precedence)),
-            );
+            self.logger
+                .debug(&format!("current precedence: {:?}", precedence));
         }
     }
 
@@ -1315,10 +1283,9 @@ impl Parser {
             "patt" => self.log_error(ParserErrorKind::MissingPattern {
                 expected: expected.to_string(),
             }),
-            _ => self.logger.log(
-                LogLevel::Error,
-                LogMsg::from(format!("{ty} not found. Expected {expected}, found none")),
-            ),
+            _ => self
+                .logger
+                .error(&format!("{ty} not found. Expected {expected}, found none")),
         }
 
         self.next_token();

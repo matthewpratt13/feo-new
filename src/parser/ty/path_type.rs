@@ -1,7 +1,6 @@
 use crate::{
     ast::{Identifier, PathRoot, PathType, SelfType},
     error::ErrorsEmitted,
-    logger::{LogLevel, LogMsg},
     token::Token,
 };
 
@@ -12,13 +11,8 @@ impl PathType {
         parser: &mut Parser,
         token: Option<Token>,
     ) -> Result<PathType, ErrorsEmitted> {
-        ////////////////////////////////////////////////////////////////////////////////
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("entering `PathType::parse()`"),
-        );
+        parser.logger.debug("entering `PathType::parse()`");
         parser.log_current_token(false);
-        ////////////////////////////////////////////////////////////////////////////////
 
         let mut path: Vec<Identifier> = Vec::new();
 
@@ -96,13 +90,8 @@ impl PathType {
         };
 
         ////////////////////////////////////////////////////////////////////////////////
-        parser
-            .logger
-            .log(LogLevel::Debug, LogMsg::from("exiting `PathType::parse()`"));
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from(format!("parsed path: {}", path_type)),
-        );
+        parser.logger.debug("exiting `PathType::parse()`");
+        parser.logger.debug(&format!("parsed path: {}", path_type));
         parser.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 

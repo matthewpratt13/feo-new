@@ -1,20 +1,14 @@
 use crate::{
     ast::{BlockExpr, Delimiter, InnerAttr, Statement},
     error::ErrorsEmitted,
-    logger::{LogLevel, LogMsg},
     parser::{collection, ParseConstructExpr, Parser},
     token::Token,
 };
 
 impl ParseConstructExpr for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
-        ////////////////////////////////////////////////////////////////////////////////
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("entering `BlockExpr::parse()`"),
-        );
+        parser.logger.debug("entering `BlockExpr::parse()`");
         parser.log_current_token(false);
-        ////////////////////////////////////////////////////////////////////////////////
 
         let first_token = parser.current_token().cloned();
 
@@ -49,13 +43,8 @@ impl ParseConstructExpr for BlockExpr {
                     span,
                 };
 
-                ////////////////////////////////////////////////////////////////////////////////
-                parser.logger.log(
-                    LogLevel::Debug,
-                    LogMsg::from("exiting `BlockExpr::parse()`"),
-                );
+                parser.logger.debug("exiting `BlockExpr::parse()`");
                 parser.log_current_token(false);
-                ////////////////////////////////////////////////////////////////////////////////
 
                 Ok(expr)
             }
@@ -71,13 +60,8 @@ impl ParseConstructExpr for BlockExpr {
 fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, ErrorsEmitted> {
     let mut statements: Vec<Statement> = Vec::new();
 
-    ////////////////////////////////////////////////////////////////////////////////
-    parser.logger.log(
-        LogLevel::Debug,
-        LogMsg::from("entering `parse_statements()`"),
-    );
+    parser.logger.debug("entering `parse_statements()`");
     parser.log_current_token(false);
-    ////////////////////////////////////////////////////////////////////////////////
 
     while !matches!(
         parser.current_token(),
@@ -87,17 +71,12 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
         statements.push(statement);
     }
 
-    ////////////////////////////////////////////////////////////////////////////////
-    parser.logger.log(
-        LogLevel::Debug,
-        LogMsg::from("exiting `parse_statements()`"),
-    );
-    parser.logger.log(
-        LogLevel::Debug,
-        LogMsg::from(format!("statements.is_empty(): {}", &statements.is_empty())),
-    );
+    parser.logger.debug("exiting `parse_statements()`");
+    parser.logger.debug(&format!(
+        "statements.is_empty(): {}",
+        &statements.is_empty()
+    ));
     parser.log_current_token(false);
-    ////////////////////////////////////////////////////////////////////////////////
 
     match statements.is_empty() {
         true => Ok(None),

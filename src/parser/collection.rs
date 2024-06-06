@@ -1,7 +1,6 @@
 use crate::{
     ast::{Delimiter, Expression, OuterAttr, Visibility},
     error::ErrorsEmitted,
-    logger::{LogLevel, LogMsg},
     token::Token,
 };
 
@@ -102,13 +101,8 @@ pub(crate) fn get_expressions(
 ) -> Result<Option<Vec<Expression>>, ErrorsEmitted> {
     let mut expressions: Vec<Expression> = Vec::new();
 
-    ////////////////////////////////////////////////////////////////////////////////
-    parser.logger.log(
-        LogLevel::Debug,
-        LogMsg::from("entering `get_expressions()`"),
-    );
+    parser.logger.debug("entering `get_expressions()`");
     parser.log_current_token(true);
-    ////////////////////////////////////////////////////////////////////////////////
 
     match open_delimiter {
         Delimiter::LParen { .. } => {
@@ -156,19 +150,12 @@ pub(crate) fn get_expressions(
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////
-    parser
-        .logger
-        .log(LogLevel::Debug, LogMsg::from("exiting `get_expressions()`"));
-    parser.logger.log(
-        LogLevel::Debug,
-        LogMsg::from(format!(
-            "expressions.is_empty(): {}",
-            &expressions.is_empty()
-        )),
-    );
+    parser.logger.debug("exiting `get_expressions()`");
+    parser.logger.debug(&format!(
+        "expressions.is_empty(): {}",
+        &expressions.is_empty()
+    ));
     parser.log_current_token(false);
-    ////////////////////////////////////////////////////////////////////////////////
 
     match expressions.is_empty() {
         true => Ok(None),
@@ -210,28 +197,20 @@ pub(crate) fn get_attributes<T>(
 ) -> Option<Vec<T>> {
     let mut attributes = Vec::new();
 
-    ////////////////////////////////////////////////////////////////////////////////
-    parser
-        .logger
-        .log(LogLevel::Debug, LogMsg::from("entering `get_attributes()`"));
+    parser.logger.debug("entering `get_attributes()`");
     parser.log_current_token(false);
-    ////////////////////////////////////////////////////////////////////////////////
 
     while let Some(a) = f(parser) {
         attributes.push(a);
         parser.next_token();
     }
 
-    ////////////////////////////////////////////////////////////////////////////////
-    parser
-        .logger
-        .log(LogLevel::Debug, LogMsg::from("exiting `get_attributes()`"));
-    parser.logger.log(
-        LogLevel::Debug,
-        LogMsg::from(format!("attributes.is_empty(): {}", &attributes.is_empty())),
-    );
+    parser.logger.debug("exiting `get_attributes()`");
+    parser.logger.debug(&format!(
+        "attributes.is_empty(): {}",
+        &attributes.is_empty()
+    ));
     parser.log_current_token(false);
-    ////////////////////////////////////////////////////////////////////////////////
 
     match attributes.is_empty() {
         true => None,

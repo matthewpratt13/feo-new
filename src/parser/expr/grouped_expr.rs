@@ -1,20 +1,14 @@
 use crate::{
     ast::{Delimiter, Expression, GroupedExpr, TupleElements, TupleExpr},
     error::ErrorsEmitted,
-    logger::{LogLevel, LogMsg},
     parser::{ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
 
 impl ParseConstructExpr for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {
-        ////////////////////////////////////////////////////////////////////////////////
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("entering `GroupedExpr::parse()`"),
-        );
+        parser.logger.debug("entering `GroupedExpr::parse()`");
         parser.log_current_token(false);
-        ////////////////////////////////////////////////////////////////////////////////
 
         let first_token = parser.current_token().cloned();
 
@@ -60,10 +54,7 @@ impl ParseConstructExpr for GroupedExpr {
                 parser.next_token();
 
                 ////////////////////////////////////////////////////////////////////////////////
-                parser.logger.log(
-                    LogLevel::Debug,
-                    LogMsg::from("exiting `GroupedExpr::parse()`"),
-                );
+                parser.logger.debug("exiting `GroupedExpr::parse()`");
                 parser.log_current_token(false);
                 ////////////////////////////////////////////////////////////////////////////////
 

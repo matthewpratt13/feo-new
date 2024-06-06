@@ -1,7 +1,6 @@
 use crate::{
     ast::{Delimiter, GroupedPatt, Pattern, TuplePatt, TuplePattElements},
     error::ErrorsEmitted,
-    logger::{LogLevel, LogMsg},
     parser::{ParsePattern, Parser},
     span::Position,
     token::Token,
@@ -9,13 +8,8 @@ use crate::{
 
 impl ParsePattern for GroupedPatt {
     fn parse_patt(parser: &mut Parser) -> Result<GroupedPatt, ErrorsEmitted> {
-        ////////////////////////////////////////////////////////////////////////////////
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("entering `GroupedPatt::parse()`"),
-        );
+        parser.logger.debug("entering `GroupedPatt::parse()`");
         parser.log_current_token(false);
-        ////////////////////////////////////////////////////////////////////////////////
 
         let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
             let position = Position::new(parser.current, &parser.stream.span().input());
@@ -45,13 +39,8 @@ impl ParsePattern for GroupedPatt {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
 
-                ////////////////////////////////////////////////////////////////////////////////
-                parser.logger.log(
-                    LogLevel::Debug,
-                    LogMsg::from("exiting `GroupedPatt::parse()`"),
-                );
+                parser.logger.debug("exiting `GroupedPatt::parse()`");
                 parser.log_current_token(false);
-                ////////////////////////////////////////////////////////////////////////////////
 
                 Ok(GroupedPatt { inner_pattern })
             }

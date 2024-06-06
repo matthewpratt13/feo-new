@@ -7,7 +7,6 @@ use crate::{
         Unit,
     },
     error::ErrorsEmitted,
-    logger::{LogLevel, LogMsg},
     span::Position,
     token::Token,
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
@@ -18,12 +17,8 @@ use super::{collection, Parser};
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
-        ////////////////////////////////////////////////////////////////////////////////
-        parser
-            .logger
-            .log(LogLevel::Debug, LogMsg::from("entering `Type::parse()`"));
+        parser.logger.debug("entering `Type::parse()`");
         parser.log_current_token(false);
-        ////////////////////////////////////////////////////////////////////////////////
 
         let token = parser.next_token();
 

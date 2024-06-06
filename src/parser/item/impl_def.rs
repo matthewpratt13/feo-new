@@ -4,7 +4,6 @@ use crate::{
         Keyword, OuterAttr, PathType, TraitImplDef, TraitImplItem, Type, Visibility,
     },
     error::ErrorsEmitted,
-    logger::{LogLevel, LogMsg},
     span::Position,
     token::Token,
 };
@@ -177,10 +176,7 @@ impl ParseAssociatedItem for InherentImplItem {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
                 if constant_decl.value_opt.is_none() {
-                    parser.logger.log(
-                        LogLevel::Warning,
-                        LogMsg::from("assigned value cannot be `None`"),
-                    );
+                    parser.logger.warn("assigned value cannot be `None`");
                     Err(ErrorsEmitted)
                 } else {
                     Ok(InherentImplItem::ConstantDecl(constant_decl))
@@ -214,10 +210,7 @@ impl ParseAssociatedItem for TraitImplItem {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
                 if constant_decl.value_opt.is_none() {
-                    parser.logger.log(
-                        LogLevel::Warning,
-                        LogMsg::from("assigned value cannot be `None`"),
-                    );
+                    parser.logger.warn("assigned value cannot be `None`");
                     Err(ErrorsEmitted)
                 } else {
                     Ok(TraitImplItem::ConstantDecl(constant_decl))

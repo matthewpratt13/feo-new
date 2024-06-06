@@ -3,20 +3,14 @@ use core::fmt;
 use crate::{
     ast::{Identifier, PathExpr, PathRoot, SelfType},
     error::ErrorsEmitted,
-    logger::{LogLevel, LogMsg},
     parser::{ParseSimpleExpr, Parser},
     token::Token,
 };
 
 impl ParseSimpleExpr for PathExpr {
     fn parse(parser: &mut Parser) -> Result<PathExpr, ErrorsEmitted> {
-        ////////////////////////////////////////////////////////////////////////////////
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("entering `PathExpr::parse()`"),
-        );
+        parser.logger.debug("entering `PathExpr::parse()`");
         parser.log_current_token(false);
-        ////////////////////////////////////////////////////////////////////////////////
 
         let mut tree: Vec<Identifier> = Vec::new();
 
@@ -75,12 +69,8 @@ impl ParseSimpleExpr for PathExpr {
             span,
         };
 
-        ////////////////////////////////////////////////////////////////////////////////
-        parser
-            .logger
-            .log(LogLevel::Debug, LogMsg::from("exiting `PathExpr::parse()`"));
+        parser.logger.debug("exiting `PathExpr::parse()`");
         parser.log_current_token(false);
-        ////////////////////////////////////////////////////////////////////////////////
 
         Ok(expr)
     }

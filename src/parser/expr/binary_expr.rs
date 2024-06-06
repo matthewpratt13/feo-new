@@ -3,7 +3,6 @@ use crate::{
         AssigneeExpr, BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression, ValueExpr,
     },
     error::ErrorsEmitted,
-    logger::{LogLevel, LogMsg},
     parser::{ParseOperatorExpr, Parser},
     span::Spanned,
     token::{Token, TokenType},
@@ -14,13 +13,8 @@ impl ParseOperatorExpr for BinaryExpr {
     /// This method parses the operator and calls `parse_expression()` recursively to handle
     /// the right-hand side of the expression.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        ////////////////////////////////////////////////////////////////////////////////
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("entering `BinaryExpr::parse()`"),
-        );
+        parser.logger.debug("entering `BinaryExpr::parse()`");
         parser.log_current_token(true);
-        ////////////////////////////////////////////////////////////////////////////////
 
         let left_expr_span = &left_expr.span();
 
@@ -74,13 +68,8 @@ impl ParseOperatorExpr for ComparisonExpr {
     /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on
     /// the input operator.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        ////////////////////////////////////////////////////////////////////////////////
-        parser.logger.log(
-            LogLevel::Debug,
-            LogMsg::from("entering `ComparisonExpr::parse()`"),
-        );
+        parser.logger.debug("entering `ComparisonExpr::parse()`");
         parser.log_current_token(true);
-        ////////////////////////////////////////////////////////////////////////////////
 
         let left_expr_span = &left_expr.span();
 
