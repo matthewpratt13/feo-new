@@ -77,6 +77,10 @@ pub enum SemanticErrorKind {
         found: String,
     },
 
+    UndefinedField {
+        name: Identifier,
+    },
+
     UndefinedFunction {
         name: Identifier,
     },
@@ -182,7 +186,9 @@ impl fmt::Display for SemanticErrorKind {
                 )
             }
 
-            SemanticErrorKind::UndefinedFunction { name } => write!(f, "undefined function: `{name}`"),
+            SemanticErrorKind::UndefinedField { name } => write!(f, "undefined field: `{name}`"),  
+            
+             SemanticErrorKind::UndefinedFunction { name } => write!(f, "undefined function: `{name}`"),
 
             SemanticErrorKind::UndefinedPath { name } => write!(f, "undefined path: `{name}`"),
 

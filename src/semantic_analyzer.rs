@@ -567,12 +567,16 @@ impl SemanticAnalyzer {
                     Some(Symbol::Struct(s)) => match &s.fields_opt {
                         Some(v) => match v.iter().find(|f| f.field_name == fa.field_name) {
                             Some(sdf) => Ok(*sdf.field_type.clone()),
-                            _ => todo!(), // undefined field
+                            _ => Err(SemanticErrorKind::UndefinedField {
+                                name: fa.field_name.clone(),
+                            }),
                         },
                         None => Ok(Type::UnitType(Unit)),
                     },
 
-                    _ => todo!(), // undefined type
+                    _ => Err(SemanticErrorKind::UndefinedType {
+                        name: Identifier::from(&object_type.to_string()),
+                    }),
                 }
             }
 
