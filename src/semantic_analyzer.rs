@@ -608,12 +608,20 @@ impl SemanticAnalyzer {
                     | Type::U32(_)
                     | Type::U64(_)
                     | Type::U128(_) => (),
-                    _ => todo!(), // type mismatch (variable)
+                    _ => {
+                        return Err(SemanticErrorKind::UnexpectedType {
+                            expected: "numeric type".to_string(),
+                            found: format!("`{}`", index_type),
+                        })
+                    }
                 }
 
                 match array_type {
                     Type::Array { element_type, .. } => Ok(*element_type),
-                    _ => todo!(), // unexpected type (expected array)
+                    _ => Err(SemanticErrorKind::UnexpectedType {
+                        expected: "array".to_string(),
+                        found: format!("`{}`", array_type),
+                    }),
                 }
             }
 
@@ -625,10 +633,16 @@ impl SemanticAnalyzer {
                         if ti.index < UInt::from(t.len()) {
                             Ok(Type::Tuple(t))
                         } else {
-                            todo!() // index out of bounds
+                            Err(SemanticErrorKind::TupleIndexOutOfBounds {
+                                len: ti.index,
+                                i: UInt::from(t.len()),
+                            })
                         }
                     }
-                    _ => todo!(), // unexpected type (expected tuple)
+                    _ => Err(SemanticErrorKind::UnexpectedType {
+                        expected: "tuple".to_string(),
+                        found: format!("`{}`", tuple_type),
+                    }),
                 }
             }
 

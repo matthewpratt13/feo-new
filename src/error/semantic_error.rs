@@ -3,7 +3,7 @@
 use core::fmt;
 use std::error::Error;
 
-use crate::ast::Identifier;
+use crate::ast::{Identifier, UInt};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {
@@ -43,6 +43,11 @@ pub enum SemanticErrorKind {
 
     MissingValue {
         expected: String,
+    },
+
+    TupleIndexOutOfBounds {
+        len: UInt,
+        i: UInt
     },
 
     TypeMismatchArgument {
@@ -152,7 +157,12 @@ impl fmt::Display for SemanticErrorKind {
             }
             SemanticErrorKind::MissingValue { expected } => {
                 write!(f, "value not found. Expected {expected}, found none")
+            }   
+            
+            SemanticErrorKind::TupleIndexOutOfBounds { len, i } => {
+                write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
             }
+
             SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
                 f,
                 "array element types do not match. Expected {expected}, found {found}"
