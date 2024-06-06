@@ -1069,8 +1069,8 @@ impl SemanticAnalyzer {
                         Ok(var_type.clone())
                     }
 
-                    // TODO: add expression name (technically a type mismatch)
-                    Some(t) => Err(SemanticErrorKind::UnexpectedType {
+                    Some(t) => Err(SemanticErrorKind::TypeMismatchVariable {
+                        name,
                         expected: expr_type.to_string(),
                         found: format!("`{}`", &t),
                     }),
