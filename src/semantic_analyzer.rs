@@ -808,7 +808,7 @@ impl SemanticAnalyzer {
 
                     _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "matching numeric types".to_string(),
-                        found: format!("`({:?}, {:?})`", &lhs_type, &rhs_type),
+                        found: format!("`({}, {})`", &lhs_type, &rhs_type),
                     }),
                 }
             }
@@ -909,7 +909,7 @@ impl SemanticAnalyzer {
 
                     _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "matching numeric types".to_string(),
-                        found: format!("`({:?}, {:?})`", &lhs_type, &rhs_type),
+                        found: format!("`({}, {})`", &lhs_type, &rhs_type),
                     }),
                 }
             }
@@ -1132,7 +1132,7 @@ impl SemanticAnalyzer {
 
                     _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "matching numeric types".to_string(),
-                        found: format!("`({:?}, {:?})`", &lhs_type, &rhs_type),
+                        found: format!("`({}, {})`", &lhs_type, &rhs_type),
                     }),
                 }
             }
