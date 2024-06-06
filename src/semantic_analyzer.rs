@@ -736,8 +736,88 @@ impl SemanticAnalyzer {
                 self.analyze_expr(&wrap_into_expression(d.assignee_expr.clone())?)
             }
 
-            // TODO: check if original type can be cast as new type
-            Expression::TypeCast(tc) => Ok(*tc.new_type.clone()),
+            Expression::TypeCast(tc) => {
+                let value_type = self.analyze_expr(&wrap_into_expression(*tc.value.clone())?)?;
+
+                let new_type = *tc.new_type.clone();
+
+                match (&value_type, &new_type) {
+                    (
+                        Type::I32(_) | Type::I64(_),
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_)
+                        | Type::F32(_)
+                        | Type::F64(_),
+                    )
+                    | (
+                        Type::U8(_) | Type::Byte(_),
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_)
+                        | Type::F32(_)
+                        | Type::F64(_)
+                        | Type::Byte(_)
+                        | Type::Char(_),
+                    )
+                    | (
+                        Type::U16(_) | Type::U32(_),
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_)
+                        | Type::F32(_)
+                        | Type::F64(_)
+                        | Type::Char(_),
+                    )
+                    | (
+                        Type::U64(_) | Type::U128(_),
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_)
+                        | Type::F32(_)
+                        | Type::F64(_),
+                    )
+                    | (Type::F32(_) | Type::F64(_), Type::F32(_) | Type::F64(_))
+                    | (
+                        Type::B2(_) | Type::B4(_) | Type::B16(_) | Type::B32(_),
+                        Type::B2(_) | Type::B4(_) | Type::B16(_) | Type::B32(_),
+                    )
+                    | (
+                        Type::H160(_) | Type::H256(_) | Type::H512(_),
+                        Type::H160(_) | Type::H256(_) | Type::H512(_),
+                    )
+                    | (Type::Char(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
+                        Ok(new_type)
+                    }
+                    (t, u) => Err(SemanticErrorKind::TypeCastError {
+                        from: t.to_string(),
+                        to: u.to_string(),
+                    }),
+                }
+            }
 
             Expression::Binary(b) => {
                 let lhs_type = self.analyze_expr(&wrap_into_expression(*b.lhs.clone())?)?;

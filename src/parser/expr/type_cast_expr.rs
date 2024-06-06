@@ -50,9 +50,7 @@ impl ParseOperatorExpr for TypeCastExpr {
                 | Token::H160Type { .. }
                 | Token::H256Type { .. }
                 | Token::H512Type { .. }
-                | Token::CharType { .. }
-                | Token::StrType { .. }
-                | Token::StringType { .. },
+                | Token::CharType { .. },
             ) => Ok(Type::parse(parser)?),
             _ => {
                 parser.log_unexpected_token("numeric, text or hash cast type");

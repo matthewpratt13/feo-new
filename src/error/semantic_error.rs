@@ -50,6 +50,11 @@ pub enum SemanticErrorKind {
         i: UInt
     },
 
+    TypeCastError {
+        from: String,
+        to: String,
+    },
+
     TypeMismatchArgument {
         name: Identifier,
         expected: String,
@@ -129,7 +134,6 @@ impl fmt::Display for SemanticErrorKind {
                     "argument count mismatch. Expected {expected} arguments, found {found}"
                 )
             }
-
             SemanticErrorKind::ConversionError { from, into } => {
                 write!(f, "conversion error. Unable to convert {from} into {into}")
             }
@@ -142,7 +146,6 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::InvalidPathIdentifier { name } => {
                 write!(f, "invalid path identifier: `{name}`")
             }
-
             SemanticErrorKind::InvalidStructName { name } => {
                 write!(f, "invalid struct name: `{name}`")
             }
@@ -158,11 +161,12 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::MissingValue { expected } => {
                 write!(f, "value not found. Expected {expected}, found none")
             }   
-            
             SemanticErrorKind::TupleIndexOutOfBounds { len, i } => {
                 write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
             }
-
+            SemanticErrorKind::TypeCastError { from, to } => {
+                write!(f, "unable to cast {} as {}", from, to)
+            },
             SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
                 f,
                 "array element types do not match. Expected {expected}, found {found}"
@@ -179,12 +183,10 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "value type does not match return type. Expected {expected}, found {found}"
             ),
-
             SemanticErrorKind::TypeMismatchValues { expected, found } => write!(
                 f,
                 "type mismatch between values. Expected {expected}, found {found}"
             ),
-
             SemanticErrorKind::TypeMismatchVariable {
                 name,
                 expected,
@@ -195,15 +197,14 @@ impl fmt::Display for SemanticErrorKind {
                     "type mismatch for `{name}`. Expected {expected}, found {found}"
                 )
             }
-
             SemanticErrorKind::UndefinedField { name } => write!(f, "undefined field: `{name}`"),  
             
-             SemanticErrorKind::UndefinedFunction { name } => write!(f, "undefined function: `{name}`"),
+            SemanticErrorKind::UndefinedFunction { name } => write!(f, "undefined function: `{name}`"),
 
             SemanticErrorKind::UndefinedPath { name } => write!(f, "undefined path: `{name}`"),
 
-            SemanticErrorKind::UndefinedStruct { name } => write!(f, "undefined struct: `{name}`"),       
-            
+            SemanticErrorKind::UndefinedStruct { name } => write!(f, "undefined struct: `{name}`"),     
+
             SemanticErrorKind::UndefinedType { name } => write!(f, "undefined type: `{name}`"),
             
             SemanticErrorKind::UndefinedVariable { name } => {
