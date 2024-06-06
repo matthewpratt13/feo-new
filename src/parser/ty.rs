@@ -30,12 +30,10 @@ impl Type {
         match &token {
             Some(Token::I32Type { .. }) => Ok(Type::I32(Int::I32(i32::default()))),
             Some(Token::I64Type { .. }) => Ok(Type::I64(Int::I64(i64::default()))),
-            Some(Token::I128Type { .. }) => Ok(Type::I128(Int::I128(i128::default()))),
             Some(Token::U8Type { .. }) => Ok(Type::U8(UInt::U8(u8::default()))),
             Some(Token::U16Type { .. }) => Ok(Type::U16(UInt::U16(u16::default()))),
             Some(Token::U32Type { .. }) => Ok(Type::U32(UInt::U32(u32::default()))),
             Some(Token::U64Type { .. }) => Ok(Type::U64(UInt::U64(u64::default()))),
-            Some(Token::U128Type { .. }) => Ok(Type::U128(UInt::U128(u128::default()))),
             Some(Token::U256Type { .. }) => Ok(Type::U256(BigUInt::U256(U256::default()))),
             Some(Token::U512Type { .. }) => Ok(Type::U512(BigUInt::U512(U512::default()))),
             Some(Token::F32Type { .. }) => Ok(Type::F32(Float::F32(F32::default()))),

@@ -10,7 +10,6 @@ use super::{FunctionOrMethodParam, Identifier, PathExpr, Type};
 pub enum Int {
     I32(i32),
     I64(i64),
-    I128(i128),
 }
 
 impl fmt::Display for Int {
@@ -18,7 +17,6 @@ impl fmt::Display for Int {
         match self {
             Int::I32(t) => write!(f, "{}", t),
             Int::I64(t) => write!(f, "{}", t),
-            Int::I128(t) => write!(f, "{}", t),
         }
     }
 }
@@ -31,12 +29,11 @@ pub enum UInt {
     U16(u16),
     U32(u32),
     U64(u64),
-    U128(u128),
 }
 
 impl From<usize> for UInt {
     fn from(value: usize) -> Self {
-        UInt::U128(value as u128)
+        UInt::U64(value as u64)
     }
 }
 
@@ -47,7 +44,6 @@ impl fmt::Display for UInt {
             UInt::U16(t) => write!(f, "{}", t),
             UInt::U32(t) => write!(f, "{}", t),
             UInt::U64(t) => write!(f, "{}", t),
-            UInt::U128(t) => write!(f, "{}", t),
         }
     }
 }
@@ -259,13 +255,6 @@ impl fmt::Display for InferredType {
         write!(f, "_")
     }
 }
-
-// /// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
-// #[derive(Debug, Clone, PartialEq)]
-// pub struct PathType {
-//     pub(crate) path_root: PathRoot,
-//     pub(crate) tree_opt: Option<Vec<Identifier>>,
-// }
 
 /// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
 #[derive(Debug, Clone, PartialEq)]
