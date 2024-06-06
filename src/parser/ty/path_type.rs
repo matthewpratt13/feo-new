@@ -20,7 +20,7 @@ impl PathType {
         parser.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
-        let mut tree: Vec<Identifier> = Vec::new();
+        let mut path: Vec<Identifier> = Vec::new();
 
         let path_root = match token {
             Some(Token::Identifier { name, .. }) => {
@@ -51,15 +51,12 @@ impl PathType {
         | None = parser.current_token()
         {
             return Ok(PathType {
-                path_root,
-                tree_opt: {
-                    match tree.is_empty() {
-                        true => None,
-                        false => Some(tree),
-                    }
-                },
+                associated_type_path_prefix_opt: None,
+                type_name: Identifier(path_root.to_string()),
             });
         }
+
+        path.push(Identifier(path_root.to_string()));
 
         while let Some(Token::DblColon { .. }) = parser.current_token() {
             match parser.peek_ahead_by(1).cloned() {
@@ -67,7 +64,7 @@ impl PathType {
                     parser.next_token();
                     parser.next_token();
 
-                    tree.push(Identifier(name));
+                    path.push(Identifier(name));
                 }
                 Some(Token::LBrace { .. }) => break,
                 Some(Token::EOF) | None => {
@@ -81,22 +78,31 @@ impl PathType {
             }
         }
 
+        let type_name = path.pop().unwrap();
+
+        let prefix = path;
+
         parser.next_token();
 
         let path_type = PathType {
-            path_root,
-            tree_opt: {
-                match tree.is_empty() {
-                    true => None,
-                    false => Some(tree),
+            associated_type_path_prefix_opt: {
+                if prefix.is_empty() {
+                    None
+                } else {
+                    Some(prefix)
                 }
             },
+            type_name,
         };
 
         ////////////////////////////////////////////////////////////////////////////////
         parser
             .logger
             .log(LogLevel::Debug, LogMsg::from("exiting `PathType::parse()`"));
+        parser.logger.log(
+            LogLevel::Debug,
+            LogMsg::from(format!("parsed path: {}", path_type)),
+        );
         parser.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 

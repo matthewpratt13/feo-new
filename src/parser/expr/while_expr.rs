@@ -7,7 +7,9 @@ use crate::{
 
 impl ParseControlExpr for WhileExpr {
     fn parse(parser: &mut Parser) -> Result<WhileExpr, ErrorsEmitted> {
-        let kw_while = if let Some(Token::While { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_while = if let Some(Token::While { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::While)
         } else {
@@ -39,10 +41,13 @@ impl ParseControlExpr for WhileExpr {
             }
         }?;
 
+        let span = parser.get_span(&first_token.unwrap().span(), &block.span);
+
         let expr = WhileExpr {
             kw_while,
             condition,
             block,
+            span,
         };
 
         Ok(expr)

@@ -45,7 +45,7 @@ impl ParsePattern for StructPatt {
                 parser.next_token();
                 Ok(StructPatt {
                     struct_path,
-                    fields_opt,
+                    struct_fields_opt: fields_opt,
                 })
             }
             Some(Token::EOF) | None => {
@@ -129,8 +129,8 @@ impl ParsePattern for TupleStructPatt {
             Some(Token::RParen { .. }) => {
                 parser.next_token();
                 Ok(TupleStructPatt {
-                    tuple_struct_path,
-                    elements_opt,
+                    struct_path: tuple_struct_path,
+                    struct_elements_opt: elements_opt,
                 })
             }
             Some(Token::EOF) | None => {

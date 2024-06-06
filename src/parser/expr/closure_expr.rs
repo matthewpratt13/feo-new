@@ -2,15 +2,14 @@ use crate::{
     ast::{
         BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Delimiter, Expression, IdentifierPatt,
         Type,
-    },
-    error::ErrorsEmitted,
-    parser::{collection, ParseConstructExpr, ParsePattern, Parser, Precedence},
-    token::Token,
+    }, error::ErrorsEmitted, parser::{collection, ParseConstructExpr, ParsePattern, Parser, Precedence}, span::Spanned, token::Token
 };
 
 impl ParseConstructExpr for ClosureExpr {
     fn parse(parser: &mut Parser) -> Result<ClosureExpr, ErrorsEmitted> {
-        let closure_params = match parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let closure_params = match &first_token {
             Some(Token::Pipe { .. }) => {
                 let position = parser.current_position();
                 let open_pipe = Delimiter::Pipe { position };
@@ -64,15 +63,19 @@ impl ParseConstructExpr for ClosureExpr {
         }?;
 
         let body_expression = if return_type_opt.is_some() {
-            Box::new(Expression::Block(BlockExpr::parse(parser)?))
+            Expression::Block(BlockExpr::parse(parser)?)
         } else {
-            Box::new(parser.parse_expression(Precedence::Lowest)?)
+            parser.parse_expression(Precedence::Lowest)?
         };
+
+        let start_span = first_token.unwrap().span();
+        let span = parser.get_span(&start_span, &body_expression.span());
 
         let expr = ClosureExpr {
             closure_params,
             return_type_opt,
-            body_expression,
+            body_expression: Box::new(body_expression),
+            span,
         };
 
         Ok(expr)

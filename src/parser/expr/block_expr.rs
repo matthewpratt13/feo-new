@@ -16,6 +16,8 @@ impl ParseConstructExpr for BlockExpr {
         parser.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
+        let first_token = parser.current_token().cloned();
+
         let attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
         let open_brace = match parser.current_token() {
@@ -38,11 +40,13 @@ impl ParseConstructExpr for BlockExpr {
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
                 parser.next_token();
 
                 let expr = BlockExpr {
                     attributes_opt,
                     statements_opt,
+                    span,
                 };
 
                 ////////////////////////////////////////////////////////////////////////////////

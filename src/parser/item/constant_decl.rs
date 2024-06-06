@@ -13,7 +13,9 @@ impl ParseDeclItem for ConstantDecl {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ConstantDecl, ErrorsEmitted> {
-        let kw_const = if let Some(Token::Const { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_const = if let Some(Token::Const { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Const)
         } else {
@@ -70,6 +72,8 @@ impl ParseDeclItem for ConstantDecl {
 
         match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
 
                 Ok(ConstantDecl {
@@ -79,6 +83,7 @@ impl ParseDeclItem for ConstantDecl {
                     constant_name,
                     constant_type,
                     value_opt,
+                    span
                 })
             }
             Some(Token::EOF) | None => {
@@ -105,10 +110,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let item = parser.parse_item();
+        let statement = parser.parse_statement();
 
-        match item {
-            Ok(i) => Ok(println!("{:#?}", i)),
+        match statement {
+            Ok(s) => Ok(println!("{:#?}", s)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

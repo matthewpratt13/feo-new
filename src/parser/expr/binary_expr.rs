@@ -5,6 +5,7 @@ use crate::{
     error::ErrorsEmitted,
     logger::{LogLevel, LogMsg},
     parser::{ParseOperatorExpr, Parser},
+    span::Spanned,
     token::{Token, TokenType},
 };
 
@@ -21,14 +22,16 @@ impl ParseOperatorExpr for BinaryExpr {
         parser.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
+        let left_expr_span = &left_expr.span();
+
         let lhs: ValueExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        let operator_token = &parser.current_token().cloned().unwrap_or(Token::EOF);
+        let operator_token = parser.current_token().cloned().unwrap_or(Token::EOF);
 
-        let binary_op = match operator_token.token_type() {
+        let binary_op = match &operator_token.token_type() {
             TokenType::Plus => Ok(BinaryOp::Add),
             TokenType::Minus => Ok(BinaryOp::Subtract),
             TokenType::Asterisk => Ok(BinaryOp::Multiply),
@@ -48,16 +51,19 @@ impl ParseOperatorExpr for BinaryExpr {
             }
         }?;
 
-        let precedence = parser.get_precedence(operator_token);
+        let precedence = parser.get_precedence(&operator_token);
 
         parser.next_token();
 
         let rhs = parser.parse_value_expr(precedence)?;
 
+        let span = parser.get_span(left_expr_span, &rhs.span());
+
         let expr = BinaryExpr {
             lhs: Box::new(lhs),
             binary_op,
             rhs: Box::new(rhs),
+            span,
         };
 
         Ok(Expression::Binary(expr))
@@ -76,14 +82,16 @@ impl ParseOperatorExpr for ComparisonExpr {
         parser.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
+        let left_expr_span = &left_expr.span();
+
         let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
 
-        let operator_token = &parser.current_token().cloned().unwrap_or(Token::EOF);
+        let operator_token = parser.current_token().cloned().unwrap_or(Token::EOF);
 
-        let comparison_op = match operator_token.token_type() {
+        let comparison_op = match &operator_token.token_type() {
             TokenType::DblEquals => Ok(ComparisonOp::Equal),
             TokenType::BangEquals => Ok(ComparisonOp::NotEqual),
             TokenType::LessThan => Ok(ComparisonOp::LessThan),
@@ -98,16 +106,19 @@ impl ParseOperatorExpr for ComparisonExpr {
             }
         }?;
 
-        let precedence = parser.get_precedence(operator_token);
+        let precedence = parser.get_precedence(&operator_token);
 
         parser.next_token();
 
         let rhs = parser.parse_assignee_expr(precedence)?;
 
+        let span = parser.get_span(left_expr_span, &rhs.span());
+
         let expr = ComparisonExpr {
             lhs,
             comparison_op,
             rhs,
+            span,
         };
 
         Ok(Expression::Comparison(expr))

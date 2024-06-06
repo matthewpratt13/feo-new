@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         Delimiter, Identifier, Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef,
-        TupleStructDefField, Type, Visibility,
+        TupleStructDefElement, Type, Visibility,
     },
     error::ErrorsEmitted,
     span::Position,
@@ -16,7 +16,9 @@ impl ParseDefItem for StructDef {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<StructDef, ErrorsEmitted> {
-        let kw_struct = if let Some(Token::Struct { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_struct = if let Some(Token::Struct { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Struct)
         } else {
@@ -57,6 +59,7 @@ impl ParseDefItem for StructDef {
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
                 parser.next_token();
 
                 Ok(StructDef {
@@ -65,6 +68,7 @@ impl ParseDefItem for StructDef {
                     kw_struct,
                     struct_name,
                     fields_opt,
+                    span,
                 })
             }
             Some(Token::EOF) | None => {
@@ -86,7 +90,9 @@ impl ParseDefItem for TupleStructDef {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<TupleStructDef, ErrorsEmitted> {
-        let kw_struct = if let Some(Token::Struct { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_struct = if let Some(Token::Struct { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Struct)
         } else {
@@ -137,13 +143,17 @@ impl ParseDefItem for TupleStructDef {
 
         match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
+
                 Ok(TupleStructDef {
                     attributes_opt,
                     visibility,
                     kw_struct,
                     struct_name,
-                    tuple_struct_fields_opt,
+                    elements_opt: tuple_struct_fields_opt,
+                    span,
                 })
             }
             Some(Token::EOF) | None => {
@@ -164,13 +174,14 @@ impl StructDefField {
 
         let visibility = Visibility::visibility(parser)?;
 
-        let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
-            parser.next_token();
-            Ok(Identifier(name))
-        } else {
-            parser.log_missing_token("struct field identifier");
-            Err(ErrorsEmitted)
-        }?;
+        let field_name =
+            if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
+                parser.next_token();
+                Ok(Identifier(name))
+            } else {
+                parser.log_missing_token("struct field identifier");
+                Err(ErrorsEmitted)
+            }?;
 
         match parser.current_token() {
             Some(Token::Colon { .. }) => {
@@ -200,17 +211,19 @@ impl StructDefField {
     }
 }
 
-fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefField, ErrorsEmitted> {
+fn parse_tuple_struct_def_field(
+    parser: &mut Parser,
+) -> Result<TupleStructDefElement, ErrorsEmitted> {
     let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
     let visibility = Visibility::visibility(parser)?;
 
     let field_type = Box::new(Type::parse(parser)?);
 
-    let field = TupleStructDefField {
+    let field = TupleStructDefElement {
         attributes_opt,
         visibility,
-        field_type,
+        element_type: field_type,
     };
 
     Ok(field)
@@ -233,10 +246,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let item = parser.parse_item();
+        let statement = parser.parse_statement();
 
-        match item {
-            Ok(i) => Ok(println!("{:#?}", i)),
+        match statement {
+            Ok(s) => Ok(println!("{:#?}", s)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -253,10 +266,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let item = parser.parse_item();
+        let statement = parser.parse_statement();
 
-        match item {
-            Ok(i) => Ok(println!("{:#?}", i)),
+        match statement {
+            Ok(s) => Ok(println!("{:#?}", s)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

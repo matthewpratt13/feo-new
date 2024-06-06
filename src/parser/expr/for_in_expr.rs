@@ -7,7 +7,9 @@ use crate::{
 
 impl ParseControlExpr for ForInExpr {
     fn parse(parser: &mut Parser) -> Result<ForInExpr, ErrorsEmitted> {
-        let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_for = if let Some(Token::For { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::For)
         } else {
@@ -47,9 +49,9 @@ impl ParseControlExpr for ForInExpr {
 
         let iterator = match expression {
             Expression::Literal(l) => match l {
-                Literal::Int(_) => todo!(),
-                Literal::UInt(_) => todo!(),
-                Literal::BigUInt(_) => todo!(),
+                Literal::Int { .. } | Literal::UInt { .. } | Literal::BigUInt { .. } => {
+                    Ok(Box::new(Expression::Literal(l)))
+                }
                 _ => {
                     parser.log_unexpected_token("numeric value");
                     Err(ErrorsEmitted)
@@ -79,7 +81,7 @@ impl ParseControlExpr for ForInExpr {
             _ => {
                 parser.log_error(ParserErrorKind::UnexpectedExpression {
                     expected: "iterable expression".to_string(),
-                    found: format!("{}", expression),
+                    found: format!("{}", &expression),
                 });
                 Err(ErrorsEmitted)
             }
@@ -97,12 +99,15 @@ impl ParseControlExpr for ForInExpr {
             }
         }?;
 
+        let span = parser.get_span(&first_token.unwrap().span(), &block.span);
+
         let expr = ForInExpr {
             kw_for,
             pattern: Box::new(pattern),
             kw_in,
             iterator,
             block,
+            span,
         };
 
         Ok(expr)

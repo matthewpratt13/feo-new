@@ -1,13 +1,15 @@
 use crate::{
-    ast::{Delimiter, MappingExpr, MappingPair},
+    ast::{Delimiter, IdentifierPatt, MappingExpr, MappingPair},
     error::ErrorsEmitted,
-    parser::{collection, ParseConstructExpr, Parser, Precedence},
+    parser::{collection, ParseConstructExpr, ParsePattern, Parser, Precedence},
     token::Token,
 };
 
 impl ParseConstructExpr for MappingExpr {
     fn parse(parser: &mut Parser) -> Result<MappingExpr, ErrorsEmitted> {
-        let open_brace = match parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let open_brace = match &first_token {
             Some(Token::LBrace { .. }) => {
                 let position = parser.current_position();
                 parser.next_token();
@@ -23,8 +25,11 @@ impl ParseConstructExpr for MappingExpr {
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
-                Ok(MappingExpr { pairs_opt })
+
+                Ok(MappingExpr { pairs_opt, span })
             }
             _ => {
                 parser.log_unmatched_delimiter(&open_brace);
@@ -35,14 +40,14 @@ impl ParseConstructExpr for MappingExpr {
 }
 
 fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted> {
-    let key = parser.parse_pattern()?;
+    let key = IdentifierPatt::parse_patt(parser)?;
 
     match parser.current_token() {
         Some(Token::Colon { .. }) => {
             parser.next_token();
 
             if let Some(Token::Comma { .. } | Token::RBrace { .. }) = parser.current_token() {
-                parser.log_missing("expr", &format!("value for key: \"{}\"", key));
+                parser.log_missing("expr", &format!("value for key: \"{}\"", &key));
                 return Err(ErrorsEmitted);
             }
         }

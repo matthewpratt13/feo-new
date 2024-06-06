@@ -1,5 +1,9 @@
 use std::sync::Arc;
 
+pub trait Spanned {
+    fn span(&self) -> Span;
+}
+
 /// Struct that represents a range of characters in the source code where a token appears.
 /// This information is useful in numerous cases, including displaying error messages
 /// with exact locations and highlighting syntax errors.

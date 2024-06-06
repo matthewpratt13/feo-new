@@ -2,11 +2,14 @@ use crate::{
     ast::{Expression, Type, TypeCastExpr, TypeCastOp},
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser},
+    span::Spanned,
     token::Token,
 };
 
 impl ParseOperatorExpr for TypeCastExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let left_expr_span = &left_expr.span();
+
         let value_expr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -50,17 +53,22 @@ impl ParseOperatorExpr for TypeCastExpr {
                 | Token::CharType { .. }
                 | Token::StrType { .. }
                 | Token::StringType { .. },
-            ) => Ok(Box::new(Type::parse(parser)?)),
+            ) => Ok(Type::parse(parser)?),
             _ => {
                 parser.log_unexpected_token("numeric, text or hash cast type");
                 Err(ErrorsEmitted)
             }
         }?;
 
+        let last_token = parser.peek_behind_by(1);
+
+        let span = parser.get_span(left_expr_span, &last_token.unwrap().span());
+
         let expr = TypeCastExpr {
             value: Box::new(value_expr),
             type_cast_op,
-            new_type,
+            new_type: Box::new(new_type),
+            span,
         };
 
         Ok(Expression::TypeCast(expr))

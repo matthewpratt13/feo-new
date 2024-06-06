@@ -7,7 +7,9 @@ use crate::{
 
 impl ParseControlExpr for MatchExpr {
     fn parse(parser: &mut Parser) -> Result<MatchExpr, ErrorsEmitted> {
-        let kw_match = if let Some(Token::Match { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_match = if let Some(Token::Match { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Match)
         } else {
@@ -64,6 +66,8 @@ impl ParseControlExpr for MatchExpr {
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
 
                 let expr = MatchExpr {
@@ -76,6 +80,7 @@ impl ParseControlExpr for MatchExpr {
                         }
                     },
                     final_arm,
+                    span,
                 };
 
                 Ok(expr)

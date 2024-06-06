@@ -2,11 +2,14 @@ use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, IndexExpr},
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser, Precedence},
+    span::Spanned,
     token::Token,
 };
 
 impl ParseOperatorExpr for IndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let left_expr_span = &left_expr.span();
+
         let array: AssigneeExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -30,13 +33,18 @@ impl ParseOperatorExpr for IndexExpr {
 
         let index = parser.parse_value_expr(Precedence::Lowest)?;
 
-        match parser.current_token() {
+        let token = parser.current_token();
+
+        match &token {
             Some(Token::RBracket { .. }) => {
+                let span = parser.get_span(&left_expr_span, &token.unwrap().span());
+
                 parser.next_token();
 
                 let expr = IndexExpr {
                     array: Box::new(array),
                     index: Box::new(index),
+                    span,
                 };
 
                 Ok(Expression::Index(expr))

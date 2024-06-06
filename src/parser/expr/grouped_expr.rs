@@ -16,7 +16,9 @@ impl ParseConstructExpr for GroupedExpr {
         parser.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
-        let open_paren = match parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let open_paren = match &first_token {
             Some(Token::LParen { .. }) => {
                 let position = parser.current_position();
                 parser.next_token();
@@ -29,22 +31,32 @@ impl ParseConstructExpr for GroupedExpr {
         }?;
 
         if let Some(Token::RParen { .. }) = parser.current_token() {
+            let token = first_token.unwrap();
+
+            let span = parser.get_span_by_token(&token);
+
             let tuple_expr = TupleExpr {
                 tuple_elements: TupleElements {
                     elements: Vec::new(),
                     final_element_opt: None,
                 },
+                span: span.clone(),
             };
 
-            let inner_expression = Box::new(Expression::Tuple(tuple_expr));
+            let inner_expression = Expression::Tuple(tuple_expr);
 
-            return Ok(GroupedExpr { inner_expression });
+            return Ok(GroupedExpr {
+                inner_expression: Box::new(inner_expression),
+                span,
+            });
         }
 
         let inner_expression = Box::new(parser.parse_expression(Precedence::Lowest)?);
 
         match parser.current_token() {
             Some(Token::RParen { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
 
                 ////////////////////////////////////////////////////////////////////////////////
@@ -55,7 +67,10 @@ impl ParseConstructExpr for GroupedExpr {
                 parser.log_current_token(false);
                 ////////////////////////////////////////////////////////////////////////////////
 
-                Ok(GroupedExpr { inner_expression })
+                Ok(GroupedExpr {
+                    inner_expression,
+                    span,
+                })
             }
 
             _ => {

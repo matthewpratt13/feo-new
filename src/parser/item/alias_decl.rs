@@ -12,7 +12,9 @@ impl ParseDeclItem for AliasDecl {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<AliasDecl, ErrorsEmitted> {
-        let kw_alias = if let Some(Token::Alias { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_alias = if let Some(Token::Alias { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Alias)
         } else {
@@ -47,13 +49,17 @@ impl ParseDeclItem for AliasDecl {
 
         match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
+
                 Ok(AliasDecl {
                     attributes_opt,
                     visibility,
                     kw_alias,
                     alias_name,
                     original_type_opt,
+                    span,
                 })
             }
             Some(Token::EOF) | None => {
@@ -79,10 +85,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let item = parser.parse_item();
+        let statement = parser.parse_statement();
 
-        match item {
-            Ok(i) => Ok(println!("{:#?}", i)),
+        match statement {
+            Ok(s) => Ok(println!("{:#?}", s)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

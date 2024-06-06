@@ -1,8 +1,10 @@
 use core::fmt;
 
+use crate::span::Span;
+
 use super::{
     AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,
-    PathType, ReferenceOp, Separator, Type, ValueExpr,
+    PathType, ReferenceOp, SelfType, Separator, Type, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -19,6 +21,15 @@ pub(crate) enum EnumVariantType {
 pub(crate) enum FunctionOrMethodParam {
     FunctionParam(FunctionParam),
     MethodParam(SelfParam),
+}
+
+impl FunctionOrMethodParam {
+    pub(crate) fn param_type(&self) -> Type {
+        match self {
+            FunctionOrMethodParam::FunctionParam(f) => *f.param_type.clone(),
+            FunctionOrMethodParam::MethodParam(_) => Type::SelfType(SelfType),
+        }
+    }
 }
 
 impl fmt::Display for FunctionOrMethodParam {
@@ -132,10 +143,10 @@ pub(crate) struct StructDefField {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct TupleStructDefField {
+pub(crate) struct TupleStructDefElement {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
-    pub(crate) field_type: Box<Type>,
+    pub(crate) element_type: Box<Type>,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -149,6 +160,7 @@ pub struct AliasDecl {
     pub(crate) kw_alias: Keyword,
     pub(crate) alias_name: Identifier,
     pub(crate) original_type_opt: Option<Type>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -159,6 +171,7 @@ pub struct ConstantDecl {
     pub(crate) constant_name: Identifier,
     pub(crate) constant_type: Box<Type>,
     pub(crate) value_opt: Option<ValueExpr>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -168,6 +181,7 @@ pub struct EnumDef {
     pub(crate) kw_enum: Keyword,
     pub(crate) enum_name: Identifier,
     pub(crate) variants: Vec<EnumVariant>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -179,6 +193,7 @@ pub struct FunctionItem {
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
     pub(crate) return_type_opt: Option<Box<Type>>,
     pub(crate) block_opt: Option<BlockExpr>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -187,6 +202,7 @@ pub struct ImportDecl {
     pub(crate) visibility: Visibility,
     pub(crate) kw_import: Keyword,
     pub(crate) import_tree: ImportTree,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -195,6 +211,7 @@ pub struct InherentImplDef {
     pub(crate) kw_impl: Keyword,
     pub(crate) nominal_type: PathType,
     pub(crate) associated_items_opt: Option<Vec<InherentImplItem>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -205,6 +222,7 @@ pub struct ModuleItem {
     pub(crate) module_name: Identifier,
     pub(crate) inner_attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) items_opt: Option<Vec<Item>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -216,6 +234,7 @@ pub struct StaticVarDecl {
     pub(crate) var_name: Identifier,
     pub(crate) var_type: Type,
     pub(crate) assignee_opt: Option<Box<AssigneeExpr>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -225,15 +244,7 @@ pub struct StructDef {
     pub(crate) kw_struct: Keyword,
     pub(crate) struct_name: Identifier,
     pub(crate) fields_opt: Option<Vec<StructDefField>>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TupleStructDef {
-    pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
-    pub(crate) visibility: Visibility,
-    pub(crate) kw_struct: Keyword,
-    pub(crate) struct_name: Identifier,
-    pub(crate) tuple_struct_fields_opt: Option<Vec<TupleStructDefField>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -244,6 +255,7 @@ pub struct TraitDef {
     pub(crate) trait_name: Identifier,
     pub(crate) inner_attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) trait_items_opt: Option<Vec<TraitDefItem>>,
+    pub(crate) span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -254,4 +266,15 @@ pub struct TraitImplDef {
     pub(crate) kw_for: Keyword,
     pub(crate) implementing_type: Type,
     pub(crate) associated_items_opt: Option<Vec<TraitImplItem>>,
+    pub(crate) span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TupleStructDef {
+    pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
+    pub(crate) visibility: Visibility,
+    pub(crate) kw_struct: Keyword,
+    pub(crate) struct_name: Identifier,
+    pub(crate) elements_opt: Option<Vec<TupleStructDefElement>>,
+    pub(crate) span: Span,
 }

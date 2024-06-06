@@ -17,7 +17,9 @@ impl ParseDefItem for FunctionItem {
         attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<FunctionItem, ErrorsEmitted> {
-        let kw_func = if let Some(Token::Func { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_func = if let Some(Token::Func { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Func)
         } else {
@@ -71,10 +73,15 @@ impl ParseDefItem for FunctionItem {
             }
         }
 
+        let mut last_token = parser.current_token().cloned();
+
         let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
             parser.next_token();
 
-            if parser.current_token().is_some() {
+            let token = parser.current_token();
+
+            if token.is_some() {
+                last_token = token.cloned();
                 Ok(Some(Box::new(Type::parse(parser)?)))
             } else {
                 parser.log_missing("type", "function return type");
@@ -84,11 +91,15 @@ impl ParseDefItem for FunctionItem {
             Ok(None)
         }?;
 
-        let block_opt = if let Some(Token::LBrace { .. }) = parser.current_token() {
+        let block_opt = if let Some(Token::LBrace { .. }) = parser.current_token().cloned() {
             match parser.peek_ahead_by(1) {
                 Some(Token::RBrace { .. }) => {
                     parser.next_token();
+
+                    last_token = parser.current_token().cloned();
+
                     parser.next_token();
+
                     Ok(None)
                 }
                 Some(Token::EOF) | None => {
@@ -102,6 +113,8 @@ impl ParseDefItem for FunctionItem {
             Ok(None)
         }?;
 
+        let span = parser.get_span(&first_token.unwrap().span(), &last_token.unwrap().span());
+
         Ok(FunctionItem {
             attributes_opt,
             visibility,
@@ -110,6 +123,7 @@ impl ParseDefItem for FunctionItem {
             params_opt,
             return_type_opt,
             block_opt,
+            span,
         })
     }
 }
@@ -194,10 +208,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let item = parser.parse_item();
+        let statement = parser.parse_statement();
 
-        match item {
-            Ok(i) => Ok(println!("{:#?}", i)),
+        match statement {
+            Ok(s) => Ok(println!("{:#?}", s)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
@@ -232,10 +246,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let item = parser.parse_item();
+        let statement = parser.parse_statement();
 
-        match item {
-            Ok(i) => Ok(println!("{:#?}", i)),
+        match statement {
+            Ok(s) => Ok(println!("{:#?}", s)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

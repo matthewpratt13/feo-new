@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Identifier, PathPatt, PathRoot, SelfType},
     error::ErrorsEmitted,
@@ -65,5 +67,24 @@ impl ParsePattern for PathPatt {
         ////////////////////////////////////////////////////////////////////////////////
 
         Ok(patt)
+    }
+}
+
+
+impl fmt::Display for PathPatt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut segments: Vec<String> = Vec::new();
+
+        if let Some(v) = &self.tree_opt {
+            for i in v {
+                segments.push(i.to_string());
+            }
+        }
+
+        segments.push(self.path_root.to_string());
+
+        let full_path = segments.join("::");
+
+        write!(f, "{}", full_path)
     }
 }

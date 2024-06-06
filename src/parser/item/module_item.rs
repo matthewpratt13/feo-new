@@ -13,7 +13,9 @@ impl ParseDefItem for ModuleItem {
         outer_attributes_opt: Option<Vec<OuterAttr>>,
         visibility: Visibility,
     ) -> Result<ModuleItem, ErrorsEmitted> {
-        let kw_module = if let Some(Token::Module { .. }) = parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let kw_module = if let Some(Token::Module { .. }) = &first_token {
             parser.next_token();
             Ok(Keyword::Module)
         } else {
@@ -54,6 +56,8 @@ impl ParseDefItem for ModuleItem {
 
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
 
                 Ok(ModuleItem {
@@ -63,6 +67,7 @@ impl ParseDefItem for ModuleItem {
                     module_name,
                     inner_attributes_opt,
                     items_opt,
+                    span,
                 })
             }
             Some(Token::EOF) | None => {
@@ -172,10 +177,10 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let item = parser.parse_item();
+        let statement = parser.parse_statement();
 
-        match item {
-            Ok(i) => Ok(println!("{:#?}", i)),
+        match statement {
+            Ok(s) => Ok(println!("{:#?}", s)),
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }

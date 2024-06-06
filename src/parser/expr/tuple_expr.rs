@@ -2,12 +2,15 @@ use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, TupleElements, TupleExpr, TupleIndexExpr},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParseOperatorExpr, Parser, Precedence},
+    span::Spanned,
     token::Token,
 };
 
 impl ParseConstructExpr for TupleExpr {
     fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
-        let open_paren = match parser.current_token() {
+        let first_token = parser.current_token().cloned();
+
+        let open_paren = match &first_token {
             Some(Token::LParen { .. }) => {
                 let position = parser.current_position();
                 parser.next_token();
@@ -23,8 +26,14 @@ impl ParseConstructExpr for TupleExpr {
 
         match parser.current_token() {
             Some(Token::RParen { .. }) => {
+                let span = parser.get_span_by_token(&first_token.unwrap());
+
                 parser.next_token();
-                Ok(TupleExpr { tuple_elements })
+
+                Ok(TupleExpr {
+                    tuple_elements,
+                    span,
+                })
             }
             _ => {
                 parser.log_unmatched_delimiter(&open_paren);
@@ -63,6 +72,8 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
 
 impl ParseOperatorExpr for TupleIndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
+        let left_expr_span = &left_expr.span();
+
         let tuple: AssigneeExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
@@ -83,9 +94,14 @@ impl ParseOperatorExpr for TupleIndexExpr {
             }
         }?;
 
+        let last_token = parser.peek_behind_by(1);
+
+        let span = parser.get_span(left_expr_span, &last_token.unwrap().span());
+
         let expr = TupleIndexExpr {
             tuple: Box::new(tuple),
             index,
+            span,
         };
 
         Ok(Expression::TupleIndex(expr))
