@@ -1585,7 +1585,86 @@ impl SemanticAnalyzer {
 
             Pattern::GroupedPatt(g) => self.analyze_patt(&g.inner_pattern),
 
-            Pattern::RangePatt(_) => todo!(),
+            Pattern::RangePatt(r) => match (&r.from_pattern_opt, &r.to_pattern_opt) {
+                (None, None) => Ok(Type::UnitType(Unit)),
+                (None, Some(to)) => {
+                    let to_type = self.analyze_patt(&*to.clone())?;
+
+                    match to_type {
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_)
+                        | Type::Byte(_)
+                        | Type::Char(_) => Ok(to_type),
+                        _ => todo!(), // unexpected type
+                    }
+                }
+                (Some(from), None) => {
+                    let from_type = self.analyze_patt(&*from.clone())?;
+
+                    match from_type {
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_)
+                        | Type::Byte(_)
+                        | Type::Char(_) => Ok(from_type),
+                        _ => todo!(), // unexpected type
+                    }
+                }
+                (Some(from), Some(to)) => {
+                    let from_type = self.analyze_patt(&*from.clone())?;
+
+                    match from_type {
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_)
+                        | Type::Byte(_)
+                        | Type::Char(_) => (),
+                        _ => todo!(), // unexpected type
+                    }
+
+                    let to_type = self.analyze_patt(&*to.clone())?;
+
+                    match to_type {
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_)
+                        | Type::U128(_)
+                        | Type::U256(_)
+                        | Type::U512(_)
+                        | Type::Byte(_)
+                        | Type::Char(_) => (),
+                        _ => todo!(), // unexpected type
+                    }
+
+                    if from_type == to_type {
+                        Ok(to_type)
+                    } else {
+                        todo!() // type mismatch (value)
+                    }
+                }
+            },
 
             Pattern::TuplePatt(t) => {
                 let mut element_types: Vec<Type> = Vec::new();
