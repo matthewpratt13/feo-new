@@ -13,7 +13,7 @@ use crate::{
         UInt, UnaryOp, UnderscoreExpr, Unit, ValueExpr,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
-    logger::{LogLevel, Logger},
+    logger::{LogLevel, LogMsg, Logger},
     parser::Module,
     span::{Span, Spanned},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
@@ -37,7 +37,8 @@ impl SemanticAnalyzer {
     }
 
     fn analyze(&mut self, module: &Module) -> Result<(), ErrorsEmitted> {
-        // TODO: log info – starting semantic analysis
+        self.logger
+            .log(LogLevel::Info, LogMsg::from("starting semantic analysis"));
 
         for s in &module.statements {
             self.analyze_stmt(s).map_err(|e| {
@@ -46,7 +47,10 @@ impl SemanticAnalyzer {
             })?
         }
 
-        // TODO: log info – semantic analysis complete, no errors detected
+        self.logger.log(
+            LogLevel::Info,
+            LogMsg::from("semantic analysis complete, no errors detected"),
+        );
 
         Ok(())
     }
@@ -79,7 +83,10 @@ impl SemanticAnalyzer {
                         self.symbol_table
                             .insert(ad.alias_name.clone(), Symbol::Variable(t.clone()))?;
 
-                        // TODO: log info – alias declaration initialized
+                        self.logger.log(
+                            LogLevel::Info,
+                            LogMsg::from("alias declaration initialized"),
+                        );
                     }
                     None => {
                         let ty = PathType {
@@ -92,7 +99,10 @@ impl SemanticAnalyzer {
                             Symbol::Variable(Type::UserDefined(ty)),
                         )?;
 
-                        // TODO: log info – alias declaration initialized
+                        self.logger.log(
+                            LogLevel::Info,
+                            LogMsg::from("alias declaration initialized"),
+                        );
                     }
                 },
 
@@ -130,7 +140,10 @@ impl SemanticAnalyzer {
                         Symbol::Variable(*cd.constant_type.clone()),
                     )?;
 
-                    // TODO: log info – constant declaration initialized
+                    self.logger.log(
+                        LogLevel::Info,
+                        LogMsg::from("constant declaration initialized"),
+                    );
                 }
 
                 Item::StaticVarDecl(s) => {
@@ -156,7 +169,10 @@ impl SemanticAnalyzer {
                     self.symbol_table
                         .insert(s.var_name.clone(), Symbol::Variable(s.var_type.clone()))?;
 
-                    // TODO: log info – static variable declaration initialized
+                    self.logger.log(
+                        LogLevel::Info,
+                        LogMsg::from("static variable declaration initialized"),
+                    );
                 }
 
                 Item::ModuleItem(m) => {
@@ -215,7 +231,8 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
 
-                    // TODO: log info – trait definition initialized
+                    self.logger
+                        .log(LogLevel::Info, LogMsg::from("trait definition initialized"));
 
                     let trait_items = t.trait_items_opt.as_ref();
 
@@ -224,9 +241,15 @@ impl SemanticAnalyzer {
                             match item {
                                 TraitDefItem::FunctionItem(fi) => {
                                     let _ = self.analyze_function_def(&fi);
+
+                                    self.logger.log(
+                                        LogLevel::Info,
+                                        LogMsg::from(
+                                            "function definition acknowledged, but not initialized",
+                                        ),
+                                    );
                                 }
 
-                                // TODO: log info – function definition acknowledged, but not initialized
                                 TraitDefItem::AliasDecl(ad) => self
                                     .analyze_stmt(&Statement::Item(Item::AliasDecl(ad.clone())))?,
                                 TraitDefItem::ConstantDecl(cd) => self.analyze_stmt(
@@ -249,7 +272,8 @@ impl SemanticAnalyzer {
                             _ => err,
                         })?;
 
-                    // TODO: log info – enum definition initialized
+                    self.logger
+                        .log(LogLevel::Info, LogMsg::from("enum definition initialized"));
                 }
 
                 Item::StructDef(s) => {
@@ -264,7 +288,10 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
 
-                    // TODO: log info – struct definition initialized
+                    self.logger.log(
+                        LogLevel::Info,
+                        LogMsg::from("struct definition initialized"),
+                    );
                 }
 
                 Item::TupleStructDef(ts) => {
@@ -279,7 +306,10 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
 
-                    // TODO: log info – struct definition initialized
+                    self.logger.log(
+                        LogLevel::Info,
+                        LogMsg::from("struct definition initialized"),
+                    );
                 }
 
                 Item::InherentImplDef(i) => {
@@ -300,7 +330,10 @@ impl SemanticAnalyzer {
                                         },
                                     );
 
-                                    // TODO: log info – associated function definition initialized
+                                    self.logger.log(
+                                        LogLevel::Info,
+                                        LogMsg::from("associated function initialized"),
+                                    );
                                 }
                             }
                         }
@@ -340,7 +373,10 @@ impl SemanticAnalyzer {
                                         },
                                     );
 
-                                    // TODO: log info – associated function definition initialized
+                                    self.logger.log(
+                                        LogLevel::Info,
+                                        LogMsg::from("associated function initialized"),
+                                    );
                                 }
                             }
                         }
@@ -378,7 +414,10 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
 
-                    // TODO: log info – function definition initialized
+                    self.logger.log(
+                        LogLevel::Info,
+                        LogMsg::from("function definition initialized"),
+                    );
                 }
             },
 
