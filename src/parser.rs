@@ -1244,11 +1244,13 @@ impl Parser {
 
         // create a new `CompilerError` and push it to the `errors` vector
         let error = CompilerError::new(error_kind, pos, &self.stream.span().input());
-        self.errors.push(error.clone());
 
         // log the error as a message
         self.logger
             .log(LogLevel::Error, LogMsg::from(error.to_string()));
+
+        // push the error to the `errors` vector
+        self.errors.push(error);
     }
 
     /// Utility function that is used to report the current token and its precedence for debugging.

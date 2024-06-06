@@ -2101,9 +2101,11 @@ impl SemanticAnalyzer {
         Ok(())
     }
 
-    // TODO: update to push error to `self.errors` AND log to `self.logger` (new)
     fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {
         let error = CompilerError::new(error_kind, span.start(), &span.input());
+
+        self.logger
+            .log(LogLevel::Error, LogMsg::from(error.to_string()));
 
         self.errors.push(error);
     }
