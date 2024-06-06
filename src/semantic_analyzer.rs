@@ -13,6 +13,7 @@ use crate::{
         UInt, UnaryOp, UnderscoreExpr, Unit, ValueExpr,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
+    logger::{LogLevel, Logger},
     parser::Module,
     span::{Span, Spanned},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
@@ -23,14 +24,15 @@ use self::symbol_table::{Symbol, SymbolTable};
 struct SemanticAnalyzer {
     symbol_table: SymbolTable,
     errors: Vec<CompilerError<SemanticErrorKind>>,
-    // TODO: add `Logger`
+    logger: Logger,
 }
 
 impl SemanticAnalyzer {
-    fn new() -> Self {
+    fn new(log_level: LogLevel) -> Self {
         SemanticAnalyzer {
             symbol_table: SymbolTable::new(),
             errors: Vec::new(),
+            logger: Logger::new(log_level),
         }
     }
 
@@ -163,6 +165,7 @@ impl SemanticAnalyzer {
                     let mut analyzer = SemanticAnalyzer {
                         symbol_table: module_symbol_table,
                         errors: Vec::new(),
+                        logger: Logger::new(LogLevel::Info),
                     };
 
                     let mut statements: Vec<Statement> = Vec::new();
@@ -2016,6 +2019,7 @@ impl SemanticAnalyzer {
         let mut analyzer = SemanticAnalyzer {
             symbol_table: local_table,
             errors: Vec::new(),
+            logger: Logger::new(LogLevel::Info),
         };
 
         if func.block_opt.is_some() {
