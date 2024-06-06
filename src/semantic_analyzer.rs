@@ -664,11 +664,17 @@ impl SemanticAnalyzer {
                         | Type::U128(_)
                         | Type::U256(_)
                         | Type::U512(_) => Ok(expr_type),
-                        _ => todo!(), // unexpected type
+                        _ => Err(SemanticErrorKind::UnexpectedType {
+                            expected: "numeric type".to_string(),
+                            found: format!("`{}`", expr_type),
+                        }),
                     },
                     UnaryOp::Not => match &expr_type {
                         Type::Bool(_) => Ok(expr_type),
-                        _ => todo!(), // unexpected type
+                        _ => Err(SemanticErrorKind::UnexpectedType {
+                            expected: "boolean".to_string(),
+                            found: format!("`{}`", expr_type),
+                        }),
                     },
                 }
             }
