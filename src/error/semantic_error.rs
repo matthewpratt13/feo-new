@@ -99,6 +99,8 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
+    UndefinedScope,
+
     UndefinedStruct {
         name: Identifier,
     },
@@ -114,6 +116,10 @@ pub enum SemanticErrorKind {
     UnexpectedAttribute {
         name: String,
         msg: String,
+    },
+
+    UnexpectedSymbol {
+        name: Identifier,
     },
 
     UnexpectedType {
@@ -203,6 +209,8 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::UndefinedPath { name } => write!(f, "undefined path: `{name}`"),
 
+            SemanticErrorKind::UndefinedScope => write!(f, "attempted to access undefined scope"),
+
             SemanticErrorKind::UndefinedStruct { name } => write!(f, "undefined struct: `{name}`"),     
 
             SemanticErrorKind::UndefinedType { name } => write!(f, "undefined type: `{name}`"),
@@ -214,6 +222,8 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UnexpectedAttribute { name, msg } => {
                 write!(f, "unexpected attributes(s): `{name}`. {msg}")
             }
+
+            SemanticErrorKind::UnexpectedSymbol { name } => write!(f, "unexpected symbol: `{}`", name),
 
             SemanticErrorKind::UnexpectedType { expected, found } => {
                 write!(f, "unexpected type(s). Expected {expected}, found {found}")

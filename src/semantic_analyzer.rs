@@ -442,7 +442,7 @@ impl SemanticAnalyzer {
                     },
                 };
 
-                match self.symbol_table.get(&name) {
+                match self.symbol_table.lookup(&name) {
                     Some(_) => Ok(Type::UnitType(Unit)),
                     _ => Err(SemanticErrorKind::UndefinedPath { name }),
                 }
@@ -512,7 +512,7 @@ impl SemanticAnalyzer {
                 let type_name = PathType::from(path_expr).type_name;
 
                 // check if path expression's type is that of an existing type and analyze
-                match self.symbol_table.get(&type_name) {
+                match self.symbol_table.lookup(&type_name) {
                     Some(Symbol::Struct(s)) => {
                         if s.struct_name == type_name {
                             self.analyze_call_or_method_call_expr(
@@ -558,7 +558,9 @@ impl SemanticAnalyzer {
                         }
                     }
 
-                    _ => Err(SemanticErrorKind::UndefinedType { name: type_name }),
+                    None => Err(SemanticErrorKind::UndefinedType { name: type_name }),
+
+                    _ => Err(SemanticErrorKind::UnexpectedSymbol { name: type_name }),
                 }
             }
 
@@ -567,7 +569,7 @@ impl SemanticAnalyzer {
 
                 match self
                     .symbol_table
-                    .get(&Identifier::from(&object_type.to_string()))
+                    .lookup(&Identifier::from(&object_type.to_string()))
                 {
                     Some(Symbol::Struct(s)) => match &s.fields_opt {
                         Some(v) => match v.iter().find(|f| f.field_name == fa.field_name) {
@@ -579,7 +581,11 @@ impl SemanticAnalyzer {
                         None => Ok(Type::UnitType(Unit)),
                     },
 
-                    _ => Err(SemanticErrorKind::UndefinedType {
+                    None => Err(SemanticErrorKind::UndefinedType {
+                        name: Identifier::from(&object_type.to_string()),
+                    }),
+
+                    _ => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: Identifier::from(&object_type.to_string()),
                     }),
                 }
@@ -1064,7 +1070,7 @@ impl SemanticAnalyzer {
 
                 let name = Identifier(path.path_root.to_string());
 
-                match self.symbol_table.get(&name) {
+                match self.symbol_table.lookup(&name) {
                     Some(Symbol::Variable(var_type)) if *var_type == expr_type => {
                         Ok(var_type.clone())
                     }
@@ -1298,7 +1304,7 @@ impl SemanticAnalyzer {
 
                 let symbol_table_clone = self.symbol_table.clone();
 
-                match symbol_table_clone.get(&name) {
+                match symbol_table_clone.lookup(&name) {
                     Some(Symbol::Struct(struct_def)) => {
                         let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
@@ -1345,7 +1351,10 @@ impl SemanticAnalyzer {
 
                         Ok(Type::UserDefined(path_type))
                     }
-                    _ => Err(SemanticErrorKind::UndefinedStruct { name }),
+
+                    None => Err(SemanticErrorKind::UndefinedStruct { name }),
+
+                    _ => Err(SemanticErrorKind::UnexpectedSymbol { name }),
                 }
             }
 
@@ -1399,20 +1408,27 @@ impl SemanticAnalyzer {
             },
 
             Expression::Block(b) => match &b.statements_opt {
-                Some(v) => match v.last() {
-                    Some(s) => match s {
-                        Statement::Let(ls) => match &ls.value_opt {
-                            Some(e) => self.analyze_expr(e),
-                            None => Ok(Type::UnitType(Unit)),
+                Some(vec) => {
+                    self.symbol_table.enter_scope();
+
+                    let ty = match vec.last() {
+                        Some(s) => match s {
+                            Statement::Let(ls) => match &ls.value_opt {
+                                Some(e) => self.analyze_expr(e)?,
+                                None => Type::UnitType(Unit),
+                            },
+
+                            Statement::Item(_) => Type::UnitType(Unit),
+
+                            Statement::Expression(e) => self.analyze_expr(e)?,
                         },
+                        None => Type::UnitType(Unit),
+                    };
 
-                        Statement::Item(_) => Ok(Type::UnitType(Unit)),
+                    self.symbol_table.exit_scope();
 
-                        Statement::Expression(e) => self.analyze_expr(e),
-                    },
-
-                    None => Ok(Type::UnitType(Unit)),
-                },
+                    Ok(ty)
+                }
 
                 None => Ok(Type::UnitType(Unit)),
             },
@@ -1525,7 +1541,7 @@ impl SemanticAnalyzer {
         name: Identifier,
         args_opt: Option<Vec<Expression>>,
     ) -> Result<Type, SemanticErrorKind> {
-        match self.symbol_table.get(&name) {
+        match self.symbol_table.lookup(&name) {
             Some(Symbol::Function { function, .. }) => {
                 let args = args_opt.clone();
                 let params = function.params_opt.clone();
@@ -1566,13 +1582,16 @@ impl SemanticAnalyzer {
                     }
                 }
             }
-            _ => Err(SemanticErrorKind::UndefinedFunction { name }),
+
+            None => Err(SemanticErrorKind::UndefinedFunction { name }),
+
+            _ => Err(SemanticErrorKind::UnexpectedSymbol { name }),
         }
     }
 
     fn analyze_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
         match pattern {
-            Pattern::IdentifierPatt(i) => match self.symbol_table.get(&i.name) {
+            Pattern::IdentifierPatt(i) => match self.symbol_table.lookup(&i.name) {
                 Some(Symbol::Variable(var_type)) => Ok(var_type.clone()),
                 Some(s) => Err(SemanticErrorKind::UnexpectedType {
                     expected: "variable type".to_string(),
@@ -1629,7 +1648,7 @@ impl SemanticAnalyzer {
                     },
                 };
 
-                match self.symbol_table.get(&name) {
+                match self.symbol_table.lookup(&name) {
                     Some(_) => Ok(Type::UnitType(Unit)),
                     _ => Err(SemanticErrorKind::UndefinedPath { name }),
                 }
@@ -1843,11 +1862,11 @@ impl SemanticAnalyzer {
                     },
                 };
 
-                let symbol_table = self.symbol_table.clone();
+                let symbol_table_clone = self.symbol_table.clone();
 
-                match symbol_table.get(&name) {
+                match symbol_table_clone.lookup(&name) {
                     Some(Symbol::Struct(struct_def)) => {
-                        let mut field_map: HashMap<Identifier, Type> = HashMap::new();
+                        self.symbol_table.enter_scope();
 
                         let struct_fields = s.struct_fields_opt.clone();
 
@@ -1855,17 +1874,25 @@ impl SemanticAnalyzer {
                             for spf in &struct_fields.unwrap() {
                                 let field_name = spf.field_name.clone();
                                 let field_value = spf.field_value.clone();
-                                let field_type = self.analyze_patt(&field_value)?;
-                                field_map.insert(field_name, field_type);
+                                let field_type = self.analyze_patt(&field_value)?.clone();
+                                let _ = self
+                                    .symbol_table
+                                    .insert(field_name, Symbol::Variable(field_type));
                             }
                         }
+
+                        self.symbol_table.exit_scope();
 
                         let struct_def_fields = struct_def.fields_opt.clone();
 
                         if struct_def_fields.is_some() {
                             for sdf in &struct_def_fields.unwrap() {
-                                match field_map.get(&sdf.field_name) {
-                                    Some(patt_type) if *patt_type == *sdf.field_type => (),
+                                match self.symbol_table.lookup(&sdf.field_name) {
+                                    Some(Symbol::Variable(patt_type))
+                                        if *patt_type == *sdf.field_type =>
+                                    {
+                                        ()
+                                    }
                                     Some(t) => {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
                                             name: name.clone(),
@@ -1892,7 +1919,10 @@ impl SemanticAnalyzer {
 
                         Ok(Type::UserDefined(path_type))
                     }
-                    _ => Err(SemanticErrorKind::UndefinedStruct { name: name.clone() }),
+
+                    None => Err(SemanticErrorKind::UndefinedStruct { name }),
+
+                    _ => Err(SemanticErrorKind::UnexpectedSymbol { name }),
                 }
             }
 
@@ -1944,9 +1974,9 @@ impl SemanticAnalyzer {
                     },
                 };
 
-                let symbol_table = self.symbol_table.clone();
+                let symbol_table_clone = self.symbol_table.clone();
 
-                match symbol_table.get(&name) {
+                match symbol_table_clone.lookup(&name) {
                     Some(Symbol::TupleStruct(tuple_struct_def)) => {
                         let mut element_map: HashMap<usize, Type> = HashMap::new();
                         let mut element_counter = 0usize;
@@ -1955,7 +1985,7 @@ impl SemanticAnalyzer {
 
                         if tuple_struct_elements.is_some() {
                             for tse in &tuple_struct_elements.unwrap() {
-                                let element_type = self.analyze_patt(&tse)?;
+                                let element_type = self.analyze_patt(&tse)?.clone();
                                 element_map.insert(element_counter, element_type);
                                 element_counter += 1;
                             }
@@ -1993,7 +2023,10 @@ impl SemanticAnalyzer {
 
                         Ok(Type::UserDefined(path_type))
                     }
-                    _ => Err(SemanticErrorKind::UndefinedStruct { name: name.clone() }),
+
+                    None => Err(SemanticErrorKind::UndefinedStruct { name }),
+
+                    _ => Err(SemanticErrorKind::UnexpectedSymbol { name }),
                 }
             }
 
@@ -2014,19 +2047,19 @@ impl SemanticAnalyzer {
     }
 
     fn analyze_function_def(&mut self, func: &FunctionItem) -> Result<(), SemanticErrorKind> {
-        let mut local_table = SymbolTable::with_parent(self.symbol_table.clone());
+        self.symbol_table.enter_scope();
 
         if func.params_opt.is_some() {
             for param in &func.params_opt.clone().unwrap() {
                 match param {
                     FunctionOrMethodParam::FunctionParam(f) => {
-                        local_table.insert(
+                        self.symbol_table.insert(
                             f.param_name.name.clone(),
                             Symbol::Variable(*f.param_type.clone()),
                         )?;
                     }
                     FunctionOrMethodParam::MethodParam(_) => {
-                        local_table.insert(
+                        self.symbol_table.insert(
                             Identifier::from("self"),
                             Symbol::Variable(Type::SelfType(SelfType)),
                         )?;
@@ -2035,24 +2068,19 @@ impl SemanticAnalyzer {
             }
         }
 
-        let mut analyzer = SemanticAnalyzer {
-            symbol_table: local_table,
-            errors: Vec::new(),
-            logger: Logger::new(LogLevel::Info),
-        };
-
         if func.block_opt.is_some() {
             let statements = func.block_opt.clone().unwrap().statements_opt;
 
             if statements.is_some() {
                 for stmt in &statements.unwrap() {
-                    if let Err(e) = analyzer.analyze_stmt(stmt) {
-                        analyzer.log_error(e, &stmt.span())
+                    if let Err(e) = self.analyze_stmt(stmt) {
+                        self.log_error(e, &stmt.span())
                     }
                 }
             }
         }
-        self.errors.extend(analyzer.errors);
+
+        self.symbol_table.exit_scope();
         Ok(())
     }
 

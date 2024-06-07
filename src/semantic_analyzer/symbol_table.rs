@@ -9,7 +9,7 @@ use crate::{
     error::SemanticErrorKind,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Symbol {
     Variable(Type),
     Struct(StructDef),
@@ -44,23 +44,31 @@ impl fmt::Display for Symbol {
 
 #[derive(Debug, Clone)]
 pub(crate) struct SymbolTable {
-    pub(crate) symbols: HashMap<Identifier, Symbol>,
+    pub(crate) scope_stack: Vec<HashMap<Identifier, Symbol>>,
     parent: Option<Box<SymbolTable>>, // For nested scopes
 }
 
 impl SymbolTable {
     pub(crate) fn new() -> Self {
         SymbolTable {
-            symbols: HashMap::new(),
+            scope_stack: vec![HashMap::new()],
             parent: None,
         }
     }
 
     pub(crate) fn with_parent(parent: SymbolTable) -> Self {
         SymbolTable {
-            symbols: HashMap::new(),
+            scope_stack: vec![HashMap::new()],
             parent: Some(Box::new(parent)),
         }
+    }
+
+    pub(crate) fn enter_scope(&mut self) {
+        self.scope_stack.push(HashMap::new());
+    }
+
+    pub(crate) fn exit_scope(&mut self) {
+        self.scope_stack.pop();
     }
 
     pub(crate) fn insert(
@@ -68,17 +76,39 @@ impl SymbolTable {
         name: Identifier,
         symbol: Symbol,
     ) -> Result<(), SemanticErrorKind> {
-        if self.symbols.contains_key(&name) {
-            Err(SemanticErrorKind::DuplicateVariable { name }) // Position info should be added here
-        } else {
-            self.symbols.insert(name, symbol);
+        if let Some(current_scope) = self.scope_stack.last_mut() {
+            current_scope.insert(name, symbol);
             Ok(())
+        } else {
+            Err(SemanticErrorKind::UndefinedScope)
         }
     }
 
-    pub(crate) fn get(&self, name: &Identifier) -> Option<&Symbol> {
-        self.symbols
-            .get(name)
-            .or_else(|| self.parent.as_ref()?.get(name))
+    pub(crate) fn lookup(&self, name: &Identifier) -> Option<&Symbol> {
+        for scope in self.scope_stack.iter().rev() {
+            if let Some(symbol) = scope.get(name) {
+                return Some(symbol);
+            }
+        }
+        None
     }
+
+    // pub(crate) fn insert(
+    //     &mut self,
+    //     name: Identifier,
+    //     symbol: Symbol,
+    // ) -> Result<(), SemanticErrorKind> {
+    //     if self.scopes.contains_key(&name) {
+    //         Err(SemanticErrorKind::DuplicateVariable { name })
+    //     } else {
+    //         self.scopes.insert(name, symbol);
+    //         Ok(())
+    //     }
+    // }
+
+    // pub(crate) fn get(&self, name: &Identifier) -> Option<&Symbol> {
+    //     self.scopes
+    //         .get(name)
+    //         .or_else(|| self.parent.as_ref()?.get(name))
+    // }
 }
