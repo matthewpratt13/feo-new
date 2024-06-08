@@ -22,7 +22,7 @@ use crate::{
 use self::symbol_table::{Symbol, SymbolTable};
 
 struct SemanticAnalyzer {
-    symbol_table: SymbolTable,
+    scope_stack: Vec<SymbolTable>,
     errors: Vec<CompilerError<SemanticErrorKind>>,
     logger: Logger,
 }
@@ -30,14 +30,40 @@ struct SemanticAnalyzer {
 impl SemanticAnalyzer {
     fn new(log_level: LogLevel) -> Self {
         SemanticAnalyzer {
-            symbol_table: SymbolTable::new(),
+            scope_stack: vec![HashMap::new()],
             errors: Vec::new(),
             logger: Logger::new(log_level),
         }
     }
 
+    fn enter_scope(&mut self) {
+        self.scope_stack.push(HashMap::new());
+    }
+
+    fn exit_scope(&mut self) {
+        self.scope_stack.pop();
+    }
+
+    fn insert(&mut self, name: Identifier, symbol: Symbol) -> Result<(), SemanticErrorKind> {
+        if let Some(current_scope) = self.scope_stack.last_mut() {
+            current_scope.insert(name, symbol);
+            Ok(())
+        } else {
+            Err(SemanticErrorKind::UndefinedScope)
+        }
+    }
+
+    fn lookup(&self, name: &Identifier) -> Option<&Symbol> {
+        for scope in self.scope_stack.iter().rev() {
+            if let Some(symbol) = scope.get(name) {
+                return Some(symbol);
+            }
+        }
+        None
+    }
+
     fn analyze(&mut self, module: &Module) -> Result<(), ErrorsEmitted> {
-        self.logger.info("starting semantic analysis");
+        self.logger.info("starting semantic analysis...");
 
         for s in &module.statements {
             self.analyze_stmt(s).map_err(|e| {
@@ -53,6 +79,8 @@ impl SemanticAnalyzer {
     }
 
     fn analyze_stmt(&mut self, statement: &Statement) -> Result<(), SemanticErrorKind> {
+        self.logger.info("analysing statement...");
+
         match statement {
             Statement::Let(ls) => {
                 let expr_type = match &ls.value_opt {
@@ -60,8 +88,7 @@ impl SemanticAnalyzer {
                     None => Type::UnitType(Unit),
                 };
 
-                self.symbol_table
-                    .insert(ls.assignee.name.clone(), Symbol::Variable(expr_type))
+                self.insert(ls.assignee.name.clone(), Symbol::Variable(expr_type))
                     .map_err(|e| match e {
                         SemanticErrorKind::DuplicateVariable { .. } => {
                             SemanticErrorKind::DuplicateVariable {
@@ -77,8 +104,7 @@ impl SemanticAnalyzer {
 
                 Item::AliasDecl(ad) => match &ad.original_type_opt {
                     Some(t) => {
-                        self.symbol_table
-                            .insert(ad.alias_name.clone(), Symbol::Variable(t.clone()))?;
+                        self.insert(ad.alias_name.clone(), Symbol::Variable(t.clone()))?;
 
                         self.logger.info("alias declaration initialized");
                     }
@@ -88,7 +114,7 @@ impl SemanticAnalyzer {
                             type_name: ad.alias_name.clone(),
                         };
 
-                        self.symbol_table.insert(
+                        self.insert(
                             ad.alias_name.clone(),
                             Symbol::Variable(Type::UserDefined(ty)),
                         )?;
@@ -126,12 +152,12 @@ impl SemanticAnalyzer {
                         );
                     }
 
-                    self.symbol_table.insert(
+                    self.insert(
                         cd.constant_name.clone(),
                         Symbol::Variable(*cd.constant_type.clone()),
                     )?;
 
-                    self.logger.info("constant declaration initialized");
+                    self.logger.info("constant declared");
                 }
 
                 Item::StaticVarDecl(s) => {
@@ -154,28 +180,27 @@ impl SemanticAnalyzer {
                         });
                     }
 
-                    self.symbol_table
-                        .insert(s.var_name.clone(), Symbol::Variable(s.var_type.clone()))?;
+                    self.insert(s.var_name.clone(), Symbol::Variable(s.var_type.clone()))?;
 
-                    self.logger.info("static variable declaration initialized");
+                    self.logger.info("static variable declared");
                 }
 
                 Item::ModuleItem(m) => {
-                    let module_symbol_table = SymbolTable::with_parent(self.symbol_table.clone());
+                    let mut module_scope = HashMap::new();
 
-                    let mut analyzer = SemanticAnalyzer {
-                        symbol_table: module_symbol_table,
-                        errors: Vec::new(),
-                        logger: Logger::new(LogLevel::Info),
-                    };
-
-                    let mut statements: Vec<Statement> = Vec::new();
+                    self.enter_scope();
 
                     if let Some(v) = &m.items_opt {
                         for item in v.iter() {
-                            statements.push(Statement::Item(item.clone()));
+                            self.analyze_stmt(&Statement::Item(item.clone()))?;
                         }
                     }
+
+                    if let Some(curr_scope) = self.scope_stack.pop() {
+                        module_scope = curr_scope;
+                    }
+
+                    self.insert(m.module_name.clone(), Symbol::Module(module_scope))?;
 
                     if let Some(a) = &m.outer_attributes_opt {
                         return Err(SemanticErrorKind::UnexpectedAttribute {
@@ -191,16 +216,11 @@ impl SemanticAnalyzer {
                         });
                     }
 
-                    let _ = analyzer.analyze(&Module { statements });
-
-                    self.errors.extend(analyzer.errors);
-
-                    self.logger.info("module item initialized");
+                    self.logger.info("entered new module scope");
                 }
 
                 Item::TraitDef(t) => {
-                    self.symbol_table
-                        .insert(t.trait_name.clone(), Symbol::Trait(t.clone()))
+                    self.insert(t.trait_name.clone(), Symbol::Trait(t.clone()))
                         .map_err(|e| match e {
                             SemanticErrorKind::DuplicateVariable { .. } => {
                                 SemanticErrorKind::DuplicateVariable {
@@ -235,8 +255,7 @@ impl SemanticAnalyzer {
                 }
 
                 Item::EnumDef(ed) => {
-                    self.symbol_table
-                        .insert(ed.enum_name.clone(), Symbol::Enum(ed.clone()))
+                    self.insert(ed.enum_name.clone(), Symbol::Enum(ed.clone()))
                         .map_err(|err| match err {
                             SemanticErrorKind::DuplicateVariable { .. } => {
                                 SemanticErrorKind::DuplicateVariable {
@@ -250,8 +269,7 @@ impl SemanticAnalyzer {
                 }
 
                 Item::StructDef(s) => {
-                    self.symbol_table
-                        .insert(s.struct_name.clone(), Symbol::Struct(s.clone()))
+                    self.insert(s.struct_name.clone(), Symbol::Struct(s.clone()))
                         .map_err(|e| match e {
                             SemanticErrorKind::DuplicateVariable { .. } => {
                                 SemanticErrorKind::DuplicateVariable {
@@ -265,8 +283,7 @@ impl SemanticAnalyzer {
                 }
 
                 Item::TupleStructDef(ts) => {
-                    self.symbol_table
-                        .insert(ts.struct_name.clone(), Symbol::TupleStruct(ts.clone()))
+                    self.insert(ts.struct_name.clone(), Symbol::TupleStruct(ts.clone()))
                         .map_err(|e| match e {
                             SemanticErrorKind::DuplicateVariable { .. } => {
                                 SemanticErrorKind::DuplicateVariable {
@@ -288,7 +305,7 @@ impl SemanticAnalyzer {
                                 )?,
 
                                 InherentImplItem::FunctionItem(fi) => {
-                                    self.symbol_table.insert(
+                                    self.insert(
                                         fi.function_name.clone(),
                                         Symbol::Function {
                                             associated_type_opt: Some(i.nominal_type.clone()),
@@ -326,7 +343,7 @@ impl SemanticAnalyzer {
                                 )?,
 
                                 TraitImplItem::FunctionItem(fi) => {
-                                    self.symbol_table.insert(
+                                    self.insert(
                                         fi.function_name.clone(),
                                         Symbol::Function {
                                             associated_type_opt: Some(
@@ -355,22 +372,21 @@ impl SemanticAnalyzer {
                 }
 
                 Item::FunctionItem(f) => {
-                    self.symbol_table
-                        .insert(
-                            f.function_name.clone(),
-                            Symbol::Function {
-                                associated_type_opt: None,
-                                function: f.clone(),
-                            },
-                        )
-                        .map_err(|e| match e {
-                            SemanticErrorKind::DuplicateVariable { .. } => {
-                                SemanticErrorKind::DuplicateVariable {
-                                    name: f.function_name.clone(),
-                                }
+                    self.insert(
+                        f.function_name.clone(),
+                        Symbol::Function {
+                            associated_type_opt: None,
+                            function: f.clone(),
+                        },
+                    )
+                    .map_err(|e| match e {
+                        SemanticErrorKind::DuplicateVariable { .. } => {
+                            SemanticErrorKind::DuplicateVariable {
+                                name: f.function_name.clone(),
                             }
-                            _ => e,
-                        })?;
+                        }
+                        _ => e,
+                    })?;
 
                     self.analyze_function_def(f)?;
 
@@ -379,9 +395,12 @@ impl SemanticAnalyzer {
             },
 
             Statement::Expression(expr) => {
+                self.logger.info("analysing expression...");
                 self.analyze_expr(expr)?;
             }
         }
+
+        self.logger.info("finished analysing");
 
         Ok(())
     }
@@ -395,12 +414,11 @@ impl SemanticAnalyzer {
             .map(|p| p.param_type())
             .collect();
 
-        self.symbol_table.enter_scope();
+        self.enter_scope();
 
         if let Some(p) = &f.params_opt {
             for (param, param_type) in p.iter().zip(param_types) {
-                self.symbol_table
-                    .insert(param.param_name().clone(), Symbol::Variable(param_type))?;
+                self.insert(param.param_name().clone(), Symbol::Variable(param_type))?;
             }
         }
 
@@ -413,17 +431,29 @@ impl SemanticAnalyzer {
                 }
             }
         }
-        self.symbol_table.exit_scope();
+
+        self.exit_scope();
+
         Ok(())
     }
 
     fn analyze_import(&mut self, tree: &ImportTree) -> Result<(), SemanticErrorKind> {
-        // TODO: check if module path exists and is accessible
-
         let mut path: Vec<PathType> = Vec::new();
+
+        let mut current_scope = self.scope_stack.first().unwrap();
 
         for ps in tree.path_segments.iter() {
             path.push(ps.root.clone());
+
+            let name = &ps.root.type_name;
+
+            match current_scope.get(name) {
+                Some(Symbol::Module(module_scope)) => current_scope = module_scope,
+
+                Some(_) => return Err(SemanticErrorKind::UnexpectedSymbol { name: name.clone() }),
+
+                None => return Err(SemanticErrorKind::UndefinedModule { name: name.clone() }),
+            }
         }
 
         let name = match path.last() {
@@ -431,14 +461,16 @@ impl SemanticAnalyzer {
             None => Identifier::from(""),
         };
 
-        self.symbol_table
-            .insert(name.clone(), Symbol::Import(path))
-            .map_err(|e| match e {
-                SemanticErrorKind::DuplicateImport { .. } => {
-                    SemanticErrorKind::DuplicateImport { name }
-                }
-                _ => e,
-            })?;
+        if let Some(Symbol::Module(module_scope)) = current_scope.get(&name).cloned() {
+            for (name, symbol) in module_scope.iter() {
+                self.insert(name.clone(), symbol.clone())?;
+            }
+        } else {
+            return Err(SemanticErrorKind::UndefinedModule { name });
+        }
+
+        self.logger.info("import declared");
+
         Ok(())
     }
 
@@ -490,7 +522,7 @@ impl SemanticAnalyzer {
                     },
                 };
 
-                match self.symbol_table.lookup(&name) {
+                match self.lookup(&name) {
                     Some(_) => Ok(Type::UnitType(Unit)),
                     _ => Err(SemanticErrorKind::UndefinedPath { name }),
                 }
@@ -560,7 +592,7 @@ impl SemanticAnalyzer {
                 let type_name = PathType::from(path_expr).type_name;
 
                 // check if path expression's type is that of an existing type and analyze
-                match self.symbol_table.lookup(&type_name) {
+                match self.lookup(&type_name) {
                     Some(Symbol::Struct(s)) => {
                         if s.struct_name == type_name {
                             self.analyze_call_or_method_call_expr(
@@ -615,10 +647,7 @@ impl SemanticAnalyzer {
             Expression::FieldAccess(fa) => {
                 let object_type = self.analyze_expr(&wrap_into_expression(*fa.object.clone())?)?;
 
-                match self
-                    .symbol_table
-                    .lookup(&Identifier::from(&object_type.to_string()))
-                {
+                match self.lookup(&Identifier::from(&object_type.to_string())) {
                     Some(Symbol::Struct(s)) => match &s.fields_opt {
                         Some(v) => match v.iter().find(|f| f.field_name == fa.field_name) {
                             Some(sdf) => Ok(*sdf.field_type.clone()),
@@ -1118,7 +1147,7 @@ impl SemanticAnalyzer {
 
                 let name = Identifier(path.path_root.to_string());
 
-                match self.symbol_table.lookup(&name) {
+                match self.lookup(&name) {
                     Some(Symbol::Variable(var_type)) if *var_type == expr_type => {
                         Ok(var_type.clone())
                     }
@@ -1350,9 +1379,7 @@ impl SemanticAnalyzer {
                     },
                 };
 
-                let symbol_table_clone = self.symbol_table.clone();
-
-                match symbol_table_clone.lookup(&name) {
+                match self.lookup(&name).cloned() {
                     Some(Symbol::Struct(struct_def)) => {
                         let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
@@ -1399,7 +1426,6 @@ impl SemanticAnalyzer {
 
                         Ok(Type::UserDefined(path_type))
                     }
-
                     None => Err(SemanticErrorKind::UndefinedStruct { name }),
 
                     _ => Err(SemanticErrorKind::UnexpectedSymbol { name }),
@@ -1457,7 +1483,7 @@ impl SemanticAnalyzer {
 
             Expression::Block(b) => match &b.statements_opt {
                 Some(vec) => {
-                    self.symbol_table.enter_scope();
+                    self.enter_scope();
 
                     let ty = match vec.last() {
                         Some(s) => match s {
@@ -1473,7 +1499,7 @@ impl SemanticAnalyzer {
                         None => Type::UnitType(Unit),
                     };
 
-                    self.symbol_table.exit_scope();
+                    self.exit_scope();
 
                     Ok(ty)
                 }
@@ -1589,7 +1615,7 @@ impl SemanticAnalyzer {
         name: Identifier,
         args_opt: Option<Vec<Expression>>,
     ) -> Result<Type, SemanticErrorKind> {
-        match self.symbol_table.lookup(&name) {
+        match self.lookup(&name) {
             Some(Symbol::Function { function, .. }) => {
                 let args = args_opt.clone();
                 let params = function.params_opt.clone();
@@ -1639,7 +1665,7 @@ impl SemanticAnalyzer {
 
     fn analyze_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
         match pattern {
-            Pattern::IdentifierPatt(i) => match self.symbol_table.lookup(&i.name) {
+            Pattern::IdentifierPatt(i) => match self.lookup(&i.name) {
                 Some(Symbol::Variable(var_type)) => Ok(var_type.clone()),
                 Some(s) => Err(SemanticErrorKind::UnexpectedType {
                     expected: "variable type".to_string(),
@@ -1696,7 +1722,7 @@ impl SemanticAnalyzer {
                     },
                 };
 
-                match self.symbol_table.lookup(&name) {
+                match self.lookup(&name) {
                     Some(_) => Ok(Type::UnitType(Unit)),
                     _ => Err(SemanticErrorKind::UndefinedPath { name }),
                 }
@@ -1910,11 +1936,9 @@ impl SemanticAnalyzer {
                     },
                 };
 
-                let symbol_table_clone = self.symbol_table.clone();
-
-                match symbol_table_clone.lookup(&name) {
+                match self.lookup(&name).cloned() {
                     Some(Symbol::Struct(struct_def)) => {
-                        self.symbol_table.enter_scope();
+                        self.enter_scope();
 
                         let struct_fields = s.struct_fields_opt.clone();
 
@@ -1923,19 +1947,17 @@ impl SemanticAnalyzer {
                                 let field_name = spf.field_name.clone();
                                 let field_value = spf.field_value.clone();
                                 let field_type = self.analyze_patt(&field_value)?.clone();
-                                let _ = self
-                                    .symbol_table
-                                    .insert(field_name, Symbol::Variable(field_type));
+                                let _ = self.insert(field_name, Symbol::Variable(field_type));
                             }
                         }
 
-                        self.symbol_table.exit_scope();
+                        self.exit_scope();
 
                         let struct_def_fields = struct_def.fields_opt.clone();
 
                         if struct_def_fields.is_some() {
                             for sdf in &struct_def_fields.unwrap() {
-                                match self.symbol_table.lookup(&sdf.field_name) {
+                                match self.lookup(&sdf.field_name) {
                                     Some(Symbol::Variable(patt_type))
                                         if *patt_type == *sdf.field_type =>
                                     {
@@ -2022,9 +2044,7 @@ impl SemanticAnalyzer {
                     },
                 };
 
-                let symbol_table_clone = self.symbol_table.clone();
-
-                match symbol_table_clone.lookup(&name) {
+                match self.lookup(&name).cloned() {
                     Some(Symbol::TupleStruct(tuple_struct_def)) => {
                         let mut element_map: HashMap<usize, Type> = HashMap::new();
                         let mut element_counter = 0usize;
