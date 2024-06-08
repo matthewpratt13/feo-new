@@ -7,10 +7,10 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, FunctionOrMethodParam,
-        Hash, Identifier, ImportTree, InferredType, InherentImplItem, Int, Item, Literal, PathExpr,
-        PathRoot, PathType, Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type,
-        UInt, UnaryOp, UnderscoreExpr, Unit, ValueExpr,
+        BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, Hash, Identifier,
+        ImportTree, InferredType, InherentImplItem, Int, Item, Literal, PathExpr, PathRoot,
+        PathType, Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp,
+        UnderscoreExpr, Unit, ValueExpr,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -171,37 +171,31 @@ impl SemanticAnalyzer {
 
                     let mut statements: Vec<Statement> = Vec::new();
 
-                    if m.items_opt.is_some() {
-                        for item in m.items_opt.as_ref().unwrap() {
+                    if let Some(v) = &m.items_opt {
+                        for item in v.iter() {
                             statements.push(Statement::Item(item.clone()));
                         }
-                    } else {
-                        let outer_attributes = m.outer_attributes_opt.as_ref();
+                    }
 
-                        let inner_attributes = m.inner_attributes_opt.as_ref();
+                    if let Some(a) = &m.outer_attributes_opt {
+                        return Err(SemanticErrorKind::UnexpectedAttribute {
+                            name: format!("{:?}", a),
+                            msg: format!("Outer attributes out of context – expected module items"),
+                        });
+                    }
 
-                        if outer_attributes.is_some() {
-                            return Err(SemanticErrorKind::UnexpectedAttribute {
-                                name: format!("{:?}", &outer_attributes.unwrap()),
-                                msg: format!(
-                                    "Outer attributes out of context – expected module items"
-                                ),
-                            });
-                        } else if inner_attributes.is_some() {
-                            return Err(SemanticErrorKind::UnexpectedAttribute {
-                                name: format!("{:?}", &inner_attributes.unwrap()),
-                                msg: format!(
-                                    "Inner attributes out of context – expected module items"
-                                ),
-                            });
-                        }
-
-                        return Ok(()); // don't need to analyze if there are no items
+                    if let Some(a) = &m.inner_attributes_opt {
+                        return Err(SemanticErrorKind::UnexpectedAttribute {
+                            name: format!("{:?}", a),
+                            msg: format!("Inner attributes out of context – expected module items"),
+                        });
                     }
 
                     let _ = analyzer.analyze(&Module { statements });
 
                     self.errors.extend(analyzer.errors);
+
+                    self.logger.info("module item initialized");
                 }
 
                 Item::TraitDef(t) => {
@@ -218,24 +212,23 @@ impl SemanticAnalyzer {
 
                     self.logger.info("trait definition initialized");
 
-                    let trait_items = t.trait_items_opt.as_ref();
-
-                    if trait_items.is_some() {
-                        for item in trait_items.unwrap() {
+                    if let Some(v) = &t.trait_items_opt {
+                        for item in v.iter() {
                             match item {
+                                TraitDefItem::AliasDecl(ad) => self
+                                    .analyze_stmt(&Statement::Item(Item::AliasDecl(ad.clone())))?,
+
+                                TraitDefItem::ConstantDecl(cd) => self.analyze_stmt(
+                                    &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                )?,
+
                                 TraitDefItem::FunctionItem(fi) => {
-                                    let _ = self.analyze_function_def(&fi);
+                                    self.analyze_function_def(fi)?;
 
                                     self.logger.info(
                                         "function definition acknowledged, but not initialized",
                                     );
                                 }
-
-                                TraitDefItem::AliasDecl(ad) => self
-                                    .analyze_stmt(&Statement::Item(Item::AliasDecl(ad.clone())))?,
-                                TraitDefItem::ConstantDecl(cd) => self.analyze_stmt(
-                                    &Statement::Item(Item::ConstantDecl(cd.clone())),
-                                )?,
                             }
                         }
                     }
@@ -287,54 +280,53 @@ impl SemanticAnalyzer {
                 }
 
                 Item::InherentImplDef(i) => {
-                    if i.associated_items_opt.is_some() {
-                        for item in i.associated_items_opt.as_ref().unwrap() {
+                    if let Some(v) = &i.associated_items_opt {
+                        for item in v.iter() {
                             match item {
                                 InherentImplItem::ConstantDecl(cd) => self.analyze_stmt(
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
                                 )?,
-                                InherentImplItem::FunctionItem(fi) => {
-                                    let _ = self.analyze_function_def(&fi);
 
-                                    let _ = self.symbol_table.insert(
+                                InherentImplItem::FunctionItem(fi) => {
+                                    self.symbol_table.insert(
                                         fi.function_name.clone(),
                                         Symbol::Function {
                                             associated_type_opt: Some(i.nominal_type.clone()),
                                             function: fi.clone(),
                                         },
-                                    );
+                                    )?;
+
+                                    self.analyze_function_def(&fi)?;
 
                                     self.logger.info("associated function initialized");
                                 }
                             }
                         }
-                    } else {
-                        let attributes = i.attributes_opt.as_ref();
+                    }
 
-                        if attributes.is_some() {
-                            return Err(SemanticErrorKind::UnexpectedAttribute {
-                                name: format!("{:?}", &attributes.unwrap()),
-                                msg: format!(
-                                    "Outer attributes out of context – expected associated items"
-                                ),
-                            });
-                        }
+                    if let Some(a) = &i.attributes_opt {
+                        return Err(SemanticErrorKind::UnexpectedAttribute {
+                            name: format!("{:?}", a),
+                            msg: format!(
+                                "Outer attributes out of context – expected associated items"
+                            ),
+                        });
                     }
                 }
 
                 Item::TraitImplDef(t) => {
-                    if t.associated_items_opt.is_some() {
-                        for item in t.associated_items_opt.as_ref().unwrap() {
+                    if let Some(v) = &t.associated_items_opt {
+                        for item in v.iter() {
                             match item {
                                 TraitImplItem::AliasDecl(ad) => self
                                     .analyze_stmt(&Statement::Item(Item::AliasDecl(ad.clone())))?,
+
                                 TraitImplItem::ConstantDecl(cd) => self.analyze_stmt(
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
                                 )?,
-                                TraitImplItem::FunctionItem(fi) => {
-                                    let _ = self.analyze_function_def(&fi);
 
-                                    let _ = self.symbol_table.insert(
+                                TraitImplItem::FunctionItem(fi) => {
+                                    self.symbol_table.insert(
                                         fi.function_name.clone(),
                                         Symbol::Function {
                                             associated_type_opt: Some(
@@ -342,29 +334,27 @@ impl SemanticAnalyzer {
                                             ),
                                             function: fi.clone(),
                                         },
-                                    );
+                                    )?;
+
+                                    self.analyze_function_def(&fi)?;
 
                                     self.logger.info("associated function initialized");
                                 }
                             }
                         }
-                    } else {
-                        let attributes = t.attributes_opt.as_ref();
+                    }
 
-                        if attributes.is_some() {
-                            return Err(SemanticErrorKind::UnexpectedAttribute {
-                                name: format!("{:?}", &attributes.unwrap()),
-                                msg: format!(
-                                    "Outer attributes out of context – expected associated items"
-                                ),
-                            });
-                        }
+                    if let Some(a) = &t.attributes_opt {
+                        return Err(SemanticErrorKind::UnexpectedAttribute {
+                            name: format!("{:?}", a),
+                            msg: format!(
+                                "Outer attributes out of context – expected associated items"
+                            ),
+                        });
                     }
                 }
 
                 Item::FunctionItem(f) => {
-                    self.analyze_function_def(f)?;
-
                     self.symbol_table
                         .insert(
                             f.function_name.clone(),
@@ -382,6 +372,8 @@ impl SemanticAnalyzer {
                             _ => e,
                         })?;
 
+                    self.analyze_function_def(f)?;
+
                     self.logger.info("function definition initialized");
                 }
             },
@@ -391,6 +383,37 @@ impl SemanticAnalyzer {
             }
         }
 
+        Ok(())
+    }
+
+    fn analyze_function_def(&mut self, f: &FunctionItem) -> Result<(), SemanticErrorKind> {
+        let param_types: Vec<Type> = f
+            .params_opt
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|p| p.param_type())
+            .collect();
+
+        self.symbol_table.enter_scope();
+
+        if let Some(p) = &f.params_opt {
+            for (param, param_type) in p.iter().zip(param_types) {
+                self.symbol_table
+                    .insert(param.param_name().clone(), Symbol::Variable(param_type))?;
+            }
+        }
+
+        if let Some(b) = &f.block_opt {
+            if let Some(v) = &b.statements_opt {
+                for stmt in v {
+                    if let Err(e) = self.analyze_stmt(stmt) {
+                        self.log_error(e, &stmt.span())
+                    }
+                }
+            }
+        }
+        self.symbol_table.exit_scope();
         Ok(())
     }
 
@@ -2046,43 +2069,43 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn analyze_function_def(&mut self, func: &FunctionItem) -> Result<(), SemanticErrorKind> {
-        self.symbol_table.enter_scope();
+    // fn analyze_function_def(&mut self, func: &FunctionItem) -> Result<(), SemanticErrorKind> {
+    //     self.symbol_table.enter_scope();
 
-        if func.params_opt.is_some() {
-            for param in &func.params_opt.clone().unwrap() {
-                match param {
-                    FunctionOrMethodParam::FunctionParam(f) => {
-                        self.symbol_table.insert(
-                            f.param_name.name.clone(),
-                            Symbol::Variable(*f.param_type.clone()),
-                        )?;
-                    }
-                    FunctionOrMethodParam::MethodParam(_) => {
-                        self.symbol_table.insert(
-                            Identifier::from("self"),
-                            Symbol::Variable(Type::SelfType(SelfType)),
-                        )?;
-                    }
-                }
-            }
-        }
+    //     if func.params_opt.is_some() {
+    //         for param in &func.params_opt.clone().unwrap() {
+    //             match param {
+    //                 FunctionOrMethodParam::FunctionParam(f) => {
+    //                     self.symbol_table.insert(
+    //                         f.param_name.name.clone(),
+    //                         Symbol::Variable(*f.param_type.clone()),
+    //                     )?;
+    //                 }
+    //                 FunctionOrMethodParam::MethodParam(_) => {
+    //                     self.symbol_table.insert(
+    //                         Identifier::from("self"),
+    //                         Symbol::Variable(Type::SelfType(SelfType)),
+    //                     )?;
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        if func.block_opt.is_some() {
-            let statements = func.block_opt.clone().unwrap().statements_opt;
+    //     if func.block_opt.is_some() {
+    //         let statements = func.block_opt.clone().unwrap().statements_opt;
 
-            if statements.is_some() {
-                for stmt in &statements.unwrap() {
-                    if let Err(e) = self.analyze_stmt(stmt) {
-                        self.log_error(e, &stmt.span())
-                    }
-                }
-            }
-        }
+    //         if statements.is_some() {
+    //             for stmt in &statements.unwrap() {
+    //                 if let Err(e) = self.analyze_stmt(stmt) {
+    //                     self.log_error(e, &stmt.span())
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        self.symbol_table.exit_scope();
-        Ok(())
-    }
+    //     self.symbol_table.exit_scope();
+    //     Ok(())
+    // }
 
     fn analyze_import(&mut self, tree: &ImportTree) -> Result<(), SemanticErrorKind> {
         // TODO: check if module path exists and is accessible

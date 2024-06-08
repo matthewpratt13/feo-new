@@ -30,6 +30,13 @@ impl FunctionOrMethodParam {
             FunctionOrMethodParam::MethodParam(_) => Type::SelfType(SelfType),
         }
     }
+
+    pub(crate) fn param_name(&self) -> Identifier {
+        match self {
+            FunctionOrMethodParam::FunctionParam(f) => f.param_name.name.clone(),
+            FunctionOrMethodParam::MethodParam(_) => Identifier::from("self"),
+        }
+    }
 }
 
 impl fmt::Display for FunctionOrMethodParam {
