@@ -417,6 +417,31 @@ impl SemanticAnalyzer {
         Ok(())
     }
 
+    fn analyze_import(&mut self, tree: &ImportTree) -> Result<(), SemanticErrorKind> {
+        // TODO: check if module path exists and is accessible
+
+        let mut path: Vec<PathType> = Vec::new();
+
+        for ps in tree.path_segments.iter() {
+            path.push(ps.root.clone());
+        }
+
+        let name = match path.last() {
+            Some(pt) => Identifier::from(&pt.to_string()),
+            None => Identifier::from(""),
+        };
+
+        self.symbol_table
+            .insert(name.clone(), Symbol::Import(path))
+            .map_err(|e| match e {
+                SemanticErrorKind::DuplicateImport { .. } => {
+                    SemanticErrorKind::DuplicateImport { name }
+                }
+                _ => e,
+            })?;
+        Ok(())
+    }
+
     fn analyze_expr(&mut self, expression: &Expression) -> Result<Type, SemanticErrorKind> {
         match expression {
             Expression::Path(p) => {
@@ -2067,69 +2092,6 @@ impl SemanticAnalyzer {
 
             Pattern::ResultPatt(r) => self.analyze_patt(&*r.pattern.clone().inner_pattern),
         }
-    }
-
-    // fn analyze_function_def(&mut self, func: &FunctionItem) -> Result<(), SemanticErrorKind> {
-    //     self.symbol_table.enter_scope();
-
-    //     if func.params_opt.is_some() {
-    //         for param in &func.params_opt.clone().unwrap() {
-    //             match param {
-    //                 FunctionOrMethodParam::FunctionParam(f) => {
-    //                     self.symbol_table.insert(
-    //                         f.param_name.name.clone(),
-    //                         Symbol::Variable(*f.param_type.clone()),
-    //                     )?;
-    //                 }
-    //                 FunctionOrMethodParam::MethodParam(_) => {
-    //                     self.symbol_table.insert(
-    //                         Identifier::from("self"),
-    //                         Symbol::Variable(Type::SelfType(SelfType)),
-    //                     )?;
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     if func.block_opt.is_some() {
-    //         let statements = func.block_opt.clone().unwrap().statements_opt;
-
-    //         if statements.is_some() {
-    //             for stmt in &statements.unwrap() {
-    //                 if let Err(e) = self.analyze_stmt(stmt) {
-    //                     self.log_error(e, &stmt.span())
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     self.symbol_table.exit_scope();
-    //     Ok(())
-    // }
-
-    fn analyze_import(&mut self, tree: &ImportTree) -> Result<(), SemanticErrorKind> {
-        // TODO: check if module path exists and is accessible
-
-        let mut path: Vec<PathType> = Vec::new();
-
-        for ps in tree.path_segments.iter() {
-            path.push(ps.root.clone());
-        }
-
-        let name = match path.last() {
-            Some(pt) => Identifier::from(&pt.to_string()),
-            None => Identifier::from(""),
-        };
-
-        self.symbol_table
-            .insert(name.clone(), Symbol::Import(path))
-            .map_err(|e| match e {
-                SemanticErrorKind::DuplicateImport { .. } => {
-                    SemanticErrorKind::DuplicateImport { name }
-                }
-                _ => e,
-            })?;
-        Ok(())
     }
 
     fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {
