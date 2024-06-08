@@ -95,6 +95,10 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
+    UndefinedModule {
+        name: Identifier,
+    },
+
     UndefinedPath {
         name: Identifier,
     },
@@ -206,6 +210,8 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UndefinedField { name } => write!(f, "undefined field: `{name}`"),  
             
             SemanticErrorKind::UndefinedFunction { name } => write!(f, "undefined function: `{name}`"),
+ 
+            SemanticErrorKind::UndefinedModule { name } => write!(f, "undefined module: `{name}`"),
 
             SemanticErrorKind::UndefinedPath { name } => write!(f, "undefined path: `{name}`"),
 
