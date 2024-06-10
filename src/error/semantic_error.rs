@@ -117,11 +117,6 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
-    UnexpectedAttribute {
-        name: String,
-        msg: String,
-    },
-
     UnexpectedSymbol {
         name: Identifier,
     },
@@ -223,10 +218,6 @@ impl fmt::Display for SemanticErrorKind {
             
             SemanticErrorKind::UndefinedVariable { name } => {
                 write!(f, "undefined variable: `{name}`",)
-            }
-
-            SemanticErrorKind::UnexpectedAttribute { name, msg } => {
-                write!(f, "unexpected attributes(s): `{name}`. {msg}")
             }
 
             SemanticErrorKind::UnexpectedSymbol { name } => write!(f, "unexpected symbol: `{}`", name),

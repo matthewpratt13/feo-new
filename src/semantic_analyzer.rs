@@ -202,20 +202,6 @@ impl SemanticAnalyzer {
 
                     self.insert(m.module_name.clone(), Symbol::Module(module_scope))?;
 
-                    if let Some(a) = &m.outer_attributes_opt {
-                        return Err(SemanticErrorKind::UnexpectedAttribute {
-                            name: format!("{:?}", a),
-                            msg: format!("Outer attributes out of context – expected module items"),
-                        });
-                    }
-
-                    if let Some(a) = &m.inner_attributes_opt {
-                        return Err(SemanticErrorKind::UnexpectedAttribute {
-                            name: format!("{:?}", a),
-                            msg: format!("Inner attributes out of context – expected module items"),
-                        });
-                    }
-
                     self.logger.info("entered new module scope");
                 }
 
@@ -320,15 +306,6 @@ impl SemanticAnalyzer {
                             }
                         }
                     }
-
-                    if let Some(a) = &i.attributes_opt {
-                        return Err(SemanticErrorKind::UnexpectedAttribute {
-                            name: format!("{:?}", a),
-                            msg: format!(
-                                "Outer attributes out of context – expected associated items"
-                            ),
-                        });
-                    }
                 }
 
                 Item::TraitImplDef(t) => {
@@ -359,15 +336,6 @@ impl SemanticAnalyzer {
                                 }
                             }
                         }
-                    }
-
-                    if let Some(a) = &t.attributes_opt {
-                        return Err(SemanticErrorKind::UnexpectedAttribute {
-                            name: format!("{:?}", a),
-                            msg: format!(
-                                "Outer attributes out of context – expected associated items"
-                            ),
-                        });
                     }
                 }
 
@@ -406,17 +374,11 @@ impl SemanticAnalyzer {
     }
 
     fn analyze_function_def(&mut self, f: &FunctionItem) -> Result<(), SemanticErrorKind> {
-        let param_types: Vec<Type> = f
-            .params_opt
-            .as_ref()
-            .unwrap()
-            .iter()
-            .map(|p| p.param_type())
-            .collect();
-
-        self.enter_scope();
-
         if let Some(p) = &f.params_opt {
+            let param_types: Vec<Type> = p.iter().map(|p| p.param_type()).collect();
+
+            self.enter_scope();
+
             for (param, param_type) in p.iter().zip(param_types) {
                 self.insert(param.param_name().clone(), Symbol::Variable(param_type))?;
             }
@@ -1487,14 +1449,12 @@ impl SemanticAnalyzer {
 
                     let ty = match vec.last() {
                         Some(s) => match s {
-                            Statement::Let(ls) => match &ls.value_opt {
-                                Some(e) => self.analyze_expr(e)?,
-                                None => Type::UnitType(Unit),
-                            },
-
-                            Statement::Item(_) => Type::UnitType(Unit),
-
                             Statement::Expression(e) => self.analyze_expr(e)?,
+
+                            _ => {
+                                self.analyze_stmt(s)?;
+                                Type::UnitType(Unit)
+                            }
                         },
                         None => Type::UnitType(Unit),
                     };
