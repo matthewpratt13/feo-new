@@ -174,11 +174,11 @@ impl fmt::Display for SemanticErrorKind {
             },
             SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
                 f,
-                "array element types do not match. Expected {expected}, found {found}"
+                "array element types do not match. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchArgument { name, expected, found } => write!(
                 f,
-                "`{name}` type does not match function definition parameter type. Expected {expected}, found {found}"
+                "`{name}` type does not match function definition parameter type. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchBinaryExpr { expected, found } => write!(
                 f,
@@ -186,7 +186,7 @@ impl fmt::Display for SemanticErrorKind {
             ),
             SemanticErrorKind::TypeMismatchReturnType { expected, found } => write!(
                 f,
-                "value type does not match return type. Expected {expected}, found {found}"
+                "value type does not match return type. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchValues { expected, found } => write!(
                 f,
