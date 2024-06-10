@@ -564,8 +564,8 @@ impl SemanticAnalyzer {
                         } else {
                             Err(SemanticErrorKind::TypeMismatchVariable {
                                 name: type_name,
-                                expected: format!("`{}`", s.struct_name),
-                                found: format!("`{}`", receiver_type),
+                                expected: s.struct_name.to_string(),
+                                found: receiver_type.to_string(),
                             })
                         }
                     }
@@ -579,8 +579,8 @@ impl SemanticAnalyzer {
                         } else {
                             Err(SemanticErrorKind::TypeMismatchVariable {
                                 name: type_name,
-                                expected: format!("`{}`", ts.struct_name),
-                                found: format!("`{}`", receiver_type),
+                                expected: ts.struct_name.to_string(),
+                                found: receiver_type.to_string(),
                             })
                         }
                     }
@@ -594,8 +594,8 @@ impl SemanticAnalyzer {
                         } else {
                             Err(SemanticErrorKind::TypeMismatchVariable {
                                 name: type_name,
-                                expected: format!("`{}`", e.enum_name),
-                                found: format!("`{}`", receiver_type),
+                                expected: e.enum_name.to_string(),
+                                found: receiver_type.to_string(),
                             })
                         }
                     }
@@ -661,7 +661,7 @@ impl SemanticAnalyzer {
                         return Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type (excluding large unsigned integers)"
                                 .to_string(),
-                            found: format!("`{}`", index_type),
+                            found: index_type.to_string(),
                         })
                     }
                 }
@@ -670,7 +670,7 @@ impl SemanticAnalyzer {
                     Type::Array { element_type, .. } => Ok(*element_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "array".to_string(),
-                        found: format!("`{}`", array_type),
+                        found: array_type.to_string(),
                     }),
                 }
             }
@@ -691,7 +691,7 @@ impl SemanticAnalyzer {
                     }
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "tuple".to_string(),
-                        found: format!("`{}`", tuple_type),
+                        found: tuple_type.to_string(),
                     }),
                 }
             }
@@ -715,14 +715,14 @@ impl SemanticAnalyzer {
                         | Type::U512(_) => Ok(expr_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric value".to_string(),
-                            found: format!("`{}`", expr_type),
+                            found: expr_type.to_string(),
                         }),
                     },
                     UnaryOp::Not => match &expr_type {
                         Type::Bool(_) => Ok(expr_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "boolean".to_string(),
-                            found: format!("`{}`", expr_type),
+                            found: expr_type.to_string(),
                         }),
                     },
                 }
@@ -1023,7 +1023,7 @@ impl SemanticAnalyzer {
                         | Type::U512(_) => Ok(to_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type".to_string(),
-                            found: format!("`{}`", to_type),
+                            found: to_type.to_string(),
                         }),
                     }
                 }
@@ -1041,7 +1041,7 @@ impl SemanticAnalyzer {
                         | Type::U512(_) => Ok(from_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type".to_string(),
-                            found: format!("`{}`", from_type),
+                            found: from_type.to_string(),
                         }),
                     }
                 }
@@ -1060,7 +1060,7 @@ impl SemanticAnalyzer {
                         _ => {
                             return Err(SemanticErrorKind::UnexpectedType {
                                 expected: "numeric type".to_string(),
-                                found: format!("`{}`", from_type),
+                                found: from_type.to_string(),
                             })
                         }
                     }
@@ -1079,7 +1079,7 @@ impl SemanticAnalyzer {
                         _ => {
                             return Err(SemanticErrorKind::UnexpectedType {
                                 expected: "numeric type".to_string(),
-                                found: format!("`{}`", to_type),
+                                found: to_type.to_string(),
                             })
                         }
                     }
@@ -1088,8 +1088,8 @@ impl SemanticAnalyzer {
                         Ok(to_type)
                     } else {
                         Err(SemanticErrorKind::TypeMismatchValues {
-                            expected: format!("`{}`", from_type),
-                            found: format!("`{}`", to_type),
+                            expected: from_type.to_string(),
+                            found: to_type.to_string(),
                         })
                     }
                 }
@@ -1117,7 +1117,7 @@ impl SemanticAnalyzer {
                     Some(t) => Err(SemanticErrorKind::TypeMismatchVariable {
                         name,
                         expected: expr_type.to_string(),
-                        found: format!("`{}`", &t),
+                        found: t.to_string(),
                     }),
                     None => Err(SemanticErrorKind::UndefinedVariable { name }),
                 }
@@ -1759,7 +1759,7 @@ impl SemanticAnalyzer {
                         | Type::Char(_) => Ok(to_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type, `byte` or `char`".to_string(),
-                            found: format!("`{}`", to_type),
+                            found: to_type.to_string(),
                         }),
                     }
                 }
@@ -1779,7 +1779,7 @@ impl SemanticAnalyzer {
                         | Type::Char(_) => Ok(from_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type, `byte` or `char`".to_string(),
-                            found: format!("`{}`", from_type),
+                            found: from_type.to_string(),
                         }),
                     }
                 }
@@ -1800,7 +1800,7 @@ impl SemanticAnalyzer {
                         _ => {
                             return Err(SemanticErrorKind::UnexpectedType {
                                 expected: "numeric type, `byte` or `char`".to_string(),
-                                found: format!("`{}`", from_type),
+                                found: from_type.to_string(),
                             })
                         }
                     }
@@ -1821,7 +1821,7 @@ impl SemanticAnalyzer {
                         _ => {
                             return Err(SemanticErrorKind::UnexpectedType {
                                 expected: "numeric type, `byte` or `char`".to_string(),
-                                found: format!("`{}`", from_type),
+                                found: from_type.to_string(),
                             })
                         }
                     }
@@ -1830,8 +1830,8 @@ impl SemanticAnalyzer {
                         Ok(to_type)
                     } else {
                         Err(SemanticErrorKind::TypeMismatchValues {
-                            expected: format!("`{}`", from_type),
-                            found: format!("`{}`", to_type),
+                            expected: from_type.to_string(),
+                            found: to_type.to_string(),
                         })
                     }
                 }

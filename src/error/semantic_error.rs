@@ -170,7 +170,7 @@ impl fmt::Display for SemanticErrorKind {
                 write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
             }
             SemanticErrorKind::TypeCastError { from, to } => {
-                write!(f, "unable to cast {} as {}", from, to)
+                write!(f, "unable to cast `{}` as `{}`", from, to)
             },
             SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
                 f,
@@ -190,7 +190,7 @@ impl fmt::Display for SemanticErrorKind {
             ),
             SemanticErrorKind::TypeMismatchValues { expected, found } => write!(
                 f,
-                "type mismatch between values. Expected {expected}, found {found}"
+                "type mismatch between values. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchVariable {
                 name,
@@ -199,7 +199,7 @@ impl fmt::Display for SemanticErrorKind {
             } => {
                 write!(
                     f,
-                    "type mismatch for `{name}`. Expected {expected}, found {found}"
+                    "type mismatch for `{name}`. Expected `{expected}`, found `{found}`"
                 )
             }
             SemanticErrorKind::UndefinedField { name } => write!(f, "undefined field: `{name}`"),  
@@ -223,7 +223,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UnexpectedSymbol { name } => write!(f, "unexpected symbol: `{}`", name),
 
             SemanticErrorKind::UnexpectedType { expected, found } => {
-                write!(f, "unexpected type(s). Expected {expected}, found {found}")
+                write!(f, "unexpected type(s). Expected {expected}, found `{found}`")
             }
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
