@@ -200,7 +200,13 @@ impl SemanticAnalyzer {
                         module_scope = curr_scope;
                     }
 
-                    self.insert(m.module_name.clone(), Symbol::Module(module_scope))?;
+                    self.insert(
+                        m.module_name.clone(),
+                        Symbol::Module {
+                            module: m.clone(),
+                            symbols: module_scope,
+                        },
+                    )?;
 
                     self.logger.info("entered new module scope");
                 }
@@ -410,9 +416,15 @@ impl SemanticAnalyzer {
             let name = &ps.root.type_name;
 
             match current_scope.get(name) {
-                Some(Symbol::Module(module_scope)) => current_scope = module_scope,
+                Some(Symbol::Module { symbols, .. }) => current_scope = symbols,
 
-                Some(_) => return Err(SemanticErrorKind::UnexpectedSymbol { name: name.clone() }),
+                Some(s) => {
+                    return Err(SemanticErrorKind::UnexpectedSymbol {
+                        name: name.clone(),
+                        expected: "module item".to_string(),
+                        found: s.to_string(),
+                    })
+                }
 
                 None => return Err(SemanticErrorKind::UndefinedModule { name: name.clone() }),
             }
@@ -423,8 +435,8 @@ impl SemanticAnalyzer {
             None => Identifier::from(""),
         };
 
-        if let Some(Symbol::Module(module_scope)) = current_scope.get(&name).cloned() {
-            for (name, symbol) in module_scope.iter() {
+        if let Some(Symbol::Module { symbols, .. }) = current_scope.get(&name).cloned() {
+            for (name, symbol) in symbols.iter() {
                 self.insert(name.clone(), symbol.clone())?;
             }
         } else {
@@ -602,7 +614,11 @@ impl SemanticAnalyzer {
 
                     None => Err(SemanticErrorKind::UndefinedType { name: type_name }),
 
-                    _ => Err(SemanticErrorKind::UnexpectedSymbol { name: type_name }),
+                    Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
+                        name: type_name,
+                        expected: "struct or enum".to_string(),
+                        found: s.to_string(),
+                    }),
                 }
             }
 
@@ -624,8 +640,10 @@ impl SemanticAnalyzer {
                         name: Identifier::from(&object_type.to_string()),
                     }),
 
-                    _ => Err(SemanticErrorKind::UnexpectedSymbol {
+                    Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: Identifier::from(&object_type.to_string()),
+                        expected: "struct".to_string(),
+                        found: s.to_string(),
                     }),
                 }
             }
@@ -1390,7 +1408,11 @@ impl SemanticAnalyzer {
                     }
                     None => Err(SemanticErrorKind::UndefinedStruct { name }),
 
-                    _ => Err(SemanticErrorKind::UnexpectedSymbol { name }),
+                    Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
+                        name,
+                        expected: "struct".to_string(),
+                        found: s.to_string(),
+                    }),
                 }
             }
 
@@ -1619,7 +1641,11 @@ impl SemanticAnalyzer {
 
             None => Err(SemanticErrorKind::UndefinedFunction { name }),
 
-            _ => Err(SemanticErrorKind::UnexpectedSymbol { name }),
+            Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
+                name,
+                expected: "function".to_string(),
+                found: s.to_string(),
+            }),
         }
     }
 
@@ -1952,7 +1978,11 @@ impl SemanticAnalyzer {
 
                     None => Err(SemanticErrorKind::UndefinedStruct { name }),
 
-                    _ => Err(SemanticErrorKind::UnexpectedSymbol { name }),
+                    Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
+                        name,
+                        expected: "struct".to_string(),
+                        found: s.to_string(),
+                    }),
                 }
             }
 
@@ -2054,7 +2084,11 @@ impl SemanticAnalyzer {
 
                     None => Err(SemanticErrorKind::UndefinedStruct { name }),
 
-                    _ => Err(SemanticErrorKind::UnexpectedSymbol { name }),
+                    Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
+                        name,
+                        expected: "struct".to_string(),
+                        found: s.to_string(),
+                    }),
                 }
             }
 
