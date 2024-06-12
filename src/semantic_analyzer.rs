@@ -1540,48 +1540,43 @@ impl SemanticAnalyzer {
                 let scrutinee_type =
                     self.analyze_expr(&wrap_into_expression(m.scrutinee.clone())?)?;
 
-                if let Some(v) = &m.match_arms_opt {
-                    match v.first() {
-                        Some(a) => {
-                            let expr_type = self.analyze_expr(&a.arm_expression)?;
+                let patt_type = self.analyze_patt(&m.final_arm.matched_pattern.clone())?;
 
-                            for arm in v.iter() {
-                                let patt_type = self.analyze_patt(&arm.matched_pattern)?;
-
-                                if patt_type != scrutinee_type {
-                                    return Err(SemanticErrorKind::UnexpectedType {
-                                        expected: scrutinee_type.to_string(),
-                                        found: patt_type.to_string(),
-                                    });
-                                }
-
-                                let arm_expr_type =
-                                    self.analyze_expr(&arm.arm_expression.clone())?;
-
-                                if arm_expr_type != expr_type {
-                                    return Err(
-                                        SemanticErrorKind::TypeMismatchMatchArmExpression {
-                                            expected: expr_type.to_string(),
-                                            found: arm_expr_type.to_string(),
-                                        },
-                                    );
-                                }
-                            }
-                        }
-                        None => (),
-                    }
-                }
-
-                let final_patt_type = self.analyze_patt(&m.final_arm.matched_pattern.clone())?;
-
-                if final_patt_type != scrutinee_type {
-                    return Err(SemanticErrorKind::UnexpectedType {
+                if patt_type != scrutinee_type {
+                    return Err(SemanticErrorKind::TypeMismatchMatchExpr {
+                        loc: "scrutinee and matched pattern".to_string(),
                         expected: scrutinee_type.to_string(),
-                        found: final_patt_type.to_string(),
+                        found: patt_type.to_string(),
                     });
                 }
 
-                self.analyze_expr(&m.final_arm.arm_expression.clone())
+                let expr_type = self.analyze_expr(&m.final_arm.arm_expression.clone())?;
+
+                if let Some(v) = &m.match_arms_opt {
+                    for arm in v.iter() {
+                        let arm_patt_type = self.analyze_patt(&arm.matched_pattern)?;
+
+                        if arm_patt_type != patt_type {
+                            return Err(SemanticErrorKind::TypeMismatchMatchExpr {
+                                loc: "matched pattern".to_string(),
+                                expected: patt_type.to_string(),
+                                found: arm_patt_type.to_string(),
+                            });
+                        }
+
+                        let arm_expr_type = self.analyze_expr(&arm.arm_expression.clone())?;
+
+                        if arm_expr_type != expr_type {
+                            return Err(SemanticErrorKind::TypeMismatchMatchExpr {
+                                loc: "match arm expression".to_string(),
+                                expected: expr_type.to_string(),
+                                found: arm_expr_type.to_string(),
+                            });
+                        }
+                    }
+                }
+
+                Ok(expr_type)
             }
 
             Expression::ForIn(fi) => self.analyze_expr(&Expression::Block(fi.block.clone())),
