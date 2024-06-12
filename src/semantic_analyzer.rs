@@ -1584,7 +1584,7 @@ impl SemanticAnalyzer {
 
                 self.analyze_patt(&fi.pattern.clone())?;
                 self.analyze_expr(&fi.iterator.clone())?;
-                
+
                 let ty = self.analyze_expr(&Expression::Block(fi.block.clone()))?;
 
                 self.exit_scope();
@@ -1592,7 +1592,17 @@ impl SemanticAnalyzer {
                 Ok(ty)
             }
 
-            Expression::While(w) => self.analyze_expr(&Expression::Block(w.block.clone())),
+            Expression::While(w) => {
+                self.enter_scope();
+
+                self.analyze_expr(&Expression::Grouped(*w.condition.clone()))?;
+
+                let ty = self.analyze_expr(&Expression::Block(w.block.clone()))?;
+
+                self.exit_scope();
+
+                Ok(ty)
+            }
 
             Expression::SomeExpr(s) => self.analyze_expr(&s.expression.clone().inner_expression),
 
