@@ -1490,6 +1490,8 @@ impl SemanticAnalyzer {
             },
 
             Expression::If(i) => {
+                self.analyze_expr(&Expression::Grouped(*i.condition.clone()))?;
+
                 let if_block_type = self.analyze_expr(&Expression::Block(*i.if_block.clone()))?;
 
                 let else_if_blocks_type = match &i.else_if_blocks_opt {
@@ -1537,6 +1539,8 @@ impl SemanticAnalyzer {
             }
 
             Expression::Match(m) => {
+                self.enter_scope();
+
                 let scrutinee_type =
                     self.analyze_expr(&wrap_into_expression(m.scrutinee.clone())?)?;
 
@@ -1575,6 +1579,8 @@ impl SemanticAnalyzer {
                         }
                     }
                 }
+
+                self.exit_scope();
 
                 Ok(expr_type)
             }
