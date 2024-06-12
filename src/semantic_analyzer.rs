@@ -1579,7 +1579,18 @@ impl SemanticAnalyzer {
                 Ok(expr_type)
             }
 
-            Expression::ForIn(fi) => self.analyze_expr(&Expression::Block(fi.block.clone())),
+            Expression::ForIn(fi) => {
+                self.enter_scope();
+
+                self.analyze_patt(&fi.pattern.clone())?;
+                self.analyze_expr(&fi.iterator.clone())?;
+                
+                let ty = self.analyze_expr(&Expression::Block(fi.block.clone()))?;
+
+                self.exit_scope();
+
+                Ok(ty)
+            }
 
             Expression::While(w) => self.analyze_expr(&Expression::Block(w.block.clone())),
 
