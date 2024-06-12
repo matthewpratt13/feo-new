@@ -1575,14 +1575,8 @@ impl SemanticAnalyzer {
             }
 
             Expression::While(w) => {
-                self.enter_scope();
-
                 self.analyze_expr(&Expression::Grouped(*w.condition.clone()))?;
-
                 let ty = self.analyze_expr(&Expression::Block(w.block.clone()))?;
-
-                self.exit_scope();
-
                 Ok(ty)
             }
 
