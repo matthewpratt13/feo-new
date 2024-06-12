@@ -381,10 +381,10 @@ impl SemanticAnalyzer {
     }
 
     fn analyze_function_def(&mut self, f: &FunctionItem) -> Result<(), SemanticErrorKind> {
+        self.enter_scope();
+
         if let Some(p) = &f.params_opt {
             let param_types: Vec<Type> = p.iter().map(|p| p.param_type()).collect();
-
-            self.enter_scope();
 
             for (param, param_type) in p.iter().zip(param_types) {
                 self.insert(param.param_name().clone(), Symbol::Variable(param_type))?;
@@ -483,12 +483,12 @@ impl SemanticAnalyzer {
 
                 match self.lookup(&name) {
                     Some(Symbol::Variable(t)) => Ok(t.clone()),
-                    None => Err(SemanticErrorKind::UndefinedVariable { name }),
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name,
                         expected: "variable".to_string(),
                         found: s.to_string(),
                     }),
+                    None => Err(SemanticErrorKind::UndefinedVariable { name }),
                 }
             }
 
@@ -1332,52 +1332,7 @@ impl SemanticAnalyzer {
             }
 
             Expression::Struct(s) => {
-                let struct_path_root = s.struct_path.path_root.clone();
-                let struct_tree_opt = s.struct_path.tree_opt.clone();
-
-                let name = match &struct_tree_opt {
-                    Some(v) => match v.last() {
-                        Some(i) => i.clone(),
-                        None => match &struct_path_root {
-                            PathRoot::Identifier(i) => i.clone(),
-                            PathRoot::SelfType(_) => Identifier::from("Self"),
-                            PathRoot::Package => {
-                                return Err(SemanticErrorKind::InvalidStructName {
-                                    name: Identifier::from("package"),
-                                })
-                            }
-                            PathRoot::Super => {
-                                return Err(SemanticErrorKind::InvalidStructName {
-                                    name: Identifier::from("super"),
-                                })
-                            }
-                            PathRoot::SelfKeyword => {
-                                return Err(SemanticErrorKind::InvalidStructName {
-                                    name: Identifier::from("self"),
-                                })
-                            }
-                        },
-                    },
-                    None => match &struct_path_root {
-                        PathRoot::Identifier(i) => i.clone(),
-                        PathRoot::SelfType(_) => Identifier::from("Self"),
-                        PathRoot::Package => {
-                            return Err(SemanticErrorKind::InvalidStructName {
-                                name: Identifier::from("package"),
-                            })
-                        }
-                        PathRoot::Super => {
-                            return Err(SemanticErrorKind::InvalidStructName {
-                                name: Identifier::from("super"),
-                            })
-                        }
-                        PathRoot::SelfKeyword => {
-                            return Err(SemanticErrorKind::InvalidStructName {
-                                name: Identifier::from("self"),
-                            })
-                        }
-                    },
-                };
+                let name = PathType::from(s.struct_path.clone()).type_name;
 
                 match self.lookup(&name).cloned() {
                     Some(Symbol::Struct(struct_def)) => {
@@ -1426,6 +1381,7 @@ impl SemanticAnalyzer {
 
                         Ok(Type::UserDefined(path_type))
                     }
+
                     None => Err(SemanticErrorKind::UndefinedStruct { name }),
 
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
@@ -1726,8 +1682,9 @@ impl SemanticAnalyzer {
         match pattern {
             Pattern::IdentifierPatt(i) => match self.lookup(&i.name) {
                 Some(Symbol::Variable(var_type)) => Ok(var_type.clone()),
-                Some(s) => Err(SemanticErrorKind::UnexpectedType {
-                    expected: "variable type".to_string(),
+                Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
+                    name: i.name.clone(),
+                    expected: "variable".to_string(),
                     found: s.to_string(),
                 }),
                 None => Err(SemanticErrorKind::UndefinedVariable {
@@ -1739,22 +1696,14 @@ impl SemanticAnalyzer {
                 let name = match &p.tree_opt {
                     Some(v) => match v.last() {
                         Some(i) => i.clone(),
-                        _ => match &p.path_root {
+                        None => match &p.path_root {
                             PathRoot::Identifier(i) => i.clone(),
 
-                            PathRoot::SelfType(_) => Identifier::from("Self"),
+                            PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
 
-                            PathRoot::SelfKeyword => Identifier::from("self"),
-
-                            PathRoot::Package => {
+                            pr => {
                                 return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                    name: Identifier::from("package"),
-                                })
-                            }
-
-                            PathRoot::Super => {
-                                return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                    name: Identifier::from("super"),
+                                    name: Identifier::from(&pr.to_string()),
                                 })
                             }
                         },
@@ -1763,27 +1712,24 @@ impl SemanticAnalyzer {
                     _ => match &p.path_root {
                         PathRoot::Identifier(i) => i.clone(),
 
-                        PathRoot::SelfType(_) => Identifier::from("Self"),
+                        PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
 
-                        PathRoot::SelfKeyword => Identifier::from("self"),
-
-                        PathRoot::Package => {
+                        pr => {
                             return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                name: Identifier::from("package"),
-                            })
-                        }
-
-                        PathRoot::Super => {
-                            return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                name: Identifier::from("super"),
+                                name: Identifier::from(&pr.to_string()),
                             })
                         }
                     },
                 };
 
                 match self.lookup(&name) {
-                    Some(_) => Ok(Type::UnitType(Unit)),
-                    _ => Err(SemanticErrorKind::UndefinedVariable { name }),
+                    Some(Symbol::Variable(t)) => Ok(t.clone()),
+                    Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
+                        name,
+                        expected: "variable".to_string(),
+                        found: s.to_string(),
+                    }),
+                    None => Err(SemanticErrorKind::UndefinedVariable { name }),
                 }
             }
 
@@ -1948,56 +1894,11 @@ impl SemanticAnalyzer {
             }
 
             Pattern::StructPatt(s) => {
-                let struct_path_root = s.struct_path.path_root.clone();
-                let struct_tree_opt = s.struct_path.tree_opt.clone();
-
-                let name = match &struct_tree_opt {
-                    Some(v) => match v.last() {
-                        Some(i) => i.clone(),
-                        None => match &struct_path_root {
-                            PathRoot::Identifier(i) => i.clone(),
-                            PathRoot::SelfType(_) => Identifier::from("Self"),
-                            PathRoot::Package => {
-                                return Err(SemanticErrorKind::InvalidStructName {
-                                    name: Identifier::from("package"),
-                                })
-                            }
-                            PathRoot::Super => {
-                                return Err(SemanticErrorKind::InvalidStructName {
-                                    name: Identifier::from("super"),
-                                })
-                            }
-                            PathRoot::SelfKeyword => {
-                                return Err(SemanticErrorKind::InvalidStructName {
-                                    name: Identifier::from("self"),
-                                })
-                            }
-                        },
-                    },
-                    None => match &struct_path_root {
-                        PathRoot::Identifier(i) => i.clone(),
-                        PathRoot::SelfType(_) => Identifier::from("Self"),
-                        PathRoot::Package => {
-                            return Err(SemanticErrorKind::InvalidStructName {
-                                name: Identifier::from("package"),
-                            })
-                        }
-                        PathRoot::Super => {
-                            return Err(SemanticErrorKind::InvalidStructName {
-                                name: Identifier::from("super"),
-                            })
-                        }
-                        PathRoot::SelfKeyword => {
-                            return Err(SemanticErrorKind::InvalidStructName {
-                                name: Identifier::from("self"),
-                            })
-                        }
-                    },
-                };
+                let name = PathType::from(s.struct_path.clone()).type_name;
 
                 match self.lookup(&name).cloned() {
                     Some(Symbol::Struct(struct_def)) => {
-                        self.enter_scope();
+                        let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
                         let struct_fields = s.struct_fields_opt.clone();
 
@@ -2006,22 +1907,16 @@ impl SemanticAnalyzer {
                                 let field_name = spf.field_name.clone();
                                 let field_value = spf.field_value.clone();
                                 let field_type = self.analyze_patt(&field_value)?.clone();
-                                let _ = self.insert(field_name, Symbol::Variable(field_type));
+                                field_map.insert(field_name, field_type);
                             }
                         }
-
-                        self.exit_scope();
 
                         let struct_def_fields = struct_def.fields_opt.clone();
 
                         if struct_def_fields.is_some() {
                             for sdf in &struct_def_fields.unwrap() {
-                                match self.lookup(&sdf.field_name) {
-                                    Some(Symbol::Variable(patt_type))
-                                        if *patt_type == *sdf.field_type =>
-                                    {
-                                        ()
-                                    }
+                                match field_map.get(&sdf.field_name) {
+                                    Some(expr_type) if *expr_type == *sdf.field_type => (),
                                     Some(t) => {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
                                             name: name.clone(),
@@ -2060,52 +1955,7 @@ impl SemanticAnalyzer {
             }
 
             Pattern::TupleStructPatt(ts) => {
-                let struct_path_root = ts.struct_path.path_root.clone();
-                let struct_tree_opt = ts.struct_path.tree_opt.clone();
-
-                let name = match &struct_tree_opt {
-                    Some(v) => match v.last() {
-                        Some(i) => i.clone(),
-                        None => match &struct_path_root {
-                            PathRoot::Identifier(i) => i.clone(),
-                            PathRoot::SelfType(_) => Identifier::from("Self"),
-                            PathRoot::Package => {
-                                return Err(SemanticErrorKind::InvalidStructName {
-                                    name: Identifier::from("package"),
-                                })
-                            }
-                            PathRoot::Super => {
-                                return Err(SemanticErrorKind::InvalidStructName {
-                                    name: Identifier::from("super"),
-                                })
-                            }
-                            PathRoot::SelfKeyword => {
-                                return Err(SemanticErrorKind::InvalidStructName {
-                                    name: Identifier::from("self"),
-                                })
-                            }
-                        },
-                    },
-                    None => match &struct_path_root {
-                        PathRoot::Identifier(i) => i.clone(),
-                        PathRoot::SelfType(_) => Identifier::from("Self"),
-                        PathRoot::Package => {
-                            return Err(SemanticErrorKind::InvalidStructName {
-                                name: Identifier::from("package"),
-                            })
-                        }
-                        PathRoot::Super => {
-                            return Err(SemanticErrorKind::InvalidStructName {
-                                name: Identifier::from("super"),
-                            })
-                        }
-                        PathRoot::SelfKeyword => {
-                            return Err(SemanticErrorKind::InvalidStructName {
-                                name: Identifier::from("self"),
-                            })
-                        }
-                    },
-                };
+                let name = PathType::from(ts.struct_path.clone()).type_name;
 
                 match self.lookup(&name).cloned() {
                     Some(Symbol::TupleStruct(tuple_struct_def)) => {
@@ -2170,13 +2020,22 @@ impl SemanticAnalyzer {
             })),
 
             Pattern::RestPatt(_) => Ok(Type::InferredType(InferredType {
-                underscore: Identifier::from("_"),
+                underscore: Identifier::from(".."),
             })),
 
-            Pattern::SomePatt(s) => self.analyze_patt(&s.pattern.clone().inner_pattern),
+            Pattern::SomePatt(s) => {
+                let ty = self.analyze_patt(&s.pattern.clone().inner_pattern)?;
 
-            Pattern::NonePatt(_) => Ok(Type::UnitType(Unit)),
+                Ok(Type::Option {
+                    inner_type: Box::new(ty),
+                })
+            }
 
+            Pattern::NonePatt(_) => Ok(Type::Option {
+                inner_type: Box::new(Type::UnitType(Unit)),
+            }),
+
+            // TODO: see `ResultExpr` type analysis above in `analyze_expr()`
             Pattern::ResultPatt(r) => self.analyze_patt(&r.pattern.clone().inner_pattern),
         }
     }

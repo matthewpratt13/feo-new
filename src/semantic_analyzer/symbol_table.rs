@@ -55,15 +55,12 @@ impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Symbol::Variable(v) => write!(f, "{}", v),
-            Symbol::Struct(s) => write!(f, "{:?}", s),
-            Symbol::TupleStruct(ts) => write!(f, "{:?}", ts),
-            Symbol::Enum(e) => write!(f, "{:?}", e),
-            Symbol::Trait(t) => write!(f, "{:?}", t),
-            Symbol::Function {
-                associated_type_opt: associated_type,
-                ..
-            } => write!(f, "{:?}", associated_type),
-            Symbol::Module { module, .. } => write!(f, "{:?}", module),
+            Symbol::Struct(s) => write!(f, "{}", s.struct_name),
+            Symbol::TupleStruct(ts) => write!(f, "{}", ts.struct_name),
+            Symbol::Enum(e) => write!(f, "{}", e.enum_name),
+            Symbol::Trait(t) => write!(f, "{}", t.trait_name),
+            Symbol::Function { function, .. } => write!(f, "{}", function.function_name),
+            Symbol::Module { module, .. } => write!(f, "{}", module.module_name),
         }
     }
 }

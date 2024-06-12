@@ -2,7 +2,7 @@ use core::fmt;
 
 pub use crate::{B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512};
 
-use super::{FunctionOrMethodParam, Identifier, PathExpr, Type};
+use super::{FunctionOrMethodParam, Identifier, PathExpr, PathPatt, Type};
 
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]
@@ -265,6 +265,34 @@ pub struct PathType {
 
 impl From<PathExpr> for PathType {
     fn from(value: PathExpr) -> Self {
+        let mut path_segment_names: Vec<Identifier> = Vec::new();
+
+        path_segment_names.push(Identifier(value.path_root.to_string()));
+
+        match value.tree_opt {
+            Some(v) => {
+                v.into_iter().for_each(|i| path_segment_names.push(i));
+            }
+            None => (),
+        }
+
+        let type_name = path_segment_names.pop().expect("empty path expression");
+
+        Self {
+            associated_type_path_prefix_opt: {
+                if path_segment_names.is_empty() {
+                    None
+                } else {
+                    Some(path_segment_names)
+                }
+            },
+            type_name,
+        }
+    }
+}
+
+impl From<PathPatt> for PathType {
+    fn from(value: PathPatt) -> Self {
         let mut path_segment_names: Vec<Identifier> = Vec::new();
 
         path_segment_names.push(Identifier(value.path_root.to_string()));
