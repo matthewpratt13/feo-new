@@ -65,8 +65,13 @@ pub enum SemanticErrorKind {
         expected: String,
         found: String,
     },
-
+    
     TypeMismatchBinaryExpr {
+        expected: String,
+        found: String,
+        },
+        
+    TypeMismatchMatchArmExpression {
         expected: String,
         found: String,
     },
@@ -177,6 +182,10 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
                 f,
                 "array element types do not match. Expected `{expected}`, found `{found}`"
+            ),
+            SemanticErrorKind::TypeMismatchMatchArmExpression { expected, found } => write!(
+                f,
+                "match arm expression types do not match. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchArgument { name, expected, found } => write!(
                 f,
