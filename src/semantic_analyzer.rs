@@ -1117,15 +1117,16 @@ impl SemanticAnalyzer {
 
                 let name = Identifier(path.path_root.to_string());
 
-                match self.lookup(&name) {
-                    Some(Symbol::Variable(var_type)) if *var_type == expr_type => {
-                        Ok(var_type.clone())
+                match self.lookup(&name).cloned() {
+                    Some(Symbol::Variable(var_type)) if var_type == expr_type => {
+                        self.analyze_expr(&wrap_into_expression(a.rhs.clone())?)?;
+                        Ok(var_type)
                     }
 
-                    Some(t) => Err(SemanticErrorKind::TypeMismatchVariable {
+                    Some(s) => Err(SemanticErrorKind::TypeMismatchVariable {
                         name,
                         expected: expr_type.to_string(),
-                        found: t.to_string(),
+                        found: s.to_string(),
                     }),
                     None => Err(SemanticErrorKind::UndefinedVariable { name }),
                 }
@@ -1134,7 +1135,7 @@ impl SemanticAnalyzer {
             Expression::CompoundAssignment(ca) => {
                 let lhs_type = self.analyze_expr(&wrap_into_expression(ca.lhs.clone())?)?;
 
-                let rhs_type = self.analyze_expr(&wrap_into_expression(ca.lhs.clone())?)?;
+                let rhs_type = self.analyze_expr(&wrap_into_expression(ca.rhs.clone())?)?;
 
                 match (&lhs_type, &rhs_type) {
                     (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
