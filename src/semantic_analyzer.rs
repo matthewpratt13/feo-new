@@ -8,9 +8,9 @@ use std::collections::HashMap;
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, Hash, Identifier,
-        ImportTree, InferredType, InherentImplItem, Int, Item, Literal, PathExpr, PathRoot,
-        PathType, Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp,
-        UnderscoreExpr, Unit, ValueExpr,
+        ImportTree, InferredType, InherentImplItem, Int, Item, Keyword, Literal, PathExpr,
+        PathRoot, PathType, Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt,
+        UnaryOp, UnderscoreExpr, Unit, ValueExpr,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -454,22 +454,14 @@ impl SemanticAnalyzer {
                 let name = match &p.tree_opt {
                     Some(v) => match v.last() {
                         Some(i) => i.clone(),
-                        _ => match &p.path_root {
+                        None => match &p.path_root {
                             PathRoot::Identifier(i) => i.clone(),
 
-                            PathRoot::SelfType(_) => Identifier::from("Self"),
+                            PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
 
-                            PathRoot::SelfKeyword => Identifier::from("self"),
-
-                            PathRoot::Package => {
-                                return Err(SemanticErrorKind::InvalidPathIdentifier {
-                                    name: Identifier::from("package"),
-                                })
-                            }
-
-                            PathRoot::Super => {
-                                return Err(SemanticErrorKind::InvalidPathIdentifier {
-                                    name: Identifier::from("super"),
+                            pr => {
+                                return Err(SemanticErrorKind::InvalidVariableIdentifier {
+                                    name: Identifier::from(&pr.to_string()),
                                 })
                             }
                         },
@@ -478,27 +470,24 @@ impl SemanticAnalyzer {
                     _ => match &p.path_root {
                         PathRoot::Identifier(i) => i.clone(),
 
-                        PathRoot::SelfType(_) => Identifier::from("Self"),
+                        PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
 
-                        PathRoot::SelfKeyword => Identifier::from("self"),
-
-                        PathRoot::Package => {
-                            return Err(SemanticErrorKind::InvalidPathIdentifier {
-                                name: Identifier::from("package"),
-                            })
-                        }
-
-                        PathRoot::Super => {
-                            return Err(SemanticErrorKind::InvalidPathIdentifier {
-                                name: Identifier::from("super"),
+                        pr => {
+                            return Err(SemanticErrorKind::InvalidVariableIdentifier {
+                                name: Identifier::from(&pr.to_string()),
                             })
                         }
                     },
                 };
 
                 match self.lookup(&name) {
-                    Some(_) => Ok(Type::UnitType(Unit)),
-                    _ => Err(SemanticErrorKind::UndefinedPath { name }),
+                    Some(Symbol::Variable(t)) => Ok(t.clone()),
+                    None => Err(SemanticErrorKind::UndefinedVariable { name }),
+                    Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
+                        name,
+                        expected: "variable".to_string(),
+                        found: s.to_string(),
+                    }),
                 }
             }
 
@@ -1610,11 +1599,38 @@ impl SemanticAnalyzer {
                 Ok(ty)
             }
 
-            Expression::SomeExpr(s) => self.analyze_expr(&s.expression.clone().inner_expression),
+            Expression::SomeExpr(s) => {
+                let ty = self.analyze_expr(&s.expression.clone().inner_expression)?;
 
-            Expression::NoneExpr(_) => Ok(Type::UnitType(Unit)),
+                Ok(Type::Option {
+                    inner_type: Box::new(ty),
+                })
+            }
 
-            Expression::ResultExpr(r) => self.analyze_expr(&r.expression.clone().inner_expression),
+            Expression::NoneExpr(_) => Ok(Type::Option {
+                inner_type: Box::new(Type::UnitType(Unit)),
+            }),
+
+            Expression::ResultExpr(r) => {
+                let ty = self.analyze_expr(&r.expression.clone().inner_expression)?;
+
+                // TODO: explicit type annotation required? Or inferred type? Or unit type?
+
+                match r.kw_ok_or_err.clone() {
+                    Keyword::Ok => Ok(Type::Result {
+                        ok_type: Box::new(ty),
+                        err_type: todo!(),
+                    }),
+                    Keyword::Err => Ok(Type::Result {
+                        ok_type: todo!(),
+                        err_type: Box::new(ty),
+                    }),
+                    k => Err(SemanticErrorKind::UnexpectedKeyword {
+                        expected: "`Ok` or `Err`".to_string(),
+                        found: k.to_string(),
+                    }),
+                }
+            }
         }
     }
 
@@ -1700,13 +1716,13 @@ impl SemanticAnalyzer {
                             PathRoot::SelfKeyword => Identifier::from("self"),
 
                             PathRoot::Package => {
-                                return Err(SemanticErrorKind::InvalidPathIdentifier {
+                                return Err(SemanticErrorKind::InvalidVariableIdentifier {
                                     name: Identifier::from("package"),
                                 })
                             }
 
                             PathRoot::Super => {
-                                return Err(SemanticErrorKind::InvalidPathIdentifier {
+                                return Err(SemanticErrorKind::InvalidVariableIdentifier {
                                     name: Identifier::from("super"),
                                 })
                             }
@@ -1721,13 +1737,13 @@ impl SemanticAnalyzer {
                         PathRoot::SelfKeyword => Identifier::from("self"),
 
                         PathRoot::Package => {
-                            return Err(SemanticErrorKind::InvalidPathIdentifier {
+                            return Err(SemanticErrorKind::InvalidVariableIdentifier {
                                 name: Identifier::from("package"),
                             })
                         }
 
                         PathRoot::Super => {
-                            return Err(SemanticErrorKind::InvalidPathIdentifier {
+                            return Err(SemanticErrorKind::InvalidVariableIdentifier {
                                 name: Identifier::from("super"),
                             })
                         }
@@ -1736,7 +1752,7 @@ impl SemanticAnalyzer {
 
                 match self.lookup(&name) {
                     Some(_) => Ok(Type::UnitType(Unit)),
-                    _ => Err(SemanticErrorKind::UndefinedPath { name }),
+                    _ => Err(SemanticErrorKind::UndefinedVariable { name }),
                 }
             }
 

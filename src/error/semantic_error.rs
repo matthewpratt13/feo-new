@@ -25,7 +25,7 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
-    InvalidPathIdentifier {
+    InvalidVariableIdentifier {
         name: Identifier,
     },
 
@@ -105,10 +105,6 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
-    UndefinedPath {
-        name: Identifier,
-    },
-
     UndefinedScope,
 
     UndefinedStruct {
@@ -122,6 +118,13 @@ pub enum SemanticErrorKind {
     UndefinedVariable {
         name: Identifier,
     },
+
+
+    UnexpectedKeyword {
+        expected: String,
+        found: String,
+    },
+
 
     UnexpectedSymbol {
         name: Identifier,
@@ -156,8 +159,8 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::DuplicateVariable { name } => {
                 write!(f, "duplicate variable: `{name}`")
             }
-            SemanticErrorKind::InvalidPathIdentifier { name } => {
-                write!(f, "invalid path identifier: `{name}`")
+            SemanticErrorKind::InvalidVariableIdentifier { name } => {
+                write!(f, "invalid variable identifier: `{name}`")
             }
             SemanticErrorKind::InvalidStructName { name } => {
                 write!(f, "invalid struct name: `{name}`")
@@ -173,7 +176,8 @@ impl fmt::Display for SemanticErrorKind {
             }
             SemanticErrorKind::MissingValue { expected } => {
                 write!(f, "value not found. Expected {expected}, found none")
-            }   
+            }  
+             
             SemanticErrorKind::TupleIndexOutOfBounds { len, i } => {
                 write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
             }
@@ -220,8 +224,7 @@ impl fmt::Display for SemanticErrorKind {
  
             SemanticErrorKind::UndefinedModule { name } => write!(f, "undefined module: `{name}`"),
 
-            SemanticErrorKind::UndefinedPath { name } => write!(f, "undefined path: `{name}`"),
-
+       
             SemanticErrorKind::UndefinedScope => write!(f, "attempted to access undefined scope"),
 
             SemanticErrorKind::UndefinedStruct { name } => write!(f, "undefined struct: `{name}`"),     
@@ -231,6 +234,8 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UndefinedVariable { name } => {
                 write!(f, "undefined variable: `{name}`",)
             }
+
+            SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found `{found}`"),
 
             SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found `{found}`"),
 
