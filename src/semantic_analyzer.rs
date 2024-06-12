@@ -748,7 +748,7 @@ impl SemanticAnalyzer {
 
             Expression::Reference(r) => {
                 let reference_op = r.reference_op.clone();
-                let inner_type = self.analyze_expr(&*r.expression)?;
+                let inner_type = self.analyze_expr(&r.expression)?;
 
                 Ok(Type::Reference {
                     reference_op,
@@ -1229,7 +1229,7 @@ impl SemanticAnalyzer {
             }
 
             Expression::Return(r) => match &r.expression_opt {
-                Some(e) => self.analyze_expr(&*e.clone()),
+                Some(e) => self.analyze_expr(&e.clone()),
                 None => Ok(Type::UnitType(Unit)),
             },
 
@@ -1247,7 +1247,7 @@ impl SemanticAnalyzer {
                     None => Ok(Type::UnitType(Unit)),
                 }?;
 
-                let expression_type = self.analyze_expr(&*c.body_expression)?;
+                let expression_type = self.analyze_expr(&c.body_expression)?;
 
                 if return_type != expression_type {
                     return Err(SemanticErrorKind::TypeMismatchReturnType {
@@ -1422,13 +1422,13 @@ impl SemanticAnalyzer {
                         let key_type =
                             self.analyze_patt(&Pattern::IdentifierPatt(p.key.clone()))?;
 
-                        let value_type = self.analyze_expr(&*p.value.clone())?;
+                        let value_type = self.analyze_expr(&p.value.clone())?;
 
                         for pair in v.iter().skip(1) {
                             let pair_key_type =
                                 self.analyze_patt(&Pattern::IdentifierPatt(pair.key.clone()))?;
 
-                            let pair_value_type = self.analyze_expr(&*pair.value.clone())?;
+                            let pair_value_type = self.analyze_expr(&pair.value.clone())?;
 
                             if (&pair_key_type, &pair_value_type) != (&key_type, &value_type) {
                                 return Err(SemanticErrorKind::UnexpectedType {
@@ -1766,7 +1766,7 @@ impl SemanticAnalyzer {
 
             Pattern::ReferencePatt(r) => Ok(Type::Reference {
                 reference_op: r.reference_op,
-                inner_type: Box::new(self.analyze_patt(&*r.pattern)?),
+                inner_type: Box::new(self.analyze_patt(&r.pattern)?),
             }),
 
             Pattern::GroupedPatt(g) => self.analyze_patt(&g.inner_pattern),
@@ -1774,7 +1774,7 @@ impl SemanticAnalyzer {
             Pattern::RangePatt(r) => match (&r.from_pattern_opt, &r.to_pattern_opt) {
                 (None, None) => Ok(Type::UnitType(Unit)),
                 (None, Some(to)) => {
-                    let to_type = self.analyze_patt(&*to.clone())?;
+                    let to_type = self.analyze_patt(&to.clone())?;
 
                     match to_type {
                         Type::I32(_)
@@ -1794,7 +1794,7 @@ impl SemanticAnalyzer {
                     }
                 }
                 (Some(from), None) => {
-                    let from_type = self.analyze_patt(&*from.clone())?;
+                    let from_type = self.analyze_patt(&from.clone())?;
 
                     match from_type {
                         Type::I32(_)
@@ -1814,7 +1814,7 @@ impl SemanticAnalyzer {
                     }
                 }
                 (Some(from), Some(to)) => {
-                    let from_type = self.analyze_patt(&*from.clone())?;
+                    let from_type = self.analyze_patt(&from.clone())?;
 
                     match from_type {
                         Type::I32(_)
@@ -1835,7 +1835,7 @@ impl SemanticAnalyzer {
                         }
                     }
 
-                    let to_type = self.analyze_patt(&*to.clone())?;
+                    let to_type = self.analyze_patt(&to.clone())?;
 
                     match to_type {
                         Type::I32(_)
@@ -2104,11 +2104,11 @@ impl SemanticAnalyzer {
                 underscore: Identifier::from("_"),
             })),
 
-            Pattern::SomePatt(s) => self.analyze_patt(&*s.pattern.clone().inner_pattern),
+            Pattern::SomePatt(s) => self.analyze_patt(&s.pattern.clone().inner_pattern),
 
             Pattern::NonePatt(_) => Ok(Type::UnitType(Unit)),
 
-            Pattern::ResultPatt(r) => self.analyze_patt(&*r.pattern.clone().inner_pattern),
+            Pattern::ResultPatt(r) => self.analyze_patt(&r.pattern.clone().inner_pattern),
         }
     }
 
