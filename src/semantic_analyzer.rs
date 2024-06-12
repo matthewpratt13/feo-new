@@ -7,10 +7,11 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, Expression, Float, FunctionItem, Hash, Identifier,
-        ImportTree, InferredType, InherentImplItem, Int, Item, Keyword, Literal, PathExpr,
-        PathRoot, PathType, Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt,
-        UnaryOp, UnderscoreExpr, Unit, ValueExpr,
+        BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
+        FunctionOrMethodParam, FunctionParam, FunctionPtr, Hash, Identifier, ImportTree,
+        InferredType, InherentImplItem, Int, Item, Keyword, Literal, PathExpr, PathRoot, PathType,
+        Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, UnderscoreExpr,
+        Unit, ValueExpr,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -1231,6 +1232,29 @@ impl SemanticAnalyzer {
             })),
 
             Expression::Closure(c) => {
+                let params_opt = match &c.closure_params {
+                    ClosureParams::Some(v) => {
+                        let mut function_params: Vec<FunctionOrMethodParam> = Vec::new();
+
+                        for cp in v {
+                            let function_param = FunctionParam {
+                                param_name: cp.param_name.clone(),
+                                param_type: cp.type_ann_opt.clone().unwrap_or(Box::new(
+                                    Type::InferredType(InferredType {
+                                        underscore: Identifier::from("_"),
+                                    }),
+                                )),
+                            };
+
+                            function_params
+                                .push(FunctionOrMethodParam::FunctionParam(function_param))
+                        }
+
+                        Some(function_params)
+                    }
+                    ClosureParams::None => None,
+                };
+
                 let return_type = match &c.return_type_opt {
                     Some(t) => Ok(*t.clone()),
                     None => Ok(Type::UnitType(Unit)),
@@ -1245,7 +1269,13 @@ impl SemanticAnalyzer {
                     });
                 }
 
-                Ok(return_type)
+                let function_ptr = FunctionPtr {
+                    function_name: Identifier::from(""),
+                    params_opt,
+                    return_type_opt: Some(Box::new(return_type)),
+                };
+
+                Ok(Type::FunctionPtr(function_ptr))
             }
 
             Expression::Array(a) => match &a.elements_opt {

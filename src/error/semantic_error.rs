@@ -173,11 +173,10 @@ impl fmt::Display for SemanticErrorKind {
                     f,
                     "tuple struct element not found. Expected {expected}, found none"
                 )
-            }
+            } 
             SemanticErrorKind::MissingValue { expected } => {
                 write!(f, "value not found. Expected {expected}, found none")
-            }  
-             
+            }
             SemanticErrorKind::TupleIndexOutOfBounds { len, i } => {
                 write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
             }
