@@ -190,6 +190,7 @@ impl SemanticAnalyzer {
 
                     if let Some(curr_scope) = self.scope_stack.pop() {
                         module_scope = curr_scope;
+                        self.logger.info("initialized new module scope");
                     }
 
                     self.insert(
@@ -199,8 +200,6 @@ impl SemanticAnalyzer {
                             symbols: module_scope,
                         },
                     )?;
-
-                    self.logger.info("entered new module scope");
                 }
 
                 Item::TraitDef(t) => {
