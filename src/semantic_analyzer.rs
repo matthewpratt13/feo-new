@@ -88,15 +88,7 @@ impl SemanticAnalyzer {
                     None => Type::UnitType(Unit),
                 };
 
-                self.insert(ls.assignee.name.clone(), Symbol::Variable(expr_type))
-                    .map_err(|e| match e {
-                        SemanticErrorKind::DuplicateVariable { .. } => {
-                            SemanticErrorKind::DuplicateVariable {
-                                name: ls.assignee.name.clone(),
-                            }
-                        }
-                        _ => e,
-                    })?;
+                self.insert(ls.assignee.name.clone(), Symbol::Variable(expr_type))?;
             }
 
             Statement::Item(i) => match i {
@@ -203,15 +195,7 @@ impl SemanticAnalyzer {
                 }
 
                 Item::TraitDef(t) => {
-                    self.insert(t.trait_name.clone(), Symbol::Trait(t.clone()))
-                        .map_err(|e| match e {
-                            SemanticErrorKind::DuplicateVariable { .. } => {
-                                SemanticErrorKind::DuplicateVariable {
-                                    name: t.trait_name.clone(),
-                                }
-                            }
-                            _ => e,
-                        })?;
+                    self.insert(t.trait_name.clone(), Symbol::Trait(t.clone()))?;
 
                     self.logger.info("trait definition initialized");
 
@@ -238,44 +222,17 @@ impl SemanticAnalyzer {
                 }
 
                 Item::EnumDef(ed) => {
-                    self.insert(ed.enum_name.clone(), Symbol::Enum(ed.clone()))
-                        .map_err(|err| match err {
-                            SemanticErrorKind::DuplicateVariable { .. } => {
-                                SemanticErrorKind::DuplicateVariable {
-                                    name: ed.enum_name.clone(),
-                                }
-                            }
-                            _ => err,
-                        })?;
-
+                    self.insert(ed.enum_name.clone(), Symbol::Enum(ed.clone()))?;
                     self.logger.info("enum definition initialized");
                 }
 
                 Item::StructDef(s) => {
-                    self.insert(s.struct_name.clone(), Symbol::Struct(s.clone()))
-                        .map_err(|e| match e {
-                            SemanticErrorKind::DuplicateVariable { .. } => {
-                                SemanticErrorKind::DuplicateVariable {
-                                    name: s.struct_name.clone(),
-                                }
-                            }
-                            _ => e,
-                        })?;
-
+                    self.insert(s.struct_name.clone(), Symbol::Struct(s.clone()))?;
                     self.logger.info("struct definition initialized");
                 }
 
                 Item::TupleStructDef(ts) => {
-                    self.insert(ts.struct_name.clone(), Symbol::TupleStruct(ts.clone()))
-                        .map_err(|e| match e {
-                            SemanticErrorKind::DuplicateVariable { .. } => {
-                                SemanticErrorKind::DuplicateVariable {
-                                    name: ts.struct_name.clone(),
-                                }
-                            }
-                            _ => e,
-                        })?;
-
+                    self.insert(ts.struct_name.clone(), Symbol::TupleStruct(ts.clone()))?;
                     self.logger.info("struct definition initialized");
                 }
 
@@ -343,15 +300,7 @@ impl SemanticAnalyzer {
                             associated_type_opt: None,
                             function: f.clone(),
                         },
-                    )
-                    .map_err(|e| match e {
-                        SemanticErrorKind::DuplicateVariable { .. } => {
-                            SemanticErrorKind::DuplicateVariable {
-                                name: f.function_name.clone(),
-                            }
-                        }
-                        _ => e,
-                    })?;
+                    )?;
 
                     self.analyze_function_def(f)?;
 

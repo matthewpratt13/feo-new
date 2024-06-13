@@ -17,14 +17,6 @@ pub enum SemanticErrorKind {
         into: String,
     },
 
-    DuplicateImport {
-        name: Identifier,
-    },
-
-    DuplicateVariable {
-        name: Identifier,
-    },
-
     InvalidVariableIdentifier {
         name: Identifier,
     },
@@ -153,12 +145,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ConversionError { from, into } => {
                 write!(f, "conversion error. Unable to convert {from} into {into}")
             }
-            SemanticErrorKind::DuplicateImport { name } => {
-                write!(f, "duplicate import: `{name}`")
-            }
-            SemanticErrorKind::DuplicateVariable { name } => {
-                write!(f, "duplicate variable: `{name}`")
-            }
+       
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }
