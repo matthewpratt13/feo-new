@@ -138,20 +138,11 @@ impl SemanticAnalyzer {
                     let constant_type = *cd.constant_type.clone();
 
                     if value_type != constant_type {
-                        self.log_error(
-                            SemanticErrorKind::TypeMismatchVariable {
-                                name: cd.constant_name.clone(),
-                                expected: constant_type.to_string(),
-                                found: value_type.to_string(),
-                            },
-                            &cd.value_opt
-                                .clone()
-                                .unwrap_or(ValueExpr::UnderscoreExpr(UnderscoreExpr {
-                                    underscore: Identifier::from("_"),
-                                    span: cd.span.clone(),
-                                }))
-                                .span(),
-                        );
+                        return Err(SemanticErrorKind::TypeMismatchVariable {
+                            name: cd.constant_name.clone(),
+                            expected: constant_type.to_string(),
+                            found: value_type.to_string(),
+                        });
                     }
 
                     self.insert(
