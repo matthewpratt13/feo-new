@@ -348,6 +348,7 @@ impl SemanticAnalyzer {
     fn analyze_import(&mut self, tree: &ImportTree) -> Result<(), SemanticErrorKind> {
         let mut path: Vec<PathType> = Vec::new();
 
+        // TODO: replace `unwrap()` with error handling
         let mut current_scope = self.scope_stack.first().unwrap();
 
         for ps in tree.path_segments.iter() {
