@@ -10,8 +10,7 @@ use crate::{
         BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
         FunctionOrMethodParam, FunctionParam, FunctionPtr, Hash, Identifier, ImportTree,
         InferredType, InherentImplItem, Int, Item, Keyword, Literal, PathExpr, PathRoot, PathType,
-        Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, UnderscoreExpr,
-        Unit, ValueExpr,
+        Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, Unit,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -179,7 +178,7 @@ impl SemanticAnalyzer {
                 }
 
                 Item::ModuleItem(m) => {
-                    let mut module_scope = HashMap::new();
+                    let mut module_scope: HashMap<Identifier, Symbol> = HashMap::new();
 
                     self.enter_scope();
 
