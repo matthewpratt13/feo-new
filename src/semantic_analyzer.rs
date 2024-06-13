@@ -105,8 +105,8 @@ impl SemanticAnalyzer {
 
                 Item::AliasDecl(ad) => match &ad.original_type_opt {
                     Some(t) => {
+                        // alias points to an existing type (`t`)
                         self.insert(ad.alias_name.clone(), Symbol::Variable(t.clone()))?;
-
                         self.logger.info("alias declaration initialized");
                     }
                     None => {
@@ -115,6 +115,7 @@ impl SemanticAnalyzer {
                             type_name: ad.alias_name.clone(),
                         };
 
+                        // alias is its own user-defined opaque type
                         self.insert(
                             ad.alias_name.clone(),
                             Symbol::Variable(Type::UserDefined(ty)),
