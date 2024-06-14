@@ -39,28 +39,37 @@ impl SemanticAnalyzer {
     }
 
     fn enter_scope(&mut self) {
+        self.logger.debug("entering new scope...");
         self.scope_stack.push(HashMap::new());
     }
 
     fn exit_scope(&mut self) {
+        self.logger.debug("exiting current scope...");
         self.scope_stack.pop();
     }
 
     fn insert(&mut self, name: Identifier, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
-            curr_scope.insert(name, symbol);
+            curr_scope.insert(name, symbol.clone());
+            self.logger.debug(&format!(
+                "inserting symbol `{:?}` into current scope...",
+                symbol
+            ));
             Ok(())
         } else {
             Err(SemanticErrorKind::UndefinedScope)
         }
     }
 
-    fn lookup(&self, name: &Identifier) -> Option<&Symbol> {
+    fn lookup(&mut self, name: &Identifier) -> Option<&Symbol> {
         for scope in self.scope_stack.iter().rev() {
             if let Some(symbol) = scope.get(name) {
+                self.logger
+                    .debug(&format!("found symbol `{:?}` in scope", &symbol));
                 return Some(symbol);
             }
         }
+        self.logger.warn(&format!("`{}` not found in scope", name));
         None
     }
 
@@ -81,7 +90,8 @@ impl SemanticAnalyzer {
     }
 
     fn analyze_stmt(&mut self, statement: &Statement) -> Result<(), SemanticErrorKind> {
-        self.logger.info("analysing statement...");
+        self.logger
+            .debug(&format!("analysing statement: {:?}...", statement));
 
         match statement {
             Statement::Let(ls) => {
@@ -91,6 +101,9 @@ impl SemanticAnalyzer {
                 };
 
                 self.insert(ls.assignee.name.clone(), Symbol::Variable(expr_type))?;
+
+                self.logger
+                    .info(&format!("analysed let statement: {:?}", ls));
             }
 
             Statement::Item(i) => match i {
@@ -100,7 +113,9 @@ impl SemanticAnalyzer {
                     Some(t) => {
                         // alias points to an existing type (`t`)
                         self.insert(ad.alias_name.clone(), Symbol::Variable(t.clone()))?;
-                        self.logger.info("alias declaration initialized");
+
+                        self.logger
+                            .info(&format!("initialized alias declaration: {:?}", ad));
                     }
                     None => {
                         let ty = PathType {
@@ -114,7 +129,8 @@ impl SemanticAnalyzer {
                             Symbol::Variable(Type::UserDefined(ty)),
                         )?;
 
-                        self.logger.info("alias declaration initialized");
+                        self.logger
+                            .info(&format!("initialized alias declaration: {:?}", ad));
                     }
                 },
 
@@ -143,7 +159,8 @@ impl SemanticAnalyzer {
                         Symbol::Variable(*cd.constant_type.clone()),
                     )?;
 
-                    self.logger.info("constant declared");
+                    self.logger
+                        .info(&format!("initialized constant declaration: {:?}", cd));
                 }
 
                 Item::StaticVarDecl(s) => {
@@ -168,7 +185,8 @@ impl SemanticAnalyzer {
 
                     self.insert(s.var_name.clone(), Symbol::Variable(s.var_type.clone()))?;
 
-                    self.logger.info("static variable declared");
+                    self.logger
+                        .info(&format!("initialized static variable declaration: {:?}", s));
                 }
 
                 Item::ModuleItem(m) => {
@@ -197,13 +215,15 @@ impl SemanticAnalyzer {
                     self.module_registry
                         .insert(m.module_name.clone(), module_scope);
 
-                    self.logger.info("initialized new module scope");
+                    self.logger
+                        .info(&format!("initialized new module scope: {:?}", m));
                 }
 
                 Item::TraitDef(t) => {
                     self.insert(t.trait_name.clone(), Symbol::Trait(t.clone()))?;
 
-                    self.logger.info("trait definition initialized");
+                    self.logger
+                        .info(&format!("initialized trait definition: {:?}", t));
 
                     if let Some(v) = &t.trait_items_opt {
                         for item in v.iter() {
@@ -219,7 +239,7 @@ impl SemanticAnalyzer {
                                     self.analyze_function_def(fi)?;
 
                                     self.logger.info(
-                                        "function definition acknowledged, but not initialized",
+                                        &format!("function definition {:?} acknowledged, but not initialized", fi),
                                     );
                                 }
                             }
@@ -227,19 +247,22 @@ impl SemanticAnalyzer {
                     }
                 }
 
-                Item::EnumDef(ed) => {
-                    self.insert(ed.enum_name.clone(), Symbol::Enum(ed.clone()))?;
-                    self.logger.info("enum definition initialized");
+                Item::EnumDef(e) => {
+                    self.insert(e.enum_name.clone(), Symbol::Enum(e.clone()))?;
+                    self.logger
+                        .info(&format!("initialized enum definition: {:?}", e));
                 }
 
                 Item::StructDef(s) => {
                     self.insert(s.struct_name.clone(), Symbol::Struct(s.clone()))?;
-                    self.logger.info("struct definition initialized");
+                    self.logger
+                        .info(&format!("initialized struct definition: {:?}", s));
                 }
 
                 Item::TupleStructDef(ts) => {
                     self.insert(ts.struct_name.clone(), Symbol::TupleStruct(ts.clone()))?;
-                    self.logger.info("struct definition initialized");
+                    self.logger
+                        .info(&format!("initialized struct definition: {:?}", ts));
                 }
 
                 Item::InherentImplDef(i) => {
@@ -261,7 +284,10 @@ impl SemanticAnalyzer {
 
                                     self.analyze_function_def(&fi)?;
 
-                                    self.logger.info("associated function initialized");
+                                    self.logger.info(&format!(
+                                        "initialized associated function definition: {:?}",
+                                        fi
+                                    ));
                                 }
                             }
                         }
@@ -292,7 +318,10 @@ impl SemanticAnalyzer {
 
                                     self.analyze_function_def(&fi)?;
 
-                                    self.logger.info("associated function initialized");
+                                    self.logger.info(&format!(
+                                        "initialized associated function definition: {:?}",
+                                        fi
+                                    ));
                                 }
                             }
                         }
@@ -310,17 +339,16 @@ impl SemanticAnalyzer {
 
                     self.analyze_function_def(f)?;
 
-                    self.logger.info("function definition initialized");
+                    self.logger
+                        .info(&format!("initialized function definition: {:?}", f));
                 }
             },
 
             Statement::Expression(expr) => {
-                self.logger.info("analysing expression...");
                 self.analyze_expr(expr)?;
+                self.logger.info(&format!("analysed expression: {}", expr));
             }
         }
-
-        self.logger.info("finished analysing");
 
         Ok(())
     }
@@ -339,9 +367,7 @@ impl SemanticAnalyzer {
         if let Some(b) = &f.block_opt {
             if let Some(v) = &b.statements_opt {
                 for stmt in v {
-                    if let Err(e) = self.analyze_stmt(stmt) {
-                        self.log_error(e, &stmt.span())
-                    }
+                    self.analyze_stmt(stmt)?;
                 }
             }
         }
@@ -373,12 +399,16 @@ impl SemanticAnalyzer {
             return Err(SemanticErrorKind::UndefinedModule { name });
         }
 
-        self.logger.info("import declared");
+        self.logger
+            .info(&format!("import path declared: {:?}", path));
 
         Ok(())
     }
 
     fn analyze_expr(&mut self, expression: &Expression) -> Result<Type, SemanticErrorKind> {
+        self.logger
+            .debug(&format!("analysing expression: {}...", &expression));
+
         match expression {
             Expression::Path(p) => {
                 let name = match &p.tree_opt {
