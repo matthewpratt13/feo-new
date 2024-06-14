@@ -5,6 +5,8 @@ mod symbol_table;
 use core::fmt;
 use std::collections::HashMap;
 
+use symbol_table::{Scope, ScopeKind};
+
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
@@ -22,7 +24,7 @@ use crate::{
 use self::symbol_table::{Symbol, SymbolTable};
 
 struct SemanticAnalyzer {
-    scope_stack: Vec<SymbolTable>,
+    scope_stack: Vec<Scope>,
     module_registry: HashMap<Identifier, SymbolTable>,
     errors: Vec<CompilerError<SemanticErrorKind>>,
     logger: Logger,
@@ -30,12 +32,15 @@ struct SemanticAnalyzer {
 
 impl SemanticAnalyzer {
     fn new(log_level: LogLevel, external_code: Option<SymbolTable>) -> Self {
-        let mut global_scope: HashMap<Identifier, Symbol> = HashMap::new();
+        let mut global_scope = Scope {
+            scope_kind: ScopeKind::Global,
+            symbols: HashMap::new(),
+        };
 
         // add external code (e.g., library functions) to the global scope if there is any
         if let Some(ext) = external_code {
             for (id, sym) in ext {
-                global_scope.insert(id, sym);
+                global_scope.symbols.insert(id, sym);
             }
         }
 
@@ -47,23 +52,32 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn enter_scope(&mut self) {
-        self.logger.debug("entering new scope...");
-        self.scope_stack.push(HashMap::new());
+    fn enter_scope(&mut self, scope_kind: ScopeKind) {
+        self.logger
+            .debug(&format!("entering new scope: {:?}...", &scope_kind));
+
+        self.scope_stack.push(Scope {
+            scope_kind,
+            symbols: HashMap::new(),
+        });
     }
 
     fn exit_scope(&mut self) {
-        self.logger.debug("exiting current scope...");
-        self.scope_stack.pop();
+        if let Some(exited_scope) = self.scope_stack.pop() {
+            self.logger
+                .debug(&format!("exiting scope: {:?}...", exited_scope.scope_kind));
+        }
     }
 
     fn insert(&mut self, name: Identifier, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
-            curr_scope.insert(name, symbol.clone());
+            curr_scope.symbols.insert(name.clone(), symbol.clone());
+
             self.logger.debug(&format!(
-                "inserting symbol `{:?}` into current scope...",
-                symbol
+                "inserted symbol `{}` into scope: {:?}",
+                name, curr_scope.scope_kind
             ));
+
             Ok(())
         } else {
             Err(SemanticErrorKind::UndefinedScope)
@@ -72,13 +86,17 @@ impl SemanticAnalyzer {
 
     fn lookup(&mut self, name: &Identifier) -> Option<&Symbol> {
         for scope in self.scope_stack.iter().rev() {
-            if let Some(symbol) = scope.get(name) {
-                self.logger
-                    .debug(&format!("found symbol `{:?}` in scope", &symbol));
+            if let Some(symbol) = scope.symbols.get(name) {
+                self.logger.debug(&format!(
+                    "found symbol `{}` in scope: {:?}",
+                    name, scope.scope_kind
+                ));
+
                 return Some(symbol);
             }
         }
-        self.logger.warn(&format!("`{}` not found in scope", name));
+        self.logger
+            .warn(&format!("symbol `{}` not found in any scope", name));
         None
     }
 
@@ -199,9 +217,12 @@ impl SemanticAnalyzer {
                 }
 
                 Item::ModuleItem(m) => {
-                    let mut module_scope: HashMap<Identifier, Symbol> = HashMap::new();
+                    let mut module_scope = Scope {
+                        scope_kind: ScopeKind::Module,
+                        symbols: HashMap::new(),
+                    };
 
-                    self.enter_scope();
+                    self.enter_scope(ScopeKind::Module);
 
                     if let Some(v) = &m.items_opt {
                         for item in v.iter() {
@@ -217,12 +238,12 @@ impl SemanticAnalyzer {
                         m.module_name.clone(),
                         Symbol::Module {
                             module: m.clone(),
-                            symbols: module_scope.clone(),
+                            symbols: module_scope.symbols.clone(),
                         },
                     )?;
 
                     self.module_registry
-                        .insert(m.module_name.clone(), module_scope);
+                        .insert(m.module_name.clone(), module_scope.symbols);
 
                     self.logger
                         .info(&format!("initialized new module scope: {:?}", m));
@@ -363,7 +384,7 @@ impl SemanticAnalyzer {
     }
 
     fn analyze_function_def(&mut self, f: &FunctionItem) -> Result<(), SemanticErrorKind> {
-        self.enter_scope();
+        self.enter_scope(ScopeKind::Function);
 
         if let Some(p) = &f.params_opt {
             let param_types: Vec<Type> = p.iter().map(|p| p.param_type()).collect();
@@ -1411,7 +1432,7 @@ impl SemanticAnalyzer {
 
             Expression::Block(b) => match &b.statements_opt {
                 Some(vec) => {
-                    self.enter_scope();
+                    self.enter_scope(ScopeKind::LocalBlock);
 
                     let ty = match vec.last() {
                         Some(s) => match s {
@@ -1483,7 +1504,7 @@ impl SemanticAnalyzer {
             }
 
             Expression::Match(m) => {
-                self.enter_scope();
+                self.enter_scope(ScopeKind::MatchExpr);
 
                 let scrutinee_type =
                     self.analyze_expr(&wrap_into_expression(m.scrutinee.clone())?)?;
@@ -1530,7 +1551,7 @@ impl SemanticAnalyzer {
             }
 
             Expression::ForIn(fi) => {
-                self.enter_scope();
+                self.enter_scope(ScopeKind::ForInLoop);
 
                 self.analyze_patt(&fi.pattern.clone())?;
                 self.analyze_expr(&fi.iterator.clone())?;

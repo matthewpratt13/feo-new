@@ -8,6 +8,22 @@ use crate::ast::{
 
 pub(crate) type SymbolTable = HashMap<Identifier, Symbol>;
 
+#[derive(Debug, Clone)]
+pub(crate) enum ScopeKind {
+    Global,
+    LocalBlock,
+    MatchExpr,
+    ForInLoop,
+    Function,
+    Module,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Scope {
+    pub(crate) scope_kind: ScopeKind,
+    pub(crate) symbols: SymbolTable,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Symbol {
     Variable(Type),
