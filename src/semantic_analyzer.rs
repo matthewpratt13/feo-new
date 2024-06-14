@@ -367,7 +367,7 @@ impl SemanticAnalyzer {
             if let Some(s) = m.get(&name) {
                 self.insert(name.clone(), s.clone())?;
             } else {
-                return Err(SemanticErrorKind::UndefinedSymbol { name: name.clone() });
+                return Err(SemanticErrorKind::UndefinedSymbol { name });
             }
         } else {
             return Err(SemanticErrorKind::UndefinedModule { name });
