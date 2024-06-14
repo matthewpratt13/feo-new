@@ -18,12 +18,6 @@ pub(crate) enum ScopeKind {
     Module,
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct Scope {
-    pub(crate) scope_kind: ScopeKind,
-    pub(crate) symbols: SymbolTable,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Symbol {
     Variable(Type),
@@ -39,6 +33,12 @@ pub(crate) enum Symbol {
         module: ModuleItem,
         symbols: SymbolTable,
     },
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Scope {
+    pub(crate) scope_kind: ScopeKind,
+    pub(crate) symbols: SymbolTable,
 }
 
 impl Symbol {
