@@ -29,9 +29,18 @@ struct SemanticAnalyzer {
 }
 
 impl SemanticAnalyzer {
-    fn new(log_level: LogLevel) -> Self {
+    fn new(log_level: LogLevel, external_code: Option<SymbolTable>) -> Self {
+        let mut global_scope: HashMap<Identifier, Symbol> = HashMap::new();
+
+        // add external code (e.g., library functions) to the global scope if there is any
+        if let Some(ext) = external_code {
+            for (id, sym) in ext {
+                global_scope.insert(id, sym);
+            }
+        }
+
         SemanticAnalyzer {
-            scope_stack: vec![HashMap::new()],
+            scope_stack: vec![global_scope],
             module_registry: HashMap::new(),
             errors: Vec::new(),
             logger: Logger::new(log_level),
