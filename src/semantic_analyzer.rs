@@ -23,6 +23,7 @@ use self::symbol_table::{Symbol, SymbolTable};
 
 struct SemanticAnalyzer {
     scope_stack: Vec<SymbolTable>,
+    module_registry: HashMap<Identifier, SymbolTable>,
     errors: Vec<CompilerError<SemanticErrorKind>>,
     logger: Logger,
 }
@@ -31,6 +32,7 @@ impl SemanticAnalyzer {
     fn new(log_level: LogLevel) -> Self {
         SemanticAnalyzer {
             scope_stack: vec![HashMap::new()],
+            module_registry: HashMap::new(),
             errors: Vec::new(),
             logger: Logger::new(log_level),
         }
@@ -45,8 +47,8 @@ impl SemanticAnalyzer {
     }
 
     fn insert(&mut self, name: Identifier, symbol: Symbol) -> Result<(), SemanticErrorKind> {
-        if let Some(current_scope) = self.scope_stack.last_mut() {
-            current_scope.insert(name, symbol);
+        if let Some(curr_scope) = self.scope_stack.last_mut() {
+            curr_scope.insert(name, symbol);
             Ok(())
         } else {
             Err(SemanticErrorKind::UndefinedScope)
@@ -182,16 +184,20 @@ impl SemanticAnalyzer {
 
                     if let Some(curr_scope) = self.scope_stack.pop() {
                         module_scope = curr_scope;
-                        self.logger.info("initialized new module scope");
                     }
 
                     self.insert(
                         m.module_name.clone(),
                         Symbol::Module {
                             module: m.clone(),
-                            symbols: module_scope,
+                            symbols: module_scope.clone(),
                         },
                     )?;
+
+                    self.module_registry
+                        .insert(m.module_name.clone(), module_scope);
+
+                    self.logger.info("initialized new module scope");
                 }
 
                 Item::TraitDef(t) => {
@@ -348,27 +354,8 @@ impl SemanticAnalyzer {
     fn analyze_import(&mut self, tree: &ImportTree) -> Result<(), SemanticErrorKind> {
         let mut path: Vec<PathType> = Vec::new();
 
-        // TODO: replace `unwrap()` with error handling
-        let mut current_scope = self.scope_stack.first().unwrap();
-
         for ps in tree.path_segments.iter() {
             path.push(ps.root.clone());
-
-            let name = &ps.root.type_name;
-
-            match current_scope.get(name) {
-                Some(Symbol::Module { symbols, .. }) => current_scope = symbols,
-
-                Some(s) => {
-                    return Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: name.clone(),
-                        expected: "module item".to_string(),
-                        found: s.to_string(),
-                    })
-                }
-
-                None => return Err(SemanticErrorKind::UndefinedModule { name: name.clone() }),
-            }
         }
 
         let name = match path.last() {
@@ -376,9 +363,11 @@ impl SemanticAnalyzer {
             None => Identifier::from(""),
         };
 
-        if let Some(Symbol::Module { symbols, .. }) = current_scope.get(&name).cloned() {
-            for (name, symbol) in symbols.iter() {
-                self.insert(name.clone(), symbol.clone())?;
+        if let Some(m) = self.module_registry.get(&name) {
+            if let Some(s) = m.get(&name) {
+                self.insert(name.clone(), s.clone())?;
+            } else {
+                return Err(SemanticErrorKind::UndefinedSymbol { name: name.clone() });
             }
         } else {
             return Err(SemanticErrorKind::UndefinedModule { name });

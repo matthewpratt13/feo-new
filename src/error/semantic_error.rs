@@ -103,6 +103,10 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
+    UndefinedSymbol {
+        name: Identifier,
+    },
+
    UndefinedType {
         name: Identifier,
     },
@@ -116,7 +120,6 @@ pub enum SemanticErrorKind {
         expected: String,
         found: String,
     },
-
 
     UnexpectedSymbol {
         name: Identifier,
@@ -210,10 +213,11 @@ impl fmt::Display for SemanticErrorKind {
  
             SemanticErrorKind::UndefinedModule { name } => write!(f, "undefined module: `{name}`"),
 
-       
             SemanticErrorKind::UndefinedScope => write!(f, "attempted to access undefined scope"),
 
-            SemanticErrorKind::UndefinedStruct { name } => write!(f, "undefined struct: `{name}`"),     
+            SemanticErrorKind::UndefinedStruct { name } => write!(f, "undefined struct: `{name}`"),  
+
+            SemanticErrorKind::UndefinedSymbol { name } => write!(f, "undefined symbol: `{name}`"),     
 
             SemanticErrorKind::UndefinedType { name } => write!(f, "undefined type: `{name}`"),
             
