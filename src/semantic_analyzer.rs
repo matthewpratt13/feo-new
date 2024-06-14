@@ -1524,15 +1524,17 @@ impl SemanticAnalyzer {
             Expression::ResultExpr(r) => {
                 let ty = self.analyze_expr(&r.expression.clone().inner_expression)?;
 
-                // TODO: explicit type annotation required? Or inferred type? Or unit type?
-
                 match r.kw_ok_or_err.clone() {
                     Keyword::Ok => Ok(Type::Result {
                         ok_type: Box::new(ty),
-                        err_type: todo!(),
+                        err_type: Box::new(Type::InferredType(InferredType {
+                            underscore: Identifier::from("_"),
+                        })),
                     }),
                     Keyword::Err => Ok(Type::Result {
-                        ok_type: todo!(),
+                        ok_type: Box::new(Type::InferredType(InferredType {
+                            underscore: Identifier::from("_"),
+                        })),
                         err_type: Box::new(ty),
                     }),
                     k => Err(SemanticErrorKind::UnexpectedKeyword {
