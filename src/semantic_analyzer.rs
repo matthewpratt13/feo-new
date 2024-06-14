@@ -1960,8 +1960,28 @@ impl SemanticAnalyzer {
                 inner_type: Box::new(Type::UnitType(Unit)),
             }),
 
-            // TODO: see `ResultExpr` type analysis above in `analyze_expr()`
-            Pattern::ResultPatt(r) => self.analyze_patt(&r.pattern.clone().inner_pattern),
+            Pattern::ResultPatt(r) => {
+                let ty = self.analyze_patt(&r.pattern.clone().inner_pattern)?;
+
+                match r.kw_ok_or_err.clone() {
+                    Keyword::Ok => Ok(Type::Result {
+                        ok_type: Box::new(ty),
+                        err_type: Box::new(Type::InferredType(InferredType {
+                            underscore: Identifier::from("_"),
+                        })),
+                    }),
+                    Keyword::Err => Ok(Type::Result {
+                        ok_type: Box::new(Type::InferredType(InferredType {
+                            underscore: Identifier::from("_"),
+                        })),
+                        err_type: Box::new(ty),
+                    }),
+                    k => Err(SemanticErrorKind::UnexpectedKeyword {
+                        expected: "`Ok` or `Err`".to_string(),
+                        found: k.to_string(),
+                    }),
+                }
+            }
         }
     }
 
