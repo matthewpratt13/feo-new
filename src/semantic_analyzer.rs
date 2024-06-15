@@ -405,10 +405,10 @@ impl SemanticAnalyzer {
     fn analyze_function_def(&mut self, f: &FunctionItem) -> Result<(), SemanticErrorKind> {
         self.enter_scope(ScopeKind::Function);
 
-        if let Some(p) = &f.params_opt {
-            let param_types: Vec<Type> = p.iter().map(|p| p.param_type()).collect();
+        if let Some(v) = &f.params_opt {
+            let param_types: Vec<Type> = v.iter().map(|p| p.param_type()).collect();
 
-            for (param, param_type) in p.iter().zip(param_types) {
+            for (param, param_type) in v.iter().zip(param_types) {
                 self.insert(param.param_name().clone(), Symbol::Variable(param_type))?;
             }
         }
@@ -1246,13 +1246,29 @@ impl SemanticAnalyzer {
                         let mut function_params: Vec<FunctionOrMethodParam> = Vec::new();
 
                         for cp in v {
+                            // annotated type (expected)
+                            let param_type =
+                                cp.type_ann_opt
+                                    .clone()
+                                    .unwrap_or(Box::new(Type::InferredType(InferredType {
+                                        underscore: Identifier::from("_"),
+                                    })));
+
+                            // actual parameter type
+                            let param_name_type =
+                                self.analyze_patt(&Pattern::IdentifierPatt(cp.param_name.clone()))?;
+
+                            if param_name_type != *param_type {
+                                return Err(SemanticErrorKind::TypeMismatchArgument {
+                                    name: cp.param_name.name.clone(),
+                                    expected: param_type.to_string(),
+                                    found: param_name_type.to_string(),
+                                });
+                            }
+
                             let function_param = FunctionParam {
                                 param_name: cp.param_name.clone(),
-                                param_type: cp.type_ann_opt.clone().unwrap_or(Box::new(
-                                    Type::InferredType(InferredType {
-                                        underscore: Identifier::from("_"),
-                                    }),
-                                )),
+                                param_type,
                             };
 
                             function_params
@@ -1264,6 +1280,16 @@ impl SemanticAnalyzer {
                     ClosureParams::None => None,
                 };
 
+                self.enter_scope(ScopeKind::Function);
+
+                if let Some(v) = &params_opt {
+                    let param_types: Vec<Type> = v.iter().map(|p| p.param_type()).collect();
+
+                    for (param, param_type) in v.iter().zip(param_types) {
+                        self.insert(param.param_name().clone(), Symbol::Variable(param_type))?;
+                    }
+                }
+
                 let return_type = match &c.return_type_opt {
                     Some(t) => Ok(*t.clone()),
                     None => Ok(Type::UnitType(Unit)),
@@ -1271,7 +1297,9 @@ impl SemanticAnalyzer {
 
                 let expression_type = self.analyze_expr(&c.body_expression)?;
 
-                if return_type != expression_type {
+                self.exit_scope();
+
+                if expression_type != return_type {
                     return Err(SemanticErrorKind::TypeMismatchReturnType {
                         expected: return_type.to_string(),
                         found: expression_type.to_string(),

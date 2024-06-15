@@ -183,7 +183,7 @@ impl fmt::Display for SemanticErrorKind {
             ),
             SemanticErrorKind::TypeMismatchArgument { name, expected, found } => write!(
                 f,
-                "`{name}` type does not match function definition parameter type. Expected `{expected}`, found `{found}`"
+                "`{name}` type does not match defined parameter type. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchBinaryExpr { expected, found } => write!(
                 f,
