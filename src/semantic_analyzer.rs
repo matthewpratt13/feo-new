@@ -1261,25 +1261,12 @@ impl SemanticAnalyzer {
                         let mut function_params: Vec<FunctionOrMethodParam> = Vec::new();
 
                         for cp in v {
-                            // annotated type (expected)
                             let param_type =
                                 cp.type_ann_opt
                                     .clone()
                                     .unwrap_or(Box::new(Type::InferredType(InferredType {
                                         name: Identifier::from("_"),
                                     })));
-
-                            // actual parameter type
-                            let param_name_type =
-                                self.analyze_patt(&Pattern::IdentifierPatt(cp.param_name.clone()))?;
-
-                            if param_name_type != *param_type {
-                                return Err(SemanticErrorKind::TypeMismatchArgument {
-                                    name: cp.param_name.name.clone(),
-                                    expected: param_type.to_string(),
-                                    found: param_name_type.to_string(),
-                                });
-                            }
 
                             let function_param = FunctionParam {
                                 param_name: cp.param_name.clone(),
