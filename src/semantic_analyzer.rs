@@ -125,7 +125,7 @@ impl SemanticAnalyzer {
                 let var_type = match &ls.type_ann_opt {
                     Some(t) => t.clone(),
                     None => Type::InferredType(InferredType {
-                        underscore: Identifier::from("_"),
+                        name: Identifier::from("_"),
                     }),
                 };
 
@@ -184,7 +184,7 @@ impl SemanticAnalyzer {
                         }
 
                         None => Type::InferredType(InferredType {
-                            underscore: Identifier::from("_"),
+                            name: Identifier::from("_"),
                         }),
                     };
 
@@ -215,7 +215,7 @@ impl SemanticAnalyzer {
                         }
 
                         None => Type::InferredType(InferredType {
-                            underscore: Identifier::from("_"),
+                            name: Identifier::from("_"),
                         }),
                     };
 
@@ -413,11 +413,26 @@ impl SemanticAnalyzer {
             }
         }
 
-        if let Some(b) = &f.block_opt {
+        let expression_type = if let Some(b) = &f.block_opt {
             if let Some(v) = &b.statements_opt {
                 for stmt in v {
                     self.analyze_stmt(stmt)?;
                 }
+            }
+
+            self.analyze_expr(&Expression::Block(b.clone()))?
+        } else {
+            Type::InferredType(InferredType {
+                name: Identifier::from("_"),
+            })
+        };
+
+        if let Some(t) = &f.return_type_opt {
+            if expression_type != *t.clone() {
+                return Err(SemanticErrorKind::TypeMismatchReturnType {
+                    expected: t.to_string(),
+                    found: expression_type.to_string(),
+                });
             }
         }
 
@@ -1237,7 +1252,7 @@ impl SemanticAnalyzer {
             Expression::Continue(_) => Ok(Type::UnitType(Unit)),
 
             Expression::Underscore(_) => Ok(Type::InferredType(InferredType {
-                underscore: Identifier::from("_"),
+                name: Identifier::from("_"),
             })),
 
             Expression::Closure(c) => {
@@ -1251,7 +1266,7 @@ impl SemanticAnalyzer {
                                 cp.type_ann_opt
                                     .clone()
                                     .unwrap_or(Box::new(Type::InferredType(InferredType {
-                                        underscore: Identifier::from("_"),
+                                        name: Identifier::from("_"),
                                     })));
 
                             // actual parameter type
@@ -1635,12 +1650,12 @@ impl SemanticAnalyzer {
                     Keyword::Ok => Ok(Type::Result {
                         ok_type: Box::new(ty),
                         err_type: Box::new(Type::InferredType(InferredType {
-                            underscore: Identifier::from("_"),
+                            name: Identifier::from("_"),
                         })),
                     }),
                     Keyword::Err => Ok(Type::Result {
                         ok_type: Box::new(Type::InferredType(InferredType {
-                            underscore: Identifier::from("_"),
+                            name: Identifier::from("_"),
                         })),
                         err_type: Box::new(ty),
                     }),
@@ -2048,11 +2063,11 @@ impl SemanticAnalyzer {
             }
 
             Pattern::WildcardPatt(_) => Ok(Type::InferredType(InferredType {
-                underscore: Identifier::from("_"),
+                name: Identifier::from("_"),
             })),
 
             Pattern::RestPatt(_) => Ok(Type::InferredType(InferredType {
-                underscore: Identifier::from(".."),
+                name: Identifier::from(".."),
             })),
 
             Pattern::SomePatt(s) => {
@@ -2074,12 +2089,12 @@ impl SemanticAnalyzer {
                     Keyword::Ok => Ok(Type::Result {
                         ok_type: Box::new(ty),
                         err_type: Box::new(Type::InferredType(InferredType {
-                            underscore: Identifier::from("_"),
+                            name: Identifier::from("_"),
                         })),
                     }),
                     Keyword::Err => Ok(Type::Result {
                         ok_type: Box::new(Type::InferredType(InferredType {
-                            underscore: Identifier::from("_"),
+                            name: Identifier::from("_"),
                         })),
                         err_type: Box::new(ty),
                     }),

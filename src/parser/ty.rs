@@ -237,7 +237,7 @@ impl Type {
             Some(Token::Identifier { name, .. }) => {
                 if name == "_" {
                     let ty = InferredType {
-                        underscore: Identifier::from(name),
+                        name: Identifier::from(name),
                     };
 
                     Ok(Type::InferredType(ty))
