@@ -5,7 +5,7 @@ mod symbol_table;
 use core::fmt;
 use std::collections::HashMap;
 
-use symbol_table::{Scope, ScopeKind};
+use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 
 use crate::{
     ast::{
@@ -20,8 +20,6 @@ use crate::{
     span::{Span, Spanned},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
-
-use self::symbol_table::{Symbol, SymbolTable};
 
 struct SemanticAnalyzer {
     scope_stack: Vec<Scope>,
