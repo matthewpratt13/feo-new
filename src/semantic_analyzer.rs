@@ -427,6 +427,8 @@ impl SemanticAnalyzer {
             })
         };
 
+        self.exit_scope();
+
         if let Some(t) = &f.return_type_opt {
             if expression_type != *t.clone() {
                 return Err(SemanticErrorKind::TypeMismatchReturnType {
@@ -435,8 +437,6 @@ impl SemanticAnalyzer {
                 });
             }
         }
-
-        self.exit_scope();
 
         Ok(())
     }
