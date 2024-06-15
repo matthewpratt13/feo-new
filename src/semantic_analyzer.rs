@@ -122,12 +122,27 @@ impl SemanticAnalyzer {
 
         match statement {
             Statement::Let(ls) => {
-                let expr_type = match &ls.value_opt {
+                let var_type = match &ls.type_ann_opt {
+                    Some(t) => t.clone(),
+                    None => Type::InferredType(InferredType {
+                        underscore: Identifier::from("_"),
+                    }),
+                };
+
+                let value_type = match &ls.value_opt {
                     Some(v) => self.analyze_expr(v)?,
                     None => Type::UnitType(Unit),
                 };
 
-                self.insert(ls.assignee.name.clone(), Symbol::Variable(expr_type))?;
+                if value_type != var_type {
+                    return Err(SemanticErrorKind::TypeMismatchVariable {
+                        name: ls.assignee.name.clone(),
+                        expected: var_type.to_string(),
+                        found: value_type.to_string(),
+                    });
+                }
+
+                self.insert(ls.assignee.name.clone(), Symbol::Variable(value_type))?;
 
                 self.logger
                     .info(&format!("analysed let statement: {:?}", ls));
@@ -168,7 +183,9 @@ impl SemanticAnalyzer {
                             self.analyze_expr(&value)?
                         }
 
-                        None => Type::UnitType(Unit),
+                        None => Type::InferredType(InferredType {
+                            underscore: Identifier::from("_"),
+                        }),
                     };
 
                     let constant_type = *cd.constant_type.clone();
@@ -197,7 +214,9 @@ impl SemanticAnalyzer {
                             self.analyze_expr(&assignee)?
                         }
 
-                        None => Type::UnitType(Unit),
+                        None => Type::InferredType(InferredType {
+                            underscore: Identifier::from("_"),
+                        }),
                     };
 
                     let var_type = s.var_type.clone();
