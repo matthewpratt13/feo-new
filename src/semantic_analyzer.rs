@@ -118,7 +118,7 @@ impl SemanticAnalyzer {
 
     fn analyze_stmt(&mut self, statement: &Statement) -> Result<(), SemanticErrorKind> {
         self.logger
-            .debug(&format!("analysing statement: {:?}...", statement));
+            .debug(&format!("analyzing statement: {:?}...", statement));
 
         match statement {
             Statement::Let(ls) => {
@@ -145,7 +145,7 @@ impl SemanticAnalyzer {
                 self.insert(ls.assignee.name.clone(), Symbol::Variable(value_type))?;
 
                 self.logger
-                    .info(&format!("analysed let statement: {:?}", ls));
+                    .info(&format!("analyzed let statement: {:?}", ls));
             }
 
             Statement::Item(i) => match i {
@@ -395,7 +395,7 @@ impl SemanticAnalyzer {
 
             Statement::Expression(expr) => {
                 self.analyze_expr(expr)?;
-                self.logger.info(&format!("analysed expression: {}", expr));
+                self.logger.info(&format!("analyzed expression: {}", expr));
             }
         }
 
@@ -471,7 +471,7 @@ impl SemanticAnalyzer {
 
     fn analyze_expr(&mut self, expression: &Expression) -> Result<Type, SemanticErrorKind> {
         self.logger
-            .debug(&format!("analysing expression: {}...", &expression));
+            .debug(&format!("analyzing expression: {}...", &expression));
 
         match expression {
             Expression::Path(p) => {
