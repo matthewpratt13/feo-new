@@ -31,13 +31,13 @@
 
 - `String`: growable string. E.g., `let x = String::from("foobar");` [not yet supported]
 - `Vec<T>`: growable array of type `T`. E.g., `let vec: Vec<u256> = Vec::new();`
-- `Mapping<K, V>`: store of key-value pairs. E.g., `let balances: Mapping<u160, u256>;`
+- `Mapping<K, V>`: store of key-value pairs. E.g., `let balances: Mapping<h160, u256>;`
 
 ## Other Types
 
 - `func(T) -> U`: function pointer. E.g.,
 ```
-let balances: Mapping<u160, u256> = Mapping::new();
+let balances: Mapping<h160, u256> = Mapping::new();
 
 func get_balance(addr: h160) -> Option<u256> {
     balances.get(addr)
@@ -47,7 +47,7 @@ let balance_of: func(h160) -> Option<u256> = get_balance;
 
 let alice_balance = balance_of($0x12345123451234512345).expect("balance not found");
 ```
-- `&T` and `&mut T`: reference types. E.g., `let ref mut balances: &mut Mapping<u160, u256>;`
+- `&T` and `&mut T`: reference types. E.g., `let ref mut balances: &mut Mapping<h160, u256>;`
 
 ## Additional Modules in `stdlib` [not yet implemented]
 
