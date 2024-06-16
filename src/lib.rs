@@ -8,7 +8,7 @@ mod keccak;
 mod lexer;
 mod logger;
 mod parser;
-mod semantic_analyzer;
+mod semantic_analyser;
 mod span;
 mod token;
 
