@@ -259,6 +259,26 @@ pub(crate) enum BinaryOp {
     Exponentiation,
 }
 
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BinaryOp::Add => write!(f, "+"),
+            BinaryOp::Subtract => write!(f, "-"),
+            BinaryOp::Multiply => write!(f, "*"),
+            BinaryOp::Divide => write!(f, "/"),
+            BinaryOp::Modulus => write!(f, "%"),
+            BinaryOp::LogicalAnd => write!(f, "&&"),
+            BinaryOp::LogicalOr => write!(f, "||"),
+            BinaryOp::BitwiseAnd => write!(f, "&"),
+            BinaryOp::BitwiseOr => write!(f, "|"),
+            BinaryOp::BitwiseXor => write!(f, "^"),
+            BinaryOp::ShiftLeft => write!(f, "<<"),
+            BinaryOp::ShiftRight => write!(f, ">>"),
+            BinaryOp::Exponentiation => write!(f, "**"),
+        }
+    }
+}
+
 /// Unit struct representing the type cast operator (`as`).
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct TypeCastOp;
@@ -274,6 +294,19 @@ pub(crate) enum ComparisonOp {
     GreaterEqual,
 }
 
+impl fmt::Display for ComparisonOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ComparisonOp::Equal => write!(f, "=="),
+            ComparisonOp::NotEqual => write!(f, "!="),
+            ComparisonOp::LessThan => write!(f, "<"),
+            ComparisonOp::LessEqual => write!(f, "<="),
+            ComparisonOp::GreaterThan => write!(f, ">"),
+            ComparisonOp::GreaterEqual => write!(f, ">="),
+        }
+    }
+}
+
 /// Enum representing the different compound assignment operators used in AST nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum CompoundAssignmentOp {
@@ -282,6 +315,18 @@ pub(crate) enum CompoundAssignmentOp {
     MultiplyAssign,
     DivideAssign,
     ModulusAssign,
+}
+
+impl fmt::Display for CompoundAssignmentOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CompoundAssignmentOp::AddAssign => write!(f, "+="),
+            CompoundAssignmentOp::SubtractAssign => write!(f, "-="),
+            CompoundAssignmentOp::MultiplyAssign => write!(f, "*="),
+            CompoundAssignmentOp::DivideAssign => write!(f, "/="),
+            CompoundAssignmentOp::ModulusAssign => write!(f, "%="),
+        }
+    }
 }
 
 /// Unit struct representing the dereference operator (`*`).

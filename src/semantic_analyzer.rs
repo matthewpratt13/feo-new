@@ -127,6 +127,8 @@ impl SemanticAnalyzer {
                     }),
                 };
 
+                // variables must be declared with a type and are assigned the unit type if not;
+                // this prevents uninitialized variable errors
                 let value_type = match &ls.value_opt {
                     Some(v) => self.analyze_expr(v)?,
                     None => Type::UnitType(Unit),
@@ -641,7 +643,8 @@ impl SemanticAnalyzer {
                         Some(v) => match v.iter().find(|f| f.field_name == fa.field_name) {
                             Some(sdf) => Ok(*sdf.field_type.clone()),
                             _ => Err(SemanticErrorKind::UndefinedField {
-                                name: fa.field_name.clone(),
+                                struct_name: s.struct_name.clone(),
+                                field_name: fa.field_name.clone(),
                             }),
                         },
                         None => Ok(Type::UnitType(Unit)),
@@ -941,8 +944,8 @@ impl SemanticAnalyzer {
                     }),
 
                     _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "matching numeric types".to_string(),
-                        found: format!("`({}, {})`", &lhs_type, &rhs_type),
+                        expected: "numeric values with matching types".to_string(),
+                        found: format!("`{} {} {}`", &lhs_type, b.binary_op, &rhs_type),
                     }),
                 }
             }
@@ -1028,8 +1031,8 @@ impl SemanticAnalyzer {
                     }),
 
                     _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "matching numeric types".to_string(),
-                        found: format!("`({}, {})`", &lhs_type, &rhs_type),
+                        expected: "numeric values with matching types".to_string(),
+                        found: format!("`{} {} {}`", &lhs_type, c.comparison_op, &rhs_type),
                     }),
                 }
             }
@@ -1125,31 +1128,49 @@ impl SemanticAnalyzer {
             },
 
             Expression::Assignment(a) => {
-                let expr = wrap_into_expression(a.lhs.clone())?;
+                let assignee = wrap_into_expression(a.lhs.clone())?;
 
-                let path = PathExpr::try_from(expr.clone()).map_err(|_| {
+                let assignee_path = PathExpr::try_from(assignee.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
-                        from: expr.to_string(),
+                        from: assignee.to_string(),
                         into: "`PathExpr`".to_string(),
                     }
                 })?;
 
-                let expr_type = self.analyze_expr(&expr)?;
+                let assignee_type = self.analyze_expr(&assignee)?;
 
-                let name = Identifier(path.path_root.to_string());
+                let assignee_name = Identifier(assignee_path.path_root.to_string());
 
-                match self.lookup(&name).cloned() {
-                    Some(Symbol::Variable(var_type)) if var_type == expr_type => {
-                        self.analyze_expr(&wrap_into_expression(a.rhs.clone())?)?;
-                        Ok(var_type)
-                    }
+                let value_type = self.analyze_expr(&wrap_into_expression(a.rhs.clone())?)?;
 
-                    Some(s) => Err(SemanticErrorKind::TypeMismatchVariable {
-                        name,
-                        expected: expr_type.to_string(),
+                if value_type != assignee_type {
+                    return Err(SemanticErrorKind::TypeMismatchValues {
+                        expected: assignee_type.to_string(),
+                        found: value_type.to_string(),
+                    });
+                }
+
+                match self.lookup(&assignee_name).cloned() {
+                    Some(Symbol::Variable(var_type)) => match var_type == assignee_type {
+                        true => {
+                            self.analyze_expr(&wrap_into_expression(a.rhs.clone())?)?;
+                            Ok(var_type)
+                        }
+                        false => Err(SemanticErrorKind::TypeMismatchVariable {
+                            name: assignee_name,
+                            expected: assignee_type.to_string(),
+                            found: var_type.to_string(),
+                        }),
+                    },
+
+                    Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
+                        name: assignee_name,
+                        expected: assignee_type.to_string(),
                         found: s.to_string(),
                     }),
-                    None => Err(SemanticErrorKind::UndefinedVariable { name }),
+                    None => Err(SemanticErrorKind::UndefinedVariable {
+                        name: assignee_name,
+                    }),
                 }
             }
 
@@ -1234,8 +1255,11 @@ impl SemanticAnalyzer {
                     }),
 
                     _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "matching numeric types".to_string(),
-                        found: format!("`({}, {})`", &lhs_type, &rhs_type),
+                        expected: "numeric values with matching types".to_string(),
+                        found: format!(
+                            "`{} {} {}`",
+                            &lhs_type, ca.compound_assignment_op, &rhs_type
+                        ),
                     }),
                 }
             }
@@ -1668,6 +1692,7 @@ impl SemanticAnalyzer {
                     (None, None) => Ok(Type::UnitType(Unit)),
                     (None, Some(_)) | (Some(_), None) => {
                         return Err(SemanticErrorKind::ArgumentCountMismatch {
+                            name,
                             expected: params.unwrap_or(Vec::new()).len(),
                             found: args.unwrap_or(Vec::new()).len(),
                         })
@@ -1675,6 +1700,7 @@ impl SemanticAnalyzer {
                     (Some(a), Some(p)) => {
                         if a.len() != p.len() {
                             return Err(SemanticErrorKind::ArgumentCountMismatch {
+                                name,
                                 expected: p.len(),
                                 found: a.len(),
                             });

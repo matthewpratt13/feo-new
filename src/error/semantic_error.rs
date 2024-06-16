@@ -8,6 +8,7 @@ use crate::ast::{Identifier, UInt};
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {
     ArgumentCountMismatch {
+        name: Identifier,
         expected: usize,
         found: usize,
     },
@@ -86,7 +87,8 @@ pub enum SemanticErrorKind {
     },
 
     UndefinedField {
-        name: Identifier,
+        struct_name: Identifier,
+        field_name: Identifier,
     },
 
     UndefinedFunction {
@@ -139,10 +141,10 @@ pub enum SemanticErrorKind {
 impl fmt::Display for SemanticErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SemanticErrorKind::ArgumentCountMismatch { expected, found } => {
+            SemanticErrorKind::ArgumentCountMismatch {name,  expected, found } => {
                 write!(
                     f,
-                    "argument count mismatch. Expected {expected} arguments, found {found}"
+                    "argument count mismatch in function `{name}()`. Expected {expected} arguments, found {found}"
                 )
             }
             SemanticErrorKind::ConversionError { from, into } => {
@@ -187,7 +189,7 @@ impl fmt::Display for SemanticErrorKind {
             ),
             SemanticErrorKind::TypeMismatchBinaryExpr { expected, found } => write!(
                 f,
-                "type mismatch in binary expression. Expected {expected}, found {found}"
+                "invalid operation: type mismatch in binary expression. Expected {expected}, found {found}"
             ),
             SemanticErrorKind::TypeMismatchReturnType { expected, found } => write!(
                 f,
@@ -207,19 +209,19 @@ impl fmt::Display for SemanticErrorKind {
                     "type mismatch for `{name}`. Expected `{expected}`, found `{found}`"
                 )
             }
-            SemanticErrorKind::UndefinedField { name } => write!(f, "undefined field: `{name}`"),  
+            SemanticErrorKind::UndefinedField { struct_name , field_name} => write!(f, "struct `{struct_name}` has no field `{field_name}`"),  
             
-            SemanticErrorKind::UndefinedFunction { name } => write!(f, "undefined function: `{name}`"),
+            SemanticErrorKind::UndefinedFunction { name } => write!(f, "no function `{name}()` in current scope"),
  
             SemanticErrorKind::UndefinedModule { name } => write!(f, "undefined module: `{name}`"),
 
             SemanticErrorKind::UndefinedScope => write!(f, "attempted to access undefined scope"),
 
-            SemanticErrorKind::UndefinedStruct { name } => write!(f, "undefined struct: `{name}`"),  
+            SemanticErrorKind::UndefinedStruct { name } => write!(f, "no struct `{name}` in current scope"),  
 
             SemanticErrorKind::UndefinedSymbol { name } => write!(f, "undefined symbol: `{name}`"),     
 
-            SemanticErrorKind::UndefinedType { name } => write!(f, "undefined type: `{name}`"),
+            SemanticErrorKind::UndefinedType { name } => write!(f, "no type `{name}` in current scope"),
             
             SemanticErrorKind::UndefinedVariable { name } => {
                 write!(f, "undefined variable: `{name}`",)
