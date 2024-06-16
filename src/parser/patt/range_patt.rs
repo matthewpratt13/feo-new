@@ -62,8 +62,8 @@ fn parse_range_from(parser: &mut Parser) -> Result<RangePatt, ErrorsEmitted> {
         Some(Token::EOF) | None => {
             if range_op != RangeOp::RangeExclusive {
                 parser.log_error(ParserErrorKind::UnexpectedRangeOp {
-                    expected: RangeOp::RangeExclusive.to_string(),
-                    found: range_op.to_string(),
+                    expected: format!("`{}`", RangeOp::RangeExclusive),
+                    found: format!("`{}`", range_op),
                 });
                 Err(ErrorsEmitted)
             } else {

@@ -26,7 +26,7 @@ impl ParseOperatorExpr for RangeExpr {
             }
             _ => {
                 parser.log_unexpected_token(&format!(
-                    "range operator ({} or {})",
+                    "range operator (`{}` or `{}`)",
                     RangeOp::RangeExclusive,
                     RangeOp::RangeInclusive
                 ));
@@ -46,8 +46,9 @@ impl ParseOperatorExpr for RangeExpr {
                 range_op: {
                     if range_op == RangeOp::RangeInclusive {
                         parser.log_error(ParserErrorKind::UnexpectedRangeOp {
-                            expected: RangeOp::RangeExclusive.to_string(),
-                            found: range_op.to_string(),
+                            expected: format!("`{}`", RangeOp::RangeExclusive),
+
+                            found: format!("`{}`", range_op),
                         });
                         return Err(ErrorsEmitted);
                     } else {
@@ -87,7 +88,7 @@ impl RangeExpr {
             Token::DotDotEquals { .. } => Ok(RangeOp::RangeInclusive),
             _ => {
                 parser.log_unexpected_token(&format!(
-                    "range operator ({} or {})",
+                    "range operator (`{}` or `{}`)",
                     RangeOp::RangeExclusive,
                     RangeOp::RangeInclusive
                 ));
@@ -107,8 +108,9 @@ impl RangeExpr {
                 to_expr_opt: {
                     if range_op == RangeOp::RangeInclusive {
                         parser.log_error(ParserErrorKind::UnexpectedRangeOp {
-                            expected: RangeOp::RangeExclusive.to_string(),
-                            found: range_op.to_string(),
+                            expected: format!("`{}`", RangeOp::RangeExclusive),
+
+                            found: format!("`{}`", range_op),
                         });
                         return Err(ErrorsEmitted);
                     } else {

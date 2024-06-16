@@ -343,8 +343,8 @@ pub(crate) enum RangeOp {
 impl fmt::Display for RangeOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RangeOp::RangeExclusive => write!(f, "`..`"),
-            RangeOp::RangeInclusive => write!(f, "`..=`"),
+            RangeOp::RangeExclusive => write!(f, ".."),
+            RangeOp::RangeInclusive => write!(f, "..="),
         }
     }
 }
