@@ -26,7 +26,7 @@ impl ParsePattern for IdentifierPatt {
 
         let name = if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
             parser.next_token();
-            Ok(Identifier(name))
+            Ok(Identifier::from(&name))
         } else {
             parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)

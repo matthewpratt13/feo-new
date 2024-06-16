@@ -28,7 +28,7 @@ impl ParseDefItem for TraitDef {
         }?;
 
         let trait_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)

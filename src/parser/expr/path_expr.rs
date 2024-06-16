@@ -40,7 +40,7 @@ impl ParseSimpleExpr for PathExpr {
                     parser.next_token();
                     parser.next_token();
 
-                    tree.push(Identifier(name));
+                    tree.push(Identifier::from(&name));
                 }
                 Some(Token::LBrace { .. }) => break,
                 Some(Token::EOF) | None => {

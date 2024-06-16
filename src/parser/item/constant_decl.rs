@@ -24,7 +24,7 @@ impl ParseDeclItem for ConstantDecl {
         }?;
 
         let constant_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
@@ -83,7 +83,7 @@ impl ParseDeclItem for ConstantDecl {
                     constant_name,
                     constant_type,
                     value_opt,
-                    span
+                    span,
                 })
             }
             Some(Token::EOF) | None => {

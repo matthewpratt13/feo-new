@@ -18,7 +18,7 @@ impl ParseOperatorExpr for MethodCallExpr {
         let method_name = match parser.current_token().cloned() {
             Some(Token::Identifier { name, .. }) => {
                 parser.next_token();
-                Ok(Identifier(name))
+                Ok(Identifier::from(&name))
             }
             Some(Token::EOF) | None => {
                 parser.log_missing_token("identifier");

@@ -77,7 +77,7 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
     let field_name = match parser.current_token().cloned() {
         Some(Token::Identifier { name, .. }) => {
             parser.next_token();
-            Ok(Identifier(name))
+            Ok(Identifier::from(&name))
         }
         Some(Token::EOF) | None => {
             parser.log_missing_token("identifier");

@@ -64,7 +64,7 @@ impl ParsePattern for StructPatt {
 fn parse_struct_patt_field(parser: &mut Parser) -> Result<StructPattField, ErrorsEmitted> {
     let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
         parser.next_token();
-        Ok(Identifier(name))
+        Ok(Identifier::from(&name))
     } else {
         parser.log_missing_token("struct field identifier");
         Err(ErrorsEmitted)

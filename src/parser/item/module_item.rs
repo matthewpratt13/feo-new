@@ -24,7 +24,7 @@ impl ParseDefItem for ModuleItem {
         }?;
 
         let module_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)

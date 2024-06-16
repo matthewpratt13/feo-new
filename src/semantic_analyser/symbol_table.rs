@@ -58,7 +58,7 @@ impl Symbol {
                     let func_name = function.function_name;
 
                     let func_full_path = format!("{}::{}", assoc_type_name, func_name);
-                    Identifier(func_full_path)
+                    Identifier::from(&func_full_path)
                 }
                 None => Identifier::from(""),
             },

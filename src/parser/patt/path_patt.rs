@@ -37,7 +37,7 @@ impl ParsePattern for PathPatt {
                 parser.next_token();
                 parser.next_token();
 
-                tree.push(Identifier(name));
+                tree.push(Identifier::from(&name));
             } else {
                 break;
             }

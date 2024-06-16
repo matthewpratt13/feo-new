@@ -27,7 +27,7 @@ impl ParseDefItem for StructDef {
         }?;
 
         let struct_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
@@ -101,7 +101,7 @@ impl ParseDefItem for TupleStructDef {
         }?;
 
         let struct_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
+            Ok(Identifier::from(&name))
         } else {
             parser.log_unexpected_token("struct name");
             Err(ErrorsEmitted)
@@ -177,7 +177,7 @@ impl StructDefField {
         let field_name =
             if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
                 parser.next_token();
-                Ok(Identifier(name))
+                Ok(Identifier::from(&name))
             } else {
                 parser.log_missing_token("struct field identifier");
                 Err(ErrorsEmitted)

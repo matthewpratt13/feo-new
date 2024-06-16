@@ -1139,7 +1139,7 @@ impl SemanticAnalyser {
 
                 let assignee_type = self.analyse_expr(&assignee)?;
 
-                let assignee_name = Identifier(assignee_path.path_root.to_string());
+                let assignee_name = Identifier::from(&assignee_path.path_root.to_string());
 
                 let value_type = self.analyse_expr(&wrap_into_expression(a.rhs.clone())?)?;
 

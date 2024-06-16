@@ -28,7 +28,7 @@ impl ParseDefItem for EnumDef {
         }?;
 
         let enum_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
@@ -120,7 +120,7 @@ fn parse_enum_variant(
     let visibility = Visibility::visibility(parser)?;
 
     let variant_name = match token {
-        Some(Token::Identifier { name, .. }) => Ok(Identifier(name)),
+        Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
         Some(Token::EOF) | None => {
             parser.log_unexpected_eoi();
             Err(ErrorsEmitted)

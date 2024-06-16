@@ -46,11 +46,11 @@ impl PathType {
         {
             return Ok(PathType {
                 associated_type_path_prefix_opt: None,
-                type_name: Identifier(path_root.to_string()),
+                type_name: Identifier::from(&path_root.to_string()),
             });
         }
 
-        path.push(Identifier(path_root.to_string()));
+        path.push(Identifier::from(&path_root.to_string()));
 
         while let Some(Token::DblColon { .. }) = parser.current_token() {
             match parser.peek_ahead_by(1).cloned() {
@@ -58,7 +58,7 @@ impl PathType {
                     parser.next_token();
                     parser.next_token();
 
-                    path.push(Identifier(name));
+                    path.push(Identifier::from(&name));
                 }
                 Some(Token::LBrace { .. }) => break,
                 Some(Token::EOF) | None => {

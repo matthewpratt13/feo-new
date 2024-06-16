@@ -78,7 +78,7 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
         parser.next_token();
 
         let id = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier(name))
+            Ok(Identifier::from(&name))
         } else {
             parser.log_unexpected_token("identifier");
             Err(ErrorsEmitted)
