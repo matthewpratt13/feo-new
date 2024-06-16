@@ -278,7 +278,7 @@ impl From<PathExpr> for PathType {
 
         let type_name = path_segment_names.pop().expect("empty path expression");
 
-        Self {
+        PathType {
             associated_type_path_prefix_opt: {
                 if path_segment_names.is_empty() {
                     None
@@ -306,7 +306,7 @@ impl From<PathPatt> for PathType {
 
         let type_name = path_segment_names.pop().expect("empty path expression");
 
-        Self {
+        PathType {
             associated_type_path_prefix_opt: {
                 if path_segment_names.is_empty() {
                     None

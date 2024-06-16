@@ -27,7 +27,7 @@ pub struct Logger {
 impl Logger {
     /// Construct a new `Logger`.
     pub fn new(level: LogLevel) -> Self {
-        Self {
+        Logger {
             level,
             messages: Vec::new(),
         }

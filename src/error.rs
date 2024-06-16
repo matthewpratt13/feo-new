@@ -24,7 +24,7 @@ where
 {
     /// Create a new `CompilerError` that provides details at a precise location in the source code.
     pub(crate) fn new(error_kind: T, pos: usize, source: &str) -> Self {
-        Self {
+        CompilerError {
             error_kind,
             position: Position::new(pos, source),
         }

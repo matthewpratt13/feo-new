@@ -64,7 +64,7 @@ impl Position {
             pos
         };
 
-        Self {
+        Position {
             line: line_count,
             col: last_line_len,
             _snippet: source[start_index..end_index].trim().to_string(),
