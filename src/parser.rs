@@ -1231,7 +1231,7 @@ impl Parser {
         let token = self.current_token().unwrap();
         let precedence = self.get_precedence(token);
 
-        self.logger.debug(&format!("current token: {:?}", token));
+        self.logger.debug(&format!("current token: {}", token));
 
         if log_precedence {
             self.logger
