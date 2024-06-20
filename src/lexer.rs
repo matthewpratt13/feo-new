@@ -867,8 +867,10 @@ impl<'a> Lexer<'a> {
                 match t {
                     Token::U256Type { .. } => suffix_opt = Some(TokenType::U256Type),
                     Token::U512Type { .. } => suffix_opt = Some(TokenType::U512Type),
-                    _ => {
-                        // TODO: invalid suffix
+                    t => {
+                        self.log_error(LexErrorKind::UnexpectedBigUIntSuffix {
+                            suffix: format!("{:?}", t),
+                        });
                         return Err(ErrorsEmitted);
                     }
                 }
@@ -958,8 +960,10 @@ impl<'a> Lexer<'a> {
                     Token::H160Type { .. } => suffix_opt = Some(TokenType::H160Type),
                     Token::H256Type { .. } => suffix_opt = Some(TokenType::H256Type),
                     Token::H512Type { .. } => suffix_opt = Some(TokenType::H512Type),
-                    _ => {
-                        // TODO: invalid suffix
+                    t => {
+                        self.log_error(LexErrorKind::UnexpectedHashSuffix {
+                            suffix: format!("{:?}", t),
+                        });
                         return Err(ErrorsEmitted);
                     }
                 }
@@ -1012,8 +1016,10 @@ impl<'a> Lexer<'a> {
                     Token::I64Type { .. } => suffix_opt = Some(TokenType::I64Type),
                     Token::F32Type { .. } => suffix_opt = Some(TokenType::F32Type),
                     Token::F64Type { .. } => suffix_opt = Some(TokenType::F64Type),
-                    _ => {
-                        // TODO: invalid suffix
+                    t => {
+                        self.log_error(LexErrorKind::UnexpectedNumericSuffix {
+                            suffix: format!("{:?}", t),
+                        });
                         return Err(ErrorsEmitted);
                     }
                 }
