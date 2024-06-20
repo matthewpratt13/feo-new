@@ -1086,6 +1086,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // TODO: add doc comment
     fn tokenize_hash_suffix(
         &mut self,
         hash_start_pos: usize,
@@ -1175,6 +1176,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // TODO: add doc comment
     fn tokenize_numeric_suffix(
         &mut self,
         start_pos: usize,
