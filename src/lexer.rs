@@ -873,7 +873,7 @@ impl<'a> Lexer<'a> {
                     Token::U512Type { .. } => suffix_opt = Some(TokenType::U512Type),
                     t => {
                         self.log_error(LexErrorKind::UnexpectedBigUIntSuffix {
-                            suffix: format!("{:?}", t),
+                            suffix: t.to_string(),
                         });
                         return Err(ErrorsEmitted);
                     }
@@ -919,7 +919,7 @@ impl<'a> Lexer<'a> {
                 }
                 tt => {
                     self.log_error(LexErrorKind::UnexpectedBigUIntSuffix {
-                        suffix: format!("{:?}", tt),
+                        suffix: tt.to_string(),
                     });
                     Err(ErrorsEmitted)
                 }
@@ -975,7 +975,7 @@ impl<'a> Lexer<'a> {
                     Token::H512Type { .. } => suffix_opt = Some(TokenType::H512Type),
                     t => {
                         self.log_error(LexErrorKind::UnexpectedHashSuffix {
-                            suffix: format!("{:?}", t),
+                            suffix: t.to_string(),
                         });
                         return Err(ErrorsEmitted);
                     }
@@ -1047,7 +1047,7 @@ impl<'a> Lexer<'a> {
                     Token::F64Type { .. } => suffix_opt = Some(TokenType::F64Type),
                     t => {
                         self.log_error(LexErrorKind::UnexpectedNumericSuffix {
-                            suffix: format!("{:?}", t),
+                            suffix: t.to_string(),
                         });
                         return Err(ErrorsEmitted);
                     }
@@ -1218,7 +1218,7 @@ impl<'a> Lexer<'a> {
 
             tt => {
                 self.log_error(LexErrorKind::UnexpectedHashSuffix {
-                    suffix: format!("{:?}", tt),
+                    suffix: tt.to_string(),
                 });
                 Err(ErrorsEmitted)
             }
@@ -1338,7 +1338,7 @@ impl<'a> Lexer<'a> {
 
             tt => {
                 self.log_error(LexErrorKind::UnexpectedNumericSuffix {
-                    suffix: format!("{:?}", tt),
+                    suffix: tt.to_string(),
                 });
                 Err(ErrorsEmitted)
             }
