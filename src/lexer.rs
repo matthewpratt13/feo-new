@@ -1133,7 +1133,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // TODO: add doc comment
+    /// Helper method to tokenize hash literals with a suffix.
     fn tokenize_hash_suffix(
         &mut self,
         hash_start_pos: usize,
@@ -1225,7 +1225,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // TODO: add doc comment
+    /// Helper method to tokenize numeric literals with a suffix (e.g., `0u8`).
     fn tokenize_numeric_suffix(
         &mut self,
         start_pos: usize,
