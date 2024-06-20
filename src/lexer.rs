@@ -1155,6 +1155,7 @@ impl<'a> Lexer<'a> {
         start_pos: usize,
         suffix: TokenType,
     ) -> Result<Token, ErrorsEmitted> {
+        // remove the `_` separators before parsing (if they exist)
         let value_string = self.input[start_pos..self.pos]
             .split('_')
             .collect::<Vec<&str>>()
