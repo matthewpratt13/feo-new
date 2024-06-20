@@ -44,6 +44,10 @@ pub enum LexErrorKind {
         found: char,
     },
 
+    UnexpectedHashOrBigUIntPrefix {
+        prefix: char,
+    },
+
     UnexpectedHashSuffix {
         suffix: String,
     },
@@ -119,17 +123,23 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::UnexpectedBigUIntSuffix { suffix } => {
                 write!(
                     f,
-                    "unexpected numeric suffix: expected `u256` or `u512`, found {suffix}"
+                    "unexpected large unsigned integer suffix: expected `u256` or `u512`, found {suffix}"
                 )
-            }
-            LexErrorKind::UnexpectedNumericSuffix { suffix } => {
-                write!(f, "unexpected numeric suffix: expected `i32`, `i64`, `u8`, `u16`, `u32` `u64`, `f32` or `f64`; found {suffix}")
             }
             LexErrorKind::UnexpectedHashSuffix { suffix } => {
                 write!(
                     f,
-                    "unexpected numeric suffix: expected `h160`, `h256` or `u512`; found {suffix}"
+                    "unexpected hash suffix: expected `h160`, `h256` or `u512`; found {suffix}"
                 )
+            }
+            LexErrorKind::UnexpectedHashOrBigUIntPrefix { prefix } => {
+                write!(
+                    f,
+                    "unexpected hexadecimal prefix: expected `0x`, found {prefix}"
+                )
+            }
+            LexErrorKind::UnexpectedNumericSuffix { suffix } => {
+                write!(f, "unexpected numeric suffix: expected `i32`, `i64`, `u8`, `u16`, `u32` `u64`, `f32` or `f64`; found {suffix}")
             }
             LexErrorKind::UnrecognizedChar { value } => {
                 write!(f, "syntax error: unrecognized character – `{value}`")

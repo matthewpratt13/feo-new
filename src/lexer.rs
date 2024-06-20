@@ -846,17 +846,21 @@ impl<'a> Lexer<'a> {
 
         let start_pos = self.pos;
 
-        // check for hexadecimal prefix (`0x`)
-        if self.peek_current() == Some('0')
-            && self
-                .peek_next()
-                .is_some_and(|x| &x.to_lowercase().to_string() == "x")
-        {
-            // consume prefix
-            self.advance();
-            self.advance();
+        if let Some(c) = self.peek_current() {
+            // check for hexadecimal prefix (`0x`)
+            if c == '0' && self.peek_next() == Some('x') {
+                // consume prefix
+                self.advance();
+                self.advance();
+            } else {
+                self.log_error(LexErrorKind::UnexpectedHashOrBigUIntPrefix { prefix: c });
+                return Err(ErrorsEmitted);
+            }
         } else {
-            // TODO: unexpected prefix
+            self.log_error(LexErrorKind::CharNotFound {
+                expected: "`0x` prefix".to_string(),
+            });
+            return Err(ErrorsEmitted);
         }
 
         // collect hexadecimal digits (may have `_` separators)
@@ -874,7 +878,6 @@ impl<'a> Lexer<'a> {
                         return Err(ErrorsEmitted);
                     }
                 }
-
                 break;
             } else {
                 break;
@@ -914,8 +917,10 @@ impl<'a> Lexer<'a> {
                         Err(ErrorsEmitted)
                     }
                 }
-                _ => {
-                    // TODO: invalid token type
+                tt => {
+                    self.log_error(LexErrorKind::UnexpectedBigUIntSuffix {
+                        suffix: format!("{:?}", tt),
+                    });
                     Err(ErrorsEmitted)
                 }
             }
@@ -940,14 +945,22 @@ impl<'a> Lexer<'a> {
 
         self.advance(); // skip `$`
 
-        if self.peek_current() == Some('0') && self.peek_next() == Some('x') {
-            self.advance(); // skip `0`
-            self.advance(); // skip `x`
-        } else if self.peek_current().is_some_and(|x| x.is_digit(16)) {
-            // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
-            ()
+        if let Some(c) = self.peek_current() {
+            // check for hexadecimal prefix (`0x`)
+            if c == '0' && self.peek_next() == Some('x') {
+                self.advance(); // skip `0`
+                self.advance(); // skip `x`
+            } else if self.peek_current().is_some_and(|x| x.is_digit(16)) {
+                // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
+                ()
+            } else {
+                self.log_error(LexErrorKind::UnexpectedHashOrBigUIntPrefix { prefix: c })
+            }
         } else {
-            // TODO: unexpected prefix
+            self.log_error(LexErrorKind::CharNotFound {
+                expected: "`0x` prefix".to_string(),
+            });
+            return Err(ErrorsEmitted);
         }
 
         let hash_start_pos = self.pos;
@@ -967,7 +980,6 @@ impl<'a> Lexer<'a> {
                         return Err(ErrorsEmitted);
                     }
                 }
-
                 break;
             } else {
                 break;
@@ -993,6 +1005,11 @@ impl<'a> Lexer<'a> {
         if self.peek_current() == Some('-') && self.peek_next().is_some_and(|c| c.is_digit(10)) {
             is_negative = true;
             self.advance(); // skip `-`
+        } else {
+            self.log_error(LexErrorKind::CharNotFound {
+                expected: "`-` or digit".to_string(),
+            });
+            return Err(ErrorsEmitted);
         }
 
         // go back and read from previous character (`-`) if negative,
@@ -1023,7 +1040,6 @@ impl<'a> Lexer<'a> {
                         return Err(ErrorsEmitted);
                     }
                 }
-
                 break;
             } else {
                 break;
@@ -1188,8 +1204,10 @@ impl<'a> Lexer<'a> {
                 }
             }
 
-            _ => {
-                // TODO: invalid token type
+            tt => {
+                self.log_error(LexErrorKind::UnexpectedHashSuffix {
+                    suffix: format!("{:?}", tt),
+                });
                 Err(ErrorsEmitted)
             }
         }
@@ -1306,8 +1324,10 @@ impl<'a> Lexer<'a> {
                 }
             }
 
-            _ => {
-                // TODO: invalid token type
+            tt => {
+                self.log_error(LexErrorKind::UnexpectedNumericSuffix {
+                    suffix: format!("{:?}", tt),
+                });
                 Err(ErrorsEmitted)
             }
         }
