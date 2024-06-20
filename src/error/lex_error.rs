@@ -44,12 +44,12 @@ pub enum LexErrorKind {
         found: char,
     },
 
-    UnexpectedHashOrBigUIntPrefix {
-        prefix: char,
-    },
-
     UnexpectedHashSuffix {
         suffix: String,
+    },
+
+    UnexpectedHexadecimalPrefix {
+        prefix: char,
     },
 
     UnexpectedNumericSuffix {
@@ -113,6 +113,12 @@ impl fmt::Display for LexErrorKind {
                 write!(f, "error parsing floating-point number literal")
             }
             LexErrorKind::ParseBoolError => write!(f, "error parsing boolean literal"),
+            LexErrorKind::UnexpectedBigUIntSuffix { suffix } => {
+                write!(
+                    f,
+                    "unexpected large unsigned integer suffix: expected `u256` or `u512`, found {suffix}"
+                )
+            }
             LexErrorKind::UnexpectedChar { expected, found } => write!(
                 f,
                 "unexpected character: expected {expected}, found `{found}`",
@@ -120,19 +126,13 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::UnexpectedEndOfInput => {
                 write!(f, "scanning error: unexpected end of input")
             }
-            LexErrorKind::UnexpectedBigUIntSuffix { suffix } => {
-                write!(
-                    f,
-                    "unexpected large unsigned integer suffix: expected `u256` or `u512`, found {suffix}"
-                )
-            }
             LexErrorKind::UnexpectedHashSuffix { suffix } => {
                 write!(
                     f,
                     "unexpected hash suffix: expected `h160`, `h256` or `u512`; found {suffix}"
                 )
             }
-            LexErrorKind::UnexpectedHashOrBigUIntPrefix { prefix } => {
+            LexErrorKind::UnexpectedHexadecimalPrefix { prefix } => {
                 write!(
                     f,
                     "unexpected hexadecimal prefix: expected `0x`, found {prefix}"

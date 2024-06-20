@@ -853,7 +853,7 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 self.advance();
             } else {
-                self.log_error(LexErrorKind::UnexpectedHashOrBigUIntPrefix { prefix: c });
+                self.log_error(LexErrorKind::UnexpectedHexadecimalPrefix { prefix: c });
                 return Err(ErrorsEmitted);
             }
         } else {
@@ -954,7 +954,7 @@ impl<'a> Lexer<'a> {
                 // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
                 ()
             } else {
-                self.log_error(LexErrorKind::UnexpectedHashOrBigUIntPrefix { prefix: c })
+                self.log_error(LexErrorKind::UnexpectedHexadecimalPrefix { prefix: c })
             }
         } else {
             self.log_error(LexErrorKind::CharNotFound {
@@ -1001,15 +1001,27 @@ impl<'a> Lexer<'a> {
         let mut is_negative = false;
         let mut suffix_opt = None::<TokenType>;
 
-        // check for `-` before the number to decide which type of integer to parse to
-        if self.peek_current() == Some('-') && self.peek_next().is_some_and(|c| c.is_digit(10)) {
-            is_negative = true;
-            self.advance(); // skip `-`
-        } else {
-            self.log_error(LexErrorKind::CharNotFound {
-                expected: "`-` or digit".to_string(),
-            });
-            return Err(ErrorsEmitted);
+        // check for `-` before the number to decide which type of integer to parse to later
+        if let Some('-') = self.peek_current() {
+            let next = self.peek_next();
+
+            if next.is_some() {
+                if next.unwrap().is_digit(10) {
+                    is_negative = true;
+                    self.advance(); // skip `-`
+                } else {
+                    self.log_error(LexErrorKind::UnexpectedChar {
+                        expected: "digit".to_string(),
+                        found: next.unwrap(),
+                    });
+                    return Err(ErrorsEmitted);
+                }
+            } else {
+                self.log_error(LexErrorKind::CharNotFound {
+                    expected: "digit".to_string(),
+                });
+                return Err(ErrorsEmitted);
+            }
         }
 
         // go back and read from previous character (`-`) if negative,
