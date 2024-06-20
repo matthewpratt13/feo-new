@@ -855,6 +855,9 @@ impl<'a> Lexer<'a> {
             // consume prefix
             self.advance();
             self.advance();
+        } else {
+            self.log_error(LexErrorKind::LexBigUIntError);
+            return Err(ErrorsEmitted);
         }
 
         // collect hexadecimal digits (may have `_` separators)
@@ -915,6 +918,8 @@ impl<'a> Lexer<'a> {
 
     /// Tokenize a hash literal (i.e., `h160`, `h256` and `h512`), starting with `$`.
     fn tokenize_hash(&mut self) -> Result<Token, ErrorsEmitted> {
+        let mut suffix_opt = None::<TokenType>;
+
         let start_pos = self.pos;
 
         self.advance(); // skip `$`
@@ -935,50 +940,27 @@ impl<'a> Lexer<'a> {
         while let Some(c) = self.peek_current() {
             if c.is_digit(16) || c == '_' {
                 self.advance();
+            } else if let Ok(t) = self.tokenize_identifier_or_keyword() {
+                match t {
+                    Token::H160Type { .. } => suffix_opt = Some(TokenType::H160Type),
+                    Token::H256Type { .. } => suffix_opt = Some(TokenType::H256Type),
+                    Token::H512Type { .. } => suffix_opt = Some(TokenType::H512Type),
+                    _ => {
+                        // TODO: invalid suffix
+                        return Err(ErrorsEmitted);
+                    }
+                }
+
+                break;
             } else {
                 break;
             }
         }
 
-        let hash = self.input[hash_start_pos..self.pos]
-            .split('_')
-            .collect::<Vec<&str>>()
-            .concat();
-
-        let span = Span::new(self.input, start_pos, self.pos);
-
-        match hash.len() {
-            20 => {
-                let value = H160::from_slice(hash.as_bytes());
-
-                Ok(Token::HashLiteral {
-                    value: Hash::H160(value),
-                    span,
-                })
-            }
-
-            32 => {
-                let value = H256::from_slice(hash.as_bytes());
-
-                Ok(Token::HashLiteral {
-                    value: Hash::H256(value),
-                    span,
-                })
-            }
-
-            64 => {
-                let value = H512::from_slice(hash.as_bytes());
-
-                Ok(Token::HashLiteral {
-                    value: Hash::H512(value),
-                    span,
-                })
-            }
-
-            _ => {
-                self.log_error(LexErrorKind::InvalidHashLength { len: hash.len() });
-                Err(ErrorsEmitted)
-            }
+        if let Some(s) = suffix_opt {
+            self.tokenize_hash_suffix(hash_start_pos, start_pos, s)
+        } else {
+            self.tokenize_hash_suffix(hash_start_pos, start_pos, TokenType::H512Type)
         }
     }
 
@@ -1104,79 +1086,93 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Handle escape sequences found in a string or character literal.
-    /// Escape sequences are special sequences of characters that represent certain characters,
-    /// such as newline (`\n`), tab (`\t`), or quotes (`\'`) within strings and character literals.
-    fn parse_escape_sequence(&mut self) -> Result<Option<char>, ErrorsEmitted> {
-        self.advance(); // skip backslash
+    fn tokenize_hash_suffix(
+        &mut self,
+        hash_start_pos: usize,
+        start_pos: usize,
+        suffix: TokenType,
+    ) -> Result<Token, ErrorsEmitted> {
+        // remove the `_` separators before parsing (if they exist)
+        let hash = self.input[hash_start_pos..self.pos]
+            .split('_')
+            .collect::<Vec<&str>>()
+            .concat();
 
-        if let Some(c) = self.peek_current() {
-            let escaped_char = match c {
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                '\\' => '\\',
-                '0' => '\0',
-                '\'' => '\'',
-                '\"' => '\"',
-                _ => {
-                    self.log_error(LexErrorKind::UnrecognizedEscapeSequence { sequence: c });
-                    return Err(ErrorsEmitted);
+        let span = Span::new(self.input, start_pos, self.pos);
+
+        match suffix {
+            TokenType::H160Type => {
+                let value = H160::from_slice(hash.as_bytes());
+
+                match hash.len() {
+                    20 => Ok(Token::HashLiteral {
+                        value: Hash::H160(value),
+                        span,
+                    }),
+                    32 => Ok(Token::HashLiteral {
+                        value: Hash::H256(H256::from(value)),
+                        span,
+                    }),
+                    64 => Ok(Token::HashLiteral {
+                        value: Hash::H512(H512::from(value)),
+                        span,
+                    }),
+                    _ => {
+                        self.log_error(LexErrorKind::InvalidHashLength { len: hash.len() });
+                        Err(ErrorsEmitted)
+                    }
                 }
-            };
+            }
+            TokenType::H256Type => {
+                let value = H256::from_slice(hash.as_bytes());
 
-            self.advance(); // skip escape sequence
+                match hash.len() {
+                    20 => Ok(Token::HashLiteral {
+                        value: Hash::H160(H160::from(value)),
+                        span,
+                    }),
+                    32 => Ok(Token::HashLiteral {
+                        value: Hash::H256(value),
+                        span,
+                    }),
+                    64 => Ok(Token::HashLiteral {
+                        value: Hash::H512(H512::from(value)),
+                        span,
+                    }),
+                    _ => {
+                        self.log_error(LexErrorKind::InvalidHashLength { len: hash.len() });
+                        Err(ErrorsEmitted)
+                    }
+                }
+            }
+            TokenType::H512Type => {
+                let value = H512::from_slice(hash.as_bytes());
 
-            Ok(Some(escaped_char))
-        } else {
-            // incomplete escape sequence
-            self.log_error(LexErrorKind::UnexpectedEndOfInput);
-            Err(ErrorsEmitted)
-        }
-    }
+                match hash.len() {
+                    20 => Ok(Token::HashLiteral {
+                        value: Hash::H160(H160::from(value)),
+                        span,
+                    }),
+                    32 => Ok(Token::HashLiteral {
+                        value: Hash::H256(H256::from(value)),
+                        span,
+                    }),
+                    64 => Ok(Token::HashLiteral {
+                        value: Hash::H512(value),
+                        span,
+                    }),
+                    _ => {
+                        self.log_error(LexErrorKind::InvalidHashLength { len: hash.len() });
+                        Err(ErrorsEmitted)
+                    }
+                }
+            }
 
-    /// Advance the lexer (and iterator) by one character.
-    fn advance(&mut self) {
-        self.pos += 1; // update lexer's position
-        self.peekable_chars.next(); // move to next character in the iterator (discard output)
-    }
-
-    /// Get the character at the current position.
-    fn peek_current(&self) -> Option<char> {
-        self.peekable_chars.clone().peek().cloned()
-    }
-
-    /// Get the next character without advancing the iterator.
-    fn peek_next(&self) -> Option<char> {
-        let mut cloned_iter = self.peekable_chars.clone();
-        cloned_iter.next();
-        cloned_iter.peek().cloned()
-    }
-
-    /// Skip the source string's whitespace, which is considered unnecessary.
-    fn skip_whitespace(&mut self) {
-        while let Some(c) = self.peek_current() {
-            if c.is_whitespace() {
-                // if the current character is whitespace, advance to the next one
-                self.advance();
-            } else {
-                // if the current character is not whitespace, break out of the loop
-                break;
+            _ => {
+                // TODO: invalid token type
+                Err(ErrorsEmitted)
             }
         }
-    }
-
-    /// Log information about an error that occurred during tokenization by pushing the error
-    /// to the `errors` vector and providing information about error kind and position.
-    fn log_error(&mut self, error_kind: LexErrorKind) {
-        let error = CompilerError::new(error_kind, self.pos, self.input);
-
-        self.errors.push(error);
-    }
-
-    /// Retrieve a list of any errors that occurred during tokenization.
-    pub(crate) fn errors(&self) -> &[CompilerError<LexErrorKind>] {
-        &self.errors
     }
 
     fn tokenize_numeric_suffix(
@@ -1294,6 +1290,81 @@ impl<'a> Lexer<'a> {
                 Err(ErrorsEmitted)
             }
         }
+    }
+
+    /// Handle escape sequences found in a string or character literal.
+    /// Escape sequences are special sequences of characters that represent certain characters,
+    /// such as newline (`\n`), tab (`\t`), or quotes (`\'`) within strings and character literals.
+    fn parse_escape_sequence(&mut self) -> Result<Option<char>, ErrorsEmitted> {
+        self.advance(); // skip backslash
+
+        if let Some(c) = self.peek_current() {
+            let escaped_char = match c {
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                '\\' => '\\',
+                '0' => '\0',
+                '\'' => '\'',
+                '\"' => '\"',
+                _ => {
+                    self.log_error(LexErrorKind::UnrecognizedEscapeSequence { sequence: c });
+                    return Err(ErrorsEmitted);
+                }
+            };
+
+            self.advance(); // skip escape sequence
+
+            Ok(Some(escaped_char))
+        } else {
+            // incomplete escape sequence
+            self.log_error(LexErrorKind::UnexpectedEndOfInput);
+            Err(ErrorsEmitted)
+        }
+    }
+
+    /// Advance the lexer (and iterator) by one character.
+    fn advance(&mut self) {
+        self.pos += 1; // update lexer's position
+        self.peekable_chars.next(); // move to next character in the iterator (discard output)
+    }
+
+    /// Get the character at the current position.
+    fn peek_current(&self) -> Option<char> {
+        self.peekable_chars.clone().peek().cloned()
+    }
+
+    /// Get the next character without advancing the iterator.
+    fn peek_next(&self) -> Option<char> {
+        let mut cloned_iter = self.peekable_chars.clone();
+        cloned_iter.next();
+        cloned_iter.peek().cloned()
+    }
+
+    /// Skip the source string's whitespace, which is considered unnecessary.
+    fn skip_whitespace(&mut self) {
+        while let Some(c) = self.peek_current() {
+            if c.is_whitespace() {
+                // if the current character is whitespace, advance to the next one
+                self.advance();
+            } else {
+                // if the current character is not whitespace, break out of the loop
+                break;
+            }
+        }
+    }
+
+    /// Log information about an error that occurred during tokenization by pushing the error
+    /// to the `errors` vector and providing information about error kind and position.
+    fn log_error(&mut self, error_kind: LexErrorKind) {
+        let error = CompilerError::new(error_kind, self.pos, self.input);
+
+        self.errors.push(error);
+    }
+
+    /// Retrieve a list of any errors that occurred during tokenization.
+    pub(crate) fn errors(&self) -> &[CompilerError<LexErrorKind>] {
+        &self.errors
     }
 }
 
