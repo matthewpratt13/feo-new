@@ -872,13 +872,7 @@ impl<'a> Lexer<'a> {
                     Token::U256Type { .. } => suffix_opt = Some(TokenType::U256Type),
                     Token::U512Type { .. } => suffix_opt = Some(TokenType::U512Type),
 
-                    t => {
-                        println!("current token: {:?}", t);
-                        self.log_error(LexErrorKind::UnexpectedBigUIntSuffix {
-                            suffix: t.to_string(),
-                        });
-                        return Err(ErrorsEmitted);
-                    }
+                    _ => suffix_opt = None,
                 }
                 break;
             } else {
@@ -903,7 +897,6 @@ impl<'a> Lexer<'a> {
                             span,
                         })
                     } else {
-                        println!("current token: {}", s);
                         self.log_error(LexErrorKind::ParseBigUIntError);
                         Err(ErrorsEmitted)
                     }
@@ -1540,7 +1533,7 @@ mod tests {
 
     #[test]
     fn tokenize_assignment_stmt() -> Result<(), ()> {
-        let input = r#"let x: u256 = 0x1234_ABCD; // inline comment
+        let input = r#"let x: u256 = 0x1234_ABCDu256; // inline comment
         // line comment
         /*
         block comment
