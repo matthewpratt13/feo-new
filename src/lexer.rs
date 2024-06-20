@@ -286,7 +286,7 @@ impl<'a> Lexer<'a> {
                         if let Ok(n) = name.parse::<bool>() {
                             Bool::from(n)
                         } else {
-                            self.log_error(LexErrorKind::LexBoolError);
+                            self.log_error(LexErrorKind::ParseBoolError);
                             return Err(ErrorsEmitted);
                         }
                     },
@@ -320,7 +320,7 @@ impl<'a> Lexer<'a> {
                         if let Ok(n) = name.parse::<bool>() {
                             Bool::from(n)
                         } else {
-                            self.log_error(LexErrorKind::LexBoolError);
+                            self.log_error(LexErrorKind::ParseBoolError);
                             return Err(ErrorsEmitted);
                         }
                     },
@@ -856,8 +856,7 @@ impl<'a> Lexer<'a> {
             self.advance();
             self.advance();
         } else {
-            self.log_error(LexErrorKind::LexBigUIntError);
-            return Err(ErrorsEmitted);
+            // TODO: unexpected prefix
         }
 
         // collect hexadecimal digits (may have `_` separators)
@@ -888,20 +887,35 @@ impl<'a> Lexer<'a> {
 
         let span = Span::new(self.input, start_pos, self.pos);
 
-        if suffix_opt.is_some() {
-            if let Ok(v) = value_string.parse::<U256>() {
-                Ok(Token::BigUIntLiteral {
-                    value: BigUInt::U256(v),
-                    span,
-                })
-            } else if let Ok(v) = value_string.parse::<U512>() {
-                Ok(Token::BigUIntLiteral {
-                    value: BigUInt::U512(v),
-                    span,
-                })
-            } else {
-                self.log_error(LexErrorKind::LexBigUIntError);
-                Err(ErrorsEmitted)
+        if let Some(s) = suffix_opt {
+            match s {
+                TokenType::U256Type => {
+                    if let Ok(v) = value_string.parse::<U256>() {
+                        Ok(Token::BigUIntLiteral {
+                            value: BigUInt::U256(v),
+                            span,
+                        })
+                    } else {
+                        self.log_error(LexErrorKind::ParseBigUIntError);
+                        Err(ErrorsEmitted)
+                    }
+                }
+
+                TokenType::U512Type => {
+                    if let Ok(v) = value_string.parse::<U512>() {
+                        Ok(Token::BigUIntLiteral {
+                            value: BigUInt::U512(v),
+                            span,
+                        })
+                    } else {
+                        self.log_error(LexErrorKind::ParseBigUIntError);
+                        Err(ErrorsEmitted)
+                    }
+                }
+                _ => {
+                    // TODO: invalid token type
+                    Err(ErrorsEmitted)
+                }
             }
         } else {
             if let Ok(v) = value_string.parse::<U512>() {
@@ -910,7 +924,7 @@ impl<'a> Lexer<'a> {
                     span,
                 })
             } else {
-                self.log_error(LexErrorKind::LexBigUIntError);
+                self.log_error(LexErrorKind::ParseBigUIntError);
                 Err(ErrorsEmitted)
             }
         }
@@ -931,8 +945,7 @@ impl<'a> Lexer<'a> {
             // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
             ()
         } else {
-            self.log_error(LexErrorKind::LexHashError);
-            return Err(ErrorsEmitted);
+            // TODO: unexpected prefix
         }
 
         let hash_start_pos = self.pos;
@@ -1198,7 +1211,7 @@ impl<'a> Lexer<'a> {
                         span,
                     })
                 } else {
-                    self.log_error(LexErrorKind::LexIntError);
+                    self.log_error(LexErrorKind::ParseIntError);
                     Err(ErrorsEmitted)
                 }
             }
@@ -1210,7 +1223,7 @@ impl<'a> Lexer<'a> {
                         span,
                     })
                 } else {
-                    self.log_error(LexErrorKind::LexIntError);
+                    self.log_error(LexErrorKind::ParseIntError);
                     Err(ErrorsEmitted)
                 }
             }
@@ -1222,7 +1235,7 @@ impl<'a> Lexer<'a> {
                         span,
                     })
                 } else {
-                    self.log_error(LexErrorKind::LexUIntError);
+                    self.log_error(LexErrorKind::ParseUIntError);
                     Err(ErrorsEmitted)
                 }
             }
@@ -1234,7 +1247,7 @@ impl<'a> Lexer<'a> {
                         span,
                     })
                 } else {
-                    self.log_error(LexErrorKind::LexUIntError);
+                    self.log_error(LexErrorKind::ParseUIntError);
                     Err(ErrorsEmitted)
                 }
             }
@@ -1246,7 +1259,7 @@ impl<'a> Lexer<'a> {
                         span,
                     })
                 } else {
-                    self.log_error(LexErrorKind::LexUIntError);
+                    self.log_error(LexErrorKind::ParseUIntError);
                     Err(ErrorsEmitted)
                 }
             }
@@ -1258,7 +1271,7 @@ impl<'a> Lexer<'a> {
                         span,
                     })
                 } else {
-                    self.log_error(LexErrorKind::LexUIntError);
+                    self.log_error(LexErrorKind::ParseUIntError);
                     Err(ErrorsEmitted)
                 }
             }
@@ -1270,7 +1283,7 @@ impl<'a> Lexer<'a> {
                         span,
                     })
                 } else {
-                    self.log_error(LexErrorKind::LexFloatError);
+                    self.log_error(LexErrorKind::ParseFloatError);
                     Err(ErrorsEmitted)
                 }
             }
@@ -1282,7 +1295,7 @@ impl<'a> Lexer<'a> {
                         span,
                     })
                 } else {
-                    self.log_error(LexErrorKind::LexFloatError);
+                    self.log_error(LexErrorKind::ParseFloatError);
                     Err(ErrorsEmitted)
                 }
             }

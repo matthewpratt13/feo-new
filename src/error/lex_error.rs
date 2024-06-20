@@ -6,12 +6,11 @@ use std::error::Error;
 /// during tokenization.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexErrorKind {
-    LexIntError,
-    LexUIntError,
-    LexBigUIntError,
-    LexFloatError,
-    LexBoolError,
-    LexHashError,
+    ParseIntError,
+    ParseUIntError,
+    ParseBigUIntError,
+    ParseFloatError,
+    ParseBoolError,
 
     InvalidHashLength {
         len: usize,
@@ -70,16 +69,15 @@ pub enum LexErrorKind {
 impl fmt::Display for LexErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexErrorKind::LexIntError => write!(f, "error tokenizing signed integer literal"),
-            LexErrorKind::LexUIntError => write!(f, "error tokenizing unsigned integer literal"),
-            LexErrorKind::LexBigUIntError => {
-                write!(f, "error tokenizing large unsigned integer literal")
+            LexErrorKind::ParseIntError => write!(f, "error parsing signed integer literal"),
+            LexErrorKind::ParseUIntError => write!(f, "error parsing unsigned integer literal"),
+            LexErrorKind::ParseBigUIntError => {
+                write!(f, "error parsing large unsigned integer literal")
             }
-            LexErrorKind::LexFloatError => {
-                write!(f, "error tokenizing floating-point number literal")
+            LexErrorKind::ParseFloatError => {
+                write!(f, "error parsing floating-point number literal")
             }
-            LexErrorKind::LexBoolError => write!(f, "error tokenizing boolean literal"),
-            LexErrorKind::LexHashError => write!(f, "error tokenizing hash literal"),
+            LexErrorKind::ParseBoolError => write!(f, "error parsing boolean literal"),
             LexErrorKind::InvalidHashLength { len } => {
                 write!(f, "syntax error: invalid hash length – {len}")
             }
