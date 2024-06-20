@@ -11,7 +11,7 @@ use crate::{
     ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
-    token::{DocCommentType, Token, TokenStream},
+    token::{DocCommentType, Token, TokenStream, TokenType},
     B16, B2, B32, B4, B8, H160, H256, H512, U512,
 };
 
@@ -959,6 +959,7 @@ impl<'a> Lexer<'a> {
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut is_float = false;
         let mut is_negative = false;
+        let mut suffix_opt = None::<TokenType>;
 
         // check for `-` before the number to decide which type of integer to parse to
         if self.peek_current() == Some('-') && self.peek_next().is_some_and(|c| c.is_digit(10)) {
@@ -977,70 +978,40 @@ impl<'a> Lexer<'a> {
             } else if c == '.' && !is_float && self.peek_next() != Some('.') {
                 is_float = true;
                 self.advance();
+            } else if let Ok(t) = self.tokenize_identifier_or_keyword() {
+                match t {
+                    Token::U8Type { .. } => suffix_opt = Some(TokenType::U8Type),
+                    Token::U16Type { .. } => suffix_opt = Some(TokenType::U16Type),
+                    Token::U32Type { .. } => suffix_opt = Some(TokenType::U32Type),
+                    Token::U64Type { .. } => suffix_opt = Some(TokenType::U64Type),
+                    Token::I32Type { .. } => suffix_opt = Some(TokenType::I32Type),
+                    Token::I64Type { .. } => suffix_opt = Some(TokenType::I64Type),
+                    Token::F32Type { .. } => suffix_opt = Some(TokenType::F32Type),
+                    Token::F64Type { .. } => suffix_opt = Some(TokenType::F64Type),
+                    _ => {
+                        // TODO: invalid suffix
+                        return Err(ErrorsEmitted);
+                    }
+                }
+
+                break;
             } else {
                 break;
             }
         }
 
+        if let Some(s) = suffix_opt {
+            return self.tokenize_numeric_suffix(start_pos, s);
+        }
+
         if is_float {
-            // remove the `_` separators before parsing (if they exist)
-            let value = self.input[start_pos..self.pos]
-                .split('_')
-                .collect::<Vec<&str>>()
-                .concat()
-                .parse::<f64>();
-
-            let span = Span::new(self.input, start_pos, self.pos);
-
-            if let Ok(v) = value {
-                return Ok(Token::FloatLiteral {
-                    value: Float::F64(ordered_float::OrderedFloat(v)),
-                    span,
-                });
-            } else {
-                self.log_error(LexErrorKind::LexFloatError);
-                return Err(ErrorsEmitted);
-            }
+            return self.tokenize_numeric_suffix(start_pos, TokenType::F64Type);
         }
 
         if is_negative {
-            // remove the `_` separators before parsing (if they exist)
-            let value = self.input[start_pos..self.pos]
-                .split('_')
-                .collect::<Vec<&str>>()
-                .concat()
-                .parse::<i64>();
-
-            let span = Span::new(self.input, start_pos, self.pos);
-
-            if let Ok(v) = value {
-                Ok(Token::IntLiteral {
-                    value: Int::I64(v),
-                    span,
-                })
-            } else {
-                self.log_error(LexErrorKind::LexIntError);
-                Err(ErrorsEmitted)
-            }
+            self.tokenize_numeric_suffix(start_pos, TokenType::I64Type)
         } else {
-            // remove the `_` separators before parsing (if they exist)
-            let value = self.input[start_pos..self.pos]
-                .split('_')
-                .collect::<Vec<&str>>()
-                .concat()
-                .parse::<u64>();
-
-            let span = Span::new(self.input, start_pos, self.pos);
-
-            if let Ok(v) = value {
-                Ok(Token::UIntLiteral {
-                    value: UInt::U64(v),
-                    span,
-                })
-            } else {
-                self.log_error(LexErrorKind::LexUIntError);
-                Err(ErrorsEmitted)
-            }
+            self.tokenize_numeric_suffix(start_pos, TokenType::U64Type)
         }
     }
 
@@ -1177,6 +1148,122 @@ impl<'a> Lexer<'a> {
     /// Retrieve a list of any errors that occurred during tokenization.
     pub(crate) fn errors(&self) -> &[CompilerError<LexErrorKind>] {
         &self.errors
+    }
+
+    fn tokenize_numeric_suffix(
+        &mut self,
+        start_pos: usize,
+        suffix: TokenType,
+    ) -> Result<Token, ErrorsEmitted> {
+        let value_string = self.input[start_pos..self.pos]
+            .split('_')
+            .collect::<Vec<&str>>()
+            .concat();
+
+        let span = Span::new(self.input, start_pos, self.pos);
+
+        match suffix {
+            TokenType::I32Type => {
+                if let Ok(i) = value_string.parse::<i32>() {
+                    Ok(Token::IntLiteral {
+                        value: Int::I32(i),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::LexIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::I64Type => {
+                if let Ok(i) = value_string.parse::<i64>() {
+                    Ok(Token::IntLiteral {
+                        value: Int::I64(i),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::LexIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::U8Type => {
+                if let Ok(ui) = value_string.parse::<u8>() {
+                    Ok(Token::UIntLiteral {
+                        value: UInt::U8(ui),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::LexUIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::U16Type => {
+                if let Ok(ui) = value_string.parse::<u16>() {
+                    Ok(Token::UIntLiteral {
+                        value: UInt::U16(ui),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::LexUIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::U32Type => {
+                if let Ok(ui) = value_string.parse::<u32>() {
+                    Ok(Token::UIntLiteral {
+                        value: UInt::U32(ui),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::LexUIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::U64Type => {
+                if let Ok(ui) = value_string.parse::<u64>() {
+                    Ok(Token::UIntLiteral {
+                        value: UInt::U64(ui),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::LexUIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::F32Type => {
+                if let Ok(f) = value_string.parse::<f32>() {
+                    Ok(Token::FloatLiteral {
+                        value: Float::F32(ordered_float::OrderedFloat(f)),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::LexFloatError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::F64Type => {
+                if let Ok(f) = value_string.parse::<f64>() {
+                    Ok(Token::FloatLiteral {
+                        value: Float::F64(ordered_float::OrderedFloat(f)),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::LexFloatError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            _ => {
+                // TODO: invalid token type
+                Err(ErrorsEmitted)
+            }
+        }
     }
 }
 
