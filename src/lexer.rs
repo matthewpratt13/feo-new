@@ -180,7 +180,7 @@ impl<'a> Lexer<'a> {
         self.advance(); // skip first `/`
 
         match &self.peek_current() {
-            Some('/') if self.peek_current() == Some('/') || self.peek_current() == Some('!') => {
+            Some('/') if self.peek_next() == Some('/') || self.peek_current() == Some('!') => {
                 let comment_type = if self.peek_current() == Some('/') {
                     DocCommentType::OuterDocComment
                 } else {
@@ -871,7 +871,9 @@ impl<'a> Lexer<'a> {
                 match t {
                     Token::U256Type { .. } => suffix_opt = Some(TokenType::U256Type),
                     Token::U512Type { .. } => suffix_opt = Some(TokenType::U512Type),
+
                     t => {
+                        println!("current token: {:?}", t);
                         self.log_error(LexErrorKind::UnexpectedBigUIntSuffix {
                             suffix: t.to_string(),
                         });
@@ -895,19 +897,20 @@ impl<'a> Lexer<'a> {
         if let Some(s) = suffix_opt {
             match s {
                 TokenType::U256Type => {
-                    if let Ok(v) = value_string.parse::<U256>() {
+                    if let Ok(v) = value_string.trim_end_matches("u256").parse::<U256>() {
                         Ok(Token::BigUIntLiteral {
                             value: BigUInt::U256(v),
                             span,
                         })
                     } else {
+                        println!("current token: {}", s);
                         self.log_error(LexErrorKind::ParseBigUIntError);
                         Err(ErrorsEmitted)
                     }
                 }
 
                 TokenType::U512Type => {
-                    if let Ok(v) = value_string.parse::<U512>() {
+                    if let Ok(v) = value_string.trim_end_matches("u512").parse::<U512>() {
                         Ok(Token::BigUIntLiteral {
                             value: BigUInt::U512(v),
                             span,
@@ -1150,7 +1153,7 @@ impl<'a> Lexer<'a> {
 
         match suffix {
             TokenType::H160Type => {
-                let value = H160::from_slice(hash.as_bytes());
+                let value = H160::from_slice(hash.trim_end_matches("h160").as_bytes());
 
                 match hash.len() {
                     20 => Ok(Token::HashLiteral {
@@ -1172,7 +1175,7 @@ impl<'a> Lexer<'a> {
                 }
             }
             TokenType::H256Type => {
-                let value = H256::from_slice(hash.as_bytes());
+                let value = H256::from_slice(hash.trim_end_matches("h256").as_bytes());
 
                 match hash.len() {
                     20 => Ok(Token::HashLiteral {
@@ -1194,7 +1197,7 @@ impl<'a> Lexer<'a> {
                 }
             }
             TokenType::H512Type => {
-                let value = H512::from_slice(hash.as_bytes());
+                let value = H512::from_slice(hash.trim_end_matches("h512").as_bytes());
 
                 match hash.len() {
                     20 => Ok(Token::HashLiteral {
@@ -1241,7 +1244,7 @@ impl<'a> Lexer<'a> {
 
         match suffix {
             TokenType::I32Type => {
-                if let Ok(i) = value_string.parse::<i32>() {
+                if let Ok(i) = value_string.trim_end_matches("i32").parse::<i32>() {
                     Ok(Token::IntLiteral {
                         value: Int::I32(i),
                         span,
@@ -1253,7 +1256,7 @@ impl<'a> Lexer<'a> {
             }
 
             TokenType::I64Type => {
-                if let Ok(i) = value_string.parse::<i64>() {
+                if let Ok(i) = value_string.trim_end_matches("i64").parse::<i64>() {
                     Ok(Token::IntLiteral {
                         value: Int::I64(i),
                         span,
@@ -1265,7 +1268,7 @@ impl<'a> Lexer<'a> {
             }
 
             TokenType::U8Type => {
-                if let Ok(ui) = value_string.parse::<u8>() {
+                if let Ok(ui) = value_string.trim_end_matches("u8").parse::<u8>() {
                     Ok(Token::UIntLiteral {
                         value: UInt::U8(ui),
                         span,
@@ -1277,7 +1280,7 @@ impl<'a> Lexer<'a> {
             }
 
             TokenType::U16Type => {
-                if let Ok(ui) = value_string.parse::<u16>() {
+                if let Ok(ui) = value_string.trim_end_matches("u16").parse::<u16>() {
                     Ok(Token::UIntLiteral {
                         value: UInt::U16(ui),
                         span,
@@ -1289,7 +1292,7 @@ impl<'a> Lexer<'a> {
             }
 
             TokenType::U32Type => {
-                if let Ok(ui) = value_string.parse::<u32>() {
+                if let Ok(ui) = value_string.trim_end_matches("u32").parse::<u32>() {
                     Ok(Token::UIntLiteral {
                         value: UInt::U32(ui),
                         span,
@@ -1301,7 +1304,7 @@ impl<'a> Lexer<'a> {
             }
 
             TokenType::U64Type => {
-                if let Ok(ui) = value_string.parse::<u64>() {
+                if let Ok(ui) = value_string.trim_end_matches("u64").parse::<u64>() {
                     Ok(Token::UIntLiteral {
                         value: UInt::U64(ui),
                         span,
@@ -1313,7 +1316,7 @@ impl<'a> Lexer<'a> {
             }
 
             TokenType::F32Type => {
-                if let Ok(f) = value_string.parse::<f32>() {
+                if let Ok(f) = value_string.trim_end_matches("f32").parse::<f32>() {
                     Ok(Token::FloatLiteral {
                         value: Float::F32(ordered_float::OrderedFloat(f)),
                         span,
@@ -1325,7 +1328,7 @@ impl<'a> Lexer<'a> {
             }
 
             TokenType::F64Type => {
-                if let Ok(f) = value_string.parse::<f64>() {
+                if let Ok(f) = value_string.trim_end_matches("f64").parse::<f64>() {
                     Ok(Token::FloatLiteral {
                         value: Float::F64(ordered_float::OrderedFloat(f)),
                         span,
