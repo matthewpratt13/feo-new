@@ -12,7 +12,7 @@ use crate::{
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{DocCommentType, Token, TokenStream, TokenType},
-    B16, B2, B32, B4, B8, H160, H256, H512, U512,
+    B16, B2, B32, B4, B8, H160, H256, H512, U256, U512,
 };
 
 /// Struct that stores an input string (source code) and contains methods to render tokens
@@ -842,6 +842,8 @@ impl<'a> Lexer<'a> {
 
     /// Tokenize a large unsigned integer literal (i.e., `u256` and `u512`).
     fn tokenize_big_uint(&mut self) -> Result<Token, ErrorsEmitted> {
+        let mut suffix_opt = None::<TokenType>;
+
         let start_pos = self.pos;
 
         // check for hexadecimal prefix (`0x`)
@@ -859,28 +861,55 @@ impl<'a> Lexer<'a> {
         while let Some(c) = self.peek_current() {
             if c.is_digit(16) || c == '_' {
                 self.advance();
+            } else if let Ok(t) = self.tokenize_identifier_or_keyword() {
+                match t {
+                    Token::U256Type { .. } => suffix_opt = Some(TokenType::U256Type),
+                    Token::U512Type { .. } => suffix_opt = Some(TokenType::U512Type),
+                    _ => {
+                        // TODO: invalid suffix
+                        return Err(ErrorsEmitted);
+                    }
+                }
+
+                break;
             } else {
                 break;
             }
         }
 
         // remove the `_` separators before parsing (if they exist)
-        let value = self.input[start_pos..self.pos]
+        let value_string = self.input[start_pos..self.pos]
             .split('_')
             .collect::<Vec<&str>>()
-            .concat()
-            .parse::<U512>();
+            .concat();
 
         let span = Span::new(self.input, start_pos, self.pos);
 
-        if let Ok(v) = value {
-            Ok(Token::BigUIntLiteral {
-                value: BigUInt::U512(v),
-                span,
-            })
+        if suffix_opt.is_some() {
+            if let Ok(v) = value_string.parse::<U256>() {
+                Ok(Token::BigUIntLiteral {
+                    value: BigUInt::U256(v),
+                    span,
+                })
+            } else if let Ok(v) = value_string.parse::<U512>() {
+                Ok(Token::BigUIntLiteral {
+                    value: BigUInt::U512(v),
+                    span,
+                })
+            } else {
+                self.log_error(LexErrorKind::LexBigUIntError);
+                Err(ErrorsEmitted)
+            }
         } else {
-            self.log_error(LexErrorKind::LexBigUIntError);
-            Err(ErrorsEmitted)
+            if let Ok(v) = value_string.parse::<U512>() {
+                Ok(Token::BigUIntLiteral {
+                    value: BigUInt::U512(v),
+                    span,
+                })
+            } else {
+                self.log_error(LexErrorKind::LexBigUIntError);
+                Err(ErrorsEmitted)
+            }
         }
     }
 
