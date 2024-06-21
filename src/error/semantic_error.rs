@@ -64,6 +64,11 @@ pub enum SemanticErrorKind {
         found: String,
         },
         
+    TypeMismatchLetStmt {
+        value_type: String,
+        declared_type: String,
+    },
+
     TypeMismatchMatchExpr {
         loc: String,
         expected: String,
@@ -85,6 +90,7 @@ pub enum SemanticErrorKind {
         expected: String,
         found: String,
     },
+
 
     UndefinedField {
         struct_name: Identifier,
@@ -173,31 +179,35 @@ impl fmt::Display for SemanticErrorKind {
                 write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
             }
             SemanticErrorKind::TypeCastError { from, to } => {
-                write!(f, "unable to cast `{}` as `{}`", from, to)
+                write!(f, "unable to cast {} as {}", from, to)
             },
             SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
                 f,
-                "array element types do not match. Expected `{expected}`, found `{found}`"
+                "array element types do not match. Expected {expected}, found {found}"
             ),
             SemanticErrorKind::TypeMismatchMatchExpr { loc, expected, found } => write!(
                 f,
-                "{loc} types do not match in match expression. Expected `{expected}`, found `{found}`"
+                "{loc} types do not match in match expression. Expected {expected}, found {found}"
             ),
             SemanticErrorKind::TypeMismatchArgument { name, expected, found } => write!(
                 f,
-                "`{name}` type does not match defined parameter type. Expected `{expected}`, found `{found}`"
+                "`{name}` type does not match defined parameter type. Expected {expected}, found {found}"
             ),
             SemanticErrorKind::TypeMismatchBinaryExpr { expected, found } => write!(
                 f,
                 "invalid operation: type mismatch in binary expression. Expected {expected}, found {found}"
             ),
+            SemanticErrorKind::TypeMismatchLetStmt {value_type, declared_type } => write!(
+                f,
+                "declared type {declared_type} does not match value's type: {value_type}"
+            ),
             SemanticErrorKind::TypeMismatchReturnType { expected, found } => write!(
                 f,
-                "value type does not match return type. Expected `{expected}`, found `{found}`"
+                "value type does not match return type. Expected {expected}, found {found}"
             ),
             SemanticErrorKind::TypeMismatchValues { expected, found } => write!(
                 f,
-                "type mismatch between values. Expected `{expected}`, found `{found}`"
+                "type mismatch between values. Expected {expected}, found {found}"
             ),
             SemanticErrorKind::TypeMismatchVariable {
                 name,
@@ -206,7 +216,7 @@ impl fmt::Display for SemanticErrorKind {
             } => {
                 write!(
                     f,
-                    "type mismatch for `{name}`. Expected `{expected}`, found `{found}`"
+                    "type mismatch for `{name}`. Expected {expected}, found {found}"
                 )
             }
             SemanticErrorKind::UndefinedField { struct_name , field_name} => write!(f, "struct `{struct_name}` has no field `{field_name}`"),  
@@ -232,7 +242,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found `{found}`"),
 
             SemanticErrorKind::UnexpectedType { expected, found } => {
-                write!(f, "unexpected type(s). Expected {expected}, found `{found}`")
+                write!(f, "unexpected type(s). Expected {expected}, found {found}")
             }
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),

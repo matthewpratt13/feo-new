@@ -140,10 +140,9 @@ impl SemanticAnalyser {
 
                 // check that the value matches the type annotation
                 if inferred_type != *declared_type {
-                    return Err(SemanticErrorKind::TypeMismatchVariable {
-                        name: ls.assignee.name.clone(),
-                        expected: declared_type.to_string(),
-                        found: inferred_type.to_string(),
+                    return Err(SemanticErrorKind::TypeMismatchLetStmt {
+                        value_type: inferred_type.to_string(),
+                        declared_type: declared_type.to_string(),
                     });
                 }
 
