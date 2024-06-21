@@ -935,8 +935,6 @@ impl<'a> Lexer<'a> {
 
     /// Tokenize a hash literal (i.e., `h160`, `h256` and `h512`), starting with `$`.
     fn tokenize_hash(&mut self) -> Result<Token, ErrorsEmitted> {
-        let mut suffix_opt = None::<TokenType>;
-
         let start_pos = self.pos;
 
         self.advance(); // skip `$`
@@ -950,7 +948,8 @@ impl<'a> Lexer<'a> {
                 // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
                 ()
             } else {
-                self.log_error(LexErrorKind::UnexpectedHexadecimalPrefix { prefix: c })
+                self.log_error(LexErrorKind::UnexpectedHexadecimalPrefix { prefix: c });
+                return Err(ErrorsEmitted);
             }
         } else {
             self.log_error(LexErrorKind::CharNotFound {
@@ -964,28 +963,50 @@ impl<'a> Lexer<'a> {
         while let Some(c) = self.peek_current() {
             if c.is_digit(16) || c == '_' {
                 self.advance();
-            } else if let Ok(t) = self.tokenize_identifier_or_keyword() {
-                match t {
-                    Token::H160Type { .. } => suffix_opt = Some(TokenType::H160Type),
-                    Token::H256Type { .. } => suffix_opt = Some(TokenType::H256Type),
-                    Token::H512Type { .. } => suffix_opt = Some(TokenType::H512Type),
-                    t => {
-                        self.log_error(LexErrorKind::UnexpectedHashSuffix {
-                            suffix: t.to_string(),
-                        });
-                        return Err(ErrorsEmitted);
-                    }
-                }
-                break;
             } else {
                 break;
             }
         }
 
-        if let Some(s) = suffix_opt {
-            self.tokenize_hash_suffix(hash_start_pos, start_pos, s)
-        } else {
-            self.tokenize_hash_suffix(hash_start_pos, start_pos, TokenType::H512Type)
+        let hash = self.input[hash_start_pos..self.pos]
+            .split('_')
+            .collect::<Vec<&str>>()
+            .concat();
+
+        let span = Span::new(self.input, start_pos, self.pos);
+
+        match hash.len() {
+            20 => {
+                let value = H160::from_slice(hash.as_bytes());
+
+                Ok(Token::HashLiteral {
+                    value: Hash::H160(value),
+                    span,
+                })
+            }
+
+            32 => {
+                let value = H256::from_slice(hash.as_bytes());
+
+                Ok(Token::HashLiteral {
+                    value: Hash::H256(value),
+                    span,
+                })
+            }
+
+            64 => {
+                let value = H512::from_slice(hash.as_bytes());
+
+                Ok(Token::HashLiteral {
+                    value: Hash::H512(value),
+                    span,
+                })
+            }
+
+            _ => {
+                self.log_error(LexErrorKind::InvalidHashLength { len: hash.len() });
+                Err(ErrorsEmitted)
+            }
         }
     }
 
@@ -1041,12 +1062,7 @@ impl<'a> Lexer<'a> {
                     Token::I64Type { .. } => suffix_opt = Some(TokenType::I64Type),
                     Token::F32Type { .. } => suffix_opt = Some(TokenType::F32Type),
                     Token::F64Type { .. } => suffix_opt = Some(TokenType::F64Type),
-                    t => {
-                        self.log_error(LexErrorKind::UnexpectedNumericSuffix {
-                            suffix: t.to_string(),
-                        });
-                        return Err(ErrorsEmitted);
-                    }
+                    _ => suffix_opt = None,
                 }
                 break;
             } else {
@@ -1124,98 +1140,6 @@ impl<'a> Lexer<'a> {
             "||" => Ok(Token::DblPipe { punc, span }),
             _ => {
                 self.log_error(LexErrorKind::UnrecognizedChar { value: punc });
-                Err(ErrorsEmitted)
-            }
-        }
-    }
-
-    /// Helper method to tokenize hash literals with a suffix.
-    fn tokenize_hash_suffix(
-        &mut self,
-        hash_start_pos: usize,
-        start_pos: usize,
-        suffix: TokenType,
-    ) -> Result<Token, ErrorsEmitted> {
-        // remove the `_` separators before parsing (if they exist)
-        let hash = self.input[hash_start_pos..self.pos]
-            .split('_')
-            .collect::<Vec<&str>>()
-            .concat();
-
-        let span = Span::new(self.input, start_pos, self.pos);
-
-        match suffix {
-            TokenType::H160Type => {
-                let value = H160::from_slice(hash.trim_end_matches("h160").as_bytes());
-
-                match hash.len() {
-                    20 => Ok(Token::HashLiteral {
-                        value: Hash::H160(value),
-                        span,
-                    }),
-                    32 => Ok(Token::HashLiteral {
-                        value: Hash::H256(H256::from(value)),
-                        span,
-                    }),
-                    64 => Ok(Token::HashLiteral {
-                        value: Hash::H512(H512::from(value)),
-                        span,
-                    }),
-                    _ => {
-                        self.log_error(LexErrorKind::InvalidHashLength { len: hash.len() });
-                        Err(ErrorsEmitted)
-                    }
-                }
-            }
-            TokenType::H256Type => {
-                let value = H256::from_slice(hash.trim_end_matches("h256").as_bytes());
-
-                match hash.len() {
-                    20 => Ok(Token::HashLiteral {
-                        value: Hash::H160(H160::from(value)),
-                        span,
-                    }),
-                    32 => Ok(Token::HashLiteral {
-                        value: Hash::H256(value),
-                        span,
-                    }),
-                    64 => Ok(Token::HashLiteral {
-                        value: Hash::H512(H512::from(value)),
-                        span,
-                    }),
-                    _ => {
-                        self.log_error(LexErrorKind::InvalidHashLength { len: hash.len() });
-                        Err(ErrorsEmitted)
-                    }
-                }
-            }
-            TokenType::H512Type => {
-                let value = H512::from_slice(hash.trim_end_matches("h512").as_bytes());
-
-                match hash.len() {
-                    20 => Ok(Token::HashLiteral {
-                        value: Hash::H160(H160::from(value)),
-                        span,
-                    }),
-                    32 => Ok(Token::HashLiteral {
-                        value: Hash::H256(H256::from(value)),
-                        span,
-                    }),
-                    64 => Ok(Token::HashLiteral {
-                        value: Hash::H512(value),
-                        span,
-                    }),
-                    _ => {
-                        self.log_error(LexErrorKind::InvalidHashLength { len: hash.len() });
-                        Err(ErrorsEmitted)
-                    }
-                }
-            }
-
-            tt => {
-                self.log_error(LexErrorKind::UnexpectedHashSuffix {
-                    suffix: tt.to_string(),
-                });
                 Err(ErrorsEmitted)
             }
         }
@@ -1790,7 +1714,7 @@ mod tests {
                 let array: [u8; 4] = [1, 2, 3, 4];
                 let mut vec: Vec<u256> = Vec::new();
 
-                let _unused_float: f64 = -12.34;
+                let _unused_float = -12.34f64;
 
                 for num in array {
                     vec.push(num as u256);
