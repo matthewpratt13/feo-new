@@ -44,10 +44,6 @@ pub enum LexErrorKind {
         found: char,
     },
 
-    UnexpectedHashSuffix {
-        suffix: String,
-    },
-
     UnexpectedHexadecimalPrefix {
         prefix: char,
     },
@@ -126,12 +122,7 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::UnexpectedEndOfInput => {
                 write!(f, "scanning error: unexpected end of input")
             }
-            LexErrorKind::UnexpectedHashSuffix { suffix } => {
-                write!(
-                    f,
-                    "unexpected hash suffix: expected `h160`, `h256` or `u512`; found {suffix}"
-                )
-            }
+
             LexErrorKind::UnexpectedHexadecimalPrefix { prefix } => {
                 write!(
                     f,
