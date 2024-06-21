@@ -382,6 +382,8 @@ impl SemanticAnalyser {
                                     &t.implemented_trait_path,
                                 )?,
 
+                                // TODO: distinguish different implementations of trait functions
+                                // TODO: according to associated type
                                 TraitImplItem::FunctionItem(fi) => {
                                     self.insert(
                                         fi.function_name.clone(),
