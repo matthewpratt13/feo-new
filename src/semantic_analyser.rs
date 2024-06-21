@@ -122,29 +122,29 @@ impl SemanticAnalyser {
             Statement::Let(ls) => {
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors
-                let value_type = if let Some(v) = &ls.value_opt {
+                let inferred_type = if let Some(v) = &ls.value_opt {
                     self.analyse_expr(v)?
                 } else {
                     Type::UnitType(Unit)
                 };
 
                 // get the type annotation if there is one, otherwise assume the value's type
-                let var_type = match &ls.type_ann_opt {
+                let declared_type = match &ls.type_ann_opt {
                     Some(t) => t,
-                    None => &value_type,
+                    None => &inferred_type,
                 };
 
                 // check that the value matches the type annotation
-                if value_type != *var_type {
+                if inferred_type != *declared_type {
                     return Err(SemanticErrorKind::TypeMismatchVariable {
                         name: ls.assignee.name.clone(),
-                        expected: var_type.to_string(),
-                        found: value_type.to_string(),
+                        expected: declared_type.to_string(),
+                        found: inferred_type.to_string(),
                     });
                 }
 
                 // add the variable to the symbol table
-                self.insert(ls.assignee.name.clone(), Symbol::Variable(value_type))?;
+                self.insert(ls.assignee.name.clone(), Symbol::Variable(inferred_type))?;
 
                 self.logger
                     .info(&format!("analysed let statement: {:?}", ls));
