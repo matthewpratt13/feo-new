@@ -343,7 +343,7 @@ impl SemanticAnalyser {
                                     self.insert(
                                         fi.function_name.clone(),
                                         Symbol::Function {
-                                            associated_type_opt: Some(i.nominal_type.clone()),
+                                            path_opt: Some(i.nominal_type.clone()),
                                             function: fi.clone(),
                                         },
                                     )?;
@@ -378,9 +378,7 @@ impl SemanticAnalyser {
                                     self.insert(
                                         fi.function_name.clone(),
                                         Symbol::Function {
-                                            associated_type_opt: Some(
-                                                t.implemented_trait_path.clone(),
-                                            ),
+                                            path_opt: Some(t.implemented_trait_path.clone()),
                                             function: fi.clone(),
                                         },
                                     )?;
@@ -401,7 +399,7 @@ impl SemanticAnalyser {
                     self.insert(
                         f.function_name.clone(),
                         Symbol::Function {
-                            associated_type_opt: Some(root.clone()),
+                            path_opt: Some(root.clone()),
                             function: f.clone(),
                         },
                     )?;

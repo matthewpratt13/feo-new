@@ -26,7 +26,7 @@ pub(crate) enum Symbol {
     Enum(EnumDef),
     Trait(TraitDef),
     Function {
-        associated_type_opt: Option<PathType>,
+        path_opt: Option<PathType>,
         function: FunctionItem,
     },
     Module {
@@ -55,7 +55,7 @@ impl Symbol {
             Symbol::Enum(e) => e.enum_name,
             Symbol::Trait(t) => t.trait_name,
             Symbol::Function {
-                associated_type_opt,
+                path_opt: associated_type_opt,
                 function,
             } => match associated_type_opt {
                 Some(t) => {
