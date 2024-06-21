@@ -166,23 +166,7 @@ impl SemanticAnalyser {
                             .info(&format!("initialized alias declaration: {:?}", ad));
                     }
                     None => {
-                        let alias_path = {
-                            if let Some(ref mut p) = root.associated_type_path_prefix_opt.clone() {
-                                p.push(root.type_name.clone());
-
-                                PathType {
-                                    associated_type_path_prefix_opt: Some(p.to_vec()),
-                                    type_name: ad.alias_name.clone(),
-                                }
-                            } else {
-                                PathType {
-                                    associated_type_path_prefix_opt: Some(vec![root
-                                        .type_name
-                                        .clone()]),
-                                    type_name: ad.alias_name.clone(),
-                                }
-                            }
-                        };
+                        let alias_path = build_item_path(root.clone(), ad.alias_name.clone());
 
                         // alias is its own user-defined opaque type
                         self.insert(
@@ -217,23 +201,9 @@ impl SemanticAnalyser {
                         });
                     }
 
-                    let constant_path = {
-                        if let Some(ref mut p) = root.associated_type_path_prefix_opt.clone() {
-                            p.push(root.type_name.clone());
+                    let constant_path = build_item_path(root.clone(), cd.constant_name.clone());
 
-                            PathType {
-                                associated_type_path_prefix_opt: Some(p.to_vec()),
-                                type_name: cd.constant_name.clone(),
-                            }
-                        } else {
-                            PathType {
-                                associated_type_path_prefix_opt: Some(vec![root.type_name.clone()]),
-                                type_name: cd.constant_name.clone(),
-                            }
-                        }
-                    };
-
-                    self.insert( 
+                    self.insert(
                         cd.constant_name.clone(),
                         Symbol::Constant {
                             path: constant_path,
@@ -315,25 +285,7 @@ impl SemanticAnalyser {
 
                     if let Some(v) = &t.trait_items_opt {
                         for item in v.iter() {
-                            let trait_path = {
-                                if let Some(ref mut p) =
-                                    root.associated_type_path_prefix_opt.clone()
-                                {
-                                    p.push(root.type_name.clone());
-
-                                    PathType {
-                                        associated_type_path_prefix_opt: Some(p.to_vec()),
-                                        type_name: t.trait_name.clone(),
-                                    }
-                                } else {
-                                    PathType {
-                                        associated_type_path_prefix_opt: Some(vec![root
-                                            .type_name
-                                            .clone()]),
-                                        type_name: t.trait_name.clone(),
-                                    }
-                                }
-                            };
+                            let trait_path = build_item_path(root.clone(), t.trait_name.clone());
 
                             match item {
                                 TraitDefItem::AliasDecl(ad) => {
@@ -2202,6 +2154,22 @@ impl SemanticAnalyser {
         self.logger.error(&error.to_string());
 
         self.errors.push(error);
+    }
+}
+
+fn build_item_path(root: PathType, item_name: Identifier) -> PathType {
+    if let Some(ref mut p) = root.associated_type_path_prefix_opt.clone() {
+        p.push(root.type_name.clone());
+
+        PathType {
+            associated_type_path_prefix_opt: Some(p.to_vec()),
+            type_name: item_name,
+        }
+    } else {
+        PathType {
+            associated_type_path_prefix_opt: Some(vec![root.type_name.clone()]),
+            type_name: item_name,
+        }
     }
 }
 
