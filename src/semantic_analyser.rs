@@ -300,11 +300,20 @@ impl SemanticAnalyser {
                                 )?,
 
                                 TraitDefItem::FunctionItem(fi) => {
+                                    self.insert(
+                                        fi.function_name.clone(),
+                                        Symbol::Function {
+                                            path_opt: Some(trait_path),
+                                            function: fi.clone(),
+                                        },
+                                    )?;
+
                                     self.analyse_function_def(fi)?;
 
-                                    self.logger.info(
-                                        &format!("function definition {:?} acknowledged, but not initialized", fi),
-                                    );
+                                    self.logger.info(&format!(
+                                        "initialized trait function definition: {:?}",
+                                        fi
+                                    ));
                                 }
                             }
                         }
