@@ -30,8 +30,13 @@ pub(crate) enum Symbol {
         function: FunctionItem,
     },
     Module {
+        path_opt: Option<PathType>,
         module: ModuleItem,
         symbols: SymbolTable,
+    },
+    Constant {
+        path: PathType,
+        ty: Type,
     },
 }
 
@@ -63,6 +68,7 @@ impl Symbol {
                 None => Identifier::from(""),
             },
             Symbol::Module { module, .. } => module.module_name,
+            Symbol::Constant { ty, .. } => Identifier::from(&ty.to_string()),
         }
     }
 }
@@ -77,6 +83,7 @@ impl fmt::Display for Symbol {
             Symbol::Trait(t) => write!(f, "{}", t.trait_name),
             Symbol::Function { function, .. } => write!(f, "{}", function.function_name),
             Symbol::Module { module, .. } => write!(f, "{}", module.module_name),
+            Symbol::Constant { path, .. } => write!(f, "{}", path.type_name),
         }
     }
 }

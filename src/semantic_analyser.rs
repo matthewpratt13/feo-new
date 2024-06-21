@@ -98,11 +98,11 @@ impl SemanticAnalyser {
         None
     }
 
-    fn analyse(&mut self, module: &Module) -> Result<(), ErrorsEmitted> {
+    fn analyse(&mut self, module: &Module, module_path: &PathType) -> Result<(), ErrorsEmitted> {
         self.logger.info("starting semantic analysis...");
 
         for s in &module.statements {
-            self.analyse_stmt(s).map_err(|e| {
+            self.analyse_stmt(s, module_path).map_err(|e| {
                 self.log_error(e, &s.span());
                 ErrorsEmitted
             })?
@@ -114,7 +114,11 @@ impl SemanticAnalyser {
         Ok(())
     }
 
-    fn analyse_stmt(&mut self, statement: &Statement) -> Result<(), SemanticErrorKind> {
+    fn analyse_stmt(
+        &mut self,
+        statement: &Statement,
+        root: &PathType,
+    ) -> Result<(), SemanticErrorKind> {
         self.logger
             .debug(&format!("analysing statement: {:?}...", statement));
 
@@ -162,15 +166,28 @@ impl SemanticAnalyser {
                             .info(&format!("initialized alias declaration: {:?}", ad));
                     }
                     None => {
-                        let ty = PathType {
-                            associated_type_path_prefix_opt: None,
-                            type_name: ad.alias_name.clone(),
+                        let alias_path = {
+                            if let Some(ref mut p) = root.associated_type_path_prefix_opt.clone() {
+                                p.push(root.type_name.clone());
+
+                                PathType {
+                                    associated_type_path_prefix_opt: Some(p.to_vec()),
+                                    type_name: ad.alias_name.clone(),
+                                }
+                            } else {
+                                PathType {
+                                    associated_type_path_prefix_opt: Some(vec![root
+                                        .type_name
+                                        .clone()]),
+                                    type_name: ad.alias_name.clone(),
+                                }
+                            }
                         };
 
                         // alias is its own user-defined opaque type
                         self.insert(
                             ad.alias_name.clone(),
-                            Symbol::Variable(Type::UserDefined(ty)),
+                            Symbol::Variable(Type::UserDefined(alias_path)),
                         )?;
 
                         self.logger
@@ -200,9 +217,28 @@ impl SemanticAnalyser {
                         });
                     }
 
-                    self.insert(
+                    let constant_path = {
+                        if let Some(ref mut p) = root.associated_type_path_prefix_opt.clone() {
+                            p.push(root.type_name.clone());
+
+                            PathType {
+                                associated_type_path_prefix_opt: Some(p.to_vec()),
+                                type_name: cd.constant_name.clone(),
+                            }
+                        } else {
+                            PathType {
+                                associated_type_path_prefix_opt: Some(vec![root.type_name.clone()]),
+                                type_name: cd.constant_name.clone(),
+                            }
+                        }
+                    };
+
+                    self.insert( 
                         cd.constant_name.clone(),
-                        Symbol::Variable(*cd.constant_type.clone()),
+                        Symbol::Constant {
+                            path: constant_path,
+                            ty: *cd.constant_type.clone(),
+                        },
                     )?;
 
                     self.logger
@@ -247,7 +283,7 @@ impl SemanticAnalyser {
 
                     if let Some(v) = &m.items_opt {
                         for item in v.iter() {
-                            self.analyse_stmt(&Statement::Item(item.clone()))?;
+                            self.analyse_stmt(&Statement::Item(item.clone()), root)?;
                         }
                     }
 
@@ -258,6 +294,7 @@ impl SemanticAnalyser {
                     self.insert(
                         m.module_name.clone(),
                         Symbol::Module {
+                            path_opt: Some(root.clone()),
                             module: m.clone(),
                             symbols: module_scope.symbols.clone(),
                         },
@@ -278,12 +315,37 @@ impl SemanticAnalyser {
 
                     if let Some(v) = &t.trait_items_opt {
                         for item in v.iter() {
+                            let trait_path = {
+                                if let Some(ref mut p) =
+                                    root.associated_type_path_prefix_opt.clone()
+                                {
+                                    p.push(root.type_name.clone());
+
+                                    PathType {
+                                        associated_type_path_prefix_opt: Some(p.to_vec()),
+                                        type_name: t.trait_name.clone(),
+                                    }
+                                } else {
+                                    PathType {
+                                        associated_type_path_prefix_opt: Some(vec![root
+                                            .type_name
+                                            .clone()]),
+                                        type_name: t.trait_name.clone(),
+                                    }
+                                }
+                            };
+
                             match item {
-                                TraitDefItem::AliasDecl(ad) => self
-                                    .analyse_stmt(&Statement::Item(Item::AliasDecl(ad.clone())))?,
+                                TraitDefItem::AliasDecl(ad) => {
+                                    self.analyse_stmt(
+                                        &Statement::Item(Item::AliasDecl(ad.clone())),
+                                        &trait_path,
+                                    )?;
+                                }
 
                                 TraitDefItem::ConstantDecl(cd) => self.analyse_stmt(
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                    &trait_path,
                                 )?,
 
                                 TraitDefItem::FunctionItem(fi) => {
@@ -322,6 +384,7 @@ impl SemanticAnalyser {
                             match item {
                                 InherentImplItem::ConstantDecl(cd) => self.analyse_stmt(
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                    &i.nominal_type,
                                 )?,
 
                                 InherentImplItem::FunctionItem(fi) => {
@@ -349,11 +412,14 @@ impl SemanticAnalyser {
                     if let Some(v) = &t.associated_items_opt {
                         for item in v.iter() {
                             match item {
-                                TraitImplItem::AliasDecl(ad) => self
-                                    .analyse_stmt(&Statement::Item(Item::AliasDecl(ad.clone())))?,
+                                TraitImplItem::AliasDecl(ad) => self.analyse_stmt(
+                                    &Statement::Item(Item::AliasDecl(ad.clone())),
+                                    &t.implemented_trait_path,
+                                )?,
 
                                 TraitImplItem::ConstantDecl(cd) => self.analyse_stmt(
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                    &t.implemented_trait_path,
                                 )?,
 
                                 TraitImplItem::FunctionItem(fi) => {
@@ -383,7 +449,7 @@ impl SemanticAnalyser {
                     self.insert(
                         f.function_name.clone(),
                         Symbol::Function {
-                            associated_type_opt: None,
+                            associated_type_opt: Some(root.clone()),
                             function: f.clone(),
                         },
                     )?;
@@ -418,7 +484,12 @@ impl SemanticAnalyser {
         let expression_type = if let Some(b) = &f.block_opt {
             if let Some(v) = &b.statements_opt {
                 for stmt in v {
-                    self.analyse_stmt(stmt)?;
+                    let path = PathType {
+                        associated_type_path_prefix_opt: None,
+                        type_name: Identifier::from(""),
+                    };
+
+                    self.analyse_stmt(stmt, &path)?;
                 }
             }
 
@@ -1512,7 +1583,12 @@ impl SemanticAnalyser {
                             Statement::Expression(e) => self.analyse_expr(e)?,
 
                             _ => {
-                                self.analyse_stmt(s)?;
+                                let path = PathType {
+                                    associated_type_path_prefix_opt: None,
+                                    type_name: Identifier::from(""),
+                                };
+
+                                self.analyse_stmt(s, &path)?;
                                 Type::UnitType(Unit)
                             }
                         },
