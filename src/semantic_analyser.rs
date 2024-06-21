@@ -406,10 +406,12 @@ impl SemanticAnalyser {
                 }
 
                 Item::FunctionItem(f) => {
+                    let function_path = build_item_path(root.clone(), f.function_name.clone());
+
                     self.insert(
                         f.function_name.clone(),
                         Symbol::Function {
-                            path_opt: Some(root.clone()),
+                            path_opt: Some(function_path),
                             function: f.clone(),
                         },
                     )?;
