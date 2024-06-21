@@ -11,8 +11,8 @@ use crate::{
     ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
-    token::{DocCommentType, Token, TokenStream},
-    B16, B2, B32, B4, B8, H160, H256, H512, U512,
+    token::{DocCommentType, Token, TokenStream, TokenType},
+    B16, B2, B32, B4, B8, H160, H256, H512, U256, U512,
 };
 
 /// Struct that stores an input string (source code) and contains methods to render tokens
@@ -180,7 +180,7 @@ impl<'a> Lexer<'a> {
         self.advance(); // skip first `/`
 
         match &self.peek_current() {
-            Some('/') if self.peek_current() == Some('/') || self.peek_current() == Some('!') => {
+            Some('/') if self.peek_next() == Some('/') || self.peek_current() == Some('!') => {
                 let comment_type = if self.peek_current() == Some('/') {
                     DocCommentType::OuterDocComment
                 } else {
@@ -286,7 +286,7 @@ impl<'a> Lexer<'a> {
                         if let Ok(n) = name.parse::<bool>() {
                             Bool::from(n)
                         } else {
-                            self.log_error(LexErrorKind::LexBoolError);
+                            self.log_error(LexErrorKind::ParseBoolError);
                             return Err(ErrorsEmitted);
                         }
                     },
@@ -320,7 +320,7 @@ impl<'a> Lexer<'a> {
                         if let Ok(n) = name.parse::<bool>() {
                             Bool::from(n)
                         } else {
-                            self.log_error(LexErrorKind::LexBoolError);
+                            self.log_error(LexErrorKind::ParseBoolError);
                             return Err(ErrorsEmitted);
                         }
                     },
@@ -842,45 +842,94 @@ impl<'a> Lexer<'a> {
 
     /// Tokenize a large unsigned integer literal (i.e., `u256` and `u512`).
     fn tokenize_big_uint(&mut self) -> Result<Token, ErrorsEmitted> {
+        let mut suffix_opt = None::<TokenType>;
+
         let start_pos = self.pos;
 
-        // check for hexadecimal prefix (`0x`)
-        if self.peek_current() == Some('0')
-            && self
-                .peek_next()
-                .is_some_and(|x| &x.to_lowercase().to_string() == "x")
-        {
-            // consume prefix
-            self.advance();
-            self.advance();
+        if let Some(c) = self.peek_current() {
+            // check for hexadecimal prefix (`0x`)
+            if c == '0' && self.peek_next() == Some('x') {
+                // consume prefix
+                self.advance();
+                self.advance();
+            } else {
+                self.log_error(LexErrorKind::UnexpectedHexadecimalPrefix { prefix: c });
+                return Err(ErrorsEmitted);
+            }
+        } else {
+            self.log_error(LexErrorKind::CharNotFound {
+                expected: "`0x` prefix".to_string(),
+            });
+            return Err(ErrorsEmitted);
         }
 
         // collect hexadecimal digits (may have `_` separators)
         while let Some(c) = self.peek_current() {
             if c.is_digit(16) || c == '_' {
                 self.advance();
+            } else if let Ok(t) = self.tokenize_identifier_or_keyword() {
+                match t {
+                    Token::U256Type { .. } => suffix_opt = Some(TokenType::U256Type),
+                    Token::U512Type { .. } => suffix_opt = Some(TokenType::U512Type),
+
+                    _ => suffix_opt = None,
+                }
+                break;
             } else {
                 break;
             }
         }
 
         // remove the `_` separators before parsing (if they exist)
-        let value = self.input[start_pos..self.pos]
+        let value_string = self.input[start_pos..self.pos]
             .split('_')
             .collect::<Vec<&str>>()
-            .concat()
-            .parse::<U512>();
+            .concat();
 
         let span = Span::new(self.input, start_pos, self.pos);
 
-        if let Ok(v) = value {
-            Ok(Token::BigUIntLiteral {
-                value: BigUInt::U512(v),
-                span,
-            })
+        if let Some(s) = suffix_opt {
+            match s {
+                TokenType::U256Type => {
+                    if let Ok(v) = value_string.trim_end_matches("u256").parse::<U256>() {
+                        Ok(Token::BigUIntLiteral {
+                            value: BigUInt::U256(v),
+                            span,
+                        })
+                    } else {
+                        self.log_error(LexErrorKind::ParseBigUIntError);
+                        Err(ErrorsEmitted)
+                    }
+                }
+
+                TokenType::U512Type => {
+                    if let Ok(v) = value_string.trim_end_matches("u512").parse::<U512>() {
+                        Ok(Token::BigUIntLiteral {
+                            value: BigUInt::U512(v),
+                            span,
+                        })
+                    } else {
+                        self.log_error(LexErrorKind::ParseBigUIntError);
+                        Err(ErrorsEmitted)
+                    }
+                }
+                tt => {
+                    self.log_error(LexErrorKind::UnexpectedBigUIntSuffix {
+                        suffix: tt.to_string(),
+                    });
+                    Err(ErrorsEmitted)
+                }
+            }
         } else {
-            self.log_error(LexErrorKind::LexBigUIntError);
-            Err(ErrorsEmitted)
+            if let Ok(v) = value_string.parse::<U512>() {
+                Ok(Token::BigUIntLiteral {
+                    value: BigUInt::U512(v),
+                    span,
+                })
+            } else {
+                self.log_error(LexErrorKind::ParseBigUIntError);
+                Err(ErrorsEmitted)
+            }
         }
     }
 
@@ -890,14 +939,22 @@ impl<'a> Lexer<'a> {
 
         self.advance(); // skip `$`
 
-        if self.peek_current() == Some('0') && self.peek_next() == Some('x') {
-            self.advance(); // skip `0`
-            self.advance(); // skip `x`
-        } else if self.peek_current().is_some_and(|x| x.is_digit(16)) {
-            // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
-            ()
+        if let Some(c) = self.peek_current() {
+            // check for hexadecimal prefix (`0x`)
+            if c == '0' && self.peek_next() == Some('x') {
+                self.advance(); // skip `0`
+                self.advance(); // skip `x`
+            } else if self.peek_current().is_some_and(|x| x.is_digit(16)) {
+                // it's okay if there is no `0x`, as long as the input is a valid hexadecimal digit
+                ()
+            } else {
+                self.log_error(LexErrorKind::UnexpectedHexadecimalPrefix { prefix: c });
+                return Err(ErrorsEmitted);
+            }
         } else {
-            self.log_error(LexErrorKind::LexHashError);
+            self.log_error(LexErrorKind::CharNotFound {
+                expected: "`0x` prefix".to_string(),
+            });
             return Err(ErrorsEmitted);
         }
 
@@ -959,11 +1016,29 @@ impl<'a> Lexer<'a> {
     fn tokenize_numeric(&mut self) -> Result<Token, ErrorsEmitted> {
         let mut is_float = false;
         let mut is_negative = false;
+        let mut suffix_opt = None::<TokenType>;
 
-        // check for `-` before the number to decide which type of integer to parse to
-        if self.peek_current() == Some('-') && self.peek_next().is_some_and(|c| c.is_digit(10)) {
-            is_negative = true;
-            self.advance(); // skip `-`
+        // check for `-` before the number to decide which type of integer to parse to later
+        if let Some('-') = self.peek_current() {
+            let next = self.peek_next();
+
+            if next.is_some() {
+                if next.unwrap().is_digit(10) {
+                    is_negative = true;
+                    self.advance(); // skip `-`
+                } else {
+                    self.log_error(LexErrorKind::UnexpectedChar {
+                        expected: "digit".to_string(),
+                        found: next.unwrap(),
+                    });
+                    return Err(ErrorsEmitted);
+                }
+            } else {
+                self.log_error(LexErrorKind::CharNotFound {
+                    expected: "digit".to_string(),
+                });
+                return Err(ErrorsEmitted);
+            }
         }
 
         // go back and read from previous character (`-`) if negative,
@@ -977,70 +1052,36 @@ impl<'a> Lexer<'a> {
             } else if c == '.' && !is_float && self.peek_next() != Some('.') {
                 is_float = true;
                 self.advance();
+            } else if let Ok(t) = self.tokenize_identifier_or_keyword() {
+                match t {
+                    Token::U8Type { .. } => suffix_opt = Some(TokenType::U8Type),
+                    Token::U16Type { .. } => suffix_opt = Some(TokenType::U16Type),
+                    Token::U32Type { .. } => suffix_opt = Some(TokenType::U32Type),
+                    Token::U64Type { .. } => suffix_opt = Some(TokenType::U64Type),
+                    Token::I32Type { .. } => suffix_opt = Some(TokenType::I32Type),
+                    Token::I64Type { .. } => suffix_opt = Some(TokenType::I64Type),
+                    Token::F32Type { .. } => suffix_opt = Some(TokenType::F32Type),
+                    Token::F64Type { .. } => suffix_opt = Some(TokenType::F64Type),
+                    _ => suffix_opt = None,
+                }
+                break;
             } else {
                 break;
             }
         }
 
+        if let Some(s) = suffix_opt {
+            return self.tokenize_numeric_suffix(start_pos, s);
+        }
+
         if is_float {
-            // remove the `_` separators before parsing (if they exist)
-            let value = self.input[start_pos..self.pos]
-                .split('_')
-                .collect::<Vec<&str>>()
-                .concat()
-                .parse::<f64>();
-
-            let span = Span::new(self.input, start_pos, self.pos);
-
-            if let Ok(v) = value {
-                return Ok(Token::FloatLiteral {
-                    value: Float::F64(ordered_float::OrderedFloat(v)),
-                    span,
-                });
-            } else {
-                self.log_error(LexErrorKind::LexFloatError);
-                return Err(ErrorsEmitted);
-            }
+            return self.tokenize_numeric_suffix(start_pos, TokenType::F64Type);
         }
 
         if is_negative {
-            // remove the `_` separators before parsing (if they exist)
-            let value = self.input[start_pos..self.pos]
-                .split('_')
-                .collect::<Vec<&str>>()
-                .concat()
-                .parse::<i64>();
-
-            let span = Span::new(self.input, start_pos, self.pos);
-
-            if let Ok(v) = value {
-                Ok(Token::IntLiteral {
-                    value: Int::I64(v),
-                    span,
-                })
-            } else {
-                self.log_error(LexErrorKind::LexIntError);
-                Err(ErrorsEmitted)
-            }
+            self.tokenize_numeric_suffix(start_pos, TokenType::I64Type)
         } else {
-            // remove the `_` separators before parsing (if they exist)
-            let value = self.input[start_pos..self.pos]
-                .split('_')
-                .collect::<Vec<&str>>()
-                .concat()
-                .parse::<u64>();
-
-            let span = Span::new(self.input, start_pos, self.pos);
-
-            if let Ok(v) = value {
-                Ok(Token::UIntLiteral {
-                    value: UInt::U64(v),
-                    span,
-                })
-            } else {
-                self.log_error(LexErrorKind::LexUIntError);
-                Err(ErrorsEmitted)
-            }
+            self.tokenize_numeric_suffix(start_pos, TokenType::U64Type)
         }
     }
 
@@ -1099,6 +1140,126 @@ impl<'a> Lexer<'a> {
             "||" => Ok(Token::DblPipe { punc, span }),
             _ => {
                 self.log_error(LexErrorKind::UnrecognizedChar { value: punc });
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
+    /// Helper method to tokenize numeric literals with a suffix (e.g., `0u8`).
+    fn tokenize_numeric_suffix(
+        &mut self,
+        start_pos: usize,
+        suffix: TokenType,
+    ) -> Result<Token, ErrorsEmitted> {
+        // remove the `_` separators before parsing (if they exist)
+        let value_string = self.input[start_pos..self.pos]
+            .split('_')
+            .collect::<Vec<&str>>()
+            .concat();
+
+        let span = Span::new(self.input, start_pos, self.pos);
+
+        match suffix {
+            TokenType::I32Type => {
+                if let Ok(i) = value_string.trim_end_matches("i32").parse::<i32>() {
+                    Ok(Token::IntLiteral {
+                        value: Int::I32(i),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::ParseIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::I64Type => {
+                if let Ok(i) = value_string.trim_end_matches("i64").parse::<i64>() {
+                    Ok(Token::IntLiteral {
+                        value: Int::I64(i),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::ParseIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::U8Type => {
+                if let Ok(ui) = value_string.trim_end_matches("u8").parse::<u8>() {
+                    Ok(Token::UIntLiteral {
+                        value: UInt::U8(ui),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::ParseUIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::U16Type => {
+                if let Ok(ui) = value_string.trim_end_matches("u16").parse::<u16>() {
+                    Ok(Token::UIntLiteral {
+                        value: UInt::U16(ui),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::ParseUIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::U32Type => {
+                if let Ok(ui) = value_string.trim_end_matches("u32").parse::<u32>() {
+                    Ok(Token::UIntLiteral {
+                        value: UInt::U32(ui),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::ParseUIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::U64Type => {
+                if let Ok(ui) = value_string.trim_end_matches("u64").parse::<u64>() {
+                    Ok(Token::UIntLiteral {
+                        value: UInt::U64(ui),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::ParseUIntError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::F32Type => {
+                if let Ok(f) = value_string.trim_end_matches("f32").parse::<f32>() {
+                    Ok(Token::FloatLiteral {
+                        value: Float::F32(ordered_float::OrderedFloat(f)),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::ParseFloatError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            TokenType::F64Type => {
+                if let Ok(f) = value_string.trim_end_matches("f64").parse::<f64>() {
+                    Ok(Token::FloatLiteral {
+                        value: Float::F64(ordered_float::OrderedFloat(f)),
+                        span,
+                    })
+                } else {
+                    self.log_error(LexErrorKind::ParseFloatError);
+                    Err(ErrorsEmitted)
+                }
+            }
+
+            tt => {
+                self.log_error(LexErrorKind::UnexpectedNumericSuffix {
+                    suffix: tt.to_string(),
+                });
                 Err(ErrorsEmitted)
             }
         }
@@ -1296,7 +1457,7 @@ mod tests {
 
     #[test]
     fn tokenize_assignment_stmt() -> Result<(), ()> {
-        let input = r#"let x: u256 = 0x1234_ABCD; // inline comment
+        let input = r#"let x: u256 = 0x1234_ABCDu256; // inline comment
         // line comment
         /*
         block comment
@@ -1553,7 +1714,7 @@ mod tests {
                 let array: [u8; 4] = [1, 2, 3, 4];
                 let mut vec: Vec<u256> = Vec::new();
 
-                let _unused_float: f64 = -12.34;
+                let _unused_float = -12.34f64;
 
                 for num in array {
                     vec.push(num as u256);

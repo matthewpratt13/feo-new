@@ -63,3 +63,4 @@ construct_fixed_hash! {
 
 impl_fixed_hash_conversions!(H256, H160);
 impl_fixed_hash_conversions!(H512, H256);
+impl_fixed_hash_conversions!(H512, H160);
