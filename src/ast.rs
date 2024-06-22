@@ -473,16 +473,15 @@ impl Spanned for Expression {
     }
 }
 
-impl TryFrom<Expression> for PathExpr {
-    type Error = ParserErrorKind;
-
-    fn try_from(value: Expression) -> Result<Self, Self::Error> {
+impl From<Expression> for PathExpr {
+    fn from(value: Expression) -> Self {
         match value {
-            Expression::Path(p) => Ok(p),
-            _ => Err(ParserErrorKind::ConversionError {
-                from: format!("`{:?}`", value),
-                into: "`PathExpr`".to_string(),
-            }),
+            Expression::Path(p) => p,
+            e => PathExpr {
+                path_root: PathRoot::Identifier(Identifier::from("")),
+                tree_opt: None,
+                span: e.span(),
+            },
         }
     }
 }
@@ -828,20 +827,6 @@ impl TryFrom<AssigneeExpr> for Expression {
             Err(_) => Err(ParserErrorKind::ConversionError {
                 from: format!("`{:?}`", value_clone),
                 into: "`Expression`".to_string(),
-            }),
-        }
-    }
-}
-
-impl TryFrom<AssigneeExpr> for PathExpr {
-    type Error = ParserErrorKind;
-
-    fn try_from(value: AssigneeExpr) -> Result<Self, Self::Error> {
-        match value {
-            AssigneeExpr::PathExpr(p) => Ok(p),
-            _ => Err(ParserErrorKind::ConversionError {
-                from: format!("`{:?}`", value),
-                into: "`PathExpr`".to_string(),
             }),
         }
     }

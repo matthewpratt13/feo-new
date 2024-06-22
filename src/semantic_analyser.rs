@@ -701,12 +701,7 @@ impl SemanticAnalyser {
 
                 // convert receiver expression to path expression (i.e., check if receiver
                 // is a valid path)
-                let receiver_as_path_expr = PathExpr::try_from(receiver.clone()).map_err(|_| {
-                    SemanticErrorKind::ConversionError {
-                        from: receiver.to_string(),
-                        into: "`PathExpr`".to_string(),
-                    }
-                })?;
+                let receiver_as_path_expr = PathExpr::from(receiver.clone());
 
                 // get path expression's type
                 let receiver_path = PathType::from(receiver_as_path_expr);
@@ -770,12 +765,7 @@ impl SemanticAnalyser {
 
                 // convert object to path expression (i.e., check if object
                 // is a valid path)
-                let object_as_path_expr = PathExpr::try_from(object.clone()).map_err(|_| {
-                    SemanticErrorKind::ConversionError {
-                        from: object.to_string(),
-                        into: "`PathExpr`".to_string(),
-                    }
-                })?;
+                let object_as_path_expr = PathExpr::from(object.clone());
 
                 // get path expression's type
                 let object_path = PathType::from(object_as_path_expr);
@@ -807,12 +797,7 @@ impl SemanticAnalyser {
             Expression::Call(c) => {
                 let callee = wrap_into_expression(c.callee.clone())?;
 
-                let callee_as_path_expr = PathExpr::try_from(callee.clone()).map_err(|_| {
-                    SemanticErrorKind::ConversionError {
-                        from: callee.to_string(),
-                        into: "`PathExpr`".to_string(),
-                    }
-                })?;
+                let callee_as_path_expr = PathExpr::from(callee.clone());
 
                 let callee_path = PathType::from(callee_as_path_expr);
 
@@ -1280,13 +1265,7 @@ impl SemanticAnalyser {
                     });
                 }
 
-                // TODO: what if `assignee` is not a `PathExpr` ?
-                let assignee_as_path_expr = PathExpr::try_from(assignee.clone()).map_err(|_| {
-                    SemanticErrorKind::ConversionError {
-                        from: assignee.to_string(),
-                        into: "`PathExpr`".to_string(),
-                    }
-                })?;
+                let assignee_as_path_expr = PathExpr::from(assignee.clone());
 
                 let assignee_path = PathType::from(assignee_as_path_expr);
 
@@ -1326,13 +1305,7 @@ impl SemanticAnalyser {
 
                 let value_type = self.analyse_expr(&wrap_into_expression(ca.rhs.clone())?)?;
 
-                // TODO: what if `assignee` is not a `PathExpr` ?
-                let assignee_as_path_expr = PathExpr::try_from(assignee.clone()).map_err(|_| {
-                    SemanticErrorKind::ConversionError {
-                        from: assignee.to_string(),
-                        into: "`PathExpr`".to_string(),
-                    }
-                })?;
+                let assignee_as_path_expr = PathExpr::from(assignee.clone());
 
                 let assignee_path = PathType::from(assignee_as_path_expr);
 
