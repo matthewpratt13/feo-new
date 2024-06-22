@@ -10,12 +10,12 @@ pub(crate) type SymbolTable = HashMap<PathType, Symbol>;
 
 #[derive(Debug, Clone)]
 pub(crate) enum ScopeKind {
-    Global,
     LocalBlock,
     MatchExpr,
     ForInLoop,
     Function,
     Module,
+    Global,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
