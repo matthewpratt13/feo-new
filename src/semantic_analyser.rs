@@ -1315,6 +1315,11 @@ impl SemanticAnalyser {
                             found: var_type.to_string(),
                         }),
                     },
+                    Some(Symbol::Constant { constant_name, .. }) => {
+                        return Err(SemanticErrorKind::ConstantReassignment {
+                            name: constant_name,
+                        })
+                    }
 
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: assignee_path.type_name,
@@ -1328,92 +1333,123 @@ impl SemanticAnalyser {
             }
 
             Expression::CompoundAssignment(ca) => {
-                let lhs_type = self.analyse_expr(&wrap_into_expression(ca.lhs.clone())?)?;
+                let assignee = wrap_into_expression(ca.lhs.clone())?;
 
-                let rhs_type = self.analyse_expr(&wrap_into_expression(ca.rhs.clone())?)?;
+                let assignee_type = self.analyse_expr(&assignee)?;
 
-                match (&lhs_type, &rhs_type) {
-                    (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
+                let value_type = self.analyse_expr(&wrap_into_expression(ca.rhs.clone())?)?;
 
-                    (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i32`".to_string(),
-                        found: t.to_string(),
-                    }),
+                let assignee_as_path_expr = PathExpr::try_from(assignee.clone()).map_err(|_| {
+                    SemanticErrorKind::ConversionError {
+                        from: assignee.to_string(),
+                        into: "`PathExpr`".to_string(),
+                    }
+                })?;
 
-                    (Type::I64(_), Type::I64(_)) => Ok(Type::I64(Int::I64(i64::default()))),
+                let assignee_path = PathType::from(assignee_as_path_expr);
 
-                    (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i64`".to_string(),
-                        found: t.to_string(),
-                    }),
+                match self.lookup(&assignee_path).cloned() {
+                    Some(Symbol::Variable(_)) => match (&assignee_type, &value_type) {
+                        (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
 
-                    (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
+                        (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                            expected: "`i32`".to_string(),
+                            found: t.to_string(),
+                        }),
 
-                    (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u8`".to_string(),
-                        found: t.to_string(),
-                    }),
+                        (Type::I64(_), Type::I64(_)) => Ok(Type::I64(Int::I64(i64::default()))),
 
-                    (Type::U16(_), Type::U16(_)) => Ok(Type::U16(UInt::U16(u16::default()))),
+                        (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                            expected: "`i64`".to_string(),
+                            found: t.to_string(),
+                        }),
 
-                    (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u16`".to_string(),
-                        found: t.to_string(),
-                    }),
+                        (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
 
-                    (Type::U32(_), Type::U32(_)) => Ok(Type::U32(UInt::U32(u32::default()))),
+                        (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                            expected: "`u8`".to_string(),
+                            found: t.to_string(),
+                        }),
 
-                    (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u32`".to_string(),
-                        found: t.to_string(),
-                    }),
+                        (Type::U16(_), Type::U16(_)) => Ok(Type::U16(UInt::U16(u16::default()))),
 
-                    (Type::U64(_), Type::U64(_)) => Ok(Type::U64(UInt::U64(u64::default()))),
+                        (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                            expected: "`u16`".to_string(),
+                            found: t.to_string(),
+                        }),
 
-                    (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u64`".to_string(),
-                        found: t.to_string(),
-                    }),
+                        (Type::U32(_), Type::U32(_)) => Ok(Type::U32(UInt::U32(u32::default()))),
 
-                    (Type::U256(_), Type::U256(_)) => {
-                        Ok(Type::U256(BigUInt::U256(U256::default())))
+                        (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                            expected: "`u32`".to_string(),
+                            found: t.to_string(),
+                        }),
+
+                        (Type::U64(_), Type::U64(_)) => Ok(Type::U64(UInt::U64(u64::default()))),
+
+                        (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                            expected: "`u64`".to_string(),
+                            found: t.to_string(),
+                        }),
+
+                        (Type::U256(_), Type::U256(_)) => {
+                            Ok(Type::U256(BigUInt::U256(U256::default())))
+                        }
+
+                        (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                            expected: "`u256`".to_string(),
+                            found: t.to_string(),
+                        }),
+
+                        (Type::U512(_), Type::U512(_)) => {
+                            Ok(Type::U512(BigUInt::U512(U512::default())))
+                        }
+
+                        (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                            expected: "`u512`".to_string(),
+                            found: t.to_string(),
+                        }),
+
+                        (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
+
+                        (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                            expected: "`f32`".to_string(),
+                            found: t.to_string(),
+                        }),
+
+                        (Type::F64(_), Type::F64(_)) => Ok(Type::F64(Float::F64(F64::default()))),
+
+                        (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                            expected: "`f64`".to_string(),
+                            found: t.to_string(),
+                        }),
+
+                        _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                            expected: "numeric values with matching types".to_string(),
+                            found: format!(
+                                "`{} {} {}`",
+                                &assignee_type, ca.compound_assignment_op, &value_type
+                            ),
+                        }),
+                    },
+                    Some(Symbol::Constant { constant_name, .. }) => {
+                        return Err(SemanticErrorKind::ConstantReassignment {
+                            name: constant_name,
+                        })
                     }
 
-                    (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u256`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::U512(_), Type::U512(_)) => {
-                        Ok(Type::U512(BigUInt::U512(U512::default())))
+                    Some(s) => {
+                        return Err(SemanticErrorKind::UnexpectedSymbol {
+                            name: assignee_path.type_name,
+                            expected: assignee_type.to_string(),
+                            found: s.to_string(),
+                        })
                     }
-
-                    (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u512`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
-
-                    (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`f32`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    (Type::F64(_), Type::F64(_)) => Ok(Type::F64(Float::F64(F64::default()))),
-
-                    (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`f64`".to_string(),
-                        found: t.to_string(),
-                    }),
-
-                    _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "numeric values with matching types".to_string(),
-                        found: format!(
-                            "`{} {} {}`",
-                            &lhs_type, ca.compound_assignment_op, &rhs_type
-                        ),
-                    }),
+                    None => {
+                        return Err(SemanticErrorKind::UndefinedVariable {
+                            name: assignee_path.type_name,
+                        })
+                    }
                 }
             }
 

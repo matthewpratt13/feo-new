@@ -13,6 +13,10 @@ pub enum SemanticErrorKind {
         found: usize,
     },
 
+    ConstantReassignment {
+        name: Identifier,
+    },
+
     ConversionError {
         from: String,
         into: String,
@@ -152,6 +156,10 @@ impl fmt::Display for SemanticErrorKind {
                     "argument count mismatch in function `{name}()`. Expected {expected} arguments, found {found}"
                 )
             }
+            SemanticErrorKind::ConstantReassignment{ name } => {
+                write!(f, "cannot reassign constant: `{name}`")
+            }  
+            
             SemanticErrorKind::ConversionError { from, into } => {
                 write!(f, "conversion error. Unable to convert {from} into {into}")
             }
