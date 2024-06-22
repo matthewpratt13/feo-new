@@ -2,8 +2,8 @@ use core::fmt;
 use std::collections::HashMap;
 
 use crate::ast::{
-    EnumDef, FunctionItem, Identifier, ModuleItem, PathType, StructDef, TraitDef, TupleStructDef,
-    Type,
+    AliasDecl, ConstantDecl, EnumDef, FunctionItem, Identifier, ModuleItem, PathType, StructDef,
+    TraitDef, TupleStructDef, Type,
 };
 
 pub(crate) type SymbolTable = HashMap<PathType, Symbol>;
@@ -22,22 +22,38 @@ pub(crate) enum ScopeKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Symbol {
     Variable(Type),
-    Struct(StructDef),
-    TupleStruct(TupleStructDef),
-    Enum(EnumDef),
-    Trait(TraitDef),
-    Function {
-        path_opt: Option<PathType>,
-        function: FunctionItem,
-    },
-    Module {
-        path_opt: Option<PathType>,
-        module: ModuleItem,
-        symbols: SymbolTable,
+    Alias {
+        path: PathType,
+        alias_decl: AliasDecl,
     },
     Constant {
         path: PathType,
-        ty: Type,
+        constant_decl: ConstantDecl,
+    },
+    Struct {
+        path: PathType,
+        struct_def: StructDef,
+    },
+    TupleStruct {
+        path: PathType,
+        tuple_struct_def: TupleStructDef,
+    },
+    Enum {
+        path: PathType,
+        enum_def: EnumDef,
+    },
+    Trait {
+        path: PathType,
+        trait_def: TraitDef,
+    },
+    Function {
+        path: PathType,
+        function: FunctionItem,
+    },
+    Module {
+        path: PathType,
+        module: ModuleItem,
+        symbols: SymbolTable,
     },
 }
 
@@ -51,25 +67,16 @@ impl Symbol {
     pub(crate) fn symbol_type(&self) -> Identifier {
         match self.clone() {
             Symbol::Variable(t) => Identifier::from(&t.to_string()),
-            Symbol::Struct(s) => s.struct_name,
-            Symbol::TupleStruct(ts) => ts.struct_name,
-            Symbol::Enum(e) => e.enum_name,
-            Symbol::Trait(t) => t.trait_name,
-            Symbol::Function {
-                path_opt: associated_type_opt,
-                function,
-            } => match associated_type_opt {
-                Some(t) => {
-                    let assoc_type_name = t.type_name;
-                    let func_name = function.function_name;
-
-                    let func_full_path = format!("{}::{}", assoc_type_name, func_name);
-                    Identifier::from(&func_full_path)
-                }
-                None => Identifier::from(""),
-            },
+            Symbol::Alias { alias_decl, .. } => alias_decl.alias_name,
+            Symbol::Constant { constant_decl, .. } => constant_decl.constant_name,
+            Symbol::Struct { struct_def, .. } => struct_def.struct_name,
+            Symbol::TupleStruct {
+                tuple_struct_def, ..
+            } => tuple_struct_def.struct_name,
+            Symbol::Enum { enum_def, .. } => enum_def.enum_name,
+            Symbol::Trait { trait_def, .. } => trait_def.trait_name,
+            Symbol::Function { function, .. } => function.function_name,
             Symbol::Module { module, .. } => module.module_name,
-            Symbol::Constant { ty, .. } => Identifier::from(&ty.to_string()),
         }
     }
 }
@@ -78,13 +85,14 @@ impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Symbol::Variable(v) => write!(f, "{}", v),
-            Symbol::Struct(s) => write!(f, "{}", s.struct_name),
-            Symbol::TupleStruct(ts) => write!(f, "{}", ts.struct_name),
-            Symbol::Enum(e) => write!(f, "{}", e.enum_name),
-            Symbol::Trait(t) => write!(f, "{}", t.trait_name),
-            Symbol::Function { function, .. } => write!(f, "{}", function.function_name),
-            Symbol::Module { module, .. } => write!(f, "{}", module.module_name),
-            Symbol::Constant { path, .. } => write!(f, "{}", path.type_name),
+            Symbol::Alias { path, .. } => write!(f, "{}", path),
+            Symbol::Constant { path, .. } => write!(f, "{}", path),
+            Symbol::Struct { path, .. } => write!(f, "{}", path),
+            Symbol::TupleStruct { path, .. } => write!(f, "{}", path),
+            Symbol::Enum { path, .. } => write!(f, "{}", path),
+            Symbol::Trait { path, .. } => write!(f, "{}", path),
+            Symbol::Function { path, .. } => write!(f, "{}", path),
+            Symbol::Module { path, .. } => write!(f, "{}", path),
         }
     }
 }

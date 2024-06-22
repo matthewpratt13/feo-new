@@ -23,7 +23,7 @@ use crate::{
 
 struct SemanticAnalyser {
     scope_stack: Vec<Scope>,
-    module_registry: HashMap<Identifier, SymbolTable>,
+    module_registry: HashMap<PathType, SymbolTable>,
     errors: Vec<CompilerError<SemanticErrorKind>>,
     logger: Logger,
 }
@@ -67,13 +67,13 @@ impl SemanticAnalyser {
         }
     }
 
-    fn insert(&mut self, name: Identifier, symbol: Symbol) -> Result<(), SemanticErrorKind> {
+    fn insert(&mut self, path: PathType, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
-            curr_scope.symbols.insert(name.clone(), symbol.clone());
+            curr_scope.symbols.insert(path.clone(), symbol.clone());
 
             self.logger.debug(&format!(
                 "inserted symbol `{}` into scope: {:?}",
-                name, curr_scope.scope_kind
+                path, curr_scope.scope_kind
             ));
 
             Ok(())
@@ -82,19 +82,19 @@ impl SemanticAnalyser {
         }
     }
 
-    fn lookup(&mut self, name: &Identifier) -> Option<&Symbol> {
+    fn lookup(&mut self, path: &PathType) -> Option<&Symbol> {
         for scope in self.scope_stack.iter().rev() {
-            if let Some(symbol) = scope.symbols.get(name) {
+            if let Some(symbol) = scope.symbols.get(path) {
                 self.logger.debug(&format!(
                     "found symbol `{}` in scope: {:?}",
-                    name, scope.scope_kind
+                    path, scope.scope_kind
                 ));
 
                 return Some(symbol);
             }
         }
         self.logger
-            .warn(&format!("symbol `{}` not found in any scope", name));
+            .warn(&format!("symbol `{}` not found in any scope", path));
         None
     }
 
@@ -146,8 +146,10 @@ impl SemanticAnalyser {
                     });
                 }
 
+                let assignee_path = build_item_path(root, ls.assignee.name.clone());
+
                 // add the variable to the symbol table
-                self.insert(ls.assignee.name.clone(), Symbol::Variable(inferred_type))?;
+                self.insert(assignee_path, Symbol::Variable(inferred_type))?;
 
                 self.logger
                     .info(&format!("analysed let statement: {:?}", ls));
@@ -156,27 +158,29 @@ impl SemanticAnalyser {
             Statement::Item(i) => match i {
                 Item::ImportDecl(id) => self.analyse_import(&id.import_tree)?,
 
-                Item::AliasDecl(ad) => match &ad.original_type_opt {
-                    Some(t) => {
-                        // alias points to an existing type (`t`)
-                        self.insert(ad.alias_name.clone(), Symbol::Variable(t.clone()))?;
+                Item::AliasDecl(ad) => {
+                    let alias_path = build_item_path(root, ad.alias_name.clone());
 
-                        self.logger
-                            .info(&format!("initialized alias declaration: {:?}", ad));
+                    match &ad.original_type_opt {
+                        Some(t) => {
+                            // alias points to an existing type (`t`)
+                            self.insert(alias_path, Symbol::Variable(t.clone()))?;
+
+                            self.logger
+                                .info(&format!("initialized alias declaration: {:?}", ad));
+                        }
+                        None => {
+                            // alias is its own user-defined opaque type
+                            self.insert(
+                                alias_path.clone(),
+                                Symbol::Variable(Type::UserDefined(alias_path)),
+                            )?;
+
+                            self.logger
+                                .info(&format!("initialized alias declaration: {:?}", ad));
+                        }
                     }
-                    None => {
-                        let alias_path = build_item_path(root.clone(), ad.alias_name.clone());
-
-                        // alias is its own user-defined opaque type
-                        self.insert(
-                            ad.alias_name.clone(),
-                            Symbol::Variable(Type::UserDefined(alias_path)),
-                        )?;
-
-                        self.logger
-                            .info(&format!("initialized alias declaration: {:?}", ad));
-                    }
-                },
+                }
 
                 Item::ConstantDecl(cd) => {
                     let value_type = match &cd.value_opt {
@@ -190,23 +194,21 @@ impl SemanticAnalyser {
                         }),
                     };
 
-                    let constant_type = *cd.constant_type.clone();
-
-                    if value_type != constant_type {
+                    if value_type != *cd.constant_type {
                         return Err(SemanticErrorKind::TypeMismatchVariable {
                             name: cd.constant_name.clone(),
-                            expected: constant_type.to_string(),
+                            expected: cd.constant_type.to_string(),
                             found: value_type.to_string(),
                         });
                     }
 
-                    let constant_path = build_item_path(root.clone(), cd.constant_name.clone());
+                    let constant_path = build_item_path(root, cd.constant_name.clone());
 
                     self.insert(
-                        cd.constant_name.clone(),
+                        constant_path.clone(),
                         Symbol::Constant {
                             path: constant_path,
-                            ty: *cd.constant_type.clone(),
+                            constant_decl: cd.clone(),
                         },
                     )?;
 
@@ -226,17 +228,17 @@ impl SemanticAnalyser {
                         }),
                     };
 
-                    let var_type = s.var_type.clone();
-
-                    if assignee_type != var_type {
+                    if assignee_type != s.var_type.clone() {
                         return Err(SemanticErrorKind::TypeMismatchVariable {
                             name: s.var_name.clone(),
-                            expected: var_type.to_string(),
+                            expected: s.var_type.clone().to_string(),
                             found: assignee_type.to_string(),
                         });
                     }
 
-                    self.insert(s.var_name.clone(), Symbol::Variable(s.var_type.clone()))?;
+                    let static_var_path = build_item_path(root, s.var_name.clone());
+
+                    self.insert(static_var_path, Symbol::Variable(s.var_type.clone()))?;
 
                     self.logger
                         .info(&format!("initialized static variable declaration: {:?}", s));
@@ -260,32 +262,40 @@ impl SemanticAnalyser {
                         module_scope = curr_scope;
                     }
 
+                    let module_path = build_item_path(root, m.module_name.clone());
+
                     self.insert(
-                        m.module_name.clone(),
+                        module_path.clone(),
                         Symbol::Module {
-                            path_opt: Some(root.clone()),
+                            path: module_path.clone(),
                             module: m.clone(),
                             symbols: module_scope.symbols.clone(),
                         },
                     )?;
 
                     self.module_registry
-                        .insert(m.module_name.clone(), module_scope.symbols);
+                        .insert(module_path, module_scope.symbols);
 
                     self.logger
                         .info(&format!("initialized new module scope: {:?}", m));
                 }
 
                 Item::TraitDef(t) => {
-                    self.insert(t.trait_name.clone(), Symbol::Trait(t.clone()))?;
+                    let trait_path = build_item_path(root, t.trait_name.clone());
+
+                    self.insert(
+                        trait_path.clone(),
+                        Symbol::Trait {
+                            path: trait_path.clone(),
+                            trait_def: t.clone(),
+                        },
+                    )?;
 
                     self.logger
                         .info(&format!("initialized trait definition: {:?}", t));
 
                     if let Some(v) = &t.trait_items_opt {
                         for item in v.iter() {
-                            let trait_path = build_item_path(root.clone(), t.trait_name.clone());
-
                             match item {
                                 TraitDefItem::AliasDecl(ad) => {
                                     self.analyse_stmt(
@@ -300,10 +310,13 @@ impl SemanticAnalyser {
                                 )?,
 
                                 TraitDefItem::FunctionItem(fi) => {
+                                    let function_path =
+                                        build_item_path(&trait_path, fi.function_name.clone());
+
                                     self.insert(
-                                        fi.function_name.clone(),
+                                        function_path.clone(),
                                         Symbol::Function {
-                                            path_opt: Some(trait_path),
+                                            path: function_path,
                                             function: fi.clone(),
                                         },
                                     )?;
@@ -321,19 +334,46 @@ impl SemanticAnalyser {
                 }
 
                 Item::EnumDef(e) => {
-                    self.insert(e.enum_name.clone(), Symbol::Enum(e.clone()))?;
+                    let enum_path = build_item_path(root, e.enum_name.clone());
+
+                    self.insert(
+                        enum_path.clone(),
+                        Symbol::Enum {
+                            path: enum_path,
+                            enum_def: e.clone(),
+                        },
+                    )?;
+
                     self.logger
                         .info(&format!("initialized enum definition: {:?}", e));
                 }
 
                 Item::StructDef(s) => {
-                    self.insert(s.struct_name.clone(), Symbol::Struct(s.clone()))?;
+                    let struct_path = build_item_path(root, s.struct_name.clone());
+
+                    self.insert(
+                        struct_path.clone(),
+                        Symbol::Struct {
+                            path: struct_path,
+                            struct_def: s.clone(),
+                        },
+                    )?;
+
                     self.logger
                         .info(&format!("initialized struct definition: {:?}", s));
                 }
 
                 Item::TupleStructDef(ts) => {
-                    self.insert(ts.struct_name.clone(), Symbol::TupleStruct(ts.clone()))?;
+                    let tuple_struct_path = build_item_path(root, ts.struct_name.clone());
+
+                    self.insert(
+                        tuple_struct_path.clone(),
+                        Symbol::TupleStruct {
+                            path: tuple_struct_path,
+                            tuple_struct_def: ts.clone(),
+                        },
+                    )?;
+
                     self.logger
                         .info(&format!("initialized struct definition: {:?}", ts));
                 }
@@ -348,10 +388,13 @@ impl SemanticAnalyser {
                                 )?,
 
                                 InherentImplItem::FunctionItem(fi) => {
+                                    let function_path =
+                                        build_item_path(&i.nominal_type, fi.function_name.clone());
+
                                     self.insert(
-                                        fi.function_name.clone(),
+                                        function_path.clone(),
                                         Symbol::Function {
-                                            path_opt: Some(i.nominal_type.clone()),
+                                            path: function_path,
                                             function: fi.clone(),
                                         },
                                     )?;
@@ -385,10 +428,15 @@ impl SemanticAnalyser {
                                 // TODO: distinguish different implementations of trait functions
                                 // TODO: according to associated type
                                 TraitImplItem::FunctionItem(fi) => {
-                                    self.insert(
+                                    let function_path = build_item_path(
+                                        &t.implemented_trait_path,
                                         fi.function_name.clone(),
+                                    );
+
+                                    self.insert(
+                                        function_path.clone(),
                                         Symbol::Function {
-                                            path_opt: Some(t.implemented_trait_path.clone()),
+                                            path: function_path,
                                             function: fi.clone(),
                                         },
                                     )?;
@@ -406,12 +454,12 @@ impl SemanticAnalyser {
                 }
 
                 Item::FunctionItem(f) => {
-                    let function_path = build_item_path(root.clone(), f.function_name.clone());
+                    let function_path = build_item_path(root, f.function_name.clone());
 
                     self.insert(
-                        f.function_name.clone(),
+                        function_path.clone(),
                         Symbol::Function {
-                            path_opt: Some(function_path),
+                            path: function_path,
                             function: f.clone(),
                         },
                     )?;
@@ -439,7 +487,12 @@ impl SemanticAnalyser {
             let param_types: Vec<Type> = v.iter().map(|p| p.param_type()).collect();
 
             for (param, param_type) in v.iter().zip(param_types) {
-                self.insert(param.param_name().clone(), Symbol::Variable(param_type))?;
+                let param_path = PathType {
+                    associated_type_path_prefix_opt: None,
+                    type_name: param.param_name(),
+                };
+
+                self.insert(param_path, Symbol::Variable(param_type))?;
             }
         }
 
@@ -477,29 +530,36 @@ impl SemanticAnalyser {
     }
 
     fn analyse_import(&mut self, tree: &ImportTree) -> Result<(), SemanticErrorKind> {
-        let mut path: Vec<PathType> = Vec::new();
+        let mut full_path: Vec<PathType> = Vec::new();
 
         for ps in tree.path_segments.iter() {
-            path.push(ps.root.clone());
+            full_path.push(ps.root.clone());
         }
 
-        let name = match path.last() {
-            Some(pt) => Identifier::from(&pt.to_string()),
-            None => Identifier::from(""),
+        let path = match full_path.last() {
+            Some(pt) => pt.clone(),
+            None => PathType {
+                associated_type_path_prefix_opt: None,
+                type_name: Identifier::from(""),
+            },
         };
 
-        if let Some(m) = self.module_registry.get(&name) {
-            if let Some(s) = m.get(&name) {
-                self.insert(name.clone(), s.clone())?;
+        if let Some(m) = self.module_registry.get(&path) {
+            if let Some(s) = m.get(&path) {
+                self.insert(path, s.clone())?;
             } else {
-                return Err(SemanticErrorKind::UndefinedSymbol { name });
+                return Err(SemanticErrorKind::UndefinedSymbol {
+                    name: path.type_name,
+                });
             }
         } else {
-            return Err(SemanticErrorKind::UndefinedModule { name });
+            return Err(SemanticErrorKind::UndefinedModule {
+                name: path.type_name,
+            });
         }
 
         self.logger
-            .info(&format!("import path declared: {:?}", path));
+            .info(&format!("import path declared: {:?}", full_path));
 
         Ok(())
     }
@@ -539,7 +599,12 @@ impl SemanticAnalyser {
                     },
                 };
 
-                match self.lookup(&name) {
+                let path = PathType {
+                    associated_type_path_prefix_opt: None,
+                    type_name: name.clone(),
+                };
+
+                match self.lookup(&path) {
                     Some(Symbol::Variable(t)) => Ok(t.clone()),
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name,
@@ -603,7 +668,7 @@ impl SemanticAnalyser {
 
                 // convert receiver expression to path expression (i.e., check if receiver
                 // is a valid path)
-                let path_expr = PathExpr::try_from(receiver.clone()).map_err(|_| {
+                let receiver_as_path_expr = PathExpr::try_from(receiver.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
                         from: receiver.to_string(),
                         into: "`PathExpr`".to_string(),
@@ -611,59 +676,58 @@ impl SemanticAnalyser {
                 })?;
 
                 // get path expression's type
-                let type_name = PathType::from(path_expr).type_name;
+                let receiver_path = PathType::from(receiver_as_path_expr);
 
                 // check if path expression's type is that of an existing type and analyse
-                match self.lookup(&type_name) {
-                    Some(Symbol::Struct(s)) => {
-                        if s.struct_name == type_name {
-                            self.analyse_call_or_method_call_expr(
-                                mc.method_name.clone(),
-                                mc.args_opt.clone(),
-                            )
+                match self.lookup(&receiver_path) {
+                    Some(Symbol::Struct { path, .. }) => {
+                        if *path == receiver_path {
+                            let method_path = build_item_path(&path, mc.method_name.clone());
+
+                            self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                         } else {
                             Err(SemanticErrorKind::TypeMismatchVariable {
-                                name: type_name,
-                                expected: s.struct_name.to_string(),
+                                name: receiver_path.type_name,
+                                expected: path.to_string(),
                                 found: receiver_type.to_string(),
                             })
                         }
                     }
 
-                    Some(Symbol::TupleStruct(ts)) => {
-                        if ts.struct_name == type_name {
-                            self.analyse_call_or_method_call_expr(
-                                mc.method_name.clone(),
-                                mc.args_opt.clone(),
-                            )
+                    Some(Symbol::TupleStruct { path, .. }) => {
+                        if *path == receiver_path {
+                            let method_path = build_item_path(&path, mc.method_name.clone());
+
+                            self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                         } else {
                             Err(SemanticErrorKind::TypeMismatchVariable {
-                                name: type_name,
-                                expected: ts.struct_name.to_string(),
+                                name: receiver_path.type_name,
+                                expected: path.to_string(),
                                 found: receiver_type.to_string(),
                             })
                         }
                     }
 
-                    Some(Symbol::Enum(e)) => {
-                        if e.enum_name == type_name {
-                            self.analyse_call_or_method_call_expr(
-                                mc.method_name.clone(),
-                                mc.args_opt.clone(),
-                            )
+                    Some(Symbol::Enum { path, .. }) => {
+                        if *path == receiver_path {
+                            let method_path = build_item_path(&path, mc.method_name.clone());
+
+                            self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                         } else {
                             Err(SemanticErrorKind::TypeMismatchVariable {
-                                name: type_name,
-                                expected: e.enum_name.to_string(),
+                                name: receiver_path.type_name,
+                                expected: path.to_string(),
                                 found: receiver_type.to_string(),
                             })
                         }
                     }
 
-                    None => Err(SemanticErrorKind::UndefinedType { name: type_name }),
+                    None => Err(SemanticErrorKind::UndefinedType {
+                        name: receiver_path.type_name,
+                    }),
 
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: type_name,
+                        name: receiver_path.type_name,
                         expected: "struct or enum".to_string(),
                         found: s.to_string(),
                     }),
@@ -671,14 +735,29 @@ impl SemanticAnalyser {
             }
 
             Expression::FieldAccess(fa) => {
-                let object_type = self.analyse_expr(&wrap_into_expression(*fa.object.clone())?)?;
+                let object_expr = wrap_into_expression(*fa.object.clone())?;
 
-                match self.lookup(&Identifier::from(&object_type.to_string())) {
-                    Some(Symbol::Struct(s)) => match &s.fields_opt {
+                let object_type = self.analyse_expr(&object_expr)?;
+
+                // convert object to path expression (i.e., check if object
+                // is a valid path)
+                let object_as_path_expr =
+                    PathExpr::try_from(object_expr.clone()).map_err(|_| {
+                        SemanticErrorKind::ConversionError {
+                            from: object_expr.to_string(),
+                            into: "`PathExpr`".to_string(),
+                        }
+                    })?;
+
+                // get path expression's type
+                let object_path = PathType::from(object_as_path_expr);
+
+                match self.lookup(&object_path) {
+                    Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
                         Some(v) => match v.iter().find(|f| f.field_name == fa.field_name) {
                             Some(sdf) => Ok(*sdf.field_type.clone()),
                             _ => Err(SemanticErrorKind::UndefinedField {
-                                struct_name: s.struct_name.clone(),
+                                struct_name: struct_def.struct_name.clone(),
                                 field_name: fa.field_name.clone(),
                             }),
                         },
@@ -700,16 +779,16 @@ impl SemanticAnalyser {
             Expression::Call(c) => {
                 let callee = wrap_into_expression(c.callee.clone())?;
 
-                let path_expr = PathExpr::try_from(callee.clone()).map_err(|_| {
+                let callee_as_path_expr = PathExpr::try_from(callee.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
                         from: callee.to_string(),
                         into: "`PathExpr`".to_string(),
                     }
                 })?;
 
-                let name = PathType::from(path_expr).type_name;
+                let path = PathType::from(callee_as_path_expr);
 
-                self.analyse_call_or_method_call_expr(name, c.args_opt.clone())
+                self.analyse_call_or_method_call_expr(path, c.args_opt.clone())
             }
 
             Expression::Index(i) => {
@@ -1165,16 +1244,7 @@ impl SemanticAnalyser {
             Expression::Assignment(a) => {
                 let assignee = wrap_into_expression(a.lhs.clone())?;
 
-                let assignee_path = PathExpr::try_from(assignee.clone()).map_err(|_| {
-                    SemanticErrorKind::ConversionError {
-                        from: assignee.to_string(),
-                        into: "`PathExpr`".to_string(),
-                    }
-                })?;
-
                 let assignee_type = self.analyse_expr(&assignee)?;
-
-                let assignee_name = Identifier::from(&assignee_path.path_root.to_string());
 
                 let value_type = self.analyse_expr(&wrap_into_expression(a.rhs.clone())?)?;
 
@@ -1185,26 +1255,35 @@ impl SemanticAnalyser {
                     });
                 }
 
-                match self.lookup(&assignee_name).cloned() {
+                let assignee_as_path_expr = PathExpr::try_from(assignee.clone()).map_err(|_| {
+                    SemanticErrorKind::ConversionError {
+                        from: assignee.to_string(),
+                        into: "`PathExpr`".to_string(),
+                    }
+                })?;
+
+                let assignee_path = PathType::from(assignee_as_path_expr);
+
+                match self.lookup(&assignee_path).cloned() {
                     Some(Symbol::Variable(var_type)) => match var_type == assignee_type {
                         true => {
                             self.analyse_expr(&wrap_into_expression(a.rhs.clone())?)?;
                             Ok(var_type)
                         }
                         false => Err(SemanticErrorKind::TypeMismatchVariable {
-                            name: assignee_name,
+                            name: assignee_path.type_name,
                             expected: assignee_type.to_string(),
                             found: var_type.to_string(),
                         }),
                     },
 
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: assignee_name,
+                        name: assignee_path.type_name,
                         expected: assignee_type.to_string(),
                         found: s.to_string(),
                     }),
                     None => Err(SemanticErrorKind::UndefinedVariable {
-                        name: assignee_name,
+                        name: assignee_path.type_name,
                     }),
                 }
             }
@@ -1345,7 +1424,11 @@ impl SemanticAnalyser {
                     let param_types: Vec<Type> = v.iter().map(|p| p.param_type()).collect();
 
                     for (param, param_type) in v.iter().zip(param_types) {
-                        self.insert(param.param_name().clone(), Symbol::Variable(param_type))?;
+                        let param_path = PathType {
+                            associated_type_path_prefix_opt: None,
+                            type_name: param.param_name(),
+                        };
+                        self.insert(param_path, Symbol::Variable(param_type))?;
                     }
                 }
 
@@ -1427,10 +1510,10 @@ impl SemanticAnalyser {
             }
 
             Expression::Struct(s) => {
-                let name = PathType::from(s.struct_path.clone()).type_name;
+                let path_type = PathType::from(s.struct_path.clone());
 
-                match self.lookup(&name).cloned() {
-                    Some(Symbol::Struct(struct_def)) => {
+                match self.lookup(&path_type).cloned() {
+                    Some(Symbol::Struct { struct_def, path }) => {
                         let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
                         let struct_fields = s.struct_fields_opt.clone();
@@ -1452,7 +1535,7 @@ impl SemanticAnalyser {
                                     Some(expr_type) if *expr_type == *sdf.field_type => (),
                                     Some(t) => {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
-                                            name: name.clone(),
+                                            name: path.type_name,
                                             expected: sdf.field_type.clone().to_string(),
                                             found: t.to_string(),
                                         })
@@ -1469,18 +1552,15 @@ impl SemanticAnalyser {
                             }
                         }
 
-                        let path_type = PathType {
-                            associated_type_path_prefix_opt: None,
-                            type_name: name,
-                        };
-
-                        Ok(Type::UserDefined(path_type))
+                        Ok(Type::UserDefined(path))
                     }
 
-                    None => Err(SemanticErrorKind::UndefinedStruct { name }),
+                    None => Err(SemanticErrorKind::UndefinedStruct {
+                        name: path_type.type_name,
+                    }),
 
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name,
+                        name: path_type.type_name,
                         expected: "struct".to_string(),
                         found: s.to_string(),
                     }),
@@ -1719,10 +1799,10 @@ impl SemanticAnalyser {
 
     fn analyse_call_or_method_call_expr(
         &mut self,
-        name: Identifier,
+        path: PathType,
         args_opt: Option<Vec<Expression>>,
     ) -> Result<Type, SemanticErrorKind> {
-        match self.lookup(&name) {
+        match self.lookup(&path) {
             Some(Symbol::Function { function, .. }) => {
                 let args = args_opt.clone();
                 let params = function.params_opt.clone();
@@ -1732,7 +1812,7 @@ impl SemanticAnalyser {
                     (None, None) => Ok(Type::UnitType(Unit)),
                     (None, Some(_)) | (Some(_), None) => {
                         return Err(SemanticErrorKind::ArgumentCountMismatch {
-                            name,
+                            name: path.type_name,
                             expected: params.unwrap_or(Vec::new()).len(),
                             found: args.unwrap_or(Vec::new()).len(),
                         })
@@ -1740,7 +1820,7 @@ impl SemanticAnalyser {
                     (Some(a), Some(p)) => {
                         if a.len() != p.len() {
                             return Err(SemanticErrorKind::ArgumentCountMismatch {
-                                name,
+                                name: path.type_name,
                                 expected: p.len(),
                                 found: a.len(),
                             });
@@ -1751,7 +1831,7 @@ impl SemanticAnalyser {
                             let param_type = param.param_type();
                             if arg_type != param_type {
                                 return Err(SemanticErrorKind::TypeMismatchArgument {
-                                    name,
+                                    name: path.type_name,
                                     expected: param_type.to_string(),
                                     found: arg_type.to_string(),
                                 });
@@ -1766,10 +1846,12 @@ impl SemanticAnalyser {
                 }
             }
 
-            None => Err(SemanticErrorKind::UndefinedFunction { name }),
+            None => Err(SemanticErrorKind::UndefinedFunction {
+                name: path.type_name,
+            }),
 
             Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
-                name,
+                name: path.type_name,
                 expected: "function".to_string(),
                 found: s.to_string(),
             }),
@@ -1778,7 +1860,10 @@ impl SemanticAnalyser {
 
     fn analyse_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
         match pattern {
-            Pattern::IdentifierPatt(i) => match self.lookup(&i.name) {
+            Pattern::IdentifierPatt(i) => match self.lookup(&PathType {
+                associated_type_path_prefix_opt: None,
+                type_name: i.name.clone(),
+            }) {
                 Some(Symbol::Variable(var_type)) => Ok(var_type.clone()),
                 Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: i.name.clone(),
@@ -1820,14 +1905,21 @@ impl SemanticAnalyser {
                     },
                 };
 
-                match self.lookup(&name) {
+                let path = PathType {
+                    associated_type_path_prefix_opt: None,
+                    type_name: name.clone(),
+                };
+
+                match self.lookup(&path) {
                     Some(Symbol::Variable(t)) => Ok(t.clone()),
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name,
                         expected: "variable".to_string(),
                         found: s.to_string(),
                     }),
-                    None => Err(SemanticErrorKind::UndefinedVariable { name }),
+                    None => Err(SemanticErrorKind::UndefinedVariable {
+                        name: path.type_name,
+                    }),
                 }
             }
 
@@ -1992,10 +2084,10 @@ impl SemanticAnalyser {
             }
 
             Pattern::StructPatt(s) => {
-                let name = PathType::from(s.struct_path.clone()).type_name;
+                let path_type = PathType::from(s.struct_path.clone());
 
-                match self.lookup(&name).cloned() {
-                    Some(Symbol::Struct(struct_def)) => {
+                match self.lookup(&path_type).cloned() {
+                    Some(Symbol::Struct { struct_def, path }) => {
                         let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
                         let struct_fields = s.struct_fields_opt.clone();
@@ -2017,7 +2109,7 @@ impl SemanticAnalyser {
                                     Some(expr_type) if *expr_type == *sdf.field_type => (),
                                     Some(t) => {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
-                                            name: name.clone(),
+                                            name: path.type_name,
                                             expected: sdf.field_type.clone().to_string(),
                                             found: t.to_string(),
                                         })
@@ -2034,18 +2126,15 @@ impl SemanticAnalyser {
                             }
                         }
 
-                        let path_type = PathType {
-                            associated_type_path_prefix_opt: None,
-                            type_name: name,
-                        };
-
-                        Ok(Type::UserDefined(path_type))
+                        Ok(Type::UserDefined(path))
                     }
 
-                    None => Err(SemanticErrorKind::UndefinedStruct { name }),
+                    None => Err(SemanticErrorKind::UndefinedStruct {
+                        name: path_type.type_name,
+                    }),
 
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name,
+                        name: path_type.type_name,
                         expected: "struct".to_string(),
                         found: s.to_string(),
                     }),
@@ -2053,10 +2142,13 @@ impl SemanticAnalyser {
             }
 
             Pattern::TupleStructPatt(ts) => {
-                let name = PathType::from(ts.struct_path.clone()).type_name;
+                let path_type = PathType::from(ts.struct_path.clone());
 
-                match self.lookup(&name).cloned() {
-                    Some(Symbol::TupleStruct(tuple_struct_def)) => {
+                match self.lookup(&path_type).cloned() {
+                    Some(Symbol::TupleStruct {
+                        tuple_struct_def,
+                        path,
+                    }) => {
                         let mut element_map: HashMap<usize, Type> = HashMap::new();
                         let mut element_counter = 0usize;
 
@@ -2078,7 +2170,7 @@ impl SemanticAnalyser {
                                     Some(patt_type) if *patt_type == *tsde.element_type => (),
                                     Some(t) => {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
-                                            name: name.clone(),
+                                            name: path.type_name,
                                             expected: tsde.element_type.clone().to_string(),
                                             found: t.to_string(),
                                         })
@@ -2087,7 +2179,7 @@ impl SemanticAnalyser {
                                         return Err(SemanticErrorKind::MissingTupleStructElement {
                                             expected: format!(
                                                 "`{}.{}: {}`",
-                                                &name, i, *tsde.element_type
+                                                &path_type, i, *tsde.element_type
                                             ),
                                         })
                                     }
@@ -2095,18 +2187,15 @@ impl SemanticAnalyser {
                             }
                         }
 
-                        let path_type = PathType {
-                            associated_type_path_prefix_opt: None,
-                            type_name: name,
-                        };
-
-                        Ok(Type::UserDefined(path_type))
+                        Ok(Type::UserDefined(path))
                     }
 
-                    None => Err(SemanticErrorKind::UndefinedStruct { name }),
+                    None => Err(SemanticErrorKind::UndefinedStruct {
+                        name: path_type.type_name,
+                    }),
 
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name,
+                        name: path_type.type_name,
                         expected: "struct".to_string(),
                         found: s.to_string(),
                     }),
@@ -2167,7 +2256,7 @@ impl SemanticAnalyser {
     }
 }
 
-fn build_item_path(root: PathType, item_name: Identifier) -> PathType {
+fn build_item_path(root: &PathType, item_name: Identifier) -> PathType {
     if let Some(ref mut p) = root.associated_type_path_prefix_opt.clone() {
         p.push(root.type_name.clone());
 
