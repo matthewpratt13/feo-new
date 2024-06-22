@@ -16,6 +16,7 @@ pub(crate) enum ScopeKind {
     ForInLoop,
     Function,
     Trait,
+    Implementation,
     Module,
     Global,
 }

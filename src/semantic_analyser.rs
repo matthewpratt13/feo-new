@@ -379,6 +379,8 @@ impl SemanticAnalyser {
                 }
 
                 Item::InherentImplDef(i) => {
+                    self.enter_scope(ScopeKind::Implementation);
+
                     if let Some(v) = &i.associated_items_opt {
                         for item in v.iter() {
                             match item {
@@ -409,6 +411,8 @@ impl SemanticAnalyser {
                             }
                         }
                     }
+
+                    self.exit_scope()
                 }
 
                 Item::TraitImplDef(t) => {
