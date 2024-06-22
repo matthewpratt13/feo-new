@@ -18,7 +18,6 @@ pub(crate) enum ScopeKind {
     Module,
 }
 
-// TODO: add `path` fields to `Struct`, `TupleStruct`, `Enum` and `Trait`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Symbol {
     Variable(Type),
