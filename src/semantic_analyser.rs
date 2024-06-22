@@ -1280,6 +1280,7 @@ impl SemanticAnalyser {
                     });
                 }
 
+                // TODO: what if `assignee` is not a `PathExpr` ?
                 let assignee_as_path_expr = PathExpr::try_from(assignee.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
                         from: assignee.to_string(),
@@ -1325,6 +1326,7 @@ impl SemanticAnalyser {
 
                 let value_type = self.analyse_expr(&wrap_into_expression(ca.rhs.clone())?)?;
 
+                // TODO: what if `assignee` is not a `PathExpr` ?
                 let assignee_as_path_expr = PathExpr::try_from(assignee.clone()).map_err(|_| {
                     SemanticErrorKind::ConversionError {
                         from: assignee.to_string(),
