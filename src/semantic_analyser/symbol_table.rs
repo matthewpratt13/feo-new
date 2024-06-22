@@ -62,13 +62,13 @@ impl Symbol {
     pub(crate) fn symbol_type(&self) -> Identifier {
         match self.clone() {
             Symbol::Variable(t) => Identifier::from(&t.to_string()),
-            Symbol::Alias { alias_decl, .. } => alias_decl.alias_name,
             Symbol::Struct { struct_def, .. } => struct_def.struct_name,
             Symbol::TupleStruct {
                 tuple_struct_def, ..
             } => tuple_struct_def.struct_name,
             Symbol::Enum { enum_def, .. } => enum_def.enum_name,
             Symbol::Trait { trait_def, .. } => trait_def.trait_name,
+            Symbol::Alias { alias_decl, .. } => alias_decl.alias_name,
             Symbol::Function { function, .. } => function.function_name,
             Symbol::Module { module, .. } => module.module_name,
         }
@@ -79,11 +79,11 @@ impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Symbol::Variable(v) => write!(f, "{}", v),
-            Symbol::Alias { path, .. } => write!(f, "{}", path),
             Symbol::Struct { path, .. } => write!(f, "{}", path),
             Symbol::TupleStruct { path, .. } => write!(f, "{}", path),
             Symbol::Enum { path, .. } => write!(f, "{}", path),
             Symbol::Trait { path, .. } => write!(f, "{}", path),
+            Symbol::Alias { path, .. } => write!(f, "{}", path),
             Symbol::Function { path, .. } => write!(f, "{}", path),
             Symbol::Module { path, .. } => write!(f, "{}", path),
         }
