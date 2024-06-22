@@ -146,7 +146,7 @@ impl SemanticAnalyser {
                     });
                 }
 
-                let assignee_path = build_item_path(root, ls.assignee.name.clone());
+                let assignee_path = PathType::from(ls.assignee.name.clone());
 
                 // add the variable to the symbol table
                 self.insert(assignee_path, Symbol::Variable(inferred_type))?;
