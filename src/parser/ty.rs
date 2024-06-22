@@ -3,7 +3,7 @@ mod path_type;
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Delimiter, Float, FunctionOrMethodParam, FunctionPtr,
-        Hash, Identifier, InferredType, Int, PathType, ReferenceOp, SelfType, Str, Type, UInt,
+        Identifier, InferredType, Int, PathType, ReferenceOp, SelfType, Str, Type, UInt,
         Unit,
     },
     error::ErrorsEmitted,
@@ -39,9 +39,9 @@ impl Type {
             Some(Token::B8Type { .. }) => Ok(Type::B8(Bytes::B8(B8::default()))),
             Some(Token::B16Type { .. }) => Ok(Type::B16(Bytes::B16(B16::default()))),
             Some(Token::B32Type { .. }) => Ok(Type::B32(Bytes::B32(B32::default()))),
-            Some(Token::H160Type { .. }) => Ok(Type::H160(Hash::H160(H160::default()))),
-            Some(Token::H256Type { .. }) => Ok(Type::H256(Hash::H256(H256::default()))),
-            Some(Token::H512Type { .. }) => Ok(Type::H512(Hash::H512(H512::default()))),
+            Some(Token::H160Type { .. }) => Ok(Type::H160(crate::ast::Hash::H160(H160::default()))),
+            Some(Token::H256Type { .. }) => Ok(Type::H256(crate::ast::Hash::H256(H256::default()))),
+            Some(Token::H512Type { .. }) => Ok(Type::H512(crate::ast::Hash::H512(H512::default()))),
             Some(Token::StrType { .. }) => Ok(Type::Str(Str::from(String::default().as_str()))),
             Some(Token::CharType { .. }) => Ok(Type::Char(Char::from(char::default()))),
             Some(Token::BoolType { .. }) => Ok(Type::Bool(Bool::from(bool::default()))),

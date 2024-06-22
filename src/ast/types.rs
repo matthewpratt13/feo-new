@@ -132,7 +132,7 @@ pub enum Hash {
     H512(H512),
 }
 
-impl fmt::Display for Hash {
+impl fmt::Display for self::Hash {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Hash::H160(t) => write!(f, "{}", t),
