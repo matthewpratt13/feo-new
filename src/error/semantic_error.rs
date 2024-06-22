@@ -13,6 +13,10 @@ pub enum SemanticErrorKind {
         found: usize,
     },
 
+    ConstantReassignment {
+        name: Identifier,
+    },
+
     ConversionError {
         from: String,
         into: String,
@@ -64,8 +68,8 @@ pub enum SemanticErrorKind {
         found: String,
         },
         
-    TypeMismatchLetStmt {
-        value_type: String,
+    TypeMismatchDeclaredType {
+        actual_type: String,
         declared_type: String,
     },
 
@@ -119,24 +123,25 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
-    UndefinedVariable {
-        name: Identifier,
-    },
-
+    
     UnexpectedKeyword {
         expected: String,
         found: String,
     },
-
+    
     UnexpectedSymbol {
         name: Identifier,
         expected: String,
         found: String
     },
-
+    
     UnexpectedType {
         expected: String,
         found: String,
+    },
+    
+    VariableOutOfScope {
+        name: Identifier,
     },
 
     #[default]
@@ -152,6 +157,10 @@ impl fmt::Display for SemanticErrorKind {
                     "argument count mismatch in function `{name}()`. Expected {expected} arguments, found {found}"
                 )
             }
+            SemanticErrorKind::ConstantReassignment{ name } => {
+                write!(f, "cannot reassign constant: `{name}`")
+            }  
+            
             SemanticErrorKind::ConversionError { from, into } => {
                 write!(f, "conversion error. Unable to convert {from} into {into}")
             }
@@ -196,9 +205,9 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "invalid operation: type mismatch in binary expression. Expected {expected}, found {found}"
             ),
-            SemanticErrorKind::TypeMismatchLetStmt {value_type, declared_type } => write!(
+            SemanticErrorKind::TypeMismatchDeclaredType {actual_type, declared_type } => write!(
                 f,
-                "declared type {declared_type} does not match value's type: {value_type}"
+                "declared type {declared_type} does not match value's type: {actual_type}"
             ),
             SemanticErrorKind::TypeMismatchReturnType { expected, found } => write!(
                 f,
@@ -232,16 +241,17 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::UndefinedType { name } => write!(f, "no type `{name}` in current scope"),
             
-            SemanticErrorKind::UndefinedVariable { name } => {
-                write!(f, "undefined variable: `{name}`",)
-            }
-
+            
             SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found `{found}`"),
-
+            
             SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found `{found}`"),
-
+            
             SemanticErrorKind::UnexpectedType { expected, found } => {
                 write!(f, "unexpected type(s). Expected {expected}, found {found}")
+            }
+
+            SemanticErrorKind::VariableOutOfScope { name } => {
+                write!(f, "cannot find variable `{name}` in current scope",)
             }
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
