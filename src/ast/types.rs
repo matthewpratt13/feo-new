@@ -2,7 +2,7 @@ use core::fmt;
 
 pub use crate::{B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512};
 
-use super::{FunctionOrMethodParam, Identifier, PathExpr, PathPatt, Type};
+use super::{FunctionOrMethodParam, Identifier, Type};
 
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]
@@ -132,7 +132,7 @@ pub enum Hash {
     H512(H512),
 }
 
-impl fmt::Display for Hash {
+impl fmt::Display for self::Hash {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Hash::H160(t) => write!(f, "{}", t),
@@ -207,7 +207,7 @@ impl fmt::Display for Bool {
 }
 
 /// Function pointer type: `func(<param>) -> <Type>`
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionPtr {
     pub(crate) function_name: Identifier,
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
@@ -225,7 +225,7 @@ impl fmt::Display for FunctionPtr {
 }
 
 /// Unit struct that represents the `Self` type.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SelfType;
 
 impl fmt::Display for SelfType {
@@ -235,7 +235,7 @@ impl fmt::Display for SelfType {
 }
 
 /// Unit struct that represents the unit type `()`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unit;
 
 impl fmt::Display for Unit {
@@ -245,7 +245,7 @@ impl fmt::Display for Unit {
 }
 
 /// Struct that represents an inferred type.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InferredType {
     pub(crate) name: Identifier,
 }
@@ -257,82 +257,8 @@ impl fmt::Display for InferredType {
 }
 
 /// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PathType {
     pub(crate) associated_type_path_prefix_opt: Option<Vec<Identifier>>,
     pub(crate) type_name: Identifier,
-}
-
-impl From<PathExpr> for PathType {
-    fn from(value: PathExpr) -> Self {
-        let mut path_segment_names: Vec<Identifier> = Vec::new();
-
-        path_segment_names.push(Identifier(value.path_root.to_string()));
-
-        match value.tree_opt {
-            Some(v) => {
-                v.into_iter().for_each(|i| path_segment_names.push(i));
-            }
-            None => (),
-        }
-
-        let type_name = path_segment_names.pop().expect("empty path expression");
-
-        PathType {
-            associated_type_path_prefix_opt: {
-                if path_segment_names.is_empty() {
-                    None
-                } else {
-                    Some(path_segment_names)
-                }
-            },
-            type_name,
-        }
-    }
-}
-
-impl From<PathPatt> for PathType {
-    fn from(value: PathPatt) -> Self {
-        let mut path_segment_names: Vec<Identifier> = Vec::new();
-
-        path_segment_names.push(Identifier(value.path_root.to_string()));
-
-        match value.tree_opt {
-            Some(v) => {
-                v.into_iter().for_each(|i| path_segment_names.push(i));
-            }
-            None => (),
-        }
-
-        let type_name = path_segment_names.pop().expect("empty path expression");
-
-        PathType {
-            associated_type_path_prefix_opt: {
-                if path_segment_names.is_empty() {
-                    None
-                } else {
-                    Some(path_segment_names)
-                }
-            },
-            type_name,
-        }
-    }
-}
-
-impl fmt::Display for PathType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut segments: Vec<String> = Vec::new();
-
-        if let Some(v) = &self.associated_type_path_prefix_opt {
-            for i in v {
-                segments.push(i.to_string());
-            }
-        }
-
-        segments.push(self.type_name.to_string());
-
-        let full_path = segments.join("::");
-
-        write!(f, "{}", full_path)
-    }
 }

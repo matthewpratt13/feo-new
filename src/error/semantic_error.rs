@@ -123,7 +123,6 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
-
     UnexpectedKeyword {
         expected: String,
         found: String,

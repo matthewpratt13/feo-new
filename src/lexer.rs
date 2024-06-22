@@ -8,7 +8,7 @@
 use core::{iter::Peekable, str::Chars};
 
 use crate::{
-    ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
+    ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Int, Str, UInt},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{DocCommentType, Token, TokenStream, TokenType},
@@ -980,7 +980,7 @@ impl<'a> Lexer<'a> {
                 let value = H160::from_slice(hash.as_bytes());
 
                 Ok(Token::HashLiteral {
-                    value: Hash::H160(value),
+                    value: crate::ast::Hash::H160(value),
                     span,
                 })
             }
@@ -989,7 +989,7 @@ impl<'a> Lexer<'a> {
                 let value = H256::from_slice(hash.as_bytes());
 
                 Ok(Token::HashLiteral {
-                    value: Hash::H256(value),
+                    value: crate::ast::Hash::H256(value),
                     span,
                 })
             }
@@ -998,7 +998,7 @@ impl<'a> Lexer<'a> {
                 let value = H512::from_slice(hash.as_bytes());
 
                 Ok(Token::HashLiteral {
-                    value: Hash::H512(value),
+                    value: crate::ast::Hash::H512(value),
                     span,
                 })
             }

@@ -1,7 +1,7 @@
 use core::fmt;
 
 use crate::{
-    ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
+    ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Int, Str, UInt},
     span::Span,
 };
 
@@ -40,7 +40,7 @@ pub(crate) enum Token {
         span: Span,
     },
     HashLiteral {
-        value: Hash,
+        value: crate::ast::Hash,
         span: Span,
     },
     StrLiteral {
@@ -1271,7 +1271,7 @@ pub(crate) enum TokenType {
     FloatLit(Float),
     ByteLit(Byte),
     BytesLit(Bytes),
-    HashLit(Hash),
+    HashLit(crate::ast::Hash),
     StrLit(Str),
     CharLit(Char),
     BoolLit(Bool),

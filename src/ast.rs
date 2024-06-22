@@ -23,7 +23,7 @@ pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different literals used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum Literal {
     Int { value: Int, span: Span },
     UInt { value: UInt, span: Span },
@@ -31,7 +31,7 @@ pub(crate) enum Literal {
     Float { value: Float, span: Span },
     Byte { value: Byte, span: Span },
     Bytes { value: Bytes, span: Span },
-    Hash { value: Hash, span: Span },
+    Hash { value: types::Hash, span: Span },
     Str { value: Str, span: Span },
     Char { value: Char, span: Span },
     Bool { value: Bool, span: Span },
@@ -102,7 +102,7 @@ impl fmt::Display for Identifier {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different keywords used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum Keyword {
     Import,
     Module,
@@ -172,7 +172,7 @@ impl fmt::Display for Keyword {
 }
 
 /// Enum representing the different inner attributes used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum InnerAttr {
     Abstract,
     Contract,
@@ -183,7 +183,7 @@ pub(crate) enum InnerAttr {
 }
 
 /// Enum representing the different outer attributes used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum OuterAttr {
     Calldata,
     Constructor,
@@ -238,11 +238,11 @@ impl fmt::Display for Delimiter {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Unit struct representing the assignment operator (`=`) used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct AssignmentOp;
 
 /// Enum representing the different binary operators used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum BinaryOp {
     Add,
     Subtract,
@@ -280,11 +280,11 @@ impl fmt::Display for BinaryOp {
 }
 
 /// Unit struct representing the type cast operator (`as`).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct TypeCastOp;
 
 /// Enum representing the different comparison operators used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum ComparisonOp {
     Equal,
     NotEqual,
@@ -308,7 +308,7 @@ impl fmt::Display for ComparisonOp {
 }
 
 /// Enum representing the different compound assignment operators used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum CompoundAssignmentOp {
     AddAssign,
     SubtractAssign,
@@ -330,11 +330,11 @@ impl fmt::Display for CompoundAssignmentOp {
 }
 
 /// Unit struct representing the dereference operator (`*`).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct DereferenceOp;
 
 /// Enum representing the different range operators used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum RangeOp {
     RangeExclusive, // `..`
     RangeInclusive, // `..=`
@@ -350,7 +350,7 @@ impl fmt::Display for RangeOp {
 }
 
 /// Enum representing the different reference operators used in AST nodes (i.e., `&` and `&mut`).
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum ReferenceOp {
     Borrow,        // `&`
     MutableBorrow, // `&mut`
@@ -366,21 +366,21 @@ impl fmt::Display for ReferenceOp {
 }
 
 /// Enum representing the different separators used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum Separator {
     Comma,              // used in tuples
     ColonColonAsterisk, // path wildcard terminator
 }
 
 /// Enum representing the different unary operators used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum UnaryOp {
     Negate, // `-`
     Not,    // `!`
 }
 
 /// Unit struct representing the unwrap operator (`?`) used in AST nodes.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct UnwrapOp;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -392,7 +392,7 @@ pub(crate) struct UnwrapOp;
 /// Expressions can function differently in various contexts; i.e., they can act both as values
 /// and as locations in memory. This distinction refers to **value expressions**
 /// and **place expressions**. See additional expression type enumerations below for both cases.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Expression {
     Literal(Literal),
     Path(PathExpr),
@@ -543,7 +543,7 @@ impl fmt::Display for Expression {
 /// Enum representing expressions behaving in a **value expression** context.
 /// A **value expression** is an expression that represents an actual value, as opposed
 /// to a **place expression**, which represents a location in memory.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum ValueExpr {
     Literal(Literal),
     PathExpr(PathExpr),
@@ -676,7 +676,7 @@ impl TryFrom<ValueExpr> for Expression {
 /// **Assignee expressions** usually occur on the left hand side of assignment expressions,
 /// and cover all **place expressions**, the underscore expression, plus arrays
 /// of assignee expressions, tuples of assignee expressions, and structs of assignee expressions.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum AssigneeExpr {
     Literal(Literal),
     PathExpr(PathExpr),
@@ -850,7 +850,7 @@ impl TryFrom<AssigneeExpr> for PathExpr {
 /// Enum representing patterns, which are syntactically similar to `Expression`.
 /// Patterns are used to match values against structures, as well as within
 /// variable declarations and as function parameters.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Pattern {
     Literal(Literal),
     IdentifierPatt(IdentifierPatt),
@@ -903,7 +903,7 @@ impl fmt::Display for Pattern {
 /// Enum representing the different statement AST nodes, which are built up of expressions.
 /// A statement is a component of a block, which is a component of an outer expression
 /// or function.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Statement {
     Let(LetStmt),
     Item(Item),
@@ -935,7 +935,7 @@ impl Spanned for Statement {
 
 /// Enum representing the different item nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Item {
     ImportDecl(ImportDecl),
     AliasDecl(AliasDecl),
@@ -953,7 +953,7 @@ pub(crate) enum Item {
 
 /// Enum representing the language's different types, which help to define a value's
 /// memory interpretation and the appropriate operations that may be performed.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Type {
     // primitives
     I32(Int),
@@ -972,9 +972,9 @@ pub(crate) enum Type {
     B8(Bytes),
     B16(Bytes),
     B32(Bytes),
-    H160(Hash),
-    H256(Hash),
-    H512(Hash),
+    H160(types::Hash),
+    H256(types::Hash),
+    H512(types::Hash),
     Str(Str),
     Char(Char),
     Bool(Bool),

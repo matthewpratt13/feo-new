@@ -11,13 +11,13 @@ use super::{
 // HELPER TYPES
 ///////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum EnumVariantType {
     Struct(EnumVariantStruct),
     Tuple(EnumVariantTuple),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum FunctionOrMethodParam {
     FunctionParam(FunctionParam),
     MethodParam(SelfParam),
@@ -48,44 +48,44 @@ impl fmt::Display for FunctionOrMethodParam {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum InherentImplItem {
     ConstantDecl(ConstantDecl),
     FunctionItem(FunctionItem),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TraitDefItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     FunctionItem(FunctionItem),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TraitImplItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     FunctionItem(FunctionItem),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Visibility {
     Private,                   // default
     PubPackage(PubPackageVis), // `pub(package)`
     Pub,                       // accessible everywhere
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct EnumVariantStruct {
     pub(crate) struct_fields: Vec<StructDefField>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct EnumVariantTuple {
     pub(crate) element_types: Vec<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct EnumVariant {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -93,7 +93,7 @@ pub(crate) struct EnumVariant {
     pub(crate) variant_type_opt: Option<EnumVariantType>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct FunctionParam {
     pub(crate) param_name: IdentifierPatt,
     pub(crate) param_type: Box<Type>,
@@ -105,31 +105,31 @@ impl fmt::Display for FunctionParam {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ImportTree {
     pub(crate) path_segments: Vec<PathSegment>,
     pub(crate) wildcard_opt: Option<Separator>, // trailing `::*`
     pub(crate) as_clause_opt: Option<(Keyword, Identifier)>, // (`as`, `new_name`)
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PathSegment {
     pub(crate) root: PathType, // e.g., `PathRoot::Identifier(_)`, `package::module::Object`
     pub(crate) subset_opt: Option<PathSubset>, // e.g., `::{ Foo, Bar, .. }` (basic)
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PathSubset {
     pub(crate) nested_trees: Vec<ImportTree>, // e.g., `::{ Foo, bar::baz{ FooBar, BAZ, .. }, .. }`
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PubPackageVis {
     pub(crate) kw_pub: Keyword,
     pub(crate) kw_package: Keyword,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct SelfParam {
     pub(crate) reference_op_opt: Option<ReferenceOp>,
     pub(crate) kw_self: Keyword,
@@ -141,7 +141,7 @@ impl fmt::Display for SelfParam {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct StructDefField {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -149,7 +149,7 @@ pub(crate) struct StructDefField {
     pub(crate) field_type: Box<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct TupleStructDefElement {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -160,7 +160,7 @@ pub(crate) struct TupleStructDefElement {
 // AST NODE STRUCTURES
 ///////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AliasDecl {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -170,7 +170,7 @@ pub struct AliasDecl {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConstantDecl {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -181,7 +181,7 @@ pub struct ConstantDecl {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnumDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -191,7 +191,7 @@ pub struct EnumDef {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionItem {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -203,7 +203,7 @@ pub struct FunctionItem {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportDecl {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -212,7 +212,7 @@ pub struct ImportDecl {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InherentImplDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) kw_impl: Keyword,
@@ -221,7 +221,7 @@ pub struct InherentImplDef {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModuleItem {
     pub(crate) outer_attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -232,7 +232,7 @@ pub struct ModuleItem {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StaticVarDecl {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -244,7 +244,7 @@ pub struct StaticVarDecl {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -254,7 +254,7 @@ pub struct StructDef {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TraitDef {
     pub(crate) outer_attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -265,7 +265,7 @@ pub struct TraitDef {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TraitImplDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) kw_impl: Keyword,
@@ -276,7 +276,7 @@ pub struct TraitImplDef {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TupleStructDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
