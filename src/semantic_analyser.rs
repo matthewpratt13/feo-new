@@ -162,9 +162,15 @@ impl SemanticAnalyser {
                     let alias_path = build_item_path(root, ad.alias_name.clone());
 
                     match &ad.original_type_opt {
-                        Some(t) => {
+                        Some(_) => {
                             // alias points to an existing type (`t`)
-                            self.insert(alias_path, Symbol::Variable(t.clone()))?;
+                            self.insert(
+                                alias_path.clone(),
+                                Symbol::Alias {
+                                    path: alias_path,
+                                    alias_decl: ad.clone(),
+                                },
+                            )?;
 
                             self.logger
                                 .info(&format!("initialized alias declaration: {:?}", ad));
