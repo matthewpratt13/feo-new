@@ -2,8 +2,8 @@ use core::fmt;
 use std::collections::HashMap;
 
 use crate::ast::{
-    AliasDecl, EnumDef, FunctionItem, Identifier, ModuleItem, PathType, StructDef, TraitDef,
-    TupleStructDef, Type,
+    EnumDef, FunctionItem, Identifier, ModuleItem, PathType, StructDef, TraitDef, TupleStructDef,
+    Type, Visibility,
 };
 
 pub(crate) type SymbolTable = HashMap<PathType, Symbol>;
@@ -41,10 +41,13 @@ pub(crate) enum Symbol {
     },
     Alias {
         path: PathType,
-        alias_decl: AliasDecl,
+        visibility: Visibility,
+        alias_name: Identifier,
+        original_type_opt: Option<Type>,
     },
     Constant {
         path: PathType,
+        visibility: Visibility,
         constant_name: Identifier,
         constant_type: Type,
     },
@@ -75,7 +78,7 @@ impl Symbol {
             } => tuple_struct_def.struct_name,
             Symbol::Enum { enum_def, .. } => enum_def.enum_name,
             Symbol::Trait { trait_def, .. } => trait_def.trait_name,
-            Symbol::Alias { alias_decl, .. } => alias_decl.alias_name,
+            Symbol::Alias { alias_name, .. } => alias_name,
             Symbol::Constant { constant_name, .. } => constant_name,
             Symbol::Function { function, .. } => function.function_name,
             Symbol::Module { module, .. } => module.module_name,

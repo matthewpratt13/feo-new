@@ -168,7 +168,9 @@ impl SemanticAnalyser {
                                 alias_path.clone(),
                                 Symbol::Alias {
                                     path: alias_path,
-                                    alias_decl: ad.clone(),
+                                    visibility: ad.visibility.clone(),
+                                    alias_name: ad.alias_name.clone(),
+                                    original_type_opt: ad.original_type_opt.clone(),
                                 },
                             )?;
 
@@ -213,6 +215,7 @@ impl SemanticAnalyser {
                         constant_path.clone(),
                         Symbol::Constant {
                             path: constant_path,
+                            visibility: cd.visibility.clone(),
                             constant_name: cd.constant_name.clone(),
                             constant_type: value_type,
                         },
