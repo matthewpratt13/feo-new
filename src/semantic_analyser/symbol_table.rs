@@ -2,8 +2,8 @@ use core::fmt;
 use std::collections::HashMap;
 
 use crate::ast::{
-    AliasDecl, ConstantDecl, EnumDef, FunctionItem, Identifier, ModuleItem, PathType, StructDef,
-    TraitDef, TupleStructDef, Type,
+    AliasDecl, EnumDef, FunctionItem, Identifier, ModuleItem, PathType, StructDef, TraitDef,
+    TupleStructDef, Type,
 };
 
 pub(crate) type SymbolTable = HashMap<PathType, Symbol>;
@@ -24,10 +24,6 @@ pub(crate) enum Symbol {
     Alias {
         path: PathType,
         alias_decl: AliasDecl,
-    },
-    Constant {
-        path: PathType,
-        constant_decl: ConstantDecl,
     },
     Struct {
         path: PathType,
@@ -67,7 +63,6 @@ impl Symbol {
         match self.clone() {
             Symbol::Variable(t) => Identifier::from(&t.to_string()),
             Symbol::Alias { alias_decl, .. } => alias_decl.alias_name,
-            Symbol::Constant { constant_decl, .. } => constant_decl.constant_name,
             Symbol::Struct { struct_def, .. } => struct_def.struct_name,
             Symbol::TupleStruct {
                 tuple_struct_def, ..
@@ -85,7 +80,6 @@ impl fmt::Display for Symbol {
         match self {
             Symbol::Variable(v) => write!(f, "{}", v),
             Symbol::Alias { path, .. } => write!(f, "{}", path),
-            Symbol::Constant { path, .. } => write!(f, "{}", path),
             Symbol::Struct { path, .. } => write!(f, "{}", path),
             Symbol::TupleStruct { path, .. } => write!(f, "{}", path),
             Symbol::Enum { path, .. } => write!(f, "{}", path),

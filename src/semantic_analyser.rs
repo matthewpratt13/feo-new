@@ -204,13 +204,7 @@ impl SemanticAnalyser {
 
                     let constant_path = build_item_path(root, cd.constant_name.clone());
 
-                    self.insert(
-                        constant_path.clone(),
-                        Symbol::Constant {
-                            path: constant_path,
-                            constant_decl: cd.clone(),
-                        },
-                    )?;
+                    self.insert(constant_path.clone(), Symbol::Variable(value_type))?;
 
                     self.logger
                         .info(&format!("initialized constant declaration: {:?}", cd));
