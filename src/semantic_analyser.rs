@@ -379,6 +379,8 @@ impl SemanticAnalyser {
                 }
 
                 Item::InherentImplDef(i) => {
+                    self.enter_scope(ScopeKind::Impl);
+
                     if let Some(v) = &i.associated_items_opt {
                         for item in v.iter() {
                             match item {
@@ -409,72 +411,56 @@ impl SemanticAnalyser {
                             }
                         }
                     }
+
+                    self.exit_scope()
                 }
 
                 Item::TraitImplDef(t) => {
+                    self.enter_scope(ScopeKind::TraitImpl);
+
+                    let trait_impl_path = match &t.implementing_type {
+                        Type::UserDefined(pt) => {
+                            build_item_path(pt, t.implemented_trait_path.type_name.clone())
+                        }
+                        ty => {
+                            return Err(SemanticErrorKind::UnexpectedType {
+                                expected: "user-defined type".to_string(),
+                                found: ty.to_string(),
+                            })
+                        }
+                    };
+
                     if let Some(v) = &t.associated_items_opt {
                         for item in v.iter() {
                             match item {
                                 TraitImplItem::AliasDecl(ad) => {
-                                    let alias_implementation_path = match &t.implementing_type {
-                                        Type::UserDefined(p) => {
-                                            build_item_path(p, ad.alias_name.clone())
-                                        }
-                                        ty => {
-                                            return Err(SemanticErrorKind::UnexpectedType {
-                                                expected: "user-defined type".to_string(),
-                                                found: ty.to_string(),
-                                            })
-                                        }
-                                    };
+                                    let alias_impl_path =
+                                        build_item_path(&trait_impl_path, ad.alias_name.clone());
 
                                     self.analyse_stmt(
                                         &Statement::Item(Item::AliasDecl(ad.clone())),
-                                        &alias_implementation_path,
+                                        &alias_impl_path,
                                     )?
                                 }
 
                                 TraitImplItem::ConstantDecl(cd) => {
-                                    let constant_implementation_path = match &t.implementing_type {
-                                        Type::UserDefined(p) => {
-                                            build_item_path(p, cd.constant_name.clone())
-                                        }
-                                        ty => {
-                                            return Err(SemanticErrorKind::UnexpectedType {
-                                                expected: "user-defined type".to_string(),
-                                                found: ty.to_string(),
-                                            })
-                                        }
-                                    };
+                                    let constant_impl_path =
+                                        build_item_path(&trait_impl_path, cd.constant_name.clone());
 
                                     self.analyse_stmt(
                                         &Statement::Item(Item::ConstantDecl(cd.clone())),
-                                        &constant_implementation_path,
+                                        &constant_impl_path,
                                     )?
                                 }
 
                                 TraitImplItem::FunctionItem(fi) => {
-                                    let function_def_path = build_item_path(
-                                        &t.implemented_trait_path,
-                                        fi.function_name.clone(),
-                                    );
-
-                                    let function_implementation_path = match &t.implementing_type {
-                                        Type::UserDefined(p) => {
-                                            build_item_path(p, fi.function_name.clone())
-                                        }
-                                        ty => {
-                                            return Err(SemanticErrorKind::UnexpectedType {
-                                                expected: "user-defined type".to_string(),
-                                                found: ty.to_string(),
-                                            })
-                                        }
-                                    };
+                                    let function_impl_path =
+                                        build_item_path(&trait_impl_path, fi.function_name.clone());
 
                                     self.insert(
-                                        function_implementation_path.clone(),
+                                        function_impl_path.clone(),
                                         Symbol::Function {
-                                            path: function_def_path,
+                                            path: function_impl_path,
                                             function: fi.clone(),
                                         },
                                     )?;
@@ -489,6 +475,8 @@ impl SemanticAnalyser {
                             }
                         }
                     }
+
+                    self.exit_scope();
                 }
 
                 Item::FunctionItem(f) => {
