@@ -152,13 +152,13 @@ impl SemanticAnalyser {
                 self.insert(
                     assignee_path.clone(),
                     Symbol::Variable {
-                        name: assignee_path.type_name,
+                        name: ls.assignee.name.clone(),
                         var_type: value_type,
                     },
                 )?;
 
                 self.logger
-                    .info(&format!("analysed let statement: {:?}", ls));
+                    .info(&format!("analysed let statement: {:?}", &ls));
             }
 
             Statement::Item(i) => match i {
