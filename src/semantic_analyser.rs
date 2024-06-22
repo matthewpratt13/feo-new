@@ -559,10 +559,32 @@ impl SemanticAnalyser {
 
         match expression {
             Expression::Path(p) => {
-                let name = match &p.tree_opt {
-                    Some(v) => match v.last() {
-                        Some(i) => i.clone(),
-                        None => match &p.path_root {
+                let path = match p.tree_opt.clone() {
+                    Some(ref mut v) => {
+                        if let Some(id) = v.pop() {
+                            PathType {
+                                associated_type_path_prefix_opt: Some(v.to_vec()),
+                                type_name: id,
+                            }
+                        } else {
+                            let name = match &p.path_root {
+                                PathRoot::Identifier(i) => i.clone(),
+
+                                PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
+
+                                pr => {
+                                    return Err(SemanticErrorKind::InvalidVariableIdentifier {
+                                        name: Identifier::from(&pr.to_string()),
+                                    })
+                                }
+                            };
+
+                            PathType::from(name)
+                        }
+                    }
+
+                    _ => {
+                        let name = match &p.path_root {
                             PathRoot::Identifier(i) => i.clone(),
 
                             PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
@@ -572,32 +594,22 @@ impl SemanticAnalyser {
                                     name: Identifier::from(&pr.to_string()),
                                 })
                             }
-                        },
-                    },
+                        };
 
-                    _ => match &p.path_root {
-                        PathRoot::Identifier(i) => i.clone(),
-
-                        PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
-
-                        pr => {
-                            return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                name: Identifier::from(&pr.to_string()),
-                            })
-                        }
-                    },
+                        PathType::from(name)
+                    }
                 };
-
-                let path = PathType::from(name.clone());
 
                 match self.lookup(&path) {
                     Some(Symbol::Variable(t)) => Ok(t.clone()),
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name,
+                        name: path.type_name,
                         expected: "variable".to_string(),
                         found: s.to_string(),
                     }),
-                    None => Err(SemanticErrorKind::UndefinedVariable { name }),
+                    None => Err(SemanticErrorKind::UndefinedVariable {
+                        name: path.type_name,
+                    }),
                 }
             }
 
@@ -1859,10 +1871,32 @@ impl SemanticAnalyser {
             },
 
             Pattern::PathPatt(p) => {
-                let name = match &p.tree_opt {
-                    Some(v) => match v.last() {
-                        Some(i) => i.clone(),
-                        None => match &p.path_root {
+                let path = match p.tree_opt.clone() {
+                    Some(ref mut v) => {
+                        if let Some(id) = v.pop() {
+                            PathType {
+                                associated_type_path_prefix_opt: Some(v.to_vec()),
+                                type_name: id,
+                            }
+                        } else {
+                            let name = match &p.path_root {
+                                PathRoot::Identifier(i) => i.clone(),
+
+                                PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
+
+                                pr => {
+                                    return Err(SemanticErrorKind::InvalidVariableIdentifier {
+                                        name: Identifier::from(&pr.to_string()),
+                                    })
+                                }
+                            };
+
+                            PathType::from(name)
+                        }
+                    }
+
+                    _ => {
+                        let name = match &p.path_root {
                             PathRoot::Identifier(i) => i.clone(),
 
                             PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
@@ -1872,28 +1906,16 @@ impl SemanticAnalyser {
                                     name: Identifier::from(&pr.to_string()),
                                 })
                             }
-                        },
-                    },
+                        };
 
-                    _ => match &p.path_root {
-                        PathRoot::Identifier(i) => i.clone(),
-
-                        PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
-
-                        pr => {
-                            return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                name: Identifier::from(&pr.to_string()),
-                            })
-                        }
-                    },
+                        PathType::from(name)
+                    }
                 };
-
-                let path = PathType::from(name.clone());
 
                 match self.lookup(&path) {
                     Some(Symbol::Variable(t)) => Ok(t.clone()),
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name,
+                        name: path.type_name,
                         expected: "variable".to_string(),
                         found: s.to_string(),
                     }),
