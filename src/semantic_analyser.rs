@@ -140,8 +140,8 @@ impl SemanticAnalyser {
 
                 // check that the value matches the type annotation
                 if value_type != *declared_type {
-                    return Err(SemanticErrorKind::TypeMismatchLetStmt {
-                        value_type: value_type.to_string(),
+                    return Err(SemanticErrorKind::TypeMismatchDeclaredType {
+                        actual_type: value_type.to_string(),
                         declared_type: declared_type.to_string(),
                     });
                 }
@@ -201,10 +201,9 @@ impl SemanticAnalyser {
                     };
 
                     if value_type != *cd.constant_type {
-                        return Err(SemanticErrorKind::TypeMismatchVariable {
-                            name: cd.constant_name.clone(),
-                            expected: cd.constant_type.to_string(),
-                            found: value_type.to_string(),
+                        return Err(SemanticErrorKind::TypeMismatchDeclaredType {
+                            declared_type: cd.constant_type.to_string(),
+                            actual_type: value_type.to_string(),
                         });
                     }
 
@@ -236,10 +235,9 @@ impl SemanticAnalyser {
                     };
 
                     if assignee_type != s.var_type.clone() {
-                        return Err(SemanticErrorKind::TypeMismatchVariable {
-                            name: s.var_name.clone(),
-                            expected: s.var_type.clone().to_string(),
-                            found: assignee_type.to_string(),
+                        return Err(SemanticErrorKind::TypeMismatchDeclaredType {
+                            declared_type: s.var_type.clone().to_string(),
+                            actual_type: assignee_type.to_string(),
                         });
                     }
 
@@ -632,7 +630,7 @@ impl SemanticAnalyser {
                         expected: "variable".to_string(),
                         found: s.to_string(),
                     }),
-                    None => Err(SemanticErrorKind::UndefinedVariable {
+                    None => Err(SemanticErrorKind::VariableOutOfScope {
                         name: path.type_name,
                     }),
                 }
@@ -1316,7 +1314,7 @@ impl SemanticAnalyser {
                         expected: assignee_type.to_string(),
                         found: s.to_string(),
                     }),
-                    None => Err(SemanticErrorKind::UndefinedVariable {
+                    None => Err(SemanticErrorKind::VariableOutOfScope {
                         name: assignee_path.type_name,
                     }),
                 }
@@ -1436,7 +1434,7 @@ impl SemanticAnalyser {
                         })
                     }
                     None => {
-                        return Err(SemanticErrorKind::UndefinedVariable {
+                        return Err(SemanticErrorKind::VariableOutOfScope {
                             name: assignee_path.type_name,
                         })
                     }
@@ -1946,7 +1944,7 @@ impl SemanticAnalyser {
                     expected: "variable".to_string(),
                     found: s.to_string(),
                 }),
-                None => Err(SemanticErrorKind::UndefinedVariable {
+                None => Err(SemanticErrorKind::VariableOutOfScope {
                     name: i.name.clone(),
                 }),
             },
@@ -2000,7 +1998,7 @@ impl SemanticAnalyser {
                         expected: "variable".to_string(),
                         found: s.to_string(),
                     }),
-                    None => Err(SemanticErrorKind::UndefinedVariable {
+                    None => Err(SemanticErrorKind::VariableOutOfScope {
                         name: path.type_name,
                     }),
                 }
