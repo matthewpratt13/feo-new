@@ -263,6 +263,15 @@ pub struct PathType {
     pub(crate) type_name: Identifier,
 }
 
+impl From<Identifier> for PathType {
+    fn from(value: Identifier) -> Self {
+        PathType {
+            associated_type_path_prefix_opt: None,
+            type_name: value,
+        }
+    }
+}
+
 impl From<PathExpr> for PathType {
     fn from(value: PathExpr) -> Self {
         let mut path_segment_names: Vec<Identifier> = Vec::new();
