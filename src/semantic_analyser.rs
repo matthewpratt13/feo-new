@@ -379,7 +379,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::InherentImplDef(i) => {
-                    self.enter_scope(ScopeKind::Implementation);
+                    self.enter_scope(ScopeKind::Impl);
 
                     if let Some(v) = &i.associated_items_opt {
                         for item in v.iter() {
@@ -416,7 +416,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::TraitImplDef(t) => {
-                    self.enter_scope(ScopeKind::Trait);
+                    self.enter_scope(ScopeKind::TraitImpl);
 
                     let trait_impl_path = match &t.implementing_type {
                         Type::UserDefined(pt) => {

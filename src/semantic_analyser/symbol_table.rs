@@ -14,8 +14,8 @@ pub(crate) enum ScopeKind {
     MatchExpr,
     ForInLoop,
     Function,
-    Trait,
-    Implementation,
+    TraitImpl,
+    Impl,
     Module,
     Global,
 }
