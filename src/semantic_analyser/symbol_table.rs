@@ -74,7 +74,7 @@ pub(crate) struct Scope {
 impl Symbol {
     pub(crate) fn symbol_type(&self) -> Identifier {
         match self.clone() {
-            Symbol::Variable { var_type: ty, .. } => Identifier::from(&ty.to_string()),
+            Symbol::Variable { var_type, .. } => Identifier::from(&var_type.to_string()),
             Symbol::Struct { struct_def, .. } => struct_def.struct_name,
             Symbol::TupleStruct {
                 tuple_struct_def, ..
