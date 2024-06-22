@@ -527,31 +527,9 @@ impl SemanticAnalyser {
         }
 
         let expression_type = if let Some(b) = &f.block_opt {
-            if let Some(v) = &b.statements_opt {
-                for stmt in v {
-                    let path = PathType::from(Identifier::from(""));
-
-                    match stmt {
-                        Statement::Expression(e) => match e {
-                            Expression::Return(_) => {
-                                if v.into_iter().next().is_some() {
-                                    self.logger.warn("unreachable code")
-                                }
-                            }
-                            _ => (),
-                        },
-                        _ => (),
-                    }
-
-                    self.analyse_stmt(stmt, &path)?;
-                }
-            }
-
             self.analyse_expr(&Expression::Block(b.clone()))?
         } else {
-            Type::InferredType(InferredType {
-                name: Identifier::from("_"),
-            })
+            Type::UnitType(Unit)
         };
 
         self.exit_scope();
