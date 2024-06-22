@@ -531,6 +531,18 @@ impl SemanticAnalyser {
                 for stmt in v {
                     let path = PathType::from(Identifier::from(""));
 
+                    match stmt {
+                        Statement::Expression(e) => match e {
+                            Expression::Return(_) | Expression::Break(_) => {
+                                if v.into_iter().next().is_some() {
+                                    self.logger.warn("unreachable code")
+                                }
+                            }
+                            _ => (),
+                        },
+                        _ => (),
+                    }
+
                     self.analyse_stmt(stmt, &path)?;
                 }
             }
