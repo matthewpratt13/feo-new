@@ -21,10 +21,6 @@ pub(crate) enum ScopeKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Symbol {
     Variable(Type),
-    Alias {
-        path: PathType,
-        alias_decl: AliasDecl,
-    },
     Struct {
         path: PathType,
         struct_def: StructDef,
@@ -40,6 +36,10 @@ pub(crate) enum Symbol {
     Trait {
         path: PathType,
         trait_def: TraitDef,
+    },
+    Alias {
+        path: PathType,
+        alias_decl: AliasDecl,
     },
     Function {
         path: PathType,
