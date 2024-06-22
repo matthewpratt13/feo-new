@@ -43,6 +43,11 @@ pub(crate) enum Symbol {
         path: PathType,
         alias_decl: AliasDecl,
     },
+    Constant {
+        path: PathType,
+        constant_name: Identifier,
+        constant_type: Type,
+    },
     Function {
         path: PathType,
         function: FunctionItem,
@@ -71,6 +76,7 @@ impl Symbol {
             Symbol::Enum { enum_def, .. } => enum_def.enum_name,
             Symbol::Trait { trait_def, .. } => trait_def.trait_name,
             Symbol::Alias { alias_decl, .. } => alias_decl.alias_name,
+            Symbol::Constant { constant_name, .. } => constant_name,
             Symbol::Function { function, .. } => function.function_name,
             Symbol::Module { module, .. } => module.module_name,
         }
@@ -86,6 +92,7 @@ impl fmt::Display for Symbol {
             Symbol::Enum { path, .. } => write!(f, "{}", path),
             Symbol::Trait { path, .. } => write!(f, "{}", path),
             Symbol::Alias { path, .. } => write!(f, "{}", path),
+            Symbol::Constant { path, .. } => write!(f, "{}", path),
             Symbol::Function { path, .. } => write!(f, "{}", path),
             Symbol::Module { path, .. } => write!(f, "{}", path),
         }
