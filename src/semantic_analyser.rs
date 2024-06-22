@@ -716,7 +716,6 @@ impl SemanticAnalyser {
                     Some(Symbol::Struct { path, .. }) => {
                         if *path == receiver_path {
                             let method_path = build_item_path(&path, mc.method_name.clone());
-
                             self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                         } else {
                             Err(SemanticErrorKind::TypeMismatchVariable {
@@ -730,7 +729,6 @@ impl SemanticAnalyser {
                     Some(Symbol::TupleStruct { path, .. }) => {
                         if *path == receiver_path {
                             let method_path = build_item_path(&path, mc.method_name.clone());
-
                             self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                         } else {
                             Err(SemanticErrorKind::TypeMismatchVariable {
@@ -744,7 +742,6 @@ impl SemanticAnalyser {
                     Some(Symbol::Enum { path, .. }) => {
                         if *path == receiver_path {
                             let method_path = build_item_path(&path, mc.method_name.clone());
-
                             self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                         } else {
                             Err(SemanticErrorKind::TypeMismatchVariable {
@@ -768,19 +765,17 @@ impl SemanticAnalyser {
             }
 
             Expression::FieldAccess(fa) => {
-                let object_expr = wrap_into_expression(*fa.object.clone())?;
-
-                let object_type = self.analyse_expr(&object_expr)?;
+                let object = wrap_into_expression(*fa.object.clone())?;
+                let object_type = self.analyse_expr(&object)?;
 
                 // convert object to path expression (i.e., check if object
                 // is a valid path)
-                let object_as_path_expr =
-                    PathExpr::try_from(object_expr.clone()).map_err(|_| {
-                        SemanticErrorKind::ConversionError {
-                            from: object_expr.to_string(),
-                            into: "`PathExpr`".to_string(),
-                        }
-                    })?;
+                let object_as_path_expr = PathExpr::try_from(object.clone()).map_err(|_| {
+                    SemanticErrorKind::ConversionError {
+                        from: object.to_string(),
+                        into: "`PathExpr`".to_string(),
+                    }
+                })?;
 
                 // get path expression's type
                 let object_path = PathType::from(object_as_path_expr);
@@ -819,9 +814,9 @@ impl SemanticAnalyser {
                     }
                 })?;
 
-                let path = PathType::from(callee_as_path_expr);
+                let callee_path = PathType::from(callee_as_path_expr);
 
-                self.analyse_call_or_method_call_expr(path, c.args_opt.clone())
+                self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
             }
 
             Expression::Index(i) => {
@@ -830,16 +825,10 @@ impl SemanticAnalyser {
                 let index_type = self.analyse_expr(&wrap_into_expression(*i.index.clone())?)?;
 
                 match index_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_) => (),
+                    Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) => (),
                     _ => {
                         return Err(SemanticErrorKind::UnexpectedType {
-                            expected: "numeric type (excluding large unsigned integers)"
-                                .to_string(),
+                            expected: "unsigned integer".to_string(),
                             found: index_type.to_string(),
                         })
                     }
@@ -891,7 +880,9 @@ impl SemanticAnalyser {
                         | Type::U32(_)
                         | Type::U64(_)
                         | Type::U256(_)
-                        | Type::U512(_) => Ok(expr_type),
+                        | Type::U512(_)
+                        | Type::F32(_)
+                        | Type::F64(_) => Ok(expr_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric value".to_string(),
                             found: expr_type.to_string(),
@@ -944,6 +935,7 @@ impl SemanticAnalyser {
                         Type::U8(_) | Type::Byte(_),
                         Type::I32(_)
                         | Type::I64(_)
+                        | Type::U8(_)
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_)
