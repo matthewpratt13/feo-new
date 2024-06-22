@@ -533,7 +533,7 @@ impl SemanticAnalyser {
 
                     match stmt {
                         Statement::Expression(e) => match e {
-                            Expression::Return(_) | Expression::Break(_) => {
+                            Expression::Return(_) => {
                                 if v.into_iter().next().is_some() {
                                     self.logger.warn("unreachable code")
                                 }
@@ -1703,6 +1703,26 @@ impl SemanticAnalyser {
             Expression::Block(b) => match &b.statements_opt {
                 Some(vec) => {
                     self.enter_scope(ScopeKind::LocalBlock);
+
+                    for stmt in vec {
+                        let path = PathType::from(Identifier::from(""));
+
+                        match stmt {
+                            Statement::Expression(e) => match e {
+                                Expression::Return(_)
+                                | Expression::Break(_)
+                                | Expression::Continue(_) => {
+                                    if vec.into_iter().next().is_some() {
+                                        self.logger.warn("unreachable code")
+                                    }
+                                }
+                                _ => (),
+                            },
+                            _ => (),
+                        }
+
+                        self.analyse_stmt(stmt, &path)?;
+                    }
 
                     let ty = match vec.last() {
                         Some(s) => match s {
