@@ -10,9 +10,9 @@ use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
-        FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportTree,
-        InferredType, InherentImplItem, Int, Item, Keyword, Literal, PathExpr, PathRoot, PathType,
-        Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, Unit,
+        FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportTree, InferredType,
+        InherentImplItem, Int, Item, Keyword, Literal, PathExpr, PathRoot, PathType, Pattern,
+        Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, Unit,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -487,10 +487,7 @@ impl SemanticAnalyser {
             let param_types: Vec<Type> = v.iter().map(|p| p.param_type()).collect();
 
             for (param, param_type) in v.iter().zip(param_types) {
-                let param_path = PathType {
-                    associated_type_path_prefix_opt: None,
-                    type_name: param.param_name(),
-                };
+                let param_path = PathType::from(param.param_name());
 
                 self.insert(param_path, Symbol::Variable(param_type))?;
             }
@@ -499,10 +496,7 @@ impl SemanticAnalyser {
         let expression_type = if let Some(b) = &f.block_opt {
             if let Some(v) = &b.statements_opt {
                 for stmt in v {
-                    let path = PathType {
-                        associated_type_path_prefix_opt: None,
-                        type_name: Identifier::from(""),
-                    };
+                    let path = PathType::from(Identifier::from(""));
 
                     self.analyse_stmt(stmt, &path)?;
                 }
@@ -538,10 +532,7 @@ impl SemanticAnalyser {
 
         let path = match full_path.last() {
             Some(pt) => pt.clone(),
-            None => PathType {
-                associated_type_path_prefix_opt: None,
-                type_name: Identifier::from(""),
-            },
+            None => PathType::from(Identifier::from("")),
         };
 
         if let Some(m) = self.module_registry.get(&path) {
@@ -599,10 +590,7 @@ impl SemanticAnalyser {
                     },
                 };
 
-                let path = PathType {
-                    associated_type_path_prefix_opt: None,
-                    type_name: name.clone(),
-                };
+                let path = PathType::from(name.clone());
 
                 match self.lookup(&path) {
                     Some(Symbol::Variable(t)) => Ok(t.clone()),
@@ -649,9 +637,15 @@ impl SemanticAnalyser {
                 },
 
                 Literal::Hash { value, .. } => match value {
-                    crate::ast::Hash::H160(_) => Ok(Type::H160(crate::ast::Hash::H160(H160::default()))),
-                    crate::ast::Hash::H256(_) => Ok(Type::H256(crate::ast::Hash::H256(H256::default()))),
-                    crate::ast::Hash::H512(_) => Ok(Type::H512(crate::ast::Hash::H512(H512::default()))),
+                    crate::ast::Hash::H160(_) => {
+                        Ok(Type::H160(crate::ast::Hash::H160(H160::default())))
+                    }
+                    crate::ast::Hash::H256(_) => {
+                        Ok(Type::H256(crate::ast::Hash::H256(H256::default())))
+                    }
+                    crate::ast::Hash::H512(_) => {
+                        Ok(Type::H512(crate::ast::Hash::H512(H512::default())))
+                    }
                 },
 
                 Literal::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
@@ -1424,10 +1418,7 @@ impl SemanticAnalyser {
                     let param_types: Vec<Type> = v.iter().map(|p| p.param_type()).collect();
 
                     for (param, param_type) in v.iter().zip(param_types) {
-                        let param_path = PathType {
-                            associated_type_path_prefix_opt: None,
-                            type_name: param.param_name(),
-                        };
+                        let param_path = PathType::from(param.param_name());
                         self.insert(param_path, Symbol::Variable(param_type))?;
                     }
                 }
@@ -1625,10 +1616,7 @@ impl SemanticAnalyser {
                             Statement::Expression(e) => self.analyse_expr(e)?,
 
                             _ => {
-                                let path = PathType {
-                                    associated_type_path_prefix_opt: None,
-                                    type_name: Identifier::from(""),
-                                };
+                                let path = PathType::from(Identifier::from(""));
 
                                 self.analyse_stmt(s, &path)?;
                                 Type::UnitType(Unit)
@@ -1860,10 +1848,7 @@ impl SemanticAnalyser {
 
     fn analyse_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
         match pattern {
-            Pattern::IdentifierPatt(i) => match self.lookup(&PathType {
-                associated_type_path_prefix_opt: None,
-                type_name: i.name.clone(),
-            }) {
+            Pattern::IdentifierPatt(i) => match self.lookup(&PathType::from(i.name.clone())) {
                 Some(Symbol::Variable(var_type)) => Ok(var_type.clone()),
                 Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: i.name.clone(),
@@ -1905,10 +1890,7 @@ impl SemanticAnalyser {
                     },
                 };
 
-                let path = PathType {
-                    associated_type_path_prefix_opt: None,
-                    type_name: name.clone(),
-                };
+                let path = PathType::from(name.clone());
 
                 match self.lookup(&path) {
                     Some(Symbol::Variable(t)) => Ok(t.clone()),
@@ -1957,9 +1939,15 @@ impl SemanticAnalyser {
                 },
 
                 Literal::Hash { value, .. } => match value {
-                    crate::ast::Hash::H160(_) => Ok(Type::H160(crate::ast::Hash::H160(H160::default()))),
-                    crate::ast::Hash::H256(_) => Ok(Type::H256(crate::ast::Hash::H256(H256::default()))),
-                    crate::ast::Hash::H512(_) => Ok(Type::H512(crate::ast::Hash::H512(H512::default()))),
+                    crate::ast::Hash::H160(_) => {
+                        Ok(Type::H160(crate::ast::Hash::H160(H160::default())))
+                    }
+                    crate::ast::Hash::H256(_) => {
+                        Ok(Type::H256(crate::ast::Hash::H256(H256::default())))
+                    }
+                    crate::ast::Hash::H512(_) => {
+                        Ok(Type::H512(crate::ast::Hash::H512(H512::default())))
+                    }
                 },
 
                 Literal::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),

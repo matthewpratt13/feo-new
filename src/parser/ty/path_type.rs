@@ -98,3 +98,12 @@ impl PathType {
         Ok(path_type)
     }
 }
+
+impl From<Identifier> for PathType {
+    fn from(value: Identifier) -> Self {
+        PathType {
+            associated_type_path_prefix_opt: None,
+            type_name: value,
+        }
+    }
+}
