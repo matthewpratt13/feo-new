@@ -22,7 +22,10 @@ pub(crate) enum ScopeKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Symbol {
-    Variable(Type),
+    Variable {
+        name: Identifier,
+        var_type: Type,
+    },
     Struct {
         path: PathType,
         struct_def: StructDef,
@@ -71,7 +74,7 @@ pub(crate) struct Scope {
 impl Symbol {
     pub(crate) fn symbol_type(&self) -> Identifier {
         match self.clone() {
-            Symbol::Variable(t) => Identifier::from(&t.to_string()),
+            Symbol::Variable { var_type: ty, .. } => Identifier::from(&ty.to_string()),
             Symbol::Struct { struct_def, .. } => struct_def.struct_name,
             Symbol::TupleStruct {
                 tuple_struct_def, ..
@@ -79,7 +82,7 @@ impl Symbol {
             Symbol::Enum { enum_def, .. } => enum_def.enum_name,
             Symbol::Trait { trait_def, .. } => trait_def.trait_name,
             Symbol::Alias { alias_name, .. } => alias_name,
-            Symbol::Constant { constant_name, .. } => constant_name,
+            Symbol::Constant { constant_type, .. } => Identifier::from(&constant_type.to_string()),
             Symbol::Function { function, .. } => function.function_name,
             Symbol::Module { module, .. } => module.module_name,
         }
@@ -89,7 +92,7 @@ impl Symbol {
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Symbol::Variable(v) => write!(f, "{}", v),
+            Symbol::Variable { name, .. } => write!(f, "{}", name),
             Symbol::Struct { path, .. } => write!(f, "{}", path),
             Symbol::TupleStruct { path, .. } => write!(f, "{}", path),
             Symbol::Enum { path, .. } => write!(f, "{}", path),

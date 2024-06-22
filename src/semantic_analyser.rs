@@ -149,7 +149,13 @@ impl SemanticAnalyser {
                 let assignee_path = PathType::from(ls.assignee.name.clone());
 
                 // add the variable to the symbol table
-                self.insert(assignee_path, Symbol::Variable(value_type))?;
+                self.insert(
+                    assignee_path.clone(),
+                    Symbol::Variable {
+                        name: assignee_path.type_name,
+                        var_type: value_type,
+                    },
+                )?;
 
                 self.logger
                     .info(&format!("analysed let statement: {:?}", ls));
@@ -161,33 +167,18 @@ impl SemanticAnalyser {
                 Item::AliasDecl(ad) => {
                     let alias_path = build_item_path(root, ad.alias_name.clone());
 
-                    match &ad.original_type_opt {
-                        Some(_) => {
-                            // alias points to an existing type (`t`)
-                            self.insert(
-                                alias_path.clone(),
-                                Symbol::Alias {
-                                    path: alias_path,
-                                    visibility: ad.visibility.clone(),
-                                    alias_name: ad.alias_name.clone(),
-                                    original_type_opt: ad.original_type_opt.clone(),
-                                },
-                            )?;
+                    self.insert(
+                        alias_path.clone(),
+                        Symbol::Alias {
+                            path: alias_path,
+                            visibility: ad.visibility.clone(),
+                            alias_name: ad.alias_name.clone(),
+                            original_type_opt: ad.original_type_opt.clone(),
+                        },
+                    )?;
 
-                            self.logger
-                                .info(&format!("initialized alias declaration: {:?}", ad));
-                        }
-                        None => {
-                            // alias is its own user-defined opaque type
-                            self.insert(
-                                alias_path.clone(),
-                                Symbol::Variable(Type::UserDefined(alias_path)),
-                            )?;
-
-                            self.logger
-                                .info(&format!("initialized alias declaration: {:?}", ad));
-                        }
-                    }
+                    self.logger
+                        .info(&format!("initialized alias declaration: {:?}", ad));
                 }
 
                 Item::ConstantDecl(cd) => {
@@ -246,7 +237,13 @@ impl SemanticAnalyser {
 
                     let static_var_path = build_item_path(root, s.var_name.clone());
 
-                    self.insert(static_var_path, Symbol::Variable(s.var_type.clone()))?;
+                    self.insert(
+                        static_var_path,
+                        Symbol::Variable {
+                            name: s.var_name.clone(),
+                            var_type: s.var_type.clone(),
+                        },
+                    )?;
 
                     self.logger
                         .info(&format!("initialized static variable declaration: {:?}", s));
@@ -523,7 +520,13 @@ impl SemanticAnalyser {
             for (param, param_type) in v.iter().zip(param_types) {
                 let param_path = PathType::from(param.param_name());
 
-                self.insert(param_path, Symbol::Variable(param_type))?;
+                self.insert(
+                    param_path,
+                    Symbol::Variable {
+                        name: param.param_name(),
+                        var_type: param_type,
+                    },
+                )?;
             }
         }
 
@@ -627,7 +630,7 @@ impl SemanticAnalyser {
                 };
 
                 match self.lookup(&path) {
-                    Some(Symbol::Variable(t)) => Ok(t.clone()),
+                    Some(Symbol::Variable { var_type, .. }) => Ok(var_type.clone()),
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: path.type_name,
                         expected: "variable".to_string(),
@@ -1295,7 +1298,7 @@ impl SemanticAnalyser {
                 let assignee_path = PathType::from(assignee_as_path_expr);
 
                 match self.lookup(&assignee_path).cloned() {
-                    Some(Symbol::Variable(var_type)) => match var_type == assignee_type {
+                    Some(Symbol::Variable { var_type, .. }) => match var_type == assignee_type {
                         true => {
                             self.analyse_expr(&wrap_into_expression(a.rhs.clone())?)?;
                             Ok(var_type)
@@ -1340,7 +1343,7 @@ impl SemanticAnalyser {
                 let assignee_path = PathType::from(assignee_as_path_expr);
 
                 match self.lookup(&assignee_path).cloned() {
-                    Some(Symbol::Variable(_)) => match (&assignee_type, &value_type) {
+                    Some(Symbol::Variable { .. }) => match (&assignee_type, &value_type) {
                         (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
 
                         (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1491,7 +1494,14 @@ impl SemanticAnalyser {
 
                     for (param, param_type) in v.iter().zip(param_types) {
                         let param_path = PathType::from(param.param_name());
-                        self.insert(param_path, Symbol::Variable(param_type))?;
+
+                        self.insert(
+                            param_path,
+                            Symbol::Variable {
+                                name: param.param_name(),
+                                var_type: param_type,
+                            },
+                        )?;
                     }
                 }
 
@@ -1941,7 +1951,7 @@ impl SemanticAnalyser {
     fn analyse_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
         match pattern {
             Pattern::IdentifierPatt(i) => match self.lookup(&PathType::from(i.name.clone())) {
-                Some(Symbol::Variable(var_type)) => Ok(var_type.clone()),
+                Some(Symbol::Variable { var_type, .. }) => Ok(var_type.clone()),
                 Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: i.name.clone(),
                     expected: "variable".to_string(),
@@ -1995,7 +2005,7 @@ impl SemanticAnalyser {
                 };
 
                 match self.lookup(&path) {
-                    Some(Symbol::Variable(t)) => Ok(t.clone()),
+                    Some(Symbol::Variable { var_type, .. }) => Ok(var_type.clone()),
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: path.type_name,
                         expected: "variable".to_string(),
