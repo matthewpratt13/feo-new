@@ -310,13 +310,13 @@ impl SemanticAnalyser {
                                 )?,
 
                                 TraitDefItem::FunctionItem(fi) => {
-                                    let function_path =
+                                    let function_def_path =
                                         build_item_path(&trait_path, fi.function_name.clone());
 
                                     self.insert(
-                                        function_path.clone(),
+                                        function_def_path.clone(),
                                         Symbol::Function {
-                                            path: function_path,
+                                            path: function_def_path,
                                             function: fi.clone(),
                                         },
                                     )?;
@@ -415,26 +415,66 @@ impl SemanticAnalyser {
                     if let Some(v) = &t.associated_items_opt {
                         for item in v.iter() {
                             match item {
-                                TraitImplItem::AliasDecl(ad) => self.analyse_stmt(
-                                    &Statement::Item(Item::AliasDecl(ad.clone())),
-                                    &t.implemented_trait_path,
-                                )?,
+                                TraitImplItem::AliasDecl(ad) => {
+                                    let alias_implementation_path = match &t.implementing_type {
+                                        Type::UserDefined(p) => {
+                                            build_item_path(p, ad.alias_name.clone())
+                                        }
+                                        ty => {
+                                            return Err(SemanticErrorKind::UnexpectedType {
+                                                expected: "user-defined type".to_string(),
+                                                found: ty.to_string(),
+                                            })
+                                        }
+                                    };
 
-                                TraitImplItem::ConstantDecl(cd) => self.analyse_stmt(
-                                    &Statement::Item(Item::ConstantDecl(cd.clone())),
-                                    &t.implemented_trait_path,
-                                )?,
+                                    self.analyse_stmt(
+                                        &Statement::Item(Item::AliasDecl(ad.clone())),
+                                        &alias_implementation_path,
+                                    )?
+                                }
+
+                                TraitImplItem::ConstantDecl(cd) => {
+                                    let constant_implementation_path = match &t.implementing_type {
+                                        Type::UserDefined(p) => {
+                                            build_item_path(p, cd.constant_name.clone())
+                                        }
+                                        ty => {
+                                            return Err(SemanticErrorKind::UnexpectedType {
+                                                expected: "user-defined type".to_string(),
+                                                found: ty.to_string(),
+                                            })
+                                        }
+                                    };
+
+                                    self.analyse_stmt(
+                                        &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                        &constant_implementation_path,
+                                    )?
+                                }
 
                                 TraitImplItem::FunctionItem(fi) => {
-                                    let function_path = build_item_path(
+                                    let function_def_path = build_item_path(
                                         &t.implemented_trait_path,
                                         fi.function_name.clone(),
                                     );
 
+                                    let function_implementation_path = match &t.implementing_type {
+                                        Type::UserDefined(p) => {
+                                            build_item_path(p, fi.function_name.clone())
+                                        }
+                                        ty => {
+                                            return Err(SemanticErrorKind::UnexpectedType {
+                                                expected: "user-defined type".to_string(),
+                                                found: ty.to_string(),
+                                            })
+                                        }
+                                    };
+
                                     self.insert(
-                                        function_path.clone(),
+                                        function_implementation_path.clone(),
                                         Symbol::Function {
-                                            path: function_path,
+                                            path: function_def_path,
                                             function: fi.clone(),
                                         },
                                     )?;
