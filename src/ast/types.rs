@@ -207,7 +207,7 @@ impl fmt::Display for Bool {
 }
 
 /// Function pointer type: `func(<param>) -> <Type>`
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionPtr {
     pub(crate) function_name: Identifier,
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
@@ -225,7 +225,7 @@ impl fmt::Display for FunctionPtr {
 }
 
 /// Unit struct that represents the `Self` type.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SelfType;
 
 impl fmt::Display for SelfType {
@@ -235,7 +235,7 @@ impl fmt::Display for SelfType {
 }
 
 /// Unit struct that represents the unit type `()`.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unit;
 
 impl fmt::Display for Unit {
@@ -245,7 +245,7 @@ impl fmt::Display for Unit {
 }
 
 /// Struct that represents an inferred type.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InferredType {
     pub(crate) name: Identifier,
 }

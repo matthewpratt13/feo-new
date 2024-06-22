@@ -6,7 +6,7 @@ use super::{Expression, IdentifierPatt, Keyword, Type};
 // AST NODE STRUCTURES
 ///////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LetStmt {
     pub(crate) kw_let: Keyword,
     pub(crate) assignee: IdentifierPatt,

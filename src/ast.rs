@@ -935,7 +935,7 @@ impl Spanned for Statement {
 
 /// Enum representing the different item nodes in the AST.
 /// An item is a component of a package, organized by a set of modules.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Item {
     ImportDecl(ImportDecl),
     AliasDecl(AliasDecl),

@@ -20,7 +20,7 @@ pub(crate) enum ClosureParams {
 }
 
 /// Enum representing the different path root options.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PathRoot {
     Package,
     Super,
