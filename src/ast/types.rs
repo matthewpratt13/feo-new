@@ -207,7 +207,7 @@ impl fmt::Display for Bool {
 }
 
 /// Function pointer type: `func(<param>) -> <Type>`
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FunctionPtr {
     pub(crate) function_name: Identifier,
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
@@ -235,7 +235,7 @@ impl fmt::Display for SelfType {
 }
 
 /// Unit struct that represents the unit type `()`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Unit;
 
 impl fmt::Display for Unit {
@@ -245,7 +245,7 @@ impl fmt::Display for Unit {
 }
 
 /// Struct that represents an inferred type.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct InferredType {
     pub(crate) name: Identifier,
 }
@@ -257,7 +257,7 @@ impl fmt::Display for InferredType {
 }
 
 /// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct PathType {
     pub(crate) associated_type_path_prefix_opt: Option<Vec<Identifier>>,
     pub(crate) type_name: Identifier,

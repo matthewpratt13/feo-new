@@ -6,7 +6,7 @@ use crate::ast::{
     Type,
 };
 
-pub(crate) type SymbolTable = HashMap<Identifier, Symbol>;
+pub(crate) type SymbolTable = HashMap<PathType, Symbol>;
 
 #[derive(Debug, Clone)]
 pub(crate) enum ScopeKind {
@@ -19,7 +19,7 @@ pub(crate) enum ScopeKind {
 }
 
 // TODO: add `path` fields to `Struct`, `TupleStruct`, `Enum` and `Trait`
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Symbol {
     Variable(Type),
     Struct(StructDef),
