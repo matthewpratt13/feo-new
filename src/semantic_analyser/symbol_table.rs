@@ -8,7 +8,6 @@ use crate::ast::{
 
 pub(crate) type SymbolTable = HashMap<PathType, Symbol>;
 
-// TODO: add `Trait` scope
 #[derive(Debug, Clone)]
 pub(crate) enum ScopeKind {
     LocalBlock,
