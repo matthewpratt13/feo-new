@@ -156,9 +156,6 @@ impl SemanticAnalyser {
                         var_type: value_type,
                     },
                 )?;
-
-                self.logger
-                    .info(&format!("analysed let statement: {:?}", &ls));
             }
 
             Statement::Item(i) => match i {
@@ -176,9 +173,6 @@ impl SemanticAnalyser {
                             original_type_opt: ad.original_type_opt.clone(),
                         },
                     )?;
-
-                    self.logger
-                        .info(&format!("initialized alias declaration: {:?}", ad));
                 }
 
                 Item::ConstantDecl(cd) => {
@@ -211,9 +205,6 @@ impl SemanticAnalyser {
                             constant_type: value_type,
                         },
                     )?;
-
-                    self.logger
-                        .info(&format!("initialized constant declaration: {:?}", cd));
                 }
 
                 Item::StaticVarDecl(s) => {
@@ -244,9 +235,6 @@ impl SemanticAnalyser {
                             var_type: s.var_type.clone(),
                         },
                     )?;
-
-                    self.logger
-                        .info(&format!("initialized static variable declaration: {:?}", s));
                 }
 
                 Item::ModuleItem(m) => {
@@ -280,9 +268,6 @@ impl SemanticAnalyser {
 
                     self.module_registry
                         .insert(module_path, module_scope.symbols);
-
-                    self.logger
-                        .info(&format!("initialized new module scope: {:?}", m));
                 }
 
                 Item::TraitDef(t) => {
@@ -295,9 +280,6 @@ impl SemanticAnalyser {
                             trait_def: t.clone(),
                         },
                     )?;
-
-                    self.logger
-                        .info(&format!("initialized trait definition: {:?}", t));
 
                     if let Some(v) = &t.trait_items_opt {
                         for item in v.iter() {
@@ -327,11 +309,6 @@ impl SemanticAnalyser {
                                     )?;
 
                                     self.analyse_function_def(fi)?;
-
-                                    self.logger.info(&format!(
-                                        "initialized trait function definition: {:?}",
-                                        fi
-                                    ));
                                 }
                             }
                         }
@@ -348,9 +325,6 @@ impl SemanticAnalyser {
                             enum_def: e.clone(),
                         },
                     )?;
-
-                    self.logger
-                        .info(&format!("initialized enum definition: {:?}", e));
                 }
 
                 Item::StructDef(s) => {
@@ -363,9 +337,6 @@ impl SemanticAnalyser {
                             struct_def: s.clone(),
                         },
                     )?;
-
-                    self.logger
-                        .info(&format!("initialized struct definition: {:?}", s));
                 }
 
                 Item::TupleStructDef(ts) => {
@@ -378,9 +349,6 @@ impl SemanticAnalyser {
                             tuple_struct_def: ts.clone(),
                         },
                     )?;
-
-                    self.logger
-                        .info(&format!("initialized struct definition: {:?}", ts));
                 }
 
                 Item::InherentImplDef(i) => {
@@ -407,11 +375,6 @@ impl SemanticAnalyser {
                                     )?;
 
                                     self.analyse_function_def(&fi)?;
-
-                                    self.logger.info(&format!(
-                                        "initialized associated function definition: {:?}",
-                                        fi
-                                    ));
                                 }
                             }
                         }
@@ -471,11 +434,6 @@ impl SemanticAnalyser {
                                     )?;
 
                                     self.analyse_function_def(&fi)?;
-
-                                    self.logger.info(&format!(
-                                        "initialized associated function definition: {:?}",
-                                        fi
-                                    ));
                                 }
                             }
                         }
@@ -496,9 +454,6 @@ impl SemanticAnalyser {
                     )?;
 
                     self.analyse_function_def(f)?;
-
-                    self.logger
-                        .info(&format!("initialized function definition: {:?}", f));
                 }
             },
 
@@ -578,9 +533,6 @@ impl SemanticAnalyser {
                 name: path.type_name,
             });
         }
-
-        self.logger
-            .info(&format!("import path declared: {:?}", full_path));
 
         Ok(())
     }
