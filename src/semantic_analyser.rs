@@ -508,6 +508,9 @@ impl SemanticAnalyser {
             }
         }
 
+        self.logger
+            .info(&format!("analysed statement: {:?}", statement));
+
         Ok(())
     }
 
