@@ -66,7 +66,7 @@ pub enum SemanticErrorKind {
     TypeMismatchBinaryExpr {
         expected: String,
         found: String,
-        },
+    },
         
     TypeMismatchDeclaredType {
         actual_type: String,
@@ -119,10 +119,9 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
-   UndefinedType {
+    UndefinedType {
         name: Identifier,
     },
-
     
     UnexpectedKeyword {
         expected: String,
@@ -140,7 +139,7 @@ pub enum SemanticErrorKind {
         found: String,
     },
     
-    VariableOutOfScope {
+    UndefinedVariable {
         name: Identifier,
     },
 
@@ -241,7 +240,9 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::UndefinedType { name } => write!(f, "no type `{name}` in current scope"),
             
-            
+            SemanticErrorKind::UndefinedVariable { name } => {
+                write!(f, "undefined variable: `{name}`",)
+            }
             SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found `{found}`"),
             
             SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found `{found}`"),
@@ -250,9 +251,6 @@ impl fmt::Display for SemanticErrorKind {
                 write!(f, "unexpected type(s). Expected {expected}, found {found}")
             }
 
-            SemanticErrorKind::VariableOutOfScope { name } => {
-                write!(f, "cannot find variable `{name}` in current scope",)
-            }
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
         }
