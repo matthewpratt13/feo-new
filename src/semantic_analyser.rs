@@ -591,7 +591,7 @@ impl SemanticAnalyser {
                         expected: "variable".to_string(),
                         found: s.to_string(),
                     }),
-                    None => Err(SemanticErrorKind::VariableOutOfScope {
+                    None => Err(SemanticErrorKind::UndefinedVariable {
                         name: path.type_name,
                     }),
                 }
@@ -1247,7 +1247,7 @@ impl SemanticAnalyser {
                         expected: assignee_type.to_string(),
                         found: s.to_string(),
                     }),
-                    None => Err(SemanticErrorKind::VariableOutOfScope {
+                    None => Err(SemanticErrorKind::UndefinedVariable {
                         name: assignee_path.type_name,
                     }),
                 }
@@ -1362,7 +1362,7 @@ impl SemanticAnalyser {
                         })
                     }
                     None => {
-                        return Err(SemanticErrorKind::VariableOutOfScope {
+                        return Err(SemanticErrorKind::UndefinedVariable {
                             name: assignee_path.type_name,
                         })
                     }
@@ -1879,7 +1879,7 @@ impl SemanticAnalyser {
                     expected: "variable".to_string(),
                     found: s.to_string(),
                 }),
-                None => Err(SemanticErrorKind::VariableOutOfScope {
+                None => Err(SemanticErrorKind::UndefinedVariable {
                     name: i.name.clone(),
                 }),
             },
@@ -1933,7 +1933,7 @@ impl SemanticAnalyser {
                         expected: "variable".to_string(),
                         found: s.to_string(),
                     }),
-                    None => Err(SemanticErrorKind::VariableOutOfScope {
+                    None => Err(SemanticErrorKind::UndefinedVariable {
                         name: path.type_name,
                     }),
                 }
