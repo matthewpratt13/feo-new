@@ -66,7 +66,7 @@ pub enum SemanticErrorKind {
     TypeMismatchBinaryExpr {
         expected: String,
         found: String,
-        },
+    },
         
     TypeMismatchDeclaredType {
         actual_type: String,
@@ -119,10 +119,9 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
-   UndefinedType {
+    UndefinedType {
         name: Identifier,
     },
-
     
     UnexpectedKeyword {
         expected: String,
