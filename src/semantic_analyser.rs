@@ -2338,11 +2338,11 @@ mod tests {
 
     #[test]
     fn analyse_let_stmt() -> Result<(), ()> {
-        let input = r#"let foo = Foo::new();"#;
+        let input = r#"let foo = 15;"#;
 
         let (mut analyser, module) = setup(input, LogLevel::Debug, false, true, None)?;
 
-        match analyser.analyse(&module, &PathType::from(Identifier::from(""))) {
+        match analyser.analyse(&module, &PathType::from(Identifier::from("package"))) {
             Ok(_) => Ok(()),
             Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
         }

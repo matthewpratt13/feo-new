@@ -698,6 +698,7 @@ pub(crate) enum AssigneeExpr {
         span: Span,
     },
     StructExpr {
+        struct_path: PathExpr,
         fields: Vec<StructAssigneeExprField>,
         span: Span,
     },
@@ -784,6 +785,7 @@ impl TryFrom<Expression> for AssigneeExpr {
                 });
 
                 Ok(AssigneeExpr::StructExpr {
+                    struct_path: s.struct_path,
                     fields,
                     span: s.span,
                 })
@@ -816,19 +818,83 @@ impl Spanned for AssigneeExpr {
     }
 }
 
-impl TryFrom<AssigneeExpr> for Expression {
-    type Error = ParserErrorKind;
+impl From<AssigneeExpr> for Expression {
+    fn from(value: AssigneeExpr) -> Self {
+        match value {
+            AssigneeExpr::Literal(l) => Expression::Literal(l),
+            AssigneeExpr::PathExpr(p) => Expression::Path(p),
+            AssigneeExpr::MethodCallExpr(mc) => Expression::MethodCall(mc),
+            AssigneeExpr::FieldAccessExpr(fa) => Expression::FieldAccess(fa),
+            AssigneeExpr::IndexExpr(i) => Expression::Index(i),
+            AssigneeExpr::TupleIndexExpr(ti) => Expression::TupleIndex(ti),
+            AssigneeExpr::ReferenceExpr(r) => Expression::Reference(r),
+            AssigneeExpr::GroupedExpr {
+                inner_expression,
+                span,
+            } => Expression::Grouped(GroupedExpr {
+                inner_expression: Box::new(Expression::from(*inner_expression)),
+                span,
+            }),
+            AssigneeExpr::UnderscoreExpr(u) => Expression::Underscore(u),
+            AssigneeExpr::ArrayExpr { elements, span } => Expression::Array(ArrayExpr {
+                elements_opt: {
+                    let mut expressions: Vec<Expression> = Vec::new();
 
-    fn try_from(value: AssigneeExpr) -> Result<Self, Self::Error> {
-        println!("foo");
+                    for ae in elements {
+                        expressions.push(Expression::from(ae))
+                    }
 
-        let value_clone = value.clone();
+                    if expressions.is_empty() {
+                        None
+                    } else {
+                        Some(expressions)
+                    }
+                },
+                span,
+            }),
+            AssigneeExpr::TupleExpr { elements, span } => Expression::Tuple(TupleExpr {
+                tuple_elements: {
+                    let mut expressions: Vec<Expression> = Vec::new();
 
-        match <AssigneeExpr as TryInto<Expression>>::try_into(value) {
-            Ok(expr) => Ok(expr),
-            Err(_) => Err(ParserErrorKind::ConversionError {
-                from: format!("`{:?}`", value_clone),
-                into: "`Expression`".to_string(),
+                    for ae in elements {
+                        expressions.push(Expression::from(ae))
+                    }
+
+                    let final_element_opt = expressions.pop().map(|e| Box::new(e));
+
+                    TupleElements {
+                        elements: expressions,
+                        final_element_opt,
+                    }
+                },
+                span,
+            }),
+            AssigneeExpr::StructExpr {
+                struct_path,
+                fields,
+                span,
+            } => Expression::Struct(StructExpr {
+                struct_path,
+                struct_fields_opt: {
+                    let mut struct_fields: Vec<StructField> = Vec::new();
+
+                    for f in fields {
+                        let field = StructField {
+                            attributes_opt: f.attributes_opt,
+                            field_name: f.field_name,
+                            field_value: Box::new(Expression::from(*f.field_value)),
+                        };
+
+                        struct_fields.push(field)
+                    }
+
+                    if struct_fields.is_empty() {
+                        None
+                    } else {
+                        Some(struct_fields)
+                    }
+                },
+                span,
             }),
         }
     }
