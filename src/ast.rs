@@ -501,10 +501,10 @@ impl fmt::Display for Expression {
                 Literal::Char { value, .. } => write!(f, "{}", value),
                 Literal::Bool { value, .. } => write!(f, "{}", value),
             },
-            Expression::Path(pth) => write!(f, "{}", pth),
+            Expression::Path(pth) => write!(f, "{}", PathType::from(pth.clone()).to_string()),
             Expression::MethodCall(mc) => write!(f, "{:?}", mc),
             Expression::FieldAccess(fa) => write!(f, "{:?}", fa),
-            Expression::Call(cal) => write!(f, "{:?}", cal),
+            Expression::Call(cal) => write!(f, "`{}({:?})`", cal.callee, cal.args_opt),
             Expression::Index(i) => write!(f, "{:?}", i),
             Expression::TupleIndex(ti) => write!(f, "{:?}", ti),
             Expression::Unwrap(unw) => write!(f, "{:?}", unw),
@@ -525,9 +525,17 @@ impl fmt::Display for Expression {
             Expression::Closure(clo) => write!(f, "{:?}", clo),
             Expression::Array(arr) => write!(f, "{:?}", arr),
             Expression::Tuple(tup) => write!(f, "{:?}", tup),
-            Expression::Struct(strc) => write!(f, "{:?}", strc),
+            Expression::Struct(strc) => write!(
+                f,
+                "`{} {{ {:?} }}`",
+                strc.struct_path, strc.struct_fields_opt
+            ),
             Expression::Mapping(map) => write!(f, "{:?}", map),
-            Expression::Block(blk) => write!(f, "{:?}", blk),
+            Expression::Block(blk) => write!(
+                f,
+                "`#[{:?}]\n{{ {:?} }}`",
+                blk.attributes_opt, blk.statements_opt
+            ),
             Expression::If(ifex) => write!(f, "{:?}", ifex),
             Expression::Match(mat) => write!(f, "{:?}", mat),
             Expression::ForIn(fi) => write!(f, "{:?}", fi),
@@ -900,6 +908,42 @@ impl From<AssigneeExpr> for Expression {
     }
 }
 
+impl fmt::Display for AssigneeExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AssigneeExpr::Literal(l) => match l {
+                Literal::Int { value, .. } => write!(f, "{}", value),
+                Literal::UInt { value, .. } => write!(f, "{}", value),
+                Literal::BigUInt { value, .. } => write!(f, "{}", value),
+                Literal::Float { value, .. } => write!(f, "{}", value),
+                Literal::Byte { value, .. } => write!(f, "{}", value),
+                Literal::Bytes { value, .. } => write!(f, "{}", value),
+                Literal::Hash { value, .. } => write!(f, "{}", value),
+                Literal::Str { value, .. } => write!(f, "{}", value),
+                Literal::Char { value, .. } => write!(f, "{}", value),
+                Literal::Bool { value, .. } => write!(f, "{}", value),
+            },
+            AssigneeExpr::PathExpr(pth) => write!(f, "{}", PathType::from(pth.clone()).to_string()),
+            AssigneeExpr::MethodCallExpr(_) => todo!(),
+            AssigneeExpr::FieldAccessExpr(_) => todo!(),
+            AssigneeExpr::IndexExpr(_) => todo!(),
+            AssigneeExpr::TupleIndexExpr(_) => todo!(),
+            AssigneeExpr::ReferenceExpr(_) => todo!(),
+            AssigneeExpr::GroupedExpr {
+                inner_expression, ..
+            } => write!(f, "({})", *inner_expression),
+            AssigneeExpr::UnderscoreExpr(_) => write!(f, "_"),
+            AssigneeExpr::ArrayExpr { elements, .. } => write!(f, "{:?}", elements),
+            AssigneeExpr::TupleExpr { elements, .. } => write!(f, "{:?}", elements),
+            AssigneeExpr::StructExpr {
+                struct_path,
+                fields,
+                ..
+            } => write!(f, "{} {{ {:?} }}", struct_path, fields),
+        }
+    }
+}
+
 /// Enum representing patterns, which are syntactically similar to `Expression`.
 /// Patterns are used to match values against structures, as well as within
 /// variable declarations and as function parameters.
@@ -982,6 +1026,37 @@ impl Spanned for Statement {
                 Item::FunctionItem(fi) => fi.span,
             },
             Statement::Expression(e) => e.span(),
+        }
+    }
+}
+
+impl fmt::Display for Statement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Statement::Let(l) => write!(
+                f,
+                "`let {}: {:?} = {:?};`",
+                l.assignee, l.type_ann_opt, l.value_opt
+            ),
+            Statement::Item(it) => match it {
+                Item::ImportDecl(im) => write!(
+                    f,
+                    "`{:?}\n{} import {:?};`",
+                    im.attributes_opt, im.visibility, im.import_tree
+                ),
+                Item::AliasDecl(ad) => write!(f, "{:?}\n{} alias {} = {:?}", ad.attributes_opt, ad.visibility, ad.alias_name, ad.original_type_opt),
+                Item::ConstantDecl(_) => todo!(),
+                Item::StaticVarDecl(_) => todo!(),
+                Item::ModuleItem(_) => todo!(),
+                Item::TraitDef(_) => todo!(),
+                Item::EnumDef(_) => todo!(),
+                Item::StructDef(_) => todo!(),
+                Item::TupleStructDef(_) => todo!(),
+                Item::InherentImplDef(_) => todo!(),
+                Item::TraitImplDef(_) => todo!(),
+                Item::FunctionItem(_) => todo!(),
+            },
+            Statement::Expression(e) => write!(f, "{}", e),
         }
     }
 }

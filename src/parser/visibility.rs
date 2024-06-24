@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Delimiter, Keyword, PubPackageVis, Visibility},
     error::ErrorsEmitted,
@@ -61,6 +63,16 @@ impl Visibility {
                 }
             }
             _ => Ok(Visibility::Private),
+        }
+    }
+}
+
+impl fmt::Display for Visibility {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Visibility::Private => write!(f, ""),
+            Visibility::PubPackage(_) => write!(f, "pub(package)"),
+            Visibility::Pub => write!(f, "pub"),
         }
     }
 }
