@@ -858,6 +858,7 @@ impl Parser {
                 | Token::Enum { .. }
                 | Token::Struct { .. }
                 | Token::Impl { .. }
+                | Token::Func { .. }
                 | Token::Contract { .. }
                 | Token::Library { .. }
                 | Token::Script { .. }

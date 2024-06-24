@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn parse_function_def_with_block() -> Result<(), ()> {
         let input = r#"
-        pub func foo(bar: &mut str, baz: u64) -> CustomType {
+        func foo(bar: &mut str, baz: u64) -> CustomType {
             let arr: [u64; 4] = [10, 20, 30, 40];
             let mut counter = 0;
             
