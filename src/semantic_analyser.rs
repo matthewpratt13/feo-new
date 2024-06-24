@@ -2319,6 +2319,7 @@ mod tests {
         input: &str,
         log_level: LogLevel,
         print_tokens: bool,
+        print_statements: bool,
         external_code: Option<SymbolTable>,
     ) -> Result<(SemanticAnalyser, Module), ()> {
         let mut parser = parser::test_utils::get_parser(input, LogLevel::Debug, print_tokens);
@@ -2328,14 +2329,18 @@ mod tests {
             Err(_) => return Err(println!("{:#?}", parser.errors())),
         };
 
+        if print_statements {
+            println!("{:#?}", module.statements)
+        }
+
         Ok((SemanticAnalyser::new(log_level, external_code), module))
     }
 
     #[test]
     fn analyse_let_stmt() -> Result<(), ()> {
-        let input = r#"let foo = 15;"#;
+        let input = r#"let foo = Foo::new();"#;
 
-        let (mut analyser, module) = setup(input, LogLevel::Debug, false, None)?;
+        let (mut analyser, module) = setup(input, LogLevel::Debug, false, true, None)?;
 
         match analyser.analyse(&module, &PathType::from(Identifier::from(""))) {
             Ok(_) => Ok(()),

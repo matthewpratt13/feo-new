@@ -820,6 +820,8 @@ impl TryFrom<AssigneeExpr> for Expression {
     type Error = ParserErrorKind;
 
     fn try_from(value: AssigneeExpr) -> Result<Self, Self::Error> {
+        println!("foo");
+
         let value_clone = value.clone();
 
         match <AssigneeExpr as TryInto<Expression>>::try_into(value) {
