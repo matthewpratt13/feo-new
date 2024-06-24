@@ -74,7 +74,7 @@ mod let_statement;
 mod parse;
 mod patt;
 mod precedence;
-mod test_utils;
+pub(crate) mod test_utils;
 mod ty;
 mod visibility;
 
@@ -220,7 +220,7 @@ impl Parser {
 
     /// Main parsing function that returns the parsed tokens as a `Module`.
     #[allow(dead_code)]
-    fn parse_module(&mut self) -> Result<Module, ErrorsEmitted> {
+    pub(crate) fn parse_module(&mut self) -> Result<Module, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
 
         // clear log messages, then log status info
@@ -1294,6 +1294,12 @@ impl Parser {
     /// Log error information when the source code has to an unexpected end.
     fn log_unexpected_eoi(&mut self) {
         self.log_error(ParserErrorKind::UnexpectedEndOfInput)
+    }
+
+    /// Retrieve a list of any errors that occurred during parsing.
+    #[allow(dead_code)]
+    pub(crate) fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
+        &self.errors
     }
 
     ///////////////////////////////////////////////////////////////////////////

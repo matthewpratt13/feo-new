@@ -29,7 +29,7 @@ struct SemanticAnalyser {
 }
 
 impl SemanticAnalyser {
-    fn new(log_level: LogLevel, external_code: Option<SymbolTable>) -> Self {
+    pub(crate) fn new(log_level: LogLevel, external_code: Option<SymbolTable>) -> Self {
         let mut global_scope = Scope {
             scope_kind: ScopeKind::Global,
             symbols: HashMap::new(),
@@ -2303,4 +2303,43 @@ where
         from: format!("`{:?}`", &value.clone()),
         into: "`Expression`".to_string(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        ast::{Identifier, PathType},
+        logger::LogLevel,
+        parser::{self, Module},
+    };
+
+    use super::*;
+
+    fn setup(
+        input: &str,
+        log_level: LogLevel,
+        print_tokens: bool,
+        external_code: Option<SymbolTable>,
+    ) -> Result<(SemanticAnalyser, Module), ()> {
+        let mut parser = parser::test_utils::get_parser(input, LogLevel::Debug, print_tokens);
+
+        let module = match parser.parse_module() {
+            Ok(m) => m,
+            Err(_) => return Err(println!("{:#?}", parser.errors())),
+        };
+
+        Ok((SemanticAnalyser::new(log_level, external_code), module))
+    }
+
+    #[test]
+    fn analyse_let_stmt() -> Result<(), ()> {
+        let input = r#"let foo = 15;"#;
+
+        let (mut analyser, module) = setup(input, LogLevel::Debug, false, None)?;
+
+        match analyser.analyse(&module, &PathType::from(Identifier::from(""))) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        }
+    }
 }
