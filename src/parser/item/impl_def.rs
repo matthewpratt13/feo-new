@@ -186,7 +186,7 @@ impl ParseAssociatedItem for InherentImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.log_missing("item", "implementation associated item");
+                    parser.log_missing("item", "function implementation");
                     Err(ErrorsEmitted)
                 } else {
                     Ok(InherentImplItem::FunctionItem(function_def))

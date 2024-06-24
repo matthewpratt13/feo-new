@@ -101,12 +101,16 @@ impl SemanticAnalyser {
     fn analyse(&mut self, module: &Module, module_path: &PathType) -> Result<(), ErrorsEmitted> {
         self.logger.info("starting semantic analysis...");
 
+        self.enter_scope(ScopeKind::Module);
+
         for s in &module.statements {
             self.analyse_stmt(s, module_path).map_err(|e| {
                 self.log_error(e, &s.span());
                 ErrorsEmitted
             })?
         }
+
+        self.exit_scope();
 
         self.logger
             .info("semantic analysis complete, no errors detected");
@@ -2287,9 +2291,16 @@ fn build_item_path(root: &PathType, item_name: Identifier) -> PathType {
             type_name: item_name,
         }
     } else {
-        PathType {
-            associated_type_path_prefix_opt: Some(vec![root.type_name.clone()]),
-            type_name: item_name,
+        if root.type_name == Identifier::from("") {
+            PathType {
+                associated_type_path_prefix_opt: None,
+                type_name: item_name,
+            }
+        } else {
+            PathType {
+                associated_type_path_prefix_opt: Some(vec![root.type_name.clone()]),
+                type_name: item_name,
+            }
         }
     }
 }
@@ -2338,12 +2349,27 @@ mod tests {
 
     #[test]
     fn analyse_let_stmt() -> Result<(), ()> {
-        let input = r#"let foo = 15;"#;
+        let input = r#"
+        func baz() {}
+        
+        struct Foo {}
+
+        impl Foo {
+            func new() {
+                baz();
+
+                Foo {}
+            }
+
+            func bar() {
+                let foo = Foo::new();
+            }
+        }"#;
 
         let (mut analyser, module) = setup(input, LogLevel::Debug, false, true, None)?;
 
-        match analyser.analyse(&module, &PathType::from(Identifier::from("package"))) {
-            Ok(_) => Ok(()),
+        match analyser.analyse(&module, &PathType::from(Identifier::from(""))) {
+            Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
             Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
         }
     }
