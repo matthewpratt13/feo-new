@@ -252,8 +252,6 @@ impl SemanticAnalyser {
                 }
 
                 Item::ModuleItem(m) => {
-                    self.logger
-                  
                     let mut module_scope = Scope {
                         scope_kind: ScopeKind::Module,
                         symbols: HashMap::new(),
