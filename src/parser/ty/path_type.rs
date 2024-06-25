@@ -166,46 +166,40 @@ impl From<PathPatt> for PathType {
     }
 }
 
-impl From<PathSegment> for Vec<PathType> {
+impl From<PathSegment> for PathType {
     fn from(value: PathSegment) -> Self {
-        let mut paths: Vec<PathType> = Vec::new();
+        if let Some(p_sub) = value.subset_opt {
+            let mut full_path: Vec<Identifier> = Vec::new();
 
-        if let Some(s) = value.subset_opt {
-            for t in s.nested_trees {
-                for p_seg in t.path_segments {
-                    let mut prefixes: Vec<Identifier> = Vec::new();
+            if let Some(v) = value.root.associated_type_path_prefix_opt {
+                v.into_iter().for_each(|id| full_path.push(id));
+            }
 
-                    if let Some(ref v) = value.root.associated_type_path_prefix_opt {
-                        v.into_iter().for_each(|id| prefixes.push(id.clone()));
-                        prefixes.push(value.root.type_name.clone());
-                    }
+            full_path.push(value.root.type_name);
 
-                    let mut suffixes: Vec<Identifier> = Vec::new();
-
+            for tree in p_sub.nested_trees {
+                for p_seg in tree.path_segments {
                     if let Some(v) = p_seg.root.associated_type_path_prefix_opt {
-                        v.into_iter().for_each(|id| suffixes.push(id));
-                        suffixes.push(p_seg.root.type_name);
+                        v.into_iter().for_each(|id| full_path.push(id));
                     }
 
-                    prefixes.append(&mut suffixes);
-
-                    let type_name = if let Some(id) = prefixes.pop() {
-                        id
-                    } else {
-                        Identifier::from("")
-                    };
-
-                    paths.push(PathType {
-                        associated_type_path_prefix_opt: Some(prefixes),
-                        type_name,
-                    });
+                    full_path.push(p_seg.root.type_name);
                 }
             }
-        } else {
-            paths.push(value.root)
-        }
 
-        paths
+            let type_name = if let Some(id) = full_path.pop() {
+                id
+            } else {
+                Identifier::from("")
+            };
+
+            PathType {
+                associated_type_path_prefix_opt: Some(full_path),
+                type_name,
+            }
+        } else {
+            value.root
+        }
     }
 }
 

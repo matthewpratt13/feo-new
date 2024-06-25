@@ -1210,7 +1210,7 @@ impl fmt::Display for Statement {
             ),
             Statement::Item(it) => match it {
                 Item::ImportDecl(im) => {
-                    write!(f, "{}import {:?};", im.visibility, im.import_tree)
+                    write!(f, "{}import {};", im.visibility, im.import_tree)
                 }
                 Item::AliasDecl(ad) => write!(
                     f,
