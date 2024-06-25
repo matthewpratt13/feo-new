@@ -1,7 +1,7 @@
 use core::fmt;
 
 use crate::{
-    ast::{Identifier, PathExpr, PathPatt, PathRoot, PathType, SelfType},
+    ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, PathType, SelfType},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -163,6 +163,49 @@ impl From<PathPatt> for PathType {
             },
             type_name,
         }
+    }
+}
+
+impl From<PathSegment> for Vec<PathType> {
+    fn from(value: PathSegment) -> Self {
+        let mut paths: Vec<PathType> = Vec::new();
+
+        if let Some(s) = value.subset_opt {
+            for t in s.nested_trees {
+                for p_seg in t.path_segments {
+                    let mut prefixes: Vec<Identifier> = Vec::new();
+
+                    if let Some(ref v) = value.root.associated_type_path_prefix_opt {
+                        v.into_iter().for_each(|id| prefixes.push(id.clone()));
+                        prefixes.push(value.root.type_name.clone());
+                    }
+
+                    let mut suffixes: Vec<Identifier> = Vec::new();
+
+                    if let Some(v) = p_seg.root.associated_type_path_prefix_opt {
+                        v.into_iter().for_each(|id| suffixes.push(id));
+                        suffixes.push(p_seg.root.type_name);
+                    }
+
+                    prefixes.append(&mut suffixes);
+
+                    let type_name = if let Some(id) = prefixes.pop() {
+                        id
+                    } else {
+                        Identifier::from("")
+                    };
+
+                    paths.push(PathType {
+                        associated_type_path_prefix_opt: Some(prefixes),
+                        type_name,
+                    });
+                }
+            }
+        } else {
+            paths.push(value.root)
+        }
+
+        paths
     }
 }
 

@@ -142,7 +142,6 @@ impl fmt::Display for Keyword {
             Keyword::Package => write!(f, "package"),
             Keyword::SelfKeyword => write!(f, "self"),
             Keyword::Pub => write!(f, "pub"),
-            Keyword::As => write!(f, "as"),
             Keyword::Const => write!(f, "const"),
             Keyword::Static => write!(f, "static"),
             Keyword::Alias => write!(f, "alias"),

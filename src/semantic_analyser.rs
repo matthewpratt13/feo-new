@@ -536,11 +536,11 @@ impl SemanticAnalyser {
     fn analyse_import(&mut self, tree: &ImportTree) -> Result<(), SemanticErrorKind> {
         let mut full_path: Vec<PathType> = Vec::new();
 
-        for ps in tree.path_segments.iter() {
-            full_path.push(ps.root.clone());
+        for ps in tree.path_segments.clone() {
+            full_path.push(ps.root);
         }
 
-        let path = match full_path.last() {
+        let item = match full_path.last() {
             Some(pt) => pt.clone(),
             None => PathType::from(Identifier::from("")),
         };
@@ -555,16 +555,16 @@ impl SemanticAnalyser {
         };
 
         if let Some(m) = self.module_registry.get(root) {
-            if let Some(s) = m.get(&path) {
-                self.insert(path, s.clone())?;
+            if let Some(s) = m.get(&item) {
+                self.insert(item, s.clone())?;
             } else {
                 return Err(SemanticErrorKind::UndefinedSymbol {
-                    name: path.type_name,
+                    name: item.type_name,
                 });
             }
         } else {
             return Err(SemanticErrorKind::UndefinedModule {
-                name: path.type_name,
+                name: item.type_name,
             });
         }
 
