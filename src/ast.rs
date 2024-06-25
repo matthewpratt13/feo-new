@@ -109,7 +109,6 @@ pub(crate) enum Keyword {
     Package,
     SelfKeyword,
     Pub,
-    As,
     Const,
     Static,
     Alias,

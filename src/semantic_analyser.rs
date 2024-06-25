@@ -545,7 +545,16 @@ impl SemanticAnalyser {
             None => PathType::from(Identifier::from("")),
         };
 
-        if let Some(m) = self.module_registry.get(&path) {
+        let root = if let Some(p) = full_path.first() {
+            p
+        } else {
+            &PathType {
+                associated_type_path_prefix_opt: None,
+                type_name: Identifier::from(""),
+            }
+        };
+
+        if let Some(m) = self.module_registry.get(root) {
             if let Some(s) = m.get(&path) {
                 self.insert(path, s.clone())?;
             } else {
@@ -2361,6 +2370,12 @@ mod tests {
     #[test]
     fn analyse_let_stmt() -> Result<(), ()> {
         let input = r#"
+        module some_mod {
+            struct SomeObject {}
+        }
+
+        import some_mod::SomeObject;
+        
         func baz() {}
         
         struct Foo {}
