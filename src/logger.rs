@@ -99,6 +99,6 @@ impl fmt::Display for LogLevel {
 
 impl fmt::Display for LogMsg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}] {:#?}", self.level, self.text)
+        write!(f, "[{}] {}", self.level, self.text)
     }
 }

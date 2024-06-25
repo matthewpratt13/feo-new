@@ -71,8 +71,8 @@ impl fmt::Display for Visibility {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Visibility::Private => write!(f, ""),
-            Visibility::PubPackage(_) => write!(f, "pub(package)"),
-            Visibility::Pub => write!(f, "pub"),
+            Visibility::PubPackage(_) => write!(f, "pub(package) "),
+            Visibility::Pub => write!(f, "pub "),
         }
     }
 }

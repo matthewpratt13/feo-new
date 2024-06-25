@@ -63,6 +63,24 @@ pub(crate) struct MatchArm {
     pub(crate) arm_expression: Box<Expression>,
 }
 
+impl fmt::Display for MatchArm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} => {} {},",
+            self.matched_pattern,
+            {
+                if let Some(e) = &self.guard_opt {
+                    format!("{}", *e)
+                } else {
+                    "".to_string()
+                }
+            },
+            self.arm_expression
+        )
+    }
+}
+
 /// Struct representing a single field in a struct assignee expression, with a name, assignee
 /// and optional attributes.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -86,6 +104,12 @@ pub(crate) struct StructField {
 pub(crate) struct TupleElements {
     pub(crate) elements: Vec<Expression>,
     pub(crate) final_element_opt: Option<Box<Expression>>,
+}
+
+impl fmt::Display for TupleElements {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}, {:?}", self.elements, self.final_element_opt)
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////

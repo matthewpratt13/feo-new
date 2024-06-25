@@ -243,9 +243,9 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UndefinedVariable { name } => {
                 write!(f, "undefined variable: `{name}`",)
             }
-            SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found `{found}`"),
+            SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found {found}"),
             
-            SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found `{found}`"),
+            SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found {found}"),
             
             SemanticErrorKind::UnexpectedType { expected, found } => {
                 write!(f, "unexpected type(s). Expected {expected}, found {found}")

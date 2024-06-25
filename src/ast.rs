@@ -379,6 +379,15 @@ pub(crate) enum UnaryOp {
     Not,    // `!`
 }
 
+impl fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UnaryOp::Negate => write!(f, "-"),
+            UnaryOp::Not => write!(f, "!"),
+        }
+    }
+}
+
 /// Unit struct representing the unwrap operator (`?`) used in AST nodes.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct UnwrapOp;
@@ -488,7 +497,7 @@ impl From<Expression> for PathExpr {
 
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
+        match self.clone() {
             Expression::Literal(l) => match l {
                 Literal::Int { value, .. } => write!(f, "{}", value),
                 Literal::UInt { value, .. } => write!(f, "{}", value),
@@ -501,48 +510,141 @@ impl fmt::Display for Expression {
                 Literal::Char { value, .. } => write!(f, "{}", value),
                 Literal::Bool { value, .. } => write!(f, "{}", value),
             },
-            Expression::Path(pth) => write!(f, "{}", PathType::from(pth.clone()).to_string()),
-            Expression::MethodCall(mc) => write!(f, "{:?}", mc),
-            Expression::FieldAccess(fa) => write!(f, "{:?}", fa),
-            Expression::Call(cal) => write!(f, "`{}({:?})`", cal.callee, cal.args_opt),
-            Expression::Index(i) => write!(f, "{:?}", i),
-            Expression::TupleIndex(ti) => write!(f, "{:?}", ti),
-            Expression::Unwrap(unw) => write!(f, "{:?}", unw),
-            Expression::Unary(una) => write!(f, "{:?}", una),
-            Expression::Reference(r) => write!(f, "{:?}", r),
-            Expression::Dereference(dr) => write!(f, "{:?}", dr),
-            Expression::TypeCast(tc) => write!(f, "{:?}", tc),
-            Expression::Binary(bin) => write!(f, "{:?}", bin),
-            Expression::Comparison(cmp) => write!(f, "{:?}", cmp),
+            Expression::Path(pth) => write!(f, "{}", PathType::from(pth)),
+            Expression::MethodCall(mc) => write!(f, "{}.{}()", mc.receiver, mc.method_name),
+            Expression::FieldAccess(fa) => write!(f, "{}.{}", fa.object, fa.field_name),
+            Expression::Call(cal) => write!(
+                f,
+                "{}({:?})",
+                cal.callee,
+                cal.args_opt.unwrap_or(Vec::new())
+            ),
+            Expression::Index(i) => write!(f, "{}[{}]", *i.array, *i.index),
+            Expression::TupleIndex(ti) => write!(f, "{}.{}", *ti.tuple, ti.index),
+            Expression::Unwrap(unw) => write!(f, "{}?", *unw.value_expr),
+            Expression::Unary(una) => write!(f, "{}{}", una.unary_op, *una.value_expr),
+            Expression::Reference(r) => write!(f, "{}{}", r.reference_op, r.expression),
+            Expression::Dereference(dr) => write!(f, "*{}", dr.assignee_expr),
+            Expression::TypeCast(tc) => write!(f, "{} as {}", tc.value, tc.new_type),
+            Expression::Binary(bin) => write!(f, "{} {} {}", bin.lhs, bin.binary_op, bin.rhs),
+            Expression::Comparison(cmp) => {
+                write!(f, "{} {} {}", cmp.lhs, cmp.comparison_op, cmp.rhs)
+            }
             Expression::Grouped(grp) => write!(f, "({})", *grp.inner_expression),
-            Expression::Range(rng) => write!(f, "{:?}", rng),
-            Expression::Assignment(asn) => write!(f, "{:?}", asn),
-            Expression::CompoundAssignment(casn) => write!(f, "{:?}", casn),
-            Expression::Return(ret) => write!(f, "return  {:?}", ret.expression_opt),
+            Expression::Range(rng) => write!(
+                f,
+                "{}{}{}",
+                rng.from_expr_opt
+                    .unwrap_or(Box::new(AssigneeExpr::Literal(Literal::Int {
+                        value: Int::I64(i64::MIN),
+                        span: rng.span.clone()
+                    }))),
+                rng.range_op,
+                rng.to_expr_opt
+                    .unwrap_or(Box::new(AssigneeExpr::Literal(Literal::BigUInt {
+                        value: BigUInt::U512(U512::MAX),
+                        span: rng.span
+                    })))
+            ),
+            Expression::Assignment(asn) => write!(f, "{} = {}", asn.lhs, asn.rhs),
+            Expression::CompoundAssignment(casn) => write!(
+                f,
+                "{} {} {}",
+                casn.lhs, casn.compound_assignment_op, casn.rhs
+            ),
+            Expression::Return(ret) => write!(
+                f,
+                "return {}",
+                ret.expression_opt
+                    .unwrap_or(Box::new(Expression::Tuple(TupleExpr {
+                        tuple_elements: TupleElements {
+                            elements: Vec::new(),
+                            final_element_opt: None
+                        },
+                        span: ret.span,
+                    })))
+            ),
             Expression::Break(_) => write!(f, "break"),
             Expression::Continue(_) => write!(f, "continue"),
             Expression::Underscore(_) => write!(f, "_"),
-            Expression::Closure(clo) => write!(f, "{:?}", clo),
-            Expression::Array(arr) => write!(f, "{:?}", arr),
-            Expression::Tuple(tup) => write!(f, "{:?}", tup),
-            Expression::Struct(strc) => write!(
+            Expression::Closure(clo) => write!(
                 f,
-                "`{} {{ {:?} }}`",
-                strc.struct_path, strc.struct_fields_opt
+                "({:?}) -> {} {}",
+                clo.closure_params,
+                clo.return_type_opt
+                    .clone()
+                    .unwrap_or(Box::new(Type::UnitType(Unit))),
+                clo.body_expression
             ),
-            Expression::Mapping(map) => write!(f, "{:?}", map),
-            Expression::Block(blk) => write!(
+            Expression::Array(arr) => write!(f, "[ {:?} ]", arr.elements_opt),
+            Expression::Tuple(tup) => write!(f, "( {} )", tup.tuple_elements),
+            Expression::Struct(strc) => {
+                write!(
+                    f,
+                    "{} {{ {:?} }}",
+                    strc.struct_path,
+                    strc.struct_fields_opt.unwrap_or(Vec::new())
+                )
+            }
+            Expression::Mapping(map) => write!(f, "{{ {:?} }}", map.pairs_opt),
+            Expression::Block(blk) => {
+                write!(f, "{{ {:?} }}", blk.statements_opt.unwrap_or(Vec::new()))
+            }
+            Expression::If(ifex) => write!(
                 f,
-                "`#[{:?}]\n{{ {:?} }}`",
-                blk.attributes_opt, blk.statements_opt
+                "if {} {}{}{}",
+                Expression::Grouped(*ifex.condition),
+                Expression::Block(*ifex.if_block),
+                {
+                    if let Some(e) = ifex.else_if_blocks_opt {
+                        format!(" else {:?}", e)
+                    } else {
+                        "".to_string()
+                    }
+                },
+                {
+                    if let Some(e) = ifex.trailing_else_block_opt {
+                        format!(" else {}", Expression::Block(e))
+                    } else {
+                        "".to_string()
+                    }
+                }
             ),
-            Expression::If(ifex) => write!(f, "{:?}", ifex),
-            Expression::Match(mat) => write!(f, "{:?}", mat),
-            Expression::ForIn(fi) => write!(f, "{:?}", fi),
-            Expression::While(whl) => write!(f, "{:?}", whl),
-            Expression::SomeExpr(som) => write!(f, "{:?}", som),
+            Expression::Match(mat) => write!(
+                f,
+                "match {} {{ {}, {} }}",
+                mat.scrutinee,
+                {
+                    if let Some(m) = mat.match_arms_opt {
+                        format!("{:?}", m)
+                    } else {
+                        "".to_string()
+                    }
+                },
+                *mat.final_arm
+            ),
+            Expression::ForIn(fi) => write!(
+                f,
+                "for {} in {} {}",
+                fi.pattern,
+                fi.iterator,
+                Expression::Block(fi.block)
+            ),
+            Expression::While(whl) => write!(
+                f,
+                "while {} {}",
+                Expression::Grouped(*whl.condition),
+                Expression::Block(whl.block)
+            ),
+            Expression::SomeExpr(som) => write!(f, "Some{}", Expression::Grouped(*som.expression)),
             Expression::NoneExpr(_) => write!(f, "None"),
-            Expression::ResultExpr(res) => write!(f, "{:?}", res),
+            Expression::ResultExpr(res) => write!(f, "{}", {
+                match res.kw_ok_or_err {
+                    Keyword::Ok => format!("Ok{}", Expression::Grouped(*res.expression)),
+                    Keyword::Err => format!("Err{}", Expression::Grouped(*res.expression)),
+                    _ => "".to_string(),
+                }
+            }),
         }
     }
 }
@@ -675,6 +777,42 @@ impl TryFrom<ValueExpr> for Expression {
                 from: format!("`{:?}`", value_clone),
                 into: "`Expression`".to_string(),
             }),
+        }
+    }
+}
+
+impl fmt::Display for ValueExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.clone() {
+            ValueExpr::Literal(l) => write!(f, "{}", Expression::Literal(l)),
+            ValueExpr::PathExpr(p) => write!(f, "{}", Expression::Path(p)),
+            ValueExpr::MethodCallExpr(mc) => write!(f, "{}", Expression::MethodCall(mc)),
+            ValueExpr::FieldAccessExpr(fa) => write!(f, "{}", Expression::FieldAccess(fa)),
+            ValueExpr::CallExpr(c) => write!(f, "{}", Expression::Call(c)),
+            ValueExpr::IndexExpr(i) => write!(f, "{}", Expression::Index(i)),
+            ValueExpr::TupleIndexExpr(ti) => write!(f, "{}", Expression::TupleIndex(ti)),
+            ValueExpr::UnwrapExpr(unw) => write!(f, "{}", Expression::Unwrap(unw)),
+            ValueExpr::UnaryExpr(una) => write!(f, "{}", Expression::Unary(una)),
+            ValueExpr::ReferenceExpr(r) => write!(f, "{}", Expression::Reference(r)),
+            ValueExpr::DereferenceExpr(d) => write!(f, "{}", Expression::Dereference(d)),
+            ValueExpr::TypeCastExpr(tc) => write!(f, "{}", Expression::TypeCast(tc)),
+            ValueExpr::BinaryExpr(b) => write!(f, "{}", Expression::Binary(b)),
+            ValueExpr::GroupedExpr(g) => write!(f, "{}", Expression::Grouped(g)),
+            ValueExpr::RangeExpr(r) => write!(f, "{}", Expression::Range(r)),
+            ValueExpr::ClosureExpr(c) => write!(f, "{}", Expression::Closure(c)),
+            ValueExpr::UnderscoreExpr(und) => write!(f, "{}", Expression::Underscore(und)),
+            ValueExpr::ArrayExpr(a) => write!(f, "{}", Expression::Array(a)),
+            ValueExpr::TupleExpr(t) => write!(f, "{}", Expression::Tuple(t)),
+            ValueExpr::StructExpr(s) => write!(f, "{}", Expression::Struct(s)),
+            ValueExpr::MappingExpr(m) => write!(f, "{}", Expression::Mapping(m)),
+            ValueExpr::BlockExpr(b) => write!(f, "{}", Expression::Block(b)),
+            ValueExpr::IfExpr(ifex) => write!(f, "{}", Expression::If(ifex)),
+            ValueExpr::MatchExpr(m) => write!(f, "{}", Expression::Match(m)),
+            ValueExpr::ForInExpr(fi) => write!(f, "{}", Expression::ForIn(fi)),
+            ValueExpr::WhileExpr(w) => write!(f, "{}", Expression::While(w)),
+            ValueExpr::SomeExpr(s) => write!(f, "{}", Expression::SomeExpr(s)),
+            ValueExpr::NoneExpr(n) => write!(f, "{}", Expression::NoneExpr(n)),
+            ValueExpr::ResultExpr(r) => write!(f, "{}", Expression::ResultExpr(r)),
         }
     }
 }
@@ -910,36 +1048,25 @@ impl From<AssigneeExpr> for Expression {
 
 impl fmt::Display for AssigneeExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AssigneeExpr::Literal(l) => match l {
-                Literal::Int { value, .. } => write!(f, "{}", value),
-                Literal::UInt { value, .. } => write!(f, "{}", value),
-                Literal::BigUInt { value, .. } => write!(f, "{}", value),
-                Literal::Float { value, .. } => write!(f, "{}", value),
-                Literal::Byte { value, .. } => write!(f, "{}", value),
-                Literal::Bytes { value, .. } => write!(f, "{}", value),
-                Literal::Hash { value, .. } => write!(f, "{}", value),
-                Literal::Str { value, .. } => write!(f, "{}", value),
-                Literal::Char { value, .. } => write!(f, "{}", value),
-                Literal::Bool { value, .. } => write!(f, "{}", value),
-            },
-            AssigneeExpr::PathExpr(pth) => write!(f, "{}", PathType::from(pth.clone()).to_string()),
-            AssigneeExpr::MethodCallExpr(_) => todo!(),
-            AssigneeExpr::FieldAccessExpr(_) => todo!(),
-            AssigneeExpr::IndexExpr(_) => todo!(),
-            AssigneeExpr::TupleIndexExpr(_) => todo!(),
-            AssigneeExpr::ReferenceExpr(_) => todo!(),
+        match self.clone() {
+            AssigneeExpr::Literal(l) => write!(f, "{}", Expression::Literal(l)),
+            AssigneeExpr::PathExpr(p) => write!(f, "{}", Expression::Path(p)),
+            AssigneeExpr::MethodCallExpr(mc) => write!(f, "{}", Expression::MethodCall(mc)),
+            AssigneeExpr::FieldAccessExpr(fa) => write!(f, "{}", Expression::FieldAccess(fa)),
+            AssigneeExpr::IndexExpr(i) => write!(f, "{}", Expression::Index(i)),
+            AssigneeExpr::TupleIndexExpr(ti) => write!(f, "{}", Expression::TupleIndex(ti)),
+            AssigneeExpr::ReferenceExpr(r) => write!(f, "{}", Expression::Reference(r)),
             AssigneeExpr::GroupedExpr {
                 inner_expression, ..
             } => write!(f, "({})", *inner_expression),
-            AssigneeExpr::UnderscoreExpr(_) => write!(f, "_"),
-            AssigneeExpr::ArrayExpr { elements, .. } => write!(f, "{:?}", elements),
-            AssigneeExpr::TupleExpr { elements, .. } => write!(f, "{:?}", elements),
+            AssigneeExpr::UnderscoreExpr(und) => write!(f, "{}", Expression::Underscore(und)),
+            AssigneeExpr::ArrayExpr { elements, .. } => write!(f, "[ {:?} ]", elements),
+            AssigneeExpr::TupleExpr { elements, .. } => write!(f, "( {:?} )", elements),
             AssigneeExpr::StructExpr {
                 struct_path,
                 fields,
                 ..
-            } => write!(f, "{} {{ {:?} }}", struct_path, fields),
+            } => write!(f, "{} {{ {:#?} }}", struct_path, fields),
         }
     }
 }
@@ -967,32 +1094,67 @@ pub(crate) enum Pattern {
 
 impl fmt::Display for Pattern {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Pattern::Literal(l) => match l {
-                Literal::Int { value, .. } => write!(f, "{}", value),
-                Literal::UInt { value, .. } => write!(f, "{}", value),
-                Literal::BigUInt { value, .. } => write!(f, "{}", value),
-                Literal::Float { value, .. } => write!(f, "{}", value),
-                Literal::Byte { value, .. } => write!(f, "{}", value),
-                Literal::Bytes { value, .. } => write!(f, "{}", value),
-                Literal::Hash { value, .. } => write!(f, "{}", value),
-                Literal::Str { value, .. } => write!(f, "{}", value),
-                Literal::Char { value, .. } => write!(f, "{}", value),
-                Literal::Bool { value, .. } => write!(f, "{}", value),
-            },
-            Pattern::IdentifierPatt(id) => write!(f, "{}", id.name),
-            Pattern::PathPatt(pth) => write!(f, "{}", pth),
+        match self.clone() {
+            Pattern::Literal(l) => write!(f, "{}", Expression::Literal(l)),
+            Pattern::IdentifierPatt(id) => write!(
+                f,
+                "{}{}{}",
+                {
+                    if let Some(r) = id.kw_ref_opt {
+                        format!("{} ", r)
+                    } else {
+                        "".to_string()
+                    }
+                },
+                {
+                    if let Some(m) = id.kw_mut_opt {
+                        format!("{} ", m)
+                    } else {
+                        "".to_string()
+                    }
+                },
+                id.name
+            ),
+            Pattern::PathPatt(pth) => write!(f, "{}", PathType::from(pth.clone()).to_string()),
             Pattern::ReferencePatt(r) => write!(f, "{:?}", r),
             Pattern::GroupedPatt(g) => write!(f, "({})", *g.inner_pattern),
-            Pattern::RangePatt(rng) => write!(f, "{:?}", rng),
-            Pattern::TuplePatt(tup) => write!(f, "{:?}", tup),
-            Pattern::StructPatt(s) => write!(f, "{:?}", s),
-            Pattern::TupleStructPatt(ts) => write!(f, "{:?}", ts),
+            Pattern::RangePatt(rng) => write!(
+                f,
+                "{}{}{}",
+                rng.from_pattern_opt
+                    .unwrap_or(Box::new(Pattern::Literal(Literal::Int {
+                        value: Int::I64(i64::MIN),
+                        span: Span::new("", 0, 0)
+                    }))),
+                rng.range_op,
+                rng.to_pattern_opt
+                    .unwrap_or(Box::new(Pattern::Literal(Literal::BigUInt {
+                        value: BigUInt::U512(U512::MAX),
+                        span: Span::new("", 0, 0)
+                    })))
+            ),
+            Pattern::TuplePatt(tup) => write!(f, "( {} )", tup.tuple_patt_elements),
+            Pattern::StructPatt(strc) => {
+                write!(
+                    f,
+                    "{} {{ {:#?} }}",
+                    strc.struct_path, strc.struct_fields_opt
+                )
+            }
+            Pattern::TupleStructPatt(ts) => {
+                write!(f, "{} ( {:#?} )", ts.struct_path, ts.struct_elements_opt)
+            }
             Pattern::WildcardPatt(_) => write!(f, "*"),
             Pattern::RestPatt(_) => write!(f, ".."),
-            Pattern::SomePatt(som) => write!(f, "{:?}", som),
+            Pattern::SomePatt(som) => write!(f, "Some{}", Pattern::GroupedPatt(*som.pattern)),
             Pattern::NonePatt(_) => write!(f, "None"),
-            Pattern::ResultPatt(res) => write!(f, "{:?}", res),
+            Pattern::ResultPatt(res) => write!(f, "{}", {
+                match res.kw_ok_or_err {
+                    Keyword::Ok => format!("Ok{}", Pattern::GroupedPatt(*res.pattern)),
+                    Keyword::Err => format!("Err{}", Pattern::GroupedPatt(*res.pattern)),
+                    _ => "".to_string(),
+                }
+            }),
         }
     }
 }
@@ -1032,29 +1194,115 @@ impl Spanned for Statement {
 
 impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
+        match self.clone() {
             Statement::Let(l) => write!(
                 f,
-                "`let {}: {:?} = {:?};`",
-                l.assignee, l.type_ann_opt, l.value_opt
+                "let {}: {} = {};",
+                l.assignee.name,
+                l.type_ann_opt
+                    .clone()
+                    .unwrap_or(Type::InferredType(InferredType {
+                        name: Identifier::from("")
+                    }))
+                    .clone(),
+                l.value_opt.unwrap_or(Expression::NoneExpr(NoneExpr {
+                    kw_none: Keyword::None,
+                    span: l.span
+                }))
             ),
             Statement::Item(it) => match it {
-                Item::ImportDecl(im) => write!(
+                Item::ImportDecl(im) => {
+                    write!(f, "{}import {:?};", im.visibility, im.import_tree)
+                }
+                Item::AliasDecl(ad) => write!(
                     f,
-                    "`{:?}\n{} import {:?};`",
-                    im.attributes_opt, im.visibility, im.import_tree
+                    "{}alias {} = {};",
+                    ad.visibility,
+                    ad.alias_name,
+                    ad.original_type_opt.unwrap_or(Type::UnitType(Unit))
                 ),
-                Item::AliasDecl(ad) => write!(f, "{:?}\n{} alias {} = {:?}", ad.attributes_opt, ad.visibility, ad.alias_name, ad.original_type_opt),
-                Item::ConstantDecl(_) => todo!(),
-                Item::StaticVarDecl(_) => todo!(),
-                Item::ModuleItem(_) => todo!(),
-                Item::TraitDef(_) => todo!(),
-                Item::EnumDef(_) => todo!(),
-                Item::StructDef(_) => todo!(),
-                Item::TupleStructDef(_) => todo!(),
-                Item::InherentImplDef(_) => todo!(),
-                Item::TraitImplDef(_) => todo!(),
-                Item::FunctionItem(_) => todo!(),
+                Item::ConstantDecl(cd) => write!(
+                    f,
+                    "{}const {}: {} = {:?};",
+                    cd.visibility,
+                    cd.constant_name,
+                    *cd.constant_type,
+                    cd.value_opt.unwrap_or(ValueExpr::NoneExpr(NoneExpr {
+                        kw_none: Keyword::None,
+                        span: cd.span
+                    }))
+                ),
+                Item::StaticVarDecl(svd) => write!(
+                    f,
+                    "{}static {}: {} = {:?};",
+                    svd.visibility,
+                    svd.var_name,
+                    svd.var_type,
+                    svd.assignee_opt
+                        .unwrap_or(Box::new(AssigneeExpr::TupleExpr {
+                            elements: Vec::new(),
+                            span: svd.span
+                        }))
+                ),
+                Item::ModuleItem(m) => {
+                    write!(
+                        f,
+                        "{}module {} {{ #![{:?}] {:?} }}",
+                        m.visibility,
+                        m.module_name,
+                        m.inner_attributes_opt,
+                        m.items_opt.unwrap_or(Vec::new())
+                    )
+                }
+                Item::TraitDef(td) => write!(
+                    f,
+                    "{}trait {} {{ #![{:?}] {:?} }}",
+                    td.visibility,
+                    td.trait_name,
+                    td.inner_attributes_opt,
+                    td.trait_items_opt.unwrap_or(Vec::new())
+                ),
+                Item::EnumDef(ed) => write!(
+                    f,
+                    "{}enum {} {{ {:?} }}",
+                    ed.visibility, ed.enum_name, ed.variants
+                ),
+                Item::StructDef(sd) => write!(
+                    f,
+                    "{}struct {} {{ {:?} }}",
+                    sd.visibility,
+                    sd.struct_name,
+                    sd.fields_opt.unwrap_or(Vec::new())
+                ),
+                Item::TupleStructDef(tsd) => write!(
+                    f,
+                    "{}struct {} {{ {:?} }}",
+                    tsd.visibility,
+                    tsd.struct_name,
+                    tsd.elements_opt.unwrap_or(Vec::new())
+                ),
+                Item::InherentImplDef(iid) => write!(
+                    f,
+                    "impl {} {{ {:?} }}",
+                    iid.nominal_type,
+                    iid.associated_items_opt.unwrap_or(Vec::new())
+                ),
+                Item::TraitImplDef(tid) => write!(
+                    f,
+                    "impl {} for {} {{ {:?} }}",
+                    tid.implemented_trait_path,
+                    tid.implementing_type,
+                    tid.associated_items_opt.unwrap_or(Vec::new())
+                ),
+                Item::FunctionItem(fi) => write!(
+                    f,
+                    "{}func {}({:?}) -> {} {{ {:?} }}",
+                    fi.visibility,
+                    fi.function_name,
+                    fi.params_opt,
+                    fi.return_type_opt.unwrap_or(Box::new(Type::UnitType(Unit))),
+                    fi.block_opt
+                ),
             },
             Statement::Expression(e) => write!(f, "{}", e),
         }
@@ -1154,54 +1402,54 @@ pub(crate) enum Type {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Type::I32(_) => write!(f, "`i32`"),
-            Type::I64(_) => write!(f, "`i64`"),
-            Type::U8(_) => write!(f, "`u8`"),
-            Type::U16(_) => write!(f, "`u16`"),
-            Type::U32(_) => write!(f, "`u32`"),
-            Type::U64(_) => write!(f, "`u64`"),
-            Type::U256(_) => write!(f, "`u256`"),
-            Type::U512(_) => write!(f, "`u512`"),
-            Type::Byte(_) => write!(f, "`byte`"),
-            Type::F32(_) => write!(f, "`f32`"),
-            Type::F64(_) => write!(f, "`f64`"),
-            Type::B2(_) => write!(f, "`b2`"),
-            Type::B4(_) => write!(f, "`b4`"),
-            Type::B8(_) => write!(f, "`b8`"),
-            Type::B16(_) => write!(f, "`b16`"),
-            Type::B32(_) => write!(f, "`b32`"),
-            Type::H160(_) => write!(f, "`h160`"),
-            Type::H256(_) => write!(f, "`h256`"),
-            Type::H512(_) => write!(f, "`h512`"),
-            Type::Str(_) => write!(f, "`str`"),
-            Type::Char(_) => write!(f, "`char`"),
-            Type::Bool(_) => write!(f, "`bool`"),
-            Type::UnitType(_) => write!(f, "`()`"),
-            Type::GroupedType(g) => write!(f, "`({})`", *g),
+            Type::I32(_) => write!(f, "i32"),
+            Type::I64(_) => write!(f, "i64"),
+            Type::U8(_) => write!(f, "u8"),
+            Type::U16(_) => write!(f, "u16"),
+            Type::U32(_) => write!(f, "u32"),
+            Type::U64(_) => write!(f, "u64"),
+            Type::U256(_) => write!(f, "u256"),
+            Type::U512(_) => write!(f, "u512"),
+            Type::Byte(_) => write!(f, "byte"),
+            Type::F32(_) => write!(f, "f32"),
+            Type::F64(_) => write!(f, "f64"),
+            Type::B2(_) => write!(f, "b2"),
+            Type::B4(_) => write!(f, "b4"),
+            Type::B8(_) => write!(f, "b8"),
+            Type::B16(_) => write!(f, "b16"),
+            Type::B32(_) => write!(f, "b32"),
+            Type::H160(_) => write!(f, "h160"),
+            Type::H256(_) => write!(f, "h256"),
+            Type::H512(_) => write!(f, "h512"),
+            Type::Str(_) => write!(f, "str"),
+            Type::Char(_) => write!(f, "char"),
+            Type::Bool(_) => write!(f, "bool"),
+            Type::UnitType(_) => write!(f, "()"),
+            Type::GroupedType(g) => write!(f, "({})", *g),
             Type::Array {
                 element_type,
                 num_elements,
-            } => write!(f, "`[{}; {}]`", *element_type, num_elements),
-            Type::Tuple(t) => write!(f, "`({:?})`", t),
-            Type::UserDefined(ud) => write!(f, "`{}`", ud),
-            Type::FunctionPtr(fp) => write!(f, "`{}`", fp),
+            } => write!(f, "[{}; {}]", *element_type, num_elements),
+            Type::Tuple(t) => write!(f, "({:?})", t),
+            Type::UserDefined(ud) => write!(f, "{}", ud),
+            Type::FunctionPtr(fp) => write!(f, "{}", fp),
             Type::Reference {
                 reference_op,
                 inner_type,
             } => match reference_op {
-                ReferenceOp::Borrow => write!(f, "`{}{}`", reference_op, *inner_type),
-                ReferenceOp::MutableBorrow => write!(f, "`{} {}`", reference_op, *inner_type),
+                ReferenceOp::Borrow => write!(f, "{}{}", reference_op, *inner_type),
+                ReferenceOp::MutableBorrow => write!(f, "{} {}", reference_op, *inner_type),
             },
-            Type::SelfType(_) => write!(f, "`Self`"),
-            Type::InferredType(_) => write!(f, "`_`"),
-            Type::Vec { element_type } => write!(f, "`Vec<{}>`", *element_type),
+            Type::SelfType(_) => write!(f, "Self"),
+            Type::InferredType(_) => write!(f, "_"),
+            Type::Vec { element_type } => write!(f, "Vec<{}>", *element_type),
             Type::Mapping {
                 key_type,
                 value_type,
-            } => write!(f, "`Mapping<{}, {}>`", *key_type, *value_type),
-            Type::Option { inner_type } => write!(f, "`Option<{}>`", *inner_type),
+            } => write!(f, "Mapping<{}, {}>", *key_type, *value_type),
+            Type::Option { inner_type } => write!(f, "Option<{}>", *inner_type),
             Type::Result { ok_type, err_type } => {
-                write!(f, "`Result<{}, {}>`", *ok_type, *err_type)
+                write!(f, "Result<{}, {}>", *ok_type, *err_type)
             }
         }
     }
