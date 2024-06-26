@@ -492,7 +492,7 @@ impl SemanticAnalyser {
                     self.insert(
                         function_path.clone(),
                         Symbol::Function {
-                            path: function_path.clone(),
+                            path: function_path,
                             function: f.clone(),
                         },
                     )?;
@@ -543,6 +543,7 @@ impl SemanticAnalyser {
 
         if let Some(t) = &f.return_type_opt {
             let return_type = match *t.clone() {
+                // TODO: what if the user-defined type is from another module ?
                 Type::UserDefined(_) => {
                     Type::UserDefined(build_item_path(root, Identifier::from(&format!("{}", t))))
                 }
