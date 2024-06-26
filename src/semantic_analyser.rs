@@ -35,16 +35,22 @@ impl SemanticAnalyser {
             symbols: HashMap::new(),
         };
 
+        let mut module_registry = HashMap::new();
+
         // add external code (e.g., library functions) to the global scope if there is any
         if let Some(ext) = external_code {
-            for (id, sym) in ext {
-                global_scope.symbols.insert(id, sym);
+            for (id, ref sym) in ext {
+                if let Symbol::Module { path, symbols, .. } = sym.clone() {
+                    module_registry.insert(path, symbols);
+                }
+
+                global_scope.symbols.insert(id, sym.clone());
             }
         }
 
         SemanticAnalyser {
             scope_stack: vec![global_scope],
-            module_registry: HashMap::new(),
+            module_registry,
             errors: Vec::new(),
             logger: Logger::new(log_level),
         }
@@ -70,7 +76,7 @@ impl SemanticAnalyser {
     fn insert(&mut self, path: PathType, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             self.logger.debug(&format!(
-                "inserting symbol `{}` into scope `{:?}`",
+                "inserting path `{}` into scope `{:?}`",
                 path, curr_scope.scope_kind
             ));
 
@@ -86,7 +92,7 @@ impl SemanticAnalyser {
         for scope in self.scope_stack.iter().rev() {
             if let Some(symbol) = scope.symbols.get(path) {
                 self.logger.debug(&format!(
-                    "found symbol `{}` in scope `{:?}`",
+                    "found path `{}` in scope `{:?}`",
                     path, scope.scope_kind
                 ));
 
@@ -94,7 +100,7 @@ impl SemanticAnalyser {
             }
         }
         self.logger
-            .warn(&format!("symbol `{}` not found in any scope", path));
+            .warn(&format!("path `{}` not found in any scope", path));
         None
     }
 
@@ -127,7 +133,7 @@ impl SemanticAnalyser {
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors
                 let value_type = if let Some(v) = &ls.value_opt {
-                    self.analyse_expr(v)?
+                    self.analyse_expr(v, root)?
                 } else {
                     Type::UnitType(Unit)
                 };
@@ -190,7 +196,7 @@ impl SemanticAnalyser {
                     let value_type = match &cd.value_opt {
                         Some(v) => {
                             let value = wrap_into_expression(v.clone());
-                            self.analyse_expr(&value)?
+                            self.analyse_expr(&value, root)?
                         }
 
                         None => Type::InferredType(InferredType {
@@ -225,7 +231,7 @@ impl SemanticAnalyser {
                     let assignee_type = match &s.assignee_opt {
                         Some(a) => {
                             let assignee = wrap_into_expression(*a.clone());
-                            self.analyse_expr(&assignee)?
+                            self.analyse_expr(&assignee, root)?
                         }
 
                         None => Type::InferredType(InferredType {
@@ -259,9 +265,11 @@ impl SemanticAnalyser {
 
                     self.enter_scope(ScopeKind::Module);
 
+                    let module_path = build_item_path(root, m.module_name.clone());
+
                     if let Some(v) = &m.items_opt {
                         for item in v.iter() {
-                            self.analyse_stmt(&Statement::Item(item.clone()), root)?;
+                            self.analyse_stmt(&Statement::Item(item.clone()), &module_path)?;
                         }
                     }
 
@@ -271,8 +279,6 @@ impl SemanticAnalyser {
 
                         module_scope = curr_scope;
                     }
-
-                    let module_path = build_item_path(root, m.module_name.clone());
 
                     self.insert(
                         module_path.clone(),
@@ -330,7 +336,7 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(fi)?;
+                                    self.analyse_function_def(fi, root)?;
                                 }
                             }
                         }
@@ -359,6 +365,10 @@ impl SemanticAnalyser {
                     let struct_path = build_item_path(root, s.struct_name.clone());
 
                     self.insert(
+                        // PathType {
+                        //     associated_type_path_prefix_opt: None,
+                        //     type_name: s.struct_name.clone(),
+                        // },
                         struct_path.clone(),
                         Symbol::Struct {
                             path: struct_path,
@@ -405,7 +415,7 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(&fi)?;
+                                    self.analyse_function_def(&fi, root)?;
                                 }
                             }
                         }
@@ -464,7 +474,7 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(&fi)?;
+                                    self.analyse_function_def(&fi, root)?;
                                 }
                             }
                         }
@@ -482,12 +492,12 @@ impl SemanticAnalyser {
                     self.insert(
                         function_path.clone(),
                         Symbol::Function {
-                            path: function_path,
+                            path: function_path.clone(),
                             function: f.clone(),
                         },
                     )?;
 
-                    self.analyse_function_def(f)?;
+                    self.analyse_function_def(f, root)?;
                 }
             },
 
@@ -495,14 +505,18 @@ impl SemanticAnalyser {
                 self.logger
                     .debug(&format!("analysing statement: `{}` ...", statement));
 
-                self.analyse_expr(expr)?;
+                self.analyse_expr(expr, root)?;
             }
         }
 
         Ok(())
     }
 
-    fn analyse_function_def(&mut self, f: &FunctionItem) -> Result<(), SemanticErrorKind> {
+    fn analyse_function_def(
+        &mut self,
+        f: &FunctionItem,
+        root: &PathType,
+    ) -> Result<(), SemanticErrorKind> {
         self.enter_scope(ScopeKind::Function);
 
         if let Some(v) = &f.params_opt {
@@ -522,21 +536,29 @@ impl SemanticAnalyser {
         }
 
         let expression_type = if let Some(b) = &f.block_opt {
-            self.analyse_expr(&Expression::Block(b.clone()))?
+            self.analyse_expr(&Expression::Block(b.clone()), root)?
         } else {
             Type::UnitType(Unit)
         };
 
-        self.exit_scope();
-
         if let Some(t) = &f.return_type_opt {
-            if expression_type != *t.clone() {
+            let return_type = match *t.clone() {
+                Type::UserDefined(_) => {
+                    Type::UserDefined(build_item_path(root, Identifier::from(&format!("{}", t))))
+                }
+
+                _ => *t.clone(),
+            };
+
+            if expression_type != return_type {
                 return Err(SemanticErrorKind::TypeMismatchReturnType {
                     expected: format!("`{}`", t),
                     found: format!("`{}`", expression_type),
                 });
             }
         }
+
+        self.exit_scope();
 
         Ok(())
     }
@@ -557,6 +579,8 @@ impl SemanticAnalyser {
             }
         };
 
+        println!("paths: {:?}", paths);
+
         if let Some(m) = self.module_registry.get(&root).cloned() {
             for full_path in paths.into_iter().skip(1) {
                 if let Some(s) = m.get(&full_path) {
@@ -576,11 +600,15 @@ impl SemanticAnalyser {
         Ok(())
     }
 
-    fn analyse_expr(&mut self, expression: &Expression) -> Result<Type, SemanticErrorKind> {
+    fn analyse_expr(
+        &mut self,
+        expression: &Expression,
+        root: &PathType,
+    ) -> Result<Type, SemanticErrorKind> {
+        println!("root: {root}");
+
         match expression {
             Expression::Path(p) => {
-                println!("foo");
-
                 let path = match p.tree_opt.clone() {
                     Some(ref mut v) => {
                         if let Some(id) = v.pop() {
@@ -624,6 +652,7 @@ impl SemanticAnalyser {
 
                 match self.lookup(&path) {
                     Some(Symbol::Variable { var_type, .. }) => Ok(var_type.clone()),
+                    Some(Symbol::Constant { constant_type, .. }) => Ok(constant_type.clone()),
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: path.type_name,
                         expected: "variable".to_string(),
@@ -690,7 +719,7 @@ impl SemanticAnalyser {
             Expression::MethodCall(mc) => {
                 let receiver = wrap_into_expression(*mc.receiver.clone());
 
-                let receiver_type = self.analyse_expr(&receiver)?;
+                let receiver_type = self.analyse_expr(&receiver, root)?;
 
                 // convert receiver expression to path expression (i.e., check if receiver
                 // is a valid path)
@@ -754,7 +783,7 @@ impl SemanticAnalyser {
 
             Expression::FieldAccess(fa) => {
                 let object = wrap_into_expression(*fa.object.clone());
-                let object_type = self.analyse_expr(&object)?;
+                let object_type = self.analyse_expr(&object, root)?;
 
                 // convert object to path expression (i.e., check if object
                 // is a valid path)
@@ -798,9 +827,11 @@ impl SemanticAnalyser {
             }
 
             Expression::Index(i) => {
-                let array_type = self.analyse_expr(&wrap_into_expression(*i.array.clone()))?;
+                let array_type =
+                    self.analyse_expr(&wrap_into_expression(*i.array.clone()), root)?;
 
-                let index_type = self.analyse_expr(&wrap_into_expression(*i.index.clone()))?;
+                let index_type =
+                    self.analyse_expr(&wrap_into_expression(*i.index.clone()), root)?;
 
                 match index_type {
                     Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) => (),
@@ -822,7 +853,8 @@ impl SemanticAnalyser {
             }
 
             Expression::TupleIndex(ti) => {
-                let tuple_type = self.analyse_expr(&wrap_into_expression(*ti.tuple.clone()))?;
+                let tuple_type =
+                    self.analyse_expr(&wrap_into_expression(*ti.tuple.clone()), root)?;
 
                 match tuple_type {
                     Type::Tuple(t) => {
@@ -843,11 +875,12 @@ impl SemanticAnalyser {
             }
 
             Expression::Unwrap(u) => {
-                self.analyse_expr(&wrap_into_expression(*u.value_expr.clone()))
+                self.analyse_expr(&wrap_into_expression(*u.value_expr.clone()), root)
             }
 
             Expression::Unary(u) => {
-                let expr_type = self.analyse_expr(&wrap_into_expression(*u.value_expr.clone()))?;
+                let expr_type =
+                    self.analyse_expr(&wrap_into_expression(*u.value_expr.clone()), root)?;
 
                 match u.unary_op {
                     UnaryOp::Negate => match &expr_type {
@@ -878,7 +911,7 @@ impl SemanticAnalyser {
 
             Expression::Reference(r) => {
                 let reference_op = r.reference_op.clone();
-                let inner_type = self.analyse_expr(&r.expression)?;
+                let inner_type = self.analyse_expr(&r.expression, root)?;
 
                 Ok(Type::Reference {
                     reference_op,
@@ -887,11 +920,12 @@ impl SemanticAnalyser {
             }
 
             Expression::Dereference(d) => {
-                self.analyse_expr(&wrap_into_expression(d.assignee_expr.clone()))
+                self.analyse_expr(&wrap_into_expression(d.assignee_expr.clone()), root)
             }
 
             Expression::TypeCast(tc) => {
-                let value_type = self.analyse_expr(&wrap_into_expression(*tc.value.clone()))?;
+                let value_type =
+                    self.analyse_expr(&wrap_into_expression(*tc.value.clone()), root)?;
 
                 let new_type = *tc.new_type.clone();
 
@@ -971,9 +1005,9 @@ impl SemanticAnalyser {
             }
 
             Expression::Binary(b) => {
-                let lhs_type = self.analyse_expr(&wrap_into_expression(*b.lhs.clone()))?;
+                let lhs_type = self.analyse_expr(&wrap_into_expression(*b.lhs.clone()), root)?;
 
-                let rhs_type = self.analyse_expr(&wrap_into_expression(*b.rhs.clone()))?;
+                let rhs_type = self.analyse_expr(&wrap_into_expression(*b.rhs.clone()), root)?;
 
                 match (&lhs_type, &rhs_type) {
                     (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
@@ -1068,9 +1102,9 @@ impl SemanticAnalyser {
             }
 
             Expression::Comparison(c) => {
-                let lhs_type = self.analyse_expr(&wrap_into_expression(c.lhs.clone()))?;
+                let lhs_type = self.analyse_expr(&wrap_into_expression(c.lhs.clone()), root)?;
 
-                let rhs_type = self.analyse_expr(&wrap_into_expression(c.rhs.clone()))?;
+                let rhs_type = self.analyse_expr(&wrap_into_expression(c.rhs.clone()), root)?;
 
                 match (&lhs_type, &rhs_type) {
                     (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
@@ -1155,14 +1189,14 @@ impl SemanticAnalyser {
             }
 
             Expression::Grouped(g) => {
-                println!("foo");    
-                self.analyse_expr(&g.inner_expression)
-            },
+                println!("foo");
+                self.analyse_expr(&g.inner_expression, root)
+            }
 
             Expression::Range(r) => match (&r.from_expr_opt, &r.to_expr_opt) {
                 (None, None) => Ok(Type::UnitType(Unit)),
                 (None, Some(to)) => {
-                    let to_type = self.analyse_expr(&wrap_into_expression(*to.clone()))?;
+                    let to_type = self.analyse_expr(&wrap_into_expression(*to.clone()), root)?;
 
                     match to_type {
                         Type::I32(_)
@@ -1180,7 +1214,8 @@ impl SemanticAnalyser {
                     }
                 }
                 (Some(from), None) => {
-                    let from_type = self.analyse_expr(&wrap_into_expression(*from.clone()))?;
+                    let from_type =
+                        self.analyse_expr(&wrap_into_expression(*from.clone()), root)?;
 
                     match from_type {
                         Type::I32(_)
@@ -1198,7 +1233,8 @@ impl SemanticAnalyser {
                     }
                 }
                 (Some(from), Some(to)) => {
-                    let from_type = self.analyse_expr(&wrap_into_expression(*from.clone()))?;
+                    let from_type =
+                        self.analyse_expr(&wrap_into_expression(*from.clone()), root)?;
 
                     match from_type {
                         Type::I32(_)
@@ -1217,7 +1253,7 @@ impl SemanticAnalyser {
                         }
                     }
 
-                    let to_type = self.analyse_expr(&wrap_into_expression(*to.clone()))?;
+                    let to_type = self.analyse_expr(&wrap_into_expression(*to.clone()), root)?;
 
                     match to_type {
                         Type::I32(_)
@@ -1250,9 +1286,9 @@ impl SemanticAnalyser {
             Expression::Assignment(a) => {
                 let assignee = wrap_into_expression(a.lhs.clone());
 
-                let assignee_type = self.analyse_expr(&assignee)?;
+                let assignee_type = self.analyse_expr(&assignee, root)?;
 
-                let value_type = self.analyse_expr(&wrap_into_expression(a.rhs.clone()))?;
+                let value_type = self.analyse_expr(&wrap_into_expression(a.rhs.clone()), root)?;
 
                 if value_type != assignee_type {
                     return Err(SemanticErrorKind::TypeMismatchValues {
@@ -1268,7 +1304,7 @@ impl SemanticAnalyser {
                 match self.lookup(&assignee_path).cloned() {
                     Some(Symbol::Variable { var_type, .. }) => match var_type == assignee_type {
                         true => {
-                            self.analyse_expr(&wrap_into_expression(a.rhs.clone()))?;
+                            self.analyse_expr(&wrap_into_expression(a.rhs.clone()), root)?;
                             Ok(var_type)
                         }
                         false => Err(SemanticErrorKind::TypeMismatchVariable {
@@ -1297,9 +1333,9 @@ impl SemanticAnalyser {
             Expression::CompoundAssignment(ca) => {
                 let assignee = wrap_into_expression(ca.lhs.clone());
 
-                let assignee_type = self.analyse_expr(&assignee)?;
+                let assignee_type = self.analyse_expr(&assignee, root)?;
 
-                let value_type = self.analyse_expr(&wrap_into_expression(ca.rhs.clone()))?;
+                let value_type = self.analyse_expr(&wrap_into_expression(ca.rhs.clone()), root)?;
 
                 let assignee_as_path_expr = PathExpr::from(assignee.clone());
 
@@ -1411,7 +1447,7 @@ impl SemanticAnalyser {
             }
 
             Expression::Return(r) => match &r.expression_opt {
-                Some(e) => self.analyse_expr(&e.clone()),
+                Some(e) => self.analyse_expr(&e.clone(), root),
                 None => Ok(Type::UnitType(Unit)),
             },
 
@@ -1473,7 +1509,7 @@ impl SemanticAnalyser {
                     None => Ok(Type::UnitType(Unit)),
                 }?;
 
-                let expression_type = self.analyse_expr(&c.body_expression)?;
+                let expression_type = self.analyse_expr(&c.body_expression, root)?;
 
                 self.exit_scope();
 
@@ -1498,12 +1534,12 @@ impl SemanticAnalyser {
                     Some(expr) => {
                         let mut element_count = 0u64;
 
-                        let first_element_type = self.analyse_expr(expr)?;
+                        let first_element_type = self.analyse_expr(expr, root)?;
 
                         element_count += 1;
 
                         for elem in v.iter().skip(1) {
-                            let element_type = self.analyse_expr(elem)?;
+                            let element_type = self.analyse_expr(elem, root)?;
 
                             element_count += 1;
 
@@ -1538,7 +1574,7 @@ impl SemanticAnalyser {
                 let mut element_types: Vec<Type> = Vec::new();
 
                 for expr in t.tuple_elements.elements.iter() {
-                    let ty = self.analyse_expr(expr)?;
+                    let ty = self.analyse_expr(expr, root)?;
                     element_types.push(ty)
                 }
 
@@ -1547,6 +1583,10 @@ impl SemanticAnalyser {
 
             Expression::Struct(s) => {
                 let path_type = PathType::from(s.struct_path.clone());
+
+                let path_type = build_item_path(root, path_type.type_name);
+
+                println!("path type: {path_type}");
 
                 match self.lookup(&path_type).cloned() {
                     Some(Symbol::Struct { struct_def, path }) => {
@@ -1558,7 +1598,7 @@ impl SemanticAnalyser {
                             for sf in &struct_fields.unwrap() {
                                 let field_name = sf.field_name.clone();
                                 let field_value = *sf.field_value.clone();
-                                let field_type = self.analyse_expr(&field_value)?;
+                                let field_type = self.analyse_expr(&field_value, root)?;
                                 field_map.insert(field_name, field_type);
                             }
                         }
@@ -1609,13 +1649,13 @@ impl SemanticAnalyser {
                         let key_type =
                             self.analyse_patt(&Pattern::IdentifierPatt(p.key.clone()))?;
 
-                        let value_type = self.analyse_expr(&p.value.clone())?;
+                        let value_type = self.analyse_expr(&p.value.clone(), root)?;
 
                         for pair in v.iter().skip(1) {
                             let pair_key_type =
                                 self.analyse_patt(&Pattern::IdentifierPatt(pair.key.clone()))?;
 
-                            let pair_value_type = self.analyse_expr(&pair.value.clone())?;
+                            let pair_value_type = self.analyse_expr(&pair.value.clone(), root)?;
 
                             if (&pair_key_type, &pair_value_type) != (&key_type, &value_type) {
                                 return Err(SemanticErrorKind::UnexpectedType {
@@ -1655,8 +1695,6 @@ impl SemanticAnalyser {
                     self.enter_scope(ScopeKind::LocalBlock);
 
                     for stmt in vec {
-                        let path = PathType::from(Identifier::from(""));
-
                         match stmt {
                             Statement::Expression(e) => match e {
                                 Expression::Return(_)
@@ -1671,12 +1709,12 @@ impl SemanticAnalyser {
                             _ => (),
                         }
 
-                        self.analyse_stmt(stmt, &path)?;
+                        self.analyse_stmt(stmt, root)?;
                     }
 
                     let ty = match vec.last() {
                         Some(s) => match s {
-                            Statement::Expression(e) => self.analyse_expr(e)?,
+                            Statement::Expression(e) => self.analyse_expr(e, root)?,
 
                             _ => Type::UnitType(Unit),
                         },
@@ -1692,16 +1730,17 @@ impl SemanticAnalyser {
             },
 
             Expression::If(i) => {
-                self.analyse_expr(&Expression::Grouped(*i.condition.clone()))?;
+                self.analyse_expr(&Expression::Grouped(*i.condition.clone()), root)?;
 
-                let if_block_type = self.analyse_expr(&Expression::Block(*i.if_block.clone()))?;
+                let if_block_type =
+                    self.analyse_expr(&Expression::Block(*i.if_block.clone()), root)?;
 
                 let else_if_blocks_type = match &i.else_if_blocks_opt {
                     Some(v) => match v.first() {
                         Some(_) => {
                             for block in v.iter() {
                                 let block_type =
-                                    self.analyse_expr(&Expression::If(*block.clone()))?;
+                                    self.analyse_expr(&Expression::If(*block.clone()), root)?;
 
                                 if block_type != if_block_type {
                                     return Err(SemanticErrorKind::TypeMismatchValues {
@@ -1719,7 +1758,7 @@ impl SemanticAnalyser {
                 };
 
                 let trailing_else_block_type = match &i.trailing_else_block_opt {
-                    Some(b) => self.analyse_expr(&Expression::Block(b.clone()))?,
+                    Some(b) => self.analyse_expr(&Expression::Block(b.clone()), root)?,
                     None => Type::UnitType(Unit),
                 };
 
@@ -1744,7 +1783,7 @@ impl SemanticAnalyser {
                 self.enter_scope(ScopeKind::MatchExpr);
 
                 let scrutinee_type =
-                    self.analyse_expr(&wrap_into_expression(m.scrutinee.clone()))?;
+                    self.analyse_expr(&wrap_into_expression(m.scrutinee.clone()), root)?;
 
                 let patt_type = self.analyse_patt(&m.final_arm.matched_pattern.clone())?;
 
@@ -1756,7 +1795,7 @@ impl SemanticAnalyser {
                     });
                 }
 
-                let expr_type = self.analyse_expr(&m.final_arm.arm_expression.clone())?;
+                let expr_type = self.analyse_expr(&m.final_arm.arm_expression.clone(), root)?;
 
                 if let Some(v) = &m.match_arms_opt {
                     for arm in v.iter() {
@@ -1770,7 +1809,7 @@ impl SemanticAnalyser {
                             });
                         }
 
-                        let arm_expr_type = self.analyse_expr(&arm.arm_expression.clone())?;
+                        let arm_expr_type = self.analyse_expr(&arm.arm_expression.clone(), root)?;
 
                         if arm_expr_type != expr_type {
                             return Err(SemanticErrorKind::TypeMismatchMatchExpr {
@@ -1791,9 +1830,9 @@ impl SemanticAnalyser {
                 self.enter_scope(ScopeKind::ForInLoop);
 
                 self.analyse_patt(&fi.pattern.clone())?;
-                self.analyse_expr(&fi.iterator.clone())?;
+                self.analyse_expr(&fi.iterator.clone(), root)?;
 
-                let ty = self.analyse_expr(&Expression::Block(fi.block.clone()))?;
+                let ty = self.analyse_expr(&Expression::Block(fi.block.clone()), root)?;
 
                 self.exit_scope();
 
@@ -1801,13 +1840,13 @@ impl SemanticAnalyser {
             }
 
             Expression::While(w) => {
-                self.analyse_expr(&Expression::Grouped(*w.condition.clone()))?;
-                let ty = self.analyse_expr(&Expression::Block(w.block.clone()))?;
+                self.analyse_expr(&Expression::Grouped(*w.condition.clone()), root)?;
+                let ty = self.analyse_expr(&Expression::Block(w.block.clone()), root)?;
                 Ok(ty)
             }
 
             Expression::SomeExpr(s) => {
-                let ty = self.analyse_expr(&s.expression.clone().inner_expression)?;
+                let ty = self.analyse_expr(&s.expression.clone().inner_expression, root)?;
 
                 Ok(Type::Option {
                     inner_type: Box::new(ty),
@@ -1819,7 +1858,7 @@ impl SemanticAnalyser {
             }),
 
             Expression::ResultExpr(r) => {
-                let ty = self.analyse_expr(&r.expression.clone().inner_expression)?;
+                let ty = self.analyse_expr(&r.expression.clone().inner_expression, root)?;
 
                 match r.kw_ok_or_err.clone() {
                     Keyword::Ok => Ok(Type::Result {
@@ -1873,7 +1912,8 @@ impl SemanticAnalyser {
                         }
 
                         for (arg, param) in a.iter().zip(p) {
-                            let arg_type = self.analyse_expr(&arg)?;
+                            let arg_type =
+                                self.analyse_expr(&arg, &PathType::from(Identifier::from("")))?;
                             let param_type = param.param_type();
                             if arg_type != param_type {
                                 return Err(SemanticErrorKind::TypeMismatchArgument {
@@ -2346,7 +2386,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        ast::{Identifier, PathType},
+        ast::{Identifier, ModuleItem, PathType, Visibility},
         logger::LogLevel,
         parser::{self, Module},
     };
@@ -2373,6 +2413,24 @@ mod tests {
 
         Ok((SemanticAnalyser::new(log_level, external_code), module))
     }
+
+    #[test]
+    #[should_panic]
+    fn analyse_constant_reassign() {
+        let input = r#"
+        #[storage]
+        const ADDRESS: h160 = $0x12345123451234512345;
+        ADDRESS = $0x54321543215432154321;"#;
+
+        let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)
+            .expect("unable to set up semantic analyser");
+
+        match analyser.analyse(&module, &PathType::from(Identifier::from(""))) {
+            Ok(_) => println!("{:#?}", analyser.logger.messages()),
+            Err(_) => panic!("{:#?}", analyser.logger.messages()),
+        }
+    }
+
     #[test]
     fn analyse_let_stmt() -> Result<(), ()> {
         let input = r#"
@@ -2383,6 +2441,114 @@ mod tests {
         let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
 
         match analyser.analyse(&module, &PathType::from(Identifier::from(""))) {
+            Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+            Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        }
+    }
+
+    #[test]
+    fn analyse_import_decl() -> Result<(), ()> {
+        let external_func = FunctionItem {
+            attributes_opt: None,
+            visibility: Visibility::Pub,
+            kw_func: Keyword::Func,
+            function_name: Identifier::from("external_func"),
+            params_opt: None,
+            return_type_opt: None,
+            block_opt: None,
+            span: Span::new("", 0, 0),
+        };
+
+        let external_module = ModuleItem {
+            outer_attributes_opt: None,
+            visibility: Visibility::Pub,
+            kw_module: Keyword::Module,
+            module_name: Identifier::from("external_module"),
+            inner_attributes_opt: None,
+            items_opt: Some(vec![Item::FunctionItem(external_func.clone())]),
+            span: Span::new("", 0, 0),
+        };
+
+        let func_path = PathType {
+            associated_type_path_prefix_opt: None,
+            type_name: external_func.function_name.clone(),
+        };
+
+        let mut symbols: SymbolTable = HashMap::new();
+
+        symbols.insert(
+            func_path.clone(),
+            Symbol::Function {
+                path: func_path,
+                function: external_func,
+            },
+        );
+
+        let external_module_path = PathType {
+            associated_type_path_prefix_opt: None,
+            type_name: external_module.module_name.clone(),
+        };
+
+        let mut external_code: SymbolTable = HashMap::new();
+        external_code.insert(
+            external_module_path.clone(),
+            Symbol::Module {
+                path: external_module_path,
+                module: external_module,
+                symbols,
+            },
+        );
+
+        let input = r#"
+        pub import external_module::external_func;
+
+        module some_mod { 
+            struct SomeObject {}
+
+            func some_func() -> SomeObject {
+                external_func();
+
+                SomeObject {}
+            }
+        }
+
+        module another_mod {
+            import package::some_mod::{ SomeObject, some_func };
+
+            struct AnotherObject {}
+
+            func another_func() -> AnotherObject {
+                external_func();
+                AnotherObject {}
+            }
+
+            func call_some_func() -> SomeObject {
+                some_func()
+            }
+
+            pub module nested_mod {
+                func nested_func() -> SomeObject {
+                    call_some_func()
+                }
+
+                func call_another_func() -> AnotherObject {
+                    another_func()
+                }
+            }
+        }
+        
+        import package::some_mod::SomeObject;
+        import another_mod::{ nested_mod::call_another_func, AnotherObject };
+
+        func outer_func() -> AnotherObject {
+            external_func();
+            call_another_func()
+        }"#;
+
+        let (mut analyser, module) =
+            setup(input, LogLevel::Debug, false, true, Some(external_code))?;
+
+        match analyser.analyse(&module, &PathType::from(Identifier::from("package"))) {
             Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
             Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
         }
