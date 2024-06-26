@@ -763,19 +763,49 @@ impl TryFrom<Expression> for ValueExpr {
     }
 }
 
-impl TryFrom<ValueExpr> for Expression {
-    type Error = ParserErrorKind;
-
-    fn try_from(value: ValueExpr) -> Result<Self, Self::Error> {
-        let value_clone = value.clone();
-
-        match <ValueExpr as TryInto<Expression>>::try_into(value) {
-            Ok(expr) => Ok(expr),
-            Err(_) => Err(ParserErrorKind::ConversionError {
-                from: format!("`{:?}`", value_clone),
-                into: "`Expression`".to_string(),
-            }),
+impl From<ValueExpr> for Expression {
+    fn from(value: ValueExpr) -> Self {
+        match value {
+            ValueExpr::Literal(l) => Expression::Literal(l),
+            ValueExpr::PathExpr(p) => Expression::Path(p),
+            ValueExpr::MethodCallExpr(mc) => Expression::MethodCall(mc),
+            ValueExpr::FieldAccessExpr(fa) => Expression::FieldAccess(fa),
+            ValueExpr::CallExpr(c) => Expression::Call(c),
+            ValueExpr::IndexExpr(i) => Expression::Index(i),
+            ValueExpr::TupleIndexExpr(ti) => Expression::TupleIndex(ti),
+            ValueExpr::UnwrapExpr(unw) => Expression::Unwrap(unw),
+            ValueExpr::UnaryExpr(una) => Expression::Unary(una),
+            ValueExpr::ReferenceExpr(r) => Expression::Reference(r),
+            ValueExpr::DereferenceExpr(dr) => Expression::Dereference(dr),
+            ValueExpr::TypeCastExpr(tc) => Expression::TypeCast(tc),
+            ValueExpr::BinaryExpr(b) => Expression::Binary(b),
+            ValueExpr::GroupedExpr(g) => Expression::Grouped(g),
+            ValueExpr::RangeExpr(r) => Expression::Range(r),
+            ValueExpr::ClosureExpr(c) => Expression::Closure(c),
+            ValueExpr::UnderscoreExpr(u) => Expression::Underscore(u),
+            ValueExpr::ArrayExpr(a) => Expression::Array(a),
+            ValueExpr::TupleExpr(t) => Expression::Tuple(t),
+            ValueExpr::StructExpr(s) => Expression::Struct(s),
+            ValueExpr::MappingExpr(map) => Expression::Mapping(map),
+            ValueExpr::BlockExpr(b) => Expression::Block(b),
+            ValueExpr::IfExpr(i) => Expression::If(i),
+            ValueExpr::MatchExpr(mat) => Expression::Match(mat),
+            ValueExpr::ForInExpr(fi) => Expression::ForIn(fi),
+            ValueExpr::WhileExpr(w) => Expression::While(w),
+            ValueExpr::SomeExpr(s) => Expression::SomeExpr(s),
+            ValueExpr::NoneExpr(n) => Expression::NoneExpr(n),
+            ValueExpr::ResultExpr(r) => Expression::ResultExpr(r),
         }
+
+        // let value_clone = value.clone();
+
+        // match <ValueExpr as TryInto<Expression>>::try_into(value) {
+        //     Ok(expr) => Ok(expr),
+        //     Err(_) => Err(ParserErrorKind::ConversionError {
+        //         from: format!("`{:?}`", value_clone),
+        //         into: "`Expression`".to_string(),
+        //     }),
+        // }
     }
 }
 
@@ -846,6 +876,25 @@ pub(crate) enum AssigneeExpr {
         fields: Vec<StructAssigneeExprField>,
         span: Span,
     },
+}
+
+impl Spanned for AssigneeExpr {
+    fn span(&self) -> Span {
+        match self.clone() {
+            AssigneeExpr::Literal(l) => l.span(),
+            AssigneeExpr::PathExpr(p) => p.span,
+            AssigneeExpr::MethodCallExpr(mc) => mc.span,
+            AssigneeExpr::FieldAccessExpr(fa) => fa.span,
+            AssigneeExpr::IndexExpr(i) => i.span,
+            AssigneeExpr::TupleIndexExpr(ti) => ti.span,
+            AssigneeExpr::ReferenceExpr(r) => r.span,
+            AssigneeExpr::GroupedExpr { span, .. } => span,
+            AssigneeExpr::UnderscoreExpr(u) => u.span,
+            AssigneeExpr::ArrayExpr { span, .. } => span,
+            AssigneeExpr::TupleExpr { span, .. } => span,
+            AssigneeExpr::StructExpr { span, .. } => span,
+        }
+    }
 }
 
 impl TryFrom<Expression> for AssigneeExpr {
@@ -939,25 +988,6 @@ impl TryFrom<Expression> for AssigneeExpr {
                 expected: "assignee expression".to_string(),
                 found: format!("{}", value),
             }),
-        }
-    }
-}
-
-impl Spanned for AssigneeExpr {
-    fn span(&self) -> Span {
-        match self.clone() {
-            AssigneeExpr::Literal(l) => l.span(),
-            AssigneeExpr::PathExpr(p) => p.span,
-            AssigneeExpr::MethodCallExpr(mc) => mc.span,
-            AssigneeExpr::FieldAccessExpr(fa) => fa.span,
-            AssigneeExpr::IndexExpr(i) => i.span,
-            AssigneeExpr::TupleIndexExpr(ti) => ti.span,
-            AssigneeExpr::ReferenceExpr(r) => r.span,
-            AssigneeExpr::GroupedExpr { span, .. } => span,
-            AssigneeExpr::UnderscoreExpr(u) => u.span,
-            AssigneeExpr::ArrayExpr { span, .. } => span,
-            AssigneeExpr::TupleExpr { span, .. } => span,
-            AssigneeExpr::StructExpr { span, .. } => span,
         }
     }
 }

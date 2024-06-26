@@ -389,7 +389,6 @@ impl Parser {
             }
             Some(Token::LParen { .. }) => {
                 let expr = GroupedExpr::parse(self)?;
-                self.next_token();
                 Ok(Expression::Grouped(expr))
             }
             _ => {
