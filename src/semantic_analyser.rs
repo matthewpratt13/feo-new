@@ -11,8 +11,9 @@ use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
         FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportTree, InferredType,
-        InherentImplItem, Int, Item, Keyword, Literal, PathExpr, PathRoot, PathType, Pattern,
-        Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, Unit,
+        InherentImplItem, Int, Item, Keyword, Literal, ModuleItem, PathExpr, PathRoot, PathType,
+        Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, Unit,
+        Visibility,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -104,11 +105,37 @@ impl SemanticAnalyser {
         None
     }
 
-    fn analyse(&mut self, module: &Module, module_path: &PathType) -> Result<(), ErrorsEmitted> {
+    fn analyse(&mut self, module: &Module, module_path: PathType) -> Result<(), ErrorsEmitted> {
+        let anonymous_module = ModuleItem {
+            outer_attributes_opt: None,
+            visibility: Visibility::Pub,
+            kw_module: Keyword::Package,
+            module_name: module_path.type_name.clone(),
+            inner_attributes_opt: None,
+            items_opt: None,
+            span: Span::new("", 0, 0),
+        };
+
+        let mut module_contents: SymbolTable = HashMap::new();
+
+        module_contents.insert(
+            module_path.clone(),
+            Symbol::Module {
+                path: module_path.clone(),
+                module: anonymous_module.clone(),
+                symbols: HashMap::new(),
+            },
+        );
+
+        self.module_registry.insert(
+            PathType::from(anonymous_module.module_name),
+            module_contents,
+        );
+
         self.logger.info("starting semantic analysis ...");
 
         for s in &module.statements {
-            self.analyse_stmt(s, module_path).map_err(|e| {
+            self.analyse_stmt(s, &module_path).map_err(|e| {
                 self.log_error(e, &s.span());
                 ErrorsEmitted
             })?
@@ -2429,7 +2456,7 @@ mod tests {
         let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)
             .expect("unable to set up semantic analyser");
 
-        match analyser.analyse(&module, &PathType::from(Identifier::from(""))) {
+        match analyser.analyse(&module, PathType::from(Identifier::from(""))) {
             Ok(_) => println!("{:#?}", analyser.logger.messages()),
             Err(_) => panic!("{:#?}", analyser.logger.messages()),
         }
@@ -2444,7 +2471,7 @@ mod tests {
 
         let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
 
-        match analyser.analyse(&module, &PathType::from(Identifier::from(""))) {
+        match analyser.analyse(&module, PathType::from(Identifier::from(""))) {
             Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
             Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
         }
@@ -2552,7 +2579,7 @@ mod tests {
         let (mut analyser, module) =
             setup(input, LogLevel::Debug, false, false, Some(external_code))?;
 
-        match analyser.analyse(&module, &PathType::from(Identifier::from("package"))) {
+        match analyser.analyse(&module, PathType::from(Identifier::from("package"))) {
             Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
             Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
         }
