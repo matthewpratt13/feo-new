@@ -589,8 +589,20 @@ impl SemanticAnalyser {
             PathType::from(Identifier::from(""))
         };
 
-        for ps in tree.path_segments.clone() {
-            paths.push(build_item_path(&root, PathType::from(ps)));
+        for p_seg in tree.path_segments.clone() {
+            let path = build_item_path(&root, p_seg.root);
+
+            if let Some(p_sub) = p_seg.subset_opt {
+                for it in p_sub.nested_trees.into_iter() {
+                    for seg in it.path_segments {
+                        let path = build_item_path(&path, PathType::from(seg));
+
+                        paths.push(path);
+                    }
+                }
+            } else {
+                paths.push(path.clone());
+            }
         }
 
         println!("paths: {:?}", paths);

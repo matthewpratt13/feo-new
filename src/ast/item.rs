@@ -116,9 +116,19 @@ impl fmt::Display for ImportTree {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut segment_strings: Vec<String> = Vec::new();
 
-        for ps in self.clone().path_segments {
-            segment_strings.push(ps.to_string());
+        let root = if let Some(ps) = self.path_segments.first().cloned() {
+            PathType::from(ps)
+        } else {
+            PathType::from(Identifier::from(""))
+        };
+
+        for ps in self.path_segments.clone() {
+            segment_strings.push(build_item_path(&root, PathType::from(ps)).to_string());
         }
+
+        // for ps in self.clone().path_segments {
+        //     segment_strings.push(ps.to_string());
+        // }
 
         if self.wildcard_opt.is_some() {
             segment_strings.push("*".to_string());
@@ -150,28 +160,7 @@ pub(crate) struct PathSegment {
 
 impl fmt::Display for PathSegment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut segment_strings: Vec<String> = Vec::new();
-
-        segment_strings.push(self.root.to_string());
-
-        if let Some(p_sub) = self.clone().subset_opt {
-            for t in p_sub.nested_trees {
-                for p_seg in t.path_segments {
-                    segment_strings.push(p_seg.to_string());
-                }
-            }
-        }
-
-        let segment_path = if segment_strings.len() > 1 {
-            segment_strings.join("::")
-        } else {
-            segment_strings
-                .get(0)
-                .expect("empty import path segment string vector")
-                .clone()
-        };
-
-        write!(f, "{}", segment_path)
+        write!(f, "{}", self.root)
     }
 }
 
