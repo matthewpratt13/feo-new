@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::span::Span;
+use crate::{parser::ty::build_item_path, span::Span};
 
 use super::{
     AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,

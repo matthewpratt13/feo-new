@@ -75,7 +75,7 @@ mod parse;
 mod patt;
 mod precedence;
 pub(crate) mod test_utils;
-mod ty;
+pub(crate) mod ty;
 mod visibility;
 
 use std::collections::HashMap;

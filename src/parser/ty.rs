@@ -1,10 +1,10 @@
 mod path_type;
+pub(crate) use path_type::build_item_path;
 
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Delimiter, Float, FunctionOrMethodParam, FunctionPtr,
-        Identifier, InferredType, Int, PathType, ReferenceOp, SelfType, Str, Type, UInt,
-        Unit,
+        Identifier, InferredType, Int, PathType, ReferenceOp, SelfType, Str, Type, UInt, Unit,
     },
     error::ErrorsEmitted,
     span::Position,

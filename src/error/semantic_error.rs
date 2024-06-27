@@ -116,7 +116,7 @@ pub enum SemanticErrorKind {
     },
 
     UndefinedSymbol {
-        name: Identifier,
+        name: String,
     },
 
     UndefinedType {

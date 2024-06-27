@@ -203,20 +203,135 @@ impl From<PathSegment> for PathType {
     }
 }
 
+impl From<Vec<Identifier>> for PathType {
+    fn from(value: Vec<Identifier>) -> Self {
+        if value.len() > 1 {
+            let mut path_prefix: Vec<Identifier> = Vec::new();
+
+            for id in value {
+                path_prefix.push(id);
+            }
+
+            let type_name = path_prefix.pop().unwrap();
+
+            PathType {
+                associated_type_path_prefix_opt: Some(path_prefix),
+                type_name,
+            }
+        } else if value.len() == 1 {
+            let type_name = value.get(0).cloned().unwrap();
+
+            PathType {
+                associated_type_path_prefix_opt: None,
+                type_name,
+            }
+        } else {
+            PathType::from(Identifier::from(""))
+        }
+    }
+}
+
+impl From<PathType> for Vec<Identifier> {
+    fn from(value: PathType) -> Self {
+        let mut prefix = if let Some(t) = value.associated_type_path_prefix_opt {
+            t
+        } else {
+            Vec::new()
+        };
+
+        prefix.push(value.type_name);
+
+        prefix
+    }
+}
+
 impl fmt::Display for PathType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut segments: Vec<String> = Vec::new();
 
-        if let Some(v) = &self.associated_type_path_prefix_opt {
-            for i in v {
-                segments.push(i.to_string());
-            }
-        }
+        // if let Some(v) = &self.associated_type_path_prefix_opt {
+        //     for i in v {
+        //         segments.push(i.to_string());
+        //     }
+        // }
 
-        segments.push(self.type_name.to_string());
+        // segments.push(self.type_name.to_string());
+
+        for id in Vec::<Identifier>::from(self.clone()) {
+            segments.push(id.to_string())
+        }
 
         let full_path = segments.join("::");
 
         write!(f, "{}", full_path)
+    }
+}
+
+pub(crate) fn build_item_path(root: &PathType, item_path: PathType) -> PathType {
+    if let Some(prefix) = &root.associated_type_path_prefix_opt {
+        let mut path = prefix.to_vec();
+
+        path.push(root.type_name.clone());
+
+        path.append(&mut Vec::<Identifier>::from(item_path));
+
+        let type_name = if let Some(id) = path.pop() {
+            id
+        } else {
+            Identifier::from("")
+        };
+
+        PathType {
+            associated_type_path_prefix_opt: Some(path),
+            type_name,
+        }
+    } else {
+        if root.type_name == Identifier::from("") {
+            let path = &mut Vec::<Identifier>::from(item_path);
+
+            let type_name = if let Some(id) = path.pop() {
+                id
+            } else {
+                Identifier::from("")
+            };
+
+            PathType {
+                associated_type_path_prefix_opt: {
+                    if path.is_empty() {
+                        None
+                    } else {
+                        Some(path.to_vec())
+                    }
+                },
+                type_name,
+            }
+        } else {
+            let mut suffix = Vec::<Identifier>::from(item_path);
+
+            let mut path = vec![root.type_name.clone()];
+
+            if suffix.get(0) == path.get(0) {
+                path.clear();
+            }
+
+            path.append(&mut suffix);
+
+            let type_name = if let Some(id) = path.pop() {
+                id
+            } else {
+                Identifier::from("")
+            };
+
+            PathType {
+                associated_type_path_prefix_opt: {
+                    if path.is_empty() {
+                        None
+                    } else {
+                        Some(path)
+                    }
+                },
+                type_name,
+            }
+        }
     }
 }

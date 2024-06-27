@@ -13,10 +13,10 @@ pub(crate) enum ScopeKind {
     LocalBlock,
     MatchExpr,
     ForInLoop,
-    Function,
-    TraitImpl,
-    Impl,
-    Module,
+    Function(String),
+    TraitImpl(String),
+    Impl(String),
+    Module(String),
     Global,
 }
 
