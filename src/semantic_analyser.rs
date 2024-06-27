@@ -308,6 +308,9 @@ impl SemanticAnalyser {
                         module_scope = curr_scope;
                     }
 
+                    self.module_registry
+                        .insert(module_path.clone(), module_scope.symbols.clone());
+
                     self.insert(
                         module_path.clone(),
                         Symbol::Module {
@@ -321,9 +324,6 @@ impl SemanticAnalyser {
                         "inserting symbols into module at path: `{}`",
                         module_path
                     ));
-
-                    self.module_registry
-                        .insert(module_path.clone(), module_scope.symbols);
                 }
 
                 Item::TraitDef(t) => {
