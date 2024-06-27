@@ -592,6 +592,8 @@ impl SemanticAnalyser {
         for p_seg in tree.path_segments.clone() {
             let path = build_item_path(&root, p_seg.root);
 
+            paths.push(path.clone());
+
             if let Some(p_sub) = p_seg.subset_opt {
                 for it in p_sub.nested_trees.into_iter() {
                     for seg in it.path_segments {
@@ -600,12 +602,8 @@ impl SemanticAnalyser {
                         paths.push(path);
                     }
                 }
-            } else {
-                paths.push(path.clone());
             }
         }
-
-        println!("paths: {:?}", paths);
 
         if let Some(m) = self.module_registry.get(&root).cloned() {
             for full_path in paths.into_iter().skip(1) {

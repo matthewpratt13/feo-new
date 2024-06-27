@@ -114,7 +114,7 @@ pub(crate) struct ImportTree {
 
 impl fmt::Display for ImportTree {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut segment_strings: Vec<String> = Vec::new();
+        let mut paths: Vec<PathType> = Vec::new();
 
         let root = if let Some(ps) = self.path_segments.first().cloned() {
             PathType::from(ps)
@@ -122,33 +122,29 @@ impl fmt::Display for ImportTree {
             PathType::from(Identifier::from(""))
         };
 
-        for ps in self.path_segments.clone() {
-            segment_strings.push(build_item_path(&root, PathType::from(ps)).to_string());
+        for p_seg in self.path_segments.clone() {
+            let path = build_item_path(&root, p_seg.root);
+
+            paths.push(path.clone());
+
+            if let Some(p_sub) = p_seg.subset_opt {
+                for it in p_sub.nested_trees.into_iter() {
+                    for seg in it.path_segments {
+                        let path = build_item_path(&path, PathType::from(seg));
+
+                        paths.push(path);
+                    }
+                }
+            }
         }
 
-        // for ps in self.clone().path_segments {
-        //     segment_strings.push(ps.to_string());
-        // }
+        let path_strings = paths
+            .clone()
+            .into_iter()
+            .map(|p| p.to_string())
+            .collect::<Vec<String>>();
 
-        if self.wildcard_opt.is_some() {
-            segment_strings.push("*".to_string());
-        }
-
-        if let Some(ac) = self.clone().as_clause_opt {
-            segment_strings.push("as".to_string());
-            segment_strings.push(ac.to_string());
-        }
-
-        let import_path = if segment_strings.len() > 1 {
-            segment_strings.join("::")
-        } else {
-            segment_strings
-                .get(0)
-                .expect("empty import path segment string vector")
-                .clone()
-        };
-
-        write!(f, "{}", import_path)
+        write!(f, "{:?}", path_strings)
     }
 }
 
