@@ -87,6 +87,22 @@ impl Symbol {
             Symbol::Module { module, .. } => module.module_name,
         }
     }
+
+    pub(crate) fn visibility(&self) -> Visibility {
+        match self.clone() {
+            Symbol::Variable { .. } => Visibility::Private,
+            Symbol::Struct { struct_def, .. } => struct_def.visibility,
+            Symbol::TupleStruct {
+                tuple_struct_def, ..
+            } => tuple_struct_def.visibility,
+            Symbol::Enum { enum_def, .. } => enum_def.visibility,
+            Symbol::Trait { trait_def, .. } => trait_def.visibility,
+            Symbol::Alias { visibility, .. } => visibility,
+            Symbol::Constant { visibility, .. } => visibility,
+            Symbol::Function { function, .. } => function.visibility,
+            Symbol::Module { .. } => Visibility::Private,
+        }
+    }
 }
 
 impl fmt::Display for Symbol {

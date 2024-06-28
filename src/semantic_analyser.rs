@@ -10,10 +10,10 @@ use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
-        FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportTree, InferredType,
-        InherentImplItem, Int, Item, Keyword, Literal, ModuleItem, PathExpr, PathRoot, PathType,
-        Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, Unit,
-        Visibility,
+        FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportDecl, ImportTree,
+        InferredType, InherentImplItem, Int, Item, Keyword, Literal, ModuleItem, PathExpr,
+        PathRoot, PathType, Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt,
+        UnaryOp, Unit, Visibility,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -196,7 +196,7 @@ impl SemanticAnalyser {
                     self.logger
                         .debug(&format!("analysing statement: `{}` ...", statement));
 
-                    self.analyse_import(&id.import_tree)?
+                    self.analyse_import(&id, root)?
                 }
 
                 Item::AliasDecl(ad) => {
@@ -293,29 +293,32 @@ impl SemanticAnalyser {
                         symbols: HashMap::new(),
                     };
 
-                    self.enter_scope(ScopeKind::Module(module_path.to_string()));
+                    if m.visibility == Visibility::Private {
+                        self.enter_scope(ScopeKind::Module(module_path.to_string()));
+                    }
 
                     if let Some(v) = &m.items_opt {
                         for item in v.iter() {
+                            if item.visibility() == Visibility::Private {
+                                self.enter_scope(ScopeKind::Module(module_path.to_string()));
+                            }
+
                             self.analyse_stmt(&Statement::Item(item.clone()), &module_path)?;
                         }
                     }
 
-                    if let Some(curr_scope) = self.scope_stack.pop() {
+                    if let Some(Scope {
+                        scope_kind: ScopeKind::Module { .. },
+                        ..
+                    }) = self.scope_stack.last()
+                    {
+                        let curr_scope = self.scope_stack.pop().unwrap();
+
                         self.logger
                             .debug(&format!("exited scope: `{:?}` ...", &curr_scope.scope_kind));
 
                         module_scope = curr_scope;
                     }
-
-                    self.insert(
-                        module_path.clone(),
-                        Symbol::Module {
-                            path: module_path.clone(),
-                            module: m.clone(),
-                            symbols: module_scope.symbols.clone(),
-                        },
-                    )?;
 
                     self.logger.debug(&format!(
                         "inserting symbols into module at path: `{}`",
@@ -323,7 +326,16 @@ impl SemanticAnalyser {
                     ));
 
                     self.module_registry
-                        .insert(module_path.clone(), module_scope.symbols);
+                        .insert(module_path.clone(), module_scope.symbols.clone());
+
+                    self.insert(
+                        module_path.clone(),
+                        Symbol::Module {
+                            path: module_path,
+                            module: m.clone(),
+                            symbols: module_scope.symbols,
+                        },
+                    )?;
                 }
 
                 Item::TraitDef(t) => {
@@ -395,10 +407,6 @@ impl SemanticAnalyser {
                     let struct_path = build_item_path(root, PathType::from(s.struct_name.clone()));
 
                     self.insert(
-                        // PathType {
-                        //     associated_type_path_prefix_opt: None,
-                        //     type_name: s.struct_name.clone(),
-                        // },
                         struct_path.clone(),
                         Symbol::Struct {
                             path: struct_path,
@@ -607,17 +615,27 @@ impl SemanticAnalyser {
         Ok(())
     }
 
-    fn analyse_import(&mut self, tree: &ImportTree) -> Result<(), SemanticErrorKind> {
+    fn analyse_import(
+        &mut self,
+        import_decl: &ImportDecl,
+        module_root: &PathType,
+    ) -> Result<(), SemanticErrorKind> {
         let mut paths: Vec<PathType> = Vec::new();
 
-        let root = if let Some(ps) = tree.path_segments.first().cloned() {
+        let import_root = if let Some(ps) = import_decl.import_tree.path_segments.first().cloned() {
             PathType::from(ps)
         } else {
             PathType::from(Identifier::from(""))
         };
 
-        for p_seg in tree.path_segments.clone().into_iter().skip(1) {
-            let path = build_item_path(&root, p_seg.root);
+        for p_seg in import_decl
+            .import_tree
+            .path_segments
+            .clone()
+            .into_iter()
+            .skip(1)
+        {
+            let path = build_item_path(&import_root, p_seg.root);
 
             if let Some(p_sub) = p_seg.subset_opt {
                 for it in p_sub.nested_trees {
@@ -633,10 +651,16 @@ impl SemanticAnalyser {
 
         println!("paths: {:?}", paths);
 
-        if let Some(m) = self.module_registry.get(&root).cloned() {
+        if let Some(m) = self.module_registry.get(&import_root).cloned() {
             for full_path in paths {
                 if let Some(s) = m.get(&full_path) {
-                    self.insert(PathType::from(full_path.type_name), s.clone())?;
+                    if import_decl.visibility == Visibility::Private {
+                        self.enter_scope(ScopeKind::Module(module_root.to_string()));
+                        self.insert(PathType::from(full_path.type_name), s.clone())?;
+                        self.exit_scope();
+                    } else {
+                        self.insert(PathType::from(full_path.type_name), s.clone())?;
+                    }
                 } else {
                     return Err(SemanticErrorKind::UndefinedSymbol {
                         name: full_path.to_string(),
@@ -645,7 +669,7 @@ impl SemanticAnalyser {
             }
         } else {
             return Err(SemanticErrorKind::UndefinedModule {
-                name: root.type_name,
+                name: import_root.type_name,
             });
         }
 
@@ -2536,8 +2560,8 @@ mod tests {
         let input = r#"
         pub import external_module::external_func;
 
-        module some_mod { 
-            struct SomeObject {}
+        pub module some_mod { 
+            pub struct SomeObject {}
 
             func some_func() -> SomeObject {
                 external_func();
