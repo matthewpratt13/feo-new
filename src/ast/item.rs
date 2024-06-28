@@ -122,19 +122,18 @@ impl fmt::Display for ImportTree {
             PathType::from(Identifier::from(""))
         };
 
-        for p_seg in self.path_segments.clone() {
+        for p_seg in self.path_segments.clone().into_iter().skip(1) {
             let path = build_item_path(&root, p_seg.root);
 
-            paths.push(path.clone());
-
             if let Some(p_sub) = p_seg.subset_opt {
-                for it in p_sub.nested_trees.into_iter() {
+                for it in p_sub.nested_trees {
                     for seg in it.path_segments {
                         let path = build_item_path(&path, PathType::from(seg));
-
                         paths.push(path);
                     }
                 }
+            } else {
+                paths.push(path.clone());
             }
         }
 

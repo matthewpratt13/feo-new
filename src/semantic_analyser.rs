@@ -616,26 +616,27 @@ impl SemanticAnalyser {
             PathType::from(Identifier::from(""))
         };
 
-        for p_seg in tree.path_segments.clone() {
+        for p_seg in tree.path_segments.clone().into_iter().skip(1) {
             let path = build_item_path(&root, p_seg.root);
 
-            paths.push(path.clone());
-
             if let Some(p_sub) = p_seg.subset_opt {
-                for it in p_sub.nested_trees.into_iter() {
+                for it in p_sub.nested_trees {
                     for seg in it.path_segments {
                         let path = build_item_path(&path, PathType::from(seg));
-
                         paths.push(path);
                     }
                 }
+            } else {
+                paths.push(path.clone());
             }
         }
 
+        println!("paths: {:?}", paths);
+
         if let Some(m) = self.module_registry.get(&root).cloned() {
-            for full_path in paths.into_iter().skip(1) {
-                if let Some(s) = m.get(&PathType::from(full_path.type_name.clone())) {
-                    self.insert(PathType::from(full_path.type_name.clone()), s.clone())?;
+            for full_path in paths {
+                if let Some(s) = m.get(&full_path) {
+                    self.insert(PathType::from(full_path.type_name), s.clone())?;
                 } else {
                     return Err(SemanticErrorKind::UndefinedSymbol {
                         name: full_path.to_string(),
@@ -2500,8 +2501,15 @@ mod tests {
             span: Span::new("", 0, 0),
         };
 
-        let func_path = PathType {
+        let external_module_path = PathType {
             associated_type_path_prefix_opt: None,
+            type_name: external_module.module_name.clone(),
+        };
+
+        let func_path = PathType {
+            associated_type_path_prefix_opt: Some(Vec::<Identifier>::from(
+                external_module_path.clone(),
+            )),
             type_name: external_func.function_name.clone(),
         };
 
@@ -2514,11 +2522,6 @@ mod tests {
                 function: external_func,
             },
         );
-
-        let external_module_path = PathType {
-            associated_type_path_prefix_opt: None,
-            type_name: external_module.module_name.clone(),
-        };
 
         let mut external_code: SymbolTable = HashMap::new();
         external_code.insert(
