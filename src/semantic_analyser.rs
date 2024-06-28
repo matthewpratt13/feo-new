@@ -31,7 +31,7 @@ struct SemanticAnalyser {
 
 impl SemanticAnalyser {
     pub(crate) fn new(log_level: LogLevel, external_code: Option<SymbolTable>) -> Self {
-        let scope_kind = ScopeKind::Public;
+        let scope_kind = ScopeKind::Package;
 
         let mut logger = Logger::new(log_level);
 
@@ -114,7 +114,9 @@ impl SemanticAnalyser {
     }
 
     fn analyse(&mut self, module: &Module, module_path: PathType) -> Result<(), ErrorsEmitted> {
-        self.enter_scope(ScopeKind::Package);
+        self.logger.info("starting semantic analysis ...");
+
+        self.enter_scope(ScopeKind::RootModule(module_path.to_string()));
 
         let anonymous_module = ModuleItem {
             outer_attributes_opt: None,
@@ -141,8 +143,6 @@ impl SemanticAnalyser {
             PathType::from(anonymous_module.module_name),
             module_contents,
         );
-
-        self.logger.info("starting semantic analysis ...");
 
         for s in &module.statements {
             self.analyse_stmt(s, &module_path).map_err(|e| {
@@ -303,9 +303,15 @@ impl SemanticAnalyser {
                         symbols: HashMap::new(),
                     };
 
-                    if m.visibility == Visibility::Private {
-                        self.enter_scope(ScopeKind::Module(module_path.to_string()));
-                    }
+                    match m.visibility {
+                        Visibility::Private => {
+                            self.enter_scope(ScopeKind::Module(module_path.to_string()));
+                        }
+                        Visibility::PubPackage(_) => self.enter_scope(ScopeKind::Package),
+                        Visibility::Pub => {
+                            self.enter_scope(ScopeKind::Public);
+                        }
+                    };
 
                     if let Some(v) = &m.items_opt {
                         for item in v.iter() {
@@ -2592,7 +2598,7 @@ mod tests {
         }
 
         module another_mod {
-            import package::some_mod::{ SomeObject, some_func };
+            import lib::some_mod::{ SomeObject, some_func };
 
             struct AnotherObject {}
 
@@ -2616,7 +2622,7 @@ mod tests {
             }
         }
         
-        import package::some_mod::SomeObject;
+        import lib::some_mod::SomeObject;
         import another_mod::{ nested_mod::call_another_func, AnotherObject };
 
         func outer_func() -> AnotherObject {
@@ -2627,7 +2633,7 @@ mod tests {
         let (mut analyser, module) =
             setup(input, LogLevel::Debug, false, false, Some(external_code))?;
 
-        match analyser.analyse(&module, PathType::from(Identifier::from("package"))) {
+        match analyser.analyse(&module, PathType::from(Identifier::from("lib"))) {
             Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
             Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
         }

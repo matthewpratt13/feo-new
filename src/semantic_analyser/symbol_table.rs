@@ -17,6 +17,7 @@ pub(crate) enum ScopeKind {
     TraitImpl(String),
     Impl(String),
     Module(String),
+    RootModule(String),
     Package,
     Public,
 }
