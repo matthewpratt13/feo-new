@@ -652,6 +652,8 @@ impl SemanticAnalyser {
             }
         }
 
+        // TODO: handle `super` and `self` path roots
+
         if let Some(m) = self.module_registry.get(&import_root).cloned() {
             for full_path in paths {
                 if let Some(s) = m.get(&full_path) {
