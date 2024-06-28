@@ -334,7 +334,7 @@ impl SemanticAnalyser {
                     self.insert(
                         module_path.clone(),
                         Symbol::Module {
-                            path: module_path,
+                            path: PathType::from(m.module_name.clone()),
                             module: m.clone(),
                             symbols: module_scope.symbols,
                         },
