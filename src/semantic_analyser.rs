@@ -10,10 +10,10 @@ use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
-        FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportDecl, ImportTree,
-        InferredType, InherentImplItem, Int, Item, Keyword, Literal, ModuleItem, PathExpr,
-        PathRoot, PathType, Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt,
-        UnaryOp, Unit, Visibility,
+        FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportDecl, InferredType,
+        InherentImplItem, Int, Item, Keyword, Literal, ModuleItem, PathExpr, PathRoot, PathType,
+        Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, Unit,
+        Visibility,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -299,7 +299,10 @@ impl SemanticAnalyser {
 
                     if let Some(v) = &m.items_opt {
                         for item in v.iter() {
-                            if item.visibility() == Visibility::Private {
+                            if item.visibility() == Visibility::Private
+                                && self.scope_stack.last().expect("no scope found").scope_kind
+                                    != ScopeKind::Module(module_path.to_string())
+                            {
                                 self.enter_scope(ScopeKind::Module(module_path.to_string()));
                             }
 
@@ -648,8 +651,6 @@ impl SemanticAnalyser {
                 paths.push(path.clone());
             }
         }
-
-        println!("paths: {:?}", paths);
 
         if let Some(m) = self.module_registry.get(&import_root).cloned() {
             for full_path in paths {
