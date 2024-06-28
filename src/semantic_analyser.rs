@@ -31,29 +31,37 @@ struct SemanticAnalyser {
 
 impl SemanticAnalyser {
     pub(crate) fn new(log_level: LogLevel, external_code: Option<SymbolTable>) -> Self {
-        let mut global_scope = Scope {
-            scope_kind: ScopeKind::Global,
-            symbols: HashMap::new(),
-        };
+        let scope_kind = ScopeKind::Public;
 
-        let mut module_registry = HashMap::new();
+        let mut logger = Logger::new(log_level);
+
+        logger.debug(&format!("entering new scope: `{:?}` ...", &scope_kind));
+
+        let mut external_symbols: SymbolTable = HashMap::new();
+
+        let mut module_registry: HashMap<PathType, SymbolTable> = HashMap::new();
 
         // add external code (e.g., library functions) to the global scope if there is any
         if let Some(ext) = external_code {
+            logger.debug(&format!("importing external code ..."));
+
             for (id, ref sym) in ext {
                 if let Symbol::Module { path, symbols, .. } = sym.clone() {
                     module_registry.insert(path, symbols);
                 }
 
-                global_scope.symbols.insert(id, sym.clone());
+                external_symbols.insert(id, sym.clone());
             }
         }
 
         SemanticAnalyser {
-            scope_stack: vec![global_scope],
+            scope_stack: vec![Scope {
+                scope_kind,
+                symbols: external_symbols,
+            }],
             module_registry,
             errors: Vec::new(),
-            logger: Logger::new(log_level),
+            logger,
         }
     }
 
@@ -106,6 +114,8 @@ impl SemanticAnalyser {
     }
 
     fn analyse(&mut self, module: &Module, module_path: PathType) -> Result<(), ErrorsEmitted> {
+        self.enter_scope(ScopeKind::Package);
+
         let anonymous_module = ModuleItem {
             outer_attributes_opt: None,
             visibility: Visibility::Pub,
@@ -299,11 +309,23 @@ impl SemanticAnalyser {
 
                     if let Some(v) = &m.items_opt {
                         for item in v.iter() {
-                            if item.visibility() == Visibility::Private
-                                && self.scope_stack.last().expect("no scope found").scope_kind
-                                    != ScopeKind::Module(module_path.to_string())
-                            {
-                                self.enter_scope(ScopeKind::Module(module_path.to_string()));
+                            if let Some(s) = self.scope_stack.last() {
+                                match item.visibility() {
+                                    Visibility::Private => {
+                                        if s.scope_kind > ScopeKind::Module(module_path.to_string())
+                                        {
+                                            self.enter_scope(ScopeKind::Module(
+                                                module_path.to_string(),
+                                            ))
+                                        }
+                                    }
+                                    Visibility::PubPackage(_) => {
+                                        if s.scope_kind > ScopeKind::Package {
+                                            self.enter_scope(ScopeKind::Package)
+                                        }
+                                    }
+                                    Visibility::Pub => (),
+                                }
                             }
 
                             self.analyse_stmt(&Statement::Item(item.clone()), &module_path)?;
@@ -647,13 +669,19 @@ impl SemanticAnalyser {
         if let Some(m) = self.module_registry.get(&import_root).cloned() {
             for full_path in paths {
                 if let Some(s) = m.get(&full_path) {
-                    if import_decl.visibility == Visibility::Private {
-                        self.enter_scope(ScopeKind::Module(module_root.to_string()));
-                        self.insert(PathType::from(full_path.type_name), s.clone())?;
-                        self.exit_scope();
-                    } else {
-                        self.insert(PathType::from(full_path.type_name), s.clone())?;
-                    }
+                    match import_decl.visibility {
+                        Visibility::Private => {
+                            self.enter_scope(ScopeKind::Module(module_root.to_string()));
+                            self.insert(PathType::from(full_path.type_name), s.clone())?;
+                        }
+                        Visibility::PubPackage(_) => {
+                            self.enter_scope(ScopeKind::Package);
+                            self.insert(PathType::from(full_path.type_name), s.clone())?;
+                        }
+                        Visibility::Pub => {
+                            self.insert(PathType::from(full_path.type_name), s.clone())?;
+                        }
+                    };
                 } else {
                     return Err(SemanticErrorKind::UndefinedSymbol {
                         name: full_path.to_string(),
