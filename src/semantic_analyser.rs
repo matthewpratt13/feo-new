@@ -454,12 +454,12 @@ impl SemanticAnalyser {
                                     self.insert(
                                         function_path.clone(),
                                         Symbol::Function {
-                                            path: PathType::from(fi.function_name.clone()),
+                                            path: function_path,
                                             function: fi.clone(),
                                         },
                                     )?;
 
-                                    self.analyse_function_def(&fi, root)?;
+                                    self.analyse_function_def(&fi, &i.nominal_type)?;
                                 }
                             }
                         }
@@ -519,12 +519,12 @@ impl SemanticAnalyser {
                                     self.insert(
                                         function_impl_path.clone(),
                                         Symbol::Function {
-                                            path: PathType::from(fi.function_name.clone()),
+                                            path: function_impl_path,
                                             function: fi.clone(),
                                         },
                                     )?;
 
-                                    self.analyse_function_def(&fi, root)?;
+                                    self.analyse_function_def(&fi, &trait_impl_path)?;
                                 }
                             }
                         }
