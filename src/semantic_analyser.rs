@@ -347,7 +347,7 @@ impl SemanticAnalyser {
                     self.insert(
                         trait_path.clone(),
                         Symbol::Trait {
-                            path: trait_path.clone(),
+                            path: PathType::from(t.trait_name.clone()),
                             trait_def: t.clone(),
                         },
                     )?;
@@ -376,7 +376,7 @@ impl SemanticAnalyser {
                                     self.insert(
                                         function_def_path.clone(),
                                         Symbol::Function {
-                                            path: function_def_path,
+                                            path: PathType::from(fi.function_name.clone()),
                                             function: fi.clone(),
                                         },
                                     )?;
@@ -397,7 +397,7 @@ impl SemanticAnalyser {
                     self.insert(
                         enum_path.clone(),
                         Symbol::Enum {
-                            path: enum_path,
+                            path: PathType::from(e.enum_name.clone()),
                             enum_def: e.clone(),
                         },
                     )?;
@@ -412,7 +412,7 @@ impl SemanticAnalyser {
                     self.insert(
                         struct_path.clone(),
                         Symbol::Struct {
-                            path: struct_path,
+                            path: PathType::from(s.struct_name.clone()),
                             struct_def: s.clone(),
                         },
                     )?;
@@ -428,7 +428,7 @@ impl SemanticAnalyser {
                     self.insert(
                         tuple_struct_path.clone(),
                         Symbol::TupleStruct {
-                            path: tuple_struct_path,
+                            path: PathType::from(ts.struct_name.clone()),
                             tuple_struct_def: ts.clone(),
                         },
                     )?;
@@ -454,7 +454,7 @@ impl SemanticAnalyser {
                                     self.insert(
                                         function_path.clone(),
                                         Symbol::Function {
-                                            path: function_path,
+                                            path: PathType::from(fi.function_name.clone()),
                                             function: fi.clone(),
                                         },
                                     )?;
@@ -519,7 +519,7 @@ impl SemanticAnalyser {
                                     self.insert(
                                         function_impl_path.clone(),
                                         Symbol::Function {
-                                            path: function_impl_path,
+                                            path: PathType::from(fi.function_name.clone()),
                                             function: fi.clone(),
                                         },
                                     )?;
@@ -541,9 +541,9 @@ impl SemanticAnalyser {
                         build_item_path(root, PathType::from(f.function_name.clone()));
 
                     self.insert(
-                        function_path.clone(),
+                        function_path,
                         Symbol::Function {
-                            path: function_path,
+                            path: PathType::from(f.function_name.clone()),
                             function: f.clone(),
                         },
                     )?;
@@ -595,17 +595,7 @@ impl SemanticAnalyser {
         };
 
         if let Some(t) = &f.return_type_opt {
-            let return_type = match *t.clone() {
-                // TODO: what if the user-defined type is from another module ?
-                Type::UserDefined(_) => Type::UserDefined(build_item_path(
-                    root,
-                    PathType::from(Identifier::from(&format!("{}", t))),
-                )),
-
-                _ => *t.clone(),
-            };
-
-            if expression_type != return_type {
+            if expression_type != *t.clone() {
                 return Err(SemanticErrorKind::TypeMismatchReturnType {
                     expected: format!("`{}`", t),
                     found: format!("`{}`", expression_type),
@@ -2543,9 +2533,9 @@ mod tests {
         let mut symbols: SymbolTable = HashMap::new();
 
         symbols.insert(
-            func_path.clone(),
+            func_path,
             Symbol::Function {
-                path: func_path,
+                path: PathType::from(external_func.function_name.clone()),
                 function: external_func,
             },
         );
