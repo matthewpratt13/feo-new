@@ -351,6 +351,15 @@ impl SemanticAnalyser {
                         module_scope = curr_scope;
                     }
 
+                    self.insert(
+                        module_path.clone(),
+                        Symbol::Module {
+                            path: PathType::from(m.module_name.clone()),
+                            module: m.clone(),
+                            symbols: module_scope.symbols.clone(),
+                        },
+                    )?;
+
                     self.logger.debug(&format!(
                         "inserting symbols into module at path: `{}`",
                         module_path
@@ -358,15 +367,6 @@ impl SemanticAnalyser {
 
                     self.module_registry
                         .insert(module_path.clone(), module_scope.symbols.clone());
-
-                    self.insert(
-                        module_path.clone(),
-                        Symbol::Module {
-                            path: PathType::from(m.module_name.clone()),
-                            module: m.clone(),
-                            symbols: module_scope.symbols,
-                        },
-                    )?;
                 }
 
                 Item::TraitDef(t) => {
@@ -673,7 +673,7 @@ impl SemanticAnalyser {
         // TODO: handle `super` and `self` path roots
 
         if let Some(m) = self.module_registry.get(&import_root).cloned() {
-            for full_path in paths {
+            for full_path in paths.clone() {
                 if let Some(s) = m.get(&full_path) {
                     match import_decl.visibility {
                         Visibility::Private => {
