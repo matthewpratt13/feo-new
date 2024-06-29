@@ -366,7 +366,7 @@ impl SemanticAnalyser {
                     ));
 
                     self.module_registry
-                        .insert(module_path.clone(), module_scope.symbols.clone());
+                        .insert(module_path, module_scope.symbols);
                 }
 
                 Item::TraitDef(t) => {
@@ -646,7 +646,7 @@ impl SemanticAnalyser {
         let import_root = if let Some(ps) = import_decl.import_tree.path_segments.first().cloned() {
             PathType::from(ps)
         } else {
-            PathType::from(Identifier::from(""))
+            module_root.clone()
         };
 
         for p_seg in import_decl
@@ -673,6 +673,8 @@ impl SemanticAnalyser {
         // TODO: handle `super` and `self` path roots
 
         if let Some(m) = self.module_registry.get(&import_root).cloned() {
+            println!("module: {:#?}", m.clone());
+
             for full_path in paths.clone() {
                 if let Some(s) = m.get(&full_path) {
                     match import_decl.visibility {
@@ -688,10 +690,10 @@ impl SemanticAnalyser {
                             self.insert(PathType::from(full_path.type_name), s.clone())?;
                         }
                     };
-                } else {
-                    return Err(SemanticErrorKind::UndefinedSymbol {
-                        name: full_path.to_string(),
-                    });
+                // } else {
+                //     return Err(SemanticErrorKind::UndefinedSymbol {
+                //         name: full_path.to_string(),
+                //     });
                 }
             }
         } else {
