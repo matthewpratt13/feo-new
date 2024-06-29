@@ -75,10 +75,14 @@ impl SemanticAnalyser {
         });
     }
 
-    fn exit_scope(&mut self) {
+    fn exit_scope(&mut self) -> Option<Scope> {
         if let Some(exited_scope) = self.scope_stack.pop() {
             self.logger
                 .debug(&format!("exited scope: `{:?}`", exited_scope.scope_kind));
+
+            Some(exited_scope)
+        } else {
+            None
         }
     }
 
@@ -308,9 +312,7 @@ impl SemanticAnalyser {
                             self.enter_scope(ScopeKind::Module(module_path.to_string()));
                         }
                         Visibility::PubPackage(_) => self.enter_scope(ScopeKind::Package),
-                        Visibility::Pub => {
-                            self.enter_scope(ScopeKind::Public);
-                        }
+                        Visibility::Pub => ()
                     };
 
                     if let Some(v) = &m.items_opt {
@@ -338,16 +340,7 @@ impl SemanticAnalyser {
                         }
                     }
 
-                    if let Some(Scope {
-                        scope_kind: ScopeKind::Module { .. },
-                        ..
-                    }) = self.scope_stack.last()
-                    {
-                        let curr_scope = self.scope_stack.pop().unwrap();
-
-                        self.logger
-                            .debug(&format!("exited scope: `{:?}` ...", &curr_scope.scope_kind));
-
+                    if let Some(curr_scope) = self.exit_scope() {
                         module_scope = curr_scope;
                     }
 
@@ -493,7 +486,7 @@ impl SemanticAnalyser {
                         }
                     }
 
-                    self.exit_scope()
+                    self.exit_scope();
                 }
 
                 Item::TraitImplDef(t) => {
@@ -690,10 +683,10 @@ impl SemanticAnalyser {
                             self.insert(PathType::from(full_path.type_name), s.clone())?;
                         }
                     };
-                // } else {
-                //     return Err(SemanticErrorKind::UndefinedSymbol {
-                //         name: full_path.to_string(),
-                //     });
+                    // } else {
+                    //     return Err(SemanticErrorKind::UndefinedSymbol {
+                    //         name: full_path.to_string(),
+                    //     });
                 }
             }
         } else {
@@ -2592,7 +2585,7 @@ mod tests {
         pub module some_mod { 
             pub struct SomeObject {}
 
-            func some_func() -> SomeObject {
+            pub func some_func() -> SomeObject {
                 external_func();
 
                 SomeObject {}
