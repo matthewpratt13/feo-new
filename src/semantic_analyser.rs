@@ -31,11 +31,7 @@ struct SemanticAnalyser {
 
 impl SemanticAnalyser {
     pub(crate) fn new(log_level: LogLevel, external_code: Option<SymbolTable>) -> Self {
-        let scope_kind = ScopeKind::Package;
-
         let mut logger = Logger::new(log_level);
-
-        logger.debug(&format!("entering new scope: `{:?}` ...", &scope_kind));
 
         let mut external_symbols: SymbolTable = HashMap::new();
 
@@ -55,10 +51,16 @@ impl SemanticAnalyser {
         }
 
         SemanticAnalyser {
-            scope_stack: vec![Scope {
-                scope_kind,
-                symbols: external_symbols,
-            }],
+            scope_stack: vec![
+                Scope {
+                    scope_kind: ScopeKind::Public,
+                    symbols: external_symbols,
+                },
+                Scope {
+                    scope_kind: ScopeKind::Package,
+                    symbols: HashMap::new(),
+                },
+            ],
             module_registry,
             errors: Vec::new(),
             logger,
@@ -117,18 +119,38 @@ impl SemanticAnalyser {
         None
     }
 
-    fn analyse(&mut self, module: &Module, module_path: PathType) -> Result<(), ErrorsEmitted> {
+    fn analyse_module(
+        &mut self,
+        module: &Module,
+        module_path: PathType,
+    ) -> Result<(), ErrorsEmitted> {
         self.logger.info("starting semantic analysis ...");
 
         self.enter_scope(ScopeKind::RootModule(module_path.to_string()));
 
-        let anonymous_module = ModuleItem {
+        let mut module_items: Vec<Item> = Vec::new();
+
+        module.statements.clone().into_iter().for_each(|s| {
+            match s {
+                Statement::Let(_) => (),
+                Statement::Item(i) => module_items.push(i),
+                Statement::Expression(_) => (),
+            };
+        });
+
+        let root_module = ModuleItem {
             outer_attributes_opt: None,
             visibility: Visibility::Pub,
-            kw_module: Keyword::Package,
+            kw_module: Keyword::Module,
             module_name: module_path.type_name.clone(),
             inner_attributes_opt: None,
-            items_opt: None,
+            items_opt: {
+                if module_items.is_empty() {
+                    None
+                } else {
+                    Some(module_items)
+                }
+            },
             span: Span::new("", 0, 0),
         };
 
@@ -137,22 +159,20 @@ impl SemanticAnalyser {
         module_contents.insert(
             module_path.clone(),
             Symbol::Module {
-                path: module_path.clone(),
-                module: anonymous_module.clone(),
+                path: PathType::from(root_module.module_name.clone()),
+                module: root_module,
                 symbols: HashMap::new(),
             },
         );
 
-        self.module_registry.insert(
-            PathType::from(anonymous_module.module_name),
-            module_contents,
-        );
+        self.module_registry
+            .insert(module_path.clone(), module_contents);
 
         for s in &module.statements {
             self.analyse_stmt(s, &module_path).map_err(|e| {
                 self.log_error(e, &s.span());
                 ErrorsEmitted
-            })?
+            })?;
         }
 
         self.logger
@@ -312,7 +332,7 @@ impl SemanticAnalyser {
                             self.enter_scope(ScopeKind::Module(module_path.to_string()));
                         }
                         Visibility::PubPackage(_) => self.enter_scope(ScopeKind::Package),
-                        Visibility::Pub => ()
+                        Visibility::Pub => (),
                     };
 
                     if let Some(v) = &m.items_opt {
@@ -340,8 +360,12 @@ impl SemanticAnalyser {
                         }
                     }
 
-                    if let Some(curr_scope) = self.exit_scope() {
-                        module_scope = curr_scope;
+                    if let Some(Scope {
+                        scope_kind: ScopeKind::Module(_),
+                        ..
+                    }) = self.scope_stack.last()
+                    {
+                        module_scope = self.exit_scope().unwrap();
                     }
 
                     self.insert(
@@ -666,8 +690,6 @@ impl SemanticAnalyser {
         // TODO: handle `super` and `self` path roots
 
         if let Some(m) = self.module_registry.get(&import_root).cloned() {
-            println!("module: {:#?}", m.clone());
-
             for full_path in paths.clone() {
                 if let Some(s) = m.get(&full_path) {
                     match import_decl.visibility {
@@ -2503,7 +2525,7 @@ mod tests {
         let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)
             .expect("unable to set up semantic analyser");
 
-        match analyser.analyse(&module, PathType::from(Identifier::from(""))) {
+        match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
             Ok(_) => println!("{:#?}", analyser.logger.messages()),
             Err(_) => panic!("{:#?}", analyser.logger.messages()),
         }
@@ -2518,7 +2540,7 @@ mod tests {
 
         let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
 
-        match analyser.analyse(&module, PathType::from(Identifier::from(""))) {
+        match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
             Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
             Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
         }
@@ -2587,7 +2609,6 @@ mod tests {
 
             pub func some_func() -> SomeObject {
                 external_func();
-
                 SomeObject {}
             }
         }
@@ -2595,7 +2616,7 @@ mod tests {
         module another_mod {
             import lib::some_mod::{ SomeObject, some_func };
 
-            struct AnotherObject {}
+            pub struct AnotherObject {}
 
             func another_func() -> AnotherObject {
                 external_func();
@@ -2607,28 +2628,35 @@ mod tests {
             }
 
             pub module nested_mod {
+                import super::{ SomeObject, call_some_func, another_func, AnotherObject };
+
                 func nested_func() -> SomeObject {
                     call_some_func()
                 }
 
-                func call_another_func() -> AnotherObject {
+                pub func call_another_func() -> AnotherObject {
                     another_func()
                 }
             }
+            
+            pub import self::nested_mod::nested_func;
         }
         
-        import lib::some_mod::SomeObject;
         import another_mod::{ nested_mod::call_another_func, AnotherObject };
 
         func outer_func() -> AnotherObject {
             external_func();
             call_another_func()
+        }
+        
+        func call_nested_func() {
+            nested_func();
         }"#;
 
         let (mut analyser, module) =
             setup(input, LogLevel::Debug, false, false, Some(external_code))?;
 
-        match analyser.analyse(&module, PathType::from(Identifier::from("lib"))) {
+        match analyser.analyse_module(&module, PathType::from(Identifier::from("lib"))) {
             Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
             Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
         }
