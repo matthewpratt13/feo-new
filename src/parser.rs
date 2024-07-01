@@ -228,6 +228,10 @@ impl Parser {
         self.logger.info("starting to parse tokens...");
 
         while self.current < self.stream.tokens().len() {
+            if self.current_token() == Some(&Token::EOF) {
+                break;
+            }
+
             let statement = self.parse_statement()?;
 
             // log status info
@@ -889,9 +893,13 @@ impl Parser {
                 ));
 
                 match self.current_token() {
+                    Some(Token::LineComment { .. }) => {
+                        self.next_token();
+                    }
                     Some(Token::Semicolon { .. }) => {
                         self.next_token();
                     }
+
                     Some(Token::RBrace { .. } | Token::EOF) | None => (),
 
                     _ => {

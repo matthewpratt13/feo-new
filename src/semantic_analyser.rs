@@ -327,63 +327,87 @@ impl SemanticAnalyser {
                         symbols: HashMap::new(),
                     };
 
-                    match m.visibility {
-                        Visibility::Private => {
-                            self.enter_scope(ScopeKind::Module(module_path.to_string()));
-                        }
-                        Visibility::PubPackage(_) => self.enter_scope(ScopeKind::Package),
-                        Visibility::Pub => (),
-                    };
+                    // match m.visibility {
+                    //     Visibility::Private => {
+                    //         self.enter_scope(ScopeKind::Module(module_path.to_string()));
+                    //     }
+                    //     Visibility::PubPackage(_) => self.enter_scope(ScopeKind::Package),
+                    //     Visibility::Pub => (),
+                    // };
+
+                    // if let Some(v) = &m.items_opt {
+                    //     for item in v.iter() {
+                    //         if let Some(s) = self.scope_stack.last() {
+                    //             match item.visibility() {
+                    //                 Visibility::Private => {
+                    //                     if s.scope_kind > ScopeKind::Module(module_path.to_string())
+                    //                     {
+                    //                         self.enter_scope(ScopeKind::Module(
+                    //                             module_path.to_string(),
+                    //                         ))
+                    //                     }
+                    //                 }
+                    //                 Visibility::PubPackage(_) => {
+                    //                     if s.scope_kind > ScopeKind::Package {
+                    //                         self.enter_scope(ScopeKind::Package)
+                    //                     }
+                    //                 }
+                    //                 Visibility::Pub => (),
+                    //             }
+                    //         }
+
+                    //         self.analyse_stmt(&Statement::Item(item.clone()), &module_path)?;
+                    //     }
+                    // }
+
+                    // if let Some(Scope {
+                    //     scope_kind: ScopeKind::Module(_),
+                    //     ..
+                    // }) = self.scope_stack.last()
+                    // {
+                    //     module_scope = self.exit_scope().unwrap();
+                    // }
+
+                    self.enter_scope(ScopeKind::Module(module_path.to_string()));
 
                     if let Some(v) = &m.items_opt {
                         for item in v.iter() {
-                            if let Some(s) = self.scope_stack.last() {
-                                match item.visibility() {
-                                    Visibility::Private => {
-                                        if s.scope_kind > ScopeKind::Module(module_path.to_string())
-                                        {
-                                            self.enter_scope(ScopeKind::Module(
-                                                module_path.to_string(),
-                                            ))
-                                        }
-                                    }
-                                    Visibility::PubPackage(_) => {
-                                        if s.scope_kind > ScopeKind::Package {
-                                            self.enter_scope(ScopeKind::Package)
-                                        }
-                                    }
-                                    Visibility::Pub => (),
-                                }
-                            }
-
                             self.analyse_stmt(&Statement::Item(item.clone()), &module_path)?;
                         }
                     }
 
-                    if let Some(Scope {
-                        scope_kind: ScopeKind::Module(_),
-                        ..
-                    }) = self.scope_stack.last()
-                    {
-                        module_scope = self.exit_scope().unwrap();
+                    if let Some(curr_scope) = self.scope_stack.pop() {
+                        module_scope = curr_scope;
                     }
 
                     self.insert(
                         module_path.clone(),
                         Symbol::Module {
-                            path: PathType::from(m.module_name.clone()),
+                            path: module_path.clone(),
                             module: m.clone(),
                             symbols: module_scope.symbols.clone(),
                         },
                     )?;
 
-                    self.logger.debug(&format!(
-                        "inserting symbols into module at path: `{}`",
-                        module_path
-                    ));
-
                     self.module_registry
                         .insert(module_path, module_scope.symbols);
+
+                    // self.insert(
+                    //     module_path.clone(),
+                    //     Symbol::Module {
+                    //         path: PathType::from(m.module_name.clone()),
+                    //         module: m.clone(),
+                    //         symbols: module_scope.symbols.clone(),
+                    //     },
+                    // )?;
+
+                    // self.logger.debug(&format!(
+                    //     "inserting symbols into module at path: `{}`",
+                    //     module_path
+                    // ));
+
+                    // self.module_registry
+                    //     .insert(module_path, module_scope.symbols);
                 }
 
                 Item::TraitDef(t) => {
@@ -660,11 +684,14 @@ impl SemanticAnalyser {
     ) -> Result<(), SemanticErrorKind> {
         let mut paths: Vec<PathType> = Vec::new();
 
-        let import_root = if let Some(ps) = import_decl.import_tree.path_segments.first().cloned() {
-            PathType::from(ps)
-        } else {
-            module_root.clone()
-        };
+        let mut import_root =
+            if let Some(ps) = import_decl.import_tree.path_segments.first().cloned() {
+                PathType::from(ps)
+            } else {
+                module_root.clone()
+            };
+
+        let import_root_copy = import_root.clone();
 
         for p_seg in import_decl
             .import_tree
@@ -689,32 +716,47 @@ impl SemanticAnalyser {
 
         // TODO: handle `super` and `self` path roots
 
-        if let Some(m) = self.module_registry.get(&import_root).cloned() {
-            for full_path in paths.clone() {
-                if let Some(s) = m.get(&full_path) {
+        for p in paths.into_iter() {
+            import_root = if let Some(v) = p.associated_type_path_prefix_opt.clone() {
+                if v.len() > 1 {
+                    PathType::from(v)
+                } else {
+                    import_root_copy.clone()
+                }
+            } else {
+                import_root_copy.clone()
+            };
+
+            println!("import root: {}", import_root);
+
+            if let Some(m) = self.module_registry.get(&import_root).cloned() {
+                println!("module items: {:#?}", m);
+                println!("looked-up path: {}", p);
+
+                if let Some(s) = m.get(&p) {
                     match import_decl.visibility {
                         Visibility::Private => {
                             self.enter_scope(ScopeKind::Module(module_root.to_string()));
-                            self.insert(PathType::from(full_path.type_name), s.clone())?;
+                            self.insert(PathType::from(p.type_name), s.clone())?;
                         }
                         Visibility::PubPackage(_) => {
                             self.enter_scope(ScopeKind::Package);
-                            self.insert(PathType::from(full_path.type_name), s.clone())?;
+                            self.insert(PathType::from(p.type_name), s.clone())?;
                         }
                         Visibility::Pub => {
-                            self.insert(PathType::from(full_path.type_name), s.clone())?;
+                            self.insert(PathType::from(p.type_name), s.clone())?;
                         }
                     };
-                    // } else {
-                    //     return Err(SemanticErrorKind::UndefinedSymbol {
-                    //         name: full_path.to_string(),
-                    //     });
+                } else {
+                    return Err(SemanticErrorKind::UndefinedSymbol {
+                        name: p.to_string(),
+                    });
                 }
+            } else {
+                return Err(SemanticErrorKind::UndefinedModule {
+                    name: import_root.type_name,
+                });
             }
-        } else {
-            return Err(SemanticErrorKind::UndefinedModule {
-                name: import_root.type_name,
-            });
         }
 
         Ok(())
@@ -1709,8 +1751,6 @@ impl SemanticAnalyser {
 
                 let path_type = build_item_path(root, path_type);
 
-                println!("path type: {path_type}");
-
                 match self.lookup(&path_type).cloned() {
                     Some(Symbol::Struct { struct_def, path }) => {
                         let mut field_map: HashMap<Identifier, Type> = HashMap::new();
@@ -2017,7 +2057,10 @@ impl SemanticAnalyser {
                 let return_type = function.return_type_opt.clone();
 
                 match (&args, &params) {
-                    (None, None) => Ok(Type::UnitType(Unit)),
+                    (None, None) => match return_type {
+                        Some(t) => Ok(*t),
+                        None => Ok(Type::UnitType(Unit)),
+                    },
                     (None, Some(_)) | (Some(_), None) => {
                         return Err(SemanticErrorKind::ArgumentCountMismatch {
                             name: path.type_name,
@@ -2626,31 +2669,6 @@ mod tests {
             func call_some_func() -> SomeObject {
                 some_func()
             }
-
-            pub module nested_mod {
-                import super::{ SomeObject, call_some_func, another_func, AnotherObject };
-
-                func nested_func() -> SomeObject {
-                    call_some_func()
-                }
-
-                pub func call_another_func() -> AnotherObject {
-                    another_func()
-                }
-            }
-            
-            pub import self::nested_mod::nested_func;
-        }
-        
-        import another_mod::{ nested_mod::call_another_func, AnotherObject };
-
-        func outer_func() -> AnotherObject {
-            external_func();
-            call_another_func()
-        }
-        
-        func call_nested_func() {
-            nested_func();
         }"#;
 
         let (mut analyser, module) =

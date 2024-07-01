@@ -214,8 +214,10 @@ impl<'a> Lexer<'a> {
             }
             Some('/') => {
                 // consume ordinary newline or trailing comment (`//`)
+                self.advance();
+
                 while let Some(c) = self.peek_current() {
-                    if c == '\n' {
+                    if c == '\n' || c == '\r' {
                         break;
                     }
                     self.advance();

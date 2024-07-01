@@ -11,11 +11,12 @@ mod trait_def;
 
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, EnumDef, FunctionItem, ImportDecl, InherentImplDef, Item,
-        ModuleItem, OuterAttr, Statement, StaticVarDecl, StructDef, TraitDef, TraitImplDef,
-        TupleStructDef, Visibility,
+        AliasDecl, ConstantDecl, EnumDef, FunctionItem, Identifier, ImportDecl, InherentImplDef,
+        Item, Keyword, ModuleItem, OuterAttr, Statement, StaticVarDecl, StructDef, TraitDef,
+        TraitImplDef, TupleStructDef, Visibility,
     },
     error::ErrorsEmitted,
+    span::Span,
     token::Token,
 };
 
@@ -30,6 +31,18 @@ impl Item {
     ) -> Result<Item, ErrorsEmitted> {
         parser.logger.debug("entering `Item::parse()`");
         parser.log_current_token(false);
+
+        while let Some(Token::LineComment { .. }) = parser.current_token() {
+            parser.next_token();
+
+            match parser.current_token() {
+                Some(Token::EOF) | None => break,
+                Some(Token::RBrace { .. }) => {
+                    parser.next_token();
+                }
+                _ => (),
+            }
+        }
 
         match parser.current_token() {
             Some(Token::Import { .. }) => Ok(Item::ImportDecl(ImportDecl::parse(
@@ -92,6 +105,14 @@ impl Item {
                 attributes_opt,
                 visibility,
             )?)),
+            Some(Token::EOF) => Ok(Item::EnumDef(EnumDef {
+                attributes_opt,
+                visibility,
+                kw_enum: Keyword::Enum,
+                enum_name: Identifier::from(""),
+                variants: Vec::new(),
+                span: Span::new("", 0, 0),
+            })),
 
             _ => {
                 parser.log_unexpected_token("item declaration or definition");

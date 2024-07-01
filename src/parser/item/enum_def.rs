@@ -23,7 +23,7 @@ impl ParseDefItem for EnumDef {
             parser.next_token();
             Ok(Keyword::Enum)
         } else {
-            parser.log_unexpected_token("`enum`");
+            parser.log_unexpected_token("enum");
             Err(ErrorsEmitted)
         }?;
 
