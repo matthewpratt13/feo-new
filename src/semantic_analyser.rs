@@ -2578,7 +2578,7 @@ mod tests {
 
         let input = r#"
         import external_module::external_func;
-
+        
         module some_mod { 
             struct SomeObject {}
 
@@ -2600,7 +2600,17 @@ mod tests {
 
             func call_some_func() -> SomeObject {
                 some_func()
-            }
+            }  
+        }
+
+        import lib::another_mod::{ call_some_func, another_func };
+        
+        func outer_func() -> SomeObject {
+            call_some_func()
+        }
+
+        func call_another_func() -> AnotherObject {
+            another_func()
         }"#;
 
         let (mut analyser, module) =
