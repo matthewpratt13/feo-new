@@ -389,25 +389,13 @@ impl SemanticAnalyser {
                         },
                     )?;
 
+                    self.logger.debug(&format!(
+                        "inserting symbols into module at path: `{}`",
+                        module_path
+                    ));
+
                     self.module_registry
                         .insert(module_path, module_scope.symbols);
-
-                    // self.insert(
-                    //     module_path.clone(),
-                    //     Symbol::Module {
-                    //         path: PathType::from(m.module_name.clone()),
-                    //         module: m.clone(),
-                    //         symbols: module_scope.symbols.clone(),
-                    //     },
-                    // )?;
-
-                    // self.logger.debug(&format!(
-                    //     "inserting symbols into module at path: `{}`",
-                    //     module_path
-                    // ));
-
-                    // self.module_registry
-                    //     .insert(module_path, module_scope.symbols);
                 }
 
                 Item::TraitDef(t) => {
@@ -727,12 +715,7 @@ impl SemanticAnalyser {
                 import_root_copy.clone()
             };
 
-            println!("import root: {}", import_root);
-
             if let Some(m) = self.module_registry.get(&import_root).cloned() {
-                println!("module items: {:#?}", m);
-                println!("looked-up path: {}", p);
-
                 if let Some(s) = m.get(&p) {
                     match import_decl.visibility {
                         Visibility::Private => {
