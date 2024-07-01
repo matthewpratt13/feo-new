@@ -201,22 +201,3 @@ impl ParseStatement for Item {
         }
     }
 }
-
-impl Item {
-    pub(crate) fn visibility(&self) -> Visibility {
-        match self.clone() {
-            Item::ImportDecl(id) => id.visibility,
-            Item::AliasDecl(ad) => ad.visibility,
-            Item::ConstantDecl(cd) => cd.visibility,
-            Item::StaticVarDecl(svd) => svd.visibility,
-            Item::ModuleItem(mi) => mi.visibility,
-            Item::TraitDef(td) => td.visibility,
-            Item::EnumDef(ed) => ed.visibility,
-            Item::StructDef(sd) => sd.visibility,
-            Item::TupleStructDef(tsd) => tsd.visibility,
-            Item::InherentImplDef(_) => Visibility::Pub,
-            Item::TraitImplDef(_) => Visibility::Pub,
-            Item::FunctionItem(fi) => fi.visibility,
-        }
-    }
-}

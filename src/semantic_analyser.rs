@@ -320,53 +320,13 @@ impl SemanticAnalyser {
                 }
 
                 Item::ModuleItem(m) => {
+                    // TODO: sort out visibility
                     let module_path = build_item_path(root, PathType::from(m.module_name.clone()));
 
                     let mut module_scope = Scope {
                         scope_kind: ScopeKind::Module(module_path.to_string()),
                         symbols: HashMap::new(),
                     };
-
-                    // match m.visibility {
-                    //     Visibility::Private => {
-                    //         self.enter_scope(ScopeKind::Module(module_path.to_string()));
-                    //     }
-                    //     Visibility::PubPackage(_) => self.enter_scope(ScopeKind::Package),
-                    //     Visibility::Pub => (),
-                    // };
-
-                    // if let Some(v) = &m.items_opt {
-                    //     for item in v.iter() {
-                    //         if let Some(s) = self.scope_stack.last() {
-                    //             match item.visibility() {
-                    //                 Visibility::Private => {
-                    //                     if s.scope_kind > ScopeKind::Module(module_path.to_string())
-                    //                     {
-                    //                         self.enter_scope(ScopeKind::Module(
-                    //                             module_path.to_string(),
-                    //                         ))
-                    //                     }
-                    //                 }
-                    //                 Visibility::PubPackage(_) => {
-                    //                     if s.scope_kind > ScopeKind::Package {
-                    //                         self.enter_scope(ScopeKind::Package)
-                    //                     }
-                    //                 }
-                    //                 Visibility::Pub => (),
-                    //             }
-                    //         }
-
-                    //         self.analyse_stmt(&Statement::Item(item.clone()), &module_path)?;
-                    //     }
-                    // }
-
-                    // if let Some(Scope {
-                    //     scope_kind: ScopeKind::Module(_),
-                    //     ..
-                    // }) = self.scope_stack.last()
-                    // {
-                    //     module_scope = self.exit_scope().unwrap();
-                    // }
 
                     self.enter_scope(ScopeKind::Module(module_path.to_string()));
 
@@ -703,6 +663,7 @@ impl SemanticAnalyser {
         }
 
         // TODO: handle `super` and `self` path roots
+        // TODO: handle public imports / re-exports
 
         for p in paths.into_iter() {
             import_root = if let Some(v) = p.associated_type_path_prefix_opt.clone() {
@@ -717,19 +678,7 @@ impl SemanticAnalyser {
 
             if let Some(m) = self.module_registry.get(&import_root).cloned() {
                 if let Some(s) = m.get(&p) {
-                    match import_decl.visibility {
-                        Visibility::Private => {
-                            self.enter_scope(ScopeKind::Module(module_root.to_string()));
-                            self.insert(PathType::from(p.type_name), s.clone())?;
-                        }
-                        Visibility::PubPackage(_) => {
-                            self.enter_scope(ScopeKind::Package);
-                            self.insert(PathType::from(p.type_name), s.clone())?;
-                        }
-                        Visibility::Pub => {
-                            self.insert(PathType::from(p.type_name), s.clone())?;
-                        }
-                    };
+                    self.insert(PathType::from(p.type_name), s.clone())?;
                 } else {
                     return Err(SemanticErrorKind::UndefinedSymbol {
                         name: p.to_string(),
@@ -2628,12 +2577,12 @@ mod tests {
         );
 
         let input = r#"
-        pub import external_module::external_func;
+        import external_module::external_func;
 
-        pub module some_mod { 
-            pub struct SomeObject {}
+        module some_mod { 
+            struct SomeObject {}
 
-            pub func some_func() -> SomeObject {
+            func some_func() -> SomeObject {
                 external_func();
                 SomeObject {}
             }
@@ -2642,7 +2591,7 @@ mod tests {
         module another_mod {
             import lib::some_mod::{ SomeObject, some_func };
 
-            pub struct AnotherObject {}
+            struct AnotherObject {}
 
             func another_func() -> AnotherObject {
                 external_func();
