@@ -452,7 +452,10 @@ impl SemanticAnalyser {
                 }
 
                 Item::InherentImplDef(i) => {
-                    self.enter_scope(ScopeKind::Impl(i.nominal_type.to_string()));
+                    let implementation_path =
+                        build_item_path(root, PathType::from(i.nominal_type.clone()));
+
+                    self.enter_scope(ScopeKind::Impl(implementation_path.to_string()));
 
                     if let Some(v) = &i.associated_items_opt {
                         for item in v.iter() {
@@ -476,13 +479,13 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(&fi, &i.nominal_type)?;
+                                    self.analyse_function_def(&fi, &root)?;
                                 }
                             }
                         }
                     }
 
-                    self.exit_scope();
+                    // self.exit_scope();
                 }
 
                 Item::TraitImplDef(t) => {
@@ -878,7 +881,6 @@ impl SemanticAnalyser {
 
             Expression::FieldAccess(fa) => {
                 let object = wrap_into_expression(*fa.object.clone());
-                let object_type = self.analyse_expr(&object, root)?;
 
                 // convert object to path expression (i.e., check if object
                 // is a valid path)
@@ -887,7 +889,9 @@ impl SemanticAnalyser {
                 // get path expression's type
                 let object_path = PathType::from(object_as_path_expr);
 
-                match self.lookup(&object_path) {
+                let object_type = self.analyse_expr(&object, &object_path)?;
+
+                match self.lookup(&PathType::from(fa.field_name.clone())) {
                     Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
                         Some(v) => match v.iter().find(|f| f.field_name == fa.field_name) {
                             Some(sdf) => Ok(*sdf.field_type.clone()),
@@ -1080,6 +1084,7 @@ impl SemanticAnalyser {
                         | Type::F32(_)
                         | Type::F64(_),
                     )
+                    | (Type::U256(_) | Type::U512(_), Type::U256(_) | Type::U512(_))
                     | (Type::F32(_) | Type::F64(_), Type::F32(_) | Type::F64(_))
                     | (
                         Type::B2(_) | Type::B4(_) | Type::B16(_) | Type::B32(_),
@@ -2522,6 +2527,44 @@ mod tests {
     }
 
     #[test]
+    fn analyse_struct() -> Result<(), ()> {
+        let input = r#"
+        struct Foo { a: u64, b: str, c: u256 }
+
+        impl Foo {
+            func new(a: u64, b: str, c: u256) -> Foo {
+                Foo {
+                    a: a,
+                    b: b,
+                    c: c
+                }
+            }
+        }
+        
+        func add_a() -> f64 {
+            let foo = Foo::new(42, "foo", 0x1_000_000 as u256);
+            (foo.a as f64) + 3.14
+        }
+
+        func return_string() -> str {
+            let foo = Foo::new(42, "foo", 0x1_000_000 as u256);
+            foo.b
+        }
+        
+        func subtract_c() -> u256 {
+            let foo = Foo::new(42, "foo", 0x1_000_000 as u256);
+            foo.c - (1_000 as u256)
+        }"#;
+
+        let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
+
+        match analyser.analyse_module(&module, PathType::from(Identifier::from("lib"))) {
+            Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+            Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        }
+    }
+
+    #[test]
     fn analyse_import_decl() -> Result<(), ()> {
         let external_func = FunctionItem {
             attributes_opt: None,
@@ -2621,31 +2664,4 @@ mod tests {
             Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
         }
     }
-
-    // #[test]
-    // fn analyse_let_stmt() -> Result<(), ()> {
-    //     let input = r#"
-    //     func baz() {}
-
-    //     struct Foo {}
-
-    //     impl Foo {
-    //         func new() {
-    //             baz();
-
-    //             Foo {}
-    //         }
-
-    //         func bar() {
-    //             let foo = Foo::new();
-    //         }
-    //     }"#;
-
-    //     let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
-
-    //     match analyser.analyse(&module, &PathType::from(Identifier::from(""))) {
-    //         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-    //         Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
-    //     }
-    // }
 }
