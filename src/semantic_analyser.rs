@@ -457,7 +457,7 @@ impl SemanticAnalyser {
                     let implementation_path =
                         build_item_path(root, PathType::from(i.nominal_type.clone()));
 
-                    self.enter_scope(ScopeKind::Impl(implementation_path.to_string()));
+                    // self.enter_scope(ScopeKind::Impl(implementation_path.to_string()));
 
                     if let Some(v) = &i.associated_items_opt {
                         for item in v.iter() {
@@ -468,8 +468,13 @@ impl SemanticAnalyser {
                                 )?,
 
                                 InherentImplItem::FunctionItem(fi) => {
+                                    let type_path = build_item_path(
+                                        root,
+                                        PathType::from(i.nominal_type.clone()),
+                                    );
+
                                     let function_path = build_item_path(
-                                        &i.nominal_type,
+                                        &type_path,
                                         PathType::from(fi.function_name.clone()),
                                     );
 
@@ -481,7 +486,7 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(&fi, &root)?;
+                                    self.analyse_function_def(&fi, root)?;
                                 }
                             }
                         }
@@ -503,7 +508,7 @@ impl SemanticAnalyser {
                         }
                     };
 
-                    self.enter_scope(ScopeKind::TraitImpl(trait_impl_path.to_string()));
+                    // self.enter_scope(ScopeKind::TraitImpl(trait_impl_path.to_string()));
 
                     if let Some(v) = &t.associated_items_opt {
                         for item in v.iter() {
@@ -575,8 +580,10 @@ impl SemanticAnalyser {
             },
 
             Statement::Expression(expr) => {
-                self.logger
-                    .debug(&format!("analysing statement: `{}` ...", statement));
+                self.logger.debug(&format!(
+                    "analysing expression statement: `{}` ...",
+                    statement
+                ));
 
                 self.analyse_expr(expr, root)?;
             }
@@ -922,7 +929,7 @@ impl SemanticAnalyser {
 
                 let callee_as_path_expr = PathExpr::from(callee.clone());
 
-                let callee_path = PathType::from(callee_as_path_expr);
+                let callee_path = build_item_path(root, PathType::from(callee_as_path_expr));
 
                 self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
             }
@@ -1686,9 +1693,7 @@ impl SemanticAnalyser {
             }
 
             Expression::Struct(s) => {
-                let path_type = PathType::from(s.struct_path.clone());
-
-                let path_type = build_item_path(root, path_type);
+                let path_type = build_item_path(root, PathType::from(s.struct_path.clone()));
 
                 match self.lookup(&path_type).cloned() {
                     Some(Symbol::Struct { struct_def, path }) => {
