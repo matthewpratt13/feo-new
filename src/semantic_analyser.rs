@@ -337,6 +337,8 @@ impl SemanticAnalyser {
                     }
 
                     if let Some(curr_scope) = self.scope_stack.pop() {
+                        self.logger
+                            .debug(&format!("exiting scope: `{:?}`", curr_scope));
                         module_scope = curr_scope;
                     }
 
