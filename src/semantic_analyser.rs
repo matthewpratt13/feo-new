@@ -1798,14 +1798,12 @@ impl SemanticAnalyser {
             Expression::Mapping(m) => match &m.pairs_opt {
                 Some(v) => match v.first() {
                     Some(p) => {
-                        let key_type =
-                            self.analyse_patt(&Pattern::IdentifierPatt(p.key.clone()))?;
+                        let key_type = self.analyse_patt(&p.key.clone())?;
 
                         let value_type = self.analyse_expr(&p.value.clone(), root)?;
 
                         for pair in v.iter().skip(1) {
-                            let pair_key_type =
-                                self.analyse_patt(&Pattern::IdentifierPatt(pair.key.clone()))?;
+                            let pair_key_type = self.analyse_patt(&pair.key.clone())?;
 
                             let pair_value_type = self.analyse_expr(&pair.value.clone(), root)?;
 
