@@ -400,7 +400,7 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(fi, root)?;
+                                    self.analyse_function_def(fi, &trait_path, true)?;
                                 }
                             }
                         }
@@ -454,25 +454,19 @@ impl SemanticAnalyser {
                 }
 
                 Item::InherentImplDef(i) => {
-                    let implementation_path =
-                        build_item_path(root, PathType::from(i.nominal_type.clone()));
+                    let type_path = build_item_path(root, PathType::from(i.nominal_type.clone()));
 
-                    // self.enter_scope(ScopeKind::Impl(implementation_path.to_string()));
+                    // self.enter_scope(ScopeKind::ObjectImpl(type_path.to_string()));
 
                     if let Some(v) = &i.associated_items_opt {
                         for item in v.iter() {
                             match item {
                                 InherentImplItem::ConstantDecl(cd) => self.analyse_stmt(
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
-                                    &i.nominal_type,
+                                    &type_path,
                                 )?,
 
                                 InherentImplItem::FunctionItem(fi) => {
-                                    let type_path = build_item_path(
-                                        root,
-                                        PathType::from(i.nominal_type.clone()),
-                                    );
-
                                     let function_path = build_item_path(
                                         &type_path,
                                         PathType::from(fi.function_name.clone()),
@@ -486,7 +480,7 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(&fi, root)?;
+                                    self.analyse_function_def(&fi, &type_path, true)?;
                                 }
                             }
                         }
@@ -498,7 +492,7 @@ impl SemanticAnalyser {
                 Item::TraitImplDef(t) => {
                     let trait_impl_path = match &t.implementing_type {
                         Type::UserDefined(pt) => {
-                            build_item_path(pt, t.implemented_trait_path.clone())
+                            build_item_path(pt, PathType::from(t.implemented_trait_path.type_name.clone()))
                         }
                         ty => {
                             return Err(SemanticErrorKind::UnexpectedType {
@@ -551,13 +545,13 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(&fi, &trait_impl_path)?;
+                                    self.analyse_function_def(&fi, &trait_impl_path, true)?;
                                 }
                             }
                         }
                     }
 
-                    self.exit_scope();
+                    // self.exit_scope();
                 }
 
                 Item::FunctionItem(f) => {
@@ -575,7 +569,7 @@ impl SemanticAnalyser {
                         },
                     )?;
 
-                    self.analyse_function_def(f, root)?;
+                    self.analyse_function_def(f, root, false)?;
                 }
             },
 
@@ -596,6 +590,7 @@ impl SemanticAnalyser {
         &mut self,
         f: &FunctionItem,
         root: &PathType,
+        is_assoc_type_root: bool,
     ) -> Result<(), SemanticErrorKind> {
         let function_path = build_item_path(root, PathType::from(f.function_name.clone()));
 
@@ -618,7 +613,17 @@ impl SemanticAnalyser {
         }
 
         let expression_type = if let Some(b) = &f.block_opt {
-            self.analyse_expr(&Expression::Block(b.clone()), root)?
+            let path = if is_assoc_type_root {
+                // discard `type_name` if the root points to a type
+                if let Some(t) = &root.associated_type_path_prefix_opt {
+                    &PathType::from(t.clone())
+                } else {
+                    root
+                }
+            } else {
+                root
+            };
+            self.analyse_expr(&Expression::Block(b.clone()), path)?
         } else {
             Type::UnitType(Unit)
         };
@@ -1811,12 +1816,14 @@ impl SemanticAnalyser {
                                         self.logger.warn("unreachable code")
                                     }
                                 }
-                                _ => (),
+                                _ => {
+                                    self.analyse_expr(e, root)?;
+                                }
                             },
-                            _ => (),
+                            _ => {
+                                self.analyse_stmt(stmt, root)?;
+                            }
                         }
-
-                        self.analyse_stmt(stmt, root)?;
                     }
 
                     let ty = match vec.last() {

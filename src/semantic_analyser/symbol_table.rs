@@ -15,7 +15,7 @@ pub(crate) enum ScopeKind {
     ForInLoop,
     Function(String),
     // TraitImpl(String),
-    // Impl(String),
+    ObjectImpl(String),
     Module(String),
     RootModule(String),
     Package,
