@@ -206,23 +206,68 @@ impl SemanticAnalyser {
                 };
 
                 // check that the value matches the type annotation
-                if value_type != *declared_type {
+                if &value_type != declared_type {
                     return Err(SemanticErrorKind::TypeMismatchDeclaredType {
-                        actual_type: format!("`{}`", value_type),
+                        actual_type: format!("`{}`", &value_type),
                         declared_type: format!("`{}`", declared_type),
                     });
                 }
 
                 let assignee_path = PathType::from(ls.assignee.name.clone());
 
-                // add the variable to the symbol table
-                self.insert(
-                    assignee_path.clone(),
-                    Symbol::Variable {
+                let symbol = match &value_type {
+                    Type::I32(_)
+                    | Type::I64(_)
+                    | Type::U8(_)
+                    | Type::U16(_)
+                    | Type::U32(_)
+                    | Type::U64(_)
+                    | Type::U256(_)
+                    | Type::U512(_)
+                    | Type::F32(_)
+                    | Type::F64(_)
+                    | Type::Byte(_)
+                    | Type::B2(_)
+                    | Type::B4(_)
+                    | Type::B8(_)
+                    | Type::B16(_)
+                    | Type::B32(_)
+                    | Type::H160(_)
+                    | Type::H256(_)
+                    | Type::H512(_)
+                    | Type::Str(_)
+                    | Type::Char(_)
+                    | Type::Bool(_)
+                    | Type::UnitType(_)
+                    | Type::GroupedType(_)
+                    | Type::Array { .. }
+                    | Type::Tuple(_)
+                    | Type::FunctionPtr(_)
+                    | Type::Reference { .. }
+                    | Type::SelfType(_)
+                    | Type::InferredType(_)
+                    | Type::Vec { .. }
+                    | Type::Mapping { .. }
+                    | Type::Option { .. }
+                    | Type::Result { .. } => Symbol::Variable {
                         name: ls.assignee.name.clone(),
-                        var_type: value_type,
+                        var_type: value_type.clone(),
                     },
-                )?;
+                    Type::UserDefined(pt) => {
+                        let type_path = build_item_path(root, pt.clone());
+
+                        match self.lookup(&type_path) {
+                            Some(s) => s.clone(),
+                            None => Symbol::Variable {
+                                name: ls.assignee.name.clone(),
+                                var_type: value_type,
+                            },
+                        }
+                    }
+                };
+
+                // add the variable to the symbol table
+                self.insert(assignee_path, symbol)?;
             }
 
             Statement::Item(i) => match i {
@@ -491,9 +536,10 @@ impl SemanticAnalyser {
 
                 Item::TraitImplDef(t) => {
                     let trait_impl_path = match &t.implementing_type {
-                        Type::UserDefined(pt) => {
-                            build_item_path(pt, PathType::from(t.implemented_trait_path.type_name.clone()))
-                        }
+                        Type::UserDefined(pt) => build_item_path(
+                            pt,
+                            PathType::from(t.implemented_trait_path.type_name.clone()),
+                        ),
                         ty => {
                             return Err(SemanticErrorKind::UnexpectedType {
                                 expected: "user-defined type".to_string(),
@@ -614,7 +660,7 @@ impl SemanticAnalyser {
 
         let expression_type = if let Some(b) = &f.block_opt {
             let path = if is_assoc_type_root {
-                // discard `type_name` if the root points to a type
+                // strip `type_name`
                 if let Some(t) = &root.associated_type_path_prefix_opt {
                     &PathType::from(t.clone())
                 } else {
@@ -760,13 +806,7 @@ impl SemanticAnalyser {
                 };
 
                 match self.lookup(&path) {
-                    Some(Symbol::Variable { var_type, .. }) => Ok(var_type.clone()),
-                    Some(Symbol::Constant { constant_type, .. }) => Ok(constant_type.clone()),
-                    Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: path.type_name,
-                        expected: "variable".to_string(),
-                        found: s.to_string(),
-                    }),
+                    Some(s) => Ok(s.symbol_type()),
                     None => Err(SemanticErrorKind::UndefinedVariable {
                         name: path.type_name,
                     }),
@@ -905,7 +945,7 @@ impl SemanticAnalyser {
 
                 let object_type = self.analyse_expr(&object, &object_path)?;
 
-                match self.lookup(&PathType::from(fa.field_name.clone())) {
+                match self.lookup(&object_path) {
                     Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
                         Some(v) => match v.iter().find(|f| f.field_name == fa.field_name) {
                             Some(sdf) => Ok(*sdf.field_type.clone()),
@@ -1702,6 +1742,14 @@ impl SemanticAnalyser {
 
                 match self.lookup(&path_type).cloned() {
                     Some(Symbol::Struct { struct_def, path }) => {
+                        self.insert(
+                            PathType::from(s.struct_path.clone()),
+                            Symbol::Struct {
+                                path: path.clone(),
+                                struct_def: struct_def.clone(),
+                            },
+                        )?;
+
                         let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
                         let struct_fields = s.struct_fields_opt.clone();
@@ -1816,9 +1864,7 @@ impl SemanticAnalyser {
                                         self.logger.warn("unreachable code")
                                     }
                                 }
-                                _ => {
-                                    self.analyse_expr(e, root)?;
-                                }
+                                _ => (),
                             },
                             _ => {
                                 self.analyse_stmt(stmt, root)?;

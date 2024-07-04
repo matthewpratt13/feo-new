@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::ast::{
     EnumDef, FunctionItem, Identifier, ModuleItem, PathType, StructDef, TraitDef, TupleStructDef,
-    Type, Visibility,
+    Type, Unit, Visibility,
 };
 
 pub(crate) type SymbolTable = HashMap<PathType, Symbol>;
@@ -74,19 +74,20 @@ pub(crate) struct Scope {
 }
 
 impl Symbol {
-    pub(crate) fn symbol_type(&self) -> Identifier {
+    pub(crate) fn symbol_type(&self) -> Type {
         match self.clone() {
-            Symbol::Variable { var_type, .. } => Identifier::from(&var_type.to_string()),
-            Symbol::Struct { struct_def, .. } => struct_def.struct_name,
-            Symbol::TupleStruct {
-                tuple_struct_def, ..
-            } => tuple_struct_def.struct_name,
-            Symbol::Enum { enum_def, .. } => enum_def.enum_name,
-            Symbol::Trait { trait_def, .. } => trait_def.trait_name,
-            Symbol::Alias { alias_name, .. } => alias_name,
-            Symbol::Constant { constant_type, .. } => Identifier::from(&constant_type.to_string()),
-            Symbol::Function { function, .. } => function.function_name,
-            Symbol::Module { module, .. } => module.module_name,
+            Symbol::Variable { var_type, .. } => var_type,
+            Symbol::Struct { path, .. } => Type::UserDefined(path),
+            Symbol::TupleStruct { path, .. } => Type::UserDefined(path),
+            Symbol::Enum { path, .. } => Type::UserDefined(path),
+            Symbol::Trait { path, .. } => Type::UserDefined(path),
+            Symbol::Alias { path, .. } => Type::UserDefined(path),
+            Symbol::Constant { constant_type, .. } => constant_type,
+            Symbol::Function { function, .. } => match function.return_type_opt {
+                Some(t) => *t.clone(),
+                None => Type::UnitType(Unit),
+            },
+            Symbol::Module { .. } => Type::UnitType(Unit),
         }
     }
 
