@@ -501,8 +501,6 @@ impl SemanticAnalyser {
                 Item::InherentImplDef(i) => {
                     let type_path = build_item_path(root, PathType::from(i.nominal_type.clone()));
 
-                    // self.enter_scope(ScopeKind::ObjectImpl(type_path.to_string()));
-
                     if let Some(v) = &i.associated_items_opt {
                         for item in v.iter() {
                             match item {
@@ -530,8 +528,6 @@ impl SemanticAnalyser {
                             }
                         }
                     }
-
-                    // self.exit_scope();
                 }
 
                 Item::TraitImplDef(t) => {
@@ -547,8 +543,6 @@ impl SemanticAnalyser {
                             })
                         }
                     };
-
-                    // self.enter_scope(ScopeKind::TraitImpl(trait_impl_path.to_string()));
 
                     if let Some(v) = &t.associated_items_opt {
                         for item in v.iter() {
@@ -596,8 +590,6 @@ impl SemanticAnalyser {
                             }
                         }
                     }
-
-                    // self.exit_scope();
                 }
 
                 Item::FunctionItem(f) => {
