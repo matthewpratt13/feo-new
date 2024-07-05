@@ -74,7 +74,6 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
     };
 
     let as_clause_opt = if let Some(Token::As { .. }) = parser.current_token() {
-        let kw_as = Keyword::As;
         parser.next_token();
 
         let id = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
@@ -84,7 +83,7 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
             Err(ErrorsEmitted)
         }?;
 
-        Some((kw_as, id))
+        Some(id)
     } else {
         None
     };

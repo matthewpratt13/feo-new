@@ -21,6 +21,12 @@ pub(crate) struct TuplePattElements {
     pub(crate) final_element_opt: Option<Box<Pattern>>,
 }
 
+impl fmt::Display for TuplePattElements {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}, {:?}", self.elements, self.final_element_opt)
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // STRUCTURES
 ///////////////////////////////////////////////////////////////////////////

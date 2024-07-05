@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::span::Span;
+use crate::{parser::ty::build_item_path, span::Span};
 
 use super::{
     AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,
@@ -109,7 +109,42 @@ impl fmt::Display for FunctionParam {
 pub(crate) struct ImportTree {
     pub(crate) path_segments: Vec<PathSegment>,
     pub(crate) wildcard_opt: Option<Separator>, // trailing `::*`
-    pub(crate) as_clause_opt: Option<(Keyword, Identifier)>, // (`as`, `new_name`)
+    pub(crate) as_clause_opt: Option<Identifier>, // (`as`, `new_name`)
+}
+
+impl fmt::Display for ImportTree {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut paths: Vec<PathType> = Vec::new();
+
+        let root = if let Some(ps) = self.path_segments.first().cloned() {
+            PathType::from(ps)
+        } else {
+            PathType::from(Identifier::from(""))
+        };
+
+        for p_seg in self.path_segments.clone().into_iter().skip(1) {
+            let path = build_item_path(&root, p_seg.root);
+
+            if let Some(p_sub) = p_seg.subset_opt {
+                for it in p_sub.nested_trees {
+                    for seg in it.path_segments {
+                        let path = build_item_path(&path, PathType::from(seg));
+                        paths.push(path);
+                    }
+                }
+            } else {
+                paths.push(path.clone());
+            }
+        }
+
+        let path_strings = paths
+            .clone()
+            .into_iter()
+            .map(|p| p.to_string())
+            .collect::<Vec<String>>();
+
+        write!(f, "{:?}", path_strings)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -118,9 +153,36 @@ pub(crate) struct PathSegment {
     pub(crate) subset_opt: Option<PathSubset>, // e.g., `::{ Foo, Bar, .. }` (basic)
 }
 
+impl fmt::Display for PathSegment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.root)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PathSubset {
     pub(crate) nested_trees: Vec<ImportTree>, // e.g., `::{ Foo, bar::baz{ FooBar, BAZ, .. }, .. }`
+}
+
+impl fmt::Display for PathSubset {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut trees_strings: Vec<String> = Vec::new();
+
+        for t in self.clone().nested_trees {
+            trees_strings.push(t.to_string())
+        }
+
+        let subset_path = if trees_strings.len() > 1 {
+            trees_strings.join("::")
+        } else {
+            trees_strings
+                .get(0)
+                .expect("empty import path subset string vector")
+                .clone()
+        };
+
+        write!(f, "::{{{}}}", subset_path)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

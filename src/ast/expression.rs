@@ -51,7 +51,7 @@ pub(crate) struct ClosureParam {
 /// Struct representing a key-value pair in a mapping.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct MappingPair {
-    pub(crate) key: IdentifierPatt,
+    pub(crate) key: Pattern,
     pub(crate) value: Box<Expression>,
 }
 
@@ -61,6 +61,24 @@ pub(crate) struct MatchArm {
     pub(crate) matched_pattern: Pattern,
     pub(crate) guard_opt: Option<Box<Expression>>, // `<case> if <expr>`
     pub(crate) arm_expression: Box<Expression>,
+}
+
+impl fmt::Display for MatchArm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} => {} {},",
+            self.matched_pattern,
+            {
+                if let Some(e) = &self.guard_opt {
+                    format!("{}", *e)
+                } else {
+                    "".to_string()
+                }
+            },
+            self.arm_expression
+        )
+    }
 }
 
 /// Struct representing a single field in a struct assignee expression, with a name, assignee
@@ -86,6 +104,12 @@ pub(crate) struct StructField {
 pub(crate) struct TupleElements {
     pub(crate) elements: Vec<Expression>,
     pub(crate) final_element_opt: Option<Box<Expression>>,
+}
+
+impl fmt::Display for TupleElements {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}, {:?}", self.elements, self.final_element_opt)
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////

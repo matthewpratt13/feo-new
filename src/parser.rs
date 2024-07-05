@@ -74,8 +74,8 @@ mod let_statement;
 mod parse;
 mod patt;
 mod precedence;
-mod test_utils;
-mod ty;
+pub(crate) mod test_utils;
+pub(crate) mod ty;
 mod visibility;
 
 use std::collections::HashMap;
@@ -220,7 +220,7 @@ impl Parser {
 
     /// Main parsing function that returns the parsed tokens as a `Module`.
     #[allow(dead_code)]
-    fn parse_module(&mut self) -> Result<Module, ErrorsEmitted> {
+    pub(crate) fn parse_module(&mut self) -> Result<Module, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
 
         // clear log messages, then log status info
@@ -228,6 +228,10 @@ impl Parser {
         self.logger.info("starting to parse tokens...");
 
         while self.current < self.stream.tokens().len() {
+            if self.current_token() == Some(&Token::EOF) {
+                break;
+            }
+
             let statement = self.parse_statement()?;
 
             // log status info
@@ -389,7 +393,6 @@ impl Parser {
             }
             Some(Token::LParen { .. }) => {
                 let expr = GroupedExpr::parse(self)?;
-                self.next_token();
                 Ok(Expression::Grouped(expr))
             }
             _ => {
@@ -858,6 +861,7 @@ impl Parser {
                 | Token::Enum { .. }
                 | Token::Struct { .. }
                 | Token::Impl { .. }
+                | Token::Func { .. }
                 | Token::Contract { .. }
                 | Token::Library { .. }
                 | Token::Script { .. }
@@ -889,9 +893,13 @@ impl Parser {
                 ));
 
                 match self.current_token() {
+                    Some(Token::LineComment { .. }) => {
+                        self.next_token();
+                    }
                     Some(Token::Semicolon { .. }) => {
                         self.next_token();
                     }
+
                     Some(Token::RBrace { .. } | Token::EOF) | None => (),
 
                     _ => {
@@ -1294,6 +1302,12 @@ impl Parser {
     /// Log error information when the source code has to an unexpected end.
     fn log_unexpected_eoi(&mut self) {
         self.log_error(ParserErrorKind::UnexpectedEndOfInput)
+    }
+
+    /// Retrieve a list of any errors that occurred during parsing.
+    #[allow(dead_code)]
+    pub(crate) fn errors(&self) -> &[CompilerError<ParserErrorKind>] {
+        &self.errors
     }
 
     ///////////////////////////////////////////////////////////////////////////
