@@ -1,0 +1,193 @@
+#![contract]
+
+#[event]
+struct Approve {
+    owner: Entity,
+    #[topic]
+    spender: Entity,
+    amount: u256,
+}
+
+#[event]
+struct Transfer {
+    #[topic]
+    from: Entity,
+    #[topic]
+    to: Entity,
+    #[topic]
+    amount: u256
+}
+
+#[event]
+struct TransferOwnership {
+    from: Entity,
+    #[topic]
+    to: Entity,
+}
+
+#[error]
+struct TransferError {
+    msg: str,
+    amount_sent: u256,
+}
+
+#[error]
+struct OwnershipError {
+    msg: str,
+    owner: Entity
+}
+
+trait ERC20 
+where
+    Self: Contract
+{
+    #![interface]
+
+    func approve(&mut self, spender: Entity, amount: u256) -> Result<(), ()>;
+
+    func transfer(&mut self, from: Entity, to: Entity, amount: u256) -> Result<(), ()>;
+
+    func mint(&mut self, to: Entity, amount: u256) -> Result<(), ()>;
+
+    func burn(&mut self, from: Entity, amount: u256) -> Result<(), ()>;
+}
+
+pub trait Ownable
+where
+    Self: Contract
+{
+    func transfer_ownership(&mut self, new_owner: Entity) -> Result<(), ()>;
+}
+
+static OWNER: Entity;
+
+static ALLOWANCES: Mapping<Entity, Mapping<Entity, Option<u256>>>;
+
+#[modifier]
+func only_owner() -> Result<(), ()> {
+    if MSG_SENDER != OWNER {
+       Err(print("{}", OwnershipError { msg: "caller is not owner", owner: OWNER }))
+    } else {
+        Ok(())
+    }
+}
+
+pub struct Self { 
+    name: str,
+    symbol: str,
+    decimals: u256,
+    total_supply: u256,
+    balances: Mapping<Entity, Option<u256>>,
+}
+
+impl<Emit: Event, Err: Error> Self {
+    #[constructor]
+    pub func new(name: str, symbol: str, decimals: u256, total_supply: u256) -> Self {
+        #![unsafe] 
+        {
+            OWNER = MSG_SENDER;
+        }
+
+        Self { 
+            name: name,
+            symbol: symbol,
+            decimals: decimals,
+            total_supply: total_supply,
+            balances: {},
+        }
+    }
+
+    func emit(&mut self, event: Emit) {
+        print("{}", event);
+    }
+
+    func error(&mut self, error: Err) {
+        print("{}", error);
+    }
+
+    func balance_of(&self, entity: &Entity) -> u256 {
+        match self.balances.get(entity) {
+            Some(b) => b,
+            None => 0,
+        }
+    }
+
+    func check_balance(&self, from_entity: &Entity, transfer_amount: u256) -> Result<(), ()> {
+        if self.balance_of(from_entity) < transfer_amount {
+            return Err(self.error(TransferError { msg: "insufficient balance", amount_sent: transfer_amount }));
+        }
+        
+        if self.total_supply < transfer_amount {
+            return Err(self.error(TransferError { msg: "transfer amount exceeds total supply", amount_sent: transfer_amount }));
+        }
+
+        Ok(())
+    }
+
+    func update_allowance(&self, spender: Entity, amount: u256) -> Result<(), ()> {
+        #![unsafe] 
+        {
+            self.check_balance(self, MSG_SENDER, amount)?;
+            ALLOWANCES.update(MSG_SENDER, { spender, amount } );
+        }
+
+        Ok(())
+    }
+}
+
+impl<Emit: Event, Err: Error> ERC20 for Self<Emit, Err> {
+    pub func approve(&mut self, spender: Entity, amount: u256) -> Result<(), ()> {
+        only_owner()?;
+
+        self.update_allowance(spender, amount)?;
+
+        Ok(self.emit(Approve { owner: MSG_SENDER, spender: spender, amount: amount }))
+    } 
+
+    pub func transfer(&mut self, from: Entity, to: Entity, amount: u256) -> Result<(), ()> {
+        only_owner()?;
+
+        self.check_balance(self, &from, amount)?;
+
+        self.balances.get(&from) -= amount;
+
+        self.balances.get(&to) += amount;
+
+        Ok(self.emit(Transfer { from: from, to: to, amount: amount }))
+    }
+
+    pub func mint(&mut self, to: Entity, amount: u256) -> Result<(), ()> {
+        only_owner()?;
+
+        self.total_supply += amount;
+
+        self.balances.get(&to) += amount;
+
+        Ok(self.emit(Transfer { from: ZERO_ENTITY, to: to, amount, amount }))
+    }
+
+    pub func burn(&mut self, from: Entity, amount: u256) -> Result<(), ()> {
+        only_owner()?;
+
+        self.check_balance(self, &from, amount)?;
+
+        self.balances.get(&from) -= amount;
+
+        self.total_supply -= amount;
+
+        Ok(self.emit(Transfer { from: from, to: ZERO_ENTITY, amount: amount }))
+    }
+}
+
+impl<Emit: Event, Err: Error> Ownable for Self<Emit, Err> {
+    pub func transfer_ownership(&mut self, new_owner: Entity) -> Result<(), ()> {
+        only_owner()?;
+
+        #![unsafe]
+        {
+            OWNER = new_owner.clone();
+        }
+
+        Ok(self.emit(TransferOwnership { msg: "ownership transferred", owner: new_owner }))
+    }
+}

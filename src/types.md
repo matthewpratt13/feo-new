@@ -64,7 +64,7 @@ struct FixedPoint32 {
 - `Entity`: enum that represents an `Account` or a `Contract`. E.g.,
 ```
 enum Entity<A: Hash, B> {
-    Account { address: A, balance: Option<B> },
-    Contract { address: A, balance: Option<B> },
+    Account { pub address: A, balance: Option<B> },
+    Contract { pub address: A, balance: Option<B> },
 }
 ```
