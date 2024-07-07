@@ -24,11 +24,11 @@ impl PathType {
             }
             Some(Token::SelfKeyword { .. }) => Ok(PathRoot::SelfKeyword),
             Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
-            Some(Token::Package { .. }) => Ok(PathRoot::Package),
+            Some(Token::Lib { .. }) => Ok(PathRoot::Lib),
             Some(Token::Super { .. }) => Ok(PathRoot::Super),
             _ => {
                 parser.log_unexpected_token(
-                    "path root (identifier, `package`, `super`, `self` or `Self`)",
+                    "path root (identifier, `lib`, `super`, `self` or `Self`)",
                 );
                 Err(ErrorsEmitted)
             }

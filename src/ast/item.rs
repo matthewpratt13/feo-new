@@ -70,9 +70,9 @@ pub(crate) enum TraitImplItem {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Visibility {
-    Private,                   // default
-    PubPackage(PubPackageVis), // `pub(package)`
-    Pub,                       // accessible everywhere
+    Private,           // default
+    PubLib(PubLibVis), // `pub(lib)`
+    Pub,               // accessible everywhere
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -149,7 +149,7 @@ impl fmt::Display for ImportTree {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PathSegment {
-    pub(crate) root: PathType, // e.g., `PathRoot::Identifier(_)`, `package::module::Object`
+    pub(crate) root: PathType, // e.g., `PathRoot::Identifier(_)`, `lib::module::Object`
     pub(crate) subset_opt: Option<PathSubset>, // e.g., `::{ Foo, Bar, .. }` (basic)
 }
 
@@ -186,7 +186,7 @@ impl fmt::Display for PathSubset {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct PubPackageVis {
+pub(crate) struct PubLibVis {
     pub(crate) kw_pub: Keyword,
     pub(crate) kw_package: Keyword,
 }

@@ -114,7 +114,7 @@ mod tests {
     fn parse_static_item_decl() -> Result<(), ()> {
         let input = r#"
         #[storage]
-        pub(package) static mut foo: str = "bar";"#;
+        pub(lib) static mut foo: str = "bar";"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

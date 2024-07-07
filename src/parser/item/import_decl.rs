@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn parse_import_decl_simple() -> Result<(), ()> {
-        let input = r#"pub import package::some_module::SomeObject;"#;
+        let input = r#"pub import lib::some_module::SomeObject;"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn parse_import_decl_nested() -> Result<(), ()> {
         let input = r#"
-        pub import package::some_module::{
+        pub import lib::some_module::{
             SomeObject,
             inner_module::{ 
                 SomeInnerObject,
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn parse_import_decl_with_as_clause() -> Result<(), ()> {
-        let input = r#"pub import package::some_module::SomeObject as AnotherObject;"#;
+        let input = r#"pub import lib::some_module::SomeObject as AnotherObject;"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

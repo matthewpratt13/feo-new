@@ -474,7 +474,7 @@ impl Parser {
                     Ok(Expression::Path(PathExpr::parse(self)?))
                 }
             }
-            Some(Token::SelfKeyword { .. } | Token::Package { .. } | Token::Super { .. }) => {
+            Some(Token::SelfKeyword { .. } | Token::Lib { .. } | Token::Super { .. }) => {
                 Ok(Expression::Path(PathExpr::parse(self)?))
             }
             Some(Token::Minus { .. }) => {
@@ -1105,7 +1105,7 @@ impl Parser {
                 }
                 _ => Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?)),
             },
-            Some(Token::SelfKeyword { .. } | Token::Package { .. } | Token::Super { .. }) => {
+            Some(Token::SelfKeyword { .. } | Token::Lib { .. } | Token::Super { .. }) => {
                 Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?))
             }
             Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => {

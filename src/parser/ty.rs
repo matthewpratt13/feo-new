@@ -247,7 +247,7 @@ impl Type {
                 }
             }
 
-            Some(Token::Package { .. }) => {
+            Some(Token::Lib { .. }) => {
                 let path = PathType::parse(parser, token)?;
                 Ok(Type::UserDefined(path))
             }

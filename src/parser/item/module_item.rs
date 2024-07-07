@@ -120,7 +120,7 @@ mod tests {
         pub module foo {
             #![contract]
 
-            import package::foo_error::Error;
+            import lib::foo_error::Error;
            
             trait Bar {
                 #![interface]

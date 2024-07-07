@@ -106,7 +106,7 @@ impl fmt::Display for Identifier {
 pub(crate) enum Keyword {
     Import,
     Module,
-    Package,
+    Lib,
     SelfKeyword,
     Pub,
     Const,
@@ -139,7 +139,7 @@ impl fmt::Display for Keyword {
         match self {
             Keyword::Import => write!(f, "import"),
             Keyword::Module => write!(f, "module"),
-            Keyword::Package => write!(f, "package"),
+            Keyword::Lib => write!(f, "lib"),
             Keyword::SelfKeyword => write!(f, "self"),
             Keyword::Pub => write!(f, "pub"),
             Keyword::Const => write!(f, "const"),
@@ -1338,7 +1338,7 @@ impl fmt::Display for Statement {
 }
 
 /// Enum representing the different item nodes in the AST.
-/// An item is a component of a package, organized by a set of modules.
+/// An item is a component of a library, organized by a set of modules.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Item {
     ImportDecl(ImportDecl),

@@ -32,5 +32,5 @@ pub(crate) enum Precedence {
     FieldAccess,        // object.field
     MethodCall,         // receive.method()
     TupleIndex,         // tuple.0
-    Path,               // `package::module::Item`
+    Path,               // `lib::module::Item`
 }

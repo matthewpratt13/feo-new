@@ -307,7 +307,7 @@ impl<'a> Lexer<'a> {
                 "mut" => Ok(Token::Mut { name, span }),
                 "Ok" => Ok(Token::Ok { name, span }),
                 "None" => Ok(Token::None { name, span }),
-                "package" => Ok(Token::Package { name, span }),
+                "lib" => Ok(Token::Lib { name, span }),
                 "pub" => Ok(Token::Pub { name, span }),
                 "ref" => Ok(Token::Ref { name, span }),
                 "return" => Ok(Token::Return { name, span }),
@@ -1405,10 +1405,10 @@ fn is_keyword(value: &str) -> bool {
     [
         "alias", "as", "break", "bytes", "const", "continue", "else", "enum", "Err", "false",
         "for", "func", "if", "impl", "import", "in", "let", "loop", "match", "module", "mut",
-        "None", "Ok", "package", "pub", "ref", "return", "self", "Some", "static", "struct",
-        "super", "trait", "true", "while", "i32", "i64", "u8", "u16", "u32", "u64", "u256", "u512",
-        "f32", "f64", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256", "h512", "String",
-        "str", "char", "bool", "Self", "Option", "Result", "Vec", "Mapping",
+        "None", "Ok", "lib", "pub", "ref", "return", "self", "Some", "static", "struct", "super",
+        "trait", "true", "while", "i32", "i64", "u8", "u16", "u32", "u64", "u256", "u512", "f32",
+        "f64", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256", "h512", "String", "str",
+        "char", "bool", "Self", "Option", "Result", "Vec", "Mapping",
     ]
     .contains(&value)
 }
@@ -1572,7 +1572,7 @@ mod tests {
 
     #[test]
     fn tokenize_import_decl() -> Result<(), ()> {
-        let input = r#"import package::some_module::SomeObject as Foo;"#;
+        let input = r#"import lib::some_module::SomeObject as Foo;"#;
 
         let mut lexer = Lexer::new(input);
 
@@ -1620,10 +1620,10 @@ mod tests {
         ////////////////////////////////////////////////////////////////////////////////
         // `src/lib.feo`
         ////////////////////////////////////////////////////////////////////////////////
-        //! package contents
+        //! lib contents
     
         pub module some_library {}
-        pub import package::Contract;
+        pub import lib::Contract;
 
         ////////////////////////////////////////////////////////////////////////////////
         // `src/lib/some_library.feo`
@@ -1644,8 +1644,8 @@ mod tests {
         ////////////////////////////////////////////////////////////////////////////////
         #![script]
 
-        import package::some_library;
-        import package::some_contract::{Contract, OWNER};
+        import lib::some_library;
+        import lib::some_contract::{Contract, OWNER};
 
         func main() {
             greater_than(1, 2);
@@ -1677,7 +1677,7 @@ mod tests {
         ////////////////////////////////////////////////////////////////////////////////
         #![contract]
 
-        import package::some_library::SomeTrait;
+        import lib::some_library::SomeTrait;
 
         struct Foo {
             field1: str,

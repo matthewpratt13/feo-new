@@ -22,11 +22,11 @@ impl ParseSimpleExpr for PathExpr {
             }
             Some(Token::SelfKeyword { .. }) => Ok(PathRoot::SelfKeyword),
             Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
-            Some(Token::Package { .. }) => Ok(PathRoot::Package),
+            Some(Token::Lib { .. }) => Ok(PathRoot::Lib),
             Some(Token::Super { .. }) => Ok(PathRoot::Super),
             _ => {
                 parser.log_unexpected_token(
-                    "path root (identifier, `package`, `super`, `self` or `Self`)",
+                    "path root (identifier, `lib`, `super`, `self` or `Self`)",
                 );
                 Err(ErrorsEmitted)
             }
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn parse_path_expr_full() -> Result<(), ()> {
-        let input = r#"package::some_module::SomeObject"#;
+        let input = r#"lib::some_module::SomeObject"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 

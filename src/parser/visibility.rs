@@ -1,7 +1,7 @@
 use core::fmt;
 
 use crate::{
-    ast::{Delimiter, Keyword, PubPackageVis, Visibility},
+    ast::{Delimiter, Keyword, PubLibVis, Visibility},
     error::ErrorsEmitted,
     span::Position,
     token::Token,
@@ -23,16 +23,16 @@ impl Visibility {
                         parser.next_token();
 
                         let kw_package = match parser.current_token() {
-                            Some(Token::Package { .. }) => {
+                            Some(Token::Lib { .. }) => {
                                 parser.next_token();
-                                Ok(Keyword::Package)
+                                Ok(Keyword::Lib)
                             }
                             Some(Token::EOF) | None => {
                                 parser.log_unexpected_eoi();
                                 Err(ErrorsEmitted)
                             }
                             _ => {
-                                parser.log_unexpected_token("`package`");
+                                parser.log_unexpected_token("`lib`");
                                 Err(ErrorsEmitted)
                             }
                         }?;
@@ -41,12 +41,12 @@ impl Visibility {
                             Some(Token::RParen { .. }) => {
                                 parser.next_token();
 
-                                let pub_package = PubPackageVis {
+                                let pub_package = PubLibVis {
                                     kw_pub: Keyword::Pub,
                                     kw_package,
                                 };
 
-                                Ok(Visibility::PubPackage(pub_package))
+                                Ok(Visibility::PubLib(pub_package))
                             }
                             Some(Token::EOF) | None => {
                                 parser.log_unmatched_delimiter(&open_paren);
@@ -71,7 +71,7 @@ impl fmt::Display for Visibility {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Visibility::Private => write!(f, ""),
-            Visibility::PubPackage(_) => write!(f, "pub(package) "),
+            Visibility::PubLib(_) => write!(f, "pub(lib) "),
             Visibility::Pub => write!(f, "pub "),
         }
     }

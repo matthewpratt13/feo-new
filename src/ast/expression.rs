@@ -22,7 +22,7 @@ pub(crate) enum ClosureParams {
 /// Enum representing the different path root options.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PathRoot {
-    Package,
+    Lib,
     Super,
     SelfKeyword,
     SelfType(SelfType),
@@ -32,7 +32,7 @@ pub(crate) enum PathRoot {
 impl fmt::Display for PathRoot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PathRoot::Package => write!(f, "package"),
+            PathRoot::Lib => write!(f, "lib"),
             PathRoot::Super => write!(f, "super"),
             PathRoot::SelfKeyword => write!(f, "self"),
             PathRoot::SelfType(_) => write!(f, "Self"),
