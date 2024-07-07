@@ -383,7 +383,7 @@ impl SemanticAnalyser {
 
                     if let Some(curr_scope) = self.scope_stack.pop() {
                         self.logger
-                            .debug(&format!("exiting scope: `{:?}`", curr_scope));
+                            .debug(&format!("exiting scope: `{:?}`", curr_scope.scope_kind));
                         module_scope = curr_scope;
                     }
 
@@ -962,6 +962,8 @@ impl SemanticAnalyser {
             }
 
             Expression::Call(c) => {
+                self.logger.debug("enter call expression");
+
                 let callee = wrap_into_expression(c.callee.clone());
 
                 let callee_as_path_expr = PathExpr::from(callee.clone());
@@ -1854,7 +1856,9 @@ impl SemanticAnalyser {
                                         self.logger.warn("unreachable code")
                                     }
                                 }
-                                _ => (),
+                                _ => {
+                                    self.analyse_expr(e, root)?;
+                                }
                             },
                             _ => {
                                 self.analyse_stmt(stmt, root)?;
@@ -2669,10 +2673,10 @@ mod tests {
             },
         );
 
-        let input = r#"
-        import external_module::external_func;
-        
+        let input = r#" 
         module some_mod { 
+            import external_module::external_func;
+
             struct SomeObject {}
 
             func some_func() -> SomeObject {
