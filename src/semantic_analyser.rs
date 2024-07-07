@@ -119,11 +119,7 @@ impl SemanticAnalyser {
         None
     }
 
-    fn analyse_module(
-        &mut self,
-        module: &Module,
-        path: PathType,
-    ) -> Result<(), ErrorsEmitted> {
+    fn analyse_module(&mut self, module: &Module, path: PathType) -> Result<(), ErrorsEmitted> {
         self.logger.info("starting semantic analysis ...");
 
         let module_path = if let Some(Scope {
@@ -738,6 +734,7 @@ impl SemanticAnalyser {
                 }
             } else {
                 paths.push(path.clone());
+                break;
             }
         }
 
@@ -2735,7 +2732,6 @@ mod tests {
 
         let (mut analyser, module) =
             setup(input, LogLevel::Debug, false, false, Some(external_code))?;
-
 
         match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
             Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
