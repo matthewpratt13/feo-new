@@ -962,13 +962,15 @@ impl SemanticAnalyser {
             }
 
             Expression::Call(c) => {
-                self.logger.debug("enter call expression");
-
                 let callee = wrap_into_expression(c.callee.clone());
 
-                let callee_as_path_expr = PathExpr::from(callee.clone());
+                let callee_path = PathType::from(PathExpr::from(callee));
 
-                let callee_path = build_item_path(root, PathType::from(callee_as_path_expr));
+                let callee_path = if self.lookup(&callee_path).is_some() {
+                    callee_path
+                } else {
+                    build_item_path(root, callee_path)
+                };
 
                 self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
             }
@@ -1337,7 +1339,6 @@ impl SemanticAnalyser {
             }
 
             Expression::Grouped(g) => {
-                println!("foo");
                 self.analyse_expr(&g.inner_expression, root)
             }
 
@@ -2054,7 +2055,7 @@ impl SemanticAnalyser {
                     },
                     (None, Some(_)) | (Some(_), None) => {
                         return Err(SemanticErrorKind::ArgumentCountMismatch {
-                            name: path.type_name,
+                            name: path.type_name.clone(),
                             expected: params.unwrap_or(Vec::new()).len(),
                             found: args.unwrap_or(Vec::new()).len(),
                         })
@@ -2062,7 +2063,7 @@ impl SemanticAnalyser {
                     (Some(a), Some(p)) => {
                         if a.len() != p.len() {
                             return Err(SemanticErrorKind::ArgumentCountMismatch {
-                                name: path.type_name,
+                                name: path.type_name.clone(),
                                 expected: p.len(),
                                 found: a.len(),
                             });
@@ -2674,9 +2675,9 @@ mod tests {
         );
 
         let input = r#" 
-        module some_mod { 
-            import external_module::external_func;
+        import external_module::external_func;
 
+        module some_mod { 
             struct SomeObject {}
 
             func some_func() -> SomeObject {
