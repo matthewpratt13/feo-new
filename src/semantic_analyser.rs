@@ -2736,7 +2736,6 @@ mod tests {
         let (mut analyser, module) =
             setup(input, LogLevel::Debug, false, false, Some(external_code))?;
 
-        analyser.enter_scope(ScopeKind::Lib);
 
         match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
             Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
