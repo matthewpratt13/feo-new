@@ -2723,7 +2723,7 @@ mod tests {
             }  
         }
 
-        import lib::another_mod::{ call_some_func, another_func };
+        import lib::another_mod::{ AnotherObject, call_some_func, another_func };
         
         func outer_func() -> SomeObject {
             call_some_func()
