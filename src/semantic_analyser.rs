@@ -2635,7 +2635,7 @@ mod tests {
 
         let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
 
-        match analyser.analyse_module(&module, PathType::from(Identifier::from("lib"))) {
+        match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
             Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
             Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
         }
