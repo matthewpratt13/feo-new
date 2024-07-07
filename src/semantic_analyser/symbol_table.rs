@@ -16,7 +16,7 @@ pub(crate) enum ScopeKind {
     Function(String),
     Module(String),
     RootModule(String),
-    Package,
+    Lib,
     Public,
 }
 

@@ -57,7 +57,7 @@ impl SemanticAnalyser {
                     symbols: external_symbols,
                 },
                 Scope {
-                    scope_kind: ScopeKind::Package,
+                    scope_kind: ScopeKind::Lib,
                     symbols: HashMap::new(),
                 },
             ],
@@ -122,9 +122,33 @@ impl SemanticAnalyser {
     fn analyse_module(
         &mut self,
         module: &Module,
-        module_path: PathType,
+        path: PathType,
     ) -> Result<(), ErrorsEmitted> {
         self.logger.info("starting semantic analysis ...");
+
+        let module_path = if let Some(Scope {
+            scope_kind: ScopeKind::Lib,
+            ..
+        }) = self.scope_stack.last()
+        {
+            let mut prefix: Vec<Identifier> = vec![Identifier::from("lib")];
+
+            if let Some(mut t) = path.associated_type_path_prefix_opt {
+                if t.get(0) == Some(&Identifier::from("lib")) {
+                    t.remove(0);
+                }
+
+                prefix.append(&mut t);
+            }
+
+            if path.type_name != Identifier::from("") {
+                prefix.push(path.type_name);
+            }
+
+            PathType::from(prefix)
+        } else {
+            path
+        };
 
         self.enter_scope(ScopeKind::RootModule(module_path.to_string()));
 
@@ -1338,9 +1362,7 @@ impl SemanticAnalyser {
                 }
             }
 
-            Expression::Grouped(g) => {
-                self.analyse_expr(&g.inner_expression, root)
-            }
+            Expression::Grouped(g) => self.analyse_expr(&g.inner_expression, root),
 
             Expression::Range(r) => match (&r.from_expr_opt, &r.to_expr_opt) {
                 (None, None) => Ok(Type::UnitType(Unit)),
@@ -2714,7 +2736,9 @@ mod tests {
         let (mut analyser, module) =
             setup(input, LogLevel::Debug, false, false, Some(external_code))?;
 
-        match analyser.analyse_module(&module, PathType::from(Identifier::from("lib"))) {
+        analyser.enter_scope(ScopeKind::Lib);
+
+        match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
             Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
             Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
         }
