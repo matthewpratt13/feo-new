@@ -2592,17 +2592,17 @@ mod tests {
         }
         
         func add_a() -> f64 {
-            let foo = Foo::new(42, "foo", 0x1_000_000 as u256);
+            let foo = Foo::new(42, "foo", 0x1_000_000);
             (foo.a as f64) + 3.14
         }
 
         func return_string() -> str {
-            let foo = Foo::new(42, "foo", 0x1_000_000 as u256);
+            let foo = Foo::new(42, "foo", 0x1_000_000);
             foo.b
         }
         
         func subtract_c() -> u256 {
-            let foo = Foo::new(42, "foo", 0x1_000_000 as u256);
+            let foo = Foo::new(42, "foo", 0x1_000_000);
             foo.c - (1_000 as u256)
         }"#;
 

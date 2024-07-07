@@ -923,9 +923,9 @@ impl<'a> Lexer<'a> {
                 }
             }
         } else {
-            if let Ok(v) = value_string.parse::<U512>() {
+            if let Ok(v) = value_string.parse::<U256>() {
                 Ok(Token::BigUIntLiteral {
-                    value: BigUInt::U512(v),
+                    value: BigUInt::U256(v),
                     span,
                 })
             } else {
