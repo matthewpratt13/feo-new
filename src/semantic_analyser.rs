@@ -734,7 +734,6 @@ impl SemanticAnalyser {
                 }
             } else {
                 paths.push(path.clone());
-                break;
             }
         }
 
@@ -2721,6 +2720,7 @@ mod tests {
         }
 
         import lib::another_mod::{ AnotherObject, call_some_func, another_func };
+        import lib::some_mod::SomeObject;
         
         func outer_func() -> SomeObject {
             call_some_func()
