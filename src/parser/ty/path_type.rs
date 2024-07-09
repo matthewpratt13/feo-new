@@ -166,43 +166,6 @@ impl From<PathPatt> for PathType {
     }
 }
 
-impl From<PathSegment> for PathType {
-    fn from(value: PathSegment) -> Self {
-        if let Some(p_sub) = value.subset_opt {
-            let mut full_path: Vec<Identifier> = Vec::new();
-
-            if let Some(v) = value.root.associated_type_path_prefix_opt {
-                v.into_iter().for_each(|id| full_path.push(id));
-            }
-
-            full_path.push(value.root.type_name);
-
-            for tree in p_sub.nested_trees {
-                for p_seg in tree.path_segments {
-                    if let Some(v) = p_seg.root.associated_type_path_prefix_opt {
-                        v.into_iter().for_each(|id| full_path.push(id));
-                    }
-
-                    full_path.push(p_seg.root.type_name);
-                }
-            }
-
-            let type_name = if let Some(id) = full_path.pop() {
-                id
-            } else {
-                Identifier::from("")
-            };
-
-            PathType {
-                associated_type_path_prefix_opt: Some(full_path),
-                type_name,
-            }
-        } else {
-            value.root
-        }
-    }
-}
-
 impl From<Vec<Identifier>> for PathType {
     fn from(value: Vec<Identifier>) -> Self {
         if value.len() > 1 {
@@ -233,29 +196,56 @@ impl From<Vec<Identifier>> for PathType {
 
 impl From<PathType> for Vec<Identifier> {
     fn from(value: PathType) -> Self {
-        let mut prefix = if let Some(t) = value.associated_type_path_prefix_opt {
-            t
+        let mut paths: Vec<Identifier> = Vec::new();
+
+        if let Some(v) = &value.associated_type_path_prefix_opt {
+            for id in v {
+                paths.push(id.clone())
+            }
+        }
+
+        paths.push(value.type_name.clone());
+
+        paths
+    }
+}
+
+impl From<PathSegment> for Vec<PathType> {
+    fn from(value: PathSegment) -> Self {
+        let mut paths: Vec<PathType> = Vec::new();
+
+        if let Some(v) = value.root.associated_type_path_prefix_opt {
+            let mut root: Vec<Identifier> = Vec::new();
+
+            for id in v {
+                root.push(id)
+            }
+
+            root.push(value.root.type_name);
+
+            if let Some(p_sub) = value.subset_opt {
+                for t in p_sub.nested_trees {
+                    for p_seg in t.path_segments {
+                        for p in Vec::<PathType>::from(p_seg) {
+                            let path = build_item_path(&PathType::from(root.clone()), p);
+                            paths.push(path)
+                        }
+                    }
+                }
+            } else {
+                paths.push(PathType::from(root));
+            }
         } else {
-            Vec::new()
-        };
+            paths.push(value.root);
+        }
 
-        prefix.push(value.type_name);
-
-        prefix
+        paths
     }
 }
 
 impl fmt::Display for PathType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut segments: Vec<String> = Vec::new();
-
-        // if let Some(v) = &self.associated_type_path_prefix_opt {
-        //     for i in v {
-        //         segments.push(i.to_string());
-        //     }
-        // }
-
-        // segments.push(self.type_name.to_string());
 
         for id in Vec::<Identifier>::from(self.clone()) {
             segments.push(id.to_string())

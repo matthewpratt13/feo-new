@@ -709,7 +709,13 @@ impl SemanticAnalyser {
 
         let mut import_root =
             if let Some(ps) = import_decl.import_tree.path_segments.first().cloned() {
-                PathType::from(ps)
+                let paths = Vec::<PathType>::from(ps);
+
+                if let Some(p) = paths.first() {
+                    p.clone()
+                } else {
+                    PathType::from(Identifier::from(""))
+                }
             } else {
                 module_root.clone()
             };
@@ -726,21 +732,23 @@ impl SemanticAnalyser {
             let path = build_item_path(&import_root, p_seg.root);
 
             if let Some(p_sub) = p_seg.subset_opt {
-                for it in p_sub.nested_trees {
-                    for seg in it.path_segments {
-                        let path = build_item_path(&path, PathType::from(seg));
-                        paths.push(path);
+                for t in p_sub.nested_trees {
+                    for seg in t.path_segments {
+                        for p in Vec::<PathType>::from(seg) {
+                            let path = build_item_path(&path, p);
+                            paths.push(path)
+                        }
                     }
                 }
             } else {
-                paths.push(path.clone());
+                paths.push(path);
             }
         }
 
         // TODO: handle `super` and `self` path roots
         // TODO: handle public imports / re-exports
 
-        for p in paths.into_iter() {
+        for p in paths {
             import_root = if let Some(v) = p.associated_type_path_prefix_opt.clone() {
                 if v.len() > 1 {
                     PathType::from(v)
