@@ -116,27 +116,6 @@ impl fmt::Display for ImportTree {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut paths: Vec<PathType> = Vec::new();
 
-        // let root = if let Some(ps) = self.path_segments.first().cloned() {
-        //     PathType::from(ps)
-        // } else {
-        //     PathType::from(Identifier::from(""))
-        // };
-
-        // for p_seg in self.path_segments.clone().into_iter().skip(1) {
-        //     let path = build_item_path(&root, p_seg.root);
-
-        //     if let Some(p_sub) = p_seg.subset_opt {
-        //         for it in p_sub.nested_trees {
-        //             for seg in it.path_segments {
-        //                 let path = build_item_path(&path, PathType::from(seg));
-        //                 paths.push(path);
-        //             }
-        //         }
-        //     } else {
-        //         paths.push(path.clone());
-        //     }
-        // }
-
         let import_root = if let Some(ps) = self.path_segments.first().cloned() {
             let paths = Vec::<PathType>::from(ps);
 
