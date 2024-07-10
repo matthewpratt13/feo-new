@@ -779,54 +779,56 @@ impl SemanticAnalyser {
 
         let mut paths: Vec<PathType> = Vec::new();
 
-        let mut import_root =
-            if let Some(ps) = import_decl.import_tree.path_segments.first().cloned() {
-                let mut segments = Vec::<PathType>::from(ps);
+        let mut segments = import_decl.import_tree.path_segments.clone();
 
-                if segments.first().is_some() {
-                    segments.remove(0)
-                } else {
-                    PathType::from(Identifier::from(""))
+        let mut import_root = if !segments.is_empty() {
+            let mut paths = Vec::<PathType>::from(segments.remove(0));
+
+            if !paths.is_empty() {
+                let mut path = paths.remove(0);
+
+                for p in paths {
+                    path = build_item_path(&path, p);
                 }
+
+                path
             } else {
-                module_root.clone()
-            };
+                PathType::from(Identifier::from(""))
+            }
+        } else {
+            module_root.clone()
+        };
 
-        let import_root_copy = import_root.clone();
+        for seg in segments.clone() {
+            let path = build_item_path(&import_root, seg.root);
 
-        for p_seg in import_decl
-            .import_tree
-            .path_segments
-            .clone()
-            .into_iter()
-            .skip(1)
-        {
-            let path = build_item_path(&import_root, p_seg.root);
+            if let Some(sub) = seg.subset_opt {
+                import_root = path.clone();
 
-            if let Some(p_sub) = p_seg.subset_opt {
-                for t in p_sub.nested_trees {
-                    for seg in t.path_segments {
-                        let path = build_item_path(&path, seg.root);
-                        paths.push(path);
+                for t in sub.nested_trees {
+                    for ps in t.path_segments {
+                        for p in Vec::<PathType>::from(ps) {
+                            let path = build_item_path(&path.clone(), p);
+                            paths.push(path);
+                        }
                     }
                 }
             } else {
-                paths.push(path);
+                paths.push(path.clone());
+
+                if segments.len() > 1 {
+                    import_root = path.clone();
+                }
             }
         }
+
+        println!("import root: {}", import_root);
+        println!("paths: {:?}", paths);
 
         // TODO: handle `super` and `self` path roots
         // TODO: handle public imports / re-exports
 
-        println!("paths: {:?}", paths);
-
         for p in paths {
-            import_root = if let Some(v) = p.associated_type_path_prefix_opt.clone() {
-                PathType::from(v)
-            } else {
-                import_root_copy.clone()
-            };
-
             if let Some(m) = self.module_registry.get(&import_root).cloned() {
                 if let Some(s) = m.get(&p) {
                     self.insert(PathType::from(p.type_name), s.clone())?;
