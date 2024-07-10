@@ -151,7 +151,7 @@ impl From<PathPatt> for PathType {
             None => (),
         }
 
-        let type_name = path_segment_names.pop().expect("empty path expression");
+        let type_name = path_segment_names.pop().expect("empty path pattern");
 
         PathType {
             associated_type_path_prefix_opt: {
