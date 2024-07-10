@@ -75,17 +75,17 @@ fn analyse_struct() -> Result<(), ()> {
     }
     
     func add_a() -> f64 {
-        let foo = Foo::new(42, "foo", 0x1_000_000);
+        let foo = Foo::new(42, "foo", 0x12345ABCDE);
         (foo.a as f64) + 3.14
     }
 
     func return_string() -> str {
-        let foo = Foo::new(42, "foo", 0x1_000_000);
+        let foo = Foo::new(42, "foo", 0x12345ABCDE);
         foo.b
     }
     
     func subtract_c() -> u256 {
-        let foo = Foo::new(42, "foo", 0x1_000_000);
+        let foo = Foo::new(42, "foo", 0x12345ABCDE);
         foo.c - (1_000 as u256)
     }"#;
 
