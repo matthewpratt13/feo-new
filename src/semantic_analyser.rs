@@ -799,7 +799,11 @@ impl SemanticAnalyser {
             module_root.clone()
         };
 
+        let mut segment_counter = segments.len();
+
         for seg in segments.clone() {
+            segment_counter -= 1;
+
             let path = build_item_path(&import_root, seg.root);
 
             if let Some(sub) = seg.subset_opt {
@@ -816,7 +820,7 @@ impl SemanticAnalyser {
             } else {
                 paths.push(path.clone());
 
-                if segments.len() > 1 {
+                if segment_counter > 0 {
                     import_root = path.clone();
                 }
             }
