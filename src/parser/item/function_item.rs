@@ -113,6 +113,10 @@ impl ParseDefItem for FunctionItem {
             Ok(None)
         }?;
 
+        if let Some(Token::Semicolon { .. }) = parser.current_token() {
+            parser.next_token();
+        }
+
         let span = parser.get_span(&first_token.unwrap().span(), &last_token.unwrap().span());
 
         Ok(FunctionItem {

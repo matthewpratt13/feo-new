@@ -45,59 +45,6 @@ fn analyse_constant_reassign() {
 }
 
 #[test]
-fn analyse_let_stmt() -> Result<(), ()> {
-    let input = r#"
-    let a = 42;
-    let b = 3.14;
-    let c = (a as f64) + b;"#;
-
-    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
-
-    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
-    }
-}
-
-#[test]
-fn analyse_struct() -> Result<(), ()> {
-    let input = r#"
-    struct Foo { a: u64, b: str, c: u256 }
-
-    impl Foo {
-        func new(a: u64, b: str, c: u256) -> Foo {
-            Foo {
-                a: a,
-                b: b,
-                c: c
-            }
-        }
-    }
-    
-    func add_a() -> f64 {
-        let foo = Foo::new(42, "foo", 0x12345ABCDE);
-        (foo.a as f64) + 3.14
-    }
-
-    func return_string() -> str {
-        let foo = Foo::new(42, "foo", 0x12345ABCDE);
-        foo.b
-    }
-    
-    func subtract_c() -> u256 {
-        let foo = Foo::new(42, "foo", 0x12345ABCDE);
-        foo.c - (1_000 as u256)
-    }"#;
-
-    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
-
-    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
-    }
-}
-
-#[test]
 fn analyse_import_decl() -> Result<(), ()> {
     let external_func = FunctionItem {
         attributes_opt: None,
@@ -190,8 +137,86 @@ fn analyse_import_decl() -> Result<(), ()> {
         another_func()
     }"#;
 
-    let (mut analyser, module) =
-        setup(input, LogLevel::Debug, false, false, Some(external_code))?;
+    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, Some(external_code))?;
+
+    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+    }
+}
+
+#[test]
+fn analyse_let_stmt() -> Result<(), ()> {
+    let input = r#"
+    let a = 42;
+    let b = 3.14;
+    let c = (a as f64) + b;"#;
+
+    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
+
+    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+    }
+}
+
+#[test]
+fn analyse_struct() -> Result<(), ()> {
+    let input = r#"
+    struct Foo { a: u64, b: str, c: u256 }
+
+    impl Foo {
+        func new(a: u64, b: str, c: u256) -> Foo {
+            Foo {
+                a: a,
+                b: b,
+                c: c
+            }
+        }
+    }
+    
+    func add_a() -> f64 {
+        let foo = Foo::new(42, "foo", 0x12345ABCDE);
+        (foo.a as f64) + 3.14
+    }
+
+    func return_string() -> str {
+        let foo = Foo::new(42, "foo", 0x12345ABCDE);
+        foo.b
+    }
+    
+    func subtract_c() -> u256 {
+        let foo = Foo::new(42, "foo", 0x12345ABCDE);
+        foo.c - (1_000 as u256)
+    }"#;
+
+    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
+
+    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+    }
+}
+
+#[test]
+fn analyse_trait_def() -> Result<(), ()> {
+    let input = r#"
+    trait Contract {
+        #![interface]
+
+        const CONTRACT_ADDRESS: h160;
+        const CREATOR_ADDRESS: h160;
+
+        pub func address() -> h160;
+
+        pub func balance(&self) -> u256;
+
+        pub func msg_sender() -> h160;
+        
+        pub func creator_address() -> h160;
+    }"#;
+
+    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
 
     match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),

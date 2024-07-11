@@ -325,18 +325,16 @@ impl SemanticAnalyser {
                     let value_type = match &cd.value_opt {
                         Some(v) => {
                             let value = wrap_into_expression(v.clone());
-                            self.analyse_expr(&value, root)?
+                            Some(self.analyse_expr(&value, root)?)
                         }
 
-                        None => Type::InferredType(InferredType {
-                            name: Identifier::from("_"),
-                        }),
+                        None => None,
                     };
 
-                    if value_type != *cd.constant_type {
+                    if value_type.clone().is_some_and(|t| t != *cd.constant_type) {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
                             declared_type: format!("`{}`", cd.constant_type),
-                            actual_type: format!("`{}`", value_type),
+                            actual_type: format!("`{}`", value_type.unwrap()),
                         });
                     }
 
@@ -349,7 +347,9 @@ impl SemanticAnalyser {
                             path: constant_path,
                             visibility: cd.visibility.clone(),
                             constant_name: cd.constant_name.clone(),
-                            constant_type: value_type,
+                            constant_type: value_type.unwrap_or(Type::InferredType(InferredType {
+                                name: Identifier::from("_"),
+                            })),
                         },
                     )?;
                 }
@@ -686,7 +686,11 @@ impl SemanticAnalyser {
             };
             self.analyse_expr(&Expression::Block(b.clone()), path)?
         } else {
-            Type::UnitType(Unit)
+            if let Some(t) = &f.return_type_opt {
+                *t.clone()
+            } else {
+                Type::UnitType(Unit)
+            }
         };
 
         if let Some(t) = &f.return_type_opt {
@@ -696,6 +700,8 @@ impl SemanticAnalyser {
                     found: format!("`{}`", expression_type),
                 });
             }
+        } else {
+            ()
         }
 
         self.exit_scope();
