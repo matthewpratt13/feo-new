@@ -1427,6 +1427,15 @@ pub(crate) enum Type {
     },
 }
 
+impl From<Type> for PathType {
+    fn from(value: Type) -> Self {
+        match value {
+            Type::UserDefined(p) => p,
+            t => PathType::from(Identifier::from(&t.to_string())),
+        }
+    }
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

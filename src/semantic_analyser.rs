@@ -15,7 +15,7 @@ use crate::{
         BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
         FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportDecl, InferredType,
         InherentImplItem, Int, Item, Keyword, Literal, ModuleItem, PathExpr, PathRoot, PathType,
-        Pattern, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, Unit,
+        Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, Unit,
         Visibility,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
@@ -522,7 +522,23 @@ impl SemanticAnalyser {
                 }
 
                 Item::InherentImplDef(i) => {
-                    let type_path = build_item_path(root, PathType::from(i.nominal_type.clone()));
+                    // self.insert(
+                    //     PathType::from(Identifier::from("Self")),
+                    //     Symbol::Variable {
+                    //         name: Identifier::from("Self"),
+                    //         var_type: Type::UserDefined(i.nominal_type.clone()),
+                    //     },
+                    // )?;
+
+                    // self.insert(
+                    //     PathType::from(Identifier::from("self")),
+                    //     Symbol::Variable {
+                    //         name: Identifier::from("self"),
+                    //         var_type: Type::UserDefined(i.nominal_type.clone()),
+                    //     },
+                    // )?;
+
+                    let type_path = build_item_path(root, i.nominal_type.clone());
 
                     if let Some(v) = &i.associated_items_opt {
                         for item in v.iter() {
@@ -554,9 +570,25 @@ impl SemanticAnalyser {
                 }
 
                 Item::TraitImplDef(t) => {
+                    // self.insert(
+                    //     PathType::from(Identifier::from("Self")),
+                    //     Symbol::Variable {
+                    //         name: Identifier::from("Self"),
+                    //         var_type: t.implementing_type.clone(),
+                    //     },
+                    // )?;
+
+                    // self.insert(
+                    //     PathType::from(Identifier::from("self")),
+                    //     Symbol::Variable {
+                    //         name: Identifier::from("self"),
+                    //         var_type: t.implementing_type.clone(),
+                    //     },
+                    // )?;
+
                     let trait_impl_path = match &t.implementing_type {
                         Type::UserDefined(pt) => build_item_path(
-                            pt,
+                            &build_item_path(root, pt.clone()),
                             PathType::from(t.implemented_trait_path.type_name.clone()),
                         ),
                         ty => {
@@ -571,26 +603,26 @@ impl SemanticAnalyser {
                         for item in v.iter() {
                             match item {
                                 TraitImplItem::AliasDecl(ad) => {
-                                    let alias_impl_path = build_item_path(
-                                        &trait_impl_path,
-                                        PathType::from(ad.alias_name.clone()),
-                                    );
+                                    // let alias_impl_path = build_item_path(
+                                    //     &trait_impl_path,
+                                    //     PathType::from(ad.alias_name.clone()),
+                                    // );
 
                                     self.analyse_stmt(
                                         &Statement::Item(Item::AliasDecl(ad.clone())),
-                                        &alias_impl_path,
+                                        &trait_impl_path,
                                     )?
                                 }
 
                                 TraitImplItem::ConstantDecl(cd) => {
-                                    let constant_impl_path = build_item_path(
-                                        &trait_impl_path,
-                                        PathType::from(cd.constant_name.clone()),
-                                    );
+                                    // let constant_impl_path = build_item_path(
+                                    //     &trait_impl_path,
+                                    //     PathType::from(cd.constant_name.clone()),
+                                    // );
 
                                     self.analyse_stmt(
                                         &Statement::Item(Item::ConstantDecl(cd.clone())),
-                                        &constant_impl_path,
+                                        &trait_impl_path,
                                     )?
                                 }
 
@@ -660,7 +692,15 @@ impl SemanticAnalyser {
         if let Some(v) = &f.params_opt {
             let param_types: Vec<Type> = v.iter().map(|p| p.param_type()).collect();
 
-            for (param, param_type) in v.iter().zip(param_types) {
+            for (param, mut param_type) in v.iter().zip(param_types) {
+                if param_type == Type::SelfType(SelfType) {
+                    if is_assoc_type_root {
+                        if let Some(t) = root.associated_type_path_prefix_opt.clone() {
+                            param_type = Type::UserDefined(PathType::from(t))
+                        }
+                    }
+                }
+
                 let param_path = PathType::from(param.param_name());
 
                 self.insert(
@@ -673,18 +713,24 @@ impl SemanticAnalyser {
             }
         }
 
+        println!("root: {}", root);
+
         let expression_type = if let Some(b) = &f.block_opt {
             let path = if is_assoc_type_root {
                 // strip `type_name`
                 if let Some(t) = &root.associated_type_path_prefix_opt {
-                    &PathType::from(t.clone())
+                    println!("associated path: {}", PathType::from(t.clone()));
+                    PathType::from(t.clone())
                 } else {
-                    root
+                    println!("path: {}", root);
+                    root.clone()
                 }
             } else {
-                root
+                println!("path: {}", root);
+                root.clone()
             };
-            self.analyse_expr(&Expression::Block(b.clone()), path)?
+
+            self.analyse_expr(&Expression::Block(b.clone()), &path)?
         } else {
             if let Some(t) = &f.return_type_opt {
                 *t.clone()
@@ -797,49 +843,56 @@ impl SemanticAnalyser {
                 let path = match p.tree_opt.clone() {
                     Some(ref mut v) => {
                         if let Some(id) = v.pop() {
-                            PathType {
-                                associated_type_path_prefix_opt: Some(v.to_vec()),
-                                type_name: id,
-                            }
+                            build_item_path(
+                                root,
+                                PathType {
+                                    associated_type_path_prefix_opt: Some(v.to_vec()),
+                                    type_name: id,
+                                },
+                            )
                         } else {
-                            let name = match &p.path_root {
-                                PathRoot::Identifier(i) => i.clone(),
+                            match &p.path_root {
+                                PathRoot::Identifier(i) => {
+                                    build_item_path(root, PathType::from(i.clone()))
+                                }
 
-                                PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
+                                PathRoot::SelfType(_) => root.clone(),
+
+                                PathRoot::SelfKeyword => root.clone(),
 
                                 pr => {
                                     return Err(SemanticErrorKind::InvalidVariableIdentifier {
                                         name: Identifier::from(&pr.to_string()),
                                     })
                                 }
-                            };
-
-                            PathType::from(name)
+                            }
                         }
                     }
 
-                    _ => {
-                        let name = match &p.path_root {
-                            PathRoot::Identifier(i) => i.clone(),
+                    _ => match &p.path_root {
+                        PathRoot::Identifier(i) => build_item_path(root, PathType::from(i.clone())),
 
-                            PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
+                        PathRoot::SelfType(_) => root.clone(),
 
-                            pr => {
-                                return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                    name: Identifier::from(&pr.to_string()),
-                                })
-                            }
-                        };
+                        PathRoot::SelfKeyword => root.clone(),
 
-                        PathType::from(name)
-                    }
+                        pr => {
+                            return Err(SemanticErrorKind::InvalidVariableIdentifier {
+                                name: Identifier::from(&pr.to_string()),
+                            })
+                        }
+                    },
                 };
 
-                match self.lookup(&path) {
-                    Some(s) => Ok(s.symbol_type()),
-                    None => Err(SemanticErrorKind::UndefinedVariable {
+                println!("variable path: {}", path);
+
+                if let Some(s) = self.lookup(&path) {
+                    println!("variable symbol: {}", s);
+                    Ok(s.symbol_type())
+                } else {
+                    Err(SemanticErrorKind::UndefinedVariable {
                         name: path.type_name,
-                    }),
+                    })
                 }
             }
 
@@ -975,7 +1028,13 @@ impl SemanticAnalyser {
 
                 let object_type = self.analyse_expr(&object, &object_path)?;
 
-                match self.lookup(&object_path) {
+                println!("object path: {:?}", object_path);
+
+                let symbol = self.lookup(&object_path).cloned();
+
+                println!("object symbol: {:?}", symbol);
+
+                match symbol {
                     Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
                         Some(v) => match v.iter().find(|f| f.field_name == fa.field_name) {
                             Some(sdf) => Ok(*sdf.field_type.clone()),
@@ -986,6 +1045,39 @@ impl SemanticAnalyser {
                         },
                         None => Ok(Type::UnitType(Unit)),
                     },
+
+                    Some(Symbol::Variable { name, var_type }) => {
+                        let symbol = self.lookup(&PathType::from(var_type.clone())).cloned();
+
+                        if name == Identifier::from("self") {
+                            if let Some(Symbol::Struct { struct_def, .. }) = symbol {
+                                match &struct_def.fields_opt {
+                                    Some(v) => {
+                                        match v.iter().find(|f| f.field_name == fa.field_name) {
+                                            Some(sdf) => Ok(*sdf.field_type.clone()),
+                                            _ => Err(SemanticErrorKind::UndefinedField {
+                                                struct_name: struct_def.struct_name.clone(),
+                                                field_name: fa.field_name.clone(),
+                                            }),
+                                        }
+                                    }
+                                    None => Ok(Type::UnitType(Unit)),
+                                }
+                            } else {
+                                Err(SemanticErrorKind::UnexpectedSymbol {
+                                    name: Identifier::from(&format!("{}", object_type)),
+                                    expected: "struct".to_string(),
+                                    found: format!("`{}`", name.clone()),
+                                })
+                            }
+                        } else {
+                            Err(SemanticErrorKind::UnexpectedSymbol {
+                                name: Identifier::from(&format!("{}", object_type)),
+                                expected: "struct".to_string(),
+                                found: format!("`{}`", name.clone()),
+                            })
+                        }
+                    }
 
                     None => Err(SemanticErrorKind::UndefinedType {
                         name: Identifier::from(&format!("{}", object_type)),
@@ -1771,6 +1863,8 @@ impl SemanticAnalyser {
             Expression::Struct(s) => {
                 let path_type = build_item_path(root, PathType::from(s.struct_path.clone()));
 
+                println!("struct path: {}", path_type);
+
                 match self.lookup(&path_type).cloned() {
                     Some(Symbol::Struct { struct_def, path }) => {
                         self.insert(
@@ -2039,6 +2133,12 @@ impl SemanticAnalyser {
             Expression::SomeExpr(s) => {
                 let ty = self.analyse_expr(&s.expression.clone().inner_expression, root)?;
 
+                let ty = if ty == Type::Tuple([].to_vec()) {
+                    Type::UnitType(Unit)
+                } else {
+                    ty
+                };
+
                 Ok(Type::Option {
                     inner_type: Box::new(ty),
                 })
@@ -2048,8 +2148,17 @@ impl SemanticAnalyser {
                 inner_type: Box::new(Type::UnitType(Unit)),
             }),
 
+            // TODO: handle analysing `Result` expressions with both variant types
             Expression::ResultExpr(r) => {
                 let ty = self.analyse_expr(&r.expression.clone().inner_expression, root)?;
+
+                let ty = if ty == Type::Tuple([].to_vec()) {
+                    Type::UnitType(Unit)
+                } else {
+                    ty
+                };
+
+                println!("result type: {:?}", ty);
 
                 match r.kw_ok_or_err.clone() {
                     Keyword::Ok => Ok(Type::Result {
@@ -2153,57 +2262,59 @@ impl SemanticAnalyser {
             },
 
             Pattern::PathPatt(p) => {
-                let path = match p.tree_opt.clone() {
-                    Some(ref mut v) => {
-                        if let Some(id) = v.pop() {
-                            PathType {
-                                associated_type_path_prefix_opt: Some(v.to_vec()),
-                                type_name: id,
-                            }
-                        } else {
-                            let name = match &p.path_root {
-                                PathRoot::Identifier(i) => i.clone(),
+                // let path = match p.tree_opt.clone() {
+                //     Some(ref mut v) => {
+                //         if let Some(id) = v.pop() {
+                //             PathType {
+                //                 associated_type_path_prefix_opt: Some(v.to_vec()),
+                //                 type_name: id,
+                //             }
+                //         } else {
+                //             let name = match &p.path_root {
+                //                 PathRoot::Identifier(i) => i.clone(),
 
-                                PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
+                //                 PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
 
-                                pr => {
-                                    return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                        name: Identifier::from(&pr.to_string()),
-                                    })
-                                }
-                            };
+                //                 PathRoot::SelfKeyword => Identifier::from("self"),
 
-                            PathType::from(name)
-                        }
-                    }
+                //                 pr => {
+                //                     return Err(SemanticErrorKind::InvalidVariableIdentifier {
+                //                         name: Identifier::from(&pr.to_string()),
+                //                     })
+                //                 }
+                //             };
 
-                    _ => {
-                        let name = match &p.path_root {
-                            PathRoot::Identifier(i) => i.clone(),
+                //             PathType::from(name)
+                //         }
+                //     }
 
-                            PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
+                //     _ => {
+                //         let name = match &p.path_root {
+                //             PathRoot::Identifier(i) => i.clone(),
 
-                            pr => {
-                                return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                    name: Identifier::from(&pr.to_string()),
-                                })
-                            }
-                        };
+                //             PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
 
-                        PathType::from(name)
-                    }
-                };
+                //             PathRoot::SelfKeyword => Identifier::from("self"),
 
-                match self.lookup(&path) {
-                    Some(Symbol::Variable { var_type, .. }) => Ok(var_type.clone()),
-                    Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
+                //             pr => {
+                //                 return Err(SemanticErrorKind::InvalidVariableIdentifier {
+                //                     name: Identifier::from(&pr.to_string()),
+                //                 })
+                //             }
+                //         };
+
+                //         PathType::from(name)
+                //     }
+                // };
+
+                let path = PathType::from(p.clone());
+
+                if let Some(s) = self.lookup(&path) {
+                    Ok(s.symbol_type())
+                } else {
+                    Err(SemanticErrorKind::UndefinedVariable {
                         name: path.type_name,
-                        expected: "variable".to_string(),
-                        found: s.to_string(),
-                    }),
-                    None => Err(SemanticErrorKind::UndefinedVariable {
-                        name: path.type_name,
-                    }),
+                    })
                 }
             }
 

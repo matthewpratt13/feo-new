@@ -39,6 +39,8 @@ impl ParseConstructExpr for GroupedExpr {
 
             let inner_expression = Expression::Tuple(tuple_expr);
 
+            parser.next_token();
+
             return Ok(GroupedExpr {
                 inner_expression: Box::new(inner_expression),
                 span,
