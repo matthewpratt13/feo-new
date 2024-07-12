@@ -870,7 +870,7 @@ impl SemanticAnalyser {
                     }
 
                     _ => match &p.path_root {
-                        PathRoot::Identifier(i) => build_item_path(root, PathType::from(i.clone())),
+                        PathRoot::Identifier(i) => PathType::from(i.clone()),
 
                         PathRoot::SelfType(_) => root.clone(),
 
