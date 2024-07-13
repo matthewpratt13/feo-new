@@ -116,11 +116,19 @@ impl fmt::Display for ImportTree {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut paths: Vec<PathType> = Vec::new();
 
-        let import_root = if let Some(ps) = self.path_segments.first().cloned() {
-            let paths = Vec::<PathType>::from(ps);
+        let mut segments = self.path_segments.clone();
 
-            if let Some(p) = paths.first() {
-                p.clone()
+        let mut import_root = if !segments.is_empty() {
+            let mut paths = Vec::<PathType>::from(segments.remove(0));
+
+            if !paths.is_empty() {
+                let mut path = paths.remove(0);
+
+                for p in paths {
+                    path = build_item_path(&path, p);
+                }
+
+                path
             } else {
                 PathType::from(Identifier::from(""))
             }
@@ -128,20 +136,32 @@ impl fmt::Display for ImportTree {
             PathType::from(Identifier::from(""))
         };
 
-        for p_seg in self.path_segments.clone().into_iter().skip(1) {
-            let path = build_item_path(&import_root, p_seg.root);
+        let mut segment_counter = segments.len();
 
-            if let Some(p_sub) = p_seg.subset_opt {
-                for t in p_sub.nested_trees {
-                    for seg in t.path_segments {
-                        for p in Vec::<PathType>::from(seg) {
-                            let path = build_item_path(&path, p);
-                            paths.push(path)
+        for seg in segments.clone() {
+            segment_counter -= 1;
+
+            let path = build_item_path(&import_root, seg.root);
+
+            if let Some(sub) = seg.subset_opt {
+                import_root = path.clone();
+
+                for t in sub.nested_trees {
+                    for ps in t.path_segments {
+                        for p in Vec::<PathType>::from(ps) {
+                            let path = build_item_path(&path.clone(), p);
+                            paths.push(path);
                         }
                     }
                 }
             } else {
-                paths.push(path)
+                if segment_counter != 1 {
+                    paths.push(path.clone());
+                }
+
+                if segment_counter > 0 {
+                    import_root = path.clone();
+                }
             }
         }
 

@@ -266,6 +266,59 @@ fn analyse_let_stmt() -> Result<(), ()> {
 }
 
 #[test]
+fn analyse_method_call() {
+    let input = r#"
+    module foo {
+        struct Foo {
+            name: str,
+            symbol: str,
+            decimals: u64,
+            total_supply: u64,
+        }
+
+        impl Foo {
+            #[constructor]
+            func new(name: str, symbol: str, balances: Mapping<h160, u256>) -> Foo {
+                Foo {
+                    name: name,
+                    symbol: symbol,
+                    decimals: 18,
+                    total_supply: 1_000_000,
+                }
+            }
+
+            func name(&self) -> str {
+                self.name
+            }
+
+            func symbol(&self) -> str {
+                self.symbol
+            }
+        }
+    }
+
+    import lib::foo::Foo;
+
+    func main() {
+        let foo = Foo::new("Foo", "FOO", {});
+
+        let name = foo.name();
+
+        let symbol = foo.symbol();
+
+        return;
+    }"#;
+
+    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)
+        .expect("unable to set up semantic analyser");
+
+    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+        Ok(_) => println!("{:#?}", analyser.logger.messages()),
+        Err(_) => panic!("{:#?}", analyser.logger.messages()),
+    }
+}
+
+#[test]
 fn analyse_struct() -> Result<(), ()> {
     let input = r#"
     struct Foo { a: u64, b: str, c: u256 }
