@@ -741,10 +741,24 @@ impl SemanticAnalyser {
 
         if let Some(t) = &f.return_type_opt {
             if expression_type != *t.clone() {
-                return Err(SemanticErrorKind::TypeMismatchReturnType {
-                    expected: format!("`{}`", t),
-                    found: format!("`{}`", expression_type),
-                });
+                if let Type::Result { ok_type, err_type } = expression_type.clone() {
+                    if *ok_type
+                        == Type::InferredType(InferredType {
+                            name: Identifier::from("_"),
+                        })
+                        || *err_type
+                            == Type::InferredType(InferredType {
+                                name: Identifier::from("_"),
+                            })
+                    {
+                        ()
+                    } else {
+                        return Err(SemanticErrorKind::TypeMismatchReturnType {
+                            expected: format!("`{}`", t),
+                            found: format!("`{}`", expression_type),
+                        });
+                    }
+                }
             }
         } else {
             ()
@@ -2148,7 +2162,6 @@ impl SemanticAnalyser {
                 inner_type: Box::new(Type::UnitType(Unit)),
             }),
 
-            // TODO: handle analysing `Result` expressions with both variant types
             Expression::ResultExpr(r) => {
                 let ty = self.analyse_expr(&r.expression.clone().inner_expression, root)?;
 

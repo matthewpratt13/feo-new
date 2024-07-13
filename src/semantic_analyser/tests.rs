@@ -45,6 +45,111 @@ fn analyse_constant_reassign() {
 }
 
 #[test]
+fn analyse_impl() -> Result<(), ()> {
+    let input = r#"
+    module erc_20 {
+        trait Contract {
+            #![interface]
+    
+            const CONTRACT_ADDRESS: h160;
+            const CREATOR_ADDRESS: h160;
+    
+            pub func address() -> h160;
+            pub func balance(&self) -> u256;
+            pub func msg_sender() -> h160;
+            pub func creator_address() -> h160;
+        }
+
+        trait ERC20 {
+            #![interface]
+
+            func approve(&self, spender: h160, amount: u256) -> Result<(), ()>;
+
+            func transfer(&mut self, from: h160, to: Entity, amount: u256) -> Result<(), ()>;
+
+            func mint(&mut self, to: h160, amount: u256) -> Result<(), ()>;
+
+            func burn(&mut self, from: h160, amount: u256) -> Result<(), ()>;
+        }
+    }
+
+    module some_token {
+        #![contract]
+        
+        import lib::erc_20::{ Contract, ERC20 };
+
+        struct SomeToken {
+            name: str,
+            symbol: str,
+            decimals: u64,
+            total_supply: u64,
+            balances: Mapping<h160, u64>,        
+        }
+
+        impl SomeToken {
+            #[constructor]
+            func new(name: str, symbol: str, decimals: u64, total_supply: u64, balances: Mapping<h160, u64>) -> SomeToken {
+                SomeToken {
+                    name: "SomeToken",
+                    symbol: "STK",
+                    decimals: 18,
+                    total_supply: 1_000_000,
+                    balances: {
+                        $0x12345123451234512345: 1_000,
+                    }
+                }
+            }
+        }
+
+        impl Contract for SomeToken {
+            const CONTRACT_ADDRESS: h160 = $0x12345123451234512345;
+            const CREATOR_ADDRESS: h160 = $0x54321543215432154321;
+
+            pub func address() -> h160 {
+                SomeToken::Contract::CONTRACT_ADDRESS
+            }
+
+            pub func balance(&self) -> u64 {
+                self.total_supply
+            }
+
+            pub func msg_sender() -> h160 {
+                SomeToken::Contract::CREATOR_ADDRESS
+            }
+
+            pub func creator_address() -> h160 {
+                SomeToken::Contract::CREATOR_ADDRESS
+            }
+        }
+
+        impl ERC20 for SomeToken {
+            func approve(&self, spender: h160, amount: u256) -> Result<(), ()> {
+                Ok(())
+            }
+
+            func transfer(&mut self, from: h160, to: Entity, amount: u256) -> Result<(), ()> {
+               Ok(())
+            }
+
+            func mint(&mut self, to: h160, amount: u256) -> Result<(), ()> {
+               Ok(())
+            }
+
+            func burn(&mut self, from: h160, amount: u256) -> Result<(), ()> {
+                Ok(())
+            }
+        }
+    }"#;
+
+    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
+
+    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+    }
+}
+
+#[test]
 fn analyse_import_decl() -> Result<(), ()> {
     let external_func = FunctionItem {
         attributes_opt: None,
@@ -211,111 +316,6 @@ fn analyse_trait_def() -> Result<(), ()> {
         pub func balance(&self) -> u256;
         pub func msg_sender() -> h160;
         pub func creator_address() -> h160;
-    }"#;
-
-    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
-
-    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
-    }
-}
-
-#[test]
-fn analyse_impl() -> Result<(), ()> {
-    let input = r#"
-    module erc_20 {
-        trait Contract {
-            #![interface]
-    
-            const CONTRACT_ADDRESS: h160;
-            const CREATOR_ADDRESS: h160;
-    
-            pub func address() -> h160;
-            pub func balance(&self) -> u256;
-            pub func msg_sender() -> h160;
-            pub func creator_address() -> h160;
-        }
-
-        trait ERC20 {
-            #![interface]
-
-            func approve(&self, spender: h160, amount: u256);
-
-            func transfer(&mut self, from: h160, to: Entity, amount: u256);
-
-            func mint(&mut self, to: h160, amount: u256);
-
-            func burn(&mut self, from: h160, amount: u256);
-        }
-    }
-
-    module some_token {
-        #![contract]
-        
-        import lib::erc_20::{ Contract, ERC20 };
-
-        struct SomeToken {
-            name: str,
-            symbol: str,
-            decimals: u64,
-            total_supply: u64,
-            balances: Mapping<h160, u64>,        
-        }
-
-        impl SomeToken {
-            #[constructor]
-            func new(name: str, symbol: str, decimals: u64, total_supply: u64, balances: Mapping<h160, u64>) -> SomeToken {
-                SomeToken {
-                    name: "SomeToken",
-                    symbol: "STK",
-                    decimals: 18,
-                    total_supply: 1_000_000,
-                    balances: {
-                        $0x12345123451234512345: 1_000,
-                    }
-                }
-            }
-        }
-
-        impl Contract for SomeToken {
-            const CONTRACT_ADDRESS: h160 = $0x12345123451234512345;
-            const CREATOR_ADDRESS: h160 = $0x54321543215432154321;
-
-            pub func address() -> h160 {
-                SomeToken::Contract::CONTRACT_ADDRESS
-            }
-
-            pub func balance(&self) -> u64 {
-                self.total_supply
-            }
-
-            pub func msg_sender() -> h160 {
-                SomeToken::Contract::CREATOR_ADDRESS
-            }
-
-            pub func creator_address() -> h160 {
-                SomeToken::Contract::CREATOR_ADDRESS
-            }
-        }
-
-        impl ERC20 for SomeToken {
-            func approve(&self, spender: h160, amount: u256) {
-                ()
-            }
-
-            func transfer(&mut self, from: h160, to: Entity, amount: u256) {
-                ()
-            }
-
-            func mint(&mut self, to: h160, amount: u256) {
-                ()
-            }
-
-            func burn(&mut self, from: h160, amount: u256) {
-                ()
-            }
-        }
     }"#;
 
     let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
