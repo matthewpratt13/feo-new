@@ -522,22 +522,6 @@ impl SemanticAnalyser {
                 }
 
                 Item::InherentImplDef(i) => {
-                    // self.insert(
-                    //     PathType::from(Identifier::from("Self")),
-                    //     Symbol::Variable {
-                    //         name: Identifier::from("Self"),
-                    //         var_type: Type::UserDefined(i.nominal_type.clone()),
-                    //     },
-                    // )?;
-
-                    // self.insert(
-                    //     PathType::from(Identifier::from("self")),
-                    //     Symbol::Variable {
-                    //         name: Identifier::from("self"),
-                    //         var_type: Type::UserDefined(i.nominal_type.clone()),
-                    //     },
-                    // )?;
-
                     let type_path = build_item_path(root, i.nominal_type.clone());
 
                     if let Some(v) = &i.associated_items_opt {
@@ -570,22 +554,6 @@ impl SemanticAnalyser {
                 }
 
                 Item::TraitImplDef(t) => {
-                    // self.insert(
-                    //     PathType::from(Identifier::from("Self")),
-                    //     Symbol::Variable {
-                    //         name: Identifier::from("Self"),
-                    //         var_type: t.implementing_type.clone(),
-                    //     },
-                    // )?;
-
-                    // self.insert(
-                    //     PathType::from(Identifier::from("self")),
-                    //     Symbol::Variable {
-                    //         name: Identifier::from("self"),
-                    //         var_type: t.implementing_type.clone(),
-                    //     },
-                    // )?;
-
                     let trait_impl_path = match &t.implementing_type {
                         Type::UserDefined(pt) => build_item_path(
                             &build_item_path(root, pt.clone()),
@@ -2275,51 +2243,6 @@ impl SemanticAnalyser {
             },
 
             Pattern::PathPatt(p) => {
-                // let path = match p.tree_opt.clone() {
-                //     Some(ref mut v) => {
-                //         if let Some(id) = v.pop() {
-                //             PathType {
-                //                 associated_type_path_prefix_opt: Some(v.to_vec()),
-                //                 type_name: id,
-                //             }
-                //         } else {
-                //             let name = match &p.path_root {
-                //                 PathRoot::Identifier(i) => i.clone(),
-
-                //                 PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
-
-                //                 PathRoot::SelfKeyword => Identifier::from("self"),
-
-                //                 pr => {
-                //                     return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                //                         name: Identifier::from(&pr.to_string()),
-                //                     })
-                //                 }
-                //             };
-
-                //             PathType::from(name)
-                //         }
-                //     }
-
-                //     _ => {
-                //         let name = match &p.path_root {
-                //             PathRoot::Identifier(i) => i.clone(),
-
-                //             PathRoot::SelfType(s) => return Ok(Type::SelfType(s.clone())),
-
-                //             PathRoot::SelfKeyword => Identifier::from("self"),
-
-                //             pr => {
-                //                 return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                //                     name: Identifier::from(&pr.to_string()),
-                //                 })
-                //             }
-                //         };
-
-                //         PathType::from(name)
-                //     }
-                // };
-
                 let path = PathType::from(p.clone());
 
                 if let Some(s) = self.lookup(&path) {
