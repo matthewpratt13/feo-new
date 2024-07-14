@@ -1031,6 +1031,8 @@ impl SemanticAnalyser {
                     Some(Symbol::Variable { name, var_type }) => {
                         let symbol = self.lookup(&PathType::from(var_type.clone())).cloned();
 
+                        println!("object variable type: {}", var_type);
+
                         if name == Identifier::from("self") {
                             if let Some(Symbol::Struct { struct_def, .. }) = symbol {
                                 match &struct_def.fields_opt {
@@ -1969,9 +1971,10 @@ impl SemanticAnalyser {
                                         self.logger.warn("unreachable code")
                                     }
                                 }
-                                _ => {
-                                    self.analyse_expr(e, root)?;
-                                }
+                                // _ => {
+                                //     self.analyse_expr(e, root)?;
+                                // }
+                                _ => (),
                             },
                             _ => {
                                 self.analyse_stmt(stmt, root)?;
