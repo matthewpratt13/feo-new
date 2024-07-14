@@ -468,7 +468,11 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(fi, &trait_path, true)?;
+                                    self.analyse_function_def(
+                                        fi,
+                                        &trait_path,
+                                        Some(trait_path.clone()),
+                                    )?;
                                 }
                             }
                         }
@@ -546,7 +550,11 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(&fi, &type_path, true)?;
+                                    self.analyse_function_def(
+                                        &fi,
+                                        &type_path,
+                                        Some(type_path.clone()),
+                                    )?;
                                 }
                             }
                         }
@@ -608,7 +616,11 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(&fi, &trait_impl_path, true)?;
+                                    self.analyse_function_def(
+                                        &fi,
+                                        &trait_impl_path,
+                                        Some(trait_impl_path.clone()),
+                                    )?;
                                 }
                             }
                         }
@@ -630,7 +642,7 @@ impl SemanticAnalyser {
                         },
                     )?;
 
-                    self.analyse_function_def(f, root, false)?;
+                    self.analyse_function_def(f, root, None)?;
                 }
             },
 
@@ -651,7 +663,7 @@ impl SemanticAnalyser {
         &mut self,
         f: &FunctionItem,
         root: &PathType,
-        is_assoc_type_root: bool,
+        associated_type: Option<PathType>,
     ) -> Result<(), SemanticErrorKind> {
         let function_path = build_item_path(root, PathType::from(f.function_name.clone()));
 
@@ -662,10 +674,8 @@ impl SemanticAnalyser {
 
             for (param, mut param_type) in v.iter().zip(param_types) {
                 if param_type == Type::SelfType(SelfType) {
-                    if is_assoc_type_root {
-                        if let Some(t) = root.associated_type_path_prefix_opt.clone() {
-                            param_type = Type::UserDefined(PathType::from(t))
-                        }
+                    if let Some(t) = associated_type.clone() {
+                        param_type = Type::UserDefined(t);
                     }
                 }
 
@@ -681,20 +691,33 @@ impl SemanticAnalyser {
             }
         }
 
-        println!("root: {}", root);
+        println!("function root: {}", root);
 
         let expression_type = if let Some(b) = &f.block_opt {
-            let path = if is_assoc_type_root {
-                // strip `type_name`
-                if let Some(t) = &root.associated_type_path_prefix_opt {
-                    println!("associated path: {}", PathType::from(t.clone()));
-                    PathType::from(t.clone())
+            // let path = if is_assoc_type_root {
+            //     // strip `type_name`
+            //     if let Some(t) = &root.associated_type_path_prefix_opt {
+            //         println!("associated path: {}", PathType::from(t.clone()));
+            //         PathType::from(t.clone())
+            //     } else {
+            //         println!("path: {}", root);
+            //         root.clone()
+            //     }
+            // } else {
+            //     println!("path: {}", root);
+            //     root.clone()
+            // };
+
+            let path = if let Some(t) = associated_type {
+                if let Some(p) = t.associated_type_path_prefix_opt {
+                    println!("associated type path prefix: {}", PathType::from(p.clone()));
+                    PathType::from(p)
                 } else {
-                    println!("path: {}", root);
-                    root.clone()
+                    let type_path = build_item_path(&root, PathType::from(t.type_name));
+                    println!("associated type name: {}", type_path);
+                    type_path
                 }
             } else {
-                println!("path: {}", root);
                 root.clone()
             };
 
