@@ -119,6 +119,7 @@ enum ParserContext {
     MethodCall,  // `.`
 }
 
+/// Struct representing the parsed tokens as an array of statements for analysis and processing.
 pub(crate) struct Program {
     pub(crate) statements: Vec<Statement>,
 }
@@ -218,9 +219,9 @@ impl Parser {
 
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Main parsing function that returns the parsed tokens as a `Module`.
+    /// Main parsing function that returns the parsed tokens as a `Program`.
     #[allow(dead_code)]
-    pub(crate) fn parse_module(&mut self) -> Result<Program, ErrorsEmitted> {
+    pub(crate) fn parse_tokens(&mut self) -> Result<Program, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
 
         // clear log messages, then log status info

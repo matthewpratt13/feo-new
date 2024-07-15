@@ -15,7 +15,7 @@ fn setup(
 ) -> Result<(SemanticAnalyser, Program), ()> {
     let mut parser = parser::test_utils::get_parser(input, LogLevel::Debug, print_tokens);
 
-    let module = match parser.parse_module() {
+    let module = match parser.parse_tokens() {
         Ok(m) => m,
         Err(_) => return Err(println!("{:#?}", parser.errors())),
     };
