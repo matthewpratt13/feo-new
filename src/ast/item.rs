@@ -159,7 +159,7 @@ impl fmt::Display for ImportTree {
                     paths.push(path.clone());
                 }
 
-                if segment_counter > 0 {
+                if segment_counter < segments.len() {
                     import_root = path.clone();
                 }
             }
