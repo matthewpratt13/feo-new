@@ -122,7 +122,7 @@ impl SemanticAnalyser {
         None
     }
 
-    fn analyse_module(&mut self, module: &Module, path: PathType) -> Result<(), ErrorsEmitted> {
+    fn analyse_file(&mut self, module: &Module, path: PathType) -> Result<(), ErrorsEmitted> {
         self.logger.info("starting semantic analysis ...");
 
         let module_path = if let Some(Scope {

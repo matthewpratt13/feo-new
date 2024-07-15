@@ -38,7 +38,7 @@ fn analyse_constant_reassign() {
     let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)
         .expect("unable to set up semantic analyser");
 
-    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+    match analyser.analyse_file(&module, PathType::from(Identifier::from(""))) {
         Ok(_) => println!("{:#?}", analyser.logger.messages()),
         Err(_) => panic!("{:#?}", analyser.logger.messages()),
     }
@@ -143,7 +143,7 @@ fn analyse_impl() -> Result<(), ()> {
 
     let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
 
-    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+    match analyser.analyse_file(&module, PathType::from(Identifier::from(""))) {
         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
         Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }
@@ -244,7 +244,7 @@ fn analyse_import_decl() -> Result<(), ()> {
 
     let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, Some(external_code))?;
 
-    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+    match analyser.analyse_file(&module, PathType::from(Identifier::from(""))) {
         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
         Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }
@@ -259,7 +259,7 @@ fn analyse_let_stmt() -> Result<(), ()> {
 
     let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
 
-    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+    match analyser.analyse_file(&module, PathType::from(Identifier::from(""))) {
         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
         Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }
@@ -312,7 +312,7 @@ fn analyse_method_call() {
     let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)
         .expect("unable to set up semantic analyser");
 
-    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+    match analyser.analyse_file(&module, PathType::from(Identifier::from(""))) {
         Ok(_) => println!("{:#?}", analyser.logger.messages()),
         Err(_) => panic!("{:#?}", analyser.logger.messages()),
     }
@@ -350,7 +350,7 @@ fn analyse_struct() -> Result<(), ()> {
 
     let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
 
-    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+    match analyser.analyse_file(&module, PathType::from(Identifier::from(""))) {
         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
         Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }
@@ -373,7 +373,7 @@ fn analyse_trait_def() -> Result<(), ()> {
 
     let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
 
-    match analyser.analyse_module(&module, PathType::from(Identifier::from(""))) {
+    match analyser.analyse_file(&module, PathType::from(Identifier::from(""))) {
         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
         Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }
