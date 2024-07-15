@@ -125,7 +125,7 @@ impl SemanticAnalyser {
     fn analyse_program(&mut self, program: &Program, path: PathType) -> Result<(), ErrorsEmitted> {
         self.logger.info("starting semantic analysis ...");
 
-        let module_path = if let Some(Scope {
+        let program_path = if let Some(Scope {
             scope_kind: ScopeKind::Lib,
             ..
         }) = self.scope_stack.last()
@@ -149,7 +149,7 @@ impl SemanticAnalyser {
             path
         };
 
-        self.enter_scope(ScopeKind::RootModule(module_path.to_string()));
+        self.enter_scope(ScopeKind::RootModule(program_path.to_string()));
 
         let mut module_items: Vec<Item> = Vec::new();
 
@@ -164,7 +164,7 @@ impl SemanticAnalyser {
             outer_attributes_opt: None,
             visibility: Visibility::Pub,
             kw_module: Keyword::Module,
-            module_name: module_path.type_name.clone(),
+            module_name: program_path.type_name.clone(),
             inner_attributes_opt: None,
             items_opt: {
                 if module_items.is_empty() {
@@ -179,7 +179,7 @@ impl SemanticAnalyser {
         let mut module_contents: SymbolTable = HashMap::new();
 
         module_contents.insert(
-            module_path.clone(),
+            program_path.clone(),
             Symbol::Module {
                 path: PathType::from(root_module.module_name.clone()),
                 module: root_module,
@@ -188,10 +188,10 @@ impl SemanticAnalyser {
         );
 
         self.module_registry
-            .insert(module_path.clone(), module_contents);
+            .insert(program_path.clone(), module_contents);
 
         for s in &program.statements {
-            self.analyse_stmt(s, &module_path).map_err(|e| {
+            self.analyse_stmt(s, &program_path).map_err(|e| {
                 self.log_error(e, &s.span());
                 ErrorsEmitted
             })?;
