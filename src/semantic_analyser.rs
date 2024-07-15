@@ -787,10 +787,10 @@ impl SemanticAnalyser {
             module_root.clone()
         };
 
-        let mut segment_counter = segments.len();
+        let mut segment_counter: usize = 0;
 
         for seg in segments.clone() {
-            segment_counter -= 1;
+            segment_counter += 1;
 
             let path = build_item_path(&import_root, seg.root);
 
@@ -806,7 +806,7 @@ impl SemanticAnalyser {
                     }
                 }
             } else {
-                if segment_counter != 1 {
+                if segment_counter == segments.len() {
                     paths.push(path.clone());
                 }
 
@@ -822,7 +822,7 @@ impl SemanticAnalyser {
         for p in paths {
             if let Some(m) = self.module_registry.get(&import_root).cloned() {
                 if let Some(s) = m.get(&p) {
-                    self.insert(PathType::from(p.type_name), s.clone())?;
+                    self.insert(PathType::from(p), s.clone())?;
                 } else {
                     return Err(SemanticErrorKind::UndefinedSymbol {
                         name: p.to_string(),
@@ -1103,11 +1103,11 @@ impl SemanticAnalyser {
 
                 let callee_path = PathType::from(PathExpr::from(callee));
 
-                let callee_path = if self.lookup(&callee_path).is_some() {
-                    callee_path
-                } else {
-                    build_item_path(root, callee_path)
-                };
+                // let callee_path = if self.lookup(&callee_path).is_some() {
+                //     callee_path
+                // } else {
+                //     build_item_path(root, callee_path)
+                // };
 
                 self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
             }

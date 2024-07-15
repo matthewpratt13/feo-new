@@ -136,10 +136,10 @@ impl fmt::Display for ImportTree {
             PathType::from(Identifier::from(""))
         };
 
-        let mut segment_counter = segments.len();
+        let mut segment_counter: usize = 0;
 
         for seg in segments.clone() {
-            segment_counter -= 1;
+            segment_counter += 1;
 
             let path = build_item_path(&import_root, seg.root);
 
@@ -155,7 +155,7 @@ impl fmt::Display for ImportTree {
                     }
                 }
             } else {
-                if segment_counter != 1 {
+                if segment_counter == segments.len() {
                     paths.push(path.clone());
                 }
 
