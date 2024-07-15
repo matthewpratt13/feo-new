@@ -570,29 +570,15 @@ impl SemanticAnalyser {
                     if let Some(v) = &t.associated_items_opt {
                         for item in v.iter() {
                             match item {
-                                TraitImplItem::AliasDecl(ad) => {
-                                    // let alias_impl_path = build_item_path(
-                                    //     &trait_impl_path,
-                                    //     PathType::from(ad.alias_name.clone()),
-                                    // );
+                                TraitImplItem::AliasDecl(ad) => self.analyse_stmt(
+                                    &Statement::Item(Item::AliasDecl(ad.clone())),
+                                    &trait_impl_path,
+                                )?,
 
-                                    self.analyse_stmt(
-                                        &Statement::Item(Item::AliasDecl(ad.clone())),
-                                        &trait_impl_path,
-                                    )?
-                                }
-
-                                TraitImplItem::ConstantDecl(cd) => {
-                                    // let constant_impl_path = build_item_path(
-                                    //     &trait_impl_path,
-                                    //     PathType::from(cd.constant_name.clone()),
-                                    // );
-
-                                    self.analyse_stmt(
-                                        &Statement::Item(Item::ConstantDecl(cd.clone())),
-                                        &trait_impl_path,
-                                    )?
-                                }
+                                TraitImplItem::ConstantDecl(cd) => self.analyse_stmt(
+                                    &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                    &trait_impl_path,
+                                )?,
 
                                 TraitImplItem::FunctionItem(fi) => {
                                     let function_impl_path = build_item_path(
@@ -803,6 +789,9 @@ impl SemanticAnalyser {
 
         // TODO: handle `super` and `self` path roots
         // TODO: handle public imports / re-exports
+
+        // TODO: how to insert associated items (e.g., constructors, other functions) when importing
+        // TODO: from another module ?
 
         for p in paths {
             if let Some(m) = self.module_registry.get(&import_root).cloned() {
@@ -1086,6 +1075,7 @@ impl SemanticAnalyser {
 
                 let callee_path = PathType::from(PathExpr::from(callee));
 
+                // !! throws an error if the call path is from another module (i.e., not the root)
                 let callee_path = if self.lookup(&callee_path).is_some() {
                     callee_path
                 } else {
@@ -1853,8 +1843,6 @@ impl SemanticAnalyser {
             Expression::Struct(s) => {
                 let path_type = build_item_path(root, PathType::from(s.struct_path.clone()));
 
-                // let path_type = root.clone();
-
                 println!("struct path: {}", path_type);
 
                 match self.lookup(&path_type).cloned() {
@@ -1981,7 +1969,7 @@ impl SemanticAnalyser {
                                 }
                                 _ => {
                                     self.analyse_expr(e, root)?;
-                                } // _ => (),
+                                }
                             },
                             _ => {
                                 self.analyse_stmt(stmt, root)?;

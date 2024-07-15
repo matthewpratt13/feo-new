@@ -266,7 +266,6 @@ fn analyse_let_stmt() -> Result<(), ()> {
 }
 
 #[test]
-#[ignore]
 fn analyse_method_call() {
     let input = r#"
     module foo {
