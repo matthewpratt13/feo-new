@@ -216,7 +216,7 @@ impl fmt::Display for PathSubset {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PubLibVis {
     pub(crate) kw_pub: Keyword,
-    pub(crate) kw_package: Keyword,
+    pub(crate) kw_lib: Keyword,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

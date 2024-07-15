@@ -43,7 +43,7 @@ impl Visibility {
 
                                 let pub_lib = PubLibVis {
                                     kw_pub: Keyword::Pub,
-                                    kw_package: kw_lib,
+                                    kw_lib,
                                 };
 
                                 Ok(Visibility::PubLib(pub_lib))

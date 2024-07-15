@@ -20,7 +20,7 @@ use crate::{
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
-    parser::{ty::build_item_path, Module},
+    parser::{ty::build_item_path, Program},
     span::{Span, Spanned},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
@@ -122,7 +122,7 @@ impl SemanticAnalyser {
         None
     }
 
-    fn analyse_file(&mut self, module: &Module, path: PathType) -> Result<(), ErrorsEmitted> {
+    fn analyse_program(&mut self, program: &Program, path: PathType) -> Result<(), ErrorsEmitted> {
         self.logger.info("starting semantic analysis ...");
 
         let module_path = if let Some(Scope {
@@ -153,7 +153,7 @@ impl SemanticAnalyser {
 
         let mut module_items: Vec<Item> = Vec::new();
 
-        module.statements.clone().into_iter().for_each(|s| {
+        program.statements.clone().into_iter().for_each(|s| {
             match s {
                 Statement::Item(i) => module_items.push(i),
                 _ => (),
@@ -190,7 +190,7 @@ impl SemanticAnalyser {
         self.module_registry
             .insert(module_path.clone(), module_contents);
 
-        for s in &module.statements {
+        for s in &program.statements {
             self.analyse_stmt(s, &module_path).map_err(|e| {
                 self.log_error(e, &s.span());
                 ErrorsEmitted

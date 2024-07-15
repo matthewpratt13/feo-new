@@ -119,7 +119,7 @@ enum ParserContext {
     MethodCall,  // `.`
 }
 
-pub(crate) struct Module {
+pub(crate) struct Program {
     pub(crate) statements: Vec<Statement>,
 }
 
@@ -220,7 +220,7 @@ impl Parser {
 
     /// Main parsing function that returns the parsed tokens as a `Module`.
     #[allow(dead_code)]
-    pub(crate) fn parse_module(&mut self) -> Result<Module, ErrorsEmitted> {
+    pub(crate) fn parse_module(&mut self) -> Result<Program, ErrorsEmitted> {
         let mut statements: Vec<Statement> = Vec::new();
 
         // clear log messages, then log status info
@@ -244,7 +244,7 @@ impl Parser {
         // log status info
         self.logger.info("reached end of file");
 
-        Ok(Module { statements })
+        Ok(Program { statements })
     }
 
     ///////////////////////////////////////////////////////////////////////////
