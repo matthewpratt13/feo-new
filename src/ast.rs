@@ -796,16 +796,6 @@ impl From<ValueExpr> for Expression {
             ValueExpr::NoneExpr(n) => Expression::NoneExpr(n),
             ValueExpr::ResultExpr(r) => Expression::ResultExpr(r),
         }
-
-        // let value_clone = value.clone();
-
-        // match <ValueExpr as TryInto<Expression>>::try_into(value) {
-        //     Ok(expr) => Ok(expr),
-        //     Err(_) => Err(ParserErrorKind::ConversionError {
-        //         from: format!("`{:?}`", value_clone),
-        //         into: "`Expression`".to_string(),
-        //     }),
-        // }
     }
 }
 

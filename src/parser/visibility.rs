@@ -22,7 +22,7 @@ impl Visibility {
                         };
                         parser.next_token();
 
-                        let kw_package = match parser.current_token() {
+                        let kw_lib = match parser.current_token() {
                             Some(Token::Lib { .. }) => {
                                 parser.next_token();
                                 Ok(Keyword::Lib)
@@ -41,12 +41,12 @@ impl Visibility {
                             Some(Token::RParen { .. }) => {
                                 parser.next_token();
 
-                                let pub_package = PubLibVis {
+                                let pub_lib = PubLibVis {
                                     kw_pub: Keyword::Pub,
-                                    kw_package,
+                                    kw_package: kw_lib,
                                 };
 
-                                Ok(Visibility::PubLib(pub_package))
+                                Ok(Visibility::PubLib(pub_lib))
                             }
                             Some(Token::EOF) | None => {
                                 parser.log_unmatched_delimiter(&open_paren);
