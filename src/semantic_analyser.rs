@@ -974,35 +974,7 @@ impl SemanticAnalyser {
 
                 // check if path expression's type is that of an existing type and analyse
                 match self.lookup(&receiver_path) {
-                    Some(Symbol::Struct { path, .. }) => {
-                        if *path == receiver_path {
-                            let method_path =
-                                build_item_path(&path, PathType::from(mc.method_name.clone()));
-                            self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
-                        } else {
-                            Err(SemanticErrorKind::TypeMismatchVariable {
-                                name: receiver_path.type_name,
-                                expected: path.to_string(),
-                                found: format!("`{}`", receiver_type),
-                            })
-                        }
-                    }
-
-                    Some(Symbol::TupleStruct { path, .. }) => {
-                        if *path == receiver_path {
-                            let method_path =
-                                build_item_path(&path, PathType::from(mc.method_name.clone()));
-                            self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
-                        } else {
-                            Err(SemanticErrorKind::TypeMismatchVariable {
-                                name: receiver_path.type_name,
-                                expected: path.to_string(),
-                                found: format!("`{}`", receiver_type),
-                            })
-                        }
-                    }
-
-                    Some(Symbol::Enum { path, .. }) => {
+                    Some(Symbol::Struct { path, .. } | Symbol::TupleStruct { path, .. }) => {
                         if *path == receiver_path {
                             let method_path =
                                 build_item_path(&path, PathType::from(mc.method_name.clone()));
