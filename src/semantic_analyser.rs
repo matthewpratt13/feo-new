@@ -12,11 +12,12 @@ use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 
 use crate::{
     ast::{
-        AssigneeExpr, BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float,
-        FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportDecl,
-        InferredType, InherentImplItem, Int, Item, Keyword, Literal, MethodCallExpr, ModuleItem,
-        NonePatt, PathExpr, PathRoot, PathType, Pattern, SelfType, Statement, Str, TraitDefItem,
-        TraitImplItem, Type, UInt, UnaryOp, UnderscoreExpr, Unit, Visibility,
+        ArrayExpr, AssigneeExpr, BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression,
+        Float, FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier,
+        ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, MethodCallExpr,
+        ModuleItem, NonePatt, PathExpr, PathRoot, PathType, Pattern, ResultExpr, SelfType,
+        SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, UnderscoreExpr,
+        Unit, Visibility,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -996,24 +997,46 @@ impl SemanticAnalyser {
 
                     Some(Symbol::Variable { var_type, data, .. }) => {
                         if let Some(d) = data {
-                            // TODO: can also be `Vec`, `Option` and `Result` built-in types
-                            if let Type::Mapping { .. } = var_type {
-                                match d {
+                            match var_type {
+                                Type::Vec { .. } => match d {
+                                    Expression::Array(a) => self.analyse_vec_method(mc, &a, root),
+                                    _ => Err(SemanticErrorKind::UnexpectedType {
+                                        expected: "array".to_string(),
+                                        found: self.analyse_expr(&d, root)?.to_string(),
+                                    }),
+                                },
+                                Type::Mapping { .. } => match d {
                                     Expression::Mapping(m) => {
                                         self.analyse_mapping_method(mc, m.to_hashmap(), root)
                                     }
-                                    _ => {
-                                        return Err(SemanticErrorKind::UnexpectedType {
-                                            expected: "mapping".to_string(),
-                                            found: self.analyse_expr(&d, root)?.to_string(),
-                                        })
+                                    _ => Err(SemanticErrorKind::UnexpectedType {
+                                        expected: "`Mapping`".to_string(),
+                                        found: self.analyse_expr(&d, root)?.to_string(),
+                                    }),
+                                },
+                                Type::Option { .. } => match d {
+                                    Expression::SomeExpr(s) => {
+                                        self.analyse_option_method(mc, &s, root)
                                     }
-                                }
-                            } else {
-                                Err(SemanticErrorKind::UnexpectedType {
-                                    expected: "mapping".to_string(),
-                                    found: var_type.to_string(),
-                                })
+
+                                    _ => Err(SemanticErrorKind::UnexpectedType {
+                                        expected: "`Option`".to_string(),
+                                        found: self.analyse_expr(&d, root)?.to_string(),
+                                    }),
+                                },
+                                Type::Result { .. } => match d {
+                                    Expression::ResultExpr(r) => {
+                                        self.analyse_result_method(mc, &r, root)
+                                    }
+                                    _ => Err(SemanticErrorKind::UnexpectedType {
+                                        expected: "`Result`".to_string(),
+                                        found: self.analyse_expr(&d, root)?.to_string(),
+                                    }),
+                                },
+                                _ => Err(SemanticErrorKind::UnexpectedType {
+                                    expected: "`Vec`, `Mapping, `Option` or `Result`".to_string(),
+                                    found: self.analyse_expr(&d, root)?.to_string(),
+                                }),
                             }
                         } else {
                             Err(SemanticErrorKind::MissingValue {
@@ -2213,53 +2236,6 @@ impl SemanticAnalyser {
         }
     }
 
-    // TODO: add similar code for `Vec` (e.g., `push()`, `pop()`), `Option` and `Result` methods 
-    // TODO: (e.g., `unwrap()`)
-    fn analyse_mapping_method(
-        &mut self,
-        method_call_expr: &MethodCallExpr,
-        mapping: HashMap<Pattern, Expression>,
-        root: &PathType,
-    ) -> Result<Type, SemanticErrorKind> {
-        if Identifier::from("get") == method_call_expr.method_name
-            || Identifier::from("insert") == method_call_expr.method_name
-        {
-            if let Some(a) = &method_call_expr.args_opt {
-                if a.len() == 1 {
-                    let key = Pattern::try_from(a.get(0).unwrap().clone()).unwrap_or(
-                        Pattern::NonePatt(NonePatt {
-                            kw_none: Keyword::None,
-                        }),
-                    );
-
-                    if let Some(e) = mapping.get(&key) {
-                        Ok(Type::Option {
-                            inner_type: Box::new(self.analyse_expr(e, root)?),
-                        })
-                    } else {
-                        Err(SemanticErrorKind::MissingValue {
-                            expected: format!("value to match key: {}", key),
-                        })
-                    }
-                } else {
-                    Err(SemanticErrorKind::ArgumentCountMismatch {
-                        name: method_call_expr.method_name.clone(),
-                        expected: 1,
-                        found: a.len(),
-                    })
-                }
-            } else {
-                Err(SemanticErrorKind::MissingValue {
-                    expected: "function argument".to_string(),
-                })
-            }
-        } else {
-            Err(SemanticErrorKind::UndefinedFunction {
-                name: method_call_expr.method_name.clone(),
-            })
-        }
-    }
-
     fn analyse_call_or_method_call_expr(
         &mut self,
         path: PathType,
@@ -2322,6 +2298,81 @@ impl SemanticAnalyser {
                 found: s.to_string(),
             }),
         }
+    }
+
+    // TODO: add `push()` and `pop()` methods
+    fn analyse_vec_method(
+        &mut self,
+        method_call_expr: &MethodCallExpr,
+        vec: &ArrayExpr,
+        root: &PathType,
+    ) -> Result<Type, SemanticErrorKind> {
+        todo!()
+    }
+
+    fn analyse_mapping_method(
+        &mut self,
+        method_call_expr: &MethodCallExpr,
+        mapping: HashMap<Pattern, Expression>,
+        root: &PathType,
+    ) -> Result<Type, SemanticErrorKind> {
+        if Identifier::from("get") == method_call_expr.method_name
+            || Identifier::from("insert") == method_call_expr.method_name
+        {
+            if let Some(a) = &method_call_expr.args_opt {
+                if a.len() == 1 {
+                    let key = Pattern::try_from(a.get(0).unwrap().clone()).unwrap_or(
+                        Pattern::NonePatt(NonePatt {
+                            kw_none: Keyword::None,
+                        }),
+                    );
+
+                    if let Some(e) = mapping.get(&key) {
+                        Ok(Type::Option {
+                            inner_type: Box::new(self.analyse_expr(e, root)?),
+                        })
+                    } else {
+                        Err(SemanticErrorKind::MissingValue {
+                            expected: format!("value to match key: {}", key),
+                        })
+                    }
+                } else {
+                    Err(SemanticErrorKind::ArgumentCountMismatch {
+                        name: method_call_expr.method_name.clone(),
+                        expected: 1,
+                        found: a.len(),
+                    })
+                }
+            } else {
+                Err(SemanticErrorKind::MissingValue {
+                    expected: "function argument".to_string(),
+                })
+            }
+        } else {
+            Err(SemanticErrorKind::UndefinedFunction {
+                name: method_call_expr.method_name.clone(),
+            })
+        }
+    }
+
+    // TODO: add `unwrap()` and `expect()` methods
+    fn analyse_option_method(
+        &mut self,
+        method_call_expr: &MethodCallExpr,
+        option: &SomeExpr,
+        root: &PathType,
+    ) -> Result<Type, SemanticErrorKind> {
+        todo!()
+    }
+
+    // TODO: add `unwrap()` and `expect()` methods
+    fn analyse_result_method(
+        &mut self,
+        method_call_expr: &MethodCallExpr,
+        result: &ResultExpr,
+        root: &PathType,
+    ) -> Result<Type, SemanticErrorKind> {
+        todo!()
     }
 
     fn analyse_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
