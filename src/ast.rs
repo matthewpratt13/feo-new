@@ -1110,6 +1110,130 @@ pub(crate) enum Pattern {
     ResultPatt(ResultPatt),
 }
 
+impl TryFrom<Expression> for Pattern {
+    type Error = ParserErrorKind;
+
+    fn try_from(value: Expression) -> Result<Self, Self::Error> {
+        match value {
+            Expression::Literal(l) => Ok(Pattern::Literal(l)),
+            Expression::Path(p) => Ok(Pattern::PathPatt(PathPatt {
+                path_root: p.path_root,
+                tree_opt: p.tree_opt,
+            })),
+            Expression::Reference(r) => Ok(Pattern::ReferencePatt(ReferencePatt {
+                reference_op: r.reference_op,
+                pattern: Box::new(Pattern::try_from(*r.expression)?),
+            })),
+            Expression::Grouped(g) => Ok(Pattern::try_from(*g.inner_expression)?),
+            Expression::Range(r) => {
+                if r.from_expr_opt.is_none() && r.to_expr_opt.is_none() {
+                    if r.range_op == RangeOp::RangeExclusive {
+                        Ok(Pattern::RestPatt(RestPatt {
+                            dbl_dot: r.range_op,
+                        }))
+                    } else {
+                        Err(ParserErrorKind::UnexpectedRangeOp {
+                            expected: format!("`{}`", RangeOp::RangeExclusive),
+                            found: format!("`{}`", r.range_op),
+                        })
+                    }
+                } else {
+                    Ok(Pattern::RangePatt(RangePatt {
+                        from_pattern_opt: {
+                            if let Some(e) = r.from_expr_opt {
+                                Some(Box::new(Pattern::try_from(Expression::from(*e))?))
+                            } else {
+                                None
+                            }
+                        },
+                        range_op: r.range_op,
+                        to_pattern_opt: {
+                            if let Some(e) = r.to_expr_opt {
+                                Some(Box::new(Pattern::try_from(Expression::from(*e))?))
+                            } else {
+                                None
+                            }
+                        },
+                    }))
+                }
+            }
+            Expression::Underscore(u) => Ok(Pattern::WildcardPatt(WildcardPatt {
+                underscore: u.underscore,
+            })),
+            Expression::Tuple(t) => Ok(Pattern::TuplePatt(TuplePatt {
+                tuple_patt_elements: {
+                    let mut elements: Vec<Pattern> = Vec::new();
+
+                    for te in t.tuple_elements.elements {
+                        elements.push(Pattern::try_from(te)?)
+                    }
+
+                    let final_element_opt = if let Some(e) = t.tuple_elements.final_element_opt {
+                        Some(Box::new(Pattern::try_from(*e)?))
+                    } else {
+                        None
+                    };
+
+                    TuplePattElements {
+                        elements,
+                        final_element_opt,
+                    }
+                },
+            })),
+            Expression::Struct(s) => Ok(Pattern::StructPatt(StructPatt {
+                struct_path: PathPatt {
+                    path_root: s.struct_path.path_root,
+                    tree_opt: s.struct_path.tree_opt,
+                },
+                struct_fields_opt: {
+                    if let Some(sf) = s.struct_fields_opt {
+                        let mut struct_patt_fields: Vec<StructPattField> = Vec::new();
+                        {
+                            for f in sf {
+                                struct_patt_fields.push(StructPattField {
+                                    field_name: f.field_name,
+                                    field_value: Pattern::try_from(*f.field_value)?,
+                                })
+                            }
+                        };
+
+                        Some(struct_patt_fields)
+                    } else {
+                        None
+                    }
+                },
+            })),
+            Expression::SomeExpr(s) => Ok(Pattern::SomePatt(SomePatt {
+                kw_some: s.kw_some,
+                pattern: {
+                    let expr = Expression::Grouped(*s.expression);
+                    let patt = Pattern::try_from(expr)?;
+
+                    Box::new(GroupedPatt {
+                        inner_pattern: Box::new(patt),
+                    })
+                },
+            })),
+            Expression::NoneExpr(n) => Ok(Pattern::NonePatt(NonePatt { kw_none: n.kw_none })),
+            Expression::ResultExpr(r) => Ok(Pattern::ResultPatt(ResultPatt {
+                kw_ok_or_err: r.kw_ok_or_err,
+                pattern: {
+                    let expr = Expression::Grouped(*r.expression);
+                    let patt = Pattern::try_from(expr)?;
+
+                    Box::new(GroupedPatt {
+                        inner_pattern: Box::new(patt),
+                    })
+                },
+            })),
+            _ => Err(ParserErrorKind::UnexpectedExpression {
+                expected: "pattern-like expression".to_string(),
+                found: format!("{}", value),
+            }),
+        }
+    }
+}
+
 impl fmt::Display for Pattern {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.clone() {

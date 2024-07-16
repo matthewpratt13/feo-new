@@ -13,10 +13,10 @@ use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 use crate::{
     ast::{
         AssigneeExpr, BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float,
-        FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportDecl,
-        InferredType, InherentImplItem, Int, Item, Keyword, Literal, ModuleItem, PathExpr,
-        PathRoot, PathType, Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type,
-        UInt, UnaryOp, UnderscoreExpr, Unit, Visibility,
+        FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier,
+        IdentifierPatt, ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal,
+        ModuleItem, NonePatt, PathExpr, PathRoot, PathType, Pattern, SelfType, Statement, Str,
+        TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, UnderscoreExpr, Unit, Visibility,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -962,7 +962,7 @@ impl SemanticAnalyser {
 
             Expression::MethodCall(mc) => {
                 // TODO: what happens when we call object-specific methods like `get()` (mapping) ?
-                // TODO: these should be in the standard library, but can we access them from 
+                // TODO: these should be in the standard library, but can we access them from
                 // TODO: here (i.e., in analysis, before compilation) ?
                 // TODO: we need to find a way to interpret a `get()` call correctly and apply it
                 // TODO: to an existing mapping in the symbol tree, in order to type-check, as one
@@ -991,6 +991,46 @@ impl SemanticAnalyser {
                                 expected: path.to_string(),
                                 found: format!("`{}`", receiver_type),
                             })
+                        }
+                    }
+
+                    Some(Symbol::Variable {
+                        name,
+                        var_type,
+                        data,
+                    }) => {
+                        if let Some(d) = data {
+                            if let Type::Mapping { .. } = var_type {
+                                let mapping = match d {
+                                    Expression::Mapping(m) => m.to_hashmap(),
+                                    _ => todo!(),
+                                };
+
+                                if Identifier::from("get") == mc.method_name {
+                                    if let Some(a) = mc.args_opt {
+                                        if a.len() == 1 {
+                                            let key = Pattern::try_from(a.get(0).unwrap().clone())
+                                                .unwrap_or(Pattern::NonePatt(NonePatt {
+                                                    kw_none: Keyword::None,
+                                                }));
+
+                                            if let Some(e) = mapping.get(&key) {
+                                                Ok(Type::Option {
+                                                    inner_type: Box::new(
+                                                        self.analyse_expr(e, root)?,
+                                                    ),
+                                                })
+                                            } else {
+                                                // no value at that key
+                                            }
+                                        } else {
+                                            // too many arguments
+                                        }
+                                    } else {
+                                        // no arguments found
+                                    }
+                                }
+                            }
                         }
                     }
 

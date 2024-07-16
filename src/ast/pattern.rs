@@ -1,6 +1,6 @@
 use core::fmt;
 
-use super::{Identifier, Keyword, PathRoot, Pattern, RangeOp, ReferenceOp, Separator};
+use super::{Identifier, Keyword, PathRoot, Pattern, RangeOp, ReferenceOp};
 
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES
@@ -17,7 +17,7 @@ pub(crate) struct StructPattField {
 /// Struct representing a collection of elements in a tuple pattern.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct TuplePattElements {
-    pub(crate) elements: Vec<(Pattern, Separator)>, // single-element tuple must have trailing comma
+    pub(crate) elements: Vec<Pattern>,
     pub(crate) final_element_opt: Option<Box<Pattern>>,
 }
 
