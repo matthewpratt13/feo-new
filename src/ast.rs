@@ -366,7 +366,6 @@ impl fmt::Display for ReferenceOp {
 /// Enum representing the different separators used in AST nodes.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum Separator {
-    Comma,              // used in tuples
     ColonColonAsterisk, // path wildcard terminator
 }
 
