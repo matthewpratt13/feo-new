@@ -225,7 +225,7 @@ impl fmt::Display for FunctionPtr {
 }
 
 /// Unit struct that represents the `Self` type.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq, PartialOrd, Ord)]
 pub struct SelfType;
 
 impl fmt::Display for SelfType {

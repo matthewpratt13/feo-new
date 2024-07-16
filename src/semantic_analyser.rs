@@ -12,11 +12,11 @@ use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
-        FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportDecl, InferredType,
-        InherentImplItem, Int, Item, Keyword, Literal, ModuleItem, PathExpr, PathRoot, PathType,
-        Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, Unit,
-        Visibility,
+        AssigneeExpr, BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float,
+        FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportDecl,
+        InferredType, InherentImplItem, Int, Item, Keyword, Literal, ModuleItem, PathExpr,
+        PathRoot, PathType, Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type,
+        UInt, UnaryOp, UnderscoreExpr, Unit, Visibility,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -274,6 +274,7 @@ impl SemanticAnalyser {
                     | Type::Result { .. } => Symbol::Variable {
                         name: ls.assignee.name.clone(),
                         var_type: value_type.clone(),
+                        data: ls.value_opt.clone(),
                     },
                     Type::UserDefined(pt) => {
                         let type_path = build_item_path(root, pt.clone());
@@ -283,6 +284,7 @@ impl SemanticAnalyser {
                             None => Symbol::Variable {
                                 name: ls.assignee.name.clone(),
                                 var_type: value_type,
+                                data: ls.value_opt.clone(),
                             },
                         }
                     }
@@ -382,6 +384,18 @@ impl SemanticAnalyser {
                         Symbol::Variable {
                             name: s.var_name.clone(),
                             var_type: s.var_type.clone(),
+                            data: {
+                                if s.assignee_opt.is_some() {
+                                    Some(Expression::from(*s.assignee_opt.clone().unwrap_or(
+                                        Box::new(AssigneeExpr::UnderscoreExpr(UnderscoreExpr {
+                                            underscore: Identifier::from("_"),
+                                            span: Span::new("", 0, 0),
+                                        })),
+                                    )))
+                                } else {
+                                    None
+                                }
+                            },
                         },
                     )?;
                 }
@@ -691,6 +705,13 @@ impl SemanticAnalyser {
                     Symbol::Variable {
                         name: param.param_name(),
                         var_type: param_type,
+                        data: {
+                            if f.block_opt.is_some() {
+                                Some(Expression::Block(f.block_opt.clone().unwrap()))
+                            } else {
+                                None
+                            }
+                        },
                     },
                 )?;
             }
@@ -1037,7 +1058,7 @@ impl SemanticAnalyser {
                         None => Ok(Type::UnitType(Unit)),
                     },
 
-                    Some(Symbol::Variable { name, var_type }) => {
+                    Some(Symbol::Variable { name, var_type, .. }) => {
                         if name == Identifier::from("self") {
                             if let Some(Symbol::Struct { struct_def, .. }) =
                                 self.lookup(&PathType::from(var_type))
@@ -1770,6 +1791,7 @@ impl SemanticAnalyser {
                             Symbol::Variable {
                                 name: param.param_name(),
                                 var_type: param_type,
+                                data: Some(Expression::Closure(c.clone())),
                             },
                         )?;
                     }

@@ -1092,7 +1092,7 @@ impl fmt::Display for AssigneeExpr {
 /// Enum representing patterns, which are syntactically similar to `Expression`.
 /// Patterns are used to match values against structures, as well as within
 /// variable declarations and as function parameters.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum Pattern {
     Literal(Literal),
     IdentifierPatt(IdentifierPatt),

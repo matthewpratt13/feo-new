@@ -2,8 +2,7 @@ use core::fmt;
 use std::collections::HashMap;
 
 use crate::ast::{
-    EnumDef, FunctionItem, Identifier, ModuleItem, PathType, StructDef, TraitDef, TupleStructDef,
-    Type, Unit, Visibility,
+    EnumDef, Expression, FunctionItem, Identifier, ModuleItem, PathType, StructDef, TraitDef, TupleStructDef, Type, Unit, Visibility
 };
 
 pub(crate) type SymbolTable = HashMap<PathType, Symbol>;
@@ -25,6 +24,7 @@ pub(crate) enum Symbol {
     Variable {
         name: Identifier,
         var_type: Type,
+        data: Option<Expression>,
     },
     Struct {
         path: PathType,
