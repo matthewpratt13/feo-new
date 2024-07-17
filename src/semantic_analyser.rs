@@ -2304,7 +2304,7 @@ impl SemanticAnalyser {
         vec: &ArrayExpr,
         root: &PathType,
     ) -> Result<Type, SemanticErrorKind> {
-        self.analyse_expr(&Expression::MethodCall(method_call_expr.clone()), root)?;
+        self.analyse_expr(&Expression::Array(vec.clone()), root)?;
 
         if Identifier::from("get") == method_call_expr.method_name
             || Identifier::from("remove") == method_call_expr.method_name
@@ -2459,8 +2459,6 @@ impl SemanticAnalyser {
         option: &SomeExpr,
         root: &PathType,
     ) -> Result<Type, SemanticErrorKind> {
-        self.analyse_expr(&Expression::MethodCall(method_call_expr.clone()), root)?;
-
         if Identifier::from("unwrap") == method_call_expr.method_name {
             if let Some(a) = &method_call_expr.args_opt {
                 return Err(SemanticErrorKind::ArgumentCountMismatch {
@@ -2513,8 +2511,6 @@ impl SemanticAnalyser {
         result: &ResultExpr,
         root: &PathType,
     ) -> Result<Type, SemanticErrorKind> {
-        self.analyse_expr(&Expression::MethodCall(method_call_expr.clone()), root)?;
-
         if Identifier::from("unwrap") == method_call_expr.method_name {
             if let Some(a) = &method_call_expr.args_opt {
                 return Err(SemanticErrorKind::ArgumentCountMismatch {
