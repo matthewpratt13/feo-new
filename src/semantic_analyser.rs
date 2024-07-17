@@ -962,12 +962,6 @@ impl SemanticAnalyser {
             },
 
             Expression::MethodCall(mc) => {
-                // TODO: what happens when we call object-specific methods like `get()` (mapping) ?
-                // TODO: these should be in the standard library, but can we access them from
-                // TODO: here (i.e., in analysis, before compilation) ?
-                // TODO: we need to find a way to interpret a `get()` call correctly and apply it
-                // TODO: to an existing mapping in the symbol tree, in order to type-check, as one
-                // TODO: would with index and tuple index expressions before further processing
                 let receiver = wrap_into_expression(*mc.receiver.clone());
 
                 let receiver_type = self.analyse_expr(&receiver, root)?;
