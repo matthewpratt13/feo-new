@@ -14,10 +14,10 @@ use crate::{
     ast::{
         ArrayExpr, AssigneeExpr, BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression,
         Float, FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier,
-        ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, MethodCallExpr,
-        ModuleItem, NonePatt, PathExpr, PathRoot, PathType, Pattern, ResultExpr, SelfType,
-        SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp, UnderscoreExpr,
-        Unit, Visibility,
+        ImportDecl, IndexExpr, InferredType, InherentImplItem, Int, Item, Keyword, Literal,
+        MethodCallExpr, ModuleItem, NoneExpr, NonePatt, PathExpr, PathRoot, PathType, Pattern,
+        ResultExpr, SelfType, SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt,
+        UnaryOp, UnderscoreExpr, Unit, Visibility,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -1007,6 +1007,8 @@ impl SemanticAnalyser {
                                 },
                                 Type::Mapping { .. } => match d {
                                     Expression::Mapping(m) => {
+                                        self.analyse_expr(&Expression::Mapping(m.clone()), root)?;
+
                                         self.analyse_mapping_method(mc, m.to_hashmap(), root)
                                     }
                                     _ => Err(SemanticErrorKind::UnexpectedType {
@@ -1018,6 +1020,10 @@ impl SemanticAnalyser {
                                     Expression::SomeExpr(s) => {
                                         self.analyse_option_method(mc, &s, root)
                                     }
+
+                                    Expression::NoneExpr(n) => Ok(Type::Option {
+                                        inner_type: Box::new(Type::UnitType(Unit)),
+                                    }),
 
                                     _ => Err(SemanticErrorKind::UnexpectedType {
                                         expected: "`Option`".to_string(),
@@ -2300,16 +2306,112 @@ impl SemanticAnalyser {
         }
     }
 
-    // TODO: add `push()` and `pop()` methods
     fn analyse_vec_method(
         &mut self,
         method_call_expr: &MethodCallExpr,
         vec: &ArrayExpr,
         root: &PathType,
     ) -> Result<Type, SemanticErrorKind> {
-        todo!()
+        self.analyse_expr(&Expression::MethodCall(method_call_expr.clone()), root)?;
+
+        if Identifier::from("get") == method_call_expr.method_name
+            || Identifier::from("remove") == method_call_expr.method_name
+        {
+            if let Some(a) = &method_call_expr.args_opt {
+                if a.len() == 1 {
+                    let expr = a.get(0).cloned().unwrap_or(Expression::NoneExpr(NoneExpr {
+                        kw_none: Keyword::None,
+                        span: Span::new("", 0, 0),
+                    }));
+
+                    let index = if let Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) =
+                        self.analyse_expr(&expr, root)?
+                    {
+                        match expr {
+                            Expression::Literal(ref l) => match l {
+                                Literal::UInt { value, .. } => value,
+                                _ => {
+                                    return Err(SemanticErrorKind::TypeMismatchValues {
+                                        expected: "unsigned integer".to_string(),
+                                        found: self.analyse_expr(&expr, root)?.to_string(),
+                                    })
+                                }
+                            },
+                            _ => {
+                                return Err(SemanticErrorKind::UnexpectedExpression {
+                                    expected: "unsigned integer literal expression".to_string(),
+                                    found: expr.to_string(),
+                                })
+                            }
+                        }
+                    } else {
+                        return Err(SemanticErrorKind::TypeMismatchValues {
+                            expected: "unsigned integer".to_string(),
+                            found: self.analyse_expr(&expr, root)?.to_string(),
+                        });
+                    };
+
+                    let array = if let Some(v) = vec.elements_opt.clone() {
+                        v
+                    } else {
+                        Vec::new()
+                    };
+
+                    if let Some(e) = array.get(index.to_usize()) {
+                        Ok(Type::Option {
+                            inner_type: Box::new(self.analyse_expr(e, root)?),
+                        })
+                    } else {
+                        Err(SemanticErrorKind::MissingValue {
+                            expected: format!("element at index: {}", index),
+                        })
+                    }
+                } else {
+                    Err(SemanticErrorKind::ArgumentCountMismatch {
+                        name: method_call_expr.method_name.clone(),
+                        expected: 1,
+                        found: a.len(),
+                    })
+                }
+            } else {
+                Err(SemanticErrorKind::MissingValue {
+                    expected: "function argument".to_string(),
+                })
+            }
+        } else if Identifier::from("pop") == method_call_expr.method_name
+            || Identifier::from("last") == method_call_expr.method_name
+        {
+            if let Some(a) = &method_call_expr.args_opt {
+                return Err(SemanticErrorKind::ArgumentCountMismatch {
+                    name: method_call_expr.method_name.clone(),
+                    expected: 0,
+                    found: a.len(),
+                });
+            }
+
+            if let Some(v) = &vec.elements_opt {
+                if let Some(e) = v.last() {
+                    Ok(Type::Option {
+                        inner_type: Box::new(self.analyse_expr(e, root)?),
+                    })
+                } else {
+                    Err(SemanticErrorKind::MissingValue {
+                        expected: "final array element".to_string(),
+                    })
+                }
+            } else {
+                Err(SemanticErrorKind::MissingValue {
+                    expected: "array elements".to_string(),
+                })
+            }
+        } else {
+            Err(SemanticErrorKind::UndefinedFunction {
+                name: method_call_expr.method_name.clone(),
+            })
+        }
     }
 
+    // type-check values taken / produced by method calls (i.e., return values)
     fn analyse_mapping_method(
         &mut self,
         method_call_expr: &MethodCallExpr,
@@ -2317,7 +2419,7 @@ impl SemanticAnalyser {
         root: &PathType,
     ) -> Result<Type, SemanticErrorKind> {
         if Identifier::from("get") == method_call_expr.method_name
-            || Identifier::from("insert") == method_call_expr.method_name
+            || Identifier::from("remove") == method_call_expr.method_name
         {
             if let Some(a) = &method_call_expr.args_opt {
                 if a.len() == 1 {
