@@ -41,9 +41,8 @@ impl ParseConstructExpr for MappingExpr {
     }
 }
 
-#[allow(dead_code)]
 impl MappingExpr {
-    pub fn to_hashmap(&self) -> HashMap<Pattern, Expression> {
+    pub(crate) fn to_hashmap(&self) -> HashMap<Pattern, Expression> {
         let mut data: HashMap<Pattern, Expression> = HashMap::new();
 
         if let Some(v) = &self.pairs_opt {
@@ -53,14 +52,6 @@ impl MappingExpr {
         }
 
         data
-    }
-
-    pub fn get(&self, key: &Pattern) -> Option<Expression> {
-        self.to_hashmap().get(key).cloned()
-    }
-
-    pub fn insert(&mut self, key: Pattern, value: Expression) -> Option<Expression> {
-        self.to_hashmap().insert(key, value)
     }
 }
 

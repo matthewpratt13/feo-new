@@ -14,10 +14,10 @@ use crate::{
     ast::{
         ArrayExpr, AssigneeExpr, BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression,
         Float, FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier,
-        ImportDecl, IndexExpr, InferredType, InherentImplItem, Int, Item, Keyword, Literal,
-        MethodCallExpr, ModuleItem, NoneExpr, NonePatt, PathExpr, PathRoot, PathType, Pattern,
-        ResultExpr, SelfType, SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt,
-        UnaryOp, UnderscoreExpr, Unit, Visibility,
+        ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, MethodCallExpr,
+        ModuleItem, NoneExpr, NonePatt, PathExpr, PathRoot, PathType, Pattern, ResultExpr,
+        SelfType, SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp,
+        UnderscoreExpr, Unit, Visibility,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -1021,7 +1021,7 @@ impl SemanticAnalyser {
                                         self.analyse_option_method(mc, &s, root)
                                     }
 
-                                    Expression::NoneExpr(n) => Ok(Type::Option {
+                                    Expression::NoneExpr(_) => Ok(Type::Option {
                                         inner_type: Box::new(Type::UnitType(Unit)),
                                     }),
 
@@ -2358,9 +2358,13 @@ impl SemanticAnalyser {
                     };
 
                     if let Some(e) = array.get(index.to_usize()) {
-                        Ok(Type::Option {
-                            inner_type: Box::new(self.analyse_expr(e, root)?),
-                        })
+                        if method_call_expr.method_name == Identifier::from("remove") {
+                            self.analyse_expr(e, root)
+                        } else {
+                            Ok(Type::Option {
+                                inner_type: Box::new(self.analyse_expr(e, root)?),
+                            })
+                        }
                     } else {
                         Err(SemanticErrorKind::MissingValue {
                             expected: format!("element at index: {}", index),
@@ -2447,7 +2451,7 @@ impl SemanticAnalyser {
                 }
             } else {
                 Err(SemanticErrorKind::MissingValue {
-                    expected: "function argument".to_string(),
+                    expected: "key".to_string(),
                 })
             }
         } else {
@@ -2457,24 +2461,112 @@ impl SemanticAnalyser {
         }
     }
 
-    // TODO: add `unwrap()` and `expect()` methods
     fn analyse_option_method(
         &mut self,
         method_call_expr: &MethodCallExpr,
         option: &SomeExpr,
         root: &PathType,
     ) -> Result<Type, SemanticErrorKind> {
-        todo!()
+        self.analyse_expr(&Expression::MethodCall(method_call_expr.clone()), root)?;
+
+        if Identifier::from("unwrap") == method_call_expr.method_name {
+            if let Some(a) = &method_call_expr.args_opt {
+                return Err(SemanticErrorKind::ArgumentCountMismatch {
+                    name: method_call_expr.method_name.clone(),
+                    expected: 0,
+                    found: a.len(),
+                });
+            }
+
+            self.analyse_expr(&Expression::SomeExpr(option.clone()), root)
+        } else if Identifier::from("expect") == method_call_expr.method_name {
+            if let Some(a) = &method_call_expr.args_opt {
+                if a.len() == 1 {
+                    let expr = a.get(0).cloned().unwrap_or(Expression::NoneExpr(NoneExpr {
+                        kw_none: Keyword::None,
+                        span: Span::new("", 0, 0),
+                    }));
+
+                    if let Type::Str { .. } = self.analyse_expr(&expr, root)? {
+                        self.analyse_expr(&Expression::SomeExpr(option.clone()), root)
+                    } else {
+                        Err(SemanticErrorKind::TypeMismatchArgument {
+                            name: Identifier::from("msg"),
+                            expected: "str".to_string(),
+                            found: self.analyse_expr(&expr, root)?.to_string(),
+                        })
+                    }
+                } else {
+                    Err(SemanticErrorKind::ArgumentCountMismatch {
+                        name: method_call_expr.method_name.clone(),
+                        expected: 1,
+                        found: a.len(),
+                    })
+                }
+            } else {
+                Err(SemanticErrorKind::MissingValue {
+                    expected: "error message".to_string(),
+                })
+            }
+        } else {
+            Err(SemanticErrorKind::UndefinedFunction {
+                name: method_call_expr.method_name.clone(),
+            })
+        }
     }
 
-    // TODO: add `unwrap()` and `expect()` methods
     fn analyse_result_method(
         &mut self,
         method_call_expr: &MethodCallExpr,
         result: &ResultExpr,
         root: &PathType,
     ) -> Result<Type, SemanticErrorKind> {
-        todo!()
+        self.analyse_expr(&Expression::MethodCall(method_call_expr.clone()), root)?;
+
+        if Identifier::from("unwrap") == method_call_expr.method_name {
+            if let Some(a) = &method_call_expr.args_opt {
+                return Err(SemanticErrorKind::ArgumentCountMismatch {
+                    name: method_call_expr.method_name.clone(),
+                    expected: 0,
+                    found: a.len(),
+                });
+            }
+
+            self.analyse_expr(&Expression::ResultExpr(result.clone()), root)
+        } else if Identifier::from("expect") == method_call_expr.method_name {
+            if let Some(a) = &method_call_expr.args_opt {
+                if a.len() == 1 {
+                    let expr = a.get(0).cloned().unwrap_or(Expression::NoneExpr(NoneExpr {
+                        kw_none: Keyword::None,
+                        span: Span::new("", 0, 0),
+                    }));
+
+                    if let Type::Str { .. } = self.analyse_expr(&expr, root)? {
+                        self.analyse_expr(&Expression::ResultExpr(result.clone()), root)
+                    } else {
+                        Err(SemanticErrorKind::TypeMismatchArgument {
+                            name: Identifier::from("msg"),
+                            expected: "str".to_string(),
+                            found: self.analyse_expr(&expr, root)?.to_string(),
+                        })
+                    }
+                } else {
+                    Err(SemanticErrorKind::ArgumentCountMismatch {
+                        name: method_call_expr.method_name.clone(),
+                        expected: 1,
+                        found: a.len(),
+                    })
+                }
+            } else {
+                Err(SemanticErrorKind::MissingValue {
+                    expected: "error message".to_string(),
+                })
+            }
+        } else {
+            Err(SemanticErrorKind::UndefinedFunction {
+                name: method_call_expr.method_name.clone(),
+            })
+        }
     }
 
     fn analyse_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
