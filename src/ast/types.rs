@@ -31,6 +31,17 @@ pub enum UInt {
     U64(u64),
 }
 
+impl UInt {
+    pub(crate) fn to_usize(self) -> usize {
+        match self {
+            UInt::U8(u) => u as usize,
+            UInt::U16(u) => u as usize,
+            UInt::U32(u) => u as usize,
+            UInt::U64(u) => u as usize,
+        }
+    }
+}
+
 impl From<usize> for UInt {
     fn from(value: usize) -> Self {
         UInt::U64(value as u64)
@@ -225,7 +236,7 @@ impl fmt::Display for FunctionPtr {
 }
 
 /// Unit struct that represents the `Self` type.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq, PartialOrd, Ord)]
 pub struct SelfType;
 
 impl fmt::Display for SelfType {

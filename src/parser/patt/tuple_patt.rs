@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, Pattern, Separator, TuplePatt, TuplePattElements},
+    ast::{Delimiter, Pattern, TuplePatt, TuplePattElements},
     error::ErrorsEmitted,
     parser::{ParsePattern, Parser},
     span::Position,
@@ -51,7 +51,7 @@ fn parse_tuple_patt_elements(parser: &mut Parser) -> Result<TuplePattElements, E
         let element = parser.parse_pattern()?;
 
         if let Some(Token::Comma { .. }) = parser.current_token() {
-            elements.push((element, Separator::Comma));
+            elements.push(element);
             parser.next_token();
         } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
             parser.log_unexpected_token("`,` or `)`");
