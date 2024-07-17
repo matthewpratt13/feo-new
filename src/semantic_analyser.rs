@@ -15,8 +15,8 @@ use crate::{
         ArrayExpr, AssigneeExpr, BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression,
         Float, FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier,
         ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, MethodCallExpr,
-        ModuleItem, NoneExpr, NonePatt, PathExpr, PathRoot, PathType, Pattern, ResultExpr,
-        SelfType, SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, UInt, UnaryOp,
+        ModuleItem, NoneExpr, NonePatt, PathExpr, PathRoot, Pattern, ResultExpr, SelfType,
+        SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, TypePath, UInt, UnaryOp,
         UnderscoreExpr, Unit, Visibility,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
@@ -28,7 +28,7 @@ use crate::{
 
 struct SemanticAnalyser {
     scope_stack: Vec<Scope>,
-    module_registry: HashMap<PathType, SymbolTable>,
+    module_registry: HashMap<TypePath, SymbolTable>,
     errors: Vec<CompilerError<SemanticErrorKind>>,
     logger: Logger,
 }
@@ -39,7 +39,7 @@ impl SemanticAnalyser {
 
         let mut external_symbols: SymbolTable = HashMap::new();
 
-        let mut module_registry: HashMap<PathType, SymbolTable> = HashMap::new();
+        let mut module_registry: HashMap<TypePath, SymbolTable> = HashMap::new();
 
         // add external code (e.g., library functions) to the global scope if there is any
         if let Some(ext) = external_code {
@@ -92,7 +92,7 @@ impl SemanticAnalyser {
         }
     }
 
-    fn insert(&mut self, path: PathType, symbol: Symbol) -> Result<(), SemanticErrorKind> {
+    fn insert(&mut self, path: TypePath, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             self.logger.debug(&format!(
                 "inserting path `{}` into scope `{:?}`",
@@ -107,7 +107,7 @@ impl SemanticAnalyser {
         }
     }
 
-    fn lookup(&mut self, path: &PathType) -> Option<&Symbol> {
+    fn lookup(&mut self, path: &TypePath) -> Option<&Symbol> {
         for scope in self.scope_stack.iter().rev() {
             if let Some(symbol) = scope.symbols.get(path) {
                 self.logger.debug(&format!(
@@ -123,7 +123,7 @@ impl SemanticAnalyser {
         None
     }
 
-    fn analyse_program(&mut self, program: &Program, path: PathType) -> Result<(), ErrorsEmitted> {
+    fn analyse_program(&mut self, program: &Program, path: TypePath) -> Result<(), ErrorsEmitted> {
         self.logger.info("starting semantic analysis ...");
 
         let program_path = if let Some(Scope {
@@ -145,7 +145,7 @@ impl SemanticAnalyser {
                 prefix.push(path.type_name);
             }
 
-            PathType::from(prefix)
+            TypePath::from(prefix)
         } else {
             path
         };
@@ -182,7 +182,7 @@ impl SemanticAnalyser {
         module_contents.insert(
             program_path.clone(),
             Symbol::Module {
-                path: PathType::from(root_module.module_name.clone()),
+                path: TypePath::from(root_module.module_name.clone()),
                 module: root_module,
                 symbols: HashMap::new(),
             },
@@ -207,7 +207,7 @@ impl SemanticAnalyser {
     fn analyse_stmt(
         &mut self,
         statement: &Statement,
-        root: &PathType,
+        root: &TypePath,
     ) -> Result<(), SemanticErrorKind> {
         match statement {
             Statement::Let(ls) => {
@@ -236,7 +236,7 @@ impl SemanticAnalyser {
                     });
                 }
 
-                let assignee_path = PathType::from(ls.assignee.name.clone());
+                let assignee_path = TypePath::from(ls.assignee.name.clone());
 
                 let symbol = match &value_type {
                     Type::I32(_)
@@ -307,7 +307,7 @@ impl SemanticAnalyser {
                     self.logger
                         .debug(&format!("analysing statement: `{}` ...", statement));
 
-                    let alias_path = build_item_path(root, PathType::from(ad.alias_name.clone()));
+                    let alias_path = build_item_path(root, TypePath::from(ad.alias_name.clone()));
 
                     self.insert(
                         alias_path.clone(),
@@ -341,7 +341,7 @@ impl SemanticAnalyser {
                     }
 
                     let constant_path =
-                        build_item_path(root, PathType::from(cd.constant_name.clone()));
+                        build_item_path(root, TypePath::from(cd.constant_name.clone()));
 
                     self.insert(
                         constant_path.clone(),
@@ -378,7 +378,7 @@ impl SemanticAnalyser {
                         });
                     }
 
-                    let static_var_path = build_item_path(root, PathType::from(s.var_name.clone()));
+                    let static_var_path = build_item_path(root, TypePath::from(s.var_name.clone()));
 
                     self.insert(
                         static_var_path,
@@ -403,7 +403,7 @@ impl SemanticAnalyser {
 
                 Item::ModuleItem(m) => {
                     // TODO: sort out visibility
-                    let module_path = build_item_path(root, PathType::from(m.module_name.clone()));
+                    let module_path = build_item_path(root, TypePath::from(m.module_name.clone()));
 
                     let scope_kind = ScopeKind::Module(module_path.to_string());
 
@@ -446,7 +446,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::TraitDef(t) => {
-                    let trait_name_path = PathType::from(t.trait_name.clone());
+                    let trait_name_path = TypePath::from(t.trait_name.clone());
 
                     let full_path = build_item_path(root, trait_name_path.clone());
 
@@ -475,7 +475,7 @@ impl SemanticAnalyser {
 
                                 TraitDefItem::FunctionItem(fi) => {
                                     let function_name_path =
-                                        PathType::from(fi.function_name.clone());
+                                        TypePath::from(fi.function_name.clone());
 
                                     let function_def_path =
                                         build_item_path(&full_path, function_name_path.clone());
@@ -499,7 +499,7 @@ impl SemanticAnalyser {
                     self.logger
                         .debug(&format!("analysing statement: `{}` ...", statement));
 
-                    let enum_name_path = PathType::from(e.enum_name.clone());
+                    let enum_name_path = TypePath::from(e.enum_name.clone());
 
                     let enum_def_path = build_item_path(root, enum_name_path.clone());
 
@@ -516,7 +516,7 @@ impl SemanticAnalyser {
                     self.logger
                         .debug(&format!("analysing statement: `{}` ...", statement));
 
-                    let struct_name_path = PathType::from(s.struct_name.clone());
+                    let struct_name_path = TypePath::from(s.struct_name.clone());
 
                     let struct_def_path = build_item_path(root, struct_name_path.clone());
 
@@ -533,7 +533,7 @@ impl SemanticAnalyser {
                     self.logger
                         .debug(&format!("analysing statement: `{}` ...", statement));
 
-                    let struct_name_path = PathType::from(ts.struct_name.clone());
+                    let struct_name_path = TypePath::from(ts.struct_name.clone());
 
                     let tuple_struct_path = build_item_path(root, struct_name_path.clone());
 
@@ -560,7 +560,7 @@ impl SemanticAnalyser {
                                 InherentImplItem::FunctionItem(fi) => {
                                     let function_path = build_item_path(
                                         &type_path,
-                                        PathType::from(fi.function_name.clone()),
+                                        TypePath::from(fi.function_name.clone()),
                                     );
 
                                     self.insert(
@@ -582,7 +582,7 @@ impl SemanticAnalyser {
                     let trait_impl_path = match &t.implementing_type {
                         Type::UserDefined(pt) => build_item_path(
                             &build_item_path(root, pt.clone()),
-                            PathType::from(t.implemented_trait_path.type_name.clone()),
+                            TypePath::from(t.implemented_trait_path.type_name.clone()),
                         ),
                         ty => {
                             return Err(SemanticErrorKind::UnexpectedType {
@@ -608,7 +608,7 @@ impl SemanticAnalyser {
                                 TraitImplItem::FunctionItem(fi) => {
                                     let function_impl_path = build_item_path(
                                         &trait_impl_path,
-                                        PathType::from(fi.function_name.clone()),
+                                        TypePath::from(fi.function_name.clone()),
                                     );
 
                                     self.insert(
@@ -630,7 +630,7 @@ impl SemanticAnalyser {
                     self.logger
                         .debug(&format!("analysing statement: `{}` ...", statement));
 
-                    let function_name_path = PathType::from(f.function_name.clone());
+                    let function_name_path = TypePath::from(f.function_name.clone());
 
                     let function_item_path = build_item_path(root, function_name_path.clone());
 
@@ -662,7 +662,7 @@ impl SemanticAnalyser {
     fn analyse_function_def(
         &mut self,
         f: &FunctionItem,
-        path: &PathType,
+        path: &TypePath,
         is_associated_func: bool,
         is_trait_impl: bool,
     ) -> Result<(), SemanticErrorKind> {
@@ -674,7 +674,7 @@ impl SemanticAnalyser {
 
         let function_root = if is_trait_impl {
             if let Some(prefix) = &path.associated_type_path_prefix_opt {
-                PathType::from(prefix.clone())
+                TypePath::from(prefix.clone())
             } else {
                 path.clone()
             }
@@ -685,7 +685,7 @@ impl SemanticAnalyser {
         println!("function root: {}", function_root);
 
         // append the function name to the root
-        let full_path = build_item_path(&function_root, PathType::from(f.function_name.clone()));
+        let full_path = build_item_path(&function_root, TypePath::from(f.function_name.clone()));
 
         self.enter_scope(ScopeKind::Function(full_path.to_string()));
 
@@ -699,7 +699,7 @@ impl SemanticAnalyser {
                     }
                 }
 
-                let param_path = PathType::from(param.param_name());
+                let param_path = TypePath::from(param.param_name());
 
                 self.insert(
                     param_path,
@@ -726,7 +726,7 @@ impl SemanticAnalyser {
                 path_vec.pop(); // remove associated type name
             }
 
-            self.analyse_expr(&Expression::Block(b.clone()), &PathType::from(path_vec))?
+            self.analyse_expr(&Expression::Block(b.clone()), &TypePath::from(path_vec))?
         } else {
             if let Some(t) = &f.return_type_opt {
                 *t.clone()
@@ -767,14 +767,14 @@ impl SemanticAnalyser {
     fn analyse_import(
         &mut self,
         import_decl: &ImportDecl,
-        module_root: &PathType,
+        module_root: &TypePath,
     ) -> Result<(), SemanticErrorKind> {
-        let mut paths: Vec<PathType> = Vec::new();
+        let mut paths: Vec<TypePath> = Vec::new();
 
         let mut segments = import_decl.import_tree.path_segments.clone();
 
         let mut import_root = if !segments.is_empty() {
-            let mut paths = Vec::<PathType>::from(segments.remove(0));
+            let mut paths = Vec::<TypePath>::from(segments.remove(0));
 
             if !paths.is_empty() {
                 let mut path = paths.remove(0);
@@ -785,7 +785,7 @@ impl SemanticAnalyser {
 
                 path
             } else {
-                PathType::from(Identifier::from(""))
+                TypePath::from(Identifier::from(""))
             }
         } else {
             module_root.clone()
@@ -804,7 +804,7 @@ impl SemanticAnalyser {
 
                 for t in sub.nested_trees {
                     for ps in t.path_segments {
-                        for p in Vec::<PathType>::from(ps) {
+                        for p in Vec::<TypePath>::from(ps) {
                             let path = build_item_path(&path.clone(), p);
                             paths.push(path);
                         }
@@ -830,7 +830,7 @@ impl SemanticAnalyser {
         for p in paths {
             if let Some(m) = self.module_registry.get(&import_root) {
                 if let Some(s) = m.get(&p) {
-                    self.insert(PathType::from(p.type_name), s.clone())?;
+                    self.insert(TypePath::from(p.type_name), s.clone())?;
                 } else {
                     return Err(SemanticErrorKind::UndefinedSymbol {
                         name: p.to_string(),
@@ -849,7 +849,7 @@ impl SemanticAnalyser {
     fn analyse_expr(
         &mut self,
         expression: &Expression,
-        root: &PathType,
+        root: &TypePath,
     ) -> Result<Type, SemanticErrorKind> {
         match expression {
             Expression::Path(p) => {
@@ -858,7 +858,7 @@ impl SemanticAnalyser {
                         if let Some(id) = v.pop() {
                             build_item_path(
                                 root,
-                                PathType {
+                                TypePath {
                                     associated_type_path_prefix_opt: Some(v.to_vec()),
                                     type_name: id,
                                 },
@@ -866,7 +866,7 @@ impl SemanticAnalyser {
                         } else {
                             match &p.path_root {
                                 PathRoot::Identifier(i) => {
-                                    build_item_path(root, PathType::from(i.clone()))
+                                    build_item_path(root, TypePath::from(i.clone()))
                                 }
 
                                 PathRoot::SelfType(_) => root.clone(),
@@ -883,7 +883,7 @@ impl SemanticAnalyser {
                     }
 
                     _ => match &p.path_root {
-                        PathRoot::Identifier(i) => PathType::from(i.clone()),
+                        PathRoot::Identifier(i) => TypePath::from(i.clone()),
 
                         PathRoot::SelfType(_) => root.clone(),
 
@@ -970,14 +970,14 @@ impl SemanticAnalyser {
                 // is a valid path)
                 let receiver_as_path_expr = PathExpr::from(receiver);
 
-                let receiver_path = PathType::from(receiver_as_path_expr);
+                let receiver_path = TypePath::from(receiver_as_path_expr);
 
                 // check if path expression's type is that of an existing type and analyse
                 match self.lookup(&receiver_path).cloned() {
                     Some(Symbol::Struct { path, .. } | Symbol::TupleStruct { path, .. }) => {
                         if path == receiver_path {
                             let method_path =
-                                build_item_path(&path, PathType::from(mc.method_name.clone()));
+                                build_item_path(&path, TypePath::from(mc.method_name.clone()));
                             self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                         } else {
                             Err(SemanticErrorKind::TypeMismatchVariable {
@@ -1063,7 +1063,7 @@ impl SemanticAnalyser {
                 // is a valid path)
                 let object_as_path_expr = PathExpr::from(object.clone());
 
-                let object_path = PathType::from(object_as_path_expr);
+                let object_path = TypePath::from(object_as_path_expr);
 
                 let object_type = self.analyse_expr(&object, &object_path)?;
 
@@ -1088,7 +1088,7 @@ impl SemanticAnalyser {
                     Some(Symbol::Variable { name, var_type, .. }) => {
                         if name == Identifier::from("self") {
                             if let Some(Symbol::Struct { struct_def, .. }) =
-                                self.lookup(&PathType::from(var_type))
+                                self.lookup(&TypePath::from(var_type))
                             {
                                 match &struct_def.fields_opt {
                                     Some(v) => {
@@ -1133,7 +1133,7 @@ impl SemanticAnalyser {
             Expression::Call(c) => {
                 let callee = wrap_into_expression(c.callee.clone());
 
-                let callee_path = PathType::from(PathExpr::from(callee));
+                let callee_path = TypePath::from(PathExpr::from(callee));
 
                 // !! throws an error if the call path is from another module (i.e., not the root)
                 let callee_path = if self.lookup(&callee_path).is_some() {
@@ -1616,7 +1616,7 @@ impl SemanticAnalyser {
 
                 let assignee_as_path_expr = PathExpr::from(assignee);
 
-                let assignee_path = PathType::from(assignee_as_path_expr);
+                let assignee_path = TypePath::from(assignee_as_path_expr);
 
                 match self.lookup(&assignee_path).cloned() {
                     Some(Symbol::Variable { var_type, .. }) => match var_type == assignee_type {
@@ -1656,7 +1656,7 @@ impl SemanticAnalyser {
 
                 let assignee_as_path_expr = PathExpr::from(assignee);
 
-                let assignee_path = PathType::from(assignee_as_path_expr);
+                let assignee_path = TypePath::from(assignee_as_path_expr);
 
                 match self.lookup(&assignee_path) {
                     Some(Symbol::Variable { .. }) => match (&assignee_type, &value_type) {
@@ -1804,14 +1804,14 @@ impl SemanticAnalyser {
                 };
 
                 self.enter_scope(ScopeKind::Function(
-                    PathType::from(Identifier::from("")).to_string(),
+                    TypePath::from(Identifier::from("")).to_string(),
                 ));
 
                 if let Some(v) = &params_opt {
                     let param_types: Vec<Type> = v.iter().map(|p| p.param_type()).collect();
 
                     for (param, param_type) in v.iter().zip(param_types) {
-                        let param_path = PathType::from(param.param_name());
+                        let param_path = TypePath::from(param.param_name());
 
                         self.insert(
                             param_path,
@@ -1916,14 +1916,14 @@ impl SemanticAnalyser {
             }
 
             Expression::Struct(s) => {
-                let path_type = build_item_path(root, PathType::from(s.struct_path.clone()));
+                let path_type = build_item_path(root, TypePath::from(s.struct_path.clone()));
 
                 println!("struct path: {}", path_type);
 
                 match self.lookup(&path_type).cloned() {
                     Some(Symbol::Struct { struct_def, path }) => {
                         self.insert(
-                            PathType::from(s.struct_path.clone()),
+                            TypePath::from(s.struct_path.clone()),
                             Symbol::Struct {
                                 path: path.clone(),
                                 struct_def: struct_def.clone(),
@@ -2236,7 +2236,7 @@ impl SemanticAnalyser {
 
     fn analyse_call_or_method_call_expr(
         &mut self,
-        path: PathType,
+        path: TypePath,
         args_opt: Option<Vec<Expression>>,
     ) -> Result<Type, SemanticErrorKind> {
         match self.lookup(&path) {
@@ -2267,7 +2267,7 @@ impl SemanticAnalyser {
 
                         for (arg, param) in a.iter().zip(p) {
                             let arg_type =
-                                self.analyse_expr(&arg, &PathType::from(Identifier::from("")))?;
+                                self.analyse_expr(&arg, &TypePath::from(Identifier::from("")))?;
                             let param_type = param.param_type();
                             if arg_type != param_type {
                                 return Err(SemanticErrorKind::TypeMismatchArgument {
@@ -2302,7 +2302,7 @@ impl SemanticAnalyser {
         &mut self,
         method_call_expr: &MethodCallExpr,
         vec: &ArrayExpr,
-        root: &PathType,
+        root: &TypePath,
     ) -> Result<Type, SemanticErrorKind> {
         self.analyse_expr(&Expression::Array(vec.clone()), root)?;
 
@@ -2412,7 +2412,7 @@ impl SemanticAnalyser {
         &mut self,
         method_call_expr: &MethodCallExpr,
         mapping: HashMap<Pattern, Expression>,
-        root: &PathType,
+        root: &TypePath,
     ) -> Result<Type, SemanticErrorKind> {
         if Identifier::from("get") == method_call_expr.method_name
             || Identifier::from("remove") == method_call_expr.method_name
@@ -2457,7 +2457,7 @@ impl SemanticAnalyser {
         &mut self,
         method_call_expr: &MethodCallExpr,
         option: &SomeExpr,
-        root: &PathType,
+        root: &TypePath,
     ) -> Result<Type, SemanticErrorKind> {
         if Identifier::from("unwrap") == method_call_expr.method_name {
             if let Some(a) = &method_call_expr.args_opt {
@@ -2509,7 +2509,7 @@ impl SemanticAnalyser {
         &mut self,
         method_call_expr: &MethodCallExpr,
         result: &ResultExpr,
-        root: &PathType,
+        root: &TypePath,
     ) -> Result<Type, SemanticErrorKind> {
         if Identifier::from("unwrap") == method_call_expr.method_name {
             if let Some(a) = &method_call_expr.args_opt {
@@ -2559,7 +2559,7 @@ impl SemanticAnalyser {
 
     fn analyse_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
         match pattern {
-            Pattern::IdentifierPatt(i) => match self.lookup(&PathType::from(i.name.clone())) {
+            Pattern::IdentifierPatt(i) => match self.lookup(&TypePath::from(i.name.clone())) {
                 Some(Symbol::Variable { var_type, .. }) => Ok(var_type.clone()),
                 Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: i.name.clone(),
@@ -2572,7 +2572,7 @@ impl SemanticAnalyser {
             },
 
             Pattern::PathPatt(p) => {
-                let path = PathType::from(p.clone());
+                let path = TypePath::from(p.clone());
 
                 if let Some(s) = self.lookup(&path) {
                     Ok(s.symbol_type())
@@ -2750,7 +2750,7 @@ impl SemanticAnalyser {
             }
 
             Pattern::StructPatt(s) => {
-                let path_type = PathType::from(s.struct_path.clone());
+                let path_type = TypePath::from(s.struct_path.clone());
 
                 match self.lookup(&path_type).cloned() {
                     Some(Symbol::Struct { struct_def, path }) => {
@@ -2806,7 +2806,7 @@ impl SemanticAnalyser {
             }
 
             Pattern::TupleStructPatt(ts) => {
-                let path_type = PathType::from(ts.struct_path.clone());
+                let path_type = TypePath::from(ts.struct_path.clone());
 
                 match self.lookup(&path_type).cloned() {
                     Some(Symbol::TupleStruct {

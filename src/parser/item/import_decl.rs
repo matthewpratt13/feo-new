@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathSegment, PathSubset,
-        PathType, Separator, Visibility,
+        TypePath, Separator, Visibility,
     },
     error::ErrorsEmitted,
     span::Position,
@@ -96,7 +96,7 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
 }
 
 fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted> {
-    let root = PathType::parse(parser, parser.current_token().cloned())?;
+    let root = TypePath::parse(parser, parser.current_token().cloned())?;
 
     let subset_opt = if let Some(Token::LBrace { .. }) = &parser.peek_ahead_by(1) {
         parser.next_token();

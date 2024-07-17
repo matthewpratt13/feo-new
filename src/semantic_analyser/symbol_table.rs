@@ -2,10 +2,11 @@ use core::fmt;
 use std::collections::HashMap;
 
 use crate::ast::{
-    EnumDef, Expression, FunctionItem, Identifier, ModuleItem, PathType, StructDef, TraitDef, TupleStructDef, Type, Unit, Visibility
+    EnumDef, Expression, FunctionItem, Identifier, ModuleItem, StructDef, TraitDef, TupleStructDef,
+    Type, TypePath, Unit, Visibility,
 };
 
-pub(crate) type SymbolTable = HashMap<PathType, Symbol>;
+pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub(crate) enum ScopeKind {
@@ -27,39 +28,39 @@ pub(crate) enum Symbol {
         data: Option<Expression>,
     },
     Struct {
-        path: PathType,
+        path: TypePath,
         struct_def: StructDef,
     },
     TupleStruct {
-        path: PathType,
+        path: TypePath,
         tuple_struct_def: TupleStructDef,
     },
     Enum {
-        path: PathType,
+        path: TypePath,
         enum_def: EnumDef,
     },
     Trait {
-        path: PathType,
+        path: TypePath,
         trait_def: TraitDef,
     },
     Alias {
-        path: PathType,
+        path: TypePath,
         visibility: Visibility,
         alias_name: Identifier,
         original_type_opt: Option<Type>,
     },
     Constant {
-        path: PathType,
+        path: TypePath,
         visibility: Visibility,
         constant_name: Identifier,
         constant_type: Type,
     },
     Function {
-        path: PathType,
+        path: TypePath,
         function: FunctionItem,
     },
     Module {
-        path: PathType,
+        path: TypePath,
         module: ModuleItem,
         symbols: SymbolTable,
     },

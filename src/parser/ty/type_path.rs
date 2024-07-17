@@ -1,18 +1,18 @@
 use core::fmt;
 
 use crate::{
-    ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, PathType, SelfType},
+    ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, TypePath, SelfType},
     error::ErrorsEmitted,
     token::Token,
 };
 
 use super::Parser;
 
-impl PathType {
+impl TypePath {
     pub(crate) fn parse(
         parser: &mut Parser,
         token: Option<Token>,
-    ) -> Result<PathType, ErrorsEmitted> {
+    ) -> Result<TypePath, ErrorsEmitted> {
         parser.logger.debug("entering `PathType::parse()`");
         parser.log_current_token(false);
 
@@ -46,7 +46,7 @@ impl PathType {
         )
         | None = parser.current_token()
         {
-            return Ok(PathType {
+            return Ok(TypePath {
                 associated_type_path_prefix_opt: None,
                 type_name: Identifier::from(&path_root.to_string()),
             });
@@ -80,7 +80,7 @@ impl PathType {
 
         parser.next_token();
 
-        let path_type = PathType {
+        let path_type = TypePath {
             associated_type_path_prefix_opt: {
                 if prefix.is_empty() {
                     None
@@ -101,16 +101,16 @@ impl PathType {
     }
 }
 
-impl From<Identifier> for PathType {
+impl From<Identifier> for TypePath {
     fn from(value: Identifier) -> Self {
-        PathType {
+        TypePath {
             associated_type_path_prefix_opt: None,
             type_name: value,
         }
     }
 }
 
-impl From<PathExpr> for PathType {
+impl From<PathExpr> for TypePath {
     fn from(value: PathExpr) -> Self {
         let mut path_segment_names: Vec<Identifier> = Vec::new();
 
@@ -125,7 +125,7 @@ impl From<PathExpr> for PathType {
 
         let type_name = path_segment_names.pop().expect("empty path expression");
 
-        PathType {
+        TypePath {
             associated_type_path_prefix_opt: {
                 if path_segment_names.is_empty() {
                     None
@@ -138,7 +138,7 @@ impl From<PathExpr> for PathType {
     }
 }
 
-impl From<PathPatt> for PathType {
+impl From<PathPatt> for TypePath {
     fn from(value: PathPatt) -> Self {
         let mut path_segment_names: Vec<Identifier> = Vec::new();
 
@@ -153,7 +153,7 @@ impl From<PathPatt> for PathType {
 
         let type_name = path_segment_names.pop().expect("empty path pattern");
 
-        PathType {
+        TypePath {
             associated_type_path_prefix_opt: {
                 if path_segment_names.is_empty() {
                     None
@@ -166,7 +166,7 @@ impl From<PathPatt> for PathType {
     }
 }
 
-impl From<Vec<Identifier>> for PathType {
+impl From<Vec<Identifier>> for TypePath {
     fn from(value: Vec<Identifier>) -> Self {
         if value.len() > 1 {
             let mut path_prefix: Vec<Identifier> = Vec::new();
@@ -177,25 +177,25 @@ impl From<Vec<Identifier>> for PathType {
 
             let type_name = path_prefix.pop().unwrap();
 
-            PathType {
+            TypePath {
                 associated_type_path_prefix_opt: Some(path_prefix),
                 type_name,
             }
         } else if value.len() == 1 {
             let type_name = value.get(0).cloned().unwrap();
 
-            PathType {
+            TypePath {
                 associated_type_path_prefix_opt: None,
                 type_name,
             }
         } else {
-            PathType::from(Identifier::from(""))
+            TypePath::from(Identifier::from(""))
         }
     }
 }
 
-impl From<PathType> for Vec<Identifier> {
-    fn from(value: PathType) -> Self {
+impl From<TypePath> for Vec<Identifier> {
+    fn from(value: TypePath) -> Self {
         let mut paths: Vec<Identifier> = Vec::new();
 
         if let Some(v) = &value.associated_type_path_prefix_opt {
@@ -210,9 +210,9 @@ impl From<PathType> for Vec<Identifier> {
     }
 }
 
-impl From<PathSegment> for Vec<PathType> {
+impl From<PathSegment> for Vec<TypePath> {
     fn from(value: PathSegment) -> Self {
-        let mut paths: Vec<PathType> = Vec::new();
+        let mut paths: Vec<TypePath> = Vec::new();
 
         if let Some(v) = value.root.associated_type_path_prefix_opt {
             let mut root: Vec<Identifier> = Vec::new();
@@ -226,14 +226,14 @@ impl From<PathSegment> for Vec<PathType> {
             if let Some(p_sub) = value.subset_opt {
                 for t in p_sub.nested_trees {
                     for p_seg in t.path_segments {
-                        for p in Vec::<PathType>::from(p_seg) {
-                            let path = build_item_path(&PathType::from(root.clone()), p);
+                        for p in Vec::<TypePath>::from(p_seg) {
+                            let path = build_item_path(&TypePath::from(root.clone()), p);
                             paths.push(path)
                         }
                     }
                 }
             } else {
-                paths.push(PathType::from(root));
+                paths.push(TypePath::from(root));
             }
         } else {
             paths.push(value.root);
@@ -243,7 +243,7 @@ impl From<PathSegment> for Vec<PathType> {
     }
 }
 
-impl fmt::Display for PathType {
+impl fmt::Display for TypePath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut segments: Vec<String> = Vec::new();
 
@@ -257,7 +257,7 @@ impl fmt::Display for PathType {
     }
 }
 
-pub(crate) fn build_item_path(root: &PathType, item_path: PathType) -> PathType {
+pub(crate) fn build_item_path(root: &TypePath, item_path: TypePath) -> TypePath {
     if let Some(prefix) = &root.associated_type_path_prefix_opt {
         let mut path = prefix.to_vec();
 
@@ -271,7 +271,7 @@ pub(crate) fn build_item_path(root: &PathType, item_path: PathType) -> PathType 
             Identifier::from("")
         };
 
-        PathType {
+        TypePath {
             associated_type_path_prefix_opt: Some(path),
             type_name,
         }
@@ -285,7 +285,7 @@ pub(crate) fn build_item_path(root: &PathType, item_path: PathType) -> PathType 
                 Identifier::from("")
             };
 
-            PathType {
+            TypePath {
                 associated_type_path_prefix_opt: {
                     if path.is_empty() {
                         None
@@ -312,7 +312,7 @@ pub(crate) fn build_item_path(root: &PathType, item_path: PathType) -> PathType 
                 Identifier::from("")
             };
 
-            PathType {
+            TypePath {
                 associated_type_path_prefix_opt: {
                     if path.is_empty() {
                         None

@@ -269,7 +269,7 @@ impl fmt::Display for InferredType {
 
 /// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct PathType {
+pub struct TypePath {
     pub(crate) associated_type_path_prefix_opt: Option<Vec<Identifier>>,
     pub(crate) type_name: Identifier,
 }

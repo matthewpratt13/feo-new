@@ -4,7 +4,7 @@ use crate::{parser::ty::build_item_path, span::Span};
 
 use super::{
     AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,
-    PathType, ReferenceOp, SelfType, Separator, Type, ValueExpr,
+    TypePath, ReferenceOp, SelfType, Separator, Type, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -114,12 +114,12 @@ pub(crate) struct ImportTree {
 
 impl fmt::Display for ImportTree {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut paths: Vec<PathType> = Vec::new();
+        let mut paths: Vec<TypePath> = Vec::new();
 
         let mut segments = self.path_segments.clone();
 
         let mut import_root = if !segments.is_empty() {
-            let mut paths = Vec::<PathType>::from(segments.remove(0));
+            let mut paths = Vec::<TypePath>::from(segments.remove(0));
 
             if !paths.is_empty() {
                 let mut path = paths.remove(0);
@@ -130,10 +130,10 @@ impl fmt::Display for ImportTree {
 
                 path
             } else {
-                PathType::from(Identifier::from(""))
+                TypePath::from(Identifier::from(""))
             }
         } else {
-            PathType::from(Identifier::from(""))
+            TypePath::from(Identifier::from(""))
         };
 
         let mut segment_counter: usize = 0;
@@ -148,7 +148,7 @@ impl fmt::Display for ImportTree {
 
                 for t in sub.nested_trees {
                     for ps in t.path_segments {
-                        for p in Vec::<PathType>::from(ps) {
+                        for p in Vec::<TypePath>::from(ps) {
                             let path = build_item_path(&path.clone(), p);
                             paths.push(path);
                         }
@@ -177,7 +177,7 @@ impl fmt::Display for ImportTree {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PathSegment {
-    pub(crate) root: PathType, // e.g., `PathRoot::Identifier(_)`, `lib::module::Object`
+    pub(crate) root: TypePath, // e.g., `PathRoot::Identifier(_)`, `lib::module::Object`
     pub(crate) subset_opt: Option<PathSubset>, // e.g., `::{ Foo, Bar, .. }` (basic)
 }
 
@@ -306,7 +306,7 @@ pub struct ImportDecl {
 pub struct InherentImplDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) kw_impl: Keyword,
-    pub(crate) nominal_type: PathType,
+    pub(crate) nominal_type: TypePath,
     pub(crate) associated_items_opt: Option<Vec<InherentImplItem>>,
     pub(crate) span: Span,
 }
@@ -359,7 +359,7 @@ pub struct TraitDef {
 pub struct TraitImplDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) kw_impl: Keyword,
-    pub(crate) implemented_trait_path: PathType,
+    pub(crate) implemented_trait_path: TypePath,
     pub(crate) kw_for: Keyword,
     pub(crate) implementing_type: Type,
     pub(crate) associated_items_opt: Option<Vec<TraitImplItem>>,

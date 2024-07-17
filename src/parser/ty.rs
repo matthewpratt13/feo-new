@@ -1,10 +1,10 @@
-mod path_type;
-pub(crate) use path_type::build_item_path;
+mod type_path;
+pub(crate) use type_path::build_item_path;
 
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Delimiter, Float, FunctionOrMethodParam, FunctionPtr,
-        Identifier, InferredType, Int, PathType, ReferenceOp, SelfType, Str, Type, UInt, Unit,
+        Identifier, InferredType, Int, TypePath, ReferenceOp, SelfType, Str, Type, UInt, Unit,
     },
     error::ErrorsEmitted,
     span::Position,
@@ -242,29 +242,29 @@ impl Type {
 
                     Ok(Type::InferredType(ty))
                 } else {
-                    let path = PathType::parse(parser, token)?;
+                    let path = TypePath::parse(parser, token)?;
                     Ok(Type::UserDefined(path))
                 }
             }
 
             Some(Token::Lib { .. }) => {
-                let path = PathType::parse(parser, token)?;
+                let path = TypePath::parse(parser, token)?;
                 Ok(Type::UserDefined(path))
             }
 
             Some(Token::Super { .. }) => {
-                let path = PathType::parse(parser, token)?;
+                let path = TypePath::parse(parser, token)?;
                 Ok(Type::UserDefined(path))
             }
 
             Some(Token::SelfKeyword { .. }) => {
-                let path = PathType::parse(parser, token)?;
+                let path = TypePath::parse(parser, token)?;
                 Ok(Type::UserDefined(path))
             }
 
             Some(Token::SelfType { .. }) => match parser.peek_ahead_by(1) {
                 Some(Token::DblColon { .. }) => {
-                    let path = PathType::parse(parser, token)?;
+                    let path = TypePath::parse(parser, token)?;
                     Ok(Type::UserDefined(path))
                 }
                 _ => Ok(Type::SelfType(SelfType)),

@@ -507,7 +507,7 @@ impl fmt::Display for Expression {
                 Literal::Char { value, .. } => write!(f, "{}", value),
                 Literal::Bool { value, .. } => write!(f, "{}", value),
             },
-            Expression::Path(pth) => write!(f, "{}", PathType::from(pth)),
+            Expression::Path(pth) => write!(f, "{}", TypePath::from(pth)),
             Expression::MethodCall(mc) => write!(f, "{}.{}()", mc.receiver, mc.method_name),
             Expression::FieldAccess(fa) => write!(f, "{}.{}", fa.object, fa.field_name),
             Expression::Call(cal) => write!(
@@ -1256,7 +1256,7 @@ impl fmt::Display for Pattern {
                 },
                 id.name
             ),
-            Pattern::PathPatt(pth) => write!(f, "{}", PathType::from(pth.clone()).to_string()),
+            Pattern::PathPatt(pth) => write!(f, "{}", TypePath::from(pth.clone()).to_string()),
             Pattern::ReferencePatt(r) => write!(f, "{:?}", r),
             Pattern::GroupedPatt(g) => write!(f, "({})", *g.inner_pattern),
             Pattern::RangePatt(rng) => write!(
@@ -1508,7 +1508,7 @@ pub(crate) enum Type {
 
     Tuple(Vec<Type>),
 
-    UserDefined(PathType), // struct, enum, trait, alias, constant (paths / items)
+    UserDefined(TypePath), // struct, enum, trait, alias, constant (paths / items)
 
     FunctionPtr(FunctionPtr),
 
@@ -1540,11 +1540,11 @@ pub(crate) enum Type {
     },
 }
 
-impl From<Type> for PathType {
+impl From<Type> for TypePath {
     fn from(value: Type) -> Self {
         match value {
             Type::UserDefined(p) => p,
-            t => PathType::from(Identifier::from(&t.to_string())),
+            t => TypePath::from(Identifier::from(&t.to_string())),
         }
     }
 }
