@@ -970,7 +970,6 @@ impl SemanticAnalyser {
                 // is a valid path)
                 let receiver_as_path_expr = PathExpr::from(receiver);
 
-                // get path expression's type
                 let receiver_path = PathType::from(receiver_as_path_expr);
 
                 // check if path expression's type is that of an existing type and analyse
@@ -1064,7 +1063,6 @@ impl SemanticAnalyser {
                 // is a valid path)
                 let object_as_path_expr = PathExpr::from(object.clone());
 
-                // get path expression's type
                 let object_path = PathType::from(object_as_path_expr);
 
                 let object_type = self.analyse_expr(&object, &object_path)?;
