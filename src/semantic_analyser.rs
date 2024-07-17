@@ -329,7 +329,6 @@ impl SemanticAnalyser {
                             let value = wrap_into_expression(v.clone());
                             Some(self.analyse_expr(&value, root)?)
                         }
-
                         _ => None,
                     };
 
@@ -365,7 +364,6 @@ impl SemanticAnalyser {
                             let assignee = wrap_into_expression(*a.clone());
                             self.analyse_expr(&assignee, root)?
                         }
-
                         _ => Type::InferredType(InferredType {
                             name: Identifier::from("_"),
                         }),
@@ -500,7 +498,6 @@ impl SemanticAnalyser {
                         .debug(&format!("analysing statement: `{}` ...", statement));
 
                     let enum_name_path = TypePath::from(e.enum_name.clone());
-
                     let enum_def_path = build_item_path(root, enum_name_path.clone());
 
                     self.insert(
@@ -517,7 +514,6 @@ impl SemanticAnalyser {
                         .debug(&format!("analysing statement: `{}` ...", statement));
 
                     let struct_name_path = TypePath::from(s.struct_name.clone());
-
                     let struct_def_path = build_item_path(root, struct_name_path.clone());
 
                     self.insert(
@@ -534,7 +530,6 @@ impl SemanticAnalyser {
                         .debug(&format!("analysing statement: `{}` ...", statement));
 
                     let struct_name_path = TypePath::from(ts.struct_name.clone());
-
                     let tuple_struct_path = build_item_path(root, struct_name_path.clone());
 
                     self.insert(
@@ -631,7 +626,6 @@ impl SemanticAnalyser {
                         .debug(&format!("analysing statement: `{}` ...", statement));
 
                     let function_name_path = TypePath::from(f.function_name.clone());
-
                     let function_item_path = build_item_path(root, function_name_path.clone());
 
                     self.insert(
@@ -1631,11 +1625,10 @@ impl SemanticAnalyser {
                         }),
                     },
                     Some(Symbol::Constant { constant_name, .. }) => {
-                        return Err(SemanticErrorKind::ConstantReassignment {
+                        Err(SemanticErrorKind::ConstantReassignment {
                             name: constant_name,
                         })
                     }
-
                     Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: assignee_path.type_name,
                         expected: format!("`{}`", assignee_type),
@@ -1743,23 +1736,18 @@ impl SemanticAnalyser {
                         }),
                     },
                     Some(Symbol::Constant { constant_name, .. }) => {
-                        return Err(SemanticErrorKind::ConstantReassignment {
+                        Err(SemanticErrorKind::ConstantReassignment {
                             name: constant_name.clone(),
                         })
                     }
-
-                    Some(s) => {
-                        return Err(SemanticErrorKind::UnexpectedSymbol {
-                            name: assignee_path.type_name,
-                            expected: format!("`{}`", assignee_type),
-                            found: s.to_string(),
-                        })
-                    }
-                    None => {
-                        return Err(SemanticErrorKind::UndefinedVariable {
-                            name: assignee_path.type_name,
-                        })
-                    }
+                    Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
+                        name: assignee_path.type_name,
+                        expected: format!("`{}`", assignee_type),
+                        found: s.to_string(),
+                    }),
+                    None => Err(SemanticErrorKind::UndefinedVariable {
+                        name: assignee_path.type_name,
+                    }),
                 }
             }
 
@@ -1890,7 +1878,6 @@ impl SemanticAnalyser {
                             num_elements: UInt::U64(element_count),
                         })
                     }
-
                     None => {
                         let element_type = Type::UnitType(Unit);
                         let array = Type::Array {
@@ -2012,7 +1999,6 @@ impl SemanticAnalyser {
                             value_type: Box::new(value_type),
                         })
                     }
-
                     None => {
                         let key_type = Box::new(Type::UnitType(Unit));
                         let value_type = Box::new(Type::UnitType(Unit));
@@ -2210,8 +2196,6 @@ impl SemanticAnalyser {
                     ty
                 };
 
-                println!("result type: {:?}", ty);
-
                 match r.kw_ok_or_err.clone() {
                     Keyword::Ok => Ok(Type::Result {
                         ok_type: Box::new(ty),
@@ -2250,7 +2234,7 @@ impl SemanticAnalyser {
                         None => Ok(Type::UnitType(Unit)),
                     },
                     (None, Some(_)) | (Some(_), None) => {
-                        return Err(SemanticErrorKind::ArgumentCountMismatch {
+                        Err(SemanticErrorKind::ArgumentCountMismatch {
                             name: path.type_name,
                             expected: params.unwrap_or(Vec::new()).len(),
                             found: args_opt.unwrap_or(Vec::new()).len(),
@@ -2285,11 +2269,9 @@ impl SemanticAnalyser {
                     }
                 }
             }
-
             None => Err(SemanticErrorKind::UndefinedFunction {
                 name: path.type_name,
             }),
-
             Some(s) => Err(SemanticErrorKind::UnexpectedSymbol {
                 name: path.type_name,
                 expected: "function".to_string(),
