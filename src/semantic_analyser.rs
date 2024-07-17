@@ -2039,7 +2039,6 @@ impl SemanticAnalyser {
                     let ty = match vec.last() {
                         Some(s) => match s {
                             Statement::Expression(e) => self.analyse_expr(e, root)?,
-
                             _ => Type::UnitType(Unit),
                         },
                         None => Type::UnitType(Unit),
