@@ -269,6 +269,8 @@ fn analyse_let_stmt() -> Result<(), ()> {
 fn analyse_method_call() {
     let input = r#"
     module foo {
+        #![contract]
+
         struct Foo {
             name: str,
             symbol: str,
@@ -286,7 +288,7 @@ fn analyse_method_call() {
                     total_supply: 1_000_000,
                 }
             }
-
+            
             func name(&self) -> str {
                 self.name
             }

@@ -446,10 +446,10 @@ impl SemanticAnalyser {
 
                 Item::TraitDef(t) => {
                     let trait_name_path = TypePath::from(t.trait_name.clone());
-                    let full_path = build_item_path(root, trait_name_path.clone());
+                    let trait_def_path = build_item_path(root, trait_name_path.clone());
 
                     self.insert(
-                        full_path.clone(),
+                        trait_def_path.clone(),
                         Symbol::Trait {
                             path: trait_name_path,
                             trait_def: t.clone(),
@@ -462,19 +462,21 @@ impl SemanticAnalyser {
                                 TraitDefItem::AliasDecl(ad) => {
                                     self.analyse_stmt(
                                         &Statement::Item(Item::AliasDecl(ad.clone())),
-                                        &full_path,
+                                        &trait_def_path,
                                     )?;
                                 }
                                 TraitDefItem::ConstantDecl(cd) => self.analyse_stmt(
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
-                                    &full_path,
+                                    &trait_def_path,
                                 )?,
                                 TraitDefItem::FunctionItem(fi) => {
                                     let function_name_path =
                                         TypePath::from(fi.function_name.clone());
 
-                                    let function_def_path =
-                                        build_item_path(&full_path, function_name_path.clone());
+                                    let function_def_path = build_item_path(
+                                        &trait_def_path,
+                                        function_name_path.clone(),
+                                    );
 
                                     self.insert(
                                         function_def_path,
@@ -484,7 +486,7 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(fi, &full_path, true, false)?;
+                                    self.analyse_function_def(fi, &trait_def_path, true, false)?;
                                 }
                             }
                         }
@@ -550,15 +552,16 @@ impl SemanticAnalyser {
                                     &type_path,
                                 )?,
                                 InherentImplItem::FunctionItem(fi) => {
-                                    let function_path = build_item_path(
-                                        &type_path,
-                                        TypePath::from(fi.function_name.clone()),
-                                    );
+                                    let function_name_path =
+                                        TypePath::from(fi.function_name.clone());
+
+                                    let function_def_path =
+                                        build_item_path(&type_path, function_name_path.clone());
 
                                     self.insert(
-                                        function_path.clone(),
+                                        function_def_path.clone(),
                                         Symbol::Function {
-                                            path: function_path,
+                                            path: function_name_path,
                                             function: fi.clone(),
                                         },
                                     )?;
@@ -816,6 +819,8 @@ impl SemanticAnalyser {
         // TODO: how to insert associated items (e.g., constructors, other functions) when importing
         // TODO: from another module ?
 
+        println!("import paths: {:?}", paths);
+
         for p in paths {
             if let Some(m) = self.module_registry.get(&import_root) {
                 if let Some(s) = m.get(&p) {
@@ -1042,7 +1047,13 @@ impl SemanticAnalyser {
 
                 let symbol = self.lookup(&object_path).cloned();
 
-                println!("object symbol: {:?}", symbol);
+                println!(
+                    "object symbol type: {:?}",
+                    symbol
+                        .clone()
+                        .expect("no object symbol found")
+                        .symbol_type()
+                );
 
                 match symbol {
                     Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
