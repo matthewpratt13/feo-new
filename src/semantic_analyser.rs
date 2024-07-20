@@ -822,7 +822,9 @@ impl SemanticAnalyser {
         println!("import paths: {:?}", paths);
 
         for p in paths {
-            if let Some(m) = self.module_registry.get(&import_root) {
+            if let Some(s) = self.lookup(&p).cloned() {
+                self.insert(p, s)?;
+            } else if let Some(m) = self.module_registry.get(&import_root) {
                 if let Some(s) = m.get(&p) {
                     self.insert(TypePath::from(p.type_name), s.clone())?;
                 } else {

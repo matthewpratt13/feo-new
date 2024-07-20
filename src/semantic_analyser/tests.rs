@@ -299,10 +299,10 @@ fn analyse_method_call() {
         }
     }
 
-    import lib::foo::Foo;
+    import lib::foo;
 
     func main() {
-        let foo = Foo::new("Foo", "FOO", {});
+        let foo = lib::foo::Foo::new("Foo", "FOO", {});
 
         let name = foo.name();
 
