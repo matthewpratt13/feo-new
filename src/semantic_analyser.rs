@@ -822,9 +822,7 @@ impl SemanticAnalyser {
         println!("import paths: {:?}", paths);
 
         for p in paths {
-            if let Some(s) = self.lookup(&p).cloned() {
-                self.insert(p, s)?;
-            } else if let Some(m) = self.module_registry.get(&import_root) {
+            if let Some(m) = self.module_registry.get(&import_root) {
                 if let Some(s) = m.get(&p) {
                     self.insert(TypePath::from(p.type_name), s.clone())?;
                 } else {
@@ -832,6 +830,8 @@ impl SemanticAnalyser {
                         name: p.to_string(),
                     });
                 }
+            } else if let Some(s) = self.lookup(&p).cloned() {
+                self.insert(p, s)?;
             } else {
                 return Err(SemanticErrorKind::UndefinedModule {
                     name: import_root.type_name,
