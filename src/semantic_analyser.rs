@@ -73,7 +73,7 @@ impl SemanticAnalyser {
 
     fn enter_scope(&mut self, scope_kind: ScopeKind) {
         self.logger
-            .debug(&format!("entering new scope: `{:?}` ...", &scope_kind));
+            .debug(&format!("entering new scope: `{:?}` ...", scope_kind));
 
         self.scope_stack.push(Scope {
             scope_kind,
@@ -95,8 +95,8 @@ impl SemanticAnalyser {
     fn insert(&mut self, path: TypePath, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             self.logger.debug(&format!(
-                "inserting path `{}` into scope `{:?}`",
-                path, curr_scope.scope_kind
+                "inserting symbol `{symbol}` into scope `{:?}` at path `{path}`",
+                curr_scope.scope_kind
             ));
 
             curr_scope.symbols.insert(path, symbol);
@@ -111,21 +111,21 @@ impl SemanticAnalyser {
         for scope in self.scope_stack.iter().rev() {
             if let Some(symbol) = scope.symbols.get(path) {
                 self.logger.debug(&format!(
-                    "found path `{}` in scope `{:?}`",
-                    path, scope.scope_kind
+                    "found symbol `{symbol}` in scope `{:?}` at path `{path}`",
+                    scope.scope_kind
                 ));
 
                 return Some(symbol);
             }
         }
         self.logger
-            .warn(&format!("path `{}` not found in any scope", path));
+            .warn(&format!("path `{path}` not found in any scope"));
 
         None
     }
 
     fn analyse_program(&mut self, program: &Program, path: TypePath) -> Result<(), ErrorsEmitted> {
-        self.logger.info("starting semantic analysis ...");
+        self.logger.info("starting semantic analysis of program at path `{path}` ...");
 
         let program_path = if let Some(Scope {
             scope_kind: ScopeKind::Lib,
