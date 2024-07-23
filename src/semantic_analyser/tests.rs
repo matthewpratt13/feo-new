@@ -159,7 +159,7 @@ fn analyse_import_decl() -> Result<(), ()> {
         params_opt: None,
         return_type_opt: None,
         block_opt: None,
-        span: Span::new("", 0, 0),
+        span: Span::default(),
     };
 
     let external_module = ModuleItem {
@@ -169,7 +169,7 @@ fn analyse_import_decl() -> Result<(), ()> {
         module_name: Identifier::from("external_module"),
         inner_attributes_opt: None,
         items_opt: Some(vec![Item::FunctionItem(external_func.clone())]),
-        span: Span::new("", 0, 0),
+        span: Span::default(),
     };
 
     let external_module_path = TypePath {

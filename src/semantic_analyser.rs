@@ -175,7 +175,7 @@ impl SemanticAnalyser {
                     Some(module_items)
                 }
             },
-            span: Span::new("", 0, 0),
+            span: Span::default(),
         };
 
         let mut module_contents: SymbolTable = HashMap::new();
@@ -389,7 +389,7 @@ impl SemanticAnalyser {
                                     Some(Expression::from(*s.assignee_opt.clone().unwrap_or(
                                         Box::new(AssigneeExpr::UnderscoreExpr(UnderscoreExpr {
                                             underscore: Identifier::from("_"),
-                                            span: Span::new("", 0, 0),
+                                            span: Span::default(),
                                         })),
                                     )))
                                 } else {
@@ -2324,7 +2324,7 @@ impl SemanticAnalyser {
                 if a.len() == 1 {
                     let expr = a.get(0).cloned().unwrap_or(Expression::NoneExpr(NoneExpr {
                         kw_none: Keyword::None,
-                        span: Span::new("", 0, 0),
+                        span: Span::default(),
                     }));
 
                     let index = if let Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) =
@@ -2485,7 +2485,7 @@ impl SemanticAnalyser {
                 if a.len() == 1 {
                     let expr = a.get(0).cloned().unwrap_or(Expression::NoneExpr(NoneExpr {
                         kw_none: Keyword::None,
-                        span: Span::new("", 0, 0),
+                        span: Span::default(),
                     }));
 
                     if let Type::Str { .. } = self.analyse_expr(&expr, root)? {
@@ -2537,7 +2537,7 @@ impl SemanticAnalyser {
                 if a.len() == 1 {
                     let expr = a.get(0).cloned().unwrap_or(Expression::NoneExpr(NoneExpr {
                         kw_none: Keyword::None,
-                        span: Span::new("", 0, 0),
+                        span: Span::default(),
                     }));
 
                     if let Type::Str { .. } = self.analyse_expr(&expr, root)? {

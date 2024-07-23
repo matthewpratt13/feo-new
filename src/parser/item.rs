@@ -33,7 +33,7 @@ impl Item {
         parser.log_current_token(false);
 
         // TODO: fix – throws error for comments within an item (e.g., function, module, etc.)
-        
+
         while let Some(Token::LineComment { .. }) = parser.current_token() {
             parser.next_token();
 
@@ -113,7 +113,7 @@ impl Item {
                 kw_enum: Keyword::Enum,
                 enum_name: Identifier::from(""),
                 variants: Vec::new(),
-                span: Span::new("", 0, 0),
+                span: Span::default(),
             })),
 
             _ => {

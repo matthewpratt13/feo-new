@@ -1265,13 +1265,13 @@ impl fmt::Display for Pattern {
                 rng.from_pattern_opt
                     .unwrap_or(Box::new(Pattern::Literal(Literal::Int {
                         value: Int::I64(i64::MIN),
-                        span: Span::new("", 0, 0)
+                        span: Span::default()
                     }))),
                 rng.range_op,
                 rng.to_pattern_opt
                     .unwrap_or(Box::new(Pattern::Literal(Literal::BigUInt {
                         value: BigUInt::U512(U512::MAX),
-                        span: Span::new("", 0, 0)
+                        span: Span::default()
                     })))
             ),
             Pattern::TuplePatt(tup) => write!(f, "( {} )", tup.tuple_patt_elements),
