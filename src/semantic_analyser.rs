@@ -821,7 +821,10 @@ impl SemanticAnalyser {
         for p in paths {
             if let Some(m) = self.module_registry.get(&import_root).cloned() {
                 for (path, symbol) in m.clone() {
-                    let short_path = build_item_path(&TypePath::from(p.type_name.clone()), TypePath::from(path.type_name));
+                    let short_path = build_item_path(
+                        &TypePath::from(p.type_name.clone()),
+                        TypePath::from(path.type_name),
+                    );
                     self.insert(short_path, symbol)?;
                 }
 
@@ -1151,8 +1154,15 @@ impl SemanticAnalyser {
                 let callee_path = if self.lookup(&callee_path).is_some() {
                     callee_path
                 } else {
-                    // TODO: I don't like this – what if the function is not in the root path ?
-                    build_item_path(root, callee_path)
+                    let maybe_relative_path = build_item_path(root, callee_path);
+
+                    if self.lookup(&maybe_relative_path).is_some() {
+                        maybe_relative_path
+                    } else {
+                        return Err(SemanticErrorKind::MissingValue {
+                            expected: "function".to_string(),
+                        });
+                    }
                 };
 
                 self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
