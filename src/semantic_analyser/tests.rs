@@ -276,6 +276,7 @@ fn analyse_method_call() {
             symbol: str,
             decimals: u64,
             total_supply: u64,
+            balances: Mapping<h160, u256>
         }
 
         impl Foo {
@@ -286,6 +287,7 @@ fn analyse_method_call() {
                     symbol: symbol,
                     decimals: 18,
                     total_supply: 1_000_000,
+                    balances: balances
                 }
             }
             
