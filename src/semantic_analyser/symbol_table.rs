@@ -110,15 +110,15 @@ impl Symbol {
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Symbol::Variable { name, .. } => write!(f, "{}", name),
-            Symbol::Struct { path, .. } => write!(f, "{}", path),
-            Symbol::TupleStruct { path, .. } => write!(f, "{}", path),
-            Symbol::Enum { path, .. } => write!(f, "{}", path),
-            Symbol::Trait { path, .. } => write!(f, "{}", path),
-            Symbol::Alias { path, .. } => write!(f, "{}", path),
-            Symbol::Constant { path, .. } => write!(f, "{}", path),
-            Symbol::Function { path, .. } => write!(f, "{}", path),
-            Symbol::Module { path, .. } => write!(f, "{}", path),
+            Symbol::Variable { name, .. } => write!(f, "Variable: {name}"),
+            Symbol::Struct { path, .. } => write!(f, "Struct: {path}"),
+            Symbol::TupleStruct { path, .. } => write!(f, "TupleStruct: {path}"),
+            Symbol::Enum { path, .. } => write!(f, "Enum: {path}"),
+            Symbol::Trait { path, .. } => write!(f, "Trait: {path}"),
+            Symbol::Alias { path, .. } => write!(f, "Alias: {path}"),
+            Symbol::Constant { path, .. } => write!(f, "Constant: {path}"),
+            Symbol::Function { path, .. } => write!(f, "Function: {path}()"),
+            Symbol::Module { path, .. } => write!(f, "Module: {path}"),
         }
     }
 }

@@ -125,7 +125,8 @@ impl SemanticAnalyser {
     }
 
     fn analyse_program(&mut self, program: &Program, path: TypePath) -> Result<(), ErrorsEmitted> {
-        self.logger.info("starting semantic analysis of program at path `{path}` ...");
+        self.logger
+            .info("starting semantic analysis of program at path `{path}` ...");
 
         let program_path = if let Some(Scope {
             scope_kind: ScopeKind::Lib,
@@ -213,7 +214,7 @@ impl SemanticAnalyser {
         match statement {
             Statement::Let(ls) => {
                 self.logger
-                    .debug(&format!("analysing statement: `{}` ...", statement));
+                    .debug(&format!("analysing let statement: `{}` ...", statement));
 
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors
@@ -298,15 +299,17 @@ impl SemanticAnalyser {
 
             Statement::Item(i) => match i {
                 Item::ImportDecl(id) => {
-                    self.logger
-                        .debug(&format!("analysing statement: `{}` ...", statement));
+                    self.logger.debug(&format!(
+                        "analysing import declaration: `{}` ...",
+                        statement
+                    ));
 
                     self.analyse_import(&id, root)?
                 }
 
                 Item::AliasDecl(ad) => {
                     self.logger
-                        .debug(&format!("analysing statement: `{}` ...", statement));
+                        .debug(&format!("analysing alias declaration: `{}` ...", statement));
 
                     let alias_path = build_item_path(root, TypePath::from(ad.alias_name.clone()));
 
@@ -322,8 +325,10 @@ impl SemanticAnalyser {
                 }
 
                 Item::ConstantDecl(cd) => {
-                    self.logger
-                        .debug(&format!("analysing statement: `{}` ...", statement));
+                    self.logger.debug(&format!(
+                        "analysing constant declaration: `{}` ...",
+                        statement
+                    ));
 
                     let value_type = match &cd.value_opt {
                         Some(v) => {
@@ -357,8 +362,10 @@ impl SemanticAnalyser {
                 }
 
                 Item::StaticVarDecl(s) => {
-                    self.logger
-                        .debug(&format!("analysing statement: `{}` ...", statement));
+                    self.logger.debug(&format!(
+                        "analysing static variable declaration: `{}` ...",
+                        statement
+                    ));
 
                     let assignee_type = match &s.assignee_opt {
                         Some(a) => {
@@ -498,7 +505,7 @@ impl SemanticAnalyser {
 
                 Item::EnumDef(e) => {
                     self.logger
-                        .debug(&format!("analysing statement: `{}` ...", statement));
+                        .debug(&format!("analysing enum definition: `{}` ...", statement));
 
                     let enum_name_path = TypePath::from(e.enum_name.clone());
                     let enum_def_path = build_item_path(root, enum_name_path.clone());
@@ -514,7 +521,7 @@ impl SemanticAnalyser {
 
                 Item::StructDef(s) => {
                     self.logger
-                        .debug(&format!("analysing statement: `{}` ...", statement));
+                        .debug(&format!("analysing struct definition: `{}` ...", statement));
 
                     let struct_name_path = TypePath::from(s.struct_name.clone());
                     let struct_def_path = build_item_path(root, struct_name_path.clone());
@@ -529,8 +536,10 @@ impl SemanticAnalyser {
                 }
 
                 Item::TupleStructDef(ts) => {
-                    self.logger
-                        .debug(&format!("analysing statement: `{}` ...", statement));
+                    self.logger.debug(&format!(
+                        "analysing tuple struct definition: `{}` ...",
+                        statement
+                    ));
 
                     let struct_name_path = TypePath::from(ts.struct_name.clone());
                     let tuple_struct_path = build_item_path(root, struct_name_path.clone());
@@ -624,7 +633,7 @@ impl SemanticAnalyser {
 
                 Item::FunctionItem(f) => {
                     self.logger
-                        .debug(&format!("analysing statement: `{}` ...", statement));
+                        .debug(&format!("analysing function item: `{}` ...", statement));
 
                     let function_name_path = TypePath::from(f.function_name.clone());
                     let function_item_path = build_item_path(root, function_name_path.clone());
@@ -1022,12 +1031,10 @@ impl SemanticAnalyser {
                                         found: self.analyse_expr(&d, root)?.to_string(),
                                     }),
                                 },
-                                // TODO: what if the `Type::UserDefined` is not a struct ?
                                 Type::UserDefined(t) => match self.lookup(&TypePath::from(name)) {
                                     Some(s) => {
-                                        if let Symbol::Struct { .. }
-                                        | Symbol::TupleStruct { .. }
-                                        | Symbol::Variable { .. } = s
+                                        if let Symbol::Struct { .. } | Symbol::TupleStruct { .. } =
+                                            s
                                         {
                                             Ok(Type::UserDefined(t))
                                         } else {
@@ -1041,10 +1048,9 @@ impl SemanticAnalyser {
                                         }
                                     }
                                     None => Err(SemanticErrorKind::MissingValue {
-                                        expected: "user-defined type".to_string(),
+                                        expected: "struct".to_string(),
                                     }),
                                 },
-
                                 _ => Err(SemanticErrorKind::UnexpectedType {
                                     expected: "`Vec`, `Mapping, `Option`, `Result` or struct"
                                         .to_string(),
