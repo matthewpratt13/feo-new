@@ -1468,6 +1468,25 @@ pub(crate) enum Item {
     FunctionItem(FunctionItem),
 }
 
+impl Spanned for Item {
+    fn span(&self) -> Span {
+        match self.clone() {
+            Item::ImportDecl(id) => id.span,
+            Item::AliasDecl(ad) => ad.span,
+            Item::ConstantDecl(cvd) => cvd.span,
+            Item::StaticVarDecl(svd) => svd.span,
+            Item::ModuleItem(mi) => mi.span,
+            Item::TraitDef(td) => td.span,
+            Item::EnumDef(ed) => ed.span,
+            Item::StructDef(sd) => sd.span,
+            Item::TupleStructDef(tsd) => tsd.span,
+            Item::InherentImplDef(iid) => iid.span,
+            Item::TraitImplDef(tid) => tid.span,
+            Item::FunctionItem(fi) => fi.span,
+        }
+    }
+}
+
 /// Enum representing the language's different types, which help to define a value's
 /// memory interpretation and the appropriate operations that may be performed.
 #[derive(Debug, Clone, PartialEq, Eq)]

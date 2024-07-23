@@ -415,7 +415,10 @@ impl SemanticAnalyser {
 
                     if let Some(v) = &m.items_opt {
                         for item in v.iter() {
-                            self.analyse_stmt(&Statement::Item(item.clone()), &module_path)?;
+                            match self.analyse_stmt(&Statement::Item(item.clone()), &module_path) {
+                                Ok(_) => (),
+                                Err(e) => self.log_error(e, &item.span()),
+                            }
                         }
                     }
 
@@ -783,12 +786,9 @@ impl SemanticAnalyser {
             module_root.clone()
         };
 
-        let mut segment_counter: usize = 0;
         let num_segments = segments.len();
 
-        for seg in segments {
-            segment_counter += 1;
-
+        for (i, seg) in segments.into_iter().enumerate() {
             let path = build_item_path(&import_root, seg.root);
 
             if let Some(sub) = seg.subset_opt {
@@ -803,11 +803,11 @@ impl SemanticAnalyser {
                     }
                 }
             } else {
-                if segment_counter == num_segments {
+                if i == num_segments - 1 {
                     paths.push(path.clone());
                 }
 
-                if segment_counter < num_segments {
+                if i < num_segments - 1 {
                     import_root = path.clone();
                 }
             }
@@ -2058,9 +2058,10 @@ impl SemanticAnalyser {
                                     self.analyse_expr(e, root)?;
                                 }
                             },
-                            _ => {
-                                self.analyse_stmt(stmt, root)?;
-                            }
+                            _ => match self.analyse_stmt(stmt, root) {
+                                Ok(_) => (),
+                                Err(e) => self.log_error(e, &stmt.span()),
+                            },
                         }
                     }
 
