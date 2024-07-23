@@ -1154,7 +1154,12 @@ impl SemanticAnalyser {
                 let callee_path = if self.lookup(&callee_path).is_some() {
                     callee_path
                 } else {
-                    let maybe_relative_path = build_item_path(root, callee_path);
+                    let maybe_relative_path = build_item_path(root, callee_path.clone());
+
+                    self.logger.warn(&format!(
+                        "cannot find symbol at path `{}`, trying `{maybe_relative_path}` ...",
+                        callee_path
+                    ));
 
                     if self.lookup(&maybe_relative_path).is_some() {
                         maybe_relative_path
