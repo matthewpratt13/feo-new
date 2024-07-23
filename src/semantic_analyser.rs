@@ -437,7 +437,7 @@ impl SemanticAnalyser {
 
                     self.logger.debug(&format!(
                         "inserting symbols into module at path: `{}`",
-                        module_path
+                        module_path,
                     ));
 
                     self.module_registry
@@ -816,13 +816,14 @@ impl SemanticAnalyser {
         // TODO: handle `super` and `self` path roots
         // TODO: handle public imports / re-exports
 
-        // TODO: how to insert associated items (e.g., constructors, other functions) when importing
-        // TODO: from another module ?
-
         println!("import paths: {:?}", paths);
 
         for p in paths {
-            if let Some(m) = self.module_registry.get(&import_root) {
+            if let Some(m) = self.module_registry.get(&import_root).cloned() {
+                for (path, symbol) in m.clone() {
+                    self.insert(path, symbol)?;
+                }
+
                 if let Some(s) = m.get(&p) {
                     self.insert(TypePath::from(p.type_name), s.clone())?;
                 } else {
@@ -961,15 +962,21 @@ impl SemanticAnalyser {
                                 build_item_path(&path, TypePath::from(mc.method_name.clone()));
                             self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                         } else {
+                            println!("path: {path}, receiver_path: {receiver_path}");
                             Err(SemanticErrorKind::TypeMismatchVariable {
                                 name: receiver_path.type_name,
-                                expected: path.to_string(),
+                                expected: format!("`{path}`"),
                                 found: format!("`{}`", receiver_type),
                             })
                         }
                     }
 
-                    Some(Symbol::Variable { var_type, data, .. }) => {
+                    Some(Symbol::Variable {
+                        name,
+                        var_type,
+                        data,
+                        ..
+                    }) => {
                         if let Some(d) = data {
                             match var_type {
                                 Type::Vec { .. } => match d {
@@ -1011,8 +1018,32 @@ impl SemanticAnalyser {
                                         found: self.analyse_expr(&d, root)?.to_string(),
                                     }),
                                 },
+                                // TODO: what if the `Type::UserDefined` is not a struct ?
+                                Type::UserDefined(t) => match self.lookup(&TypePath::from(name)) {
+                                    Some(s) => {
+                                        if let Symbol::Struct { .. }
+                                        | Symbol::TupleStruct { .. }
+                                        | Symbol::Variable { .. } = s
+                                        {
+                                            Ok(Type::UserDefined(t))
+                                        } else {
+                                            Err(SemanticErrorKind::UnexpectedType {
+                                                expected: "struct".to_string(),
+                                                found: format!(
+                                                    "`{}`",
+                                                    self.analyse_expr(&d, root)?
+                                                ),
+                                            })
+                                        }
+                                    }
+                                    None => Err(SemanticErrorKind::MissingValue {
+                                        expected: "user-defined type".to_string(),
+                                    }),
+                                },
+
                                 _ => Err(SemanticErrorKind::UnexpectedType {
-                                    expected: "`Vec`, `Mapping, `Option` or `Result`".to_string(),
+                                    expected: "`Vec`, `Mapping, `Option`, `Result` or struct"
+                                        .to_string(),
                                     found: self.analyse_expr(&d, root)?.to_string(),
                                 }),
                             }
@@ -1070,28 +1101,19 @@ impl SemanticAnalyser {
                     },
 
                     Some(Symbol::Variable { name, var_type, .. }) => {
-                        if name == Identifier::from("self") {
-                            if let Some(Symbol::Struct { struct_def, .. }) =
-                                self.lookup(&TypePath::from(var_type))
-                            {
-                                match &struct_def.fields_opt {
-                                    Some(v) => {
-                                        match v.iter().find(|f| f.field_name == fa.field_name) {
-                                            Some(sdf) => Ok(*sdf.field_type.clone()),
-                                            _ => Err(SemanticErrorKind::UndefinedField {
-                                                struct_name: struct_def.struct_name.clone(),
-                                                field_name: fa.field_name.clone(),
-                                            }),
-                                        }
-                                    }
-                                    None => Ok(Type::UnitType(Unit)),
-                                }
-                            } else {
-                                Err(SemanticErrorKind::UnexpectedSymbol {
-                                    name: Identifier::from(&format!("{}", object_type)),
-                                    expected: "struct".to_string(),
-                                    found: format!("`{}`", name),
-                                })
+                        // if name == Identifier::from("self") {
+                        if let Some(Symbol::Struct { struct_def, .. }) =
+                            self.lookup(&TypePath::from(var_type))
+                        {
+                            match &struct_def.fields_opt {
+                                Some(v) => match v.iter().find(|f| f.field_name == fa.field_name) {
+                                    Some(sdf) => Ok(*sdf.field_type.clone()),
+                                    _ => Err(SemanticErrorKind::UndefinedField {
+                                        struct_name: struct_def.struct_name.clone(),
+                                        field_name: fa.field_name.clone(),
+                                    }),
+                                },
+                                None => Ok(Type::UnitType(Unit)),
                             }
                         } else {
                             Err(SemanticErrorKind::UnexpectedSymbol {
@@ -1100,6 +1122,13 @@ impl SemanticAnalyser {
                                 found: format!("`{}`", name),
                             })
                         }
+                        // } else {
+                        //     Err(SemanticErrorKind::UnexpectedSymbol {
+                        //         name: Identifier::from(&format!("{}", object_type)),
+                        //         expected: "struct".to_string(),
+                        //         found: format!("`{}`", name),
+                        //     })
+                        // }
                     }
 
                     None => Err(SemanticErrorKind::UndefinedType {
@@ -1118,10 +1147,10 @@ impl SemanticAnalyser {
                 let callee = wrap_into_expression(c.callee.clone());
                 let callee_path = TypePath::from(PathExpr::from(callee));
 
-                // !! throws an error if the call path is from another module (i.e., not the root)
                 let callee_path = if self.lookup(&callee_path).is_some() {
                     callee_path
                 } else {
+                    // TODO: I don't like this – what if the function is not in the root path ?
                     build_item_path(root, callee_path)
                 };
 

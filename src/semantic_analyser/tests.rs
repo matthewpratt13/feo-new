@@ -46,6 +46,7 @@ fn analyse_constant_reassign() {
 
 #[test]
 fn analyse_impl() -> Result<(), ()> {
+    // TODO: can we not use full paths in for imported associated items (e.g., constant) ?
     let input = r#"
     module erc_20 {
         trait Contract {
@@ -267,6 +268,7 @@ fn analyse_let_stmt() -> Result<(), ()> {
 
 #[test]
 fn analyse_method_call() {
+    // TODO: can we not use full paths in for imported associated items (e.g., functions) ?
     let input = r#"
     module foo {
         #![contract]
@@ -302,7 +304,7 @@ fn analyse_method_call() {
     import lib::foo::Foo;
 
     func main() {
-        let foo = lib::foo::Foo::new("Foo", "FOO", {});
+        let foo = lib::foo::Foo::new("Foo", "FOO", { $0x12345123451234512345: 0x1234567890 });
 
         let name = foo.name();
 
