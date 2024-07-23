@@ -821,7 +821,8 @@ impl SemanticAnalyser {
         for p in paths {
             if let Some(m) = self.module_registry.get(&import_root).cloned() {
                 for (path, symbol) in m.clone() {
-                    self.insert(path, symbol)?;
+                    let short_path = build_item_path(&TypePath::from(p.type_name.clone()), TypePath::from(path.type_name));
+                    self.insert(short_path, symbol)?;
                 }
 
                 if let Some(s) = m.get(&p) {
