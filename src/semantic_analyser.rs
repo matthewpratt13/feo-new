@@ -2269,7 +2269,7 @@ impl SemanticAnalyser {
         root: &TypePath,
         expected_value: String,
     ) -> Result<TypePath, SemanticErrorKind> {
-        let variable_path = if self.lookup(path).is_some() {
+        let item_path = if self.lookup(path).is_some() {
             path.clone()
         } else {
             let full_path = build_item_path(root, path.clone());
@@ -2287,7 +2287,7 @@ impl SemanticAnalyser {
             }
         };
 
-        Ok(variable_path)
+        Ok(item_path)
     }
 
     fn analyse_call_or_method_call_expr(
