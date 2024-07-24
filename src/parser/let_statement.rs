@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{IdentifierPatt, Keyword, LetStmt, Statement, Type},
     error::ErrorsEmitted,
@@ -44,8 +46,10 @@ impl ParseStatement for LetStmt {
 
         match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
-                let span =
-                    parser.get_span(&first_token.unwrap().span(), &value_opt.as_ref().unwrap().span());
+                let span = parser.get_span(
+                    &first_token.unwrap().span(),
+                    &value_opt.as_ref().unwrap().span(),
+                );
 
                 parser.next_token();
                 let stmt = LetStmt {
@@ -67,6 +71,16 @@ impl ParseStatement for LetStmt {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for LetStmt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LetStmt")
+            .field("assignee", &self.assignee)
+            .field("type_ann_opt", &self.type_ann_opt)
+            .field("value_opt", &self.value_opt)
+            .finish()
     }
 }
 

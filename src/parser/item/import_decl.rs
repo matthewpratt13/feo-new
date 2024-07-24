@@ -3,7 +3,7 @@ use core::fmt;
 use crate::{
     ast::{
         Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathSegment, PathSubset,
-        Separator, TypePath, Visibility,
+        PathWildcard, TypePath, Visibility,
     },
     error::ErrorsEmitted,
     span::Position,
@@ -80,7 +80,7 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
 
     let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.current_token() {
         parser.next_token();
-        Some(Separator::ColonColonAsterisk)
+        Some(PathWildcard)
     } else {
         None
     };

@@ -1,9 +1,10 @@
 use core::fmt;
 
 use crate::{
-    ast::{Identifier, PathExpr, PathRoot, SelfType},
+    ast::{Expression, Identifier, PathExpr, PathRoot, SelfType},
     error::ErrorsEmitted,
     parser::{ParseSimpleExpr, Parser},
+    span::Spanned,
     token::Token,
 };
 
@@ -73,6 +74,19 @@ impl ParseSimpleExpr for PathExpr {
         parser.log_current_token(false);
 
         Ok(expr)
+    }
+}
+
+impl From<Expression> for PathExpr {
+    fn from(value: Expression) -> Self {
+        match value {
+            Expression::Path(p) => p,
+            e => PathExpr {
+                path_root: PathRoot::Identifier(Identifier::from("")),
+                tree_opt: None,
+                span: e.span(),
+            },
+        }
     }
 }
 

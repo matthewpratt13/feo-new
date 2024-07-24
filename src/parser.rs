@@ -78,7 +78,6 @@ pub(crate) mod test_utils;
 pub(crate) mod ty;
 mod visibility;
 
-use core::fmt;
 use std::collections::HashMap;
 
 use crate::{
@@ -1557,38 +1556,6 @@ impl Parser {
     /// Determine if `Token::DblPipe` indicates the logical `OR` operator.
     fn is_logical_or(&self) -> bool {
         !self.is_closure_without_params()
-    }
-}
-
-impl fmt::Debug for BreakExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BreakExpr")
-            .field("kw_break", &self.kw_break)
-            .finish()
-    }
-}
-
-impl fmt::Debug for ContinueExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ContinueExpr")
-            .field("kw_continue", &self.kw_continue)
-            .finish()
-    }
-}
-
-impl fmt::Debug for NoneExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("NoneExpr")
-            .field("kw_none", &self.kw_none)
-            .finish()
-    }
-}
-
-impl fmt::Debug for UnderscoreExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("UnderscoreExpr")
-            .field("underscore", &self.underscore)
-            .finish()
     }
 }
 
