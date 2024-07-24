@@ -95,7 +95,7 @@ impl SemanticAnalyser {
     fn insert(&mut self, path: TypePath, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             self.logger.debug(&format!(
-                "inserting symbol `{symbol}` into scope `{:?}` at path `{path}`",
+                "inserting symbol `{symbol}` into scope `{:?}` at path `{path}` ...",
                 curr_scope.scope_kind
             ));
 
@@ -279,8 +279,24 @@ impl SemanticAnalyser {
                         var_type: value_type.clone(),
                         data: ls.value_opt.clone(),
                     },
-                    Type::UserDefined(pt) => {
-                        let type_path = build_item_path(root, pt.clone());
+                    Type::UserDefined(tp) => {
+                        let type_path = if self.lookup(tp).is_some() {
+                            tp.clone()
+                        } else {
+                            let full_path = build_item_path(root, tp.clone());
+
+                            self.logger.warn(&format!(
+                                "cannot find symbol at path `{tp}`, trying `{full_path}` ..."
+                            ));
+
+                            if self.lookup(&full_path).is_some() {
+                                full_path
+                            } else {
+                                return Err(SemanticErrorKind::MissingValue {
+                                    expected: "function".to_string(),
+                                });
+                            }
+                        };
 
                         match self.lookup(&type_path) {
                             Some(s) => s.clone(),
@@ -903,9 +919,11 @@ impl SemanticAnalyser {
                     },
                 };
 
-                println!("variable path: `{}`", path);
+                let variable_path = self.check_path(&path, root, String::from("variable"))?;
 
-                if let Some(s) = self.lookup(&path) {
+                println!("variable path: `{variable_path}`");
+
+                if let Some(s) = self.lookup(&variable_path) {
                     println!("variable symbol: `{}`", s);
                     Ok(s.symbol_type())
                 } else {
@@ -970,7 +988,7 @@ impl SemanticAnalyser {
                 // check if path expression's type is that of an existing type and analyse
                 match self.lookup(&receiver_path).cloned() {
                     Some(Symbol::Struct { path, .. } | Symbol::TupleStruct { path, .. }) => {
-                        if path == receiver_path {
+                        if Type::UserDefined(path.clone()) == receiver_type {
                             let method_path =
                                 build_item_path(&path, TypePath::from(mc.method_name.clone()));
                             self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
@@ -1111,7 +1129,6 @@ impl SemanticAnalyser {
                     },
 
                     Some(Symbol::Variable { name, var_type, .. }) => {
-                        // if name == Identifier::from("self") {
                         if let Some(Symbol::Struct { struct_def, .. }) =
                             self.lookup(&TypePath::from(var_type))
                         {
@@ -1132,13 +1149,6 @@ impl SemanticAnalyser {
                                 found: format!("`{}`", name),
                             })
                         }
-                        // } else {
-                        //     Err(SemanticErrorKind::UnexpectedSymbol {
-                        //         name: Identifier::from(&format!("{}", object_type)),
-                        //         expected: "struct".to_string(),
-                        //         found: format!("`{}`", name),
-                        //     })
-                        // }
                     }
 
                     None => Err(SemanticErrorKind::UndefinedType {
@@ -1155,26 +1165,12 @@ impl SemanticAnalyser {
 
             Expression::Call(c) => {
                 let callee = wrap_into_expression(c.callee.clone());
-                let callee_path = TypePath::from(PathExpr::from(callee));
 
-                let callee_path = if self.lookup(&callee_path).is_some() {
-                    callee_path
-                } else {
-                    let maybe_relative_path = build_item_path(root, callee_path.clone());
-
-                    self.logger.warn(&format!(
-                        "cannot find symbol at path `{}`, trying `{maybe_relative_path}` ...",
-                        callee_path
-                    ));
-
-                    if self.lookup(&maybe_relative_path).is_some() {
-                        maybe_relative_path
-                    } else {
-                        return Err(SemanticErrorKind::MissingValue {
-                            expected: "function".to_string(),
-                        });
-                    }
-                };
+                let callee_path = self.check_path(
+                    &TypePath::from(PathExpr::from(callee)),
+                    root,
+                    String::from("function"),
+                )?;
 
                 self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
             }
@@ -1648,7 +1644,11 @@ impl SemanticAnalyser {
                 }
 
                 let assignee_as_path_expr = PathExpr::from(assignee);
-                let assignee_path = TypePath::from(assignee_as_path_expr);
+                let assignee_path = self.check_path(
+                    &TypePath::from(assignee_as_path_expr),
+                    root,
+                    String::from("assignee expression"),
+                )?;
 
                 match self.lookup(&assignee_path).cloned() {
                     Some(Symbol::Variable { var_type, .. }) => match var_type == assignee_type {
@@ -1685,7 +1685,11 @@ impl SemanticAnalyser {
                 let value_type = self.analyse_expr(&wrap_into_expression(ca.rhs.clone()), root)?;
 
                 let assignee_as_path_expr = PathExpr::from(assignee);
-                let assignee_path = TypePath::from(assignee_as_path_expr);
+                let assignee_path = self.check_path(
+                    &TypePath::from(assignee_as_path_expr),
+                    root,
+                    String::from("assignee expression"),
+                )?;
 
                 match self.lookup(&assignee_path) {
                     Some(Symbol::Variable { .. }) => match (&assignee_type, &value_type) {
@@ -2050,14 +2054,21 @@ impl SemanticAnalyser {
                 Some(vec) => {
                     self.enter_scope(ScopeKind::LocalBlock);
 
+                    let mut cloned_iter = vec.iter().peekable().clone();
+
                     for stmt in vec {
+                        cloned_iter.next();
+
                         match stmt {
                             Statement::Expression(e) => match e {
                                 Expression::Return(_)
                                 | Expression::Break(_)
                                 | Expression::Continue(_) => {
-                                    if vec.into_iter().next().is_some() {
-                                        self.logger.warn("unreachable code")
+                                    self.analyse_expr(e, root)?;
+
+                                    match cloned_iter.peek() {
+                                        Some(_) => self.logger.warn("unreachable code"),
+                                        None => (),
                                     }
                                 }
                                 _ => {
@@ -2252,12 +2263,39 @@ impl SemanticAnalyser {
         }
     }
 
+    fn check_path(
+        &mut self,
+        path: &TypePath,
+        root: &TypePath,
+        expected_value: String,
+    ) -> Result<TypePath, SemanticErrorKind> {
+        let variable_path = if self.lookup(path).is_some() {
+            path.clone()
+        } else {
+            let full_path = build_item_path(root, path.clone());
+
+            self.logger.warn(&format!(
+                "cannot find symbol at path `{path}`, trying `{full_path}` ...",
+            ));
+
+            if self.lookup(&full_path).is_some() {
+                full_path
+            } else {
+                return Err(SemanticErrorKind::MissingValue {
+                    expected: expected_value,
+                });
+            }
+        };
+
+        Ok(variable_path)
+    }
+
     fn analyse_call_or_method_call_expr(
         &mut self,
         path: TypePath,
         args_opt: Option<Vec<Expression>>,
     ) -> Result<Type, SemanticErrorKind> {
-        match self.lookup(&path) {
+        match self.lookup(&path).cloned() {
             Some(Symbol::Function { function, .. }) => {
                 let params = function.params_opt.clone();
                 let return_type = function.return_type_opt.clone();
@@ -2267,17 +2305,58 @@ impl SemanticAnalyser {
                         Some(t) => Ok(*t),
                         None => Ok(Type::UnitType(Unit)),
                     },
-                    (None, Some(_)) | (Some(_), None) => {
-                        Err(SemanticErrorKind::ArgumentCountMismatch {
-                            name: path.type_name,
-                            expected: params.unwrap_or(Vec::new()).len(),
-                            found: args_opt.unwrap_or(Vec::new()).len(),
-                        })
-                    }
-                    (Some(a), Some(p)) => {
-                        if a.len() != p.len() {
+                    (None, Some(p)) => {
+                        let mut self_counter: usize = 0;
+                        let mut func_param_counter: usize = 0;
+
+                        for param in p {
+                            if let Type::SelfType(_) = param.param_type() {
+                                self_counter += 1;
+                            } else {
+                                func_param_counter += 1;
+                            }
+                        }
+
+                        if self_counter > 1 {
+                            return Err(SemanticErrorKind::MethodParamCountError);
+                        }
+
+                        if self_counter != p.len() {
                             return Err(SemanticErrorKind::ArgumentCountMismatch {
-                                name: path.type_name,
+                                name: function.function_name.clone(),
+                                expected: self_counter,
+                                found: self_counter + func_param_counter,
+                            });
+                        }
+
+                        match return_type {
+                            Some(t) => Ok(*t),
+                            _ => Ok(Type::UnitType(Unit)),
+                        }
+                    }
+                    (Some(a), None) => Err(SemanticErrorKind::ArgumentCountMismatch {
+                        name: function.function_name.clone(),
+                        expected: 0,
+                        found: a.len(),
+                    }),
+                    (Some(a), Some(p)) => {
+                        let mut self_counter: usize = 0;
+
+                        for param in p {
+                            if let Type::SelfType(_) = param.param_type() {
+                                self_counter += 1;
+                            }
+                        }
+
+                        if self_counter > 1 {
+                            return Err(SemanticErrorKind::MethodParamCountError);
+                        }
+
+                        let num_func_params = p.len() - self_counter;
+
+                        if a.len() != num_func_params {
+                            return Err(SemanticErrorKind::ArgumentCountMismatch {
+                                name: function.function_name.clone(),
                                 expected: p.len(),
                                 found: a.len(),
                             });
@@ -2290,7 +2369,7 @@ impl SemanticAnalyser {
 
                             if arg_type != param_type {
                                 return Err(SemanticErrorKind::TypeMismatchArgument {
-                                    name: path.type_name,
+                                    name: function.function_name.clone(),
                                     expected: format!("`{}`", param_type),
                                     found: format!("`{}`", arg_type),
                                 });
