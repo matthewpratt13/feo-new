@@ -230,7 +230,11 @@ impl fmt::Display for FunctionPtr {
         write!(
             f,
             "{}({:?}) [-> {:?}]",
-            self.function_name, self.params_opt, self.return_type_opt
+            self.function_name,
+            self.params_opt.clone().unwrap_or(Vec::new()),
+            self.return_type_opt
+                .clone()
+                .unwrap_or(Box::new(Type::UnitType(Unit)))
         )
     }
 }
@@ -263,7 +267,7 @@ pub struct InferredType {
 
 impl fmt::Display for InferredType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "_")
+        write!(f, "{}", self.name)
     }
 }
 

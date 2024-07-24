@@ -108,7 +108,17 @@ pub(crate) struct TupleElements {
 
 impl fmt::Display for TupleElements {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}, {:?}", self.elements, self.final_element_opt)
+        write!(
+            f,
+            "{:?}, {:?}",
+            self.elements,
+            self.final_element_opt
+                .clone()
+                .unwrap_or(Box::new(Expression::NoneExpr(NoneExpr {
+                    kw_none: Keyword::None,
+                    span: Span::default()
+                })))
+        )
     }
 }
 

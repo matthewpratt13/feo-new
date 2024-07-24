@@ -23,7 +23,16 @@ pub(crate) struct TuplePattElements {
 
 impl fmt::Display for TuplePattElements {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}, {:?}", self.elements, self.final_element_opt)
+        write!(
+            f,
+            "{:?}, {:?}",
+            self.elements,
+            self.final_element_opt
+                .clone()
+                .unwrap_or(Box::new(Pattern::NonePatt(NonePatt {
+                    kw_none: Keyword::None
+                })))
+        )
     }
 }
 

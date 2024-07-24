@@ -579,7 +579,7 @@ impl fmt::Display for Expression {
                     .unwrap_or(Box::new(Type::UnitType(Unit))),
                 clo.body_expression
             ),
-            Expression::Array(arr) => write!(f, "[ {:?} ]", arr.elements_opt),
+            Expression::Array(arr) => write!(f, "[ {:?} ]", arr.elements_opt.unwrap_or(Vec::new())),
             Expression::Tuple(tup) => write!(f, "( {} )", tup.tuple_elements),
             Expression::Struct(strc) => {
                 write!(
@@ -607,7 +607,7 @@ impl fmt::Display for Expression {
                 },
                 {
                     if let Some(e) = ifex.trailing_else_block_opt {
-                        format!(" else {:?}", Expression::Block(e))
+                        format!(" else {:?}", e)
                     } else {
                         "".to_string()
                     }
@@ -1459,10 +1459,20 @@ impl fmt::Display for Pattern {
             ),
             Pattern::TuplePatt(tup) => write!(f, "( {} )", tup.tuple_patt_elements),
             Pattern::StructPatt(strc) => {
-                write!(f, "{} {{ {:?} }}", strc.struct_path, strc.struct_fields_opt)
+                write!(
+                    f,
+                    "{} {{ {:?} }}",
+                    strc.struct_path,
+                    strc.struct_fields_opt.unwrap_or(Vec::new())
+                )
             }
             Pattern::TupleStructPatt(ts) => {
-                write!(f, "{} ( {:?} )", ts.struct_path, ts.struct_elements_opt)
+                write!(
+                    f,
+                    "{} ( {:?} )",
+                    ts.struct_path,
+                    ts.struct_elements_opt.unwrap_or(Vec::new())
+                )
             }
             Pattern::WildcardPatt(_) => write!(f, "*"),
             Pattern::RestPatt(_) => write!(f, ".."),
@@ -1557,7 +1567,7 @@ impl fmt::Display for Statement {
                         "{}module {} {{ #![{:?}] {:?} }}",
                         m.visibility,
                         m.module_name,
-                        m.inner_attributes_opt,
+                        m.inner_attributes_opt.unwrap_or(Vec::new()),
                         m.items_opt.unwrap_or(Vec::new())
                     )
                 }
@@ -1566,7 +1576,7 @@ impl fmt::Display for Statement {
                     "{}trait {} {{ #![{:?}] {:?} }}",
                     td.visibility,
                     td.trait_name,
-                    td.inner_attributes_opt,
+                    td.inner_attributes_opt.unwrap_or(Vec::new()),
                     td.trait_items_opt.unwrap_or(Vec::new())
                 ),
                 Item::EnumDef(ed) => write!(
@@ -1606,7 +1616,7 @@ impl fmt::Display for Statement {
                     "{}func {}({:?}) -> {} {{ {:?} }}",
                     fi.visibility,
                     fi.function_name,
-                    fi.params_opt,
+                    fi.params_opt.unwrap_or(Vec::new()),
                     fi.return_type_opt.unwrap_or(Box::new(Type::UnitType(Unit))),
                     fi.block_opt
                 ),
@@ -1632,6 +1642,25 @@ pub(crate) enum Item {
     InherentImplDef(InherentImplDef),
     TraitImplDef(TraitImplDef),
     FunctionItem(FunctionItem),
+}
+
+impl Spanned for Item {
+    fn span(&self) -> Span {
+        match self.clone() {
+            Item::ImportDecl(id) => id.span,
+            Item::AliasDecl(ad) => ad.span,
+            Item::ConstantDecl(cvd) => cvd.span,
+            Item::StaticVarDecl(svd) => svd.span,
+            Item::ModuleItem(mi) => mi.span,
+            Item::TraitDef(td) => td.span,
+            Item::EnumDef(ed) => ed.span,
+            Item::StructDef(sd) => sd.span,
+            Item::TupleStructDef(tsd) => tsd.span,
+            Item::InherentImplDef(iid) => iid.span,
+            Item::TraitImplDef(tid) => tid.span,
+            Item::FunctionItem(fi) => fi.span,
+        }
+    }
 }
 
 impl fmt::Debug for Item {
@@ -1717,7 +1746,6 @@ impl fmt::Debug for Item {
                 .field("implementing_type", &arg0.implementing_type)
                 .field("associated_items_opt", &arg0.associated_items_opt)
                 .finish(),
-
             Self::FunctionItem(arg0) => f
                 .debug_struct("FunctionItem")
                 .field("attributes_opt", &arg0.attributes_opt)
@@ -1727,25 +1755,6 @@ impl fmt::Debug for Item {
                 .field("return_type_opt", &arg0.return_type_opt)
                 .field("block_opt", &arg0.block_opt)
                 .finish(),
-        }
-    }
-}
-
-impl Spanned for Item {
-    fn span(&self) -> Span {
-        match self.clone() {
-            Item::ImportDecl(id) => id.span,
-            Item::AliasDecl(ad) => ad.span,
-            Item::ConstantDecl(cvd) => cvd.span,
-            Item::StaticVarDecl(svd) => svd.span,
-            Item::ModuleItem(mi) => mi.span,
-            Item::TraitDef(td) => td.span,
-            Item::EnumDef(ed) => ed.span,
-            Item::StructDef(sd) => sd.span,
-            Item::TupleStructDef(tsd) => tsd.span,
-            Item::InherentImplDef(iid) => iid.span,
-            Item::TraitImplDef(tid) => tid.span,
-            Item::FunctionItem(fi) => fi.span,
         }
     }
 }
