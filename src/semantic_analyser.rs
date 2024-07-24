@@ -280,23 +280,7 @@ impl SemanticAnalyser {
                         data: ls.value_opt.clone(),
                     },
                     Type::UserDefined(tp) => {
-                        let type_path = if self.lookup(tp).is_some() {
-                            tp.clone()
-                        } else {
-                            let full_path = build_item_path(root, tp.clone());
-
-                            self.logger.warn(&format!(
-                                "cannot find symbol at path `{tp}`, trying `{full_path}` ..."
-                            ));
-
-                            if self.lookup(&full_path).is_some() {
-                                full_path
-                            } else {
-                                return Err(SemanticErrorKind::MissingValue {
-                                    expected: "function".to_string(),
-                                });
-                            }
-                        };
+                        let type_path = self.check_path(tp, root, String::from("type"))?;
 
                         match self.lookup(&type_path) {
                             Some(s) => s.clone(),
@@ -2274,7 +2258,7 @@ impl SemanticAnalyser {
         } else {
             let full_path = build_item_path(root, path.clone());
 
-            self.logger.warn(&format!(
+            self.logger.debug(&format!(
                 "cannot find symbol at path `{path}`, trying `{full_path}` ...",
             ));
 
