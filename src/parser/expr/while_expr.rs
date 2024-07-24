@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{BlockExpr, GroupedExpr, Keyword, WhileExpr},
     error::ErrorsEmitted,
@@ -51,6 +53,15 @@ impl ParseControlExpr for WhileExpr {
         };
 
         Ok(expr)
+    }
+}
+
+impl fmt::Debug for WhileExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WhileExpr")
+            .field("condition", &self.condition)
+            .field("block", &self.block)
+            .finish()
     }
 }
 

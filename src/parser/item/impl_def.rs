@@ -1,7 +1,9 @@
+use core::fmt;
+
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, Delimiter, FunctionItem, InherentImplDef, InherentImplItem,
-        Keyword, OuterAttr, TypePath, TraitImplDef, TraitImplItem, Type, Visibility,
+        Keyword, OuterAttr, TraitImplDef, TraitImplItem, Type, TypePath, Visibility,
     },
     error::ErrorsEmitted,
     span::Position,
@@ -70,6 +72,16 @@ impl ParseDefItem for InherentImplDef {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for InherentImplDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InherentImplDef")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("nominal_type", &self.nominal_type)
+            .field("associated_items_opt", &self.associated_items_opt)
+            .finish()
     }
 }
 
@@ -163,6 +175,17 @@ impl ParseDefItem for TraitImplDef {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for TraitImplDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TraitImplDef")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("implemented_trait_path", &self.implemented_trait_path)
+            .field("implementing_type", &self.implementing_type)
+            .field("associated_items_opt", &self.associated_items_opt)
+            .finish()
     }
 }
 

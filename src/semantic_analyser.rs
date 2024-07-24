@@ -686,7 +686,7 @@ impl SemanticAnalyser {
             path.clone()
         };
 
-        println!("function root: {}", function_root);
+        println!("function root: `{}`", function_root);
 
         // append the function name to the root
         let full_path = build_item_path(&function_root, TypePath::from(f.function_name.clone()));
@@ -825,7 +825,7 @@ impl SemanticAnalyser {
         // TODO: handle `super` and `self` path roots
         // TODO: handle public imports / re-exports
 
-        println!("import paths: {:?}", paths);
+        println!("import paths: `{:?}`", paths);
 
         for p in paths {
             if let Some(m) = self.module_registry.get(&import_root).cloned() {
@@ -903,10 +903,10 @@ impl SemanticAnalyser {
                     },
                 };
 
-                println!("variable path: {}", path);
+                println!("variable path: `{}`", path);
 
                 if let Some(s) = self.lookup(&path) {
-                    println!("variable symbol: {}", s);
+                    println!("variable symbol: `{}`", s);
                     Ok(s.symbol_type())
                 } else {
                     Err(SemanticErrorKind::UndefinedVariable {
@@ -975,7 +975,7 @@ impl SemanticAnalyser {
                                 build_item_path(&path, TypePath::from(mc.method_name.clone()));
                             self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                         } else {
-                            println!("path: {path}, receiver_path: {receiver_path}");
+                            println!("path: `{path}`, receiver_path: `{receiver_path}`");
                             Err(SemanticErrorKind::TypeMismatchVariable {
                                 name: receiver_path.type_name,
                                 expected: format!("`{path}`"),
@@ -1086,12 +1086,12 @@ impl SemanticAnalyser {
                 let object_path = TypePath::from(object_as_path_expr);
                 let object_type = self.analyse_expr(&object, &object_path)?;
 
-                println!("object path: {:?}", object_path);
+                println!("object path: `{}`", object_path);
 
                 let symbol = self.lookup(&object_path).cloned();
 
                 println!(
-                    "object symbol type: {:?}",
+                    "object symbol type: `{:?}`",
                     symbol
                         .clone()
                         .expect("no object symbol found")
@@ -1941,7 +1941,7 @@ impl SemanticAnalyser {
             Expression::Struct(s) => {
                 let path_type = build_item_path(root, TypePath::from(s.struct_path.clone()));
 
-                println!("struct path: {}", path_type);
+                println!("struct path: `{}`", path_type);
 
                 match self.lookup(&path_type).cloned() {
                     Some(Symbol::Struct { struct_def, path }) => {

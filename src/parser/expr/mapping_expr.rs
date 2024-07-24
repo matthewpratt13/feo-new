@@ -1,3 +1,4 @@
+use core::fmt;
 use std::collections::HashMap;
 
 use crate::{
@@ -38,6 +39,14 @@ impl ParseConstructExpr for MappingExpr {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for MappingExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MappingExpr")
+            .field("pairs_opt", &self.pairs_opt)
+            .finish()
     }
 }
 

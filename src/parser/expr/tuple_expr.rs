@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, TupleElements, TupleExpr, TupleIndexExpr},
     error::ErrorsEmitted,
@@ -40,6 +42,14 @@ impl ParseConstructExpr for TupleExpr {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for TupleExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TupleExpr")
+            .field("tuple_elements", &self.tuple_elements)
+            .finish()
     }
 }
 
@@ -105,6 +115,15 @@ impl ParseOperatorExpr for TupleIndexExpr {
         };
 
         Ok(Expression::TupleIndex(expr))
+    }
+}
+
+impl fmt::Debug for TupleIndexExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TupleIndexExpr")
+            .field("tuple", &self.tuple)
+            .field("index", &self.index)
+            .finish()
     }
 }
 

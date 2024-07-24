@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{BlockExpr, GroupedExpr, IfExpr, Keyword},
     error::ErrorsEmitted,
@@ -66,6 +68,17 @@ impl ParseControlExpr for IfExpr {
         };
 
         Ok(expr)
+    }
+}
+
+impl fmt::Debug for IfExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IfExpr")
+            .field("condition", &self.condition)
+            .field("if_block", &self.if_block)
+            .field("else_if_blocks_opt", &self.else_if_blocks_opt)
+            .field("trailing_else_block_opt", &self.trailing_else_block_opt)
+            .finish()
     }
 }
 

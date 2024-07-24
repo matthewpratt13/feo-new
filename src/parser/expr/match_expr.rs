@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
     error::{ErrorsEmitted, ParserErrorKind},
@@ -90,6 +92,16 @@ impl ParseControlExpr for MatchExpr {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for MatchExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MatchExpr")
+            .field("scrutinee", &self.scrutinee)
+            .field("match_arms_opt", &self.match_arms_opt)
+            .field("final_arm", &self.final_arm)
+            .finish()
     }
 }
 

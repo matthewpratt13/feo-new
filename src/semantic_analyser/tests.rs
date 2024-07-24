@@ -162,24 +162,24 @@ fn analyse_import_decl() -> Result<(), ()> {
         span: Span::default(),
     };
 
-    let external_module = ModuleItem {
+    let external_mod = ModuleItem {
         outer_attributes_opt: None,
         visibility: Visibility::Pub,
         kw_module: Keyword::Module,
-        module_name: Identifier::from("external_module"),
+        module_name: Identifier::from("external_mod"),
         inner_attributes_opt: None,
         items_opt: Some(vec![Item::FunctionItem(external_func.clone())]),
         span: Span::default(),
     };
 
-    let external_module_path = TypePath {
+    let external_mod_path = TypePath {
         associated_type_path_prefix_opt: None,
-        type_name: external_module.module_name.clone(),
+        type_name: external_mod.module_name.clone(),
     };
 
     let func_path = TypePath {
         associated_type_path_prefix_opt: Some(Vec::<Identifier>::from(
-            external_module_path.clone(),
+            external_mod_path.clone(),
         )),
         type_name: external_func.function_name.clone(),
     };
@@ -196,16 +196,16 @@ fn analyse_import_decl() -> Result<(), ()> {
 
     let mut external_code: SymbolTable = HashMap::new();
     external_code.insert(
-        external_module_path.clone(),
+        external_mod_path.clone(),
         Symbol::Module {
-            path: external_module_path,
-            module: external_module,
+            path: external_mod_path,
+            module: external_mod,
             symbols,
         },
     );
 
     let input = r#" 
-    import external_module::external_func;
+    import external_mod::external_func;
 
     module some_mod { 
         struct SomeObject {}

@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{
         AssigneeExpr, BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression, ValueExpr,
@@ -64,6 +66,16 @@ impl ParseOperatorExpr for BinaryExpr {
     }
 }
 
+impl fmt::Debug for BinaryExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BinaryExpr")
+            .field("lhs", &self.lhs)
+            .field("binary_op", &self.binary_op)
+            .field("rhs", &self.rhs)
+            .finish()
+    }
+}
+
 impl ParseOperatorExpr for ComparisonExpr {
     /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on
     /// the input operator.
@@ -111,6 +123,16 @@ impl ParseOperatorExpr for ComparisonExpr {
         };
 
         Ok(Expression::Comparison(expr))
+    }
+}
+
+impl fmt::Debug for ComparisonExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ComparisonExpr")
+            .field("lhs", &self.lhs)
+            .field("comparison_op", &self.comparison_op)
+            .field("rhs", &self.rhs)
+            .finish()
     }
 }
 

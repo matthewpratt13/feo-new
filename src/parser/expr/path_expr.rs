@@ -80,17 +80,26 @@ impl fmt::Display for PathExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut segments: Vec<String> = Vec::new();
 
+        segments.push(self.path_root.to_string());
+
         if let Some(v) = &self.tree_opt {
             for i in v {
                 segments.push(i.to_string());
             }
         }
 
-        segments.push(self.path_root.to_string());
-
         let full_path = segments.join("::");
 
         write!(f, "{}", full_path)
+    }
+}
+
+impl fmt::Debug for PathExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PathExpr")
+            .field("path_root", &self.path_root)
+            .field("tree_opt", &self.tree_opt)
+            .finish()
     }
 }
 

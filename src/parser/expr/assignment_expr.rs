@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{
         AssigneeExpr, AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp,
@@ -52,6 +54,16 @@ impl ParseOperatorExpr for AssignmentExpr {
     }
 }
 
+impl fmt::Debug for AssignmentExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AssignmentExpr")
+            .field("lhs", &self.lhs)
+            .field("assignment_op", &self.assignment_op)
+            .field("rhs", &self.rhs)
+            .finish()
+    }
+}
+
 impl ParseOperatorExpr for CompoundAssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let left_expr_span = &left_expr.span();
@@ -93,6 +105,16 @@ impl ParseOperatorExpr for CompoundAssignmentExpr {
         };
 
         Ok(Expression::CompoundAssignment(expr))
+    }
+}
+
+impl fmt::Debug for CompoundAssignmentExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CompoundAssignmentExpr")
+            .field("lhs", &self.lhs)
+            .field("compound_assignment_op", &self.compound_assignment_op)
+            .field("rhs", &self.rhs)
+            .finish()
     }
 }
 

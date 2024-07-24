@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{AliasDecl, Identifier, Keyword, OuterAttr, Type, Visibility},
     error::ErrorsEmitted,
@@ -72,6 +74,17 @@ impl ParseDeclItem for AliasDecl {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for AliasDecl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AliasDecl")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("visibility", &self.visibility)
+            .field("alias_name", &self.alias_name)
+            .field("original_type_opt", &self.original_type_opt)
+            .finish()
     }
 }
 

@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, IndexExpr},
     error::ErrorsEmitted,
@@ -54,6 +56,15 @@ impl ParseOperatorExpr for IndexExpr {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for IndexExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IndexExpr")
+            .field("array", &self.array)
+            .field("index", &self.index)
+            .finish()
     }
 }
 

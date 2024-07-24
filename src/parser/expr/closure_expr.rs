@@ -1,8 +1,14 @@
+use core::fmt;
+
 use crate::{
     ast::{
         BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Delimiter, Expression, IdentifierPatt,
         Type,
-    }, error::ErrorsEmitted, parser::{collection, ParseConstructExpr, ParsePattern, Parser, Precedence}, span::Spanned, token::Token
+    },
+    error::ErrorsEmitted,
+    parser::{collection, ParseConstructExpr, ParsePattern, Parser, Precedence},
+    span::Spanned,
+    token::Token,
 };
 
 impl ParseConstructExpr for ClosureExpr {
@@ -79,6 +85,16 @@ impl ParseConstructExpr for ClosureExpr {
         };
 
         Ok(expr)
+    }
+}
+
+impl fmt::Debug for ClosureExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClosureExpr")
+            .field("closure_params", &self.closure_params)
+            .field("return_type_opt", &self.return_type_opt)
+            .field("body_expression", &self.body_expression)
+            .finish()
     }
 }
 

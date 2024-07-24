@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{
         Delimiter, Identifier, OuterAttr, PathExpr, PathRoot, SelfType, StructExpr, StructField,
@@ -68,6 +70,15 @@ impl ParseConstructExpr for StructExpr {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for StructExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StructExpr")
+            .field("struct_path", &self.struct_path)
+            .field("struct_fields_opt", &self.struct_fields_opt)
+            .finish()
     }
 }
 

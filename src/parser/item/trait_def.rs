@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, Keyword,
@@ -85,6 +87,18 @@ impl ParseDefItem for TraitDef {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for TraitDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TraitDef")
+            .field("outer_attributes_opt", &self.outer_attributes_opt)
+            .field("visibility", &self.visibility)
+            .field("trait_name", &self.trait_name)
+            .field("inner_attributes_opt", &self.inner_attributes_opt)
+            .field("trait_items_opt", &self.trait_items_opt)
+            .finish()
     }
 }
 

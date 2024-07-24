@@ -23,7 +23,7 @@ pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different literals used in AST nodes.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub(crate) enum Literal {
     Int { value: Int, span: Span },
     UInt { value: UInt, span: Span },
@@ -67,6 +67,23 @@ impl fmt::Display for Literal {
             Literal::Str { value, .. } => write!(f, "{}", value),
             Literal::Char { value, .. } => write!(f, "{}", value),
             Literal::Bool { value, .. } => write!(f, "{}", value),
+        }
+    }
+}
+
+impl fmt::Debug for Literal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Int { value, .. } => f.debug_struct("Int").field("value", value).finish(),
+            Self::UInt { value, .. } => f.debug_struct("UInt").field("value", value).finish(),
+            Self::BigUInt { value, .. } => f.debug_struct("BigUInt").field("value", value).finish(),
+            Self::Float { value, .. } => f.debug_struct("Float").field("value", value).finish(),
+            Self::Byte { value, .. } => f.debug_struct("Byte").field("value", value).finish(),
+            Self::Bytes { value, .. } => f.debug_struct("Bytes").field("value", value).finish(),
+            Self::Hash { value, .. } => f.debug_struct("Hash").field("value", value).finish(),
+            Self::Str { value, .. } => f.debug_struct("Str").field("value", value).finish(),
+            Self::Char { value, .. } => f.debug_struct("Char").field("value", value).finish(),
+            Self::Bool { value, .. } => f.debug_struct("Bool").field("value", value).finish(),
         }
     }
 }
@@ -398,7 +415,7 @@ pub(crate) struct UnwrapOp;
 /// Expressions can function differently in various contexts; i.e., they can act both as values
 /// and as locations in memory. This distinction refers to **value expressions**
 /// and **place expressions**. See additional expression type enumerations below for both cases.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub(crate) enum Expression {
     Literal(Literal),
     Path(PathExpr),
@@ -495,19 +512,8 @@ impl From<Expression> for PathExpr {
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.clone() {
-            Expression::Literal(l) => match l {
-                Literal::Int { value, .. } => write!(f, "{}", value),
-                Literal::UInt { value, .. } => write!(f, "{}", value),
-                Literal::BigUInt { value, .. } => write!(f, "{}", value),
-                Literal::Float { value, .. } => write!(f, "{}", value),
-                Literal::Byte { value, .. } => write!(f, "{}", value),
-                Literal::Bytes { value, .. } => write!(f, "{}", value),
-                Literal::Hash { value, .. } => write!(f, "{}", value),
-                Literal::Str { value, .. } => write!(f, "{}", value),
-                Literal::Char { value, .. } => write!(f, "{}", value),
-                Literal::Bool { value, .. } => write!(f, "{}", value),
-            },
-            Expression::Path(pth) => write!(f, "{}", TypePath::from(pth)),
+            Expression::Literal(l) => write!(f, "{l}"),
+            Expression::Path(pth) => write!(f, "{pth}"),
             Expression::MethodCall(mc) => write!(f, "{}.{}()", mc.receiver, mc.method_name),
             Expression::FieldAccess(fa) => write!(f, "{}.{}", fa.object, fa.field_name),
             Expression::Call(cal) => write!(
@@ -585,7 +591,7 @@ impl fmt::Display for Expression {
             }
             Expression::Mapping(map) => write!(f, "{{ {:?} }}", map.pairs_opt),
             Expression::Block(blk) => {
-                write!(f, "{{ {:?} }}", blk.statements_opt.unwrap_or(Vec::new()))
+                write!(f, "{{ {:?} }}", blk)
             }
             Expression::If(ifex) => write!(
                 f,
@@ -601,7 +607,7 @@ impl fmt::Display for Expression {
                 },
                 {
                     if let Some(e) = ifex.trailing_else_block_opt {
-                        format!(" else {}", Expression::Block(e))
+                        format!(" else {:?}", Expression::Block(e))
                     } else {
                         "".to_string()
                     }
@@ -633,7 +639,9 @@ impl fmt::Display for Expression {
                 Expression::Grouped(*whl.condition),
                 Expression::Block(whl.block)
             ),
-            Expression::SomeExpr(som) => write!(f, "Some{}", Expression::Grouped(*som.expression)),
+            Expression::SomeExpr(som) => {
+                write!(f, "Some{}", Expression::Grouped(*som.expression))
+            }
             Expression::NoneExpr(_) => write!(f, "None"),
             Expression::ResultExpr(res) => write!(f, "{}", {
                 match res.kw_ok_or_err {
@@ -642,6 +650,181 @@ impl fmt::Display for Expression {
                     _ => "".to_string(),
                 }
             }),
+        }
+    }
+}
+
+impl fmt::Debug for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Literal(arg0) => f.debug_tuple("Literal").field(arg0).finish(),
+            Self::Path(arg0) => f
+                .debug_struct("PathExpr")
+                .field("path_root", &arg0.path_root)
+                .field("tree_opt", &arg0.tree_opt)
+                .finish(),
+            Self::MethodCall(arg0) => f
+                .debug_struct("MethodCall")
+                .field("receiver", &arg0.receiver)
+                .field("method_name", &arg0.method_name)
+                .field("args_opt", &arg0.args_opt)
+                .finish(),
+            Self::FieldAccess(arg0) => f
+                .debug_struct("FieldAccess")
+                .field("object", &arg0.object)
+                .field("field_name", &arg0.field_name)
+                .finish(),
+            Self::Call(arg0) => f
+                .debug_struct("Call")
+                .field("callee", &arg0.callee)
+                .field("args_opt", &arg0.args_opt)
+                .finish(),
+            Self::Index(arg0) => f
+                .debug_struct("Index")
+                .field("array", &arg0.array)
+                .field("index", &arg0.index)
+                .finish(),
+            Self::TupleIndex(arg0) => f
+                .debug_struct("TupleIndex")
+                .field("tuple", &arg0.tuple)
+                .field("index", &arg0.index)
+                .finish(),
+            Self::Unwrap(arg0) => f
+                .debug_struct("Unwrap")
+                .field("value_expr", &arg0.value_expr)
+                .finish(),
+            Self::Unary(arg0) => f
+                .debug_struct("Unary")
+                .field("unary_op", &arg0.unary_op)
+                .field("value_expr", &arg0.value_expr)
+                .finish(),
+            Self::Reference(arg0) => f
+                .debug_struct("Reference")
+                .field("reference_op", &arg0.reference_op)
+                .field("expression", &arg0.expression)
+                .finish(),
+            Self::Dereference(arg0) => f
+                .debug_struct("Dereference")
+                .field("assignee_expr", &arg0.assignee_expr)
+                .finish(),
+            Self::TypeCast(arg0) => f
+                .debug_struct("TypeCast")
+                .field("value", &arg0.value)
+                .field("new_type", &arg0.new_type)
+                .finish(),
+            Self::Binary(arg0) => f
+                .debug_struct("Binary")
+                .field("lhs", &arg0.lhs)
+                .field("binary_op", &arg0.binary_op)
+                .field("rhs", &arg0.rhs)
+                .finish(),
+            Self::Comparison(arg0) => f
+                .debug_struct("Comparison")
+                .field("lhs", &arg0.lhs)
+                .field("comparison_op", &arg0.comparison_op)
+                .field("rhs", &arg0.rhs)
+                .finish(),
+            Self::Grouped(arg0) => f
+                .debug_struct("Grouped")
+                .field("inner_expr", &arg0.inner_expression)
+                .finish(),
+            Self::Range(arg0) => f
+                .debug_struct("Range")
+                .field("from_expr_opt", &arg0.from_expr_opt)
+                .field("range_op", &arg0.range_op)
+                .field("to_expr_opt", &arg0.to_expr_opt)
+                .finish(),
+            Self::Assignment(arg0) => f
+                .debug_struct("Assignment")
+                .field("lhs", &arg0.lhs)
+                .field("rhs", &arg0.rhs)
+                .finish(),
+            Self::CompoundAssignment(arg0) => f
+                .debug_struct("CompoundAssignment")
+                .field("lhs", &arg0.lhs)
+                .field("compound_assignment_op", &arg0.compound_assignment_op)
+                .field("rhs", &arg0.rhs)
+                .finish(),
+            Self::Return(arg0) => f
+                .debug_struct("Return")
+                .field("expression_opt", &arg0.expression_opt)
+                .finish(),
+            Self::Break(arg0) => f
+                .debug_struct("Break")
+                .field("kw_break", &arg0.kw_break)
+                .finish(),
+            Self::Continue(arg0) => f
+                .debug_struct("Continue")
+                .field("kw_continue", &arg0.kw_continue)
+                .finish(),
+            Self::Underscore(arg0) => f
+                .debug_struct("Underscore")
+                .field("underscore", &arg0.underscore)
+                .finish(),
+            Self::Closure(arg0) => f
+                .debug_struct("Closure")
+                .field("closure_params", &arg0.closure_params)
+                .field("return_type_opt", &arg0.return_type_opt)
+                .field("body_expression", &arg0.body_expression)
+                .finish(),
+            Self::Array(arg0) => f
+                .debug_struct("Array")
+                .field("elements_opt", &arg0.elements_opt)
+                .finish(),
+            Self::Tuple(arg0) => f
+                .debug_struct("Tuple")
+                .field("tuple_elements", &arg0.tuple_elements)
+                .finish(),
+            Self::Struct(arg0) => f
+                .debug_struct("Struct")
+                .field("struct_path", &TypePath::from(arg0.struct_path.clone()))
+                .field("struct_fields_opt", &arg0.struct_fields_opt)
+                .finish(),
+            Self::Mapping(arg0) => f
+                .debug_struct("Mapping")
+                .field("pairs_opt", &arg0.pairs_opt)
+                .finish(),
+            Self::Block(arg0) => f
+                .debug_struct("Block")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("statements_opt", &arg0.statements_opt)
+                .finish(),
+            Self::If(arg0) => f
+                .debug_struct("If")
+                .field("condition", &arg0.condition)
+                .field("if_block", &arg0.if_block)
+                .field("else_if_blocks_opt", &arg0.else_if_blocks_opt)
+                .field("trailing_else_block_opt", &arg0.trailing_else_block_opt)
+                .finish(),
+            Self::Match(arg0) => f
+                .debug_struct("Match")
+                .field("scrutinee", &arg0.scrutinee)
+                .field("match_arms_opt", &arg0.match_arms_opt)
+                .field("final_arm", &arg0.final_arm)
+                .finish(),
+            Self::ForIn(arg0) => f
+                .debug_struct("ForIn")
+                .field("pattern", &arg0.pattern)
+                .field("iterator", &arg0.iterator)
+                .field("block", &arg0.block)
+                .finish(),
+            Self::While(arg0) => f
+                .debug_struct("While")
+                .field("condition", &arg0.condition)
+                .field("block", &arg0.block)
+                .finish(),
+            Self::SomeExpr(arg0) => f
+                .debug_struct("SomeExpr")
+                .field("expression", &arg0.expression)
+                .finish(),
+            Self::NoneExpr(arg0) => f
+                .debug_struct("NoneExpr")
+                .field("kw_none", &arg0.kw_none)
+                .finish(),
+            Self::ResultExpr(arg0) => f
+                .debug_struct("ResultExpr")
+                .field("expression", &arg0.expression)
+                .finish(),
         }
     }
 }
@@ -801,8 +984,8 @@ impl From<ValueExpr> for Expression {
 impl fmt::Display for ValueExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.clone() {
-            ValueExpr::Literal(l) => write!(f, "{}", Expression::Literal(l)),
-            ValueExpr::PathExpr(p) => write!(f, "{}", Expression::Path(p)),
+            ValueExpr::Literal(l) => write!(f, "{l}"),
+            ValueExpr::PathExpr(p) => write!(f, "{p}"),
             ValueExpr::MethodCallExpr(mc) => write!(f, "{}", Expression::MethodCall(mc)),
             ValueExpr::FieldAccessExpr(fa) => write!(f, "{}", Expression::FieldAccess(fa)),
             ValueExpr::CallExpr(c) => write!(f, "{}", Expression::Call(c)),
@@ -817,7 +1000,7 @@ impl fmt::Display for ValueExpr {
             ValueExpr::GroupedExpr(g) => write!(f, "{}", Expression::Grouped(g)),
             ValueExpr::RangeExpr(r) => write!(f, "{}", Expression::Range(r)),
             ValueExpr::ClosureExpr(c) => write!(f, "{}", Expression::Closure(c)),
-            ValueExpr::UnderscoreExpr(und) => write!(f, "{}", Expression::Underscore(und)),
+            ValueExpr::UnderscoreExpr(_) => write!(f, "_"),
             ValueExpr::ArrayExpr(a) => write!(f, "{}", Expression::Array(a)),
             ValueExpr::TupleExpr(t) => write!(f, "{}", Expression::Tuple(t)),
             ValueExpr::StructExpr(s) => write!(f, "{}", Expression::Struct(s)),
@@ -828,7 +1011,7 @@ impl fmt::Display for ValueExpr {
             ValueExpr::ForInExpr(fi) => write!(f, "{}", Expression::ForIn(fi)),
             ValueExpr::WhileExpr(w) => write!(f, "{}", Expression::While(w)),
             ValueExpr::SomeExpr(s) => write!(f, "{}", Expression::SomeExpr(s)),
-            ValueExpr::NoneExpr(n) => write!(f, "{}", Expression::NoneExpr(n)),
+            ValueExpr::NoneExpr(_) => write!(f, "None"),
             ValueExpr::ResultExpr(r) => write!(f, "{}", Expression::ResultExpr(r)),
         }
     }
@@ -1066,8 +1249,8 @@ impl From<AssigneeExpr> for Expression {
 impl fmt::Display for AssigneeExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.clone() {
-            AssigneeExpr::Literal(l) => write!(f, "{}", Expression::Literal(l)),
-            AssigneeExpr::PathExpr(p) => write!(f, "{}", Expression::Path(p)),
+            AssigneeExpr::Literal(l) => write!(f, "{l}"),
+            AssigneeExpr::PathExpr(p) => write!(f, "{p}"),
             AssigneeExpr::MethodCallExpr(mc) => write!(f, "{}", Expression::MethodCall(mc)),
             AssigneeExpr::FieldAccessExpr(fa) => write!(f, "{}", Expression::FieldAccess(fa)),
             AssigneeExpr::IndexExpr(i) => write!(f, "{}", Expression::Index(i)),
@@ -1076,14 +1259,14 @@ impl fmt::Display for AssigneeExpr {
             AssigneeExpr::GroupedExpr {
                 inner_expression, ..
             } => write!(f, "({})", *inner_expression),
-            AssigneeExpr::UnderscoreExpr(und) => write!(f, "{}", Expression::Underscore(und)),
-            AssigneeExpr::ArrayExpr { elements, .. } => write!(f, "[ {:?} ]", elements),
-            AssigneeExpr::TupleExpr { elements, .. } => write!(f, "( {:?} )", elements),
+            AssigneeExpr::UnderscoreExpr(_) => write!(f, "_"),
+            AssigneeExpr::ArrayExpr { elements, .. } => write!(f, "[ {elements:?} ]"),
+            AssigneeExpr::TupleExpr { elements, .. } => write!(f, "( {elements:?} )"),
             AssigneeExpr::StructExpr {
                 struct_path,
                 fields,
                 ..
-            } => write!(f, "{} {{ {:#?} }}", struct_path, fields),
+            } => write!(f, "{} {{ {:?} }}", struct_path, fields),
         }
     }
 }
@@ -1236,7 +1419,7 @@ impl TryFrom<Expression> for Pattern {
 impl fmt::Display for Pattern {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.clone() {
-            Pattern::Literal(l) => write!(f, "{}", Expression::Literal(l)),
+            Pattern::Literal(l) => write!(f, "{l}"),
             Pattern::IdentifierPatt(id) => write!(
                 f,
                 "{}{}{}",
@@ -1256,7 +1439,7 @@ impl fmt::Display for Pattern {
                 },
                 id.name
             ),
-            Pattern::PathPatt(pth) => write!(f, "{}", TypePath::from(pth.clone()).to_string()),
+            Pattern::PathPatt(pth) => write!(f, "{}", TypePath::from(pth)),
             Pattern::ReferencePatt(r) => write!(f, "{:?}", r),
             Pattern::GroupedPatt(g) => write!(f, "({})", *g.inner_pattern),
             Pattern::RangePatt(rng) => write!(
@@ -1276,14 +1459,10 @@ impl fmt::Display for Pattern {
             ),
             Pattern::TuplePatt(tup) => write!(f, "( {} )", tup.tuple_patt_elements),
             Pattern::StructPatt(strc) => {
-                write!(
-                    f,
-                    "{} {{ {:#?} }}",
-                    strc.struct_path, strc.struct_fields_opt
-                )
+                write!(f, "{} {{ {:?} }}", strc.struct_path, strc.struct_fields_opt)
             }
             Pattern::TupleStructPatt(ts) => {
-                write!(f, "{} ( {:#?} )", ts.struct_path, ts.struct_elements_opt)
+                write!(f, "{} ( {:?} )", ts.struct_path, ts.struct_elements_opt)
             }
             Pattern::WildcardPatt(_) => write!(f, "*"),
             Pattern::RestPatt(_) => write!(f, ".."),
@@ -1314,20 +1493,7 @@ impl Spanned for Statement {
     fn span(&self) -> Span {
         match self.clone() {
             Statement::Let(l) => l.span,
-            Statement::Item(i) => match i {
-                Item::ImportDecl(id) => id.span,
-                Item::AliasDecl(ad) => ad.span,
-                Item::ConstantDecl(cd) => cd.span,
-                Item::StaticVarDecl(svd) => svd.span,
-                Item::ModuleItem(mi) => mi.span,
-                Item::TraitDef(td) => td.span,
-                Item::EnumDef(ed) => ed.span,
-                Item::StructDef(sd) => sd.span,
-                Item::TupleStructDef(tsd) => tsd.span,
-                Item::InherentImplDef(iid) => iid.span,
-                Item::TraitImplDef(tid) => tid.span,
-                Item::FunctionItem(fi) => fi.span,
-            },
+            Statement::Item(i) => i.span(),
             Statement::Expression(e) => e.span(),
         }
     }
@@ -1364,7 +1530,7 @@ impl fmt::Display for Statement {
                 ),
                 Item::ConstantDecl(cd) => write!(
                     f,
-                    "{}const {}: {} = {:?};",
+                    "{}const {}: {} = {};",
                     cd.visibility,
                     cd.constant_name,
                     *cd.constant_type,
@@ -1375,7 +1541,7 @@ impl fmt::Display for Statement {
                 ),
                 Item::StaticVarDecl(svd) => write!(
                     f,
-                    "{}static {}: {} = {:?};",
+                    "{}static {}: {} = {};",
                     svd.visibility,
                     svd.var_name,
                     svd.var_type,
@@ -1452,7 +1618,7 @@ impl fmt::Display for Statement {
 
 /// Enum representing the different item nodes in the AST.
 /// An item is a component of a library, organized by a set of modules.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub(crate) enum Item {
     ImportDecl(ImportDecl),
     AliasDecl(AliasDecl),
@@ -1466,6 +1632,103 @@ pub(crate) enum Item {
     InherentImplDef(InherentImplDef),
     TraitImplDef(TraitImplDef),
     FunctionItem(FunctionItem),
+}
+
+impl fmt::Debug for Item {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ImportDecl(arg0) => f
+                .debug_struct("ImportDecl")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("import_tree", &arg0.import_tree)
+                .finish(),
+            Self::AliasDecl(arg0) => f
+                .debug_struct("AliasDecl")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("alias_name", &arg0.alias_name)
+                .field("original_type_opt", &arg0.original_type_opt)
+                .finish(),
+            Self::ConstantDecl(arg0) => f
+                .debug_struct("ConstantDecl")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("constant_name", &arg0.constant_name)
+                .field("constant_type", &arg0.constant_type)
+                .field("value_opt", &arg0.value_opt)
+                .finish(),
+            Self::StaticVarDecl(arg0) => f
+                .debug_struct("StaticVarDecl")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("kw_mut_opt", &arg0.kw_mut_opt)
+                .field("var_name", &arg0.var_name)
+                .field("var_type", &arg0.var_type)
+                .field("assignee_opt", &arg0.assignee_opt)
+                .finish(),
+            Self::ModuleItem(arg0) => f
+                .debug_struct("ModuleItem")
+                .field("outer_attributes_opt", &arg0.outer_attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("module_name", &arg0.module_name)
+                .field("inner_attribute_opt", &arg0.inner_attributes_opt)
+                .field("items_opt", &arg0.inner_attributes_opt)
+                .finish(),
+            Self::TraitDef(arg0) => f
+                .debug_struct("TraitDef")
+                .field("outer_attributes_opt", &arg0.outer_attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("trait_name", &arg0.trait_name)
+                .field("inner_attributes_opt", &arg0.inner_attributes_opt)
+                .field("trait_items_opt", &arg0.trait_items_opt)
+                .finish(),
+            Self::EnumDef(arg0) => f
+                .debug_struct("EnumDef")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("enum_name", &arg0.enum_name)
+                .field("variants", &arg0.variants)
+                .finish(),
+            Self::StructDef(arg0) => f
+                .debug_struct("StructDef")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("struct_name", &arg0.struct_name)
+                .field("fields_opt", &arg0.fields_opt)
+                .finish(),
+            Self::TupleStructDef(arg0) => f
+                .debug_struct("TupleStructDef")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("struct_name", &arg0.struct_name)
+                .field("elements_opt", &arg0.elements_opt)
+                .finish(),
+            Self::InherentImplDef(arg0) => f
+                .debug_struct("InherentImplDef")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("nominal_type", &arg0.nominal_type)
+                .field("associated_items_opt", &arg0.associated_items_opt)
+                .finish(),
+            Self::TraitImplDef(arg0) => f
+                .debug_struct("TraitImplDef")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("implemented_trait_path", &arg0.implemented_trait_path)
+                .field("implementing_type", &arg0.implementing_type)
+                .field("associated_items_opt", &arg0.associated_items_opt)
+                .finish(),
+
+            Self::FunctionItem(arg0) => f
+                .debug_struct("FunctionItem")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("function_name", &arg0.function_name)
+                .field("params_opt", &arg0.params_opt)
+                .field("return_type_opt", &arg0.return_type_opt)
+                .field("block_opt", &arg0.block_opt)
+                .finish(),
+        }
+    }
 }
 
 impl Spanned for Item {

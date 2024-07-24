@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Delimiter, Identifier, InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
     error::ErrorsEmitted,
@@ -80,6 +82,18 @@ impl ParseDefItem for ModuleItem {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for ModuleItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModuleItem")
+            .field("outer_attributes_opt", &self.outer_attributes_opt)
+            .field("visibility", &self.visibility)
+            .field("module_name", &self.module_name)
+            .field("inner_attributes_opt", &self.inner_attributes_opt)
+            .field("items_opt", &self.items_opt)
+            .finish()
     }
 }
 

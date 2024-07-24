@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{AssigneeExpr, Expression, FieldAccessExpr, Identifier},
     error::ErrorsEmitted,
@@ -42,6 +44,15 @@ impl ParseOperatorExpr for FieldAccessExpr {
         }?;
 
         Ok(Expression::FieldAccess(expr))
+    }
+}
+
+impl fmt::Debug for FieldAccessExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FieldAccessExpr")
+            .field("object", &self.object)
+            .field("field_name", &self.field_name)
+            .finish()
     }
 }
 

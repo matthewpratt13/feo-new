@@ -1,7 +1,9 @@
+use core::fmt;
+
 use crate::{
     ast::{
         Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathSegment, PathSubset,
-        TypePath, Separator, Visibility,
+        Separator, TypePath, Visibility,
     },
     error::ErrorsEmitted,
     span::Position,
@@ -51,6 +53,16 @@ impl ParseDeclItem for ImportDecl {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for ImportDecl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImportDecl")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("visibility", &self.visibility)
+            .field("import_tree", &self.import_tree)
+            .finish()
     }
 }
 

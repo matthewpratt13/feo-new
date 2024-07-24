@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{BlockExpr, Expression, ForInExpr, Keyword, Literal},
     error::{ErrorsEmitted, ParserErrorKind},
@@ -111,6 +113,16 @@ impl ParseControlExpr for ForInExpr {
         };
 
         Ok(expr)
+    }
+}
+
+impl fmt::Debug for ForInExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ForInExpr")
+            .field("pattern", &self.pattern)
+            .field("iterator", &self.iterator)
+            .field("block", &self.block)
+            .finish()
     }
 }
 

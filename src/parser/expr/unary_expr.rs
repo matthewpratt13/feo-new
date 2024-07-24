@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{DereferenceExpr, DereferenceOp, ReferenceExpr, ReferenceOp, UnaryExpr, UnaryOp},
     error::ErrorsEmitted,
@@ -36,6 +38,15 @@ impl ParseSimpleExpr for UnaryExpr {
     }
 }
 
+impl fmt::Debug for UnaryExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UnaryExpr")
+            .field("unary_op", &self.unary_op)
+            .field("value_expr", &self.value_expr)
+            .finish()
+    }
+}
+
 impl ParseSimpleExpr for ReferenceExpr {
     /// Parse a unary reference operation – i.e., borrow (`&`) or mutable reference (`&mut`) –
     /// based on the input operator.
@@ -67,6 +78,15 @@ impl ParseSimpleExpr for ReferenceExpr {
     }
 }
 
+impl fmt::Debug for ReferenceExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ReferenceExpr")
+            .field("reference_op", &self.reference_op)
+            .field("expression", &self.expression)
+            .finish()
+    }
+}
+
 impl ParseSimpleExpr for DereferenceExpr {
     /// Parse a unary dereference operation with the operator `*`.
     fn parse(parser: &mut Parser) -> Result<DereferenceExpr, ErrorsEmitted> {
@@ -91,6 +111,14 @@ impl ParseSimpleExpr for DereferenceExpr {
         };
 
         Ok(expr)
+    }
+}
+
+impl fmt::Debug for DereferenceExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DereferenceExpr")
+            .field("assignee_expr", &self.assignee_expr)
+            .finish()
     }
 }
 
