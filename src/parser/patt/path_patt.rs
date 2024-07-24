@@ -64,13 +64,13 @@ impl fmt::Display for PathPatt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut segments: Vec<String> = Vec::new();
 
+        segments.push(self.path_root.to_string());
+
         if let Some(v) = &self.tree_opt {
             for i in v {
                 segments.push(i.to_string());
             }
         }
-
-        segments.push(self.path_root.to_string());
 
         let full_path = segments.join("::");
 
