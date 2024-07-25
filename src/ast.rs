@@ -792,7 +792,17 @@ impl TryFrom<Expression> for AssigneeExpr {
             Expression::FieldAccess(fa) => Ok(AssigneeExpr::FieldAccessExpr(fa)),
             Expression::Index(i) => Ok(AssigneeExpr::IndexExpr(i)),
             Expression::TupleIndex(ti) => Ok(AssigneeExpr::TupleIndexExpr(ti)),
-            Expression::Reference(b) => Ok(AssigneeExpr::ReferenceExpr(b)),
+            Expression::Reference(r) => Ok(AssigneeExpr::ReferenceExpr(r)),
+            Expression::Binary(b) => Ok(AssigneeExpr::ReferenceExpr(ReferenceExpr {
+                reference_op: ReferenceOp::Borrow,
+                expression: Box::new(Expression::Binary(b.clone())),
+                span: b.span,
+            })),
+            Expression::Comparison(c) => Ok(AssigneeExpr::ReferenceExpr(ReferenceExpr {
+                reference_op: ReferenceOp::Borrow,
+                expression: Box::new(Expression::Comparison(c.clone())),
+                span: c.span,
+            })),
             Expression::Grouped(g) => {
                 let inner_expression = AssigneeExpr::try_from(*g.inner_expression)?;
                 Ok(AssigneeExpr::GroupedExpr {

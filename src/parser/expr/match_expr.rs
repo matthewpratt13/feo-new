@@ -170,6 +170,7 @@ mod tests {
         let input = r#"
         match x {
             0 => false,
+            1..=5 => false,
             _ if x > 5 => true,
             _ => false
         }"#;

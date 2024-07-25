@@ -125,8 +125,9 @@ impl SemanticAnalyser {
     }
 
     fn analyse_program(&mut self, program: &Program, path: TypePath) -> Result<(), ErrorsEmitted> {
-        self.logger
-            .info("starting semantic analysis of program at path `{path}` ...");
+        self.logger.info(&format!(
+            "starting semantic analysis of program at path `{path}` ..."
+        ));
 
         let program_path = if let Some(Scope {
             scope_kind: ScopeKind::Lib,
@@ -1344,19 +1345,28 @@ impl SemanticAnalyser {
                 let rhs_type = self.analyse_expr(&wrap_into_expression(*b.rhs.clone()), root)?;
 
                 match (&lhs_type, &rhs_type) {
-                    (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
+                    (
+                        Type::I32(_),
+                        Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
+                    ) => Ok(Type::I32(Int::I32(i32::default()))),
 
                     (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i32`".to_string(),
+                        expected: "`i32` or unsigned integer".to_string(),
                         found: format!("`{}`", t),
                     }),
 
-                    (Type::I64(_), Type::I32(_) | Type::I64(_)) => {
-                        Ok(Type::I64(Int::I64(i64::default())))
-                    }
+                    (
+                        Type::I64(_),
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_),
+                    ) => Ok(Type::I64(Int::I64(i64::default()))),
 
                     (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i64` or `i32`".to_string(),
+                        expected: "integer or unsigned integer".to_string(),
                         found: format!("`{}`", t),
                     }),
 
@@ -1441,17 +1451,28 @@ impl SemanticAnalyser {
                 let rhs_type = self.analyse_expr(&wrap_into_expression(c.rhs.clone()), root)?;
 
                 match (&lhs_type, &rhs_type) {
-                    (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
+                    (
+                        Type::I32(_),
+                        Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
+                    ) => Ok(Type::I32(Int::I32(i32::default()))),
 
                     (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i32`".to_string(),
+                        expected: "`i32` or unsigned integer".to_string(),
                         found: format!("`{}`", t),
                     }),
 
-                    (Type::I64(_), Type::I64(_)) => Ok(Type::I64(Int::I64(i64::default()))),
+                    (
+                        Type::I64(_),
+                        Type::I32(_)
+                        | Type::I64(_)
+                        | Type::U8(_)
+                        | Type::U16(_)
+                        | Type::U32(_)
+                        | Type::U64(_),
+                    ) => Ok(Type::I64(Int::I64(i64::default()))),
 
                     (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i64`".to_string(),
+                        expected: "integer or unsigned integer".to_string(),
                         found: format!("`{}`", t),
                     }),
 
@@ -1492,7 +1513,7 @@ impl SemanticAnalyser {
                         found: format!("`{}`", t),
                     }),
 
-                    (Type::U512(_), Type::U512(_)) => {
+                    (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
                         Ok(Type::U512(BigUInt::U512(U512::default())))
                     }
 
@@ -1677,17 +1698,28 @@ impl SemanticAnalyser {
 
                 match self.lookup(&assignee_path) {
                     Some(Symbol::Variable { .. }) => match (&assignee_type, &value_type) {
-                        (Type::I32(_), Type::I32(_)) => Ok(Type::I32(Int::I32(i32::default()))),
+                        (
+                            Type::I32(_),
+                            Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
+                        ) => Ok(Type::I32(Int::I32(i32::default()))),
 
                         (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "`i32`".to_string(),
+                            expected: "`i32` or unsigned integer".to_string(),
                             found: format!("`{}`", t),
                         }),
 
-                        (Type::I64(_), Type::I64(_)) => Ok(Type::I64(Int::I64(i64::default()))),
+                        (
+                            Type::I64(_),
+                            Type::I32(_)
+                            | Type::I64(_)
+                            | Type::U8(_)
+                            | Type::U16(_)
+                            | Type::U32(_)
+                            | Type::U64(_),
+                        ) => Ok(Type::I64(Int::I64(i64::default()))),
 
                         (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "`i64`".to_string(),
+                            expected: "integer or unsigned integer".to_string(),
                             found: format!("`{}`", t),
                         }),
 
@@ -1698,21 +1730,28 @@ impl SemanticAnalyser {
                             found: format!("`{}`", t),
                         }),
 
-                        (Type::U16(_), Type::U16(_)) => Ok(Type::U16(UInt::U16(u16::default()))),
+                        (Type::U16(_), Type::U8(_) | Type::U16(_)) => {
+                            Ok(Type::U16(UInt::U16(u16::default())))
+                        }
 
                         (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`u16`".to_string(),
                             found: format!("`{}`", t),
                         }),
 
-                        (Type::U32(_), Type::U32(_)) => Ok(Type::U32(UInt::U32(u32::default()))),
+                        (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
+                            Ok(Type::U32(UInt::U32(u32::default())))
+                        }
 
                         (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`u32`".to_string(),
                             found: format!("`{}`", t),
                         }),
 
-                        (Type::U64(_), Type::U64(_)) => Ok(Type::U64(UInt::U64(u64::default()))),
+                        (
+                            Type::U64(_),
+                            Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
+                        ) => Ok(Type::U64(UInt::U64(u64::default()))),
 
                         (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`u64`".to_string(),
@@ -1728,7 +1767,7 @@ impl SemanticAnalyser {
                             found: format!("`{}`", t),
                         }),
 
-                        (Type::U512(_), Type::U512(_)) => {
+                        (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
                             Ok(Type::U512(BigUInt::U512(U512::default())))
                         }
 
@@ -1744,7 +1783,9 @@ impl SemanticAnalyser {
                             found: format!("`{}`", t),
                         }),
 
-                        (Type::F64(_), Type::F64(_)) => Ok(Type::F64(Float::F64(F64::default()))),
+                        (Type::F64(_), Type::F32(_) | Type::F64(_)) => {
+                            Ok(Type::F64(Float::F64(F64::default())))
+                        }
 
                         (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`f64`".to_string(),
@@ -2115,7 +2156,7 @@ impl SemanticAnalyser {
                     _ => Type::UnitType(Unit),
                 };
 
-                if else_if_blocks_type != if_block_type {
+                if i.else_if_blocks_opt.is_some() && else_if_blocks_type != if_block_type {
                     return Err(SemanticErrorKind::TypeMismatchValues {
                         expected: format!("`{}`", if_block_type),
                         found: format!("`{}`", else_if_blocks_type),
@@ -2141,11 +2182,15 @@ impl SemanticAnalyser {
                 let patt_type = self.analyse_patt(&m.final_arm.matched_pattern.clone())?;
 
                 if patt_type != scrutinee_type {
-                    return Err(SemanticErrorKind::TypeMismatchMatchExpr {
-                        loc: "scrutinee and matched pattern".to_string(),
-                        expected: format!("`{}`", scrutinee_type),
-                        found: format!("`{}`", patt_type),
-                    });
+                    if let Type::InferredType(_) = patt_type {
+                        ()
+                    } else {
+                        return Err(SemanticErrorKind::TypeMismatchMatchExpr {
+                            loc: "scrutinee and matched pattern".to_string(),
+                            expected: format!("`{}`", scrutinee_type),
+                            found: format!("`{}`", patt_type),
+                        });
+                    }
                 }
 
                 let expr_type = self.analyse_expr(&m.final_arm.arm_expression.clone(), root)?;
@@ -2155,11 +2200,15 @@ impl SemanticAnalyser {
                         let arm_patt_type = self.analyse_patt(&arm.matched_pattern)?;
 
                         if arm_patt_type != patt_type {
-                            return Err(SemanticErrorKind::TypeMismatchMatchExpr {
-                                loc: "matched pattern".to_string(),
-                                expected: format!("`{}`", patt_type),
-                                found: format!("`{}`", arm_patt_type),
-                            });
+                            if let Type::InferredType(_) = patt_type {
+                                ()
+                            } else {
+                                return Err(SemanticErrorKind::TypeMismatchMatchExpr {
+                                    loc: "matched pattern".to_string(),
+                                    expected: format!("`{}`", patt_type),
+                                    found: format!("`{}`", arm_patt_type),
+                                });
+                            }
                         }
 
                         let arm_expr_type = self.analyse_expr(&arm.arm_expression.clone(), root)?;

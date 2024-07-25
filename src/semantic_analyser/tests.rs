@@ -45,6 +45,32 @@ fn analyse_constant_reassign() {
 }
 
 #[test]
+fn analyse_control_flow() -> Result<(), ()> {
+    let input = r#"
+        func greater_than(x: i64) -> bool {
+            if (x > 10) {
+               true
+            } else {
+                match x {
+                    ..=0 => false,
+                    1..9 => false,
+                    _ if (x + 1) == 10 => false,
+                    10 => false,
+                    _ => true,
+                } 
+            }
+        }
+    "#;
+
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+    }
+}
+
+#[test]
 fn analyse_impl() -> Result<(), ()> {
     let input = r#"
     module erc_20 {
@@ -178,9 +204,7 @@ fn analyse_import_decl() -> Result<(), ()> {
     };
 
     let func_path = TypePath {
-        associated_type_path_prefix_opt: Some(Vec::<Identifier>::from(
-            external_mod_path.clone(),
-        )),
+        associated_type_path_prefix_opt: Some(Vec::<Identifier>::from(external_mod_path.clone())),
         type_name: external_func.function_name.clone(),
     };
 
