@@ -60,6 +60,16 @@ fn analyse_control_flow() -> Result<(), ()> {
                 } 
             }
         }
+
+        func iterate(x: &mut [u64; 10]) -> [u64; 10] {
+            for i in x {
+                while (i >= 2) {
+                    i = i * 2;
+                }
+            }
+
+            x
+        }
     "#;
 
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;

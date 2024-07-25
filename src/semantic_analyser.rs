@@ -2231,8 +2231,44 @@ impl SemanticAnalyser {
             Expression::ForIn(fi) => {
                 self.enter_scope(ScopeKind::ForInLoop);
 
+                let iter_type = self.analyse_expr(&fi.iterator.clone(), root)?;
+
+                let element_type = match iter_type.clone() {
+                    Type::Array { element_type, .. } | Type::Vec { element_type, .. } => {
+                        *element_type
+                    }
+
+                    Type::Reference { inner_type, .. } => match *inner_type {
+                        Type::Array { element_type, .. } | Type::Vec { element_type, .. } => {
+                            *element_type
+                        }
+                        _ => {
+                            return Err(SemanticErrorKind::TypeMismatchArray {
+                                expected: "iterable type".to_string(),
+                                found: iter_type.to_string(),
+                            })
+                        }
+                    },
+                    _ => {
+                        return Err(SemanticErrorKind::TypeMismatchArray {
+                            expected: "iterable type".to_string(),
+                            found: iter_type.to_string(),
+                        });
+                    }
+                };
+
+                if let Pattern::IdentifierPatt(id) = *fi.pattern.clone() {
+                    self.insert(
+                        TypePath::from(id.name.clone()),
+                        Symbol::Variable {
+                            name: id.name,
+                            var_type: element_type,
+                            data: None,
+                        },
+                    )?;
+                }
+
                 self.analyse_patt(&fi.pattern.clone())?;
-                self.analyse_expr(&fi.iterator.clone(), root)?;
 
                 let ty = self.analyse_expr(&Expression::Block(fi.block.clone()), root)?;
 
