@@ -313,7 +313,10 @@ fn analyse_let_stmt() -> Result<(), ()> {
     let input = r#"
     let a = 42;
     let b = 3.14;
-    let c = (a as f64) + b;"#;
+    let c = (a as f64) + b;
+    let d = [true, false, true, true];
+    let e = (a, b, 12, d, "foo");
+    "#;
 
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
