@@ -49,7 +49,7 @@ impl Type {
             Some(Token::BoolType { .. }) => Ok(Type::Bool(Bool::from(bool::default()))),
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
-            Some(Token::Func { .. }) => parse_function_ptr_type(&token, parser),
+            Some(Token::Func { .. }) => parse_function_ptr_type(parser),
             Some(Token::Ampersand { .. }) => {
                 let inner_type = Box::new(Type::parse(parser)?);
                 Ok(Type::Reference {
@@ -341,18 +341,8 @@ impl fmt::Display for Type {
     }
 }
 
-fn parse_function_ptr_type(
-    token: &Option<Token>,
-    parser: &mut Parser,
-) -> Result<Type, ErrorsEmitted> {
+fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     let mut params: Vec<FunctionOrMethodParam> = Vec::new();
-
-    let function_name = if let Some(Token::Identifier { name, .. }) = token {
-        Ok(Identifier::from(name))
-    } else {
-        parser.log_unexpected_token("function name");
-        Err(ErrorsEmitted)
-    }?;
 
     let open_paren = match parser.current_token() {
         Some(Token::LParen { .. }) => {
@@ -412,7 +402,6 @@ fn parse_function_ptr_type(
     }?;
 
     let ty = FunctionPtr {
-        function_name,
         params_opt: {
             if params.is_empty() {
                 None

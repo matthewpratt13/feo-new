@@ -28,6 +28,30 @@ fn setup(
 }
 
 #[test]
+fn analyse_closure() -> Result<(), ()> {
+    let input = r#"
+        func do_maths(f: func(x: u64) -> u64, x: u64) -> u64 {
+           f(x)
+        }
+
+        func add_one(x: u64) -> u64 {
+            let closure = |x: u64| -> u64 {
+                x + 1
+            };
+
+            do_maths(closure, x)
+        }
+    "#;
+
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+    }
+}
+
+#[test]
 #[should_panic]
 fn analyse_constant_reassign() {
     let input = r#"

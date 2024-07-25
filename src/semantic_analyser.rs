@@ -706,11 +706,23 @@ impl SemanticAnalyser {
 
                 let param_path = TypePath::from(param.param_name());
 
-                self.insert(
-                    param_path,
-                    Symbol::Variable {
+                let symbol = match param_type {
+                    Type::FunctionPtr(f) => Symbol::Function {
+                        path: param_path.clone(),
+                        function: FunctionItem {
+                            attributes_opt: None,
+                            visibility: Visibility::Private,
+                            kw_func: Keyword::Func,
+                            function_name: Identifier::from(""),
+                            params_opt: f.params_opt,
+                            return_type_opt: f.return_type_opt,
+                            block_opt: None,
+                            span: Span::default(),
+                        },
+                    },
+                    t => Symbol::Variable {
                         name: param.param_name(),
-                        var_type: param_type,
+                        var_type: t,
                         data: {
                             if f.block_opt.is_some() {
                                 Some(Expression::Block(f.block_opt.clone().unwrap()))
@@ -719,7 +731,9 @@ impl SemanticAnalyser {
                             }
                         },
                     },
-                )?;
+                };
+
+                self.insert(param_path, symbol)?;
             }
         }
 
@@ -1908,7 +1922,6 @@ impl SemanticAnalyser {
                 }
 
                 let function_ptr = FunctionPtr {
-                    function_name: Identifier::from(""),
                     params_opt,
                     return_type_opt: Some(Box::new(return_type)),
                 };

@@ -220,7 +220,6 @@ impl fmt::Display for Bool {
 /// Function pointer type: `func(<param>) -> <Type>`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionPtr {
-    pub(crate) function_name: Identifier,
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
     pub(crate) return_type_opt: Option<Box<Type>>,
 }
@@ -229,8 +228,7 @@ impl fmt::Display for FunctionPtr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}({:?}) [-> {:?}]",
-            self.function_name,
+            "func({:?}) [-> {:?}]",
             self.params_opt.clone().unwrap_or(Vec::new()),
             self.return_type_opt
                 .clone()
