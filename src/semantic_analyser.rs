@@ -2603,13 +2603,19 @@ impl SemanticAnalyser {
                         }),
                     );
 
+                    println!("mapping: `{mapping:?}`");
+                    println!("keys: `{:?}`", mapping.keys());
+                    println!("key: `{key:?}`");
+                    println!("values: `{:?}`", mapping.values());
+                    println!("value: `{:?}`", mapping.get(&key));
+
                     if let Some(e) = mapping.get(&key) {
                         Ok(Type::Option {
                             inner_type: Box::new(self.analyse_expr(e, root)?),
                         })
                     } else {
                         Err(SemanticErrorKind::MissingValue {
-                            expected: format!("value to match key: {}", key),
+                            expected: format!("value to match key: `{}`", key),
                         })
                     }
                 } else {

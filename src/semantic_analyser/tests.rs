@@ -28,6 +28,23 @@ fn setup(
 }
 
 #[test]
+fn analyse_collection_indexing() -> Result<(), ()> {
+    let input = r#"
+        func get_balance() -> u256 {
+            let balances: Mapping<h160, u256> = { $0x12345123451234512345: 0x1_000_000 };
+            balances.get($0x12345123451234512345).unwrap()
+        }
+    "#;
+
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+    }
+}
+
+#[test]
 fn analyse_closure() -> Result<(), ()> {
     let input = r#"
         func do_maths(f: func(x: u64) -> u64, x: u64) -> u64 {
