@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{AssigneeExpr, Identifier, Keyword, OuterAttr, StaticVarDecl, Type, Visibility},
     error::ErrorsEmitted,
@@ -103,6 +105,19 @@ impl ParseDeclItem for StaticVarDecl {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for StaticVarDecl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StaticVarDecl")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("visibility", &self.visibility)
+            .field("kw_mut_opt", &self.kw_mut_opt)
+            .field("var_name", &self.var_name)
+            .field("var_type", &self.var_type)
+            .field("assignee_opt", &self.assignee_opt)
+            .finish()
     }
 }
 

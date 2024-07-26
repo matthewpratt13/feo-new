@@ -1,128 +1,118 @@
 use crate::{
-    ast::{RangeOp, RangePatt},
+    ast::{Pattern, RangeOp, RangePatt},
     error::{ErrorsEmitted, ParserErrorKind},
-    parser::{ParsePattern, Parser},
+    parser::Parser,
     token::Token,
 };
 
-impl ParsePattern for RangePatt {
-    fn parse_patt(parser: &mut Parser) -> Result<RangePatt, ErrorsEmitted> {
-        match parser.current_token() {
-            Some(Token::DotDotEquals { .. }) => parse_range_to_incl(parser),
-            _ => parse_range_from(parser),
-        }
-    }
-}
-
-/// Parse from- (exclusive) and from-to (inclusive) patterns.
-/// I.e., `<patt>..` and `<patt>..=<patt>`.
-fn parse_range_from(parser: &mut Parser) -> Result<RangePatt, ErrorsEmitted> {
-    let from_pattern = match parser.current_token() {
-        Some(
-            Token::IntLiteral { .. }
-            | Token::UIntLiteral { .. }
-            | Token::BigUIntLiteral { .. }
-            | Token::ByteLiteral { .. }
-            | Token::CharLiteral { .. },
-        ) => parser.parse_pattern(),
-        _ => {
-            parser.log_unexpected_token("numeric or text value, or identifier");
-            Err(ErrorsEmitted)
-        }
-    }?;
-
-    let range_op = match parser.current_token() {
-        Some(Token::DblDot { .. }) => Ok(RangeOp::RangeExclusive),
-        Some(Token::DotDotEquals { .. }) => Ok(RangeOp::RangeInclusive),
-        Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
-            Err(ErrorsEmitted)
-        }
-        _ => {
-            parser.log_unexpected_token("numeric or text value, or identifier");
-            Err(ErrorsEmitted)
-        }
-    }?;
-
-    parser.next_token();
-
-    let to_pattern_opt = match parser.current_token() {
-        Some(
-            Token::IntLiteral { .. }
-            | Token::UIntLiteral { .. }
-            | Token::BigUIntLiteral { .. }
-            | Token::ByteLiteral { .. }
-            | Token::CharLiteral { .. }
-            | Token::Identifier { .. },
-        ) => {
-            let pattern = parser.parse_pattern()?;
-            Ok(Some(Box::new(pattern)))
-        }
-
-        Some(Token::EOF) | None => {
-            if range_op != RangeOp::RangeExclusive {
-                parser.log_error(ParserErrorKind::UnexpectedRangeOp {
-                    expected: format!("`{}`", RangeOp::RangeExclusive),
-                    found: format!("`{}`", range_op),
-                });
+impl RangePatt {
+    /// Parse from- (exclusive) and from-to (inclusive) patterns.
+    /// I.e., `<patt>..` and `<patt>..=<patt>`.
+    pub(crate) fn parse_from(
+        parser: &mut Parser,
+        from_pattern: Pattern,
+    ) -> Result<RangePatt, ErrorsEmitted> {
+        let range_op = match parser.current_token() {
+            Some(Token::DblDot { .. }) => Ok(RangeOp::RangeExclusive),
+            Some(Token::DotDotEquals { .. }) => Ok(RangeOp::RangeInclusive),
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
                 Err(ErrorsEmitted)
-            } else {
+            }
+            _ => {
+                parser.log_unexpected_token("range operator");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        let to_pattern_opt = match parser.peek_ahead_by(1) {
+            Some(
+                Token::IntLiteral { .. }
+                | Token::UIntLiteral { .. }
+                | Token::BigUIntLiteral { .. }
+                | Token::ByteLiteral { .. }
+                | Token::CharLiteral { .. }
+                | Token::Identifier { .. },
+            ) => {
+                parser.next_token();
+                let pattern = parser.parse_pattern()?;
+                Ok(Some(Box::new(pattern)))
+            }
+
+            Some(Token::FatArrow { .. } | Token::If { .. }) => {
+                parser.next_token();
                 Ok(None)
             }
-        }
 
-        _ => {
-            parser.log_unexpected_token("numeric value or identifier");
-            Err(ErrorsEmitted)
-        }
-    }?;
+            Some(Token::EOF) | None => {
+                parser.next_token();
 
-    Ok(RangePatt {
-        from_pattern_opt: Some(Box::new(from_pattern)),
-        range_op,
-        to_pattern_opt,
-    })
-}
+                if range_op != RangeOp::RangeExclusive {
+                    parser.log_error(ParserErrorKind::UnexpectedRangeOp {
+                        expected: format!("`{}`", RangeOp::RangeExclusive),
+                        found: format!("`{}`", range_op),
+                    });
+                    Err(ErrorsEmitted)
+                } else {
+                    Ok(None)
+                }
+            }
 
-/// Parse a to (inclusive) pattern. I.e., `..=<patt>`.
-fn parse_range_to_incl(parser: &mut Parser) -> Result<RangePatt, ErrorsEmitted> {
-    let range_op = match parser.current_token() {
-        Some(Token::DotDotEquals { .. }) => Ok(RangeOp::RangeInclusive),
-        _ => {
-            parser.log_unexpected_token("inclusive range operator (`..=`)");
-            Err(ErrorsEmitted)
-        }
-    }?;
+            _ => {
+                parser.log_unexpected_token(
+                    "numeric value, identifier, fat arrow or guard statement",
+                );
+                Err(ErrorsEmitted)
+            }
+        }?;
 
-    parser.next_token();
+        Ok(RangePatt {
+            from_pattern_opt: Some(Box::new(from_pattern)),
+            range_op,
+            to_pattern_opt,
+        })
+    }
 
-    let to_pattern_opt = match parser.current_token() {
-        Some(
-            Token::IntLiteral { .. }
-            | Token::UIntLiteral { .. }
-            | Token::BigUIntLiteral { .. }
-            | Token::ByteLiteral { .. }
-            | Token::CharLiteral { .. }
-            | Token::Identifier { .. },
-        ) => {
-            let pattern = parser.parse_pattern()?;
-            Ok(Some(Box::new(pattern)))
-        }
+    /// Parse a to (inclusive) pattern. I.e., `..=<patt>`.
+    pub(crate) fn parse_to_incl(parser: &mut Parser) -> Result<RangePatt, ErrorsEmitted> {
+        let range_op = match parser.current_token() {
+            Some(Token::DotDotEquals { .. }) => Ok(RangeOp::RangeInclusive),
+            _ => {
+                parser.log_unexpected_token("inclusive range operator (`..=`)");
+                Err(ErrorsEmitted)
+            }
+        }?;
 
-        Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
-            Err(ErrorsEmitted)
-        }
+        parser.next_token();
 
-        _ => {
-            parser.log_unexpected_token("numeric value or identifier");
-            Err(ErrorsEmitted)
-        }
-    }?;
+        let to_pattern_opt = match parser.current_token() {
+            Some(
+                Token::IntLiteral { .. }
+                | Token::UIntLiteral { .. }
+                | Token::BigUIntLiteral { .. }
+                | Token::ByteLiteral { .. }
+                | Token::CharLiteral { .. }
+                | Token::Identifier { .. },
+            ) => {
+                let pattern = parser.parse_pattern()?;
+                Ok(Some(Box::new(pattern)))
+            }
 
-    Ok(RangePatt {
-        from_pattern_opt: None,
-        range_op,
-        to_pattern_opt,
-    })
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+
+            _ => {
+                parser.log_unexpected_token("numeric value or identifier");
+                Err(ErrorsEmitted)
+            }
+        }?;
+
+        Ok(RangePatt {
+            from_pattern_opt: None,
+            range_op,
+            to_pattern_opt,
+        })
+    }
 }

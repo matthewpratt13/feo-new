@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Keyword, ReturnExpr},
     error::ErrorsEmitted,
@@ -35,6 +37,15 @@ impl ParseConstructExpr for ReturnExpr {
         };
 
         Ok(expr)
+    }
+}
+
+impl fmt::Debug for ReturnExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ReturnExpr")
+            .field("kw_return", &self.kw_return)
+            .field("expression_opt", &self.expression_opt)
+            .finish()
     }
 }
 

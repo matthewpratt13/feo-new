@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
     error::{ErrorsEmitted, ParserErrorKind},
@@ -93,6 +95,16 @@ impl ParseControlExpr for MatchExpr {
     }
 }
 
+impl fmt::Debug for MatchExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MatchExpr")
+            .field("scrutinee", &self.scrutinee)
+            .field("match_arms_opt", &self.match_arms_opt)
+            .field("final_arm", &self.final_arm)
+            .finish()
+    }
+}
+
 fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
     let matched_pattern = parser.parse_pattern()?;
 
@@ -158,6 +170,7 @@ mod tests {
         let input = r#"
         match x {
             0 => false,
+            1..=5 => false,
             _ if x > 5 => true,
             _ => false
         }"#;

@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{GroupedExpr, Keyword, ResultExpr},
     error::ErrorsEmitted,
@@ -41,6 +43,15 @@ impl ParseConstructExpr for ResultExpr {
         };
 
         Ok(expr)
+    }
+}
+
+impl fmt::Debug for ResultExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResultExpr")
+            .field("kw_ok_or_err", &self.kw_ok_or_err)
+            .field("expression", &self.expression)
+            .finish()
     }
 }
 

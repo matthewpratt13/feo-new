@@ -30,6 +30,8 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
+    MethodParamCountError,
+
     MissingStructField {
         expected: String,
     },
@@ -94,7 +96,6 @@ pub enum SemanticErrorKind {
         expected: String,
         found: String,
     },
-
 
     UndefinedField {
         struct_name: Identifier,
@@ -168,12 +169,14 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ConversionError { from, into } => {
                 write!(f, "conversion error. Unable to convert {from} into {into}")
             }
-       
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }
             SemanticErrorKind::InvalidStructName { name } => {
                 write!(f, "invalid struct name: `{name}`")
+            }
+            SemanticErrorKind::MethodParamCountError => {
+                write!(f, "too many `self` parameters")
             }
             SemanticErrorKind::MissingStructField { expected } => {
                 write!(f, "struct field not found. Expected {expected}, found none")
@@ -248,7 +251,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UndefinedVariable { name } => {
                 write!(f, "undefined variable: `{name}`",)
             }
-            SemanticErrorKind::UnexpectedExpression{ expected, found } => write!(f, "unexpected expression. Expected {expected}, found {found}"),
+            SemanticErrorKind::UnexpectedExpression { expected, found } => write!(f, "unexpected expression. Expected {expected}, found {found}"),
             
             SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found {found}"),
             

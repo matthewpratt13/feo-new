@@ -861,7 +861,7 @@ impl Token {
             Token::BlockComment { span, .. } => span,
             Token::DocComment { span, .. } => span,
             Token::UnrecognizedChar { span, .. } => span,
-            Token::EOF => Span::new("", 0, 0),
+            Token::EOF => Span::default(),
         }
     }
 }

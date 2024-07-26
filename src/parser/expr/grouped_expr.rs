@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Delimiter, Expression, GroupedExpr, TupleElements, TupleExpr},
     error::ErrorsEmitted,
@@ -71,6 +73,14 @@ impl ParseConstructExpr for GroupedExpr {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for GroupedExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GroupedExpr")
+            .field("inner_expression", &self.inner_expression)
+            .finish()
     }
 }
 

@@ -1,10 +1,13 @@
 use core::fmt;
 
-use crate::{parser::ty::build_item_path, span::Span};
+use crate::{
+    parser::ty::build_item_path,
+    span::{Span, Spanned},
+};
 
 use super::{
     AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,
-    TypePath, ReferenceOp, SelfType, Separator, Type, ValueExpr,
+    PathWildcard, ReferenceOp, SelfType, Type, TypePath, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -24,17 +27,17 @@ pub(crate) enum FunctionOrMethodParam {
 }
 
 impl FunctionOrMethodParam {
-    pub(crate) fn param_type(&self) -> Type {
-        match self {
-            FunctionOrMethodParam::FunctionParam(f) => *f.param_type.clone(),
-            FunctionOrMethodParam::MethodParam(_) => Type::SelfType(SelfType),
-        }
-    }
-
     pub(crate) fn param_name(&self) -> Identifier {
         match self {
             FunctionOrMethodParam::FunctionParam(f) => f.param_name.name.clone(),
             FunctionOrMethodParam::MethodParam(_) => Identifier::from("self"),
+        }
+    }
+
+    pub(crate) fn param_type(&self) -> Type {
+        match self {
+            FunctionOrMethodParam::FunctionParam(f) => *f.param_type.clone(),
+            FunctionOrMethodParam::MethodParam(_) => Type::SelfType(SelfType),
         }
     }
 }
@@ -42,8 +45,8 @@ impl FunctionOrMethodParam {
 impl fmt::Display for FunctionOrMethodParam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FunctionOrMethodParam::FunctionParam(t) => write!(f, "{}", t),
-            FunctionOrMethodParam::MethodParam(t) => write!(f, "{}", t),
+            FunctionOrMethodParam::FunctionParam(t) => write!(f, "{t}"),
+            FunctionOrMethodParam::MethodParam(t) => write!(f, "{t}"),
         }
     }
 }
@@ -108,8 +111,8 @@ impl fmt::Display for FunctionParam {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ImportTree {
     pub(crate) path_segments: Vec<PathSegment>,
-    pub(crate) wildcard_opt: Option<Separator>, // trailing `::*`
-    pub(crate) as_clause_opt: Option<Identifier>, // (`as`, `new_name`)
+    pub(crate) wildcard_opt: Option<PathWildcard>, // trailing `::*`
+    pub(crate) as_clause_opt: Option<Identifier>,  // (`as`, `new_name`)
 }
 
 impl fmt::Display for ImportTree {
@@ -250,7 +253,7 @@ pub(crate) struct TupleStructDefElement {
 // AST NODE STRUCTURES
 ///////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct AliasDecl {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -260,7 +263,7 @@ pub struct AliasDecl {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ConstantDecl {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -271,7 +274,7 @@ pub struct ConstantDecl {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct EnumDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -281,7 +284,7 @@ pub struct EnumDef {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct FunctionItem {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -293,7 +296,7 @@ pub struct FunctionItem {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ImportDecl {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -302,7 +305,7 @@ pub struct ImportDecl {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct InherentImplDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) kw_impl: Keyword,
@@ -311,7 +314,7 @@ pub struct InherentImplDef {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ModuleItem {
     pub(crate) outer_attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -322,7 +325,7 @@ pub struct ModuleItem {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct StaticVarDecl {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -334,7 +337,7 @@ pub struct StaticVarDecl {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct StructDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -344,7 +347,7 @@ pub struct StructDef {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct TraitDef {
     pub(crate) outer_attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -355,7 +358,7 @@ pub struct TraitDef {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct TraitImplDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) kw_impl: Keyword,
@@ -366,7 +369,7 @@ pub struct TraitImplDef {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct TupleStructDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
@@ -374,4 +377,119 @@ pub struct TupleStructDef {
     pub(crate) struct_name: Identifier,
     pub(crate) elements_opt: Option<Vec<TupleStructDefElement>>,
     pub(crate) span: Span,
+}
+
+impl Spanned for Item {
+    fn span(&self) -> Span {
+        match self.clone() {
+            Item::ImportDecl(id) => id.span,
+            Item::AliasDecl(ad) => ad.span,
+            Item::ConstantDecl(cvd) => cvd.span,
+            Item::StaticVarDecl(svd) => svd.span,
+            Item::ModuleItem(mi) => mi.span,
+            Item::TraitDef(td) => td.span,
+            Item::EnumDef(ed) => ed.span,
+            Item::StructDef(sd) => sd.span,
+            Item::TupleStructDef(tsd) => tsd.span,
+            Item::InherentImplDef(iid) => iid.span,
+            Item::TraitImplDef(tid) => tid.span,
+            Item::FunctionItem(fi) => fi.span,
+        }
+    }
+}
+
+impl fmt::Debug for Item {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ImportDecl(arg0) => f
+                .debug_struct("ImportDecl")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("import_tree", &arg0.import_tree)
+                .finish(),
+            Self::AliasDecl(arg0) => f
+                .debug_struct("AliasDecl")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("alias_name", &arg0.alias_name)
+                .field("original_type_opt", &arg0.original_type_opt)
+                .finish(),
+            Self::ConstantDecl(arg0) => f
+                .debug_struct("ConstantDecl")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("constant_name", &arg0.constant_name)
+                .field("constant_type", &arg0.constant_type)
+                .field("value_opt", &arg0.value_opt)
+                .finish(),
+            Self::StaticVarDecl(arg0) => f
+                .debug_struct("StaticVarDecl")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("kw_mut_opt", &arg0.kw_mut_opt)
+                .field("var_name", &arg0.var_name)
+                .field("var_type", &arg0.var_type)
+                .field("assignee_opt", &arg0.assignee_opt)
+                .finish(),
+            Self::ModuleItem(arg0) => f
+                .debug_struct("ModuleItem")
+                .field("outer_attributes_opt", &arg0.outer_attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("module_name", &arg0.module_name)
+                .field("inner_attribute_opt", &arg0.inner_attributes_opt)
+                .field("items_opt", &arg0.inner_attributes_opt)
+                .finish(),
+            Self::TraitDef(arg0) => f
+                .debug_struct("TraitDef")
+                .field("outer_attributes_opt", &arg0.outer_attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("trait_name", &arg0.trait_name)
+                .field("inner_attributes_opt", &arg0.inner_attributes_opt)
+                .field("trait_items_opt", &arg0.trait_items_opt)
+                .finish(),
+            Self::EnumDef(arg0) => f
+                .debug_struct("EnumDef")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("enum_name", &arg0.enum_name)
+                .field("variants", &arg0.variants)
+                .finish(),
+            Self::StructDef(arg0) => f
+                .debug_struct("StructDef")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("struct_name", &arg0.struct_name)
+                .field("fields_opt", &arg0.fields_opt)
+                .finish(),
+            Self::TupleStructDef(arg0) => f
+                .debug_struct("TupleStructDef")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("struct_name", &arg0.struct_name)
+                .field("elements_opt", &arg0.elements_opt)
+                .finish(),
+            Self::InherentImplDef(arg0) => f
+                .debug_struct("InherentImplDef")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("nominal_type", &arg0.nominal_type)
+                .field("associated_items_opt", &arg0.associated_items_opt)
+                .finish(),
+            Self::TraitImplDef(arg0) => f
+                .debug_struct("TraitImplDef")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("implemented_trait_path", &arg0.implemented_trait_path)
+                .field("implementing_type", &arg0.implementing_type)
+                .field("associated_items_opt", &arg0.associated_items_opt)
+                .finish(),
+            Self::FunctionItem(arg0) => f
+                .debug_struct("FunctionItem")
+                .field("attributes_opt", &arg0.attributes_opt)
+                .field("visibility", &arg0.visibility)
+                .field("function_name", &arg0.function_name)
+                .field("params_opt", &arg0.params_opt)
+                .field("return_type_opt", &arg0.return_type_opt)
+                .field("block_opt", &arg0.block_opt)
+                .finish(),
+        }
+    }
 }

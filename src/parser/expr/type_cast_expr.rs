@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Expression, Type, TypeCastExpr, TypeCastOp},
     error::ErrorsEmitted,
@@ -68,6 +70,15 @@ impl ParseOperatorExpr for TypeCastExpr {
         };
 
         Ok(Expression::TypeCast(expr))
+    }
+}
+
+impl fmt::Debug for TypeCastExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TypeCastExpr")
+            .field("value", &self.value)
+            .field("new_type", &self.new_type)
+            .finish()
     }
 }
 

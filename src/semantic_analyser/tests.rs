@@ -15,16 +15,57 @@ fn setup(
 ) -> Result<(SemanticAnalyser, Program), ()> {
     let mut parser = parser::test_utils::get_parser(input, LogLevel::Debug, print_tokens);
 
-    let module = match parser.parse_tokens() {
-        Ok(m) => m,
+    let program = match parser.parse_tokens() {
+        Ok(prog) => prog,
         Err(_) => return Err(println!("{:#?}", parser.errors())),
     };
 
     if print_statements {
-        println!("{:#?}", module.statements)
+        println!("{:#?}", program.statements)
     }
 
-    Ok((SemanticAnalyser::new(log_level, external_code), module))
+    Ok((SemanticAnalyser::new(log_level, external_code), program))
+}
+
+#[test]
+fn analyse_collection_indexing() -> Result<(), ()> {
+    let input = r#"
+        func get_balance() -> u256 {
+            let balances: Mapping<h160, u256> = { $0x12345123451234512345: 0x1_000_000 };
+            balances.get($0x12345123451234512345).unwrap()
+        }
+    "#;
+
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+    }
+}
+
+#[test]
+fn analyse_closure() -> Result<(), ()> {
+    let input = r#"
+        func do_maths(f: func(x: u64) -> u64, x: u64) -> u64 {
+           f(x)
+        }
+
+        func add_one(x: u64) -> u64 {
+            let closure = |x: u64| -> u64 {
+                x + 1
+            };
+
+            do_maths(closure, x)
+        }
+    "#;
+
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+    }
 }
 
 #[test]
@@ -35,12 +76,48 @@ fn analyse_constant_reassign() {
     const ADDRESS: h160 = $0x12345123451234512345;
     ADDRESS = $0x54321543215432154321;"#;
 
-    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)
         .expect("unable to set up semantic analyser");
 
-    match analyser.analyse_program(&module, TypePath::from(Identifier::from(""))) {
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
         Ok(_) => println!("{:#?}", analyser.logger.messages()),
         Err(_) => panic!("{:#?}", analyser.logger.messages()),
+    }
+}
+
+#[test]
+fn analyse_control_flow() -> Result<(), ()> {
+    let input = r#"
+        func greater_than(x: i64) -> bool {
+            if (x > 10) {
+               true
+            } else {
+                match x {
+                    ..=0 => false,
+                    1..9 => false,
+                    _ if (x + 1) == 10 => false,
+                    10 => false,
+                    _ => true,
+                } 
+            }
+        }
+
+        func iterate(x: &mut [u64; 10]) -> [u64; 10] {
+            for i in x {
+                while (i >= 2) {
+                    i = i * 2;
+                }
+            }
+
+            x
+        }
+    "#;
+
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }
 }
 
@@ -141,9 +218,9 @@ fn analyse_impl() -> Result<(), ()> {
         }
     }"#;
 
-    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
-    match analyser.analyse_program(&module, TypePath::from(Identifier::from(""))) {
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
         Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }
@@ -159,28 +236,26 @@ fn analyse_import_decl() -> Result<(), ()> {
         params_opt: None,
         return_type_opt: None,
         block_opt: None,
-        span: Span::new("", 0, 0),
+        span: Span::default(),
     };
 
-    let external_module = ModuleItem {
+    let external_mod = ModuleItem {
         outer_attributes_opt: None,
         visibility: Visibility::Pub,
         kw_module: Keyword::Module,
-        module_name: Identifier::from("external_module"),
+        module_name: Identifier::from("external_mod"),
         inner_attributes_opt: None,
         items_opt: Some(vec![Item::FunctionItem(external_func.clone())]),
-        span: Span::new("", 0, 0),
+        span: Span::default(),
     };
 
-    let external_module_path = TypePath {
+    let external_mod_path = TypePath {
         associated_type_path_prefix_opt: None,
-        type_name: external_module.module_name.clone(),
+        type_name: external_mod.module_name.clone(),
     };
 
     let func_path = TypePath {
-        associated_type_path_prefix_opt: Some(Vec::<Identifier>::from(
-            external_module_path.clone(),
-        )),
+        associated_type_path_prefix_opt: Some(Vec::<Identifier>::from(external_mod_path.clone())),
         type_name: external_func.function_name.clone(),
     };
 
@@ -196,16 +271,16 @@ fn analyse_import_decl() -> Result<(), ()> {
 
     let mut external_code: SymbolTable = HashMap::new();
     external_code.insert(
-        external_module_path.clone(),
+        external_mod_path.clone(),
         Symbol::Module {
-            path: external_module_path,
-            module: external_module,
+            path: external_mod_path,
+            module: external_mod,
             symbols,
         },
     );
 
     let input = r#" 
-    import external_module::external_func;
+    import external_mod::external_func;
 
     module some_mod { 
         struct SomeObject {}
@@ -242,9 +317,9 @@ fn analyse_import_decl() -> Result<(), ()> {
         another_func()
     }"#;
 
-    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, Some(external_code))?;
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, Some(external_code))?;
 
-    match analyser.analyse_program(&module, TypePath::from(Identifier::from(""))) {
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
         Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }
@@ -255,11 +330,14 @@ fn analyse_let_stmt() -> Result<(), ()> {
     let input = r#"
     let a = 42;
     let b = 3.14;
-    let c = (a as f64) + b;"#;
+    let c = (a as f64) + b;
+    let d = [true, false, true, true];
+    let e = (a, b, 12, d, "foo");
+    "#;
 
-    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
-    match analyser.analyse_program(&module, TypePath::from(Identifier::from(""))) {
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
         Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }
@@ -269,11 +347,14 @@ fn analyse_let_stmt() -> Result<(), ()> {
 fn analyse_method_call() {
     let input = r#"
     module foo {
+        #![contract]
+
         struct Foo {
             name: str,
             symbol: str,
             decimals: u64,
             total_supply: u64,
+            balances: Mapping<h160, u256>
         }
 
         impl Foo {
@@ -284,9 +365,10 @@ fn analyse_method_call() {
                     symbol: symbol,
                     decimals: 18,
                     total_supply: 1_000_000,
+                    balances: balances
                 }
             }
-
+            
             func name(&self) -> str {
                 self.name
             }
@@ -300,7 +382,7 @@ fn analyse_method_call() {
     import lib::foo::Foo;
 
     func main() {
-        let foo = Foo::new("Foo", "FOO", {});
+        let foo = Foo::new("Foo", "FOO", { $0x12345123451234512345: 0x1234567890 });
 
         let name = foo.name();
 
@@ -309,10 +391,10 @@ fn analyse_method_call() {
         return;
     }"#;
 
-    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)
         .expect("unable to set up semantic analyser");
 
-    match analyser.analyse_program(&module, TypePath::from(Identifier::from(""))) {
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
         Ok(_) => println!("{:#?}", analyser.logger.messages()),
         Err(_) => panic!("{:#?}", analyser.logger.messages()),
     }
@@ -348,9 +430,9 @@ fn analyse_struct() -> Result<(), ()> {
         foo.c - (1_000 as u256)
     }"#;
 
-    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
-    match analyser.analyse_program(&module, TypePath::from(Identifier::from(""))) {
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
         Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }
@@ -371,9 +453,9 @@ fn analyse_trait_def() -> Result<(), ()> {
         pub func creator_address() -> h160;
     }"#;
 
-    let (mut analyser, module) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
-    match analyser.analyse_program(&module, TypePath::from(Identifier::from(""))) {
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
         Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
         Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }

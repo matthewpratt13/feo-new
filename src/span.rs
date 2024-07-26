@@ -42,6 +42,12 @@ impl Span {
     }
 }
 
+impl Default for Span {
+    fn default() -> Self {
+        Span::new("", 0, 0)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Position {
     pub line: usize,

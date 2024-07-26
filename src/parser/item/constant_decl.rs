@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{ConstantDecl, Identifier, Keyword, OuterAttr, Type, ValueExpr, Visibility},
     error::ErrorsEmitted,
@@ -95,6 +97,18 @@ impl ParseDeclItem for ConstantDecl {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for ConstantDecl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ConstantDecl")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("visibility", &self.visibility)
+            .field("constant_name", &self.constant_name)
+            .field("constant_type", &self.constant_type)
+            .field("value_opt", &self.value_opt)
+            .finish()
     }
 }
 

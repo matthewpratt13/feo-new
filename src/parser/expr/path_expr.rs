@@ -1,9 +1,10 @@
 use core::fmt;
 
 use crate::{
-    ast::{Identifier, PathExpr, PathRoot, SelfType},
+    ast::{Expression, Identifier, PathExpr, PathRoot, SelfType},
     error::ErrorsEmitted,
     parser::{ParseSimpleExpr, Parser},
+    span::Spanned,
     token::Token,
 };
 
@@ -76,9 +77,24 @@ impl ParseSimpleExpr for PathExpr {
     }
 }
 
+impl From<Expression> for PathExpr {
+    fn from(value: Expression) -> Self {
+        match value {
+            Expression::Path(p) => p,
+            e => PathExpr {
+                path_root: PathRoot::Identifier(Identifier::from("")),
+                tree_opt: None,
+                span: e.span(),
+            },
+        }
+    }
+}
+
 impl fmt::Display for PathExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut segments: Vec<String> = Vec::new();
+
+        segments.push(self.path_root.to_string());
 
         if let Some(v) = &self.tree_opt {
             for i in v {
@@ -86,11 +102,18 @@ impl fmt::Display for PathExpr {
             }
         }
 
-        segments.push(self.path_root.to_string());
-
         let full_path = segments.join("::");
 
         write!(f, "{}", full_path)
+    }
+}
+
+impl fmt::Debug for PathExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PathExpr")
+            .field("path_root", &self.path_root)
+            .field("tree_opt", &self.tree_opt)
+            .finish()
     }
 }
 

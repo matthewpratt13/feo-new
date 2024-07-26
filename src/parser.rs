@@ -811,11 +811,6 @@ impl Parser {
 
     /// Parse an expression and attempt to convert it to a value expression.
     fn parse_value_expr(&mut self, precedence: Precedence) -> Result<ValueExpr, ErrorsEmitted> {
-        // self.parse_expression(precedence)?.try_into().map_err(|e| {
-        //     self.log_error(e);
-        //     ErrorsEmitted
-        // })
-
         ValueExpr::try_from(self.parse_expression(precedence)?).map_err(|e| {
             self.log_error(e);
             ErrorsEmitted
@@ -827,11 +822,6 @@ impl Parser {
         &mut self,
         precedence: Precedence,
     ) -> Result<AssigneeExpr, ErrorsEmitted> {
-        // self.parse_expression(precedence)?.try_into().map_err(|e| {
-        //     self.log_error(e);
-        //     ErrorsEmitted
-        // })
-
         AssigneeExpr::try_from(self.parse_expression(precedence)?).map_err(|e| {
             self.log_error(e);
             ErrorsEmitted
@@ -937,15 +927,24 @@ impl Parser {
                     span,
                 });
 
+                self.next_token();
+
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
+                    self.current_token()
                 {
-                    Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
+                    if self.is_range() {
+                        Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
+                    } else {
+                        self.log_error(ParserErrorKind::InvalidTokenContext {
+                            token: self.peek_ahead_by(1).cloned(),
+                        });
+                        Err(ErrorsEmitted)
+                    }
                 } else {
-                    self.next_token();
                     Ok(patt)
                 }
             }
+
             Some(Token::UIntLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
@@ -955,15 +954,24 @@ impl Parser {
                     span,
                 });
 
+                self.next_token();
+
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
+                    self.current_token()
                 {
-                    Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
+                    if self.is_range() {
+                        Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
+                    } else {
+                        self.log_error(ParserErrorKind::InvalidTokenContext {
+                            token: self.current_token().cloned(),
+                        });
+                        Err(ErrorsEmitted)
+                    }
                 } else {
-                    self.next_token();
                     Ok(patt)
                 }
             }
+
             Some(Token::BigUIntLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
@@ -973,15 +981,24 @@ impl Parser {
                     span,
                 });
 
+                self.next_token();
+
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
+                    self.current_token()
                 {
-                    Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
+                    if self.is_range() {
+                        Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
+                    } else {
+                        self.log_error(ParserErrorKind::InvalidTokenContext {
+                            token: self.peek_ahead_by(1).cloned(),
+                        });
+                        Err(ErrorsEmitted)
+                    }
                 } else {
-                    self.next_token();
                     Ok(patt)
                 }
             }
+
             Some(Token::ByteLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
@@ -991,15 +1008,25 @@ impl Parser {
                     span,
                 });
 
+                self.next_token();
+
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
+                    self.current_token()
                 {
-                    Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
+                    if self.is_range() {
+                        Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
+                    } else {
+                        self.log_error(ParserErrorKind::InvalidTokenContext {
+                            token: self.peek_ahead_by(1).cloned(),
+                        });
+                        Err(ErrorsEmitted)
+                    }
                 } else {
                     self.next_token();
                     Ok(patt)
                 }
             }
+
             Some(Token::BytesLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
@@ -1010,6 +1037,7 @@ impl Parser {
                     span,
                 }))
             }
+
             Some(Token::HashLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
@@ -1020,6 +1048,7 @@ impl Parser {
                     span,
                 }))
             }
+
             Some(Token::StrLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
@@ -1040,15 +1069,24 @@ impl Parser {
                     span,
                 });
 
+                self.next_token();
+
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
-                    self.peek_ahead_by(1)
+                    self.current_token()
                 {
-                    Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
+                    if self.is_range() {
+                        Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
+                    } else {
+                        self.log_error(ParserErrorKind::InvalidTokenContext {
+                            token: self.peek_ahead_by(1).cloned(),
+                        });
+                        Err(ErrorsEmitted)
+                    }
                 } else {
-                    self.next_token();
                     Ok(patt)
                 }
             }
+
             Some(Token::BoolLiteral { value, .. }) => {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
@@ -1059,6 +1097,7 @@ impl Parser {
                     span,
                 }))
             }
+
             Some(Token::LParen { .. }) => {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
                     Ok(Pattern::TuplePatt(TuplePatt::parse_patt(self)?))
@@ -1068,6 +1107,7 @@ impl Parser {
                     Ok(Pattern::GroupedPatt(patt))
                 }
             }
+
             Some(Token::Identifier { name, .. }) => {
                 if name == "_" {
                     self.next_token();
@@ -1086,7 +1126,16 @@ impl Parser {
                             Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?))
                         }
                         Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
-                            Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
+                            let patt = self.parse_pattern()?;
+
+                            if self.is_range() {
+                                Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
+                            } else {
+                                self.log_error(ParserErrorKind::InvalidTokenContext {
+                                    token: self.peek_ahead_by(1).cloned(),
+                                });
+                                Err(ErrorsEmitted)
+                            }
                         }
                         _ => Ok(Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?)),
                     }
@@ -1106,9 +1155,11 @@ impl Parser {
                 }
                 _ => Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?)),
             },
+
             Some(Token::SelfKeyword { .. } | Token::Lib { .. } | Token::Super { .. }) => {
                 Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?))
             }
+
             Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => {
                 Ok(Pattern::ReferencePatt(ReferencePatt::parse_patt(self)?))
             }
@@ -1119,9 +1170,9 @@ impl Parser {
                     dbl_dot: RangeOp::RangeExclusive,
                 }))
             }
-
+            
             Some(Token::DotDotEquals { .. }) => {
-                Ok(Pattern::RangePatt(RangePatt::parse_patt(self)?))
+                Ok(Pattern::RangePatt(RangePatt::parse_to_incl(self)?))
             }
 
             Some(Token::Some { .. }) => Ok(Pattern::SomePatt(SomePatt::parse_patt(self)?)),
@@ -1556,6 +1607,35 @@ impl Parser {
     /// Determine if `Token::DblPipe` indicates the logical `OR` operator.
     fn is_logical_or(&self) -> bool {
         !self.is_closure_without_params()
+    }
+
+    fn is_range(&self) -> bool {
+        match (
+            self.peek_behind_by(1),
+            self.current_token(),
+            self.peek_ahead_by(1),
+        ) {
+            (
+                Some(
+                    Token::IntLiteral { .. }
+                    | Token::UIntLiteral { .. }
+                    | Token::BigUIntLiteral { .. }
+                    | Token::ByteLiteral { .. }
+                    | Token::CharLiteral { .. }
+                    | Token::Identifier { .. },
+                ),
+                Some(Token::DblDot { .. } | Token::DotDotEquals { .. }),
+                Some(
+                    Token::IntLiteral { .. }
+                    | Token::UIntLiteral { .. }
+                    | Token::BigUIntLiteral { .. }
+                    | Token::ByteLiteral { .. }
+                    | Token::CharLiteral { .. }
+                    | Token::Identifier { .. },
+                ),
+            ) => true,
+            _ => false,
+        }
     }
 }
 

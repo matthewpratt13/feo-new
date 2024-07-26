@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{
         Delimiter, Identifier, Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef,
@@ -84,6 +86,17 @@ impl ParseDefItem for StructDef {
     }
 }
 
+impl fmt::Debug for StructDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StructDef")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("visibility", &self.visibility)
+            .field("struct_name", &self.struct_name)
+            .field("fields_opt", &self.fields_opt)
+            .finish()
+    }
+}
+
 impl ParseDefItem for TupleStructDef {
     fn parse(
         parser: &mut Parser,
@@ -165,6 +178,17 @@ impl ParseDefItem for TupleStructDef {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for TupleStructDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TupleStructDef")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("visibility", &self.visibility)
+            .field("struct_name", &self.struct_name)
+            .field("elements_opt", &self.elements_opt)
+            .finish()
     }
 }
 

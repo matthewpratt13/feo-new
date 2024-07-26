@@ -1,3 +1,4 @@
+use core::fmt;
 use std::collections::HashMap;
 
 use crate::{
@@ -41,12 +42,20 @@ impl ParseConstructExpr for MappingExpr {
     }
 }
 
+impl fmt::Debug for MappingExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MappingExpr")
+            .field("pairs_opt", &self.pairs_opt)
+            .finish()
+    }
+}
+
 impl MappingExpr {
     pub(crate) fn to_hashmap(&self) -> HashMap<Pattern, Expression> {
         let mut data: HashMap<Pattern, Expression> = HashMap::new();
 
         if let Some(v) = &self.pairs_opt {
-            for p in v.iter() {
+            for p in v {
                 data.insert(p.key.clone(), *p.value.clone());
             }
         }

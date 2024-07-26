@@ -1,7 +1,7 @@
 use core::fmt;
 
 use crate::{
-    ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, TypePath, SelfType},
+    ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, SelfType, Type, TypePath},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -101,15 +101,6 @@ impl TypePath {
     }
 }
 
-impl From<Identifier> for TypePath {
-    fn from(value: Identifier) -> Self {
-        TypePath {
-            associated_type_path_prefix_opt: None,
-            type_name: value,
-        }
-    }
-}
-
 impl From<PathExpr> for TypePath {
     fn from(value: PathExpr) -> Self {
         let mut path_segment_names: Vec<Identifier> = Vec::new();
@@ -166,6 +157,57 @@ impl From<PathPatt> for TypePath {
     }
 }
 
+impl From<PathSegment> for Vec<TypePath> {
+    fn from(value: PathSegment) -> Self {
+        let mut paths: Vec<TypePath> = Vec::new();
+
+        if let Some(v) = value.root.associated_type_path_prefix_opt {
+            let mut root: Vec<Identifier> = Vec::new();
+
+            for id in v {
+                root.push(id)
+            }
+
+            root.push(value.root.type_name);
+
+            if let Some(p_sub) = value.subset_opt {
+                for t in p_sub.nested_trees {
+                    for p_seg in t.path_segments {
+                        for p in Vec::<TypePath>::from(p_seg) {
+                            let path = build_item_path(&TypePath::from(root.clone()), p);
+                            paths.push(path)
+                        }
+                    }
+                }
+            } else {
+                paths.push(TypePath::from(root));
+            }
+        } else {
+            paths.push(value.root);
+        }
+
+        paths
+    }
+}
+
+impl From<Type> for TypePath {
+    fn from(value: Type) -> Self {
+        match value {
+            Type::UserDefined(p) => p,
+            t => TypePath::from(Identifier::from(&t.to_string())),
+        }
+    }
+}
+
+impl From<Identifier> for TypePath {
+    fn from(value: Identifier) -> Self {
+        TypePath {
+            associated_type_path_prefix_opt: None,
+            type_name: value,
+        }
+    }
+}
+
 impl From<Vec<Identifier>> for TypePath {
     fn from(value: Vec<Identifier>) -> Self {
         if value.len() > 1 {
@@ -205,39 +247,6 @@ impl From<TypePath> for Vec<Identifier> {
         }
 
         paths.push(value.type_name.clone());
-
-        paths
-    }
-}
-
-impl From<PathSegment> for Vec<TypePath> {
-    fn from(value: PathSegment) -> Self {
-        let mut paths: Vec<TypePath> = Vec::new();
-
-        if let Some(v) = value.root.associated_type_path_prefix_opt {
-            let mut root: Vec<Identifier> = Vec::new();
-
-            for id in v {
-                root.push(id)
-            }
-
-            root.push(value.root.type_name);
-
-            if let Some(p_sub) = value.subset_opt {
-                for t in p_sub.nested_trees {
-                    for p_seg in t.path_segments {
-                        for p in Vec::<TypePath>::from(p_seg) {
-                            let path = build_item_path(&TypePath::from(root.clone()), p);
-                            paths.push(path)
-                        }
-                    }
-                }
-            } else {
-                paths.push(TypePath::from(root));
-            }
-        } else {
-            paths.push(value.root);
-        }
 
         paths
     }

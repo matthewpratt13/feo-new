@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Expression, UnwrapExpr, UnwrapOp, ValueExpr},
     error::ErrorsEmitted,
@@ -22,7 +24,7 @@ impl ParseOperatorExpr for UnwrapExpr {
                 let span = parser.get_span(left_expr_span, &last_token.unwrap().span());
 
                 parser.next_token();
-                
+
                 let expr = UnwrapExpr {
                     value_expr,
                     unwrap_op: UnwrapOp,
@@ -40,6 +42,14 @@ impl ParseOperatorExpr for UnwrapExpr {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for UnwrapExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UnwrapExpr")
+            .field("value_expr", &self.value_expr)
+            .finish()
     }
 }
 

@@ -165,7 +165,7 @@ impl From<char> for Char {
 
 impl fmt::Display for Char {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "{}", self.0)
     }
 }
 
@@ -220,7 +220,6 @@ impl fmt::Display for Bool {
 /// Function pointer type: `func(<param>) -> <Type>`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionPtr {
-    pub(crate) function_name: Identifier,
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
     pub(crate) return_type_opt: Option<Box<Type>>,
 }
@@ -229,9 +228,24 @@ impl fmt::Display for FunctionPtr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}({:?}) [-> {:?}]",
-            self.function_name, self.params_opt, self.return_type_opt
+            "func({:?}) [-> {:?}]",
+            self.params_opt.clone().unwrap_or(Vec::new()),
+            self.return_type_opt
+                .clone()
+                .unwrap_or(Box::new(Type::UnitType(Unit)))
         )
+    }
+}
+
+/// Struct that represents an inferred type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InferredType {
+    pub(crate) name: Identifier,
+}
+
+impl fmt::Display for InferredType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 
@@ -245,6 +259,13 @@ impl fmt::Display for SelfType {
     }
 }
 
+/// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TypePath {
+    pub(crate) associated_type_path_prefix_opt: Option<Vec<Identifier>>,
+    pub(crate) type_name: Identifier,
+}
+
 /// Unit struct that represents the unit type `()`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unit;
@@ -253,23 +274,4 @@ impl fmt::Display for Unit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "()")
     }
-}
-
-/// Struct that represents an inferred type.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct InferredType {
-    pub(crate) name: Identifier,
-}
-
-impl fmt::Display for InferredType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "_")
-    }
-}
-
-/// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TypePath {
-    pub(crate) associated_type_path_prefix_opt: Option<Vec<Identifier>>,
-    pub(crate) type_name: Identifier,
 }

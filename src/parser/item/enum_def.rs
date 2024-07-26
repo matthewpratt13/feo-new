@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{
         Delimiter, EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTuple, EnumVariantType,
@@ -82,6 +84,17 @@ impl ParseDefItem for EnumDef {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for EnumDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EnumDef")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("visibility", &self.visibility)
+            .field("enum_name", &self.enum_name)
+            .field("variants", &self.variants)
+            .finish()
     }
 }
 

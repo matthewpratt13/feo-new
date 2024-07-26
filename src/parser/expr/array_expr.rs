@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{ArrayExpr, Delimiter},
     error::ErrorsEmitted,
@@ -34,6 +36,14 @@ impl ParseConstructExpr for ArrayExpr {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for ArrayExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ArrayExpr")
+            .field("elements_opt", &self.elements_opt)
+            .finish()
     }
 }
 

@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{BlockExpr, Delimiter, InnerAttr, Statement},
     error::ErrorsEmitted,
@@ -54,6 +56,15 @@ impl ParseConstructExpr for BlockExpr {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for BlockExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BlockExpr")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("statements_opt", &self.statements_opt)
+            .finish()
     }
 }
 

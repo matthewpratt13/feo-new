@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{
         BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier,
@@ -129,6 +131,19 @@ impl ParseDefItem for FunctionItem {
             block_opt,
             span,
         })
+    }
+}
+
+impl fmt::Debug for FunctionItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FunctionItem")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("visibility", &self.visibility)
+            .field("function_name", &self.function_name)
+            .field("params_opt", &self.params_opt)
+            .field("return_type_opt", &self.return_type_opt)
+            .field("block_opt", &self.block_opt)
+            .finish()
     }
 }
 

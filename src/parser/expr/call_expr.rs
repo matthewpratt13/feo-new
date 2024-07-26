@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{AssigneeExpr, CallExpr, Delimiter, Expression},
     error::ErrorsEmitted,
@@ -52,6 +54,15 @@ impl ParseOperatorExpr for CallExpr {
                 Err(ErrorsEmitted)
             }
         }
+    }
+}
+
+impl fmt::Debug for CallExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CallExpr")
+            .field("callee", &self.callee)
+            .field("args_opt", &self.args_opt)
+            .finish()
     }
 }
 

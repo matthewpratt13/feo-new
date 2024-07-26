@@ -1,10 +1,12 @@
 mod type_path;
+use core::fmt;
+
 pub(crate) use type_path::build_item_path;
 
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Delimiter, Float, FunctionOrMethodParam, FunctionPtr,
-        Identifier, InferredType, Int, TypePath, ReferenceOp, SelfType, Str, Type, UInt, Unit,
+        Identifier, InferredType, Int, ReferenceOp, SelfType, Str, Type, TypePath, UInt, Unit,
     },
     error::ErrorsEmitted,
     span::Position,
@@ -47,7 +49,7 @@ impl Type {
             Some(Token::BoolType { .. }) => Ok(Type::Bool(Bool::from(bool::default()))),
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
-            Some(Token::Func { .. }) => parse_function_ptr_type(&token, parser),
+            Some(Token::Func { .. }) => parse_function_ptr_type(parser),
             Some(Token::Ampersand { .. }) => {
                 let inner_type = Box::new(Type::parse(parser)?);
                 Ok(Type::Reference {
@@ -283,18 +285,64 @@ impl Type {
     }
 }
 
-fn parse_function_ptr_type(
-    token: &Option<Token>,
-    parser: &mut Parser,
-) -> Result<Type, ErrorsEmitted> {
-    let mut params: Vec<FunctionOrMethodParam> = Vec::new();
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Type::I32(_) => write!(f, "i32"),
+            Type::I64(_) => write!(f, "i64"),
+            Type::U8(_) => write!(f, "u8"),
+            Type::U16(_) => write!(f, "u16"),
+            Type::U32(_) => write!(f, "u32"),
+            Type::U64(_) => write!(f, "u64"),
+            Type::U256(_) => write!(f, "u256"),
+            Type::U512(_) => write!(f, "u512"),
+            Type::Byte(_) => write!(f, "byte"),
+            Type::F32(_) => write!(f, "f32"),
+            Type::F64(_) => write!(f, "f64"),
+            Type::B2(_) => write!(f, "b2"),
+            Type::B4(_) => write!(f, "b4"),
+            Type::B8(_) => write!(f, "b8"),
+            Type::B16(_) => write!(f, "b16"),
+            Type::B32(_) => write!(f, "b32"),
+            Type::H160(_) => write!(f, "h160"),
+            Type::H256(_) => write!(f, "h256"),
+            Type::H512(_) => write!(f, "h512"),
+            Type::Str(_) => write!(f, "str"),
+            Type::Char(_) => write!(f, "char"),
+            Type::Bool(_) => write!(f, "bool"),
+            Type::UnitType(_) => write!(f, "()"),
+            Type::GroupedType(g) => write!(f, "({})", *g),
+            Type::Array {
+                element_type,
+                num_elements,
+            } => write!(f, "[{}; {}]", *element_type, num_elements),
+            Type::Tuple(t) => write!(f, "({:?})", t),
+            Type::UserDefined(ud) => write!(f, "{}", ud),
+            Type::FunctionPtr(fp) => write!(f, "{}", fp),
+            Type::Reference {
+                reference_op,
+                inner_type,
+            } => match reference_op {
+                ReferenceOp::Borrow => write!(f, "{}{}", reference_op, *inner_type),
+                ReferenceOp::MutableBorrow => write!(f, "{} {}", reference_op, *inner_type),
+            },
+            Type::SelfType(_) => write!(f, "Self"),
+            Type::InferredType(_) => write!(f, "_"),
+            Type::Vec { element_type } => write!(f, "Vec<{}>", *element_type),
+            Type::Mapping {
+                key_type,
+                value_type,
+            } => write!(f, "Mapping<{}, {}>", *key_type, *value_type),
+            Type::Option { inner_type } => write!(f, "Option<{}>", *inner_type),
+            Type::Result { ok_type, err_type } => {
+                write!(f, "Result<{}, {}>", *ok_type, *err_type)
+            }
+        }
+    }
+}
 
-    let function_name = if let Some(Token::Identifier { name, .. }) = token {
-        Ok(Identifier::from(name))
-    } else {
-        parser.log_unexpected_token("function name");
-        Err(ErrorsEmitted)
-    }?;
+fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
+    let mut params: Vec<FunctionOrMethodParam> = Vec::new();
 
     let open_paren = match parser.current_token() {
         Some(Token::LParen { .. }) => {
@@ -354,7 +402,6 @@ fn parse_function_ptr_type(
     }?;
 
     let ty = FunctionPtr {
-        function_name,
         params_opt: {
             if params.is_empty() {
                 None

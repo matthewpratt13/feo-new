@@ -1,7 +1,9 @@
+use core::fmt;
+
 use crate::{
     ast::{
         Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathSegment, PathSubset,
-        TypePath, Separator, Visibility,
+        PathWildcard, TypePath, Visibility,
     },
     error::ErrorsEmitted,
     span::Position,
@@ -54,6 +56,16 @@ impl ParseDeclItem for ImportDecl {
     }
 }
 
+impl fmt::Debug for ImportDecl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImportDecl")
+            .field("attributes_opt", &self.attributes_opt)
+            .field("visibility", &self.visibility)
+            .field("import_tree", &self.import_tree)
+            .finish()
+    }
+}
+
 fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
     let mut path_segments: Vec<PathSegment> = Vec::new();
 
@@ -68,7 +80,7 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
 
     let wildcard_opt = if let Some(Token::ColonColonAsterisk { .. }) = parser.current_token() {
         parser.next_token();
-        Some(Separator::ColonColonAsterisk)
+        Some(PathWildcard)
     } else {
         None
     };
