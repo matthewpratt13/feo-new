@@ -2609,6 +2609,9 @@ impl SemanticAnalyser {
                     println!("values: `{:?}`", mapping.values());
                     println!("value: `{:?}`", mapping.get(&key));
 
+                    // not working because the span is not the same between the mapping key
+                    // and indexing key (i.e., it is afterwards)
+
                     if let Some(e) = mapping.get(&key) {
                         Ok(Type::Option {
                             inner_type: Box::new(self.analyse_expr(e, root)?),
