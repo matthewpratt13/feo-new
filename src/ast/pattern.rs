@@ -1,10 +1,10 @@
 use core::fmt;
 
-use crate::{error::ParserErrorKind, span::Span};
+use crate::error::ParserErrorKind;
 
 use super::{
-    BigUInt, Expression, Identifier, Int, Keyword, Literal, PathRoot, Pattern, RangeOp,
-    ReferenceOp, TypePath, U512,
+    types, BigUInt, Bool, Byte, Bytes, Char, Expression, Float, Identifier, Int, Keyword, Literal,
+    PathRoot, Pattern, RangeOp, ReferenceOp, Str, TypePath, UInt, U512,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -64,6 +64,72 @@ impl fmt::Display for IdentifierPatt {
             "{:?} {:?} {}",
             self.kw_ref_opt, self.kw_mut_opt, self.name
         )
+    }
+}
+
+/// Enum representing the literals in a pattern context
+#[derive(Clone, Hash, PartialEq, Eq)]
+pub(crate) enum LiteralPatt {
+    Int { value: Int },
+    UInt { value: UInt },
+    BigUInt { value: BigUInt },
+    Float { value: Float },
+    Byte { value: Byte },
+    Bytes { value: Bytes },
+    Hash { value: types::Hash },
+    Str { value: Str },
+    Char { value: Char },
+    Bool { value: Bool },
+}
+
+impl From<Literal> for LiteralPatt {
+    fn from(value: Literal) -> Self {
+        match value {
+            Literal::Int { value, .. } => LiteralPatt::Int { value },
+            Literal::UInt { value, .. } => LiteralPatt::UInt { value },
+            Literal::BigUInt { value, .. } => LiteralPatt::BigUInt { value },
+            Literal::Float { value, .. } => LiteralPatt::Float { value },
+            Literal::Byte { value, .. } => LiteralPatt::Byte { value },
+            Literal::Bytes { value, .. } => LiteralPatt::Bytes { value },
+            Literal::Hash { value, .. } => LiteralPatt::Hash { value },
+            Literal::Str { value, .. } => LiteralPatt::Str { value },
+            Literal::Char { value, .. } => LiteralPatt::Char { value },
+            Literal::Bool { value, .. } => LiteralPatt::Bool { value },
+        }
+    }
+}
+
+impl fmt::Display for LiteralPatt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LiteralPatt::Int { value } => write!(f, "{}", value),
+            LiteralPatt::UInt { value } => write!(f, "{}", value),
+            LiteralPatt::BigUInt { value } => write!(f, "{}", value),
+            LiteralPatt::Float { value } => write!(f, "{}", value),
+            LiteralPatt::Byte { value } => write!(f, "{}", value),
+            LiteralPatt::Bytes { value } => write!(f, "{}", value),
+            LiteralPatt::Hash { value } => write!(f, "{}", value),
+            LiteralPatt::Str { value } => write!(f, "{}", value),
+            LiteralPatt::Char { value } => write!(f, "{}", value),
+            LiteralPatt::Bool { value } => write!(f, "{}", value),
+        }
+    }
+}
+
+impl fmt::Debug for LiteralPatt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Int { value, .. } => f.debug_struct("Int").field("value", value).finish(),
+            Self::UInt { value, .. } => f.debug_struct("UInt").field("value", value).finish(),
+            Self::BigUInt { value, .. } => f.debug_struct("BigUInt").field("value", value).finish(),
+            Self::Float { value, .. } => f.debug_struct("Float").field("value", value).finish(),
+            Self::Byte { value, .. } => f.debug_struct("Byte").field("value", value).finish(),
+            Self::Bytes { value, .. } => f.debug_struct("Bytes").field("value", value).finish(),
+            Self::Hash { value, .. } => f.debug_struct("Hash").field("value", value).finish(),
+            Self::Str { value, .. } => f.debug_struct("Str").field("value", value).finish(),
+            Self::Char { value, .. } => f.debug_struct("Char").field("value", value).finish(),
+            Self::Bool { value, .. } => f.debug_struct("Bool").field("value", value).finish(),
+        }
     }
 }
 
@@ -135,7 +201,7 @@ impl TryFrom<Expression> for Pattern {
 
     fn try_from(value: Expression) -> Result<Self, Self::Error> {
         match value {
-            Expression::Literal(l) => Ok(Pattern::Literal(l)),
+            Expression::Literal(l) => Ok(Pattern::LiteralPatt(LiteralPatt::from(l))),
             Expression::Path(p) => Ok(Pattern::PathPatt(PathPatt {
                 path_root: p.path_root,
                 tree_opt: p.tree_opt,
@@ -257,7 +323,7 @@ impl TryFrom<Expression> for Pattern {
 impl fmt::Display for Pattern {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.clone() {
-            Pattern::Literal(l) => write!(f, "{l}"),
+            Pattern::LiteralPatt(l) => write!(f, "{l}"),
             Pattern::IdentifierPatt(id) => write!(
                 f,
                 "{}{}{}",
@@ -284,16 +350,15 @@ impl fmt::Display for Pattern {
                 f,
                 "{}{}{}",
                 rng.from_pattern_opt
-                    .unwrap_or(Box::new(Pattern::Literal(Literal::Int {
+                    .unwrap_or(Box::new(Pattern::LiteralPatt(LiteralPatt::Int {
                         value: Int::I64(i64::MIN),
-                        span: Span::default()
                     }))),
                 rng.range_op,
-                rng.to_pattern_opt
-                    .unwrap_or(Box::new(Pattern::Literal(Literal::BigUInt {
+                rng.to_pattern_opt.unwrap_or(Box::new(Pattern::LiteralPatt(
+                    LiteralPatt::BigUInt {
                         value: BigUInt::U512(U512::MAX),
-                        span: Span::default()
-                    })))
+                    }
+                )))
             ),
             Pattern::TuplePatt(tup) => write!(f, "( {} )", tup.tuple_patt_elements),
             Pattern::StructPatt(strc) => {

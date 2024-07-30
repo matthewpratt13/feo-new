@@ -909,7 +909,7 @@ impl fmt::Display for AssigneeExpr {
 /// variable declarations and as function parameters.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum Pattern {
-    Literal(Literal),
+    LiteralPatt(LiteralPatt),
     IdentifierPatt(IdentifierPatt),
     PathPatt(PathPatt),
     ReferencePatt(ReferencePatt),

@@ -86,11 +86,11 @@ use crate::{
         ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter,
         DereferenceExpr, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
         Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
-        MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr, PathPatt, Pattern,
-        RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferencePatt, RestPatt, ResultExpr,
-        ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt, TupleExpr,
-        TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr, UnderscoreExpr,
-        UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
+        LiteralPatt, MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr,
+        PathPatt, Pattern, RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferencePatt, RestPatt,
+        ResultExpr, ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt,
+        TupleExpr, TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr,
+        UnderscoreExpr, UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, Logger},
@@ -919,13 +919,7 @@ impl Parser {
 
         match &token {
             Some(Token::IntLiteral { value, .. }) => {
-                let first_token = self.current_token().unwrap();
-                let span = self.get_span_by_token(first_token);
-
-                let patt = Pattern::Literal(Literal::Int {
-                    value: *value,
-                    span,
-                });
+                let patt = Pattern::LiteralPatt(LiteralPatt::Int { value: *value });
 
                 self.next_token();
 
@@ -946,13 +940,7 @@ impl Parser {
             }
 
             Some(Token::UIntLiteral { value, .. }) => {
-                let first_token = self.current_token().unwrap();
-                let span = self.get_span_by_token(first_token);
-
-                let patt = Pattern::Literal(Literal::UInt {
-                    value: *value,
-                    span,
-                });
+                let patt = Pattern::LiteralPatt(LiteralPatt::UInt { value: *value });
 
                 self.next_token();
 
@@ -973,13 +961,7 @@ impl Parser {
             }
 
             Some(Token::BigUIntLiteral { value, .. }) => {
-                let first_token = self.current_token().unwrap();
-                let span = self.get_span_by_token(first_token);
-
-                let patt = Pattern::Literal(Literal::BigUInt {
-                    value: *value,
-                    span,
-                });
+                let patt = Pattern::LiteralPatt(LiteralPatt::BigUInt { value: *value });
 
                 self.next_token();
 
@@ -1000,13 +982,7 @@ impl Parser {
             }
 
             Some(Token::ByteLiteral { value, .. }) => {
-                let first_token = self.current_token().unwrap();
-                let span = self.get_span_by_token(first_token);
-
-                let patt = Pattern::Literal(Literal::Byte {
-                    value: *value,
-                    span,
-                });
+                let patt = Pattern::LiteralPatt(LiteralPatt::Byte { value: *value });
 
                 self.next_token();
 
@@ -1028,46 +1004,24 @@ impl Parser {
             }
 
             Some(Token::BytesLiteral { value, .. }) => {
-                let first_token = self.current_token().unwrap();
-                let span = self.get_span_by_token(first_token);
-
                 self.next_token();
-                Ok(Pattern::Literal(Literal::Bytes {
-                    value: *value,
-                    span,
-                }))
+                Ok(Pattern::LiteralPatt(LiteralPatt::Bytes { value: *value }))
             }
 
             Some(Token::HashLiteral { value, .. }) => {
-                let first_token = self.current_token().unwrap();
-                let span = self.get_span_by_token(first_token);
-
                 self.next_token();
-                Ok(Pattern::Literal(Literal::Hash {
-                    value: *value,
-                    span,
-                }))
+                Ok(Pattern::LiteralPatt(LiteralPatt::Hash { value: *value }))
             }
 
             Some(Token::StrLiteral { value, .. }) => {
-                let first_token = self.current_token().unwrap();
-                let span = self.get_span_by_token(first_token);
-
                 self.next_token();
-                Ok(Pattern::Literal(Literal::Str {
+                Ok(Pattern::LiteralPatt(LiteralPatt::Str {
                     value: value.clone(),
-                    span,
                 }))
             }
 
             Some(Token::CharLiteral { value, .. }) => {
-                let first_token = self.current_token().unwrap();
-                let span = self.get_span_by_token(first_token);
-
-                let patt = Pattern::Literal(Literal::Char {
-                    value: *value,
-                    span,
-                });
+                let patt = Pattern::LiteralPatt(LiteralPatt::Char { value: *value });
 
                 self.next_token();
 
@@ -1088,14 +1042,8 @@ impl Parser {
             }
 
             Some(Token::BoolLiteral { value, .. }) => {
-                let first_token = self.current_token().unwrap();
-                let span = self.get_span_by_token(first_token);
-
                 self.next_token();
-                Ok(Pattern::Literal(Literal::Bool {
-                    value: *value,
-                    span,
-                }))
+                Ok(Pattern::LiteralPatt(LiteralPatt::Bool { value: *value }))
             }
 
             Some(Token::LParen { .. }) => {
@@ -1170,7 +1118,7 @@ impl Parser {
                     dbl_dot: RangeOp::RangeExclusive,
                 }))
             }
-            
+
             Some(Token::DotDotEquals { .. }) => {
                 Ok(Pattern::RangePatt(RangePatt::parse_to_incl(self)?))
             }

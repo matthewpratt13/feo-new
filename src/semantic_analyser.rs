@@ -14,10 +14,10 @@ use crate::{
     ast::{
         ArrayExpr, AssigneeExpr, BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression,
         Float, FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier,
-        ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, MethodCallExpr,
-        ModuleItem, NoneExpr, NonePatt, PathExpr, PathRoot, Pattern, ResultExpr, SelfType,
-        SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, TypePath, UInt, UnaryOp,
-        UnderscoreExpr, Unit, Visibility,
+        ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt,
+        MethodCallExpr, ModuleItem, NoneExpr, NonePatt, PathExpr, PathRoot, Pattern, ResultExpr,
+        SelfType, SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, TypePath, UInt,
+        UnaryOp, UnderscoreExpr, Unit, Visibility,
     },
     error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -2770,34 +2770,34 @@ impl SemanticAnalyser {
                 }
             }
 
-            Pattern::Literal(l) => match l {
-                Literal::Int { value, .. } => match value {
+            Pattern::LiteralPatt(l) => match l {
+                LiteralPatt::Int { value } => match value {
                     Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
                     Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
                 },
-                Literal::UInt { value, .. } => match value {
+                LiteralPatt::UInt { value } => match value {
                     UInt::U8(_) => Ok(Type::U8(UInt::U8(u8::default()))),
                     UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
                     UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
                     UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
                 },
-                Literal::BigUInt { value, .. } => match value {
+                LiteralPatt::BigUInt { value } => match value {
                     BigUInt::U256(_) => Ok(Type::U256(BigUInt::U256(U256::default()))),
                     BigUInt::U512(_) => Ok(Type::U512(BigUInt::U512(U512::default()))),
                 },
-                Literal::Float { value, .. } => match value {
+                LiteralPatt::Float { value } => match value {
                     Float::F32(_) => Ok(Type::F32(Float::F32(F32::default()))),
                     Float::F64(_) => Ok(Type::F64(Float::F64(F64::default()))),
                 },
-                Literal::Byte { .. } => Ok(Type::Byte(Byte::from(u8::default()))),
-                Literal::Bytes { value, .. } => match value {
+                LiteralPatt::Byte { .. } => Ok(Type::Byte(Byte::from(u8::default()))),
+                LiteralPatt::Bytes { value } => match value {
                     Bytes::B2(_) => Ok(Type::B2(Bytes::B2(B2::default()))),
                     Bytes::B4(_) => Ok(Type::B4(Bytes::B4(B4::default()))),
                     Bytes::B8(_) => Ok(Type::B8(Bytes::B8(B8::default()))),
                     Bytes::B16(_) => Ok(Type::B16(Bytes::B16(B16::default()))),
                     Bytes::B32(_) => Ok(Type::B32(Bytes::B32(B32::default()))),
                 },
-                Literal::Hash { value, .. } => match value {
+                LiteralPatt::Hash { value } => match value {
                     crate::ast::Hash::H160(_) => {
                         Ok(Type::H160(crate::ast::Hash::H160(H160::default())))
                     }
@@ -2808,9 +2808,9 @@ impl SemanticAnalyser {
                         Ok(Type::H512(crate::ast::Hash::H512(H512::default())))
                     }
                 },
-                Literal::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
-                Literal::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
-                Literal::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
+                LiteralPatt::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
+                LiteralPatt::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
+                LiteralPatt::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
             },
 
             Pattern::ReferencePatt(r) => Ok(Type::Reference {
