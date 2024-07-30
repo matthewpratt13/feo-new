@@ -975,11 +975,13 @@ impl<'a> Lexer<'a> {
             .collect::<Vec<&str>>()
             .concat();
 
+        let hash = hash.as_bytes();
+
         let span = Span::new(self.input, start_pos, self.pos);
 
         match hash.len() {
             20 => {
-                let value = H160::from_slice(hash.as_bytes());
+                let value = H160::from_slice(hash);
 
                 Ok(Token::HashLiteral {
                     value: crate::ast::Hash::H160(value),
@@ -988,7 +990,7 @@ impl<'a> Lexer<'a> {
             }
 
             32 => {
-                let value = H256::from_slice(hash.as_bytes());
+                let value = H256::from_slice(hash);
 
                 Ok(Token::HashLiteral {
                     value: crate::ast::Hash::H256(value),
@@ -997,7 +999,7 @@ impl<'a> Lexer<'a> {
             }
 
             64 => {
-                let value = H512::from_slice(hash.as_bytes());
+                let value = H512::from_slice(hash);
 
                 Ok(Token::HashLiteral {
                     value: crate::ast::Hash::H512(value),
