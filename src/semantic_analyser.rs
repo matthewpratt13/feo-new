@@ -2476,6 +2476,9 @@ impl SemanticAnalyser {
         }
     }
 
+    // TODO: for the following four methods, if the method call is the last statement in a block,
+    // TODO: there should not be a trailing semicolon
+
     fn analyse_vec_method(
         &mut self,
         method_call_expr: &MethodCallExpr,
@@ -2602,15 +2605,6 @@ impl SemanticAnalyser {
                             kw_none: Keyword::None,
                         }),
                     );
-
-                    println!("mapping: `{mapping:?}`");
-                    println!("keys: `{:?}`", mapping.keys());
-                    println!("key: `{key:?}`");
-                    println!("values: `{:?}`", mapping.values());
-                    println!("value: `{:?}`", mapping.get(&key));
-
-                    // not working because the span is not the same between the mapping key
-                    // and indexing key (i.e., it is afterwards)
 
                     if let Some(e) = mapping.get(&key) {
                         Ok(Type::Option {
