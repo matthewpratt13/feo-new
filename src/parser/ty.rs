@@ -341,6 +341,79 @@ impl fmt::Display for Type {
     }
 }
 
+impl fmt::Debug for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::I32(_) => f.debug_tuple("I32").finish(),
+            Self::I64(_) => f.debug_tuple("I64").finish(),
+            Self::U8(_) => f.debug_tuple("U8").finish(),
+            Self::U16(_) => f.debug_tuple("U16").finish(),
+            Self::U32(_) => f.debug_tuple("U32").finish(),
+            Self::U64(_) => f.debug_tuple("U64").finish(),
+            Self::U256(_) => f.debug_tuple("U256").finish(),
+            Self::U512(_) => f.debug_tuple("U512").finish(),
+            Self::F32(_) => f.debug_tuple("F32").finish(),
+            Self::F64(_) => f.debug_tuple("F64").finish(),
+            Self::Byte(_) => f.debug_tuple("Byte").finish(),
+            Self::B2(_) => f.debug_tuple("B2").finish(),
+            Self::B4(_) => f.debug_tuple("B4").finish(),
+            Self::B8(_) => f.debug_tuple("B8").finish(),
+            Self::B16(_) => f.debug_tuple("B16").finish(),
+            Self::B32(_) => f.debug_tuple("B32").finish(),
+            Self::H160(_) => f.debug_tuple("H160").finish(),
+            Self::H256(_) => f.debug_tuple("H256").finish(),
+            Self::H512(_) => f.debug_tuple("H512").finish(),
+            Self::Str(_) => f.debug_tuple("Str").finish(),
+            Self::Char(_) => f.debug_tuple("Char").finish(),
+            Self::Bool(_) => f.debug_tuple("Bool").finish(),
+            Self::UnitType(_) => f.debug_tuple("UnitType").finish(),
+            Self::GroupedType(arg0) => f.debug_tuple("GroupedType").field(arg0).finish(),
+            Self::Array {
+                element_type,
+                num_elements,
+            } => f
+                .debug_struct("Array")
+                .field("element_type", element_type)
+                .field("num_elements", num_elements)
+                .finish(),
+            Self::Tuple(arg0) => f.debug_tuple("Tuple").field(arg0).finish(),
+            Self::UserDefined(arg0) => f.debug_tuple("UserDefined").field(arg0).finish(),
+            Self::FunctionPtr(arg0) => f.debug_tuple("FunctionPtr").field(arg0).finish(),
+            Self::Reference {
+                reference_op,
+                inner_type,
+            } => f
+                .debug_struct("Reference")
+                .field("reference_op", reference_op)
+                .field("inner_type", inner_type)
+                .finish(),
+            Self::SelfType(_) => f.debug_tuple("SelfType").finish(),
+            Self::InferredType(arg0) => f.debug_tuple("InferredType").field(arg0).finish(),
+            Self::Vec { element_type } => f
+                .debug_struct("Vec")
+                .field("element_type", element_type)
+                .finish(),
+            Self::Mapping {
+                key_type,
+                value_type,
+            } => f
+                .debug_struct("Mapping")
+                .field("key_type", key_type)
+                .field("value_type", value_type)
+                .finish(),
+            Self::Option { inner_type } => f
+                .debug_struct("Option")
+                .field("inner_type", inner_type)
+                .finish(),
+            Self::Result { ok_type, err_type } => f
+                .debug_struct("Result")
+                .field("ok_type", ok_type)
+                .field("err_type", err_type)
+                .finish(),
+        }
+    }
+}
+
 fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     let mut params: Vec<FunctionOrMethodParam> = Vec::new();
 

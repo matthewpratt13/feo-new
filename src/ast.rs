@@ -955,7 +955,7 @@ pub(crate) enum Item {
 
 /// Enum representing the language's different types, which help to define a value's
 /// memory interpretation and the appropriate operations that may be performed.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub(crate) enum Type {
     // primitives
     I32(Int),
