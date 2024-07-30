@@ -2049,12 +2049,12 @@ impl SemanticAnalyser {
             Expression::Mapping(m) => match &m.pairs_opt {
                 Some(v) => match v.first() {
                     Some(p) => {
-                        let key_type = self.analyse_patt(&p.key.clone())?;
-                        let value_type = self.analyse_expr(&p.value.clone(), root)?;
+                        let key_type = self.analyse_patt(&p.k.clone())?;
+                        let value_type = self.analyse_expr(&p.v.clone(), root)?;
 
                         for pair in v.iter().skip(1) {
-                            let pair_key_type = self.analyse_patt(&pair.key.clone())?;
-                            let pair_value_type = self.analyse_expr(&pair.value.clone(), root)?;
+                            let pair_key_type = self.analyse_patt(&pair.k.clone())?;
+                            let pair_value_type = self.analyse_expr(&pair.v.clone(), root)?;
 
                             if (&pair_key_type, &pair_value_type) != (&key_type, &value_type) {
                                 return Err(SemanticErrorKind::UnexpectedType {

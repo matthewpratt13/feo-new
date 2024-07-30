@@ -10,3 +10,4 @@ uint = "0.9"
 fixed-hash = "0.8"
 tiny-keccak = { version = "2.0", features = ["sha3"] }
 ordered-float = { version = "4.0", default-features = false }
+hex = "0.4"

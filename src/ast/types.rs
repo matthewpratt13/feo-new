@@ -97,7 +97,7 @@ impl fmt::Display for Float {
 /// in a byte string type. This is different to the native Unicode `char` type, which is
 /// a UTF-8 encoded character of one (`u8`) to four bytes (`u32`) – i.e., variable length.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Byte(u8);
+pub struct Byte(pub u8);
 
 impl From<u8> for Byte {
     fn from(value: u8) -> Self {
@@ -107,7 +107,7 @@ impl From<u8> for Byte {
 
 impl fmt::Display for Byte {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "Byte(0x{:x})", self.0)
     }
 }
 

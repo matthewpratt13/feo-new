@@ -32,6 +32,7 @@ pub enum LexErrorKind {
     ParseIntError,
     ParseUIntError,
     ParseBigUIntError,
+    ParseHashError(hex::FromHexError),
     ParseFloatError,
     ParseBoolError,
 
@@ -104,6 +105,9 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::ParseUIntError => write!(f, "error parsing unsigned integer literal"),
             LexErrorKind::ParseBigUIntError => {
                 write!(f, "error parsing large unsigned integer literal")
+            }
+            LexErrorKind::ParseHashError(e) => {
+                write!(f, "error parsing hexadecimal string slice as bytes: {e}")
             }
             LexErrorKind::ParseFloatError => {
                 write!(f, "error parsing floating-point number literal")

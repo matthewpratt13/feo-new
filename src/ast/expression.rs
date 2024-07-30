@@ -52,8 +52,8 @@ pub(crate) struct ClosureParam {
 /// Struct representing a key-value pair in a mapping.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct MappingPair {
-    pub(crate) key: Pattern,
-    pub(crate) value: Box<Expression>,
+    pub(crate) k: Pattern,
+    pub(crate) v: Box<Expression>,
 }
 
 /// Struct representing a single arm in a match statement.

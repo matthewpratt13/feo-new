@@ -162,7 +162,7 @@ mod tests {
 
             impl Foo {
                 #[storage]
-                const ADDRESS: h160 = $0x12345123451234512345;
+                const ADDRESS: h160 = $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE;
     
             
                 #[constructor]

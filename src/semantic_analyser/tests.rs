@@ -31,8 +31,8 @@ fn setup(
 fn analyse_collection_indexing() -> Result<(), ()> {
     let input = r#"
         func get_balance() -> u256 {
-            let balances: Mapping<h160, u256> = { $0x12345123451234512345: 0x1_000_000 };
-            balances.get($0x12345123451234512345).unwrap()
+            let balances: Mapping<h160, u256> = { $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE: 0x1a2b3c };
+            balances.get($0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE).unwrap()
         }
     "#;
 
@@ -172,15 +172,15 @@ fn analyse_impl() -> Result<(), ()> {
                     decimals: 18,
                     total_supply: 1_000_000,
                     balances: {
-                        $0x12345123451234512345: 1_000,
+                        $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE: 1_000,
                     }
                 }
             }
         }
 
         impl Contract for SomeToken {
-            const CONTRACT_ADDRESS: h160 = $0x12345123451234512345;
-            const CREATOR_ADDRESS: h160 = $0x54321543215432154321;
+            const CONTRACT_ADDRESS: h160 = $0x54321_ABCDE_54321_ABCDE_54321_ABCDE_54321_ABCDE;
+            const CREATOR_ADDRESS: h160 = $0x67890_ABCDE_67890_ABCDE_67890_ABCDE_67890_ACBDE;
 
             pub func address() -> h160 {
                 SomeToken::Contract::CONTRACT_ADDRESS
@@ -382,7 +382,7 @@ fn analyse_method_call() {
     import lib::foo::Foo;
 
     func main() {
-        let foo = Foo::new("Foo", "FOO", { $0x12345123451234512345: 0x1234567890 });
+        let foo = Foo::new("Foo", "FOO", { $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE: 0x1234_ABCD });
 
         let name = foo.name();
 

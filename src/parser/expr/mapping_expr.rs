@@ -56,7 +56,7 @@ impl MappingExpr {
 
         if let Some(v) = &self.pairs_opt {
             for p in v {
-                data.insert(p.key.clone(), *p.value.clone());
+                data.insert(p.k.clone(), *p.v.clone());
             }
         }
 
@@ -88,7 +88,7 @@ fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted>
 
     let value = Box::new(parser.parse_expression(Precedence::Lowest)?);
 
-    Ok(MappingPair { key, value })
+    Ok(MappingPair { k: key, v: value })
 }
 
 #[cfg(test)]

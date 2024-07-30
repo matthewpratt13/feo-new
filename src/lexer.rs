@@ -975,13 +975,14 @@ impl<'a> Lexer<'a> {
             .collect::<Vec<&str>>()
             .concat();
 
-        let hash = hash.as_bytes();
-
         let span = Span::new(self.input, start_pos, self.pos);
 
         match hash.len() {
-            20 => {
-                let value = H160::from_slice(hash);
+            40 => {
+                let bytes: [Byte; 20] = self.hex_to_bytes(&hash)?;
+                let bytes = bytes.iter().map(|b| b.0).collect::<Vec<_>>();
+
+                let value = H160::from_slice(bytes.as_slice());
 
                 Ok(Token::HashLiteral {
                     value: crate::ast::Hash::H160(value),
@@ -989,8 +990,11 @@ impl<'a> Lexer<'a> {
                 })
             }
 
-            32 => {
-                let value = H256::from_slice(hash);
+            64 => {
+                let bytes: [Byte; 32] = self.hex_to_bytes(&hash)?;
+                let bytes = bytes.iter().map(|b| b.0).collect::<Vec<_>>();
+
+                let value = H256::from_slice(bytes.as_slice());
 
                 Ok(Token::HashLiteral {
                     value: crate::ast::Hash::H256(value),
@@ -998,8 +1002,11 @@ impl<'a> Lexer<'a> {
                 })
             }
 
-            64 => {
-                let value = H512::from_slice(hash);
+            128 => {
+                let bytes: [Byte; 64] = self.hex_to_bytes(&hash)?;
+                let bytes = bytes.iter().map(|b| b.0).collect::<Vec<_>>();
+
+                let value = H512::from_slice(bytes.as_slice());
 
                 Ok(Token::HashLiteral {
                     value: crate::ast::Hash::H512(value),
@@ -1331,6 +1338,28 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Convert a hexadecimal string (e.g., hash literal before parsing) into a `Byte` array
+    /// of `N` elements
+    fn hex_to_bytes<const N: usize>(&mut self, hex: &str) -> Result<[Byte; N], ErrorsEmitted> {
+        if hex.len() != N * 2 {
+            self.log_error(LexErrorKind::InvalidHashLength { len: hex.len() });
+            return Err(ErrorsEmitted);
+        }
+
+        let bytes = hex::decode(hex).map_err(|e| {
+            self.log_error(LexErrorKind::ParseHashError(e));
+            ErrorsEmitted
+        })?;
+
+        let bytes = bytes.into_iter().map(|b| Byte(b)).collect::<Vec<_>>();
+
+        let mut array = [Byte(0u8); N];
+
+        array.copy_from_slice(&bytes);
+
+        Ok(array)
+    }
+
     /// Log information about an error that occurred during tokenization by pushing the error
     /// to the `errors` vector and providing information about error kind and position.
     fn log_error(&mut self, error_kind: LexErrorKind) {
@@ -1560,7 +1589,7 @@ mod tests {
 
     #[test]
     fn tokenize_hash_lits() -> Result<(), ()> {
-        let input = r#"let hash = $0xBEEF_CAFE_1234_5678_90AB_CDEF_CAFE_BEEF;"#;
+        let input = r#"let hash = $0xBEEF_CAFE_1234_5678_90AB_CDEF_CAFE_BEEF_BEEF_CAFE_1234_5678_90AB_CDEF_CAFE_BEEF;"#;
 
         let mut lexer = Lexer::new(input);
 
@@ -1692,7 +1721,7 @@ mod tests {
 
         #[storage]
         #[extern]
-        pub const OWNER: h160 = $0x12345123451234512345;
+        pub const OWNER: h160 = $0x12345_12345_12345_12345_abcde_abcde_abcde_abcde;
 
         const STR: str = "foo";
         const BYTES: b4 = Bytes::from(STR);
