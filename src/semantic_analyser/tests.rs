@@ -73,8 +73,8 @@ fn analyse_closure() -> Result<(), ()> {
 fn analyse_constant_reassign() {
     let input = r#"
     #[storage]
-    const ADDRESS: h160 = $0x12345123451234512345;
-    ADDRESS = $0x54321543215432154321;"#;
+    const ADDRESS: h160 = $0x12345_12345_12345_12345_12345_12345_12345_12345;
+    ADDRESS = $0x54321_54321_54321_54321_54321_54321_54321_54321;"#;
 
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)
         .expect("unable to set up semantic analyser");
