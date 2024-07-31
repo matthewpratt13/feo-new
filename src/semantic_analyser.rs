@@ -43,7 +43,7 @@ impl SemanticAnalyser {
 
         // add external code (e.g., library functions) to the global scope if there is any
         if let Some(ext) = external_code {
-            logger.debug(&format!("importing external code ..."));
+            logger.debug(&format!("importing external code …"));
 
             for (id, ref sym) in ext {
                 if let Symbol::Module { path, symbols, .. } = sym.clone() {
@@ -73,7 +73,7 @@ impl SemanticAnalyser {
 
     fn enter_scope(&mut self, scope_kind: ScopeKind) {
         self.logger
-            .debug(&format!("entering new scope: `{:?}` ...", scope_kind));
+            .debug(&format!("entering new scope: `{:?}` …", scope_kind));
 
         self.scope_stack.push(Scope {
             scope_kind,
@@ -95,7 +95,7 @@ impl SemanticAnalyser {
     fn insert(&mut self, path: TypePath, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             self.logger.debug(&format!(
-                "inserting symbol `{symbol}` into scope `{:?}` at path `{path}` ...",
+                "inserting symbol `{symbol}` into scope `{:?}` at path `{path}` …",
                 curr_scope.scope_kind
             ));
 
@@ -126,7 +126,7 @@ impl SemanticAnalyser {
 
     fn analyse_program(&mut self, program: &Program, path: TypePath) -> Result<(), ErrorsEmitted> {
         self.logger.info(&format!(
-            "starting semantic analysis of program at path `{path}` ..."
+            "starting semantic analysis of program at path `{path}` …"
         ));
 
         let program_path = if let Some(Scope {
@@ -215,7 +215,7 @@ impl SemanticAnalyser {
         match statement {
             Statement::Let(ls) => {
                 self.logger
-                    .debug(&format!("analysing let statement: `{}` ...", statement));
+                    .debug(&format!("analysing let statement: `{}` …", statement));
 
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors
@@ -301,7 +301,7 @@ impl SemanticAnalyser {
             Statement::Item(i) => match i {
                 Item::ImportDecl(id) => {
                     self.logger.debug(&format!(
-                        "analysing import declaration: `{}` ...",
+                        "analysing import declaration: `{}` …",
                         statement
                     ));
 
@@ -310,7 +310,7 @@ impl SemanticAnalyser {
 
                 Item::AliasDecl(ad) => {
                     self.logger
-                        .debug(&format!("analysing alias declaration: `{}` ...", statement));
+                        .debug(&format!("analysing alias declaration: `{}` …", statement));
 
                     let alias_path = build_item_path(root, TypePath::from(ad.alias_name.clone()));
 
@@ -327,7 +327,7 @@ impl SemanticAnalyser {
 
                 Item::ConstantDecl(cd) => {
                     self.logger.debug(&format!(
-                        "analysing constant declaration: `{}` ...",
+                        "analysing constant declaration: `{}` …",
                         statement
                     ));
 
@@ -364,7 +364,7 @@ impl SemanticAnalyser {
 
                 Item::StaticVarDecl(s) => {
                     self.logger.debug(&format!(
-                        "analysing static variable declaration: `{}` ...",
+                        "analysing static variable declaration: `{}` …",
                         statement
                     ));
 
@@ -506,7 +506,7 @@ impl SemanticAnalyser {
 
                 Item::EnumDef(e) => {
                     self.logger
-                        .debug(&format!("analysing enum definition: `{}` ...", statement));
+                        .debug(&format!("analysing enum definition: `{}` …", statement));
 
                     let enum_name_path = TypePath::from(e.enum_name.clone());
                     let enum_def_path = build_item_path(root, enum_name_path.clone());
@@ -522,7 +522,7 @@ impl SemanticAnalyser {
 
                 Item::StructDef(s) => {
                     self.logger
-                        .debug(&format!("analysing struct definition: `{}` ...", statement));
+                        .debug(&format!("analysing struct definition: `{}` …", statement));
 
                     let struct_name_path = TypePath::from(s.struct_name.clone());
                     let struct_def_path = build_item_path(root, struct_name_path.clone());
@@ -538,7 +538,7 @@ impl SemanticAnalyser {
 
                 Item::TupleStructDef(ts) => {
                     self.logger.debug(&format!(
-                        "analysing tuple struct definition: `{}` ...",
+                        "analysing tuple struct definition: `{}` …",
                         statement
                     ));
 
@@ -634,7 +634,7 @@ impl SemanticAnalyser {
 
                 Item::FunctionItem(f) => {
                     self.logger
-                        .debug(&format!("analysing function item: `{}` ...", statement));
+                        .debug(&format!("analysing function item: `{}` …", statement));
 
                     let function_name_path = TypePath::from(f.function_name.clone());
                     let function_item_path = build_item_path(root, function_name_path.clone());
@@ -653,7 +653,7 @@ impl SemanticAnalyser {
 
             Statement::Expression(expr) => {
                 self.logger.debug(&format!(
-                    "analysing expression statement: `{}` ...",
+                    "analysing expression statement: `{}` …",
                     statement
                 ));
 
@@ -2357,7 +2357,7 @@ impl SemanticAnalyser {
             let full_path = build_item_path(root, path.clone());
 
             self.logger.debug(&format!(
-                "cannot find symbol at path `{path}`, trying `{full_path}` ...",
+                "cannot find symbol at path `{path}`, trying `{full_path}` …",
             ));
 
             if self.lookup(&full_path).is_some() {
