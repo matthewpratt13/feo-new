@@ -3,7 +3,7 @@ use core::fmt;
 use crate::error::ParserErrorKind;
 
 use super::{
-    types, BigUInt, Bool, Byte, Bytes, Char, Expression, Float, Identifier, Int, Keyword, Literal,
+    BigUInt, Bool, Byte, Bytes, Char, Expression, Float, Identifier, Int, Keyword, Literal,
     PathRoot, Pattern, RangeOp, ReferenceOp, Str, TypePath, UInt, U512,
 };
 
@@ -76,7 +76,7 @@ pub(crate) enum LiteralPatt {
     Float { value: Float },
     Byte { value: Byte },
     Bytes { value: Bytes },
-    Hash { value: types::Hash },
+    Hash { value: crate::ast::Hash },
     Str { value: Str },
     Char { value: Char },
     Bool { value: Bool },
