@@ -164,6 +164,20 @@ impl SemanticAnalyser {
             };
         });
 
+        let start_span = if let Some(s) = program.statements.first() {
+            s.span()
+        } else {
+            Span::default()
+        };
+
+        let end_span = if let Some(s) = program.statements.last() {
+            s.span()
+        } else {
+            Span::default()
+        };
+
+        let module_span = Span::new(&start_span.input(), start_span.start(), end_span.end());
+
         let root_module = ModuleItem {
             outer_attributes_opt: None,
             visibility: Visibility::Pub,
@@ -177,7 +191,7 @@ impl SemanticAnalyser {
                     Some(module_items)
                 }
             },
-            span: Span::default(),
+            span: module_span,
         };
 
         let mut module_contents: SymbolTable = HashMap::new();
@@ -300,10 +314,8 @@ impl SemanticAnalyser {
 
             Statement::Item(i) => match i {
                 Item::ImportDecl(id) => {
-                    self.logger.debug(&format!(
-                        "analysing import declaration: `{}` …",
-                        statement
-                    ));
+                    self.logger
+                        .debug(&format!("analysing import declaration: `{}` …", statement));
 
                     self.analyse_import(&id, root)?
                 }
@@ -397,7 +409,7 @@ impl SemanticAnalyser {
                                     Some(Expression::from(*s.assignee_opt.clone().unwrap_or(
                                         Box::new(AssigneeExpr::UnderscoreExpr(UnderscoreExpr {
                                             underscore: Identifier::from("_"),
-                                            span: Span::default(),
+                                            span: s.assignee_opt.clone().unwrap().span(),
                                         })),
                                     )))
                                 } else {
@@ -707,17 +719,17 @@ impl SemanticAnalyser {
                 let param_path = TypePath::from(param.param_name());
 
                 let symbol = match param_type {
-                    Type::FunctionPtr(f) => Symbol::Function {
+                    Type::FunctionPtr(fp) => Symbol::Function {
                         path: param_path.clone(),
                         function: FunctionItem {
                             attributes_opt: None,
                             visibility: Visibility::Private,
                             kw_func: Keyword::Func,
                             function_name: Identifier::from(""),
-                            params_opt: f.params_opt,
-                            return_type_opt: f.return_type_opt,
+                            params_opt: fp.params_opt,
+                            return_type_opt: fp.return_type_opt,
                             block_opt: None,
-                            span: Span::default(),
+                            span: f.span.clone(),
                         },
                     },
                     t => Symbol::Variable {
