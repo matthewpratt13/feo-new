@@ -600,8 +600,8 @@ impl SemanticAnalyser {
 
                 Item::TraitImplDef(t) => {
                     let trait_impl_path = match &t.implementing_type {
-                        Type::UserDefined(pt) => build_item_path(
-                            &build_item_path(root, pt.clone()),
+                        Type::UserDefined(tp) => build_item_path(
+                            &build_item_path(root, tp.clone()),
                             TypePath::from(t.implemented_trait_path.type_name.clone()),
                         ),
                         ty => {
