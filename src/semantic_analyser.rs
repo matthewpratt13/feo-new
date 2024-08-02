@@ -36,9 +36,7 @@ struct SemanticAnalyser {
 impl SemanticAnalyser {
     pub(crate) fn new(log_level: LogLevel, external_code: Option<SymbolTable>) -> Self {
         let mut logger = Logger::new(log_level);
-
         let mut external_symbols: SymbolTable = HashMap::new();
-
         let mut module_registry: HashMap<TypePath, SymbolTable> = HashMap::new();
 
         // add external code (e.g., library functions) to the global scope if there is any
@@ -1108,9 +1106,7 @@ impl SemanticAnalyser {
                 let object_path = TypePath::from(object_as_path_expr);
                 let object_type = self.analyse_expr(&object, &object_path)?;
 
-                let symbol = self.lookup(&object_path).cloned();
-
-                match symbol {
+                match self.lookup(&object_path).cloned() {
                     Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
                         Some(fields) => match fields.iter().find(|f| f.field_name == fa.field_name)
                         {
@@ -2260,6 +2256,7 @@ impl SemanticAnalyser {
                             })
                         }
                     },
+
                     _ => {
                         return Err(SemanticErrorKind::TypeMismatchArray {
                             expected: "iterable type".to_string(),
@@ -2334,9 +2331,9 @@ impl SemanticAnalyser {
                         })),
                         err_type: Box::new(ty),
                     }),
-                    k => Err(SemanticErrorKind::UnexpectedKeyword {
+                    keyword => Err(SemanticErrorKind::UnexpectedKeyword {
                         expected: "`Ok` or `Err`".to_string(),
-                        found: format!("`{}`", k),
+                        found: format!("`{}`", keyword),
                     }),
                 }
             }
@@ -3083,9 +3080,9 @@ impl SemanticAnalyser {
                         })),
                         err_type: Box::new(ty),
                     }),
-                    k => Err(SemanticErrorKind::UnexpectedKeyword {
+                    keyword => Err(SemanticErrorKind::UnexpectedKeyword {
                         expected: "`Ok` or `Err`".to_string(),
-                        found: format!("`{}`", k),
+                        found: format!("`{}`", keyword),
                     }),
                 }
             }
