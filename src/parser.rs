@@ -126,6 +126,7 @@ pub(crate) struct Program {
 
 /// Parser struct that stores a stream of tokens and contains methods to parse expressions,
 /// statements and items, as well as helper methods and error handling functionality.
+#[derive(Debug)]
 pub(crate) struct Parser {
     stream: TokenStream,
     current: usize,
@@ -154,6 +155,8 @@ impl Parser {
 
     /// Define and initialize token precedence levels.
     fn init_precedences(&mut self, tokens: &[Token]) {
+        self.logger.info("initializing precedence levels…");
+
         for t in tokens.to_vec() {
             match &t.token_type() {
                 TokenType::DblColon | TokenType::ColonColonAsterisk => {
@@ -215,13 +218,14 @@ impl Parser {
     /// struct instances.
     fn set_context(&mut self, context: ParserContext) {
         self.context = context;
+        self.logger.info("set parser context: `{context}`");
     }
 
     ///////////////////////////////////////////////////////////////////////////
 
     /// Main parsing function that returns the parsed tokens as a `Program`.
     #[allow(dead_code)]
-    pub(crate) fn parse_tokens(&mut self) -> Result<Program, ErrorsEmitted> {
+    pub(crate) fn parse_tokens(&mut self) -> Result<Program, Vec<CompilerError<ParserErrorKind>>> {
         let mut statements: Vec<Statement> = Vec::new();
 
         // clear log messages, then log status info
@@ -237,7 +241,7 @@ impl Parser {
 
             // log status info
             self.logger
-                .info(&format!("parsed statement: {:?}", &statement));
+                .info(&format!("parsed statement: `{:?}`", &statement));
 
             statements.push(statement);
         }
@@ -398,8 +402,7 @@ impl Parser {
             }
             _ => {
                 // log the error and advance the parser, then return `Err(ErrorsEmitted)`
-                self.log_unexpected_token("literal, identifier or grouped expression");
-                Err(ErrorsEmitted)
+                Err(self.log_unexpected_token("literal, identifier or grouped expression"))
             }
         }
     }
@@ -543,8 +546,7 @@ impl Parser {
                     let left = self.parse_prefix()?;
                     BinaryExpr::parse(self, left)
                 } else {
-                    self.log_error(ParserErrorKind::InvalidTokenContext { token });
-                    Err(ErrorsEmitted)
+                    Err(self.log_error(ParserErrorKind::InvalidTokenContext { token }))
                 }
             }
 
@@ -558,8 +560,7 @@ impl Parser {
                     let left = self.parse_prefix()?;
                     BinaryExpr::parse(self, left)
                 } else {
-                    self.log_error(ParserErrorKind::InvalidTokenContext { token });
-                    Err(ErrorsEmitted)
+                    Err(self.log_error(ParserErrorKind::InvalidTokenContext { token }))
                 }
             }
 
@@ -637,8 +638,7 @@ impl Parser {
 
             Some(Token::EOF) | None => {
                 // log the error, then return `Err(ErrorsEmitted)`
-                self.log_unexpected_eoi();
-                Err(ErrorsEmitted)
+                Err(self.log_unexpected_eoi())
             }
 
             _ => {
@@ -681,10 +681,7 @@ impl Parser {
                 self.next_token();
 
                 match self.current_token() {
-                    Some(Token::EOF) | None => {
-                        self.log_unexpected_eoi();
-                        return Err(ErrorsEmitted);
-                    }
+                    Some(Token::EOF) | None => Err(self.log_unexpected_eoi()),
 
                     Some(Token::Identifier { .. } | Token::UIntLiteral { .. }) => {
                         match self.context {
@@ -695,12 +692,9 @@ impl Parser {
                         }
                     }
 
-                    _ => {
-                        self.log_unexpected_token(
-                            "identifier or tuple index (unsigned decimal integer)",
-                        );
-                        Err(ErrorsEmitted)
-                    }
+                    _ => Err(self.log_unexpected_token(
+                        "identifier or tuple index (unsigned decimal integer)",
+                    )),
                 }
             }
 
@@ -790,7 +784,7 @@ impl Parser {
 
             Some(Token::EOF) | None => {
                 ////////////////////////////////////////////////////////////////////////////////
-                self.logger.debug("no infix parsing function found");
+                self.logger.warn("no infix parsing function found");
                 ////////////////////////////////////////////////////////////////////////////////
 
                 Ok(None)
@@ -811,10 +805,7 @@ impl Parser {
 
     /// Parse an expression and attempt to convert it to a value expression.
     fn parse_value_expr(&mut self, precedence: Precedence) -> Result<ValueExpr, ErrorsEmitted> {
-        ValueExpr::try_from(self.parse_expression(precedence)?).map_err(|e| {
-            self.log_error(e);
-            ErrorsEmitted
-        })
+        ValueExpr::try_from(self.parse_expression(precedence)?).map_err(|e| self.log_error(e))
     }
 
     /// Parse an expression and attempt to convert it to an assignee expression.
@@ -822,10 +813,7 @@ impl Parser {
         &mut self,
         precedence: Precedence,
     ) -> Result<AssigneeExpr, ErrorsEmitted> {
-        AssigneeExpr::try_from(self.parse_expression(precedence)?).map_err(|e| {
-            self.log_error(e);
-            ErrorsEmitted
-        })
+        AssigneeExpr::try_from(self.parse_expression(precedence)?).map_err(|e| self.log_error(e))
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -833,7 +821,7 @@ impl Parser {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Parse a statement (i.e., let statement, item declaration / definition or expression).
-    fn parse_statement(&mut self) -> Result<Statement, ErrorsEmitted> {
+    fn parse_statement(&mut self) -> Result<Statement, Vec<CompilerError<ParserErrorKind>>> {
         ////////////////////////////////////////////////////////////////////////////////
         self.logger.debug("entering `parse_statement()`…");
         self.log_current_token(false);
@@ -847,7 +835,9 @@ impl Parser {
         }
 
         match self.current_token() {
-            Some(Token::Let { .. }) => LetStmt::parse_statement(self),
+            Some(Token::Let { .. }) => {
+                LetStmt::parse_statement(self).map_err(|_| self.errors().to_vec())
+            }
 
             Some(
                 Token::Import { .. }
@@ -877,17 +867,19 @@ impl Parser {
                 | Token::Topic { .. }
                 | Token::Calldata { .. }
                 | Token::Pub { .. },
-            ) => Item::parse_statement(self),
+            ) => Item::parse_statement(self).map_err(|_| self.errors().to_vec()),
 
             Some(
                 Token::If { .. } | Token::Match { .. } | Token::For { .. } | Token::While { .. },
             ) => Ok(Statement::Expression(
-                self.parse_expression(Precedence::Lowest)?,
+                self.parse_expression(Precedence::Lowest)
+                    .map_err(|_| self.errors().to_vec())?,
             )),
 
             _ => {
                 let statement = Ok(Statement::Expression(
-                    self.parse_expression(Precedence::Lowest)?,
+                    self.parse_expression(Precedence::Lowest)
+                        .map_err(|_| self.errors().to_vec())?,
                 ));
 
                 match self.current_token() {
@@ -902,7 +894,7 @@ impl Parser {
 
                     _ => {
                         self.log_unexpected_token("`;` or `}`");
-                        return Err(ErrorsEmitted);
+                        return Err(self.errors().to_vec());
                     }
                 }
 
@@ -936,10 +928,9 @@ impl Parser {
                     if self.is_range() {
                         Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                     } else {
-                        self.log_error(ParserErrorKind::InvalidTokenContext {
+                        Err(self.log_error(ParserErrorKind::InvalidTokenContext {
                             token: self.peek_ahead_by(1).cloned(),
-                        });
-                        Err(ErrorsEmitted)
+                        }))
                     }
                 } else {
                     Ok(patt)
@@ -957,10 +948,9 @@ impl Parser {
                     if self.is_range() {
                         Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                     } else {
-                        self.log_error(ParserErrorKind::InvalidTokenContext {
+                        Err(self.log_error(ParserErrorKind::InvalidTokenContext {
                             token: self.current_token().cloned(),
-                        });
-                        Err(ErrorsEmitted)
+                        }))
                     }
                 } else {
                     Ok(patt)
@@ -978,10 +968,9 @@ impl Parser {
                     if self.is_range() {
                         Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                     } else {
-                        self.log_error(ParserErrorKind::InvalidTokenContext {
+                        Err(self.log_error(ParserErrorKind::InvalidTokenContext {
                             token: self.peek_ahead_by(1).cloned(),
-                        });
-                        Err(ErrorsEmitted)
+                        }))
                     }
                 } else {
                     Ok(patt)
@@ -999,10 +988,9 @@ impl Parser {
                     if self.is_range() {
                         Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                     } else {
-                        self.log_error(ParserErrorKind::InvalidTokenContext {
+                        Err(self.log_error(ParserErrorKind::InvalidTokenContext {
                             token: self.peek_ahead_by(1).cloned(),
-                        });
-                        Err(ErrorsEmitted)
+                        }))
                     }
                 } else {
                     self.next_token();
@@ -1038,10 +1026,9 @@ impl Parser {
                     if self.is_range() {
                         Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                     } else {
-                        self.log_error(ParserErrorKind::InvalidTokenContext {
+                        Err(self.log_error(ParserErrorKind::InvalidTokenContext {
                             token: self.peek_ahead_by(1).cloned(),
-                        });
-                        Err(ErrorsEmitted)
+                        }))
                     }
                 } else {
                     Ok(patt)
@@ -1086,10 +1073,9 @@ impl Parser {
                             if self.is_range() {
                                 Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                             } else {
-                                self.log_error(ParserErrorKind::InvalidTokenContext {
+                                Err(self.log_error(ParserErrorKind::InvalidTokenContext {
                                     token: self.peek_ahead_by(1).cloned(),
-                                });
-                                Err(ErrorsEmitted)
+                                }))
                             }
                         }
                         _ => Ok(Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?)),
@@ -1145,8 +1131,7 @@ impl Parser {
 
             Some(Token::EOF) | None => {
                 // log the error, then return `Err(ErrorsEmitted)`
-                self.log_unexpected_eoi();
-                Err(ErrorsEmitted)
+                Err(self.log_unexpected_eoi())
             }
 
             _ => {
@@ -1228,7 +1213,7 @@ impl Parser {
 
     /// Log information about an error that occurred during parsing, by pushing the error
     /// to the `errors` vector and providing information about error kind and position.
-    pub(crate) fn log_error(&mut self, error_kind: ParserErrorKind) {
+    pub(crate) fn log_error(&mut self, error_kind: ParserErrorKind) -> ErrorsEmitted {
         let current = self.current;
         let tokens = self.stream.tokens();
 
@@ -1246,6 +1231,8 @@ impl Parser {
 
         // push the error to the `errors` vector
         self.errors.push(error);
+
+        ErrorsEmitted
     }
 
     /// Utility function that is used to report the current token and its precedence for debugging.
@@ -1253,68 +1240,85 @@ impl Parser {
         let token = self.current_token().unwrap();
         let precedence = self.get_precedence(token);
 
-        self.logger.debug(&format!("current token: {:?}", token));
+        self.logger.debug(&format!("current token: `{:?}`", token));
 
         if log_precedence {
             self.logger
-                .debug(&format!("current precedence: {:?}", precedence));
+                .debug(&format!("current precedence: `{:?}`", precedence));
         }
     }
 
     /// Log error information on encountering an unexpected token by providing the expected token.
-    fn log_unexpected_token(&mut self, expected: &str) {
+    fn log_unexpected_token(&mut self, expected: &str) -> ErrorsEmitted {
         self.log_error(ParserErrorKind::UnexpectedToken {
             expected: expected.to_string(),
             found: self.current_token().cloned(),
         });
 
         self.next_token();
+
+        ErrorsEmitted
     }
 
     /// Log error information when an expected token is missing.
-    fn log_missing_token(&mut self, expected: &str) {
+    fn log_missing_token(&mut self, expected: &str) -> ErrorsEmitted {
         self.log_error(ParserErrorKind::MissingToken {
             expected: expected.to_string(),
         });
 
         self.next_token();
+
+        ErrorsEmitted
     }
 
     /// Log error information about an unmatched delimiter.
-    fn log_unmatched_delimiter(&mut self, expected: &Delimiter) {
+    fn log_unmatched_delimiter(&mut self, expected: &Delimiter) -> ErrorsEmitted {
         self.log_error(ParserErrorKind::UnmatchedDelimiter {
-            delim: format!("{}", *expected),
+            delim: format!("`{}`", *expected),
             position: expected.position(),
         });
 
         self.next_token();
+
+        ErrorsEmitted
     }
 
     /// Log error information when an expected node is missing.
-    fn log_missing(&mut self, ty: &str, expected: &str) {
+    fn log_missing(&mut self, ty: &str, expected: &str) -> ErrorsEmitted {
         match ty {
-            "expr" => self.log_error(ParserErrorKind::MissingExpression {
-                expected: expected.to_string(),
-            }),
-            "item" => self.log_error(ParserErrorKind::MissingItem {
-                expected: expected.to_string(),
-            }),
-            "type" => self.log_error(ParserErrorKind::MissingType {
-                expected: expected.to_string(),
-            }),
-            "patt" => self.log_error(ParserErrorKind::MissingPattern {
-                expected: expected.to_string(),
-            }),
-            _ => self
-                .logger
-                .error(&format!("{ty} not found. Expected {expected}, found none")),
+            "expr" => {
+                self.log_error(ParserErrorKind::MissingExpression {
+                    expected: expected.to_string(),
+                });
+            }
+            "item" => {
+                self.log_error(ParserErrorKind::MissingItem {
+                    expected: expected.to_string(),
+                });
+            }
+            "type" => {
+                self.log_error(ParserErrorKind::MissingType {
+                    expected: expected.to_string(),
+                });
+            }
+            "patt" => {
+                self.log_error(ParserErrorKind::MissingPattern {
+                    expected: expected.to_string(),
+                });
+            }
+            _ => {
+                self.logger
+                    .error(&format!("{ty} not found. Expected {expected}, found none"));
+            }
         }
 
         self.next_token();
+
+        ErrorsEmitted
     }
 
     /// Log error information when the source code has to an unexpected end.
-    fn log_unexpected_eoi(&mut self) {
+    fn log_unexpected_eoi(&mut self) -> ErrorsEmitted {
         self.log_error(ParserErrorKind::UnexpectedEndOfInput)
     }
 

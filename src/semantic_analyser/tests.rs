@@ -180,7 +180,7 @@ fn analyse_impl() -> Result<(), ()> {
 
         impl Contract for SomeToken {
             const CONTRACT_ADDRESS: h160 = $0x54321_ABCDE_54321_ABCDE_54321_ABCDE_54321_ABCDE;
-            const CREATOR_ADDRESS: h160 = $0x67890_ABCDE_67890_ABCDE_67890_ABCDE_67890_ACBDE;
+            const CREATOR_ADDRESS: h160 = $0x67890_ABCDE_67890_ABCDE_67890_ABCDE_67890_ABCDE;
 
             pub func address() -> h160 {
                 SomeToken::Contract::CONTRACT_ADDRESS

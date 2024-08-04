@@ -82,6 +82,7 @@ impl Logger {
 
     /// Clear all log messages.
     pub fn clear_messages(&mut self) {
+        self.info("clearing log messages…");
         self.messages.clear()
     }
 }
