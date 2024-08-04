@@ -40,7 +40,7 @@ impl<'a> Lexer<'a> {
 
     /// Main tokenizing function.
     /// Returns a stream of tokens generated from some input string (source code).
-    pub(crate) fn lex(&mut self) -> Result<TokenStream, ErrorsEmitted> {
+    pub(crate) fn lex(&mut self) -> Result<TokenStream, Vec<CompilerError<LexErrorKind>>> {
         let mut tokens: Vec<Token> = Vec::new();
 
         while let Some(c) = self.peek_current() {
@@ -50,30 +50,45 @@ impl<'a> Lexer<'a> {
                 _ if c.is_whitespace() => self.skip_whitespace(),
 
                 '/' if self.peek_next() == Some('/') || self.peek_next() == Some('*') => {
-                    tokens.push(self.tokenize_doc_comment()?);
+                    tokens.push(
+                        self.tokenize_doc_comment()
+                            .map_err(|_| self.errors().to_vec())?,
+                    );
                 }
 
                 'b' if self.peek_next() == Some('\"') => {
                     self.advance();
-                    tokens.push(self.tokenize_bytes()?)
+                    tokens.push(self.tokenize_bytes().map_err(|_| self.errors().to_vec())?)
                 }
 
                 // not alphanumeric because identifiers / keywords cannot start with numbers;
                 // however, numbers are allowed after the first character
-                _ if c.is_ascii_alphabetic() => tokens.push(self.tokenize_identifier_or_keyword()?),
+                _ if c.is_ascii_alphabetic() => tokens.push(
+                    self.tokenize_identifier_or_keyword()
+                        .map_err(|_| self.errors().to_vec())?,
+                ),
 
-                '_' => tokens.push(self.tokenize_identifier_or_keyword()?),
+                '_' => tokens.push(
+                    self.tokenize_identifier_or_keyword()
+                        .map_err(|_| self.errors().to_vec())?,
+                ),
 
                 '#' if self.peek_next() == Some('!') || self.peek_next() == Some('[') => {
                     self.advance();
 
                     if self.peek_current() == Some('[') {
                         self.advance();
-                        tokens.push(self.tokenize_identifier_or_keyword()?);
+                        tokens.push(
+                            self.tokenize_identifier_or_keyword()
+                                .map_err(|_| self.errors().to_vec())?,
+                        );
                     } else if self.peek_current() == Some('!') && self.peek_next() == Some('[') {
                         self.advance();
                         self.advance();
-                        tokens.push(self.tokenize_identifier_or_keyword()?);
+                        tokens.push(
+                            self.tokenize_identifier_or_keyword()
+                                .map_err(|_| self.errors().to_vec())?,
+                        );
                     } else {
                         let current_char = self
                             .peek_current()
@@ -81,39 +96,53 @@ impl<'a> Lexer<'a> {
 
                         self.log_error(LexErrorKind::UnexpectedChar {
                             expected: "`[` or `!`".to_string(),
-                            found: current_char.map_err(|_| ErrorsEmitted)?,
+                            found: current_char
+                                .map_err(|_| ErrorsEmitted)
+                                .map_err(|_| self.errors().to_vec())?,
                         });
 
-                        return Err(ErrorsEmitted);
+                        return Err(self.errors().to_vec());
                     }
                 }
 
                 '(' | '[' | '{' | ')' | ']' | '}' => {
-                    tokens.push(self.tokenize_delimiter()?);
+                    tokens.push(
+                        self.tokenize_delimiter()
+                            .map_err(|_| self.errors().to_vec())?,
+                    );
                 }
 
-                '"' => tokens.push(self.tokenize_str()?),
+                '"' => tokens.push(self.tokenize_str().map_err(|_| self.errors().to_vec())?),
 
-                '\'' => tokens.push(self.tokenize_char()?),
+                '\'' => tokens.push(self.tokenize_char().map_err(|_| self.errors().to_vec())?),
 
-                '$' => tokens.push(self.tokenize_hash()?), // `h160`, `h256` or `h512` literal
+                '$' => tokens.push(self.tokenize_hash().map_err(|_| self.errors().to_vec())?), // `h160`, `h256` or `h512` literal
 
                 // hexadecimal digit prefix (`0x` or `0X`)
                 '0' if self
                     .peek_next()
                     .is_some_and(|x| &x.to_lowercase().to_string() == "x") =>
                 {
-                    tokens.push(self.tokenize_big_uint()?)
+                    tokens.push(
+                        self.tokenize_big_uint()
+                            .map_err(|_| self.errors().to_vec())?,
+                    )
                 }
 
                 _ if c.is_digit(10)
                     || (c == '-' && self.peek_next().is_some_and(|c| c.is_digit(10))) =>
                 {
-                    tokens.push(self.tokenize_numeric()?)
+                    tokens.push(
+                        self.tokenize_numeric()
+                            .map_err(|_| self.errors().to_vec())?,
+                    )
                 }
 
                 '.' => match &self.peek_next() {
-                    Some('.') => tokens.push(self.tokenize_punctuation()?),
+                    Some('.') => tokens.push(
+                        self.tokenize_punctuation()
+                            .map_err(|_| self.errors().to_vec())?,
+                    ),
                     _ => {
                         self.advance();
                         let span = Span::new(self.input, start_pos, self.pos);
@@ -142,12 +171,18 @@ impl<'a> Lexer<'a> {
                             span,
                         });
                     } else {
-                        tokens.push(self.tokenize_punctuation()?)
+                        tokens.push(
+                            self.tokenize_punctuation()
+                                .map_err(|_| self.errors().to_vec())?,
+                        )
                     }
                 }
 
                 '!' | '%' | '&' | '*' | '+' | '/' | '-' | ':' | '<' | '=' | '>' | '?' | '\\'
-                | '^' | '|' => tokens.push(self.tokenize_punctuation()?),
+                | '^' | '|' => tokens.push(
+                    self.tokenize_punctuation()
+                        .map_err(|_| self.errors().to_vec())?,
+                ),
 
                 _ => {
                     let span = Span::new(self.input, start_pos, self.pos);
@@ -162,8 +197,8 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        if !self.errors().is_empty() {
-            return Err(ErrorsEmitted);
+        if !self.errors.is_empty() {
+            return Err(self.errors().to_vec());
         }
 
         Ok(TokenStream::new(tokens, self.input, 0, self.pos))

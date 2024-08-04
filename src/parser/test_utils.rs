@@ -5,9 +5,7 @@ use crate::{lexer::Lexer, logger::LogLevel, parser::Parser};
 pub fn get_parser(input: &str, log_level: LogLevel, print_tokens: bool) -> Parser {
     let mut lexer = Lexer::new(input);
 
-    let stream = lexer
-        .lex()
-        .expect(&format!("error tokenizing input: \n{:#?}", lexer.errors()));
+    let stream = lexer.lex().expect("error tokenizing input");
 
     if print_tokens {
         println!("{:#?}", stream.tokens());
