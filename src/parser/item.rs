@@ -32,20 +32,6 @@ impl Item {
         parser.logger.debug("entering `Item::parse()`");
         parser.log_current_token(false);
 
-        // TODO: fix – throws error for comments within an item (e.g., function, module, etc.)
-
-        // while let Some(Token::LineComment { .. }) = parser.current_token() {
-        //     parser.next_token();
-
-        //     match parser.current_token() {
-        //         Some(Token::EOF) | None => break,
-        //         Some(Token::RBrace { .. }) => {
-        //             parser.next_token();
-        //         }
-        //         _ => (),
-        //     }
-        // }
-
         match parser.current_token() {
             Some(Token::Import { .. }) => Ok(Item::ImportDecl(ImportDecl::parse(
                 parser,
