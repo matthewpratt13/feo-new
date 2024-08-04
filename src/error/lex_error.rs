@@ -12,6 +12,11 @@ pub enum LexErrorKind {
 
     EmptyCharLiteral,
 
+    InvalidCommentInitializerSequence {
+        expected: String,
+        found: String,
+    },
+
     InvalidHashLength {
         len: usize,
     },
@@ -87,6 +92,9 @@ impl fmt::Display for LexErrorKind {
             }
             LexErrorKind::EmptyCharLiteral => {
                 write!(f, "scanning error: empty character literal")
+            }
+            LexErrorKind::InvalidCommentInitializerSequence { expected, found } => {
+                write!(f, "syntax error: invalid comment initializer sequence. Expected {expected}, found `{found}`")
             }
             LexErrorKind::InvalidHashLength { len } => {
                 write!(f, "syntax error: invalid hash length – {len}")

@@ -19,7 +19,7 @@ use crate::{
         SelfType, SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, TypePath, UInt,
         UnaryOp, UnderscoreExpr, Unit, Visibility,
     },
-    error::{CompilerError, ErrorsEmitted, SemanticErrorKind},
+    error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
     parser::{ty::build_item_path, Program},
     span::{Span, Spanned},
@@ -71,7 +71,7 @@ impl SemanticAnalyser {
 
     fn enter_scope(&mut self, scope_kind: ScopeKind) {
         self.logger
-            .debug(&format!("entering new scope: `{:?}` …", scope_kind));
+            .info(&format!("entering new scope: `{:?}` …", scope_kind));
 
         self.scope_stack.push(Scope {
             scope_kind,
@@ -82,7 +82,7 @@ impl SemanticAnalyser {
     fn exit_scope(&mut self) -> Option<Scope> {
         if let Some(exited_scope) = self.scope_stack.pop() {
             self.logger
-                .debug(&format!("exited scope: `{:?}`", exited_scope.scope_kind));
+                .info(&format!("exited scope: `{:?}`", exited_scope.scope_kind));
 
             Some(exited_scope)
         } else {
@@ -92,7 +92,7 @@ impl SemanticAnalyser {
 
     fn insert(&mut self, path: TypePath, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
-            self.logger.debug(&format!(
+            self.logger.info(&format!(
                 "inserting symbol `{symbol}` into scope `{:?}` at path `{path}` …",
                 curr_scope.scope_kind
             ));
@@ -122,10 +122,12 @@ impl SemanticAnalyser {
         None
     }
 
-    fn analyse_program(&mut self, program: &Program, path: TypePath) -> Result<(), ErrorsEmitted> {
-        self.logger.info(&format!(
-            "starting semantic analysis of program at path `{path}` …"
-        ));
+    fn analyse_program(
+        &mut self,
+        program: &Program,
+        path: TypePath,
+    ) -> Result<(), Vec<CompilerError<SemanticErrorKind>>> {
+        self.logger.info(&format!("starting semantic analysis …"));
 
         let program_path = if let Some(Scope {
             scope_kind: ScopeKind::Lib,
@@ -207,10 +209,8 @@ impl SemanticAnalyser {
             .insert(program_path.clone(), module_contents);
 
         for stmt in &program.statements {
-            self.analyse_stmt(stmt, &program_path).map_err(|e| {
-                self.log_error(e, &stmt.span());
-                ErrorsEmitted
-            })?;
+            self.analyse_stmt(stmt, &program_path)
+                .map_err(|_| self.errors.clone())?;
         }
 
         self.logger
@@ -227,7 +227,7 @@ impl SemanticAnalyser {
         match statement {
             Statement::Let(ls) => {
                 self.logger
-                    .debug(&format!("analysing let statement: `{}` …", statement));
+                    .info(&format!("analysing let statement: `{}` …", statement));
 
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors
@@ -313,14 +313,14 @@ impl SemanticAnalyser {
             Statement::Item(item) => match item {
                 Item::ImportDecl(id) => {
                     self.logger
-                        .debug(&format!("analysing import declaration: `{}` …", statement));
+                        .info(&format!("analysing import declaration: `{}` …", statement));
 
                     self.analyse_import(&id, root)?
                 }
 
                 Item::AliasDecl(ad) => {
                     self.logger
-                        .debug(&format!("analysing alias declaration: `{}` …", statement));
+                        .info(&format!("analysing alias declaration: `{}` …", statement));
 
                     let alias_path = build_item_path(root, TypePath::from(ad.alias_name.clone()));
 
@@ -336,7 +336,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::ConstantDecl(cd) => {
-                    self.logger.debug(&format!(
+                    self.logger.info(&format!(
                         "analysing constant declaration: `{}` …",
                         statement
                     ));
@@ -373,7 +373,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::StaticVarDecl(s) => {
-                    self.logger.debug(&format!(
+                    self.logger.info(&format!(
                         "analysing static variable declaration: `{}` …",
                         statement
                     ));
@@ -442,7 +442,7 @@ impl SemanticAnalyser {
 
                     if let Some(curr_scope) = self.scope_stack.pop() {
                         self.logger
-                            .debug(&format!("exiting scope: `{:?}`", curr_scope.scope_kind));
+                            .info(&format!("exiting scope: `{:?}`", curr_scope.scope_kind));
 
                         module_scope = curr_scope;
                     }
@@ -456,7 +456,7 @@ impl SemanticAnalyser {
                         },
                     )?;
 
-                    self.logger.debug(&format!(
+                    self.logger.info(&format!(
                         "inserting symbols into module at path: `{}`",
                         module_path,
                     ));
@@ -516,7 +516,7 @@ impl SemanticAnalyser {
 
                 Item::EnumDef(e) => {
                     self.logger
-                        .debug(&format!("analysing enum definition: `{}` …", statement));
+                        .info(&format!("analysing enum definition: `{}` …", statement));
 
                     let enum_name_path = TypePath::from(e.enum_name.clone());
                     let enum_def_path = build_item_path(root, enum_name_path.clone());
@@ -532,7 +532,7 @@ impl SemanticAnalyser {
 
                 Item::StructDef(s) => {
                     self.logger
-                        .debug(&format!("analysing struct definition: `{}` …", statement));
+                        .info(&format!("analysing struct definition: `{}` …", statement));
 
                     let struct_name_path = TypePath::from(s.struct_name.clone());
                     let struct_def_path = build_item_path(root, struct_name_path.clone());
@@ -547,7 +547,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::TupleStructDef(ts) => {
-                    self.logger.debug(&format!(
+                    self.logger.info(&format!(
                         "analysing tuple struct definition: `{}` …",
                         statement
                     ));
@@ -644,7 +644,7 @@ impl SemanticAnalyser {
 
                 Item::FunctionItem(f) => {
                     self.logger
-                        .debug(&format!("analysing function item: `{}` …", statement));
+                        .info(&format!("analysing function item: `{}` …", statement));
 
                     let function_name_path = TypePath::from(f.function_name.clone());
                     let function_item_path = build_item_path(root, function_name_path.clone());
@@ -662,7 +662,7 @@ impl SemanticAnalyser {
             },
 
             Statement::Expression(expr) => {
-                self.logger.debug(&format!(
+                self.logger.info(&format!(
                     "analysing expression statement: `{}` …",
                     statement
                 ));

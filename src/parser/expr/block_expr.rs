@@ -22,14 +22,8 @@ impl ParseConstructExpr for BlockExpr {
                 parser.next_token();
                 Ok(Delimiter::LBrace { position })
             }
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
+            Some(Token::EOF) | None => Err(parser.log_unexpected_eoi()),
+            _ => Err(parser.log_unexpected_token("`{`")),
         }?;
 
         let statements_opt = parse_statements(parser)?;
@@ -51,10 +45,7 @@ impl ParseConstructExpr for BlockExpr {
                 Ok(expr)
             }
 
-            _ => {
-                parser.log_unmatched_delimiter(&open_brace);
-                Err(ErrorsEmitted)
-            }
+            _ => Err(parser.log_unmatched_delimiter(&open_brace)),
         }
     }
 }
@@ -78,7 +69,14 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
         parser.current_token(),
         Some(Token::RBrace { .. } | Token::EOF)
     ) {
-        let statement = parser.parse_statement()?;
+        let statement = parser.parse_statement().map_err(|errors| {
+            for err in errors {
+                parser.logger.error(&err.to_string());
+            }
+
+            ErrorsEmitted
+        })?;
+
         statements.push(statement);
     }
 
