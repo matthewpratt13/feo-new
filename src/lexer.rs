@@ -49,24 +49,22 @@ impl<'a> Lexer<'a> {
             match c {
                 _ if c.is_whitespace() => self.skip_whitespace(),
 
-                _ if c == '/'
-                    && (self.peek_next() == Some('/') || self.peek_next() == Some('*')) =>
-                {
+                '/' if self.peek_next() == Some('/') || self.peek_next() == Some('*') => {
                     tokens.push(self.tokenize_doc_comment()?);
                 }
 
-                _ if c == 'b' && self.peek_next() == Some('\"') => {
+                'b' if self.peek_next() == Some('\"') => {
                     self.advance();
                     tokens.push(self.tokenize_bytes()?)
                 }
 
                 // not alphanumeric because identifiers / keywords cannot start with numbers;
                 // however, numbers are allowed after the first character
-                _ if c.is_ascii_alphabetic() || c == '_' => {
-                    tokens.push(self.tokenize_identifier_or_keyword()?)
-                }
+                _ if c.is_ascii_alphabetic() => tokens.push(self.tokenize_identifier_or_keyword()?),
 
-                _ if c == '#' && self.peek_next() == Some('!') || self.peek_next() == Some('[') => {
+                '_' => tokens.push(self.tokenize_identifier_or_keyword()?),
+
+                '#' if self.peek_next() == Some('!') || self.peek_next() == Some('[') => {
                     self.advance();
 
                     if self.peek_current() == Some('[') {
@@ -101,10 +99,9 @@ impl<'a> Lexer<'a> {
                 '$' => tokens.push(self.tokenize_hash()?), // `h160`, `h256` or `h512` literal
 
                 // hexadecimal digit prefix (`0x` or `0X`)
-                _ if c == '0'
-                    && self
-                        .peek_next()
-                        .is_some_and(|x| &x.to_lowercase().to_string() == "x") =>
+                '0' if self
+                    .peek_next()
+                    .is_some_and(|x| &x.to_lowercase().to_string() == "x") =>
                 {
                     tokens.push(self.tokenize_big_uint()?)
                 }
@@ -136,7 +133,7 @@ impl<'a> Lexer<'a> {
                     tokens.push(Token::Semicolon { punc: ';', span })
                 }
 
-                _ if c == '&' && self.peek_next() == Some('m') => {
+                '&' if self.peek_next() == Some('m') => {
                     self.advance();
                     if let Ok(Token::Mut { .. }) = self.tokenize_identifier_or_keyword() {
                         let span = Span::new(self.input, start_pos, self.pos);
@@ -180,54 +177,70 @@ impl<'a> Lexer<'a> {
         self.advance(); // skip first `/`
 
         match &self.peek_current() {
-            Some('/') if self.peek_next() == Some('/') || self.peek_current() == Some('!') => {
-                let comment_type = if self.peek_current() == Some('/') {
-                    DocCommentType::OuterDocComment
-                } else {
-                    DocCommentType::InnerDocComment
-                };
-
-                self.advance(); // skip third `/` or `!`
-                self.skip_whitespace();
-
-                let comment_start_pos = self.pos; // only store data after `///`
-
-                // advance until the end of the line
-                while let Some(c) = self.peek_current() {
-                    if c == '\n' {
-                        break;
-                    }
-                    self.advance();
-                }
-
-                let comment = self.input[comment_start_pos..self.pos].trim().to_string();
-
-                let span = Span::new(self.input, start_pos, self.pos);
-
-                self.advance();
-
-                Ok(Token::DocComment {
-                    comment,
-                    span,
-                    comment_type,
-                })
-            }
             Some('/') => {
-                // consume ordinary newline or trailing comment (`//`)
-                self.advance();
+                self.advance(); // skip second `/`
 
-                while let Some(c) = self.peek_current() {
-                    if c == '\n' || c == '\r' {
-                        break;
+                let curr_char = self.peek_current();
+
+                if curr_char == Some('/') || curr_char == Some('!') {
+                    let comment_type = match self.peek_current() {
+                        Some('/') => DocCommentType::OuterDocComment,
+                        Some('!') => DocCommentType::InnerDocComment,
+                        Some(c) => {
+                            self.log_error(LexErrorKind::InvalidCommentInitializerSequence {
+                                expected: "`///` or `//!`".to_string(),
+                                found: c.to_string(),
+                            });
+                            return Err(ErrorsEmitted);
+                        }
+                        _ => {
+                            return Ok(Token::LineComment {
+                                span: Span::new("", start_pos, self.pos),
+                            });
+                        }
+                    };
+
+                    self.advance(); // skip third `/` or `!`
+
+                    self.skip_whitespace();
+
+                    let comment_start_pos = self.pos; // only store data after `///`
+
+                    // advance until the end of the line
+                    while let Some(c) = self.peek_current() {
+                        if c == '\n' || c == '\r' {
+                            break;
+                        }
+                        self.advance();
                     }
-                    self.advance();
-                }
 
-                // replace actual source code with `""`, as ordinary comments are discarded
-                Ok(Token::LineComment {
-                    span: Span::new("", start_pos, self.pos),
-                })
+                    let comment = self.input[comment_start_pos..self.pos].trim().to_string();
+
+                    let span = Span::new(self.input, start_pos, self.pos);
+
+                    self.advance();
+
+                    Ok(Token::DocComment {
+                        comment,
+                        span,
+                        comment_type,
+                    })
+                } else {
+                    while let Some(c) = self.peek_current() {
+                        if c == '\n' || c == '\r' {
+                            break;
+                        }
+                        self.advance();
+                    }
+
+                    // replace actual source code with `""`, as ordinary comments are discarded
+                    let span = Span::new("", start_pos, self.pos);
+
+                    self.advance();
+                    Ok(Token::LineComment { span })
+                }
             }
+
             Some('*') => {
                 // consume inline or block comment (`/• •/`)
                 self.advance(); // skip `*`
@@ -273,7 +286,7 @@ impl<'a> Lexer<'a> {
         let name = self.input[start_pos..self.pos].trim().to_string();
         let span = Span::new(self.input, start_pos, self.pos);
 
-        if is_keyword(&name) | is_attribute(&name) {
+        if is_keyword(&name) || is_attribute(&name) {
             match name.as_str() {
                 "alias" => Ok(Token::Alias { name, span }),
                 "as" => Ok(Token::As { name, span }),
@@ -811,7 +824,7 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
-                _ if value == '\'' || value == ' ' => {
+                '\'' | ' ' => {
                     self.log_error(LexErrorKind::EmptyCharLiteral);
                     Err(ErrorsEmitted)
                 }
@@ -1495,7 +1508,7 @@ mod tests {
         /*
         block comment
         */
-        foo /* don't print */ bar
+        foo /*don't print*/ bar
         let baz: byte = b"x";
         "#;
 
@@ -1618,7 +1631,7 @@ mod tests {
     #[test]
     fn tokenize_struct_def() -> Result<(), ()> {
         let input = r#"
-        /// These is a doc comment
+        /// This is a doc comment
         /// for the struct called `Foo`.
         pub struct Foo {
             bar: str,
