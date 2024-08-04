@@ -131,15 +131,18 @@ mod tests {
     #[test]
     fn parse_module_def() -> Result<(), ()> {
         let input = r#"
+        //! This is a module comment
         pub module foo {
             #![contract]
 
             import lib::foo_error::Error;
-           
+            
+            /// This is a doc comment
             trait Bar {
                 #![interface]
 
-                const ADDRESS: h160;
+                const ADDRESS: h160; // this is an inline comment
+                // This is a newline comment
                 func transfer(&mut self, to: h160, amount: u256) -> Result<Baz, Error> {}
             }
 

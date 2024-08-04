@@ -839,6 +839,13 @@ impl Parser {
         self.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
+        while let Some(
+            Token::LineComment { .. } | Token::BlockComment { .. } | Token::DocComment { .. },
+        ) = self.current_token()
+        {
+            self.next_token();
+        }
+
         match self.current_token() {
             Some(Token::Let { .. }) => LetStmt::parse_statement(self),
 
@@ -1162,6 +1169,13 @@ impl Parser {
 
         if self.current < self.stream.tokens().len() {
             self.current += 1;
+
+            while let Some(
+                Token::LineComment { .. } | Token::BlockComment { .. } | Token::DocComment { .. },
+            ) = self.current_token()
+            {
+                self.next_token();
+            }
 
             ////////////////////////////////////////////////////////////////////////////////
             self.logger.debug("consumed token");
