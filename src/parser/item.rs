@@ -182,14 +182,13 @@ impl ParseStatement for Item {
                 }
             },
             None | Some(Token::EOF { .. }) => {
-                if attributes_opt.is_some() {
-                    parser.log_unexpected_token("item to match attributes");
-                }
-
-                parser.log_missing_token("item definition keyword");
-                Err(ErrorsEmitted)
+                Err(parser.log_missing_token("item definition keyword"))
             }
             Some(_) => {
+                if attributes_opt.is_some() {
+                    return Err(parser.log_unexpected_token("item to match attributes"));
+                }
+
                 Err(parser
                     .log_unexpected_token("module definition, or implementation or trait item"))
             }
