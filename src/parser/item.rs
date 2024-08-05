@@ -166,7 +166,6 @@ impl ParseStatement for Item {
                     Err(ErrorsEmitted)
                 }
             },
-
             Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionItem(
                 FunctionItem::parse(parser, attributes_opt, visibility)?,
             ))),
@@ -182,9 +181,17 @@ impl ParseStatement for Item {
                     Err(ErrorsEmitted)
                 }
             },
-            _ => {
-                parser.log_unexpected_token("item keyword");
+            None | Some(Token::EOF { .. }) => {
+                if attributes_opt.is_some() {
+                    parser.log_unexpected_token("item to match attributes");
+                }
+
+                parser.log_missing_token("item definition keyword");
                 Err(ErrorsEmitted)
+            }
+            Some(_) => {
+                Err(parser
+                    .log_unexpected_token("module definition, or implementation or trait item"))
             }
         }
     }
