@@ -876,6 +876,11 @@ impl Parser {
                     .map_err(|_| self.errors().to_vec())?,
             )),
 
+            Some(Token::EOF) | None => Ok(Statement::Expression(Expression::NoneExpr(NoneExpr {
+                kw_none: Keyword::None,
+                span: Span::default(),
+            }))),
+
             _ => {
                 let statement = Ok(Statement::Expression(
                     self.parse_expression(Precedence::Lowest)

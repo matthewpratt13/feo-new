@@ -687,6 +687,8 @@ impl SemanticAnalyser {
         // * object implementation (e.g., `lib::some_module::SomeObject`)
         // * trait implementation (e.g., `lib::some_module::SomeObject::SomeTrait`)
 
+        println!("enter `analyse_function_def()`");
+
         let function_root = if is_trait_impl {
             if let Some(prefix) = &path.associated_type_path_prefix_opt {
                 TypePath::from(prefix.clone())
@@ -699,6 +701,8 @@ impl SemanticAnalyser {
 
         // append the function name to the root
         let full_path = build_item_path(&function_root, TypePath::from(f.function_name.clone()));
+
+        println!("function path: `{full_path}`");
 
         self.enter_scope(ScopeKind::Function(full_path.to_string()));
 
@@ -714,6 +718,8 @@ impl SemanticAnalyser {
 
                 let param_path = TypePath::from(param.param_name());
 
+                println!("param path: `{param_path}`, param_type: {param_type:?}");
+
                 let symbol = match param_type {
                     Type::FunctionPtr(fp) => Symbol::Function {
                         path: param_path.clone(),
@@ -728,10 +734,12 @@ impl SemanticAnalyser {
                             span: f.span.clone(),
                         },
                     },
+
                     ty => Symbol::Variable {
                         name: param.param_name(),
                         var_type: ty,
                         data: {
+                            // HERE IS THE PROBLEM!!!
                             if f.block_opt.is_some() {
                                 Some(Expression::Block(f.block_opt.clone().unwrap()))
                             } else {
@@ -740,6 +748,8 @@ impl SemanticAnalyser {
                         },
                     },
                 };
+
+                println!("parameter symbol: {symbol:?}");
 
                 self.insert(param_path, symbol)?;
             }
@@ -761,6 +771,10 @@ impl SemanticAnalyser {
                 Type::UnitType(Unit)
             }
         };
+
+        println!("function type: {function_type}");
+
+        println!("return type: {:?}", f.return_type_opt);
 
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
@@ -980,6 +994,8 @@ impl SemanticAnalyser {
             },
 
             Expression::MethodCall(mc) => {
+                println!("analyse method call: {mc:?}");
+
                 let receiver = wrap_into_expression(*mc.receiver.clone());
                 let receiver_type = self.analyse_expr(&receiver, root)?;
 
@@ -988,8 +1004,12 @@ impl SemanticAnalyser {
                 let receiver_as_path_expr = PathExpr::from(receiver);
                 let receiver_path = TypePath::from(receiver_as_path_expr);
 
+                let symbol = self.lookup(&receiver_path).cloned();
+
+                println!("receiver path: `{receiver_path:?}`, symbol: {symbol:?}");
+
                 // check if path expression's type is that of an existing type and analyse
-                match self.lookup(&receiver_path).cloned() {
+                match symbol {
                     Some(Symbol::Struct { path, .. } | Symbol::TupleStruct { path, .. }) => {
                         if Type::UserDefined(path.clone()) == receiver_type {
                             let method_path =
@@ -1013,11 +1033,19 @@ impl SemanticAnalyser {
                         if let Some(d) = data {
                             match var_type {
                                 Type::Vec { .. } => match d {
-                                    Expression::Array(a) => self.analyse_vec_method(mc, &a, root),
-                                    _ => Err(SemanticErrorKind::UnexpectedType {
-                                        expected: "array".to_string(),
-                                        found: self.analyse_expr(&d, root)?.to_string(),
-                                    }),
+                                    Expression::Array(a) => {
+                                        self.analyse_expr(&Expression::Array(a.clone()), root)?;
+
+                                        self.analyse_vec_method(mc, &a, root)
+                                    }
+                                    ref expr => {
+                                        println!("vector type expression: {expr:?}");
+
+                                        Err(SemanticErrorKind::UnexpectedType {
+                                            expected: "array".to_string(),
+                                            found: self.analyse_expr(&d, root)?.to_string(),
+                                        })
+                                    }
                                 },
                                 Type::Mapping { .. } => match d {
                                     Expression::Mapping(m) => {
@@ -2084,6 +2112,8 @@ impl SemanticAnalyser {
 
             Expression::Block(b) => match &b.statements_opt {
                 Some(stmts) => {
+                    println!("analyse block expression: {b:?}");
+
                     self.enter_scope(ScopeKind::LocalBlock);
 
                     let mut cloned_iter = stmts.iter().peekable().clone();
@@ -2127,7 +2157,11 @@ impl SemanticAnalyser {
                     Ok(ty)
                 }
 
-                _ => Ok(Type::UnitType(Unit)),
+                _ => {
+                    println!("analyse block expression: {b:?}");
+
+                    Ok(Type::UnitType(Unit))
+                }
             },
 
             Expression::If(i) => {
@@ -2474,14 +2508,14 @@ impl SemanticAnalyser {
     // TODO: for the following four methods, if the method call is the last statement in a block,
     // TODO: there should not be a trailing semicolon
 
+    // NOTE!!! `Vec`, `Mapping`, `Result` and `Option` are technically objects that have methods
+    // fixed-sized arrays should not have methods as they are primitive types and not objects
     fn analyse_vec_method(
         &mut self,
         method_call_expr: &MethodCallExpr,
-        vec: &ArrayExpr,
+        array: &ArrayExpr,
         root: &TypePath,
     ) -> Result<Type, SemanticErrorKind> {
-        self.analyse_expr(&Expression::Array(vec.clone()), root)?;
-
         if Identifier::from("get") == method_call_expr.method_name
             || Identifier::from("remove") == method_call_expr.method_name
         {
@@ -2522,7 +2556,7 @@ impl SemanticAnalyser {
                         });
                     };
 
-                    let array = if let Some(elements) = vec.elements_opt.clone() {
+                    let array = if let Some(elements) = array.elements_opt.clone() {
                         elements
                     } else {
                         Vec::new()
@@ -2564,7 +2598,7 @@ impl SemanticAnalyser {
                 });
             }
 
-            if let Some(elements) = &vec.elements_opt {
+            if let Some(elements) = &array.elements_opt {
                 if let Some(elem) = elements.last() {
                     Ok(Type::Option {
                         inner_type: Box::new(self.analyse_expr(elem, root)?),

@@ -54,9 +54,13 @@ fn analyse_closure() -> Result<(), ()> {
 #[test]
 fn analyse_collection_indexing() -> Result<(), ()> {
     let input = r#"
-        func get_balance() -> u256 {
-            let balances: Mapping<h160, u256> = { $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE: 0x1a2b3c };
-            balances.get($0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE)
+        // func get_balance() -> u256 {
+        //     let balances: Mapping<h160, u256> = { $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE: 0x1a2b3c };
+        //     balances.get($0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE)
+        // }
+
+        func pop_from_vec(vec: Vec<u256>) -> u256 {
+            vec.pop()
         }
     "#;
 
