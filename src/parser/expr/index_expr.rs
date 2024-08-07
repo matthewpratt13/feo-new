@@ -12,7 +12,7 @@ impl ParseOperatorExpr for IndexExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let left_expr_span = &left_expr.span();
 
-        let array: AssigneeExpr = left_expr.try_into().map_err(|e| {
+        let collection: AssigneeExpr = left_expr.try_into().map_err(|e| {
             parser.log_error(e);
             ErrorsEmitted
         })?;
@@ -44,7 +44,7 @@ impl ParseOperatorExpr for IndexExpr {
                 parser.next_token();
 
                 let expr = IndexExpr {
-                    array: Box::new(array),
+                    collection: Box::new(collection),
                     index: Box::new(index),
                     span,
                 };
@@ -62,7 +62,7 @@ impl ParseOperatorExpr for IndexExpr {
 impl fmt::Debug for IndexExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("IndexExpr")
-            .field("array", &self.array)
+            .field("array", &self.collection)
             .field("index", &self.index)
             .finish()
     }

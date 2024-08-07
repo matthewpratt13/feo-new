@@ -241,7 +241,7 @@ pub struct IfExpr {
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct IndexExpr {
-    pub(crate) array: Box<AssigneeExpr>,
+    pub(crate) collection: Box<AssigneeExpr>,
     pub(crate) index: Box<ValueExpr>,
     pub(crate) span: Span,
 }
@@ -429,7 +429,7 @@ impl fmt::Display for Expression {
                 cal.callee,
                 cal.args_opt.unwrap_or(Vec::new())
             ),
-            Expression::Index(i) => write!(f, "{}[{}]", *i.array, *i.index),
+            Expression::Index(i) => write!(f, "{}[{}]", *i.collection, *i.index),
             Expression::TupleIndex(ti) => write!(f, "{}.{}", *ti.tuple, ti.index),
             Expression::Unwrap(unw) => write!(f, "{}?", *unw.value_expr),
             Expression::Unary(una) => write!(f, "{}{}", una.unary_op, *una.value_expr),
@@ -588,7 +588,7 @@ impl fmt::Debug for Expression {
                 .finish(),
             Self::Index(arg0) => f
                 .debug_struct("Index")
-                .field("array", &arg0.array)
+                .field("array", &arg0.collection)
                 .field("index", &arg0.index)
                 .finish(),
             Self::TupleIndex(arg0) => f

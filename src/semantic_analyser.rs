@@ -1197,27 +1197,28 @@ impl SemanticAnalyser {
             }
 
             Expression::Index(i) => {
-                let array_type =
-                    self.analyse_expr(&wrap_into_expression(*i.array.clone()), root)?;
+                let collection_type =
+                    self.analyse_expr(&wrap_into_expression(*i.collection.clone()), root)?;
 
                 let index_type =
                     self.analyse_expr(&wrap_into_expression(*i.index.clone()), root)?;
 
                 match index_type {
                     Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) => (),
+
                     _ => {
                         return Err(SemanticErrorKind::UnexpectedType {
-                            expected: "unsigned integer".to_string(),
+                            expected: "array index".to_string(),
                             found: format!("`{}`", index_type),
                         })
                     }
                 }
 
-                match array_type {
+                match collection_type {
                     Type::Array { element_type, .. } => Ok(*element_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "array".to_string(),
-                        found: format!("`{}`", array_type),
+                        found: format!("`{}`", collection_type),
                     }),
                 }
             }
