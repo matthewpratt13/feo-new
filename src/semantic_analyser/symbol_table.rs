@@ -25,7 +25,7 @@ pub(crate) enum Symbol {
     Variable {
         name: Identifier,
         var_type: Type,
-        data: Option<Expression>,
+        // data: Option<Expression>,
     },
     Struct {
         path: TypePath,

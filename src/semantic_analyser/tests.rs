@@ -406,6 +406,22 @@ fn analyse_method_call() {
 }
 
 #[test]
+fn analyse_unwrap_expr() -> Result<(), ()> {
+    let input = r#"
+        func unwrap_str_opt(expr: Option<str>) -> str {
+            expr.unwrap()
+        }
+    "#;
+
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+    }
+}
+
+#[test]
 fn analyse_struct() -> Result<(), ()> {
     let input = r#"
     struct Foo { a: u64, b: str, c: u256 }

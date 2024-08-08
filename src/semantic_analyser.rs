@@ -290,7 +290,7 @@ impl SemanticAnalyser {
                     | Type::Result { .. } => Symbol::Variable {
                         name: ls.assignee.name.clone(),
                         var_type: value_type.clone(),
-                        data: ls.value_opt.clone(),
+                        // data: ls.value_opt.clone(),
                     },
                     Type::UserDefined(tp) => {
                         let type_path = self.check_path(tp, root, String::from("type"))?;
@@ -300,7 +300,7 @@ impl SemanticAnalyser {
                             _ => Symbol::Variable {
                                 name: ls.assignee.name.clone(),
                                 var_type: value_type,
-                                data: ls.value_opt.clone(),
+                                // data: ls.value_opt.clone(),
                             },
                         }
                     }
@@ -402,18 +402,18 @@ impl SemanticAnalyser {
                         Symbol::Variable {
                             name: s.var_name.clone(),
                             var_type: s.var_type.clone(),
-                            data: {
-                                if s.assignee_opt.is_some() {
-                                    Some(Expression::from(*s.assignee_opt.clone().unwrap_or(
-                                        Box::new(AssigneeExpr::UnderscoreExpr(UnderscoreExpr {
-                                            underscore: Identifier::from("_"),
-                                            span: s.assignee_opt.clone().unwrap().span(),
-                                        })),
-                                    )))
-                                } else {
-                                    None
-                                }
-                            },
+                            // data: {
+                            //     if s.assignee_opt.is_some() {
+                            //         Some(Expression::from(*s.assignee_opt.clone().unwrap_or(
+                            //             Box::new(AssigneeExpr::UnderscoreExpr(UnderscoreExpr {
+                            //                 underscore: Identifier::from("_"),
+                            //                 span: s.assignee_opt.clone().unwrap().span(),
+                            //             })),
+                            //         )))
+                            //     } else {
+                            //         None
+                            //     }
+                            // },
                         },
                     )?;
                 }
@@ -738,14 +738,14 @@ impl SemanticAnalyser {
                     ty => Symbol::Variable {
                         name: param.param_name(),
                         var_type: ty,
-                        data: {
-                            // HERE IS THE PROBLEM!!!
-                            if f.block_opt.is_some() {
-                                Some(Expression::Block(f.block_opt.clone().unwrap()))
-                            } else {
-                                None
-                            }
-                        },
+                        // data: {
+                        //     // HERE IS THE PROBLEM!!!
+                        //     if f.block_opt.is_some() {
+                        //         Some(Expression::Block(f.block_opt.clone().unwrap()))
+                        //     } else {
+                        //         None
+                        //     }
+                        // },
                     },
                 };
 
@@ -1024,92 +1024,98 @@ impl SemanticAnalyser {
                         }
                     }
 
-                    Some(Symbol::Variable {
-                        name,
-                        var_type,
-                        data,
-                        ..
-                    }) => {
-                        if let Some(d) = data {
-                            match var_type {
-                                // Type::Vec { .. } => match d {
-                                //     Expression::Array(a) => {
-                                //         self.analyse_expr(&Expression::Array(a.clone()), root)?;
+                    // Some(Symbol::Variable {
+                    //     name,
+                    //     var_type,
+                    //     // data,
+                    //     ..
+                    // }) => {
+                    //     // if let Some(d) = data {
+                    //     match var_type {
+                    //         // Type::Vec { .. } => match d {
+                    //         //     Expression::Array(a) => {
+                    //         //         self.analyse_expr(&Expression::Array(a.clone()), root)?;
 
-                                //         self.analyse_vec_method(mc, &a, root)
-                                //     }
-                                //     ref expr => {
-                                //         println!("vector type expression: {expr:?}");
+                    //         //         self.analyse_vec_method(mc, &a, root)
+                    //         //     }
+                    //         //     ref expr => {
+                    //         //         println!("vector type expression: {expr:?}");
 
-                                //         Err(SemanticErrorKind::UnexpectedType {
-                                //             expected: "array".to_string(),
-                                //             found: self.analyse_expr(&d, root)?.to_string(),
-                                //         })
-                                //     }
-                                // },
-                                Type::Mapping { .. } => match d {
-                                    Expression::Mapping(m) => {
-                                        self.analyse_expr(&Expression::Mapping(m.clone()), root)?;
+                    //         //         Err(SemanticErrorKind::UnexpectedType {
+                    //         //             expected: "array".to_string(),
+                    //         //             found: self.analyse_expr(&d, root)?.to_string(),
+                    //         //         })
+                    //         //     }
+                    //         // },
+                    //         // Type::Mapping { .. } => match d {
+                    //         //     Expression::Mapping(m) => {
+                    //         //         self.analyse_expr(&Expression::Mapping(m.clone()), root)?;
 
-                                        self.analyse_mapping_method(mc, m.to_hashmap(), root)
-                                    }
-                                    _ => Err(SemanticErrorKind::UnexpectedType {
-                                        expected: "`Mapping`".to_string(),
-                                        found: self.analyse_expr(&d, root)?.to_string(),
-                                    }),
-                                },
-                                Type::Option { .. } => match d {
-                                    Expression::SomeExpr(s) => {
-                                        self.analyse_option_method(mc, &s, root)
-                                    }
-                                    Expression::NoneExpr(_) => Ok(Type::Option {
-                                        inner_type: Box::new(Type::UnitType(Unit)),
-                                    }),
-                                    _ => Err(SemanticErrorKind::UnexpectedType {
-                                        expected: "`Option`".to_string(),
-                                        found: self.analyse_expr(&d, root)?.to_string(),
-                                    }),
-                                },
-                                Type::Result { .. } => match d {
-                                    Expression::ResultExpr(r) => {
-                                        self.analyse_result_method(mc, &r, root)
-                                    }
-                                    _ => Err(SemanticErrorKind::UnexpectedType {
-                                        expected: "`Result`".to_string(),
-                                        found: self.analyse_expr(&d, root)?.to_string(),
-                                    }),
-                                },
-                                Type::UserDefined(t) => match self.lookup(&TypePath::from(name)) {
-                                    Some(sym) => {
-                                        if let Symbol::Struct { .. } | Symbol::TupleStruct { .. } =
-                                            sym
-                                        {
-                                            Ok(Type::UserDefined(t))
-                                        } else {
-                                            Err(SemanticErrorKind::UnexpectedType {
-                                                expected: "struct".to_string(),
-                                                found: format!(
-                                                    "`{}`",
-                                                    self.analyse_expr(&d, root)?
-                                                ),
-                                            })
-                                        }
-                                    }
-                                    _ => Err(SemanticErrorKind::MissingValue {
-                                        expected: "struct".to_string(),
-                                    }),
-                                },
-                                _ => Err(SemanticErrorKind::UnexpectedType {
-                                    expected: "`Mapping, `Option`, `Result` or struct".to_string(),
-                                    found: self.analyse_expr(&d, root)?.to_string(),
-                                }),
-                            }
-                        } else {
-                            Err(SemanticErrorKind::MissingValue {
-                                expected: "variable data".to_string(),
-                            })
-                        }
-                    }
+                    //         //         self.analyse_mapping_method(mc, m.to_hashmap(), root)
+                    //         //     }
+                    //         //     _ => Err(SemanticErrorKind::UnexpectedType {
+                    //         //         expected: "`Mapping`".to_string(),
+                    //         //         found: self.analyse_expr(&d, root)?.to_string(),
+                    //         //     }),
+                    //         // },
+                    //         Type::Mapping { .. } => {
+                    //             self.analyse_mapping_method(mc, m.to_hashmap(), root)
+                    //         }
+
+                    //         // Type::Option { .. } => match d {
+                    //         //     Expression::SomeExpr(s) => self.analyse_option_method(mc, &s, root),
+                    //         //     Expression::NoneExpr(_) => Ok(Type::Option {
+                    //         //         inner_type: Box::new(Type::UnitType(Unit)),
+                    //         //     }),
+                    //         //     _ => Err(SemanticErrorKind::UnexpectedType {
+                    //         //         expected: "`Option`".to_string(),
+                    //         //         found: self.analyse_expr(&d, root)?.to_string(),
+                    //         //     }),
+                    //         // },
+                    //         Type::Option { .. } => self.analyse_option_method(mc, &s, root),
+
+                    //         // Type::Result { .. } => match d {
+                    //         //     Expression::ResultExpr(r) => {
+                    //         //         self.analyse_result_method(mc, &r, root)
+                    //         //     }
+                    //         //     _ => Err(SemanticErrorKind::UnexpectedType {
+                    //         //         expected: "`Result`".to_string(),
+                    //         //         found: self.analyse_expr(&d, root)?.to_string(),
+                    //         //     }),
+                    //         // },
+                    //         Type::Result { .. } => self.analyse_result_method(mc, &r, root),
+
+                    //         // Type::UserDefined(t) => match self.lookup(&TypePath::from(name)) {
+                    //         //     Some(sym) => {
+                    //         //         if let Symbol::Struct { .. } | Symbol::TupleStruct { .. } = sym
+                    //         //         {
+                    //         //             Ok(Type::UserDefined(t))
+                    //         //         } else {
+                    //         //             Err(SemanticErrorKind::UnexpectedType {
+                    //         //                 expected: "struct".to_string(),
+                    //         //                 found: format!("`{}`", self.analyse_expr(&d, root)?),
+                    //         //             })
+                    //         //         }
+                    //         //     }
+                    //         //     _ => Err(SemanticErrorKind::MissingValue {
+                    //         //         expected: "struct".to_string(),
+                    //         //     }),
+                    //         // },
+                    //         // _ => Err(SemanticErrorKind::UnexpectedType {
+                    //         //     expected: "`Mapping, `Option`, `Result` or struct".to_string(),
+                    //         //     found: self.analyse_expr(&d, root)?.to_string(),
+                    //         // }),
+                    //         _ => Err(SemanticErrorKind::UnexpectedType {
+                    //             expected: "`Mapping, `Option`, `Result` or struct".to_string(),
+                    //             found: var_type.to_string(),
+                    //         }),
+                    //     }
+                        // } else {
+                        // Err(SemanticErrorKind::MissingValue {
+                        // expected: "variable data".to_string(),
+                        // })
+                        // }
+                    // }
 
                     None => Err(SemanticErrorKind::UndefinedType {
                         name: receiver_path.type_name,
@@ -1907,7 +1913,7 @@ impl SemanticAnalyser {
                             Symbol::Variable {
                                 name: param.param_name(),
                                 var_type: param_type,
-                                data: Some(Expression::Closure(c.clone())),
+                                // data: Some(Expression::Closure(c.clone())),
                             },
                         )?;
                     }
@@ -2305,7 +2311,7 @@ impl SemanticAnalyser {
                         Symbol::Variable {
                             name: id.name,
                             var_type: element_type,
-                            data: None,
+                            // data: None,
                         },
                     )?;
                 }
