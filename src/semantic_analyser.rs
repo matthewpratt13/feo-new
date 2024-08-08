@@ -1198,7 +1198,7 @@ impl SemanticAnalyser {
 
             Expression::Index(i) => {
                 let collection_type =
-                    self.analyse_expr(&wrap_into_expression(*i.collection.clone()), root)?;
+                    self.analyse_expr(&wrap_into_expression(*i.array.clone()), root)?;
 
                 let index_type =
                     self.analyse_expr(&wrap_into_expression(*i.index.clone()), root)?;
