@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 mod symbol_table;
 
 #[cfg(test)]
@@ -12,12 +10,11 @@ use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 
 use crate::{
     ast::{
-        AssigneeExpr, BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float,
-        FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportDecl,
-        InferredType, InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt, MethodCallExpr,
-        ModuleItem, NoneExpr, NonePatt, PathExpr, PathRoot, Pattern, ResultExpr, SelfType,
-        SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, TypePath, UInt, UnaryOp,
-        UnderscoreExpr, Unit, Visibility,
+        BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
+        FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportDecl, InferredType,
+        InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt, ModuleItem, PathExpr, PathRoot,
+        Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type, TypePath, UInt,
+        UnaryOp, Unit, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -26,6 +23,7 @@ use crate::{
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
+#[allow(dead_code)]
 struct SemanticAnalyser {
     scope_stack: Vec<Scope>,
     module_registry: HashMap<TypePath, SymbolTable>,
@@ -33,6 +31,7 @@ struct SemanticAnalyser {
     logger: Logger,
 }
 
+#[allow(dead_code)]
 impl SemanticAnalyser {
     pub(crate) fn new(log_level: LogLevel, external_code: Option<SymbolTable>) -> Self {
         let mut logger = Logger::new(log_level);
@@ -290,7 +289,6 @@ impl SemanticAnalyser {
                     | Type::Result { .. } => Symbol::Variable {
                         name: ls.assignee.name.clone(),
                         var_type: value_type.clone(),
-                        // data: ls.value_opt.clone(),
                     },
                     Type::UserDefined(tp) => {
                         let type_path = self.check_path(tp, root, String::from("type"))?;
@@ -300,7 +298,6 @@ impl SemanticAnalyser {
                             _ => Symbol::Variable {
                                 name: ls.assignee.name.clone(),
                                 var_type: value_type,
-                                // data: ls.value_opt.clone(),
                             },
                         }
                     }
@@ -402,18 +399,6 @@ impl SemanticAnalyser {
                         Symbol::Variable {
                             name: s.var_name.clone(),
                             var_type: s.var_type.clone(),
-                            // data: {
-                            //     if s.assignee_opt.is_some() {
-                            //         Some(Expression::from(*s.assignee_opt.clone().unwrap_or(
-                            //             Box::new(AssigneeExpr::UnderscoreExpr(UnderscoreExpr {
-                            //                 underscore: Identifier::from("_"),
-                            //                 span: s.assignee_opt.clone().unwrap().span(),
-                            //             })),
-                            //         )))
-                            //     } else {
-                            //         None
-                            //     }
-                            // },
                         },
                     )?;
                 }
@@ -738,14 +723,6 @@ impl SemanticAnalyser {
                     ty => Symbol::Variable {
                         name: param.param_name(),
                         var_type: ty,
-                        // data: {
-                        //     // HERE IS THE PROBLEM!!!
-                        //     if f.block_opt.is_some() {
-                        //         Some(Expression::Block(f.block_opt.clone().unwrap()))
-                        //     } else {
-                        //         None
-                        //     }
-                        // },
                     },
                 };
 
@@ -1023,99 +1000,6 @@ impl SemanticAnalyser {
                             })
                         }
                     }
-
-                    // Some(Symbol::Variable {
-                    //     name,
-                    //     var_type,
-                    //     // data,
-                    //     ..
-                    // }) => {
-                    //     // if let Some(d) = data {
-                    //     match var_type {
-                    //         // Type::Vec { .. } => match d {
-                    //         //     Expression::Array(a) => {
-                    //         //         self.analyse_expr(&Expression::Array(a.clone()), root)?;
-
-                    //         //         self.analyse_vec_method(mc, &a, root)
-                    //         //     }
-                    //         //     ref expr => {
-                    //         //         println!("vector type expression: {expr:?}");
-
-                    //         //         Err(SemanticErrorKind::UnexpectedType {
-                    //         //             expected: "array".to_string(),
-                    //         //             found: self.analyse_expr(&d, root)?.to_string(),
-                    //         //         })
-                    //         //     }
-                    //         // },
-                    //         // Type::Mapping { .. } => match d {
-                    //         //     Expression::Mapping(m) => {
-                    //         //         self.analyse_expr(&Expression::Mapping(m.clone()), root)?;
-
-                    //         //         self.analyse_mapping_method(mc, m.to_hashmap(), root)
-                    //         //     }
-                    //         //     _ => Err(SemanticErrorKind::UnexpectedType {
-                    //         //         expected: "`Mapping`".to_string(),
-                    //         //         found: self.analyse_expr(&d, root)?.to_string(),
-                    //         //     }),
-                    //         // },
-                    //         Type::Mapping { .. } => {
-                    //             self.analyse_mapping_method(mc, m.to_hashmap(), root)
-                    //         }
-
-                    //         // Type::Option { .. } => match d {
-                    //         //     Expression::SomeExpr(s) => self.analyse_option_method(mc, &s, root),
-                    //         //     Expression::NoneExpr(_) => Ok(Type::Option {
-                    //         //         inner_type: Box::new(Type::UnitType(Unit)),
-                    //         //     }),
-                    //         //     _ => Err(SemanticErrorKind::UnexpectedType {
-                    //         //         expected: "`Option`".to_string(),
-                    //         //         found: self.analyse_expr(&d, root)?.to_string(),
-                    //         //     }),
-                    //         // },
-                    //         Type::Option { .. } => self.analyse_option_method(mc, &s, root),
-
-                    //         // Type::Result { .. } => match d {
-                    //         //     Expression::ResultExpr(r) => {
-                    //         //         self.analyse_result_method(mc, &r, root)
-                    //         //     }
-                    //         //     _ => Err(SemanticErrorKind::UnexpectedType {
-                    //         //         expected: "`Result`".to_string(),
-                    //         //         found: self.analyse_expr(&d, root)?.to_string(),
-                    //         //     }),
-                    //         // },
-                    //         Type::Result { .. } => self.analyse_result_method(mc, &r, root),
-
-                    //         // Type::UserDefined(t) => match self.lookup(&TypePath::from(name)) {
-                    //         //     Some(sym) => {
-                    //         //         if let Symbol::Struct { .. } | Symbol::TupleStruct { .. } = sym
-                    //         //         {
-                    //         //             Ok(Type::UserDefined(t))
-                    //         //         } else {
-                    //         //             Err(SemanticErrorKind::UnexpectedType {
-                    //         //                 expected: "struct".to_string(),
-                    //         //                 found: format!("`{}`", self.analyse_expr(&d, root)?),
-                    //         //             })
-                    //         //         }
-                    //         //     }
-                    //         //     _ => Err(SemanticErrorKind::MissingValue {
-                    //         //         expected: "struct".to_string(),
-                    //         //     }),
-                    //         // },
-                    //         // _ => Err(SemanticErrorKind::UnexpectedType {
-                    //         //     expected: "`Mapping, `Option`, `Result` or struct".to_string(),
-                    //         //     found: self.analyse_expr(&d, root)?.to_string(),
-                    //         // }),
-                    //         _ => Err(SemanticErrorKind::UnexpectedType {
-                    //             expected: "`Mapping, `Option`, `Result` or struct".to_string(),
-                    //             found: var_type.to_string(),
-                    //         }),
-                    //     }
-                        // } else {
-                        // Err(SemanticErrorKind::MissingValue {
-                        // expected: "variable data".to_string(),
-                        // })
-                        // }
-                    // }
 
                     None => Err(SemanticErrorKind::UndefinedType {
                         name: receiver_path.type_name,
@@ -1913,7 +1797,6 @@ impl SemanticAnalyser {
                             Symbol::Variable {
                                 name: param.param_name(),
                                 var_type: param_type,
-                                // data: Some(Expression::Closure(c.clone())),
                             },
                         )?;
                     }
@@ -2311,7 +2194,6 @@ impl SemanticAnalyser {
                         Symbol::Variable {
                             name: id.name,
                             var_type: element_type,
-                            // data: None,
                         },
                     )?;
                 }
@@ -2508,275 +2390,6 @@ impl SemanticAnalyser {
                 expected: "function".to_string(),
                 found: sym.to_string(),
             }),
-        }
-    }
-
-    // TODO: for the following four methods, if the method call is the last statement in a block,
-    // TODO: there should not be a trailing semicolon
-
-    // fn analyse_vec_method(
-    //     &mut self,
-    //     method_call_expr: &MethodCallExpr,
-    //     array: &ArrayExpr,
-    //     root: &TypePath,
-    // ) -> Result<Type, SemanticErrorKind> {
-    //     if Identifier::from("get") == method_call_expr.method_name
-    //         || Identifier::from("remove") == method_call_expr.method_name
-    //     {
-    //         if let Some(args) = &method_call_expr.args_opt {
-    //             if args.len() == 1 {
-    //                 let expr = args
-    //                     .get(0)
-    //                     .cloned()
-    //                     .unwrap_or(Expression::NoneExpr(NoneExpr {
-    //                         kw_none: Keyword::None,
-    //                         span: Span::default(),
-    //                     }));
-
-    //                 let index = if let Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) =
-    //                     self.analyse_expr(&expr, root)?
-    //                 {
-    //                     match expr {
-    //                         Expression::Literal(ref l) => match l {
-    //                             Literal::UInt { value, .. } => value,
-    //                             _ => {
-    //                                 return Err(SemanticErrorKind::TypeMismatchValues {
-    //                                     expected: "unsigned integer".to_string(),
-    //                                     found: self.analyse_expr(&expr, root)?.to_string(),
-    //                                 })
-    //                             }
-    //                         },
-    //                         _ => {
-    //                             return Err(SemanticErrorKind::UnexpectedExpression {
-    //                                 expected: "unsigned integer literal expression".to_string(),
-    //                                 found: expr.to_string(),
-    //                             })
-    //                         }
-    //                     }
-    //                 } else {
-    //                     return Err(SemanticErrorKind::TypeMismatchValues {
-    //                         expected: "unsigned integer".to_string(),
-    //                         found: self.analyse_expr(&expr, root)?.to_string(),
-    //                     });
-    //                 };
-
-    //                 let array = if let Some(elements) = array.elements_opt.clone() {
-    //                     elements
-    //                 } else {
-    //                     Vec::new()
-    //                 };
-
-    //                 if let Some(elem) = array.get(index.to_usize()) {
-    //                     if method_call_expr.method_name == Identifier::from("remove") {
-    //                         self.analyse_expr(elem, root)
-    //                     } else {
-    //                         Ok(Type::Option {
-    //                             inner_type: Box::new(self.analyse_expr(elem, root)?),
-    //                         })
-    //                     }
-    //                 } else {
-    //                     Err(SemanticErrorKind::MissingValue {
-    //                         expected: format!("element at index: {}", index),
-    //                     })
-    //                 }
-    //             } else {
-    //                 Err(SemanticErrorKind::ArgumentCountMismatch {
-    //                     name: method_call_expr.method_name.clone(),
-    //                     expected: 1,
-    //                     found: args.len(),
-    //                 })
-    //             }
-    //         } else {
-    //             Err(SemanticErrorKind::MissingValue {
-    //                 expected: "function argument".to_string(),
-    //             })
-    //         }
-    //     } else if Identifier::from("pop") == method_call_expr.method_name
-    //         || Identifier::from("last") == method_call_expr.method_name
-    //     {
-    //         if let Some(args) = &method_call_expr.args_opt {
-    //             return Err(SemanticErrorKind::ArgumentCountMismatch {
-    //                 name: method_call_expr.method_name.clone(),
-    //                 expected: 0,
-    //                 found: args.len(),
-    //             });
-    //         }
-
-    //         if let Some(elements) = &array.elements_opt {
-    //             if let Some(elem) = elements.last() {
-    //                 Ok(Type::Option {
-    //                     inner_type: Box::new(self.analyse_expr(elem, root)?),
-    //                 })
-    //             } else {
-    //                 Err(SemanticErrorKind::MissingValue {
-    //                     expected: "final array element".to_string(),
-    //                 })
-    //             }
-    //         } else {
-    //             Err(SemanticErrorKind::MissingValue {
-    //                 expected: "array elements".to_string(),
-    //             })
-    //         }
-    //     } else {
-    //         Err(SemanticErrorKind::UndefinedFunction {
-    //             name: method_call_expr.method_name.clone(),
-    //         })
-    //     }
-    // }
-
-    // type-check values taken / produced by method calls (i.e., return values)
-    fn analyse_mapping_method(
-        &mut self,
-        method_call_expr: &MethodCallExpr,
-        mapping: HashMap<Pattern, Expression>,
-        root: &TypePath,
-    ) -> Result<Type, SemanticErrorKind> {
-        if Identifier::from("get") == method_call_expr.method_name
-            || Identifier::from("remove") == method_call_expr.method_name
-        {
-            if let Some(args) = &method_call_expr.args_opt {
-                if args.len() == 1 {
-                    let key = Pattern::try_from(args.get(0).unwrap().clone()).unwrap_or(
-                        Pattern::NonePatt(NonePatt {
-                            kw_none: Keyword::None,
-                        }),
-                    );
-
-                    if let Some(val) = mapping.get(&key) {
-                        Ok(Type::Option {
-                            inner_type: Box::new(self.analyse_expr(val, root)?),
-                        })
-                    } else {
-                        Err(SemanticErrorKind::MissingValue {
-                            expected: format!("value to match key: `{}`", key),
-                        })
-                    }
-                } else {
-                    Err(SemanticErrorKind::ArgumentCountMismatch {
-                        name: method_call_expr.method_name.clone(),
-                        expected: 1,
-                        found: args.len(),
-                    })
-                }
-            } else {
-                Err(SemanticErrorKind::MissingValue {
-                    expected: "key".to_string(),
-                })
-            }
-        } else {
-            Err(SemanticErrorKind::UndefinedFunction {
-                name: method_call_expr.method_name.clone(),
-            })
-        }
-    }
-
-    fn analyse_option_method(
-        &mut self,
-        method_call_expr: &MethodCallExpr,
-        option: &SomeExpr,
-        root: &TypePath,
-    ) -> Result<Type, SemanticErrorKind> {
-        if Identifier::from("unwrap") == method_call_expr.method_name {
-            if let Some(args) = &method_call_expr.args_opt {
-                return Err(SemanticErrorKind::ArgumentCountMismatch {
-                    name: method_call_expr.method_name.clone(),
-                    expected: 0,
-                    found: args.len(),
-                });
-            }
-
-            self.analyse_expr(&Expression::SomeExpr(option.clone()), root)
-        } else if Identifier::from("expect") == method_call_expr.method_name {
-            if let Some(args) = &method_call_expr.args_opt {
-                if args.len() == 1 {
-                    let expr = args
-                        .get(0)
-                        .cloned()
-                        .unwrap_or(Expression::NoneExpr(NoneExpr {
-                            kw_none: Keyword::None,
-                            span: Span::default(),
-                        }));
-
-                    if let Type::Str { .. } = self.analyse_expr(&expr, root)? {
-                        self.analyse_expr(&Expression::SomeExpr(option.clone()), root)
-                    } else {
-                        Err(SemanticErrorKind::TypeMismatchArgument {
-                            name: Identifier::from("msg"),
-                            expected: "str".to_string(),
-                            found: self.analyse_expr(&expr, root)?.to_string(),
-                        })
-                    }
-                } else {
-                    Err(SemanticErrorKind::ArgumentCountMismatch {
-                        name: method_call_expr.method_name.clone(),
-                        expected: 1,
-                        found: args.len(),
-                    })
-                }
-            } else {
-                Err(SemanticErrorKind::MissingValue {
-                    expected: "error message".to_string(),
-                })
-            }
-        } else {
-            Err(SemanticErrorKind::UndefinedFunction {
-                name: method_call_expr.method_name.clone(),
-            })
-        }
-    }
-
-    fn analyse_result_method(
-        &mut self,
-        method_call_expr: &MethodCallExpr,
-        result: &ResultExpr,
-        root: &TypePath,
-    ) -> Result<Type, SemanticErrorKind> {
-        if Identifier::from("unwrap") == method_call_expr.method_name {
-            if let Some(args) = &method_call_expr.args_opt {
-                return Err(SemanticErrorKind::ArgumentCountMismatch {
-                    name: method_call_expr.method_name.clone(),
-                    expected: 0,
-                    found: args.len(),
-                });
-            }
-
-            self.analyse_expr(&Expression::ResultExpr(result.clone()), root)
-        } else if Identifier::from("expect") == method_call_expr.method_name {
-            if let Some(args) = &method_call_expr.args_opt {
-                if args.len() == 1 {
-                    let expr = args
-                        .get(0)
-                        .cloned()
-                        .unwrap_or(Expression::NoneExpr(NoneExpr {
-                            kw_none: Keyword::None,
-                            span: Span::default(),
-                        }));
-
-                    if let Type::Str { .. } = self.analyse_expr(&expr, root)? {
-                        self.analyse_expr(&Expression::ResultExpr(result.clone()), root)
-                    } else {
-                        Err(SemanticErrorKind::TypeMismatchArgument {
-                            name: Identifier::from("msg"),
-                            expected: "str".to_string(),
-                            found: self.analyse_expr(&expr, root)?.to_string(),
-                        })
-                    }
-                } else {
-                    Err(SemanticErrorKind::ArgumentCountMismatch {
-                        name: method_call_expr.method_name.clone(),
-                        expected: 1,
-                        found: args.len(),
-                    })
-                }
-            } else {
-                Err(SemanticErrorKind::MissingValue {
-                    expected: "error message".to_string(),
-                })
-            }
-        } else {
-            Err(SemanticErrorKind::UndefinedFunction {
-                name: method_call_expr.method_name.clone(),
-            })
         }
     }
 

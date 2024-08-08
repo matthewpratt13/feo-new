@@ -1,8 +1,7 @@
 use core::fmt;
-use std::collections::HashMap;
 
 use crate::{
-    ast::{Delimiter, Expression, MappingExpr, MappingPair, Pattern},
+    ast::{Delimiter, MappingExpr, MappingPair},
     error::ErrorsEmitted,
     parser::{collection, ParseConstructExpr, Parser, Precedence},
     token::Token,
@@ -47,20 +46,6 @@ impl fmt::Debug for MappingExpr {
         f.debug_struct("MappingExpr")
             .field("pairs_opt", &self.pairs_opt)
             .finish()
-    }
-}
-
-impl MappingExpr {
-    pub(crate) fn to_hashmap(&self) -> HashMap<Pattern, Expression> {
-        let mut data: HashMap<Pattern, Expression> = HashMap::new();
-
-        if let Some(v) = &self.pairs_opt {
-            for p in v {
-                data.insert(p.k.clone(), *p.v.clone());
-            }
-        }
-
-        data
     }
 }
 

@@ -2,8 +2,8 @@ use core::fmt;
 use std::collections::HashMap;
 
 use crate::ast::{
-    EnumDef, Expression, FunctionItem, Identifier, ModuleItem, StructDef, TraitDef, TupleStructDef,
-    Type, TypePath, Unit, Visibility,
+    EnumDef, FunctionItem, Identifier, ModuleItem, StructDef, TraitDef, TupleStructDef, Type,
+    TypePath, Unit, Visibility,
 };
 
 pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
@@ -25,7 +25,6 @@ pub(crate) enum Symbol {
     Variable {
         name: Identifier,
         var_type: Type,
-        // data: Option<Expression>,
     },
     Struct {
         path: TypePath,
@@ -87,22 +86,6 @@ impl Symbol {
                 None => Type::UnitType(Unit),
             },
             Symbol::Module { .. } => Type::UnitType(Unit),
-        }
-    }
-
-    pub(crate) fn visibility(&self) -> Visibility {
-        match self.clone() {
-            Symbol::Variable { .. } => Visibility::Private,
-            Symbol::Struct { struct_def, .. } => struct_def.visibility,
-            Symbol::TupleStruct {
-                tuple_struct_def, ..
-            } => tuple_struct_def.visibility,
-            Symbol::Enum { enum_def, .. } => enum_def.visibility,
-            Symbol::Trait { trait_def, .. } => trait_def.visibility,
-            Symbol::Alias { visibility, .. } => visibility,
-            Symbol::Constant { visibility, .. } => visibility,
-            Symbol::Function { function, .. } => function.visibility,
-            Symbol::Module { .. } => Visibility::Private,
         }
     }
 }
