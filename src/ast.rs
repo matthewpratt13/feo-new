@@ -4,12 +4,19 @@
 //! within those nodes. The primary nodes are `Expression`, `Item` and `Statement`.
 
 mod expression;
-mod item;
-mod pattern;
-mod statement;
-mod types;
+pub(crate) use expression::*;
 
-pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*};
+mod item;
+pub(crate) use item::*;
+
+mod pattern;
+pub(crate) use pattern::*;
+
+mod statement;
+pub(crate) use statement::*;
+
+mod types;
+pub(crate) use types::*;
 
 use crate::{
     error::ParserErrorKind,

@@ -71,18 +71,21 @@ mod collection;
 mod expr;
 mod item;
 mod let_statement;
-mod parse;
-mod patt;
-mod precedence;
-pub(crate) mod test_utils;
-pub(crate) mod ty;
-mod visibility;
 
-pub(crate) use self::parse::{
+mod parse;
+pub(crate) use parse::{
     ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParsePattern, ParseSimpleExpr,
     ParseStatement,
 };
-pub(crate) use self::precedence::Precedence;
+
+mod patt;
+
+mod precedence;
+pub(crate) use precedence::Precedence;
+
+pub(crate) mod test_utils;
+pub(crate) mod ty;
+mod visibility;
 
 use crate::{
     ast::{

@@ -1,4 +1,5 @@
 mod type_path;
+pub(crate) use type_path::build_item_path;
 
 use super::{collection, Parser};
 
@@ -15,8 +16,6 @@ use crate::{
 };
 
 use core::fmt;
-
-pub(crate) use type_path::build_item_path;
 
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.

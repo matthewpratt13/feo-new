@@ -1,10 +1,11 @@
 mod lex_error;
-mod parser_error;
-mod semantic_error;
+pub(crate) use lex_error::LexErrorKind;
 
-pub(crate) use self::lex_error::LexErrorKind;
-pub(crate) use self::parser_error::ParserErrorKind;
-pub(crate) use self::semantic_error::SemanticErrorKind;
+mod parser_error;
+pub(crate) use parser_error::ParserErrorKind;
+
+mod semantic_error;
+pub(crate) use semantic_error::SemanticErrorKind;
 
 use crate::span::Position;
 
