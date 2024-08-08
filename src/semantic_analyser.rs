@@ -928,40 +928,40 @@ impl SemanticAnalyser {
             }
 
             Expression::Literal(l) => match l {
-                Literal::IntLit { value, .. } => match value {
+                Literal::Int { value, .. } => match value {
                     IntType::I32(_) => Ok(Type::I32(IntType::I32(i32::default()))),
                     IntType::I64(_) => Ok(Type::I64(IntType::I64(i64::default()))),
                 },
-                Literal::UIntLit { value, .. } => match value {
+                Literal::UInt { value, .. } => match value {
                     UIntType::U8(_) => Ok(Type::U8(UIntType::U8(u8::default()))),
                     UIntType::U16(_) => Ok(Type::U16(UIntType::U16(u16::default()))),
                     UIntType::U32(_) => Ok(Type::U32(UIntType::U32(u32::default()))),
                     UIntType::U64(_) => Ok(Type::U64(UIntType::U64(u64::default()))),
                 },
-                Literal::BigUIntLit { value, .. } => match value {
+                Literal::BigUInt { value, .. } => match value {
                     BigUIntType::U256(_) => Ok(Type::U256(BigUIntType::U256(U256::default()))),
                     BigUIntType::U512(_) => Ok(Type::U512(BigUIntType::U512(U512::default()))),
                 },
-                Literal::FloatLit { value, .. } => match value {
+                Literal::Float { value, .. } => match value {
                     FloatType::F32(_) => Ok(Type::F32(FloatType::F32(F32::default()))),
                     FloatType::F64(_) => Ok(Type::F64(FloatType::F64(F64::default()))),
                 },
-                Literal::ByteLit { .. } => Ok(Type::Byte(ByteType::from(u8::default()))),
-                Literal::BytesLit { value, .. } => match value {
+                Literal::Byte { .. } => Ok(Type::Byte(ByteType::from(u8::default()))),
+                Literal::Bytes { value, .. } => match value {
                     BytesType::B2(_) => Ok(Type::B2(BytesType::B2(B2::default()))),
                     BytesType::B4(_) => Ok(Type::B4(BytesType::B4(B4::default()))),
                     BytesType::B8(_) => Ok(Type::B8(BytesType::B8(B8::default()))),
                     BytesType::B16(_) => Ok(Type::B16(BytesType::B16(B16::default()))),
                     BytesType::B32(_) => Ok(Type::B32(BytesType::B32(B32::default()))),
                 },
-                Literal::HashLit { value, .. } => match value {
+                Literal::Hash { value, .. } => match value {
                     HashType::H160(_) => Ok(Type::H160(HashType::H160(H160::default()))),
                     HashType::H256(_) => Ok(Type::H256(HashType::H256(H256::default()))),
                     HashType::H512(_) => Ok(Type::H512(HashType::H512(H512::default()))),
                 },
-                Literal::StrLit { .. } => Ok(Type::Str(StrType::from(String::default().as_str()))),
-                Literal::CharLit { .. } => Ok(Type::Char(CharType::from(char::default()))),
-                Literal::BoolLit { .. } => Ok(Type::Bool(BoolType::from(bool::default()))),
+                Literal::Str { .. } => Ok(Type::Str(StrType::from(String::default().as_str()))),
+                Literal::Char { .. } => Ok(Type::Char(CharType::from(char::default()))),
+                Literal::Bool { .. } => Ok(Type::Bool(BoolType::from(bool::default()))),
             },
 
             Expression::MethodCall(mc) => {

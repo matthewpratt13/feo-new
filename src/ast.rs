@@ -25,31 +25,31 @@ use crate::{
 /// Enum representing the different literals used in AST nodes.
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub(crate) enum Literal {
-    IntLit { value: IntType, span: Span },
-    UIntLit { value: UIntType, span: Span },
-    BigUIntLit { value: BigUIntType, span: Span },
-    FloatLit { value: FloatType, span: Span },
-    ByteLit { value: ByteType, span: Span },
-    BytesLit { value: BytesType, span: Span },
-    HashLit { value: types::HashType, span: Span },
-    StrLit { value: StrType, span: Span },
-    CharLit { value: CharType, span: Span },
-    BoolLit { value: BoolType, span: Span },
+    Int { value: IntType, span: Span },
+    UInt { value: UIntType, span: Span },
+    BigUInt { value: BigUIntType, span: Span },
+    Float { value: FloatType, span: Span },
+    Byte { value: ByteType, span: Span },
+    Bytes { value: BytesType, span: Span },
+    Hash { value: HashType, span: Span },
+    Str { value: StrType, span: Span },
+    Char { value: CharType, span: Span },
+    Bool { value: BoolType, span: Span },
 }
 
 impl Spanned for Literal {
     fn span(&self) -> Span {
         match self.clone() {
-            Literal::IntLit { span, .. } => span,
-            Literal::UIntLit { span, .. } => span,
-            Literal::BigUIntLit { span, .. } => span,
-            Literal::FloatLit { span, .. } => span,
-            Literal::ByteLit { span, .. } => span,
-            Literal::BytesLit { span, .. } => span,
-            Literal::HashLit { span, .. } => span,
-            Literal::StrLit { span, .. } => span,
-            Literal::CharLit { span, .. } => span,
-            Literal::BoolLit { span, .. } => span,
+            Literal::Int { span, .. } => span,
+            Literal::UInt { span, .. } => span,
+            Literal::BigUInt { span, .. } => span,
+            Literal::Float { span, .. } => span,
+            Literal::Byte { span, .. } => span,
+            Literal::Bytes { span, .. } => span,
+            Literal::Hash { span, .. } => span,
+            Literal::Str { span, .. } => span,
+            Literal::Char { span, .. } => span,
+            Literal::Bool { span, .. } => span,
         }
     }
 }
@@ -57,16 +57,16 @@ impl Spanned for Literal {
 impl fmt::Display for Literal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Literal::IntLit { value, .. } => write!(f, "{}", value),
-            Literal::UIntLit { value, .. } => write!(f, "{}", value),
-            Literal::BigUIntLit { value, .. } => write!(f, "{}", value),
-            Literal::FloatLit { value, .. } => write!(f, "{}", value),
-            Literal::ByteLit { value, .. } => write!(f, "{}", value),
-            Literal::BytesLit { value, .. } => write!(f, "{}", value),
-            Literal::HashLit { value, .. } => write!(f, "{}", value),
-            Literal::StrLit { value, .. } => write!(f, "{}", value),
-            Literal::CharLit { value, .. } => write!(f, "{}", value),
-            Literal::BoolLit { value, .. } => write!(f, "{}", value),
+            Literal::Int { value, .. } => write!(f, "{}", value),
+            Literal::UInt { value, .. } => write!(f, "{}", value),
+            Literal::BigUInt { value, .. } => write!(f, "{}", value),
+            Literal::Float { value, .. } => write!(f, "{}", value),
+            Literal::Byte { value, .. } => write!(f, "{}", value),
+            Literal::Bytes { value, .. } => write!(f, "{}", value),
+            Literal::Hash { value, .. } => write!(f, "{}", value),
+            Literal::Str { value, .. } => write!(f, "{}", value),
+            Literal::Char { value, .. } => write!(f, "{}", value),
+            Literal::Bool { value, .. } => write!(f, "{}", value),
         }
     }
 }
@@ -74,18 +74,16 @@ impl fmt::Display for Literal {
 impl fmt::Debug for Literal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::IntLit { value, .. } => f.debug_struct("Int").field("value", value).finish(),
-            Self::UIntLit { value, .. } => f.debug_struct("UInt").field("value", value).finish(),
-            Self::BigUIntLit { value, .. } => {
-                f.debug_struct("BigUInt").field("value", value).finish()
-            }
-            Self::FloatLit { value, .. } => f.debug_struct("Float").field("value", value).finish(),
-            Self::ByteLit { value, .. } => f.debug_struct("Byte").field("value", value).finish(),
-            Self::BytesLit { value, .. } => f.debug_struct("Bytes").field("value", value).finish(),
-            Self::HashLit { value, .. } => f.debug_struct("Hash").field("value", value).finish(),
-            Self::StrLit { value, .. } => f.debug_struct("Str").field("value", value).finish(),
-            Self::CharLit { value, .. } => f.debug_struct("Char").field("value", value).finish(),
-            Self::BoolLit { value, .. } => f.debug_struct("Bool").field("value", value).finish(),
+            Self::Int { value, .. } => f.debug_struct("Int").field("value", value).finish(),
+            Self::UInt { value, .. } => f.debug_struct("UInt").field("value", value).finish(),
+            Self::BigUInt { value, .. } => f.debug_struct("BigUInt").field("value", value).finish(),
+            Self::Float { value, .. } => f.debug_struct("Float").field("value", value).finish(),
+            Self::Byte { value, .. } => f.debug_struct("Byte").field("value", value).finish(),
+            Self::Bytes { value, .. } => f.debug_struct("Bytes").field("value", value).finish(),
+            Self::Hash { value, .. } => f.debug_struct("Hash").field("value", value).finish(),
+            Self::Str { value, .. } => f.debug_struct("Str").field("value", value).finish(),
+            Self::Char { value, .. } => f.debug_struct("Char").field("value", value).finish(),
+            Self::Bool { value, .. } => f.debug_struct("Bool").field("value", value).finish(),
         }
     }
 }
@@ -976,9 +974,9 @@ pub(crate) enum Type {
     B8(BytesType),
     B16(BytesType),
     B32(BytesType),
-    H160(types::HashType),
-    H256(types::HashType),
-    H512(types::HashType),
+    H160(HashType),
+    H256(HashType),
+    H512(HashType),
     Str(StrType),
     Char(CharType),
     Bool(BoolType),

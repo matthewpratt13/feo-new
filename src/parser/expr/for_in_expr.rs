@@ -51,7 +51,7 @@ impl ParseControlExpr for ForInExpr {
 
         let iterator = match expression {
             Expression::Literal(l) => match l {
-                Literal::IntLit { .. } | Literal::UIntLit { .. } | Literal::BigUIntLit { .. } => {
+                Literal::Int { .. } | Literal::UInt { .. } | Literal::BigUInt { .. } => {
                     Ok(Box::new(Expression::Literal(l)))
                 }
                 _ => {

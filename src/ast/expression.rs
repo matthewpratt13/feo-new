@@ -445,13 +445,13 @@ impl fmt::Display for Expression {
                 f,
                 "{}{}{}",
                 rng.from_expr_opt
-                    .unwrap_or(Box::new(AssigneeExpr::Literal(Literal::IntLit {
+                    .unwrap_or(Box::new(AssigneeExpr::Literal(Literal::Int {
                         value: IntType::I64(i64::MIN),
                         span: rng.span.clone()
                     }))),
                 rng.range_op,
                 rng.to_expr_opt
-                    .unwrap_or(Box::new(AssigneeExpr::Literal(Literal::BigUIntLit {
+                    .unwrap_or(Box::new(AssigneeExpr::Literal(Literal::BigUInt {
                         value: BigUIntType::U512(U512::MAX),
                         span: rng.span
                     })))

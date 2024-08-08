@@ -86,16 +86,16 @@ pub(crate) enum LiteralPatt {
 impl From<Literal> for LiteralPatt {
     fn from(value: Literal) -> Self {
         match value {
-            Literal::IntLit { value, .. } => LiteralPatt::Int { value },
-            Literal::UIntLit { value, .. } => LiteralPatt::UInt { value },
-            Literal::BigUIntLit { value, .. } => LiteralPatt::BigUInt { value },
-            Literal::FloatLit { value, .. } => LiteralPatt::Float { value },
-            Literal::ByteLit { value, .. } => LiteralPatt::Byte { value },
-            Literal::BytesLit { value, .. } => LiteralPatt::Bytes { value },
-            Literal::HashLit { value, .. } => LiteralPatt::Hash { value },
-            Literal::StrLit { value, .. } => LiteralPatt::Str { value },
-            Literal::CharLit { value, .. } => LiteralPatt::Char { value },
-            Literal::BoolLit { value, .. } => LiteralPatt::Bool { value },
+            Literal::Int { value, .. } => LiteralPatt::Int { value },
+            Literal::UInt { value, .. } => LiteralPatt::UInt { value },
+            Literal::BigUInt { value, .. } => LiteralPatt::BigUInt { value },
+            Literal::Float { value, .. } => LiteralPatt::Float { value },
+            Literal::Byte { value, .. } => LiteralPatt::Byte { value },
+            Literal::Bytes { value, .. } => LiteralPatt::Bytes { value },
+            Literal::Hash { value, .. } => LiteralPatt::Hash { value },
+            Literal::Str { value, .. } => LiteralPatt::Str { value },
+            Literal::Char { value, .. } => LiteralPatt::Char { value },
+            Literal::Bool { value, .. } => LiteralPatt::Bool { value },
         }
     }
 }
