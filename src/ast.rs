@@ -918,7 +918,6 @@ pub(crate) enum Pattern {
     TuplePatt(TuplePatt),
     StructPatt(StructPatt),
     TupleStructPatt(TupleStructPatt),
-    MappingPatt(MappingPatt),
     WildcardPatt(WildcardPatt),
     RestPatt(RestPatt),
     SomePatt(SomePatt),

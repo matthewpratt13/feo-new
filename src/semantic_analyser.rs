@@ -3079,8 +3079,6 @@ impl SemanticAnalyser {
                 }
             }
 
-            Pattern::MappingPatt(m) => todo!(),
-
             Pattern::WildcardPatt(_) => Ok(Type::InferredType(InferredType {
                 name: Identifier::from("_"),
             })),

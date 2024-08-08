@@ -86,10 +86,10 @@ use crate::{
         ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter,
         DereferenceExpr, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
         Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
-        LiteralPatt, MappingExpr, MappingPatt, MatchExpr, MethodCallExpr, NoneExpr, NonePatt,
-        PathExpr, PathPatt, Pattern, RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferencePatt,
-        RestPatt, ResultExpr, ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr,
-        StructPatt, TupleExpr, TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr,
+        LiteralPatt, MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr,
+        PathPatt, Pattern, RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferencePatt, RestPatt,
+        ResultExpr, ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt,
+        TupleExpr, TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr,
         UnderscoreExpr, UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
@@ -1054,20 +1054,6 @@ impl Parser {
                     Ok(Pattern::GroupedPatt(patt))
                 }
             }
-
-            Some(Token::LBrace { .. }) => match self.peek_ahead_by(2) {
-                Some(Token::Colon { .. }) => {
-                    Ok(Pattern::MappingPatt(MappingPatt::parse_patt(self)?))
-                }
-                _ => match self.peek_ahead_by(1) {
-                    Some(Token::RBrace { .. }) => {
-                        Ok(Pattern::MappingPatt(MappingPatt::parse_patt(self)?))
-                    }
-                    _ => Err(self.log_error(ParserErrorKind::InvalidTokenContext {
-                        token: self.peek_ahead_by(1).cloned(),
-                    })),
-                },
-            },
 
             Some(Token::Identifier { name, .. }) => {
                 if name == "_" {

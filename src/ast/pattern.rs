@@ -134,11 +134,6 @@ impl fmt::Debug for LiteralPatt {
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct MappingPatt {
-    pub(crate) pairs: Vec<(Box<Pattern>, Box<Pattern>)>,
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct NonePatt {
     pub(crate) kw_none: Keyword,
 }
@@ -381,9 +376,6 @@ impl fmt::Display for Pattern {
                     ts.struct_path,
                     ts.struct_elements_opt.unwrap_or(Vec::new())
                 )
-            }
-            Pattern::MappingPatt(m) => {
-                write!(f, "{{ {:?} }}", m.pairs)
             }
             Pattern::WildcardPatt(_) => write!(f, "*"),
             Pattern::RestPatt(_) => write!(f, ".."),
