@@ -12,12 +12,12 @@ use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 
 use crate::{
     ast::{
-        ArrayExpr, AssigneeExpr, BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression,
-        Float, FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier,
-        ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt,
-        MethodCallExpr, ModuleItem, NoneExpr, NonePatt, PathExpr, PathRoot, Pattern, ResultExpr,
-        SelfType, SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, TypePath, UInt,
-        UnaryOp, UnderscoreExpr, Unit, Visibility,
+        AssigneeExpr, BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float,
+        FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Identifier, ImportDecl,
+        InferredType, InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt, MethodCallExpr,
+        ModuleItem, NoneExpr, NonePatt, PathExpr, PathRoot, Pattern, ResultExpr, SelfType,
+        SomeExpr, Statement, Str, TraitDefItem, TraitImplItem, Type, TypePath, UInt, UnaryOp,
+        UnderscoreExpr, Unit, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -1032,21 +1032,21 @@ impl SemanticAnalyser {
                     }) => {
                         if let Some(d) = data {
                             match var_type {
-                                Type::Vec { .. } => match d {
-                                    Expression::Array(a) => {
-                                        self.analyse_expr(&Expression::Array(a.clone()), root)?;
+                                // Type::Vec { .. } => match d {
+                                //     Expression::Array(a) => {
+                                //         self.analyse_expr(&Expression::Array(a.clone()), root)?;
 
-                                        self.analyse_vec_method(mc, &a, root)
-                                    }
-                                    ref expr => {
-                                        println!("vector type expression: {expr:?}");
+                                //         self.analyse_vec_method(mc, &a, root)
+                                //     }
+                                //     ref expr => {
+                                //         println!("vector type expression: {expr:?}");
 
-                                        Err(SemanticErrorKind::UnexpectedType {
-                                            expected: "array".to_string(),
-                                            found: self.analyse_expr(&d, root)?.to_string(),
-                                        })
-                                    }
-                                },
+                                //         Err(SemanticErrorKind::UnexpectedType {
+                                //             expected: "array".to_string(),
+                                //             found: self.analyse_expr(&d, root)?.to_string(),
+                                //         })
+                                //     }
+                                // },
                                 Type::Mapping { .. } => match d {
                                     Expression::Mapping(m) => {
                                         self.analyse_expr(&Expression::Mapping(m.clone()), root)?;
@@ -1100,8 +1100,7 @@ impl SemanticAnalyser {
                                     }),
                                 },
                                 _ => Err(SemanticErrorKind::UnexpectedType {
-                                    expected: "`Vec`, `Mapping, `Option`, `Result` or struct"
-                                        .to_string(),
+                                    expected: "`Mapping, `Option`, `Result` or struct".to_string(),
                                     found: self.analyse_expr(&d, root)?.to_string(),
                                 }),
                             }
@@ -2509,117 +2508,115 @@ impl SemanticAnalyser {
     // TODO: for the following four methods, if the method call is the last statement in a block,
     // TODO: there should not be a trailing semicolon
 
-    // NOTE!!! `Vec`, `Mapping`, `Result` and `Option` are technically objects that have methods
-    // fixed-sized arrays should not have methods as they are primitive types and not objects
-    fn analyse_vec_method(
-        &mut self,
-        method_call_expr: &MethodCallExpr,
-        array: &ArrayExpr,
-        root: &TypePath,
-    ) -> Result<Type, SemanticErrorKind> {
-        if Identifier::from("get") == method_call_expr.method_name
-            || Identifier::from("remove") == method_call_expr.method_name
-        {
-            if let Some(args) = &method_call_expr.args_opt {
-                if args.len() == 1 {
-                    let expr = args
-                        .get(0)
-                        .cloned()
-                        .unwrap_or(Expression::NoneExpr(NoneExpr {
-                            kw_none: Keyword::None,
-                            span: Span::default(),
-                        }));
+    // fn analyse_vec_method(
+    //     &mut self,
+    //     method_call_expr: &MethodCallExpr,
+    //     array: &ArrayExpr,
+    //     root: &TypePath,
+    // ) -> Result<Type, SemanticErrorKind> {
+    //     if Identifier::from("get") == method_call_expr.method_name
+    //         || Identifier::from("remove") == method_call_expr.method_name
+    //     {
+    //         if let Some(args) = &method_call_expr.args_opt {
+    //             if args.len() == 1 {
+    //                 let expr = args
+    //                     .get(0)
+    //                     .cloned()
+    //                     .unwrap_or(Expression::NoneExpr(NoneExpr {
+    //                         kw_none: Keyword::None,
+    //                         span: Span::default(),
+    //                     }));
 
-                    let index = if let Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) =
-                        self.analyse_expr(&expr, root)?
-                    {
-                        match expr {
-                            Expression::Literal(ref l) => match l {
-                                Literal::UInt { value, .. } => value,
-                                _ => {
-                                    return Err(SemanticErrorKind::TypeMismatchValues {
-                                        expected: "unsigned integer".to_string(),
-                                        found: self.analyse_expr(&expr, root)?.to_string(),
-                                    })
-                                }
-                            },
-                            _ => {
-                                return Err(SemanticErrorKind::UnexpectedExpression {
-                                    expected: "unsigned integer literal expression".to_string(),
-                                    found: expr.to_string(),
-                                })
-                            }
-                        }
-                    } else {
-                        return Err(SemanticErrorKind::TypeMismatchValues {
-                            expected: "unsigned integer".to_string(),
-                            found: self.analyse_expr(&expr, root)?.to_string(),
-                        });
-                    };
+    //                 let index = if let Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) =
+    //                     self.analyse_expr(&expr, root)?
+    //                 {
+    //                     match expr {
+    //                         Expression::Literal(ref l) => match l {
+    //                             Literal::UInt { value, .. } => value,
+    //                             _ => {
+    //                                 return Err(SemanticErrorKind::TypeMismatchValues {
+    //                                     expected: "unsigned integer".to_string(),
+    //                                     found: self.analyse_expr(&expr, root)?.to_string(),
+    //                                 })
+    //                             }
+    //                         },
+    //                         _ => {
+    //                             return Err(SemanticErrorKind::UnexpectedExpression {
+    //                                 expected: "unsigned integer literal expression".to_string(),
+    //                                 found: expr.to_string(),
+    //                             })
+    //                         }
+    //                     }
+    //                 } else {
+    //                     return Err(SemanticErrorKind::TypeMismatchValues {
+    //                         expected: "unsigned integer".to_string(),
+    //                         found: self.analyse_expr(&expr, root)?.to_string(),
+    //                     });
+    //                 };
 
-                    let array = if let Some(elements) = array.elements_opt.clone() {
-                        elements
-                    } else {
-                        Vec::new()
-                    };
+    //                 let array = if let Some(elements) = array.elements_opt.clone() {
+    //                     elements
+    //                 } else {
+    //                     Vec::new()
+    //                 };
 
-                    if let Some(elem) = array.get(index.to_usize()) {
-                        if method_call_expr.method_name == Identifier::from("remove") {
-                            self.analyse_expr(elem, root)
-                        } else {
-                            Ok(Type::Option {
-                                inner_type: Box::new(self.analyse_expr(elem, root)?),
-                            })
-                        }
-                    } else {
-                        Err(SemanticErrorKind::MissingValue {
-                            expected: format!("element at index: {}", index),
-                        })
-                    }
-                } else {
-                    Err(SemanticErrorKind::ArgumentCountMismatch {
-                        name: method_call_expr.method_name.clone(),
-                        expected: 1,
-                        found: args.len(),
-                    })
-                }
-            } else {
-                Err(SemanticErrorKind::MissingValue {
-                    expected: "function argument".to_string(),
-                })
-            }
-        } else if Identifier::from("pop") == method_call_expr.method_name
-            || Identifier::from("last") == method_call_expr.method_name
-        {
-            if let Some(args) = &method_call_expr.args_opt {
-                return Err(SemanticErrorKind::ArgumentCountMismatch {
-                    name: method_call_expr.method_name.clone(),
-                    expected: 0,
-                    found: args.len(),
-                });
-            }
+    //                 if let Some(elem) = array.get(index.to_usize()) {
+    //                     if method_call_expr.method_name == Identifier::from("remove") {
+    //                         self.analyse_expr(elem, root)
+    //                     } else {
+    //                         Ok(Type::Option {
+    //                             inner_type: Box::new(self.analyse_expr(elem, root)?),
+    //                         })
+    //                     }
+    //                 } else {
+    //                     Err(SemanticErrorKind::MissingValue {
+    //                         expected: format!("element at index: {}", index),
+    //                     })
+    //                 }
+    //             } else {
+    //                 Err(SemanticErrorKind::ArgumentCountMismatch {
+    //                     name: method_call_expr.method_name.clone(),
+    //                     expected: 1,
+    //                     found: args.len(),
+    //                 })
+    //             }
+    //         } else {
+    //             Err(SemanticErrorKind::MissingValue {
+    //                 expected: "function argument".to_string(),
+    //             })
+    //         }
+    //     } else if Identifier::from("pop") == method_call_expr.method_name
+    //         || Identifier::from("last") == method_call_expr.method_name
+    //     {
+    //         if let Some(args) = &method_call_expr.args_opt {
+    //             return Err(SemanticErrorKind::ArgumentCountMismatch {
+    //                 name: method_call_expr.method_name.clone(),
+    //                 expected: 0,
+    //                 found: args.len(),
+    //             });
+    //         }
 
-            if let Some(elements) = &array.elements_opt {
-                if let Some(elem) = elements.last() {
-                    Ok(Type::Option {
-                        inner_type: Box::new(self.analyse_expr(elem, root)?),
-                    })
-                } else {
-                    Err(SemanticErrorKind::MissingValue {
-                        expected: "final array element".to_string(),
-                    })
-                }
-            } else {
-                Err(SemanticErrorKind::MissingValue {
-                    expected: "array elements".to_string(),
-                })
-            }
-        } else {
-            Err(SemanticErrorKind::UndefinedFunction {
-                name: method_call_expr.method_name.clone(),
-            })
-        }
-    }
+    //         if let Some(elements) = &array.elements_opt {
+    //             if let Some(elem) = elements.last() {
+    //                 Ok(Type::Option {
+    //                     inner_type: Box::new(self.analyse_expr(elem, root)?),
+    //                 })
+    //             } else {
+    //                 Err(SemanticErrorKind::MissingValue {
+    //                     expected: "final array element".to_string(),
+    //                 })
+    //             }
+    //         } else {
+    //             Err(SemanticErrorKind::MissingValue {
+    //                 expected: "array elements".to_string(),
+    //             })
+    //         }
+    //     } else {
+    //         Err(SemanticErrorKind::UndefinedFunction {
+    //             name: method_call_expr.method_name.clone(),
+    //         })
+    //     }
+    // }
 
     // type-check values taken / produced by method calls (i.e., return values)
     fn analyse_mapping_method(
