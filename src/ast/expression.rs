@@ -1,13 +1,13 @@
-use core::fmt;
-
-use crate::span::{Span, Spanned};
-
 use super::{
     AssigneeExpr, AssignmentOp, BigUInt, BinaryOp, ComparisonOp, CompoundAssignmentOp,
     DereferenceOp, Expression, Identifier, IdentifierPatt, InnerAttr, Int, Keyword, Literal,
     OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType, Statement, Type, TypeCastOp, TypePath,
     UInt, UnaryOp, UnitType, UnwrapOp, ValueExpr, U512,
 };
+
+use crate::span::{Span, Spanned};
+
+use core::fmt;
 
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES

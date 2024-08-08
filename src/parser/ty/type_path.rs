@@ -1,4 +1,4 @@
-use core::fmt;
+use super::Parser;
 
 use crate::{
     ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, SelfType, Type, TypePath},
@@ -6,7 +6,7 @@ use crate::{
     token::Token,
 };
 
-use super::Parser;
+use core::fmt;
 
 impl TypePath {
     pub(crate) fn parse(

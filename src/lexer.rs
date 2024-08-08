@@ -5,8 +5,6 @@
 //! and punctuation. It ignores ordinary comments and stops tokenizing when it reaches
 //! the end of the input string.
 
-use core::{iter::Peekable, str::Chars};
-
 use crate::{
     ast::{BigUInt, BoolType, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
@@ -14,6 +12,8 @@ use crate::{
     token::{DocCommentType, Token, TokenStream, TokenType},
     B16, B2, B32, B4, B8, H160, H256, H512, U256, U512,
 };
+
+use core::{iter::Peekable, str::Chars};
 
 /// Struct that stores an input string (source code) and contains methods to render tokens
 /// from characters in that string (i.e., tokenization).

@@ -1,4 +1,4 @@
-use core::fmt;
+use super::{collection, ParseAssociatedItem, ParseDeclItem, ParseDefItem, Parser};
 
 use crate::{
     ast::{
@@ -10,7 +10,7 @@ use crate::{
     token::Token,
 };
 
-use super::{collection, ParseAssociatedItem, ParseDeclItem, ParseDefItem, Parser};
+use core::fmt;
 
 impl ParseDefItem for InherentImplDef {
     fn parse(

@@ -1,4 +1,4 @@
-use core::fmt;
+use super::Parser;
 
 use crate::{
     ast::{Delimiter, Keyword, PubLibVis, Visibility},
@@ -7,7 +7,7 @@ use crate::{
     token::Token,
 };
 
-use super::Parser;
+use core::fmt;
 
 impl Visibility {
     pub(crate) fn visibility(parser: &mut Parser) -> Result<Visibility, ErrorsEmitted> {

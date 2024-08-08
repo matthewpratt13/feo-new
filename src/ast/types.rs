@@ -1,10 +1,10 @@
-use core::fmt;
-
-pub use crate::{B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512};
+use super::{FunctionOrMethodParam, Identifier, Type};
 
 use crate::error::ParserErrorKind;
 
-use super::{FunctionOrMethodParam, Identifier, Type};
+pub use crate::{B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512};
+
+use core::fmt;
 
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]

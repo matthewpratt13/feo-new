@@ -1,5 +1,3 @@
-use core::fmt;
-
 use crate::{
     ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr},
     error::ErrorsEmitted,
@@ -7,6 +5,8 @@ use crate::{
     span::Spanned,
     token::Token,
 };
+
+use core::fmt;
 
 impl ParseOperatorExpr for MethodCallExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {

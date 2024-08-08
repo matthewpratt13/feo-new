@@ -1,5 +1,3 @@
-use core::fmt;
-
 use crate::{
     ast::{
         AssigneeExpr, AssignmentExpr, AssignmentOp, CompoundAssignmentExpr, CompoundAssignmentOp,
@@ -10,6 +8,8 @@ use crate::{
     span::Spanned,
     token::{Token, TokenType},
 };
+
+use core::fmt;
 
 impl ParseOperatorExpr for AssignmentExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {

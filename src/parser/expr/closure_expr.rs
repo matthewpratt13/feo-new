@@ -1,5 +1,3 @@
-use core::fmt;
-
 use crate::{
     ast::{
         BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Delimiter, Expression, IdentifierPatt,
@@ -10,6 +8,8 @@ use crate::{
     span::Spanned,
     token::Token,
 };
+
+use core::fmt;
 
 impl ParseConstructExpr for ClosureExpr {
     fn parse(parser: &mut Parser) -> Result<ClosureExpr, ErrorsEmitted> {

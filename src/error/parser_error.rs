@@ -1,7 +1,7 @@
+use crate::{span::Position, token::Token};
+
 use core::fmt;
 use std::error::Error;
-
-use crate::{span::Position, token::Token};
 
 /// Enum representing the different types of parsing errors.
 /// Used in conjunction with `CompilerError` to keep track of errors encountered

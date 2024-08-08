@@ -1,5 +1,3 @@
-use core::fmt;
-
 use crate::{
     ast::{Expression, UnwrapExpr, UnwrapOp, ValueExpr},
     error::ErrorsEmitted,
@@ -7,6 +5,8 @@ use crate::{
     span::Spanned,
     token::Token,
 };
+
+use core::fmt;
 
 impl ParseOperatorExpr for UnwrapExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {

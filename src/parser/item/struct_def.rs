@@ -1,4 +1,4 @@
-use core::fmt;
+use super::{collection, ParseDefItem, Parser};
 
 use crate::{
     ast::{
@@ -10,7 +10,7 @@ use crate::{
     token::Token,
 };
 
-use super::{collection, ParseDefItem, Parser};
+use core::fmt;
 
 impl ParseDefItem for StructDef {
     fn parse(

@@ -1,14 +1,14 @@
-use core::fmt;
+use super::{
+    AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,
+    PathWildcard, ReferenceOp, SelfType, Type, TypePath, ValueExpr,
+};
 
 use crate::{
     parser::ty::build_item_path,
     span::{Span, Spanned},
 };
 
-use super::{
-    AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,
-    PathWildcard, ReferenceOp, SelfType, Type, TypePath, ValueExpr,
-};
+use core::fmt;
 
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES

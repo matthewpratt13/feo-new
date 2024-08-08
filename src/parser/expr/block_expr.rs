@@ -1,11 +1,11 @@
-use core::fmt;
-
 use crate::{
     ast::{BlockExpr, Delimiter, InnerAttr, Statement},
     error::ErrorsEmitted,
     parser::{collection, ParseConstructExpr, Parser},
     token::Token,
 };
+
+use core::fmt;
 
 impl ParseConstructExpr for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {

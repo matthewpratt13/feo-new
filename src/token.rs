@@ -1,9 +1,9 @@
-use core::fmt;
-
 use crate::{
     ast::{BigUInt, BoolType, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
     span::Span,
 };
+
+use core::fmt;
 
 /// Enum representing the different types of tokens.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

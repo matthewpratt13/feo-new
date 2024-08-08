@@ -1,8 +1,6 @@
 mod type_path;
 
-use core::fmt;
-
-pub(crate) use type_path::build_item_path;
+use super::{collection, Parser};
 
 use crate::{
     ast::{
@@ -16,7 +14,9 @@ use crate::{
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
-use super::{collection, Parser};
+use core::fmt;
+
+pub(crate) use type_path::build_item_path;
 
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.

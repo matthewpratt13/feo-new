@@ -1,11 +1,11 @@
-use core::fmt;
-
 use crate::{
     ast::{Identifier, PathPatt, PathRoot, SelfType},
     error::ErrorsEmitted,
     parser::{ParsePattern, Parser},
     token::Token,
 };
+
+use core::fmt;
 
 impl ParsePattern for PathPatt {
     fn parse_patt(parser: &mut Parser) -> Result<PathPatt, ErrorsEmitted> {

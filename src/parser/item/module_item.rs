@@ -1,4 +1,4 @@
-use core::fmt;
+use super::{collection, ParseDefItem, Parser};
 
 use crate::{
     ast::{Delimiter, Identifier, InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
@@ -7,7 +7,7 @@ use crate::{
     token::Token,
 };
 
-use super::{collection, ParseDefItem, Parser};
+use core::fmt;
 
 impl ParseDefItem for ModuleItem {
     fn parse(

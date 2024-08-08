@@ -1,4 +1,4 @@
-use core::fmt;
+use super::{collection, ParseAssociatedItem, ParseDeclItem, ParseDefItem};
 
 use crate::{
     ast::{
@@ -11,7 +11,7 @@ use crate::{
     token::Token,
 };
 
-use super::{collection, ParseAssociatedItem, ParseDeclItem, ParseDefItem};
+use core::fmt;
 
 impl ParseDefItem for TraitDef {
     fn parse(

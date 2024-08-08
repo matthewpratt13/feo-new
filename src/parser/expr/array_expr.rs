@@ -1,11 +1,11 @@
-use core::fmt;
-
 use crate::{
     ast::{ArrayExpr, Delimiter},
     error::ErrorsEmitted,
     parser::{collection, ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
+
+use core::fmt;
 
 impl ParseConstructExpr for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<ArrayExpr, ErrorsEmitted> {

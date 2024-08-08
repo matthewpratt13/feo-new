@@ -1,10 +1,10 @@
-use core::fmt;
-use std::collections::HashMap;
-
 use crate::ast::{
     EnumDef, FunctionItem, Identifier, ModuleItem, StructDef, TraitDef, TupleStructDef, Type,
     TypePath, UnitType, Visibility,
 };
+
+use core::fmt;
+use std::collections::HashMap;
 
 pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
 

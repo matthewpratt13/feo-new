@@ -1,5 +1,3 @@
-use core::fmt;
-
 use crate::{
     ast::{
         Delimiter, Identifier, OuterAttr, PathExpr, PathRoot, SelfType, StructExpr, StructField,
@@ -8,6 +6,8 @@ use crate::{
     parser::{collection, ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
+
+use core::fmt;
 
 impl ParseConstructExpr for StructExpr {
     fn parse(parser: &mut Parser) -> Result<StructExpr, ErrorsEmitted> {

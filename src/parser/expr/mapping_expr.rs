@@ -1,11 +1,11 @@
-use core::fmt;
-
 use crate::{
     ast::{Delimiter, MappingExpr, MappingPair},
     error::ErrorsEmitted,
     parser::{collection, ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
+
+use core::fmt;
 
 impl ParseConstructExpr for MappingExpr {
     fn parse(parser: &mut Parser) -> Result<MappingExpr, ErrorsEmitted> {

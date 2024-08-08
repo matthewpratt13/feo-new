@@ -78,8 +78,6 @@ pub(crate) mod test_utils;
 pub(crate) mod ty;
 mod visibility;
 
-use std::collections::HashMap;
-
 pub(crate) use self::parse::{
     ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParsePattern, ParseSimpleExpr,
     ParseStatement,
@@ -103,6 +101,8 @@ use crate::{
     span::{Position, Span},
     token::{Token, TokenStream, TokenType},
 };
+
+use std::collections::HashMap;
 
 /// Enum representing the different parsing contexts in which tokens can be interpreted.
 /// This context can influence the precedence of specific tokens according to their role
@@ -1612,9 +1612,9 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use crate::logger::LogLevel;
-
     use super::{test_utils, Precedence};
+
+    use crate::logger::LogLevel;
 
     #[test]
     fn parse_break_expr() -> Result<(), ()> {

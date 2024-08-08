@@ -11,6 +11,8 @@ mod trait_def;
 
 pub(crate) use super::parse::{ParseAssociatedItem, ParseDeclItem, ParseDefItem};
 
+use super::{collection, ParseStatement, Parser};
+
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, EnumDef, FunctionItem, Identifier, ImportDecl, InherentImplDef,
@@ -21,8 +23,6 @@ use crate::{
     span::Span,
     token::Token,
 };
-
-use super::{collection, ParseStatement, Parser};
 
 impl Item {
     pub(crate) fn parse(

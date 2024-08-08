@@ -1,11 +1,11 @@
-use core::fmt;
-
 use crate::{
     ast::{Delimiter, Expression, GroupedExpr, TupleElements, TupleExpr},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
+
+use core::fmt;
 
 impl ParseConstructExpr for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {

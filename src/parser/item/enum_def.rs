@@ -1,4 +1,4 @@
-use core::fmt;
+use super::ParseDefItem;
 
 use crate::{
     ast::{
@@ -11,7 +11,7 @@ use crate::{
     token::Token,
 };
 
-use super::ParseDefItem;
+use core::fmt;
 
 impl ParseDefItem for EnumDef {
     fn parse(

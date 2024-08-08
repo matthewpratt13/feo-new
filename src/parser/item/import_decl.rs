@@ -1,4 +1,4 @@
-use core::fmt;
+use super::{collection, ParseDeclItem, Parser};
 
 use crate::{
     ast::{
@@ -10,7 +10,7 @@ use crate::{
     token::Token,
 };
 
-use super::{collection, ParseDeclItem, Parser};
+use core::fmt;
 
 impl ParseDeclItem for ImportDecl {
     fn parse(

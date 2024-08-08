@@ -1,11 +1,11 @@
-use core::fmt;
-
-use crate::error::ParserErrorKind;
-
 use super::{
     BigUInt, BoolType, Byte, Bytes, Char, Expression, Float, Hash, Identifier, Int, Keyword,
     Literal, PathRoot, Pattern, RangeOp, ReferenceOp, Str, TypePath, UInt, U512,
 };
+
+use crate::error::ParserErrorKind;
+
+use core::fmt;
 
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES

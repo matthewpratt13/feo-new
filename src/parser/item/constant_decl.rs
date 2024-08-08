@@ -1,4 +1,4 @@
-use core::fmt;
+use super::ParseDeclItem;
 
 use crate::{
     ast::{ConstantDecl, Identifier, Keyword, OuterAttr, Type, ValueExpr, Visibility},
@@ -7,7 +7,7 @@ use crate::{
     token::Token,
 };
 
-use super::ParseDeclItem;
+use core::fmt;
 
 impl ParseDeclItem for ConstantDecl {
     fn parse(

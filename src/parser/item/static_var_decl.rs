@@ -1,4 +1,4 @@
-use core::fmt;
+use super::{ParseDeclItem, Parser};
 
 use crate::{
     ast::{AssigneeExpr, Identifier, Keyword, OuterAttr, StaticVarDecl, Type, Visibility},
@@ -7,7 +7,7 @@ use crate::{
     token::Token,
 };
 
-use super::{ParseDeclItem, Parser};
+use core::fmt;
 
 impl ParseDeclItem for StaticVarDecl {
     fn parse(

@@ -3,11 +3,6 @@ mod symbol_table;
 #[cfg(test)]
 mod tests;
 
-use core::fmt;
-use std::collections::HashMap;
-
-use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
-
 use crate::{
     ast::{
         BigUInt, BoolType, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
@@ -22,6 +17,11 @@ use crate::{
     span::{Span, Spanned},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
+
+use core::fmt;
+use std::collections::HashMap;
+
+use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 
 #[allow(dead_code)]
 struct SemanticAnalyser {
