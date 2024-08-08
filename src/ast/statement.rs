@@ -4,7 +4,7 @@ use crate::span::{Span, Spanned};
 
 use super::{
     AssigneeExpr, Expression, Identifier, IdentifierPatt, InferredType, Item, Keyword, NoneExpr,
-    Statement, Type, Unit, ValueExpr,
+    Statement, Type, UnitType, ValueExpr,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -57,7 +57,7 @@ impl fmt::Display for Statement {
                     "{}alias {} = {};",
                     ad.visibility,
                     ad.alias_name,
-                    ad.original_type_opt.unwrap_or(Type::UnitType(Unit))
+                    ad.original_type_opt.unwrap_or(Type::UnitType(UnitType))
                 ),
                 Item::ConstantDecl(cd) => write!(
                     f,
@@ -138,7 +138,8 @@ impl fmt::Display for Statement {
                     fi.visibility,
                     fi.function_name,
                     fi.params_opt.unwrap_or(Vec::new()),
-                    fi.return_type_opt.unwrap_or(Box::new(Type::UnitType(Unit))),
+                    fi.return_type_opt
+                        .unwrap_or(Box::new(Type::UnitType(UnitType))),
                     fi.block_opt
                 ),
             },

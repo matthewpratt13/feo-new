@@ -1,7 +1,10 @@
 use core::fmt;
 
 use crate::{
-    ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Int, Str, UInt},
+    ast::{
+        BigUIntType, BoolType, ByteType, BytesType, CharType, FloatType, HashType, IntType,
+        StrType, UIntType,
+    },
     span::Span,
 };
 
@@ -16,43 +19,43 @@ pub(crate) enum Token {
 
     // literals
     IntLiteral {
-        value: Int,
+        value: IntType,
         span: Span,
     },
     UIntLiteral {
-        value: UInt,
+        value: UIntType,
         span: Span,
     },
     BigUIntLiteral {
-        value: BigUInt,
+        value: BigUIntType,
         span: Span,
     },
     FloatLiteral {
-        value: Float,
+        value: FloatType,
         span: Span,
     },
     ByteLiteral {
-        value: Byte,
+        value: ByteType,
         span: Span,
     },
     BytesLiteral {
-        value: Bytes,
+        value: BytesType,
         span: Span,
     },
     HashLiteral {
-        value: crate::ast::Hash,
+        value: HashType,
         span: Span,
     },
     StrLiteral {
-        value: Str,
+        value: StrType,
         span: Span,
     },
     CharLiteral {
-        value: Char,
+        value: CharType,
         span: Span,
     },
     BoolLiteral {
-        value: Bool,
+        value: BoolType,
         span: Span,
     },
 
@@ -1265,16 +1268,16 @@ pub(crate) enum DocCommentType {
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub(crate) enum TokenType {
     Iden(String),
-    IntLit(Int),
-    UIntLit(UInt),
-    BigUIntLit(BigUInt),
-    FloatLit(Float),
-    ByteLit(Byte),
-    BytesLit(Bytes),
-    HashLit(crate::ast::Hash),
-    StrLit(Str),
-    CharLit(Char),
-    BoolLit(Bool),
+    IntLit(IntType),
+    UIntLit(UIntType),
+    BigUIntLit(BigUIntType),
+    FloatLit(FloatType),
+    ByteLit(ByteType),
+    BytesLit(BytesType),
+    HashLit(HashType),
+    StrLit(StrType),
+    CharLit(CharType),
+    BoolLit(BoolType),
     Let,
     Mut,
     Ref,

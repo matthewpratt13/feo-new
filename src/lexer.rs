@@ -8,7 +8,10 @@
 use core::{iter::Peekable, str::Chars};
 
 use crate::{
-    ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Int, Str, UInt},
+    ast::{
+        BigUIntType, BoolType, ByteType, BytesType, CharType, FloatType, HashType, IntType,
+        StrType, UIntType,
+    },
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{DocCommentType, Token, TokenStream, TokenType},
@@ -334,7 +337,7 @@ impl<'a> Lexer<'a> {
                 "false" => Ok(Token::BoolLiteral {
                     value: {
                         if let Ok(n) = name.parse::<bool>() {
-                            Bool::from(n)
+                            BoolType::from(n)
                         } else {
                             self.push_err(LexErrorKind::ParseBoolError);
                             return Err(ErrorsEmitted);
@@ -368,7 +371,7 @@ impl<'a> Lexer<'a> {
                 "true" => Ok(Token::BoolLiteral {
                     value: {
                         if let Ok(n) = name.parse::<bool>() {
-                            Bool::from(n)
+                            BoolType::from(n)
                         } else {
                             self.push_err(LexErrorKind::ParseBoolError);
                             return Err(ErrorsEmitted);
@@ -767,7 +770,7 @@ impl<'a> Lexer<'a> {
                     let span = Span::new(self.input, start_pos, self.pos);
 
                     return Ok(Token::StrLiteral {
-                        value: Str::from(buf.as_str()),
+                        value: StrType::from(buf.as_str()),
                         span,
                     });
                 }
@@ -812,7 +815,7 @@ impl<'a> Lexer<'a> {
 
                     if value.len() == 1 {
                         return Ok(Token::ByteLiteral {
-                            value: Byte::from(value.as_bytes()[0]),
+                            value: ByteType::from(value.as_bytes()[0]),
                             span,
                         });
                     }
@@ -848,7 +851,7 @@ impl<'a> Lexer<'a> {
                         let span = Span::new(self.input, start_pos, self.pos);
 
                         Ok(Token::CharLiteral {
-                            value: Char::from(escaped_char),
+                            value: CharType::from(escaped_char),
                             span,
                         })
                     } else {
@@ -873,7 +876,7 @@ impl<'a> Lexer<'a> {
                         let span = Span::new(self.input, start_pos, self.pos);
 
                         Ok(Token::CharLiteral {
-                            value: Char::from(value),
+                            value: CharType::from(value),
                             span,
                         })
                     } else {
@@ -943,7 +946,7 @@ impl<'a> Lexer<'a> {
                 TokenType::U256Type => {
                     if let Ok(v) = value_string.trim_end_matches("u256").parse::<U256>() {
                         Ok(Token::BigUIntLiteral {
-                            value: BigUInt::U256(v),
+                            value: BigUIntType::U256(v),
                             span,
                         })
                     } else {
@@ -955,7 +958,7 @@ impl<'a> Lexer<'a> {
                 TokenType::U512Type => {
                     if let Ok(v) = value_string.trim_end_matches("u512").parse::<U512>() {
                         Ok(Token::BigUIntLiteral {
-                            value: BigUInt::U512(v),
+                            value: BigUIntType::U512(v),
                             span,
                         })
                     } else {
@@ -973,7 +976,7 @@ impl<'a> Lexer<'a> {
         } else {
             if let Ok(v) = value_string.parse::<U256>() {
                 Ok(Token::BigUIntLiteral {
-                    value: BigUInt::U256(v),
+                    value: BigUIntType::U256(v),
                     span,
                 })
             } else {
@@ -1027,37 +1030,37 @@ impl<'a> Lexer<'a> {
 
         match hash.len() {
             40 => {
-                let bytes: [Byte; 20] = self.hex_to_bytes(&hash)?;
+                let bytes: [ByteType; 20] = self.hex_to_bytes(&hash)?;
                 let bytes = bytes.iter().map(|b| b.0).collect::<Vec<_>>();
 
                 let value = H160::from_slice(bytes.as_slice());
 
                 Ok(Token::HashLiteral {
-                    value: crate::ast::Hash::H160(value),
+                    value: HashType::H160(value),
                     span,
                 })
             }
 
             64 => {
-                let bytes: [Byte; 32] = self.hex_to_bytes(&hash)?;
+                let bytes: [ByteType; 32] = self.hex_to_bytes(&hash)?;
                 let bytes = bytes.iter().map(|b| b.0).collect::<Vec<_>>();
 
                 let value = H256::from_slice(bytes.as_slice());
 
                 Ok(Token::HashLiteral {
-                    value: crate::ast::Hash::H256(value),
+                    value: HashType::H256(value),
                     span,
                 })
             }
 
             128 => {
-                let bytes: [Byte; 64] = self.hex_to_bytes(&hash)?;
+                let bytes: [ByteType; 64] = self.hex_to_bytes(&hash)?;
                 let bytes = bytes.iter().map(|b| b.0).collect::<Vec<_>>();
 
                 let value = H512::from_slice(bytes.as_slice());
 
                 Ok(Token::HashLiteral {
-                    value: crate::ast::Hash::H512(value),
+                    value: HashType::H512(value),
                     span,
                 })
             }
@@ -1222,7 +1225,7 @@ impl<'a> Lexer<'a> {
             TokenType::I32Type => {
                 if let Ok(i) = value_string.trim_end_matches("i32").parse::<i32>() {
                     Ok(Token::IntLiteral {
-                        value: Int::I32(i),
+                        value: IntType::I32(i),
                         span,
                     })
                 } else {
@@ -1234,7 +1237,7 @@ impl<'a> Lexer<'a> {
             TokenType::I64Type => {
                 if let Ok(i) = value_string.trim_end_matches("i64").parse::<i64>() {
                     Ok(Token::IntLiteral {
-                        value: Int::I64(i),
+                        value: IntType::I64(i),
                         span,
                     })
                 } else {
@@ -1246,7 +1249,7 @@ impl<'a> Lexer<'a> {
             TokenType::U8Type => {
                 if let Ok(ui) = value_string.trim_end_matches("u8").parse::<u8>() {
                     Ok(Token::UIntLiteral {
-                        value: UInt::U8(ui),
+                        value: UIntType::U8(ui),
                         span,
                     })
                 } else {
@@ -1258,7 +1261,7 @@ impl<'a> Lexer<'a> {
             TokenType::U16Type => {
                 if let Ok(ui) = value_string.trim_end_matches("u16").parse::<u16>() {
                     Ok(Token::UIntLiteral {
-                        value: UInt::U16(ui),
+                        value: UIntType::U16(ui),
                         span,
                     })
                 } else {
@@ -1270,7 +1273,7 @@ impl<'a> Lexer<'a> {
             TokenType::U32Type => {
                 if let Ok(ui) = value_string.trim_end_matches("u32").parse::<u32>() {
                     Ok(Token::UIntLiteral {
-                        value: UInt::U32(ui),
+                        value: UIntType::U32(ui),
                         span,
                     })
                 } else {
@@ -1282,7 +1285,7 @@ impl<'a> Lexer<'a> {
             TokenType::U64Type => {
                 if let Ok(ui) = value_string.trim_end_matches("u64").parse::<u64>() {
                     Ok(Token::UIntLiteral {
-                        value: UInt::U64(ui),
+                        value: UIntType::U64(ui),
                         span,
                     })
                 } else {
@@ -1294,7 +1297,7 @@ impl<'a> Lexer<'a> {
             TokenType::F32Type => {
                 if let Ok(f) = value_string.trim_end_matches("f32").parse::<f32>() {
                     Ok(Token::FloatLiteral {
-                        value: Float::F32(ordered_float::OrderedFloat(f)),
+                        value: FloatType::F32(ordered_float::OrderedFloat(f)),
                         span,
                     })
                 } else {
@@ -1306,7 +1309,7 @@ impl<'a> Lexer<'a> {
             TokenType::F64Type => {
                 if let Ok(f) = value_string.trim_end_matches("f64").parse::<f64>() {
                     Ok(Token::FloatLiteral {
-                        value: Float::F64(ordered_float::OrderedFloat(f)),
+                        value: FloatType::F64(ordered_float::OrderedFloat(f)),
                         span,
                     })
                 } else {
@@ -1388,7 +1391,7 @@ impl<'a> Lexer<'a> {
 
     /// Convert a hexadecimal string (e.g., hash literal before parsing) into a `Byte` array
     /// of `N` elements
-    fn hex_to_bytes<const N: usize>(&mut self, hex: &str) -> Result<[Byte; N], ErrorsEmitted> {
+    fn hex_to_bytes<const N: usize>(&mut self, hex: &str) -> Result<[ByteType; N], ErrorsEmitted> {
         if hex.len() != N * 2 {
             self.push_err(LexErrorKind::InvalidHashLength { len: hex.len() });
             return Err(ErrorsEmitted);
@@ -1399,9 +1402,9 @@ impl<'a> Lexer<'a> {
             ErrorsEmitted
         })?;
 
-        let bytes = bytes.into_iter().map(|b| Byte(b)).collect::<Vec<_>>();
+        let bytes = bytes.into_iter().map(|b| ByteType(b)).collect::<Vec<_>>();
 
-        let mut array = [Byte(0u8); N];
+        let mut array = [ByteType(0u8); N];
 
         array.copy_from_slice(&bytes);
 
@@ -1423,41 +1426,41 @@ impl<'a> Lexer<'a> {
 }
 
 /// Helper function to turn a byte slice (`&[u8]`) into a `Bytes`.
-fn get_bytes(value: &[u8]) -> Bytes {
+fn get_bytes(value: &[u8]) -> BytesType {
     let bytes = match value.len() {
         0 => panic!("empty slice"),
         1 => panic!("byte string literals must have more than one character"),
-        2 => Bytes::B2(B2::from_slice(value)),
-        3 => Bytes::B4(B4::from(&pad_zeroes::<3, 4>(value))),
-        4 => Bytes::B4(B4::from_slice(value)),
-        5 => Bytes::B8(B8::from(&pad_zeroes::<5, 8>(value))),
-        6 => Bytes::B8(B8::from(&pad_zeroes::<6, 8>(value))),
-        7 => Bytes::B8(B8::from(&pad_zeroes::<7, 8>(value))),
-        8 => Bytes::B8(B8::from_slice(value)),
-        9 => Bytes::B16(B16::from(&pad_zeroes::<9, 16>(value))),
-        10 => Bytes::B16(B16::from(&pad_zeroes::<10, 16>(value))),
-        11 => Bytes::B16(B16::from(&pad_zeroes::<11, 16>(value))),
-        12 => Bytes::B16(B16::from(&pad_zeroes::<12, 16>(value))),
-        13 => Bytes::B16(B16::from(&pad_zeroes::<13, 16>(value))),
-        14 => Bytes::B16(B16::from(&pad_zeroes::<14, 16>(value))),
-        15 => Bytes::B16(B16::from(&pad_zeroes::<15, 16>(value))),
-        16 => Bytes::B16(B16::from_slice(value)),
-        17 => Bytes::B32(B32::from(&pad_zeroes::<17, 32>(value))),
-        18 => Bytes::B32(B32::from(&pad_zeroes::<18, 32>(value))),
-        19 => Bytes::B32(B32::from(&pad_zeroes::<19, 32>(value))),
-        20 => Bytes::B32(B32::from(&pad_zeroes::<20, 32>(value))),
-        21 => Bytes::B32(B32::from(&pad_zeroes::<21, 32>(value))),
-        22 => Bytes::B32(B32::from(&pad_zeroes::<22, 32>(value))),
-        23 => Bytes::B32(B32::from(&pad_zeroes::<23, 32>(value))),
-        24 => Bytes::B32(B32::from(&pad_zeroes::<24, 32>(value))),
-        25 => Bytes::B32(B32::from(&pad_zeroes::<25, 32>(value))),
-        26 => Bytes::B32(B32::from(&pad_zeroes::<26, 32>(value))),
-        27 => Bytes::B32(B32::from(&pad_zeroes::<27, 32>(value))),
-        28 => Bytes::B32(B32::from(&pad_zeroes::<28, 32>(value))),
-        29 => Bytes::B32(B32::from(&pad_zeroes::<29, 32>(value))),
-        30 => Bytes::B32(B32::from(&pad_zeroes::<30, 32>(value))),
-        31 => Bytes::B32(B32::from(&pad_zeroes::<31, 32>(value))),
-        32 => Bytes::B32(B32::from_slice(value)),
+        2 => BytesType::B2(B2::from_slice(value)),
+        3 => BytesType::B4(B4::from(&pad_zeroes::<3, 4>(value))),
+        4 => BytesType::B4(B4::from_slice(value)),
+        5 => BytesType::B8(B8::from(&pad_zeroes::<5, 8>(value))),
+        6 => BytesType::B8(B8::from(&pad_zeroes::<6, 8>(value))),
+        7 => BytesType::B8(B8::from(&pad_zeroes::<7, 8>(value))),
+        8 => BytesType::B8(B8::from_slice(value)),
+        9 => BytesType::B16(B16::from(&pad_zeroes::<9, 16>(value))),
+        10 => BytesType::B16(B16::from(&pad_zeroes::<10, 16>(value))),
+        11 => BytesType::B16(B16::from(&pad_zeroes::<11, 16>(value))),
+        12 => BytesType::B16(B16::from(&pad_zeroes::<12, 16>(value))),
+        13 => BytesType::B16(B16::from(&pad_zeroes::<13, 16>(value))),
+        14 => BytesType::B16(B16::from(&pad_zeroes::<14, 16>(value))),
+        15 => BytesType::B16(B16::from(&pad_zeroes::<15, 16>(value))),
+        16 => BytesType::B16(B16::from_slice(value)),
+        17 => BytesType::B32(B32::from(&pad_zeroes::<17, 32>(value))),
+        18 => BytesType::B32(B32::from(&pad_zeroes::<18, 32>(value))),
+        19 => BytesType::B32(B32::from(&pad_zeroes::<19, 32>(value))),
+        20 => BytesType::B32(B32::from(&pad_zeroes::<20, 32>(value))),
+        21 => BytesType::B32(B32::from(&pad_zeroes::<21, 32>(value))),
+        22 => BytesType::B32(B32::from(&pad_zeroes::<22, 32>(value))),
+        23 => BytesType::B32(B32::from(&pad_zeroes::<23, 32>(value))),
+        24 => BytesType::B32(B32::from(&pad_zeroes::<24, 32>(value))),
+        25 => BytesType::B32(B32::from(&pad_zeroes::<25, 32>(value))),
+        26 => BytesType::B32(B32::from(&pad_zeroes::<26, 32>(value))),
+        27 => BytesType::B32(B32::from(&pad_zeroes::<27, 32>(value))),
+        28 => BytesType::B32(B32::from(&pad_zeroes::<28, 32>(value))),
+        29 => BytesType::B32(B32::from(&pad_zeroes::<29, 32>(value))),
+        30 => BytesType::B32(B32::from(&pad_zeroes::<30, 32>(value))),
+        31 => BytesType::B32(B32::from(&pad_zeroes::<31, 32>(value))),
+        32 => BytesType::B32(B32::from_slice(value)),
         _ => panic!("slice too big"),
     };
 

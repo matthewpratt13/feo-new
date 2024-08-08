@@ -3,8 +3,9 @@ use core::fmt;
 use crate::error::ParserErrorKind;
 
 use super::{
-    BigUInt, Bool, Byte, Bytes, Char, Expression, Float, Identifier, Int, Keyword, Literal,
-    PathRoot, Pattern, RangeOp, ReferenceOp, Str, TypePath, UInt, U512,
+    BigUIntType, BoolType, ByteType, BytesType, CharType, Expression, FloatType, HashType,
+    Identifier, IntType, Keyword, Literal, PathRoot, Pattern, RangeOp, ReferenceOp, StrType,
+    TypePath, UIntType, U512,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -70,31 +71,31 @@ impl fmt::Display for IdentifierPatt {
 /// Enum representing the literals in a pattern context
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub(crate) enum LiteralPatt {
-    Int { value: Int },
-    UInt { value: UInt },
-    BigUInt { value: BigUInt },
-    Float { value: Float },
-    Byte { value: Byte },
-    Bytes { value: Bytes },
-    Hash { value: crate::ast::Hash },
-    Str { value: Str },
-    Char { value: Char },
-    Bool { value: Bool },
+    Int { value: IntType },
+    UInt { value: UIntType },
+    BigUInt { value: BigUIntType },
+    Float { value: FloatType },
+    Byte { value: ByteType },
+    Bytes { value: BytesType },
+    Hash { value: HashType },
+    Str { value: StrType },
+    Char { value: CharType },
+    Bool { value: BoolType },
 }
 
 impl From<Literal> for LiteralPatt {
     fn from(value: Literal) -> Self {
         match value {
-            Literal::Int { value, .. } => LiteralPatt::Int { value },
-            Literal::UInt { value, .. } => LiteralPatt::UInt { value },
-            Literal::BigUInt { value, .. } => LiteralPatt::BigUInt { value },
-            Literal::Float { value, .. } => LiteralPatt::Float { value },
-            Literal::Byte { value, .. } => LiteralPatt::Byte { value },
-            Literal::Bytes { value, .. } => LiteralPatt::Bytes { value },
-            Literal::Hash { value, .. } => LiteralPatt::Hash { value },
-            Literal::Str { value, .. } => LiteralPatt::Str { value },
-            Literal::Char { value, .. } => LiteralPatt::Char { value },
-            Literal::Bool { value, .. } => LiteralPatt::Bool { value },
+            Literal::IntLit { value, .. } => LiteralPatt::Int { value },
+            Literal::UIntLit { value, .. } => LiteralPatt::UInt { value },
+            Literal::BigUIntLit { value, .. } => LiteralPatt::BigUInt { value },
+            Literal::FloatLit { value, .. } => LiteralPatt::Float { value },
+            Literal::ByteLit { value, .. } => LiteralPatt::Byte { value },
+            Literal::BytesLit { value, .. } => LiteralPatt::Bytes { value },
+            Literal::HashLit { value, .. } => LiteralPatt::Hash { value },
+            Literal::StrLit { value, .. } => LiteralPatt::Str { value },
+            Literal::CharLit { value, .. } => LiteralPatt::Char { value },
+            Literal::BoolLit { value, .. } => LiteralPatt::Bool { value },
         }
     }
 }
@@ -351,12 +352,12 @@ impl fmt::Display for Pattern {
                 "{}{}{}",
                 rng.from_pattern_opt
                     .unwrap_or(Box::new(Pattern::LiteralPatt(LiteralPatt::Int {
-                        value: Int::I64(i64::MIN),
+                        value: IntType::I64(i64::MIN),
                     }))),
                 rng.range_op,
                 rng.to_pattern_opt.unwrap_or(Box::new(Pattern::LiteralPatt(
                     LiteralPatt::BigUInt {
-                        value: BigUInt::U512(U512::MAX),
+                        value: BigUIntType::U512(U512::MAX),
                     }
                 )))
             ),

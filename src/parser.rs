@@ -310,7 +310,7 @@ impl Parser {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
 
-                Ok(Expression::Literal(Literal::Int {
+                Ok(Expression::Literal(Literal::IntLit {
                     value: *value,
                     span,
                 }))
@@ -319,7 +319,7 @@ impl Parser {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
 
-                Ok(Expression::Literal(Literal::UInt {
+                Ok(Expression::Literal(Literal::UIntLit {
                     value: *value,
                     span,
                 }))
@@ -328,7 +328,7 @@ impl Parser {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
 
-                Ok(Expression::Literal(Literal::BigUInt {
+                Ok(Expression::Literal(Literal::BigUIntLit {
                     value: *value,
                     span,
                 }))
@@ -337,7 +337,7 @@ impl Parser {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
 
-                Ok(Expression::Literal(Literal::Float {
+                Ok(Expression::Literal(Literal::FloatLit {
                     value: *value,
                     span,
                 }))
@@ -346,7 +346,7 @@ impl Parser {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
 
-                Ok(Expression::Literal(Literal::Byte {
+                Ok(Expression::Literal(Literal::ByteLit {
                     value: *value,
                     span,
                 }))
@@ -355,7 +355,7 @@ impl Parser {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
 
-                Ok(Expression::Literal(Literal::Bytes {
+                Ok(Expression::Literal(Literal::BytesLit {
                     value: *value,
                     span,
                 }))
@@ -364,7 +364,7 @@ impl Parser {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
 
-                Ok(Expression::Literal(Literal::Hash {
+                Ok(Expression::Literal(Literal::HashLit {
                     value: *value,
                     span,
                 }))
@@ -373,7 +373,7 @@ impl Parser {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
 
-                Ok(Expression::Literal(Literal::Str {
+                Ok(Expression::Literal(Literal::StrLit {
                     value: value.clone(),
                     span,
                 }))
@@ -382,7 +382,7 @@ impl Parser {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
 
-                Ok(Expression::Literal(Literal::Char {
+                Ok(Expression::Literal(Literal::CharLit {
                     value: *value,
                     span,
                 }))
@@ -391,7 +391,7 @@ impl Parser {
                 let first_token = self.current_token().unwrap();
                 let span = self.get_span_by_token(first_token);
 
-                Ok(Expression::Literal(Literal::Bool {
+                Ok(Expression::Literal(Literal::BoolLit {
                     value: *value,
                     span,
                 }))

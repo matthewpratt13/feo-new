@@ -3,10 +3,10 @@ use core::fmt;
 use crate::span::{Span, Spanned};
 
 use super::{
-    AssigneeExpr, AssignmentOp, BigUInt, BinaryOp, ComparisonOp, CompoundAssignmentOp,
-    DereferenceOp, Expression, Identifier, IdentifierPatt, InnerAttr, Int, Keyword, Literal,
+    AssigneeExpr, AssignmentOp, BigUIntType, BinaryOp, ComparisonOp, CompoundAssignmentOp,
+    DereferenceOp, Expression, Identifier, IdentifierPatt, InnerAttr, IntType, Keyword, Literal,
     OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType, Statement, Type, TypeCastOp, TypePath,
-    UInt, UnaryOp, Unit, UnwrapOp, ValueExpr, U512,
+    UIntType, UnaryOp, UnitType, UnwrapOp, ValueExpr, U512,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -334,7 +334,7 @@ pub struct TupleExpr {
 #[derive(Clone, PartialEq, Eq)]
 pub struct TupleIndexExpr {
     pub(crate) tuple: Box<AssigneeExpr>,
-    pub(crate) index: UInt,
+    pub(crate) index: UIntType,
     pub(crate) span: Span,
 }
 
@@ -445,14 +445,14 @@ impl fmt::Display for Expression {
                 f,
                 "{}{}{}",
                 rng.from_expr_opt
-                    .unwrap_or(Box::new(AssigneeExpr::Literal(Literal::Int {
-                        value: Int::I64(i64::MIN),
+                    .unwrap_or(Box::new(AssigneeExpr::Literal(Literal::IntLit {
+                        value: IntType::I64(i64::MIN),
                         span: rng.span.clone()
                     }))),
                 rng.range_op,
                 rng.to_expr_opt
-                    .unwrap_or(Box::new(AssigneeExpr::Literal(Literal::BigUInt {
-                        value: BigUInt::U512(U512::MAX),
+                    .unwrap_or(Box::new(AssigneeExpr::Literal(Literal::BigUIntLit {
+                        value: BigUIntType::U512(U512::MAX),
                         span: rng.span
                     })))
             ),
@@ -483,7 +483,7 @@ impl fmt::Display for Expression {
                 clo.closure_params,
                 clo.return_type_opt
                     .clone()
-                    .unwrap_or(Box::new(Type::UnitType(Unit))),
+                    .unwrap_or(Box::new(Type::UnitType(UnitType))),
                 clo.body_expression
             ),
             Expression::Array(arr) => write!(f, "[ {:?} ]", arr.elements_opt.unwrap_or(Vec::new())),

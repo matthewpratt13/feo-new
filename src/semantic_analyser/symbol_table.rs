@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::ast::{
     EnumDef, FunctionItem, Identifier, ModuleItem, StructDef, TraitDef, TupleStructDef, Type,
-    TypePath, Unit, Visibility,
+    TypePath, UnitType, Visibility,
 };
 
 pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
@@ -83,9 +83,9 @@ impl Symbol {
             Symbol::Constant { constant_type, .. } => constant_type,
             Symbol::Function { function, .. } => match function.return_type_opt {
                 Some(t) => *t.clone(),
-                None => Type::UnitType(Unit),
+                None => Type::UnitType(UnitType),
             },
-            Symbol::Module { .. } => Type::UnitType(Unit),
+            Symbol::Module { .. } => Type::UnitType(UnitType),
         }
     }
 }

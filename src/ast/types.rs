@@ -7,16 +7,16 @@ use super::{FunctionOrMethodParam, Identifier, Type};
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Int {
+pub enum IntType {
     I32(i32),
     I64(i64),
 }
 
-impl fmt::Display for Int {
+impl fmt::Display for IntType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Int::I32(t) => write!(f, "{}", t),
-            Int::I64(t) => write!(f, "{}", t),
+            IntType::I32(t) => write!(f, "{}", t),
+            IntType::I64(t) => write!(f, "{}", t),
         }
     }
 }
@@ -24,26 +24,26 @@ impl fmt::Display for Int {
 /// Wrappers for the different unsigned integer types.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum UInt {
+pub enum UIntType {
     U8(u8),
     U16(u16),
     U32(u32),
     U64(u64),
 }
 
-impl From<usize> for UInt {
+impl From<usize> for UIntType {
     fn from(value: usize) -> Self {
-        UInt::U64(value as u64)
+        UIntType::U64(value as u64)
     }
 }
 
-impl fmt::Display for UInt {
+impl fmt::Display for UIntType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            UInt::U8(t) => write!(f, "{}", t),
-            UInt::U16(t) => write!(f, "{}", t),
-            UInt::U32(t) => write!(f, "{}", t),
-            UInt::U64(t) => write!(f, "{}", t),
+            UIntType::U8(t) => write!(f, "{}", t),
+            UIntType::U16(t) => write!(f, "{}", t),
+            UIntType::U32(t) => write!(f, "{}", t),
+            UIntType::U64(t) => write!(f, "{}", t),
         }
     }
 }
@@ -51,16 +51,16 @@ impl fmt::Display for UInt {
 /// Wrappers for the different large unsigned integer types.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum BigUInt {
+pub enum BigUIntType {
     U256(U256),
     U512(U512),
 }
 
-impl fmt::Display for BigUInt {
+impl fmt::Display for BigUIntType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BigUInt::U256(t) => write!(f, "{}", t),
-            BigUInt::U512(t) => write!(f, "{}", t),
+            BigUIntType::U256(t) => write!(f, "{}", t),
+            BigUIntType::U512(t) => write!(f, "{}", t),
         }
     }
 }
@@ -68,16 +68,16 @@ impl fmt::Display for BigUInt {
 /// Wrappers for the different floating-point types.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Float {
+pub enum FloatType {
     F32(F32),
     F64(F64),
 }
 
-impl fmt::Display for Float {
+impl fmt::Display for FloatType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Float::F32(t) => write!(f, "{}", t),
-            Float::F64(t) => write!(f, "{}", t),
+            FloatType::F32(t) => write!(f, "{}", t),
+            FloatType::F64(t) => write!(f, "{}", t),
         }
     }
 }
@@ -86,15 +86,15 @@ impl fmt::Display for Float {
 /// in a byte string type. This is different to the native Unicode `char` type, which is
 /// a UTF-8 encoded character of one (`u8`) to four bytes (`u32`) – i.e., variable length.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Byte(pub u8);
+pub struct ByteType(pub u8);
 
-impl From<u8> for Byte {
+impl From<u8> for ByteType {
     fn from(value: u8) -> Self {
-        Byte(value)
+        ByteType(value)
     }
 }
 
-impl fmt::Display for Byte {
+impl fmt::Display for ByteType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Byte(0x{:x})", self.0)
     }
@@ -103,7 +103,7 @@ impl fmt::Display for Byte {
 /// Wrappers for the different fixed-length byte string (`Bytes`) types.
 /// Analogous to `[u8; 2]`, `[u8; 4]`, `[u8; 8]`, `[u8; 16]` and `[u8; 32]`
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Bytes {
+pub enum BytesType {
     B2(B2),
     B4(B4),
     B8(B8),
@@ -111,14 +111,14 @@ pub enum Bytes {
     B32(B32),
 }
 
-impl fmt::Display for Bytes {
+impl fmt::Display for BytesType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Bytes::B2(t) => write!(f, "{}", t),
-            Bytes::B4(t) => write!(f, "{}", t),
-            Bytes::B8(t) => write!(f, "{}", t),
-            Bytes::B16(t) => write!(f, "{}", t),
-            Bytes::B32(t) => write!(f, "{}", t),
+            BytesType::B2(t) => write!(f, "{}", t),
+            BytesType::B4(t) => write!(f, "{}", t),
+            BytesType::B8(t) => write!(f, "{}", t),
+            BytesType::B16(t) => write!(f, "{}", t),
+            BytesType::B32(t) => write!(f, "{}", t),
         }
     }
 }
@@ -126,33 +126,33 @@ impl fmt::Display for Bytes {
 /// Wrappers for the different hash types.
 /// Analogous to `[u8; 20]`, `[u8; 32]` and `[u8; 64]`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Hash {
+pub enum HashType {
     H160(H160),
     H256(H256),
     H512(H512),
 }
 
-impl fmt::Display for self::Hash {
+impl fmt::Display for self::HashType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Hash::H160(t) => write!(f, "{}", t),
-            Hash::H256(t) => write!(f, "{}", t),
-            Hash::H512(t) => write!(f, "{}", t),
+            HashType::H160(t) => write!(f, "{}", t),
+            HashType::H256(t) => write!(f, "{}", t),
+            HashType::H512(t) => write!(f, "{}", t),
         }
     }
 }
 
 /// Wrapper for the `char` type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Char(char);
+pub struct CharType(char);
 
-impl From<char> for Char {
+impl From<char> for CharType {
     fn from(value: char) -> Self {
-        Char(value)
+        CharType(value)
     }
 }
 
-impl fmt::Display for Char {
+impl fmt::Display for CharType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -162,29 +162,31 @@ impl fmt::Display for Char {
 /// This type should be treated as static (i.e., not be growable / updatable), despite having
 /// a dynamic inner type.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Str(Vec<Byte>);
+pub struct StrType(Vec<ByteType>);
 
-impl From<&str> for Str {
+impl From<&str> for StrType {
     fn from(value: &str) -> Self {
-        Str::from(value.as_bytes())
+        StrType::from(value.as_bytes())
     }
 }
 
-impl From<&[u8]> for Str {
+impl From<&[u8]> for StrType {
     fn from(value: &[u8]) -> Self {
-        let mut bytes: Vec<Byte> = Vec::with_capacity(value.len());
-        value.into_iter().for_each(|b| bytes.push(Byte::from(*b)));
-        Str(bytes)
+        let mut bytes: Vec<ByteType> = Vec::with_capacity(value.len());
+        value
+            .into_iter()
+            .for_each(|b| bytes.push(ByteType::from(*b)));
+        StrType(bytes)
     }
 }
 
-impl From<Vec<Byte>> for Str {
-    fn from(value: Vec<Byte>) -> Self {
-        Str(value)
+impl From<Vec<ByteType>> for StrType {
+    fn from(value: Vec<ByteType>) -> Self {
+        StrType(value)
     }
 }
 
-impl fmt::Display for Str {
+impl fmt::Display for StrType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
@@ -192,15 +194,15 @@ impl fmt::Display for Str {
 
 /// Wrapper for the `bool` type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Bool(bool);
+pub struct BoolType(bool);
 
-impl From<bool> for Bool {
+impl From<bool> for BoolType {
     fn from(value: bool) -> Self {
-        Bool(value)
+        BoolType(value)
     }
 }
 
-impl fmt::Display for Bool {
+impl fmt::Display for BoolType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -221,7 +223,7 @@ impl fmt::Display for FunctionPtr {
             self.params_opt.clone().unwrap_or(Vec::new()),
             self.return_type_opt
                 .clone()
-                .unwrap_or(Box::new(Type::UnitType(Unit)))
+                .unwrap_or(Box::new(Type::UnitType(UnitType)))
         )
     }
 }
@@ -257,9 +259,9 @@ pub struct TypePath {
 
 /// Unit struct that represents the unit type `()`.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Unit;
+pub struct UnitType;
 
-impl fmt::Display for Unit {
+impl fmt::Display for UnitType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "()")
     }

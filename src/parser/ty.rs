@@ -6,8 +6,9 @@ pub(crate) use type_path::build_item_path;
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, Delimiter, Float, FunctionOrMethodParam, FunctionPtr,
-        Identifier, InferredType, Int, ReferenceOp, SelfType, Str, Type, TypePath, UInt, Unit,
+        BigUIntType, BoolType, ByteType, BytesType, CharType, Delimiter, FloatType,
+        FunctionOrMethodParam, FunctionPtr, HashType, Identifier, InferredType, IntType,
+        ReferenceOp, SelfType, StrType, Type, TypePath, UIntType, UnitType,
     },
     error::ErrorsEmitted,
     span::Position,
@@ -26,28 +27,28 @@ impl Type {
         let token = parser.next_token();
 
         match &token {
-            Some(Token::I32Type { .. }) => Ok(Type::I32(Int::I32(i32::default()))),
-            Some(Token::I64Type { .. }) => Ok(Type::I64(Int::I64(i64::default()))),
-            Some(Token::U8Type { .. }) => Ok(Type::U8(UInt::U8(u8::default()))),
-            Some(Token::U16Type { .. }) => Ok(Type::U16(UInt::U16(u16::default()))),
-            Some(Token::U32Type { .. }) => Ok(Type::U32(UInt::U32(u32::default()))),
-            Some(Token::U64Type { .. }) => Ok(Type::U64(UInt::U64(u64::default()))),
-            Some(Token::U256Type { .. }) => Ok(Type::U256(BigUInt::U256(U256::default()))),
-            Some(Token::U512Type { .. }) => Ok(Type::U512(BigUInt::U512(U512::default()))),
-            Some(Token::F32Type { .. }) => Ok(Type::F32(Float::F32(F32::default()))),
-            Some(Token::F64Type { .. }) => Ok(Type::F64(Float::F64(F64::default()))),
-            Some(Token::ByteType { .. }) => Ok(Type::Byte(Byte::from(u8::default()))),
-            Some(Token::B2Type { .. }) => Ok(Type::B2(Bytes::B2(B2::default()))),
-            Some(Token::B4Type { .. }) => Ok(Type::B4(Bytes::B4(B4::default()))),
-            Some(Token::B8Type { .. }) => Ok(Type::B8(Bytes::B8(B8::default()))),
-            Some(Token::B16Type { .. }) => Ok(Type::B16(Bytes::B16(B16::default()))),
-            Some(Token::B32Type { .. }) => Ok(Type::B32(Bytes::B32(B32::default()))),
-            Some(Token::H160Type { .. }) => Ok(Type::H160(crate::ast::Hash::H160(H160::default()))),
-            Some(Token::H256Type { .. }) => Ok(Type::H256(crate::ast::Hash::H256(H256::default()))),
-            Some(Token::H512Type { .. }) => Ok(Type::H512(crate::ast::Hash::H512(H512::default()))),
-            Some(Token::StrType { .. }) => Ok(Type::Str(Str::from(String::default().as_str()))),
-            Some(Token::CharType { .. }) => Ok(Type::Char(Char::from(char::default()))),
-            Some(Token::BoolType { .. }) => Ok(Type::Bool(Bool::from(bool::default()))),
+            Some(Token::I32Type { .. }) => Ok(Type::I32(IntType::I32(i32::default()))),
+            Some(Token::I64Type { .. }) => Ok(Type::I64(IntType::I64(i64::default()))),
+            Some(Token::U8Type { .. }) => Ok(Type::U8(UIntType::U8(u8::default()))),
+            Some(Token::U16Type { .. }) => Ok(Type::U16(UIntType::U16(u16::default()))),
+            Some(Token::U32Type { .. }) => Ok(Type::U32(UIntType::U32(u32::default()))),
+            Some(Token::U64Type { .. }) => Ok(Type::U64(UIntType::U64(u64::default()))),
+            Some(Token::U256Type { .. }) => Ok(Type::U256(BigUIntType::U256(U256::default()))),
+            Some(Token::U512Type { .. }) => Ok(Type::U512(BigUIntType::U512(U512::default()))),
+            Some(Token::F32Type { .. }) => Ok(Type::F32(FloatType::F32(F32::default()))),
+            Some(Token::F64Type { .. }) => Ok(Type::F64(FloatType::F64(F64::default()))),
+            Some(Token::ByteType { .. }) => Ok(Type::Byte(ByteType::from(u8::default()))),
+            Some(Token::B2Type { .. }) => Ok(Type::B2(BytesType::B2(B2::default()))),
+            Some(Token::B4Type { .. }) => Ok(Type::B4(BytesType::B4(B4::default()))),
+            Some(Token::B8Type { .. }) => Ok(Type::B8(BytesType::B8(B8::default()))),
+            Some(Token::B16Type { .. }) => Ok(Type::B16(BytesType::B16(B16::default()))),
+            Some(Token::B32Type { .. }) => Ok(Type::B32(BytesType::B32(B32::default()))),
+            Some(Token::H160Type { .. }) => Ok(Type::H160(HashType::H160(H160::default()))),
+            Some(Token::H256Type { .. }) => Ok(Type::H256(HashType::H256(H256::default()))),
+            Some(Token::H512Type { .. }) => Ok(Type::H512(HashType::H512(H512::default()))),
+            Some(Token::StrType { .. }) => Ok(Type::Str(StrType::from(String::default().as_str()))),
+            Some(Token::CharType { .. }) => Ok(Type::Char(CharType::from(char::default()))),
+            Some(Token::BoolType { .. }) => Ok(Type::Bool(BoolType::from(bool::default()))),
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
             Some(Token::Func { .. }) => parse_function_ptr_type(parser),
@@ -533,7 +534,7 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
 fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     if let Some(Token::RParen { .. }) = parser.current_token() {
         parser.next_token();
-        Ok(Type::UnitType(Unit))
+        Ok(Type::UnitType(UnitType))
     } else if let Some(Token::Comma { .. }) = parser.peek_ahead_by(1) {
         let open_delimiter = Delimiter::LParen {
             position: Position::new(parser.current - 1, &parser.stream.span().input()),
