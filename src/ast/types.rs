@@ -2,21 +2,23 @@ use core::fmt;
 
 pub use crate::{B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512};
 
+use crate::error::ParserErrorKind;
+
 use super::{FunctionOrMethodParam, Identifier, Type};
 
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum IntType {
+pub enum Int {
     I32(i32),
     I64(i64),
 }
 
-impl fmt::Display for IntType {
+impl fmt::Display for Int {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            IntType::I32(t) => write!(f, "{}", t),
-            IntType::I64(t) => write!(f, "{}", t),
+            Int::I32(t) => write!(f, "{}", t),
+            Int::I64(t) => write!(f, "{}", t),
         }
     }
 }
@@ -24,26 +26,26 @@ impl fmt::Display for IntType {
 /// Wrappers for the different unsigned integer types.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum UIntType {
+pub enum UInt {
     U8(u8),
     U16(u16),
     U32(u32),
     U64(u64),
 }
 
-impl From<usize> for UIntType {
+impl From<usize> for UInt {
     fn from(value: usize) -> Self {
-        UIntType::U64(value as u64)
+        UInt::U64(value as u64)
     }
 }
 
-impl fmt::Display for UIntType {
+impl fmt::Display for UInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            UIntType::U8(t) => write!(f, "{}", t),
-            UIntType::U16(t) => write!(f, "{}", t),
-            UIntType::U32(t) => write!(f, "{}", t),
-            UIntType::U64(t) => write!(f, "{}", t),
+            UInt::U8(t) => write!(f, "{}", t),
+            UInt::U16(t) => write!(f, "{}", t),
+            UInt::U32(t) => write!(f, "{}", t),
+            UInt::U64(t) => write!(f, "{}", t),
         }
     }
 }
@@ -51,16 +53,16 @@ impl fmt::Display for UIntType {
 /// Wrappers for the different large unsigned integer types.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum BigUIntType {
+pub enum BigUInt {
     U256(U256),
     U512(U512),
 }
 
-impl fmt::Display for BigUIntType {
+impl fmt::Display for BigUInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BigUIntType::U256(t) => write!(f, "{}", t),
-            BigUIntType::U512(t) => write!(f, "{}", t),
+            BigUInt::U256(t) => write!(f, "{}", t),
+            BigUInt::U512(t) => write!(f, "{}", t),
         }
     }
 }
@@ -68,16 +70,16 @@ impl fmt::Display for BigUIntType {
 /// Wrappers for the different floating-point types.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum FloatType {
+pub enum Float {
     F32(F32),
     F64(F64),
 }
 
-impl fmt::Display for FloatType {
+impl fmt::Display for Float {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FloatType::F32(t) => write!(f, "{}", t),
-            FloatType::F64(t) => write!(f, "{}", t),
+            Float::F32(t) => write!(f, "{}", t),
+            Float::F64(t) => write!(f, "{}", t),
         }
     }
 }
@@ -86,24 +88,52 @@ impl fmt::Display for FloatType {
 /// in a byte string type. This is different to the native Unicode `char` type, which is
 /// a UTF-8 encoded character of one (`u8`) to four bytes (`u32`) – i.e., variable length.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct ByteType(pub u8);
+pub struct Byte(pub u8);
 
-impl From<u8> for ByteType {
-    fn from(value: u8) -> Self {
-        ByteType(value)
+impl Byte {
+    fn to_hex(self) -> String {
+        format!("0x{:x}", self.0)
+    }
+
+    fn bytes_to_string(bytes: Vec<Byte>) -> Result<String, ParserErrorKind> {
+        let mut buf = String::new();
+
+        buf.push_str("\"");
+
+        let iter = bytes.into_iter().map(|b| b.0 as u16);
+
+        let chars = char::decode_utf16(iter)
+            .map(|c| c.map_err(|e| ParserErrorKind::StrDecodeError(e)))
+            .collect::<Vec<_>>();
+
+        for char_res in chars {
+            if let Ok(c) = char_res {
+                buf.push(c)
+            }
+        }
+
+        buf.push_str("\"");
+
+        Ok(buf)
     }
 }
 
-impl fmt::Display for ByteType {
+impl From<u8> for Byte {
+    fn from(value: u8) -> Self {
+        Byte(value)
+    }
+}
+
+impl fmt::Display for Byte {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Byte(0x{:x})", self.0)
+        write!(f, "{}", self.to_hex())
     }
 }
 
 /// Wrappers for the different fixed-length byte string (`Bytes`) types.
 /// Analogous to `[u8; 2]`, `[u8; 4]`, `[u8; 8]`, `[u8; 16]` and `[u8; 32]`
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum BytesType {
+pub enum Bytes {
     B2(B2),
     B4(B4),
     B8(B8),
@@ -111,14 +141,74 @@ pub enum BytesType {
     B32(B32),
 }
 
-impl fmt::Display for BytesType {
+impl Bytes {
+    pub fn to_hex_bytes(self) -> Vec<String> {
+        let strings = match self {
+            Bytes::B2(b) => {
+                b.0.into_iter()
+                    .map(|b| Byte(b).to_hex())
+                    .collect::<Vec<_>>()
+            }
+            Bytes::B4(b) => {
+                b.0.into_iter()
+                    .map(|b| Byte(b).to_hex())
+                    .collect::<Vec<_>>()
+            }
+            Bytes::B8(b) => {
+                b.0.into_iter()
+                    .map(|b| Byte(b).to_hex())
+                    .collect::<Vec<_>>()
+            }
+            Bytes::B16(b) => {
+                b.0.into_iter()
+                    .map(|b| Byte(b).to_hex())
+                    .collect::<Vec<_>>()
+            }
+            Bytes::B32(b) => {
+                b.0.into_iter()
+                    .map(|b| Byte(b).to_hex())
+                    .collect::<Vec<_>>()
+            }
+        };
+
+        strings
+    }
+
+    pub fn as_string(&self) -> String {
+        let string = match self.clone() {
+            Bytes::B2(b) => {
+                Byte::bytes_to_string(b.0.into_iter().map(|byte| Byte(byte)).collect::<Vec<_>>())
+            }
+            Bytes::B4(b) => {
+                Byte::bytes_to_string(b.0.into_iter().map(|byte| Byte(byte)).collect::<Vec<_>>())
+            }
+            Bytes::B8(b) => {
+                Byte::bytes_to_string(b.0.into_iter().map(|byte| Byte(byte)).collect::<Vec<_>>())
+            }
+            Bytes::B16(b) => {
+                Byte::bytes_to_string(b.0.into_iter().map(|byte| Byte(byte)).collect::<Vec<_>>())
+            }
+            Bytes::B32(b) => {
+                Byte::bytes_to_string(b.0.into_iter().map(|byte| Byte(byte)).collect::<Vec<_>>())
+            }
+        };
+
+        let mut buf = String::from("b");
+
+        buf.push_str(&string.unwrap_or("".to_string()));
+
+        buf
+    }
+}
+
+impl fmt::Display for Bytes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BytesType::B2(t) => write!(f, "{}", t),
-            BytesType::B4(t) => write!(f, "{}", t),
-            BytesType::B8(t) => write!(f, "{}", t),
-            BytesType::B16(t) => write!(f, "{}", t),
-            BytesType::B32(t) => write!(f, "{}", t),
+            Bytes::B2(_) => write!(f, "{}", self.as_string()),
+            Bytes::B4(_) => write!(f, "{}", self.as_string()),
+            Bytes::B8(_) => write!(f, "{}", self.as_string()),
+            Bytes::B16(_) => write!(f, "{}", self.as_string()),
+            Bytes::B32(_) => write!(f, "{}", self.as_string()),
         }
     }
 }
@@ -126,33 +216,33 @@ impl fmt::Display for BytesType {
 /// Wrappers for the different hash types.
 /// Analogous to `[u8; 20]`, `[u8; 32]` and `[u8; 64]`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum HashType {
+pub enum Hash {
     H160(H160),
     H256(H256),
     H512(H512),
 }
 
-impl fmt::Display for self::HashType {
+impl fmt::Display for self::Hash {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            HashType::H160(t) => write!(f, "{}", t),
-            HashType::H256(t) => write!(f, "{}", t),
-            HashType::H512(t) => write!(f, "{}", t),
+            Hash::H160(t) => write!(f, "{}", t),
+            Hash::H256(t) => write!(f, "{}", t),
+            Hash::H512(t) => write!(f, "{}", t),
         }
     }
 }
 
 /// Wrapper for the `char` type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct CharType(char);
+pub struct Char(char);
 
-impl From<char> for CharType {
+impl From<char> for Char {
     fn from(value: char) -> Self {
-        CharType(value)
+        Char(value)
     }
 }
 
-impl fmt::Display for CharType {
+impl fmt::Display for Char {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -162,33 +252,48 @@ impl fmt::Display for CharType {
 /// This type should be treated as static (i.e., not be growable / updatable), despite having
 /// a dynamic inner type.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct StrType(Vec<ByteType>);
+pub struct Str(Vec<Byte>);
 
-impl From<&str> for StrType {
+impl Str {
+    pub fn as_string(&self) -> String {
+        Byte::bytes_to_string(self.clone().0)
+            .clone()
+            .unwrap_or("".to_string())
+    }
+
+    pub fn as_bytes(&self) -> &[Byte] {
+        self.0.as_slice()
+    }
+}
+
+impl From<&str> for Str {
     fn from(value: &str) -> Self {
-        StrType::from(value.as_bytes())
+        Str::from(value.as_bytes())
     }
 }
 
-impl From<&[u8]> for StrType {
+impl From<&[u8]> for Str {
     fn from(value: &[u8]) -> Self {
-        let mut bytes: Vec<ByteType> = Vec::with_capacity(value.len());
-        value
-            .into_iter()
-            .for_each(|b| bytes.push(ByteType::from(*b)));
-        StrType(bytes)
+        Str::from(value.to_vec())
     }
 }
 
-impl From<Vec<ByteType>> for StrType {
-    fn from(value: Vec<ByteType>) -> Self {
-        StrType(value)
+impl From<Vec<u8>> for Str {
+    fn from(value: Vec<u8>) -> Self {
+        let bytes = value.into_iter().map(|v| Byte::from(v)).collect::<Vec<_>>();
+        Str::from(bytes)
     }
 }
 
-impl fmt::Display for StrType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
+impl From<Vec<Byte>> for Str {
+    fn from(value: Vec<Byte>) -> Self {
+        Str(value)
+    }
+}
+
+impl fmt::Display for Str {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.clone().as_string())
     }
 }
 

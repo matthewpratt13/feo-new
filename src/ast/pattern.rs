@@ -3,9 +3,8 @@ use core::fmt;
 use crate::error::ParserErrorKind;
 
 use super::{
-    BigUIntType, BoolType, ByteType, BytesType, CharType, Expression, FloatType, HashType,
-    Identifier, IntType, Keyword, Literal, PathRoot, Pattern, RangeOp, ReferenceOp, StrType,
-    TypePath, UIntType, U512,
+    BigUInt, BoolType, Byte, Bytes, Char, Expression, Float, Hash, Identifier, Int, Keyword,
+    Literal, PathRoot, Pattern, RangeOp, ReferenceOp, Str, TypePath, UInt, U512,
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -71,15 +70,15 @@ impl fmt::Display for IdentifierPatt {
 /// Enum representing the literals in a pattern context
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub(crate) enum LiteralPatt {
-    Int { value: IntType },
-    UInt { value: UIntType },
-    BigUInt { value: BigUIntType },
-    Float { value: FloatType },
-    Byte { value: ByteType },
-    Bytes { value: BytesType },
-    Hash { value: HashType },
-    Str { value: StrType },
-    Char { value: CharType },
+    Int { value: Int },
+    UInt { value: UInt },
+    BigUInt { value: BigUInt },
+    Float { value: Float },
+    Byte { value: Byte },
+    Bytes { value: Bytes },
+    Hash { value: Hash },
+    Str { value: Str },
+    Char { value: Char },
     Bool { value: BoolType },
 }
 
@@ -108,9 +107,9 @@ impl fmt::Display for LiteralPatt {
             LiteralPatt::BigUInt { value } => write!(f, "{}", value),
             LiteralPatt::Float { value } => write!(f, "{}", value),
             LiteralPatt::Byte { value } => write!(f, "{}", value),
-            LiteralPatt::Bytes { value } => write!(f, "{}", value),
+            LiteralPatt::Bytes { value } => write!(f, "{}", value.clone().as_string()),
             LiteralPatt::Hash { value } => write!(f, "{}", value),
-            LiteralPatt::Str { value } => write!(f, "{}", value),
+            LiteralPatt::Str { value } => write!(f, "{}", value.clone().as_string()),
             LiteralPatt::Char { value } => write!(f, "{}", value),
             LiteralPatt::Bool { value } => write!(f, "{}", value),
         }
@@ -352,12 +351,12 @@ impl fmt::Display for Pattern {
                 "{}{}{}",
                 rng.from_pattern_opt
                     .unwrap_or(Box::new(Pattern::LiteralPatt(LiteralPatt::Int {
-                        value: IntType::I64(i64::MIN),
+                        value: Int::I64(i64::MIN),
                     }))),
                 rng.range_op,
                 rng.to_pattern_opt.unwrap_or(Box::new(Pattern::LiteralPatt(
                     LiteralPatt::BigUInt {
-                        value: BigUIntType::U512(U512::MAX),
+                        value: BigUInt::U512(U512::MAX),
                     }
                 )))
             ),

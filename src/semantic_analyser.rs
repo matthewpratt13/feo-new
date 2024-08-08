@@ -10,11 +10,11 @@ use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 
 use crate::{
     ast::{
-        BigUIntType, BoolType, ByteType, BytesType, CharType, ClosureParams, Expression, FloatType,
-        FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, HashType, Identifier,
-        ImportDecl, InferredType, InherentImplItem, IntType, Item, Keyword, Literal, LiteralPatt,
-        ModuleItem, PathExpr, PathRoot, Pattern, SelfType, Statement, StrType, TraitDefItem,
-        TraitImplItem, Type, TypePath, UIntType, UnaryOp, UnitType, Visibility,
+        BigUInt, BoolType, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
+        FunctionOrMethodParam, FunctionParam, FunctionPtr, Hash, Identifier, ImportDecl,
+        InferredType, InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt, ModuleItem,
+        PathExpr, PathRoot, Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type,
+        TypePath, UInt, UnaryOp, UnitType, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -929,38 +929,38 @@ impl SemanticAnalyser {
 
             Expression::Literal(l) => match l {
                 Literal::Int { value, .. } => match value {
-                    IntType::I32(_) => Ok(Type::I32(IntType::I32(i32::default()))),
-                    IntType::I64(_) => Ok(Type::I64(IntType::I64(i64::default()))),
+                    Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
+                    Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
                 },
                 Literal::UInt { value, .. } => match value {
-                    UIntType::U8(_) => Ok(Type::U8(UIntType::U8(u8::default()))),
-                    UIntType::U16(_) => Ok(Type::U16(UIntType::U16(u16::default()))),
-                    UIntType::U32(_) => Ok(Type::U32(UIntType::U32(u32::default()))),
-                    UIntType::U64(_) => Ok(Type::U64(UIntType::U64(u64::default()))),
+                    UInt::U8(_) => Ok(Type::U8(UInt::U8(u8::default()))),
+                    UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
+                    UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
+                    UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
                 },
                 Literal::BigUInt { value, .. } => match value {
-                    BigUIntType::U256(_) => Ok(Type::U256(BigUIntType::U256(U256::default()))),
-                    BigUIntType::U512(_) => Ok(Type::U512(BigUIntType::U512(U512::default()))),
+                    BigUInt::U256(_) => Ok(Type::U256(BigUInt::U256(U256::default()))),
+                    BigUInt::U512(_) => Ok(Type::U512(BigUInt::U512(U512::default()))),
                 },
                 Literal::Float { value, .. } => match value {
-                    FloatType::F32(_) => Ok(Type::F32(FloatType::F32(F32::default()))),
-                    FloatType::F64(_) => Ok(Type::F64(FloatType::F64(F64::default()))),
+                    Float::F32(_) => Ok(Type::F32(Float::F32(F32::default()))),
+                    Float::F64(_) => Ok(Type::F64(Float::F64(F64::default()))),
                 },
-                Literal::Byte { .. } => Ok(Type::Byte(ByteType::from(u8::default()))),
+                Literal::Byte { .. } => Ok(Type::Byte(Byte::from(u8::default()))),
                 Literal::Bytes { value, .. } => match value {
-                    BytesType::B2(_) => Ok(Type::B2(BytesType::B2(B2::default()))),
-                    BytesType::B4(_) => Ok(Type::B4(BytesType::B4(B4::default()))),
-                    BytesType::B8(_) => Ok(Type::B8(BytesType::B8(B8::default()))),
-                    BytesType::B16(_) => Ok(Type::B16(BytesType::B16(B16::default()))),
-                    BytesType::B32(_) => Ok(Type::B32(BytesType::B32(B32::default()))),
+                    Bytes::B2(_) => Ok(Type::B2(Bytes::B2(B2::default()))),
+                    Bytes::B4(_) => Ok(Type::B4(Bytes::B4(B4::default()))),
+                    Bytes::B8(_) => Ok(Type::B8(Bytes::B8(B8::default()))),
+                    Bytes::B16(_) => Ok(Type::B16(Bytes::B16(B16::default()))),
+                    Bytes::B32(_) => Ok(Type::B32(Bytes::B32(B32::default()))),
                 },
                 Literal::Hash { value, .. } => match value {
-                    HashType::H160(_) => Ok(Type::H160(HashType::H160(H160::default()))),
-                    HashType::H256(_) => Ok(Type::H256(HashType::H256(H256::default()))),
-                    HashType::H512(_) => Ok(Type::H512(HashType::H512(H512::default()))),
+                    Hash::H160(_) => Ok(Type::H160(Hash::H160(H160::default()))),
+                    Hash::H256(_) => Ok(Type::H256(Hash::H256(H256::default()))),
+                    Hash::H512(_) => Ok(Type::H512(Hash::H512(H512::default()))),
                 },
-                Literal::Str { .. } => Ok(Type::Str(StrType::from(String::default().as_str()))),
-                Literal::Char { .. } => Ok(Type::Char(CharType::from(char::default()))),
+                Literal::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
+                Literal::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
                 Literal::Bool { .. } => Ok(Type::Bool(BoolType::from(bool::default()))),
             },
 
@@ -1112,12 +1112,12 @@ impl SemanticAnalyser {
 
                 match tuple_type {
                     Type::Tuple(elem_types) => {
-                        if ti.index < UIntType::from(elem_types.len()) {
+                        if ti.index < UInt::from(elem_types.len()) {
                             Ok(Type::Tuple(elem_types))
                         } else {
                             Err(SemanticErrorKind::TupleIndexOutOfBounds {
                                 len: ti.index,
-                                i: UIntType::from(elem_types.len()),
+                                i: UInt::from(elem_types.len()),
                             })
                         }
                     }
@@ -1268,7 +1268,7 @@ impl SemanticAnalyser {
                     (
                         Type::I32(_),
                         Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
-                    ) => Ok(Type::I32(IntType::I32(i32::default()))),
+                    ) => Ok(Type::I32(Int::I32(i32::default()))),
 
                     (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`i32` or unsigned integer".to_string(),
@@ -1283,14 +1283,14 @@ impl SemanticAnalyser {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_),
-                    ) => Ok(Type::I64(IntType::I64(i64::default()))),
+                    ) => Ok(Type::I64(Int::I64(i64::default()))),
 
                     (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "integer or unsigned integer".to_string(),
                         found: format!("`{}`", t),
                     }),
 
-                    (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UIntType::U8(u8::default()))),
+                    (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
 
                     (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u8`".to_string(),
@@ -1298,7 +1298,7 @@ impl SemanticAnalyser {
                     }),
 
                     (Type::U16(_), Type::U8(_) | Type::U16(_)) => {
-                        Ok(Type::U16(UIntType::U16(u16::default())))
+                        Ok(Type::U16(UInt::U16(u16::default())))
                     }
 
                     (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1307,7 +1307,7 @@ impl SemanticAnalyser {
                     }),
 
                     (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
-                        Ok(Type::U32(UIntType::U32(u32::default())))
+                        Ok(Type::U32(UInt::U32(u32::default())))
                     }
 
                     (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1316,7 +1316,7 @@ impl SemanticAnalyser {
                     }),
 
                     (Type::U64(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
-                        Ok(Type::U64(UIntType::U64(u64::default())))
+                        Ok(Type::U64(UInt::U64(u64::default())))
                     }
 
                     (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1325,7 +1325,7 @@ impl SemanticAnalyser {
                     }),
 
                     (Type::U256(_), Type::U256(_)) => {
-                        Ok(Type::U256(BigUIntType::U256(U256::default())))
+                        Ok(Type::U256(BigUInt::U256(U256::default())))
                     }
 
                     (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1334,7 +1334,7 @@ impl SemanticAnalyser {
                     }),
 
                     (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
-                        Ok(Type::U512(BigUIntType::U512(U512::default())))
+                        Ok(Type::U512(BigUInt::U512(U512::default())))
                     }
 
                     (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1342,7 +1342,7 @@ impl SemanticAnalyser {
                         found: format!("`{}`", t),
                     }),
 
-                    (Type::F32(_), Type::F32(_)) => Ok(Type::F32(FloatType::F32(F32::default()))),
+                    (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
 
                     (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`f32`".to_string(),
@@ -1350,7 +1350,7 @@ impl SemanticAnalyser {
                     }),
 
                     (Type::F64(_), Type::F32(_) | Type::F64(_)) => {
-                        Ok(Type::F64(FloatType::F64(F64::default())))
+                        Ok(Type::F64(Float::F64(F64::default())))
                     }
 
                     (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1374,7 +1374,7 @@ impl SemanticAnalyser {
                     (
                         Type::I32(_),
                         Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
-                    ) => Ok(Type::I32(IntType::I32(i32::default()))),
+                    ) => Ok(Type::I32(Int::I32(i32::default()))),
 
                     (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`i32` or unsigned integer".to_string(),
@@ -1389,35 +1389,35 @@ impl SemanticAnalyser {
                         | Type::U16(_)
                         | Type::U32(_)
                         | Type::U64(_),
-                    ) => Ok(Type::I64(IntType::I64(i64::default()))),
+                    ) => Ok(Type::I64(Int::I64(i64::default()))),
 
                     (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "integer or unsigned integer".to_string(),
                         found: format!("`{}`", t),
                     }),
 
-                    (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UIntType::U8(u8::default()))),
+                    (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
 
                     (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u8`".to_string(),
                         found: format!("`{}`", t),
                     }),
 
-                    (Type::U16(_), Type::U16(_)) => Ok(Type::U16(UIntType::U16(u16::default()))),
+                    (Type::U16(_), Type::U16(_)) => Ok(Type::U16(UInt::U16(u16::default()))),
 
                     (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u16`".to_string(),
                         found: format!("`{}`", t),
                     }),
 
-                    (Type::U32(_), Type::U32(_)) => Ok(Type::U32(UIntType::U32(u32::default()))),
+                    (Type::U32(_), Type::U32(_)) => Ok(Type::U32(UInt::U32(u32::default()))),
 
                     (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u32`".to_string(),
                         found: format!("`{}`", t),
                     }),
 
-                    (Type::U64(_), Type::U64(_)) => Ok(Type::U64(UIntType::U64(u64::default()))),
+                    (Type::U64(_), Type::U64(_)) => Ok(Type::U64(UInt::U64(u64::default()))),
 
                     (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u64`".to_string(),
@@ -1425,7 +1425,7 @@ impl SemanticAnalyser {
                     }),
 
                     (Type::U256(_), Type::U256(_)) => {
-                        Ok(Type::U256(BigUIntType::U256(U256::default())))
+                        Ok(Type::U256(BigUInt::U256(U256::default())))
                     }
 
                     (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1434,7 +1434,7 @@ impl SemanticAnalyser {
                     }),
 
                     (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
-                        Ok(Type::U512(BigUIntType::U512(U512::default())))
+                        Ok(Type::U512(BigUInt::U512(U512::default())))
                     }
 
                     (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1442,14 +1442,14 @@ impl SemanticAnalyser {
                         found: format!("`{}`", t),
                     }),
 
-                    (Type::F32(_), Type::F32(_)) => Ok(Type::F32(FloatType::F32(F32::default()))),
+                    (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
 
                     (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`f32`".to_string(),
                         found: format!("`{}`", t),
                     }),
 
-                    (Type::F64(_), Type::F64(_)) => Ok(Type::F64(FloatType::F64(F64::default()))),
+                    (Type::F64(_), Type::F64(_)) => Ok(Type::F64(Float::F64(F64::default()))),
 
                     (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`f64`".to_string(),
@@ -1621,7 +1621,7 @@ impl SemanticAnalyser {
                         (
                             Type::I32(_),
                             Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
-                        ) => Ok(Type::I32(IntType::I32(i32::default()))),
+                        ) => Ok(Type::I32(Int::I32(i32::default()))),
 
                         (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`i32` or unsigned integer".to_string(),
@@ -1636,14 +1636,14 @@ impl SemanticAnalyser {
                             | Type::U16(_)
                             | Type::U32(_)
                             | Type::U64(_),
-                        ) => Ok(Type::I64(IntType::I64(i64::default()))),
+                        ) => Ok(Type::I64(Int::I64(i64::default()))),
 
                         (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "integer or unsigned integer".to_string(),
                             found: format!("`{}`", t),
                         }),
 
-                        (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UIntType::U8(u8::default()))),
+                        (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
 
                         (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`u8`".to_string(),
@@ -1651,7 +1651,7 @@ impl SemanticAnalyser {
                         }),
 
                         (Type::U16(_), Type::U8(_) | Type::U16(_)) => {
-                            Ok(Type::U16(UIntType::U16(u16::default())))
+                            Ok(Type::U16(UInt::U16(u16::default())))
                         }
 
                         (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1660,7 +1660,7 @@ impl SemanticAnalyser {
                         }),
 
                         (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
-                            Ok(Type::U32(UIntType::U32(u32::default())))
+                            Ok(Type::U32(UInt::U32(u32::default())))
                         }
 
                         (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1671,7 +1671,7 @@ impl SemanticAnalyser {
                         (
                             Type::U64(_),
                             Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
-                        ) => Ok(Type::U64(UIntType::U64(u64::default()))),
+                        ) => Ok(Type::U64(UInt::U64(u64::default()))),
 
                         (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`u64`".to_string(),
@@ -1679,7 +1679,7 @@ impl SemanticAnalyser {
                         }),
 
                         (Type::U256(_), Type::U256(_)) => {
-                            Ok(Type::U256(BigUIntType::U256(U256::default())))
+                            Ok(Type::U256(BigUInt::U256(U256::default())))
                         }
 
                         (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1688,7 +1688,7 @@ impl SemanticAnalyser {
                         }),
 
                         (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
-                            Ok(Type::U512(BigUIntType::U512(U512::default())))
+                            Ok(Type::U512(BigUInt::U512(U512::default())))
                         }
 
                         (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1696,9 +1696,7 @@ impl SemanticAnalyser {
                             found: format!("`{}`", t),
                         }),
 
-                        (Type::F32(_), Type::F32(_)) => {
-                            Ok(Type::F32(FloatType::F32(F32::default())))
-                        }
+                        (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
 
                         (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`f32`".to_string(),
@@ -1706,7 +1704,7 @@ impl SemanticAnalyser {
                         }),
 
                         (Type::F64(_), Type::F32(_) | Type::F64(_)) => {
-                            Ok(Type::F64(FloatType::F64(F64::default())))
+                            Ok(Type::F64(Float::F64(F64::default())))
                         }
 
                         (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
@@ -1860,14 +1858,14 @@ impl SemanticAnalyser {
 
                         Ok(Type::Array {
                             element_type: Box::new(first_element_type),
-                            num_elements: UIntType::U64(element_count),
+                            num_elements: UInt::U64(element_count),
                         })
                     }
                     _ => {
                         let element_type = Type::UnitType(UnitType);
                         let array = Type::Array {
                             element_type: Box::new(element_type),
-                            num_elements: UIntType::U64(0u64),
+                            num_elements: UInt::U64(0u64),
                         };
 
                         Ok(array)
@@ -2417,38 +2415,38 @@ impl SemanticAnalyser {
 
             Pattern::LiteralPatt(l) => match l {
                 LiteralPatt::Int { value } => match value {
-                    IntType::I32(_) => Ok(Type::I32(IntType::I32(i32::default()))),
-                    IntType::I64(_) => Ok(Type::I64(IntType::I64(i64::default()))),
+                    Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
+                    Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
                 },
                 LiteralPatt::UInt { value } => match value {
-                    UIntType::U8(_) => Ok(Type::U8(UIntType::U8(u8::default()))),
-                    UIntType::U16(_) => Ok(Type::U16(UIntType::U16(u16::default()))),
-                    UIntType::U32(_) => Ok(Type::U32(UIntType::U32(u32::default()))),
-                    UIntType::U64(_) => Ok(Type::U64(UIntType::U64(u64::default()))),
+                    UInt::U8(_) => Ok(Type::U8(UInt::U8(u8::default()))),
+                    UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
+                    UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
+                    UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
                 },
                 LiteralPatt::BigUInt { value } => match value {
-                    BigUIntType::U256(_) => Ok(Type::U256(BigUIntType::U256(U256::default()))),
-                    BigUIntType::U512(_) => Ok(Type::U512(BigUIntType::U512(U512::default()))),
+                    BigUInt::U256(_) => Ok(Type::U256(BigUInt::U256(U256::default()))),
+                    BigUInt::U512(_) => Ok(Type::U512(BigUInt::U512(U512::default()))),
                 },
                 LiteralPatt::Float { value } => match value {
-                    FloatType::F32(_) => Ok(Type::F32(FloatType::F32(F32::default()))),
-                    FloatType::F64(_) => Ok(Type::F64(FloatType::F64(F64::default()))),
+                    Float::F32(_) => Ok(Type::F32(Float::F32(F32::default()))),
+                    Float::F64(_) => Ok(Type::F64(Float::F64(F64::default()))),
                 },
-                LiteralPatt::Byte { .. } => Ok(Type::Byte(ByteType::from(u8::default()))),
+                LiteralPatt::Byte { .. } => Ok(Type::Byte(Byte::from(u8::default()))),
                 LiteralPatt::Bytes { value } => match value {
-                    BytesType::B2(_) => Ok(Type::B2(BytesType::B2(B2::default()))),
-                    BytesType::B4(_) => Ok(Type::B4(BytesType::B4(B4::default()))),
-                    BytesType::B8(_) => Ok(Type::B8(BytesType::B8(B8::default()))),
-                    BytesType::B16(_) => Ok(Type::B16(BytesType::B16(B16::default()))),
-                    BytesType::B32(_) => Ok(Type::B32(BytesType::B32(B32::default()))),
+                    Bytes::B2(_) => Ok(Type::B2(Bytes::B2(B2::default()))),
+                    Bytes::B4(_) => Ok(Type::B4(Bytes::B4(B4::default()))),
+                    Bytes::B8(_) => Ok(Type::B8(Bytes::B8(B8::default()))),
+                    Bytes::B16(_) => Ok(Type::B16(Bytes::B16(B16::default()))),
+                    Bytes::B32(_) => Ok(Type::B32(Bytes::B32(B32::default()))),
                 },
                 LiteralPatt::Hash { value } => match value {
-                    HashType::H160(_) => Ok(Type::H160(HashType::H160(H160::default()))),
-                    HashType::H256(_) => Ok(Type::H256(HashType::H256(H256::default()))),
-                    HashType::H512(_) => Ok(Type::H512(HashType::H512(H512::default()))),
+                    Hash::H160(_) => Ok(Type::H160(Hash::H160(H160::default()))),
+                    Hash::H256(_) => Ok(Type::H256(Hash::H256(H256::default()))),
+                    Hash::H512(_) => Ok(Type::H512(Hash::H512(H512::default()))),
                 },
-                LiteralPatt::Str { .. } => Ok(Type::Str(StrType::from(String::default().as_str()))),
-                LiteralPatt::Char { .. } => Ok(Type::Char(CharType::from(char::default()))),
+                LiteralPatt::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
+                LiteralPatt::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
                 LiteralPatt::Bool { .. } => Ok(Type::Bool(BoolType::from(bool::default()))),
             },
 

@@ -25,15 +25,15 @@ use crate::{
 /// Enum representing the different literals used in AST nodes.
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub(crate) enum Literal {
-    Int { value: IntType, span: Span },
-    UInt { value: UIntType, span: Span },
-    BigUInt { value: BigUIntType, span: Span },
-    Float { value: FloatType, span: Span },
-    Byte { value: ByteType, span: Span },
-    Bytes { value: BytesType, span: Span },
-    Hash { value: HashType, span: Span },
-    Str { value: StrType, span: Span },
-    Char { value: CharType, span: Span },
+    Int { value: Int, span: Span },
+    UInt { value: UInt, span: Span },
+    BigUInt { value: BigUInt, span: Span },
+    Float { value: Float, span: Span },
+    Byte { value: Byte, span: Span },
+    Bytes { value: Bytes, span: Span },
+    Hash { value: Hash, span: Span },
+    Str { value: Str, span: Span },
+    Char { value: Char, span: Span },
     Bool { value: BoolType, span: Span },
 }
 
@@ -62,9 +62,11 @@ impl fmt::Display for Literal {
             Literal::BigUInt { value, .. } => write!(f, "{}", value),
             Literal::Float { value, .. } => write!(f, "{}", value),
             Literal::Byte { value, .. } => write!(f, "{}", value),
-            Literal::Bytes { value, .. } => write!(f, "{}", value),
+            Literal::Bytes { value, .. } => write!(f, "{}", value.clone().as_string()),
             Literal::Hash { value, .. } => write!(f, "{}", value),
-            Literal::Str { value, .. } => write!(f, "{}", value),
+            Literal::Str { value, .. } => {
+                write!(f, "{}", value.clone().as_string())
+            }
             Literal::Char { value, .. } => write!(f, "{}", value),
             Literal::Bool { value, .. } => write!(f, "{}", value),
         }
@@ -958,27 +960,27 @@ pub(crate) enum Item {
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) enum Type {
     // primitives
-    I32(IntType),
-    I64(IntType),
-    U8(UIntType),
-    U16(UIntType),
-    U32(UIntType),
-    U64(UIntType),
-    U256(BigUIntType),
-    U512(BigUIntType),
-    F32(FloatType),
-    F64(FloatType),
-    Byte(ByteType),
-    B2(BytesType),
-    B4(BytesType),
-    B8(BytesType),
-    B16(BytesType),
-    B32(BytesType),
-    H160(HashType),
-    H256(HashType),
-    H512(HashType),
-    Str(StrType),
-    Char(CharType),
+    I32(Int),
+    I64(Int),
+    U8(UInt),
+    U16(UInt),
+    U32(UInt),
+    U64(UInt),
+    U256(BigUInt),
+    U512(BigUInt),
+    F32(Float),
+    F64(Float),
+    Byte(Byte),
+    B2(Bytes),
+    B4(Bytes),
+    B8(Bytes),
+    B16(Bytes),
+    B32(Bytes),
+    H160(Hash),
+    H256(Hash),
+    H512(Hash),
+    Str(Str),
+    Char(Char),
     Bool(BoolType),
 
     UnitType(UnitType), // ()
@@ -988,7 +990,7 @@ pub(crate) enum Type {
     // built-in collections
     Array {
         element_type: Box<Type>,
-        num_elements: UIntType,
+        num_elements: UInt,
     },
 
     Tuple(Vec<Type>),

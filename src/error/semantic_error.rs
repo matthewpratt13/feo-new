@@ -1,7 +1,7 @@
 use core::fmt;
 use std::error::Error;
 
-use crate::ast::{Identifier, UIntType};
+use crate::ast::{Identifier, UInt};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {
@@ -34,8 +34,8 @@ pub enum SemanticErrorKind {
     },
 
     TupleIndexOutOfBounds {
-        len: UIntType,
-        i: UIntType
+        len: UInt,
+        i: UInt
     },
 
     TypeCastError {

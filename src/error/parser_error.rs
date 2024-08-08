@@ -8,6 +8,8 @@ use crate::{span::Position, token::Token};
 /// during parsing.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum ParserErrorKind {
+    StrDecodeError(core::char::DecodeUtf16Error),
+
     UnexpectedEndOfInput,
 
     UnexpectedToken {
@@ -66,6 +68,9 @@ pub enum ParserErrorKind {
 impl fmt::Display for ParserErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            ParserErrorKind::StrDecodeError(e) => {
+                write!(f, "error decoding u16 to `Str` type: {e}")
+            }
             ParserErrorKind::UnexpectedEndOfInput => {
                 write!(f, "unexpected end of input")
             }

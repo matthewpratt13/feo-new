@@ -1,10 +1,7 @@
 use core::fmt;
 
 use crate::{
-    ast::{
-        BigUIntType, BoolType, ByteType, BytesType, CharType, FloatType, HashType, IntType,
-        StrType, UIntType,
-    },
+    ast::{BigUInt, BoolType, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
     span::Span,
 };
 
@@ -19,39 +16,39 @@ pub(crate) enum Token {
 
     // literals
     IntLiteral {
-        value: IntType,
+        value: Int,
         span: Span,
     },
     UIntLiteral {
-        value: UIntType,
+        value: UInt,
         span: Span,
     },
     BigUIntLiteral {
-        value: BigUIntType,
+        value: BigUInt,
         span: Span,
     },
     FloatLiteral {
-        value: FloatType,
+        value: Float,
         span: Span,
     },
     ByteLiteral {
-        value: ByteType,
+        value: Byte,
         span: Span,
     },
     BytesLiteral {
-        value: BytesType,
+        value: Bytes,
         span: Span,
     },
     HashLiteral {
-        value: HashType,
+        value: Hash,
         span: Span,
     },
     StrLiteral {
-        value: StrType,
+        value: Str,
         span: Span,
     },
     CharLiteral {
-        value: CharType,
+        value: Char,
         span: Span,
     },
     BoolLiteral {
@@ -1121,9 +1118,11 @@ impl fmt::Display for Token {
             Token::BigUIntLiteral { value, .. } => write!(f, "{}", value),
             Token::FloatLiteral { value, .. } => write!(f, "{}", value),
             Token::ByteLiteral { value, .. } => write!(f, "{}", value),
-            Token::BytesLiteral { value, .. } => write!(f, "{}", value),
+            Token::BytesLiteral { value, .. } => write!(f, "{}", value.clone().as_string()),
             Token::HashLiteral { value, .. } => write!(f, "{}", value),
-            Token::StrLiteral { value, .. } => write!(f, "{}", value),
+            Token::StrLiteral { value, .. } => {
+                write!(f, "{}", value.clone().as_string())
+            }
             Token::CharLiteral { value, .. } => write!(f, "{}", value),
             Token::BoolLiteral { value, .. } => write!(f, "{}", value),
             Token::Let { name, .. } => write!(f, "{}", name),
@@ -1268,15 +1267,15 @@ pub(crate) enum DocCommentType {
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub(crate) enum TokenType {
     Iden(String),
-    IntLit(IntType),
-    UIntLit(UIntType),
-    BigUIntLit(BigUIntType),
-    FloatLit(FloatType),
-    ByteLit(ByteType),
-    BytesLit(BytesType),
-    HashLit(HashType),
-    StrLit(StrType),
-    CharLit(CharType),
+    IntLit(Int),
+    UIntLit(UInt),
+    BigUIntLit(BigUInt),
+    FloatLit(Float),
+    ByteLit(Byte),
+    BytesLit(Bytes),
+    HashLit(Hash),
+    StrLit(Str),
+    CharLit(Char),
     BoolLit(BoolType),
     Let,
     Mut,
@@ -1416,9 +1415,11 @@ impl fmt::Display for TokenType {
             TokenType::BigUIntLit(u) => write!(f, "{}", u),
             TokenType::FloatLit(flt) => write!(f, "{}", flt),
             TokenType::ByteLit(by) => write!(f, "{}", by),
-            TokenType::BytesLit(bb) => write!(f, "{}", bb),
+            TokenType::BytesLit(bb) => write!(f, "{}", bb.clone().as_string()),
             TokenType::HashLit(h) => write!(f, "{}", h),
-            TokenType::StrLit(s) => write!(f, "{}", s),
+            TokenType::StrLit(s) => {
+                write!(f, "{}", s.clone().as_string())
+            }
             TokenType::CharLit(c) => write!(f, "{}", c),
             TokenType::BoolLit(b) => write!(f, "{}", b),
             TokenType::Let => write!(f, "`let`"),
