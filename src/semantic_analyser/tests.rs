@@ -333,6 +333,11 @@ fn analyse_mapping_indexing() -> Result<(), ()> {
             let balances: Mapping<h160, u256> = { $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE: 0x1a2b3c };
             balances.get($0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE)
         }
+
+        func remove_balance() -> u256 {
+            let balances: Mapping<h160, u256> = { $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE: 0x1a2b3c };
+            balances.remove($0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE)
+        }
     "#;
 
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
