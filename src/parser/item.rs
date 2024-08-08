@@ -9,6 +9,8 @@ mod static_var_decl;
 mod struct_def;
 mod trait_def;
 
+pub(crate) use super::parse::{ParseAssociatedItem, ParseDeclItem, ParseDefItem};
+
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, EnumDef, FunctionItem, Identifier, ImportDecl, InherentImplDef,
@@ -20,7 +22,6 @@ use crate::{
     token::Token,
 };
 
-pub(crate) use super::parse::{ParseAssociatedItem, ParseDeclItem, ParseDefItem};
 use super::{collection, ParseStatement, Parser};
 
 impl Item {

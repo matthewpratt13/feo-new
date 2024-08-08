@@ -1,4 +1,5 @@
 mod type_path;
+
 use core::fmt;
 
 pub(crate) use type_path::build_item_path;

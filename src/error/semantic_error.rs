@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use core::fmt;
 use std::error::Error;
 
@@ -17,16 +15,7 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
-    ConversionError {
-        from: String,
-        into: String,
-    },
-
     InvalidVariableIdentifier {
-        name: Identifier,
-    },
-
-    InvalidStructName {
         name: Identifier,
     },
 
@@ -124,11 +113,6 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
     
-        UnexpectedExpression {
-            expected: String,
-            found: String,
-        },
-    
     UnexpectedKeyword {
         expected: String,
         found: String,
@@ -166,15 +150,10 @@ impl fmt::Display for SemanticErrorKind {
                 write!(f, "cannot reassign constant: `{name}`")
             }  
             
-            SemanticErrorKind::ConversionError { from, into } => {
-                write!(f, "conversion error. Unable to convert {from} into {into}")
-            }
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }
-            SemanticErrorKind::InvalidStructName { name } => {
-                write!(f, "invalid struct name: `{name}`")
-            }
+         
             SemanticErrorKind::MethodParamCountError => {
                 write!(f, "too many `self` parameters")
             }
@@ -251,8 +230,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UndefinedVariable { name } => {
                 write!(f, "undefined variable: `{name}`",)
             }
-            SemanticErrorKind::UnexpectedExpression { expected, found } => write!(f, "unexpected expression. Expected {expected}, found {found}"),
-            
+          
             SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found {found}"),
             
             SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found {found}"),

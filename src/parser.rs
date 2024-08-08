@@ -80,6 +80,12 @@ mod visibility;
 
 use std::collections::HashMap;
 
+pub(crate) use self::parse::{
+    ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParsePattern, ParseSimpleExpr,
+    ParseStatement,
+};
+pub(crate) use self::precedence::Precedence;
+
 use crate::{
     ast::{
         ArrayExpr, AssigneeExpr, AssignmentExpr, BinaryExpr, BlockExpr, BreakExpr, CallExpr,
@@ -97,12 +103,6 @@ use crate::{
     span::{Position, Span},
     token::{Token, TokenStream, TokenType},
 };
-
-pub(crate) use self::parse::{
-    ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParsePattern, ParseSimpleExpr,
-    ParseStatement,
-};
-pub(crate) use self::precedence::Precedence;
 
 /// Enum representing the different parsing contexts in which tokens can be interpreted.
 /// This context can influence the precedence of specific tokens according to their role

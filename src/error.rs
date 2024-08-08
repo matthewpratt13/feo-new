@@ -2,13 +2,14 @@ mod lex_error;
 mod parser_error;
 mod semantic_error;
 
-use std::{error::Error, fmt};
-
-use crate::span::Position;
+use core::fmt;
+use std::error::Error;
 
 pub(crate) use self::lex_error::LexErrorKind;
 pub(crate) use self::parser_error::ParserErrorKind;
 pub(crate) use self::semantic_error::SemanticErrorKind;
+
+use crate::span::Position;
 
 /// Generic error struct that encapsulates custom error kinds and provides the precise location
 /// of the error in the source code.

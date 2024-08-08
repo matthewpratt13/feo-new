@@ -11,12 +11,12 @@ mod types;
 
 use core::fmt;
 
+pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*};
+
 use crate::{
     error::ParserErrorKind,
     span::{Position, Span, Spanned},
 };
-
-pub(crate) use self::{expression::*, item::*, pattern::*, statement::*, types::*};
 
 ///////////////////////////////////////////////////////////////////////////
 // LITERAL
