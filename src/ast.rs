@@ -158,6 +158,7 @@ pub(crate) enum Keyword {
     None,
     Ok,
     Err,
+    Anonymous,
 }
 
 impl fmt::Display for Keyword {
@@ -191,6 +192,7 @@ impl fmt::Display for Keyword {
             Keyword::None => write!(f, "None"),
             Keyword::Ok => write!(f, "Ok"),
             Keyword::Err => write!(f, "Err"),
+            Keyword::Anonymous => write!(f, ""),
         }
     }
 }

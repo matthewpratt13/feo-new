@@ -181,7 +181,7 @@ impl SemanticAnalyser {
         let root_module = ModuleItem {
             outer_attributes_opt: None,
             visibility: Visibility::Pub,
-            kw_module: Keyword::Module,
+            kw_module: Keyword::Anonymous,
             module_name: program_path.type_name.clone(),
             inner_attributes_opt: None,
             items_opt: {
@@ -531,7 +531,7 @@ impl SemanticAnalyser {
                                             struct_def: StructDef {
                                                 attributes_opt: None,
                                                 visibility: Visibility::Private,
-                                                kw_struct: Keyword::Struct,
+                                                kw_struct: Keyword::Anonymous,
                                                 struct_name: variant.variant_name,
                                                 fields_opt: Some(s.struct_fields),
                                                 span: Span::default(),
@@ -547,7 +547,7 @@ impl SemanticAnalyser {
                                             tuple_struct_def: TupleStructDef {
                                                 attributes_opt: None,
                                                 visibility: Visibility::Private,
-                                                kw_struct: Keyword::Struct,
+                                                kw_struct: Keyword::Anonymous,
                                                 struct_name: Identifier::from(
                                                     &variant_path.to_string(),
                                                 ),
@@ -781,7 +781,7 @@ impl SemanticAnalyser {
                         function: FunctionItem {
                             attributes_opt: None,
                             visibility: Visibility::Private,
-                            kw_func: Keyword::Func,
+                            kw_func: Keyword::Anonymous,
                             function_name: f.function_name.clone(),
                             params_opt: fp.params_opt,
                             return_type_opt: fp.return_type_opt,
