@@ -1,13 +1,19 @@
 use crate::{
     ast::{Delimiter, OrPatt, Pattern},
     error::ErrorsEmitted,
-    parser::{collection, ParsePattern, Parser},
+    parser::{collection, Parser},
     token::Token,
 };
 
-impl ParsePattern for OrPatt {
-    fn parse_patt(parser: &mut Parser) -> Result<OrPatt, ErrorsEmitted> {
-        let first_pattern = parser.parse_pattern()?;
+impl OrPatt {
+    pub(crate) fn parse_patt(
+        parser: &mut Parser,
+        first_pattern: Box<Pattern>,
+    ) -> Result<OrPatt, ErrorsEmitted> {
+        ////////////////////////////////////////////////////////////////////////////////
+        parser.logger.debug("entering `OrPatt::parse_patt()`…");
+        parser.log_current_token(true);
+        ////////////////////////////////////////////////////////////////////////////////
 
         let first_pipe = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
@@ -23,8 +29,13 @@ impl ParsePattern for OrPatt {
         let subsequent_patterns_opt =
             collection::get_collection(parser, parse_pattern, &first_pipe)?;
 
+        ////////////////////////////////////////////////////////////////////////////////
+        parser.logger.debug("exiting `OrPatt::parse_patt()`…");
+        parser.log_current_token(true);
+        ////////////////////////////////////////////////////////////////////////////////
+
         Ok(OrPatt {
-            first_pattern: Box::new(first_pattern),
+            first_pattern,
             subsequent_patterns: {
                 if let Some(patts) = subsequent_patterns_opt {
                     patts
@@ -40,4 +51,21 @@ fn parse_pattern(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
     parser.parse_pattern()
 }
 
-// TODO: add tests
+#[cfg(test)]
+mod tests {
+    use crate::{logger::LogLevel, parser::test_utils};
+
+    #[test]
+    fn parse_or_patt() -> Result<(), ()> {
+        let input = r#"a | b | c"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+
+        let pattern = parser.parse_pattern();
+
+        match pattern {
+            Ok(p) => Ok(println!("{:#?}", p)),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+        }
+    }
+}
