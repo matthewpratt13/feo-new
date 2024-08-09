@@ -962,11 +962,15 @@ impl SemanticAnalyser {
                     Some(mut segments) => {
                         if let Some(id) = segments.pop() {
                             let root = match &p.path_root {
-                                PathRoot::Lib => TypePath::from(Identifier::from("lib")),
-                                PathRoot::Super => TypePath::from(Identifier::from("super")),
+                                PathRoot::Identifier(id) => TypePath::from(id.clone()),
                                 PathRoot::SelfKeyword => TypePath::from(Identifier::from("self")),
                                 PathRoot::SelfType(_) => TypePath::from(Identifier::from("Self")),
-                                PathRoot::Identifier(id) => TypePath::from(id.clone()),
+
+                                path_root => {
+                                    return Err(SemanticErrorKind::InvalidVariableIdentifier {
+                                        name: Identifier::from(&path_root.to_string()),
+                                    })
+                                }
                             };
 
                             build_item_path(
