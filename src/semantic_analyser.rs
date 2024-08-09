@@ -7,9 +7,10 @@ use crate::{
     ast::{
         BigUInt, BoolType, Byte, Bytes, Char, ClosureParams, EnumVariantType, Expression, Float,
         FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Hash, Identifier,
-        IdentifierPatt, ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal,
-        LiteralPatt, ModuleItem, PathExpr, PathRoot, Pattern, SelfType, Statement, Str, StructDef,
-        TraitDefItem, TraitImplItem, Type, TypePath, UInt, UnaryOp, UnitType, Visibility,
+        ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt,
+        ModuleItem, PathExpr, PathRoot, Pattern, SelfType, Statement, Str, StructDef, TraitDefItem,
+        TraitImplItem, TupleStructDef, TupleStructDefElement, Type, TypePath, UInt, UnaryOp,
+        UnitType, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -541,46 +542,31 @@ impl SemanticAnalyser {
                                 EnumVariantType::Tuple(t) => {
                                     self.insert(
                                         variant_path.clone(),
-                                        Symbol::Function {
+                                        Symbol::TupleStruct {
                                             path: variant_path.clone(),
-                                            function: FunctionItem {
+                                            tuple_struct_def: TupleStructDef {
                                                 attributes_opt: None,
                                                 visibility: Visibility::Private,
-                                                kw_func: Keyword::Func,
-                                                function_name: Identifier::from("new"),
-                                                params_opt: {
-                                                    let mut param_index: usize = 0;
-
-                                                    let mut params: Vec<FunctionOrMethodParam> =
+                                                kw_struct: Keyword::Struct,
+                                                struct_name: Identifier::from(
+                                                    &variant_path.to_string(),
+                                                ),
+                                                elements_opt: {
+                                                    let mut elements: Vec<TupleStructDefElement> =
                                                         Vec::new();
 
                                                     for elem_type in t.element_types {
-                                                        let ty =
-                                                            FunctionOrMethodParam::FunctionParam(
-                                                                FunctionParam {
-                                                                    param_name: IdentifierPatt {
-                                                                        kw_ref_opt: None,
-                                                                        kw_mut_opt: None,
-                                                                        name: Identifier::from(
-                                                                            &param_index
-                                                                                .to_string(),
-                                                                        ),
-                                                                    },
-                                                                    param_type: Box::new(elem_type),
-                                                                },
-                                                            );
+                                                        let elem = TupleStructDefElement {
+                                                            attributes_opt: None,
+                                                            visibility: Visibility::Private,
+                                                            element_type: Box::new(elem_type),
+                                                        };
 
-                                                        params.push(ty);
-
-                                                        param_index += 1;
+                                                        elements.push(elem);
                                                     }
 
-                                                    Some(params)
+                                                    Some(elements)
                                                 },
-                                                return_type_opt: Some(Box::new(Type::UserDefined(
-                                                    variant_path,
-                                                ))),
-                                                block_opt: None,
                                                 span: Span::default(),
                                             },
                                         },

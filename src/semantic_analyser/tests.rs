@@ -109,7 +109,7 @@ fn analyse_enum_variants() -> Result<(), ()> {
     let input = r#"
         enum Error {
             StdError,
-            TupleError(str),
+            TupleStructError(str),
             StructError {
                 expected: str,
                 found:  str
@@ -118,7 +118,7 @@ fn analyse_enum_variants() -> Result<(), ()> {
 
         func emit_error(err: Error) {
             let std_error = Error::StdError;
-            let tuple_error = Error::TupleError("foo");
+            let tuple_struct_error = Error::TupleStructError("foo");
             let struct_error = Error::StructError { expected: "foo", found: "bar" }; 
 
             return;
