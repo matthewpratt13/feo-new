@@ -2455,6 +2455,55 @@ impl SemanticAnalyser {
                     }
                 }
             }
+
+            Some(Symbol::TupleStruct {
+                path,
+                tuple_struct_def,
+            }) => {
+                let elements = tuple_struct_def.elements_opt.clone();
+
+                match (&args_opt, &elements) {
+                    (None, None) => Ok(Type::UnitType(UnitType)),
+
+                    (Some(args), None) => Err(SemanticErrorKind::ArgumentCountMismatch {
+                        name: tuple_struct_def.struct_name.clone(),
+                        expected: 0,
+                        found: args.len(),
+                    }),
+
+                    (None, Some(elements)) => Err(SemanticErrorKind::ArgumentCountMismatch {
+                        name: tuple_struct_def.struct_name.clone(),
+                        expected: elements.len(),
+                        found: 0,
+                    }),
+
+                    (Some(args), Some(elements)) => {
+                        if args.len() != elements.len() {
+                            return Err(SemanticErrorKind::ArgumentCountMismatch {
+                                name: tuple_struct_def.struct_name.clone(),
+                                expected: elements.len(),
+                                found: args.len(),
+                            });
+                        }
+
+                        for (arg, elem) in args.iter().zip(elements) {
+                            let arg_type =
+                                self.analyse_expr(&arg, &TypePath::from(Identifier::from("")))?;
+                            let element_type = elem.element_type.clone();
+
+                            if arg_type != *element_type {
+                                return Err(SemanticErrorKind::TypeMismatchArgument {
+                                    name: tuple_struct_def.struct_name.clone(),
+                                    expected: format!("`{}`", element_type),
+                                    found: format!("`{}`", arg_type),
+                                });
+                            }
+                        }
+
+                        Ok(Type::UserDefined(path))
+                    }
+                }
+            }
             None => Err(SemanticErrorKind::UndefinedFunction {
                 name: path.type_name,
             }),
