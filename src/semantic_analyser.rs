@@ -1196,8 +1196,22 @@ impl SemanticAnalyser {
                             })
                         }
                     }
+                    Type::UserDefined(ref tp) => match self.lookup(&tp) {
+                        Some(sym) => match sym {
+                            Symbol::TupleStruct { .. } => Ok(Type::UserDefined(tp.clone())),
+
+                            _ => Err(SemanticErrorKind::UnexpectedSymbol {
+                                name: tp.type_name.clone(),
+                                expected: "tuple struct".to_string(),
+                                found: sym.to_string(),
+                            }),
+                        },
+                        None => Err(SemanticErrorKind::UndefinedType {
+                            name: tp.type_name.clone(),
+                        }),
+                    },
                     _ => Err(SemanticErrorKind::UnexpectedType {
-                        expected: "tuple".to_string(),
+                        expected: "tuple or tuple struct".to_string(),
                         found: format!("`{}`", tuple_type),
                     }),
                 }
