@@ -6,7 +6,7 @@
 //! the end of the input string.
 
 use crate::{
-    ast::{BigUInt, BoolType, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
+    ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
     error::{CompilerError, ErrorsEmitted, LexErrorKind},
     span::Span,
     token::{DocCommentType, Token, TokenStream, TokenType},
@@ -334,7 +334,7 @@ impl<'a> Lexer<'a> {
                 "false" => Ok(Token::BoolLiteral {
                     value: {
                         if let Ok(n) = name.parse::<bool>() {
-                            BoolType::from(n)
+                            Bool::from(n)
                         } else {
                             self.push_err(LexErrorKind::ParseBoolError);
                             return Err(ErrorsEmitted);
@@ -368,7 +368,7 @@ impl<'a> Lexer<'a> {
                 "true" => Ok(Token::BoolLiteral {
                     value: {
                         if let Ok(n) = name.parse::<bool>() {
-                            BoolType::from(n)
+                            Bool::from(n)
                         } else {
                             self.push_err(LexErrorKind::ParseBoolError);
                             return Err(ErrorsEmitted);

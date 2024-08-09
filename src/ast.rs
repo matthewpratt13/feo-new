@@ -41,7 +41,7 @@ pub(crate) enum Literal {
     Hash { value: Hash, span: Span },
     Str { value: Str, span: Span },
     Char { value: Char, span: Span },
-    Bool { value: BoolType, span: Span },
+    Bool { value: Bool, span: Span },
 }
 
 impl Spanned for Literal {
@@ -991,7 +991,7 @@ pub(crate) enum Type {
     H512(Hash),
     Str(Str),
     Char(Char),
-    Bool(BoolType),
+    Bool(Bool),
 
     UnitType(UnitType), // ()
 

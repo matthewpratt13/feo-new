@@ -1,6 +1,6 @@
 use super::{
-    BigUInt, BoolType, Byte, Bytes, Char, Expression, Float, Hash, Identifier, Int, Keyword,
-    Literal, PathRoot, Pattern, RangeOp, ReferenceOp, Str, TypePath, UInt, U512,
+    BigUInt, Bool, Byte, Bytes, Char, Expression, Float, Hash, Identifier, Int, Keyword, Literal,
+    PathRoot, Pattern, RangeOp, ReferenceOp, Str, TypePath, UInt, U512,
 };
 
 use crate::error::ParserErrorKind;
@@ -79,7 +79,7 @@ pub(crate) enum LiteralPatt {
     Hash { value: Hash },
     Str { value: Str },
     Char { value: Char },
-    Bool { value: BoolType },
+    Bool { value: Bool },
 }
 
 impl From<Literal> for LiteralPatt {

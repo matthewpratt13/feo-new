@@ -301,15 +301,15 @@ impl fmt::Display for Str {
 
 /// Wrapper for the `bool` type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct BoolType(bool);
+pub struct Bool(bool);
 
-impl From<bool> for BoolType {
+impl From<bool> for Bool {
     fn from(value: bool) -> Self {
-        BoolType(value)
+        Bool(value)
     }
 }
 
-impl fmt::Display for BoolType {
+impl fmt::Display for Bool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BigUInt, BoolType, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
+    ast::{BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Int, Str, UInt},
     span::Span,
 };
 
@@ -52,7 +52,7 @@ pub(crate) enum Token {
         span: Span,
     },
     BoolLiteral {
-        value: BoolType,
+        value: Bool,
         span: Span,
     },
 
@@ -1276,7 +1276,7 @@ pub(crate) enum TokenType {
     HashLit(Hash),
     StrLit(Str),
     CharLit(Char),
-    BoolLit(BoolType),
+    BoolLit(Bool),
     Let,
     Mut,
     Ref,

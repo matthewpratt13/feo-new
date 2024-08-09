@@ -243,7 +243,7 @@ fn analyse_import_decl() -> Result<(), ()> {
     let external_func = FunctionItem {
         attributes_opt: None,
         visibility: Visibility::Pub,
-        kw_func: Keyword::Func,
+        kw_func: Keyword::Anonymous,
         function_name: Identifier::from("external_func"),
         params_opt: None,
         return_type_opt: None,
@@ -254,7 +254,7 @@ fn analyse_import_decl() -> Result<(), ()> {
     let external_mod = ModuleItem {
         outer_attributes_opt: None,
         visibility: Visibility::Pub,
-        kw_module: Keyword::Module,
+        kw_module: Keyword::Anonymous,
         module_name: Identifier::from("external_mod"),
         inner_attributes_opt: None,
         items_opt: Some(vec![Item::FunctionItem(external_func.clone())]),

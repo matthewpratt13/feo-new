@@ -5,7 +5,7 @@ mod tests;
 
 use crate::{
     ast::{
-        BigUInt, BoolType, Byte, Bytes, Char, ClosureParams, EnumVariantType, Expression, Float,
+        BigUInt, Bool, Byte, Bytes, Char, ClosureParams, EnumVariantType, Expression, Float,
         FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Hash, Identifier,
         ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt,
         ModuleItem, PathExpr, PathRoot, Pattern, SelfType, Statement, Str, StructDef, TraitDefItem,
@@ -1059,7 +1059,7 @@ impl SemanticAnalyser {
                 },
                 Literal::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
                 Literal::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
-                Literal::Bool { .. } => Ok(Type::Bool(BoolType::from(bool::default()))),
+                Literal::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
             },
 
             Expression::MethodCall(mc) => {
@@ -2565,7 +2565,7 @@ impl SemanticAnalyser {
                 },
                 LiteralPatt::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
                 LiteralPatt::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
-                LiteralPatt::Bool { .. } => Ok(Type::Bool(BoolType::from(bool::default()))),
+                LiteralPatt::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
             },
 
             Pattern::ReferencePatt(r) => Ok(Type::Reference {

@@ -5,7 +5,7 @@ use super::{collection, Parser};
 
 use crate::{
     ast::{
-        BigUInt, BoolType, Byte, Bytes, Char, Delimiter, Float, FunctionOrMethodParam, FunctionPtr,
+        BigUInt, Bool, Byte, Bytes, Char, Delimiter, Float, FunctionOrMethodParam, FunctionPtr,
         Hash, Identifier, InferredType, Int, ReferenceOp, SelfType, Str, Type, TypePath, UInt,
         UnitType,
     },
@@ -47,7 +47,7 @@ impl Type {
             Some(Token::H512Type { .. }) => Ok(Type::H512(Hash::H512(H512::default()))),
             Some(Token::StrType { .. }) => Ok(Type::Str(Str::from(String::default().as_str()))),
             Some(Token::CharType { .. }) => Ok(Type::Char(Char::from(char::default()))),
-            Some(Token::BoolType { .. }) => Ok(Type::Bool(BoolType::from(bool::default()))),
+            Some(Token::BoolType { .. }) => Ok(Type::Bool(Bool::from(bool::default()))),
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
             Some(Token::Func { .. }) => parse_function_ptr_type(parser),
