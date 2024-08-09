@@ -93,7 +93,7 @@ use crate::{
         ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter,
         DereferenceExpr, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
         Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
-        LiteralPatt, MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr,
+        LiteralPatt, MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, OrPatt, PathExpr,
         PathPatt, Pattern, RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferencePatt, RestPatt,
         ResultExpr, ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt,
         TupleExpr, TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr,
@@ -923,8 +923,13 @@ impl Parser {
         ////////////////////////////////////////////////////////////////////////////////
 
         let token = self.current_token().cloned();
+        let next_token = self.peek_ahead_by(1);
 
         match &token {
+            _ if next_token.is_some_and(|next| next.token_type() == TokenType::Pipe) => {
+                Ok(Pattern::OrPatt(OrPatt::parse_patt(self)?))
+            }
+
             Some(Token::IntLiteral { value, .. }) => {
                 let patt = Pattern::LiteralPatt(LiteralPatt::Int { value: *value });
 
