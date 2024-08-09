@@ -139,6 +139,12 @@ pub struct NonePatt {
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct OrPatt {
+    pub(crate) first_pattern: Box<Pattern>,
+    pub(crate) subsequent_patterns: Vec<Pattern>,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct PathPatt {
     pub(crate) path_root: PathRoot,
     pub(crate) tree_opt: Option<Vec<Identifier>>,
@@ -379,6 +385,19 @@ impl fmt::Display for Pattern {
             }
             Pattern::WildcardPatt(_) => write!(f, "*"),
             Pattern::RestPatt(_) => write!(f, ".."),
+            Pattern::OrPatt(o) => {
+                let mut patterns: Vec<String> = Vec::new();
+
+                patterns.push(o.first_pattern.to_string());
+
+                for patt in o.subsequent_patterns {
+                    patterns.push(patt.to_string());
+                }
+
+                let or_pattern_string = patterns.join(" | ");
+
+                write!(f, "{}", or_pattern_string)
+            }
             Pattern::SomePatt(som) => write!(f, "Some{}", Pattern::GroupedPatt(*som.pattern)),
             Pattern::NonePatt(_) => write!(f, "None"),
             Pattern::ResultPatt(res) => write!(f, "{}", {
