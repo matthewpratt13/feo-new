@@ -39,3 +39,5 @@ impl ParsePattern for OrPatt {
 fn parse_pattern(parser: &mut Parser) -> Result<Pattern, ErrorsEmitted> {
     parser.parse_pattern()
 }
+
+// TODO: add tests
