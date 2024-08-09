@@ -720,6 +720,13 @@ impl SemanticAnalyser {
                         },
                     },
 
+                    Type::UserDefined(tp) => match self.lookup(&tp) {
+                        Some(sym) => sym.clone(),
+                        None => {
+                            return Err(SemanticErrorKind::UndefinedType { name: tp.type_name })
+                        }
+                    },
+
                     ty => Symbol::Variable {
                         name: param.param_name(),
                         var_type: ty,
@@ -1033,31 +1040,6 @@ impl SemanticAnalyser {
                         },
                         _ => Ok(Type::UnitType(UnitType)),
                     },
-
-                    Some(Symbol::Variable { name, var_type, .. }) => {
-                        if let Some(Symbol::Struct { struct_def, .. }) =
-                            self.lookup(&TypePath::from(var_type))
-                        {
-                            match &struct_def.fields_opt {
-                                Some(fields) => {
-                                    match fields.iter().find(|f| f.field_name == fa.field_name) {
-                                        Some(sdf) => Ok(*sdf.field_type.clone()),
-                                        _ => Err(SemanticErrorKind::UndefinedField {
-                                            struct_name: struct_def.struct_name.clone(),
-                                            field_name: fa.field_name.clone(),
-                                        }),
-                                    }
-                                }
-                                _ => Ok(Type::UnitType(UnitType)),
-                            }
-                        } else {
-                            Err(SemanticErrorKind::UnexpectedSymbol {
-                                name: Identifier::from(&format!("{}", object_type)),
-                                expected: "struct".to_string(),
-                                found: format!("`{}`", name),
-                            })
-                        }
-                    }
 
                     None => Err(SemanticErrorKind::UndefinedType {
                         name: Identifier::from(&format!("{}", object_type)),

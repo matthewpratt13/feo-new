@@ -65,12 +65,6 @@ pub(crate) enum Symbol {
     },
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct Scope {
-    pub(crate) scope_kind: ScopeKind,
-    pub(crate) symbols: SymbolTable,
-}
-
 impl Symbol {
     pub(crate) fn symbol_type(&self) -> Type {
         match self.clone() {
@@ -104,4 +98,10 @@ impl fmt::Display for Symbol {
             Symbol::Module { path, .. } => write!(f, "Module({path})"),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Scope {
+    pub(crate) scope_kind: ScopeKind,
+    pub(crate) symbols: SymbolTable,
 }
