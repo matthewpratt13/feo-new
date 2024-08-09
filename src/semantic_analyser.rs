@@ -5,11 +5,11 @@ mod tests;
 
 use crate::{
     ast::{
-        BigUInt, BoolType, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionItem,
-        FunctionOrMethodParam, FunctionParam, FunctionPtr, Hash, Identifier, ImportDecl,
-        InferredType, InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt, ModuleItem,
-        PathExpr, PathRoot, Pattern, SelfType, Statement, Str, TraitDefItem, TraitImplItem, Type,
-        TypePath, UInt, UnaryOp, UnitType, Visibility,
+        BigUInt, BoolType, Byte, Bytes, Char, ClosureParams, EnumVariantType, Expression, Float,
+        FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Hash, Identifier,
+        IdentifierPatt, ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal,
+        LiteralPatt, ModuleItem, PathExpr, PathRoot, Pattern, SelfType, Statement, Str, StructDef,
+        TraitDefItem, TraitImplItem, Type, TypePath, UInt, UnaryOp, UnitType, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -507,12 +507,96 @@ impl SemanticAnalyser {
                     let enum_def_path = build_item_path(root, enum_name_path.clone());
 
                     self.insert(
-                        enum_def_path,
+                        enum_def_path.clone(),
                         Symbol::Enum {
                             path: enum_name_path,
                             enum_def: e.clone(),
                         },
                     )?;
+
+                    for variant in e.variants.clone() {
+                        let variant_name_path = TypePath::from(variant.variant_name.clone());
+
+                        let variant_path =
+                            build_item_path(&enum_def_path, variant_name_path.clone());
+
+                        if let Some(variant_type) = variant.variant_type_opt {
+                            match variant_type {
+                                EnumVariantType::Struct(s) => {
+                                    self.insert(
+                                        variant_path.clone(),
+                                        Symbol::Struct {
+                                            path: variant_name_path,
+                                            struct_def: StructDef {
+                                                attributes_opt: None,
+                                                visibility: Visibility::Private,
+                                                kw_struct: Keyword::Struct,
+                                                struct_name: variant.variant_name,
+                                                fields_opt: Some(s.struct_fields),
+                                                span: Span::default(),
+                                            },
+                                        },
+                                    )?;
+                                }
+                                EnumVariantType::Tuple(t) => {
+                                    self.insert(
+                                        variant_path.clone(),
+                                        Symbol::Function {
+                                            path: variant_name_path.clone(),
+                                            function: FunctionItem {
+                                                attributes_opt: None,
+                                                visibility: Visibility::Private,
+                                                kw_func: Keyword::Func,
+                                                function_name: Identifier::from("new"),
+                                                params_opt: {
+                                                    let mut param_index: usize = 0;
+
+                                                    let mut params: Vec<FunctionOrMethodParam> =
+                                                        Vec::new();
+
+                                                    for elem_type in t.element_types {
+                                                        let ty =
+                                                            FunctionOrMethodParam::FunctionParam(
+                                                                FunctionParam {
+                                                                    param_name: IdentifierPatt {
+                                                                        kw_ref_opt: None,
+                                                                        kw_mut_opt: None,
+                                                                        name: Identifier::from(
+                                                                            &param_index
+                                                                                .to_string(),
+                                                                        ),
+                                                                    },
+                                                                    param_type: Box::new(elem_type),
+                                                                },
+                                                            );
+
+                                                        params.push(ty);
+
+                                                        param_index += 1;
+                                                    }
+
+                                                    Some(params)
+                                                },
+                                                return_type_opt: Some(Box::new(Type::UserDefined(
+                                                    variant_name_path.clone(),
+                                                ))),
+                                                block_opt: None,
+                                                span: Span::default(),
+                                            },
+                                        },
+                                    )?;
+                                }
+                            }
+                        } else {
+                            self.insert(
+                                variant_path.clone(),
+                                Symbol::Variable {
+                                    name: variant.variant_name.clone(),
+                                    var_type: Type::UserDefined(variant_name_path),
+                                },
+                            )?;
+                        }
+                    }
                 }
 
                 Item::StructDef(s) => {
@@ -720,12 +804,17 @@ impl SemanticAnalyser {
                         },
                     },
 
-                    Type::UserDefined(tp) => match self.lookup(&tp) {
-                        Some(sym) => sym.clone(),
-                        None => {
-                            return Err(SemanticErrorKind::UndefinedType { name: tp.type_name })
+                    Type::UserDefined(tp) => {
+                        let type_path =
+                            self.check_path(&tp, &path, "user-defined type".to_string())?;
+
+                        match self.lookup(&type_path) {
+                            Some(sym) => sym.clone(),
+                            None => {
+                                return Err(SemanticErrorKind::UndefinedType { name: tp.type_name })
+                            }
                         }
-                    },
+                    }
 
                     ty => Symbol::Variable {
                         name: param.param_name(),
@@ -886,8 +975,18 @@ impl SemanticAnalyser {
                 let path = match p.tree_opt.clone() {
                     Some(mut segments) => {
                         if let Some(id) = segments.pop() {
+                            println!("segments: {segments:?}");
+
+                            let root = match &p.path_root {
+                                PathRoot::Lib => TypePath::from(Identifier::from("lib")),
+                                PathRoot::Super => TypePath::from(Identifier::from("super")),
+                                PathRoot::SelfKeyword => TypePath::from(Identifier::from("self")),
+                                PathRoot::SelfType(_) => TypePath::from(Identifier::from("Self")),
+                                PathRoot::Identifier(id) => TypePath::from(id.clone()),
+                            };
+
                             build_item_path(
-                                root,
+                                &root,
                                 TypePath {
                                     associated_type_path_prefix_opt: Some(segments.to_vec()),
                                     type_name: id,
@@ -2008,7 +2107,7 @@ impl SemanticAnalyser {
                             },
                             _ => match self.analyse_stmt(stmt, root) {
                                 Ok(_) => (),
-                                Err(e) => self.log_error(e, &stmt.span()),
+                                Err(e) => return Err(e),
                             },
                         }
                     }

@@ -35,7 +35,6 @@ impl ParseStatement for LetStmt {
 
             if parser.current_token().is_some() {
                 let value = parser.parse_expression(Precedence::Lowest)?;
-                println!("value: {value:?}");
 
                 Ok(Some(value))
             } else {
