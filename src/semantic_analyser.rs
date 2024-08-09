@@ -515,10 +515,10 @@ impl SemanticAnalyser {
                     )?;
 
                     for variant in e.variants.clone() {
-                        let variant_name_path = TypePath::from(variant.variant_name.clone());
-
-                        let variant_path =
-                            build_item_path(&enum_def_path, variant_name_path.clone());
+                        let variant_path = build_item_path(
+                            &enum_def_path,
+                            TypePath::from(variant.variant_name.clone()),
+                        );
 
                         if let Some(variant_type) = variant.variant_type_opt {
                             match variant_type {
@@ -526,7 +526,7 @@ impl SemanticAnalyser {
                                     self.insert(
                                         variant_path.clone(),
                                         Symbol::Struct {
-                                            path: variant_name_path,
+                                            path: variant_path,
                                             struct_def: StructDef {
                                                 attributes_opt: None,
                                                 visibility: Visibility::Private,
@@ -542,7 +542,7 @@ impl SemanticAnalyser {
                                     self.insert(
                                         variant_path.clone(),
                                         Symbol::Function {
-                                            path: variant_name_path.clone(),
+                                            path: variant_path.clone(),
                                             function: FunctionItem {
                                                 attributes_opt: None,
                                                 visibility: Visibility::Private,
@@ -578,7 +578,7 @@ impl SemanticAnalyser {
                                                     Some(params)
                                                 },
                                                 return_type_opt: Some(Box::new(Type::UserDefined(
-                                                    variant_name_path.clone(),
+                                                    variant_path,
                                                 ))),
                                                 block_opt: None,
                                                 span: Span::default(),
@@ -591,8 +591,8 @@ impl SemanticAnalyser {
                             self.insert(
                                 variant_path.clone(),
                                 Symbol::Variable {
-                                    name: variant.variant_name.clone(),
-                                    var_type: Type::UserDefined(variant_name_path),
+                                    name: variant.variant_name,
+                                    var_type: Type::UserDefined(variant_path),
                                 },
                             )?;
                         }
@@ -975,8 +975,6 @@ impl SemanticAnalyser {
                 let path = match p.tree_opt.clone() {
                     Some(mut segments) => {
                         if let Some(id) = segments.pop() {
-                            println!("segments: {segments:?}");
-
                             let root = match &p.path_root {
                                 PathRoot::Lib => TypePath::from(Identifier::from("lib")),
                                 PathRoot::Super => TypePath::from(Identifier::from("super")),
@@ -1024,7 +1022,11 @@ impl SemanticAnalyser {
 
                 let variable_path = self.check_path(&path, root, String::from("variable"))?;
 
+                println!("variable path: {variable_path}");
+
                 if let Some(sym) = self.lookup(&variable_path) {
+                    println!("variable symbol: {sym}");
+
                     Ok(sym.symbol_type())
                 } else {
                     Err(SemanticErrorKind::UndefinedVariable {
@@ -1071,8 +1073,6 @@ impl SemanticAnalyser {
             },
 
             Expression::MethodCall(mc) => {
-                println!("analyse method call: {mc:?}");
-
                 let receiver = wrap_into_expression(*mc.receiver.clone());
                 let receiver_type = self.analyse_expr(&receiver, root)?;
 
@@ -2080,8 +2080,6 @@ impl SemanticAnalyser {
 
             Expression::Block(b) => match &b.statements_opt {
                 Some(stmts) => {
-                    println!("analyse block expression: {b:?}");
-
                     self.enter_scope(ScopeKind::LocalBlock);
 
                     let mut cloned_iter = stmts.iter().peekable().clone();
@@ -2125,11 +2123,7 @@ impl SemanticAnalyser {
                     Ok(ty)
                 }
 
-                _ => {
-                    println!("analyse block expression: {b:?}");
-
-                    Ok(Type::UnitType(UnitType))
-                }
+                _ => Ok(Type::UnitType(UnitType)),
             },
 
             Expression::If(i) => {
