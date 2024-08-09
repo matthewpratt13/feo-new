@@ -467,7 +467,20 @@ impl Parser {
 
                             _ => self.parse_primary(),
                         },
-                        Some(Token::DblColon { .. } | Token::ColonColonAsterisk { .. }) => {
+                        Some(Token::DblColon { .. }) => match self.peek_ahead_by(2) {
+                            Some(Token::Identifier { .. }) => {
+                                if let Some(Token::LBrace { .. }) = self.peek_ahead_by(3) {
+                                    Ok(Expression::Struct(StructExpr::parse(self)?))
+                                } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(5) {
+                                    Ok(Expression::Struct(StructExpr::parse(self)?))
+                                } else {
+                                    Ok(Expression::Path(PathExpr::parse(self)?))
+                                }
+                            }
+
+                            _ => Ok(Expression::Path(PathExpr::parse(self)?)),
+                        },
+                        Some(Token::ColonColonAsterisk { .. }) => {
                             Ok(Expression::Path(PathExpr::parse(self)?))
                         }
                         _ => self.parse_primary(),

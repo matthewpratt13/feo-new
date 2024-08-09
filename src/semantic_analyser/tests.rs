@@ -105,6 +105,35 @@ fn analyse_control_flow() -> Result<(), ()> {
 }
 
 #[test]
+fn analyse_enum_variants() -> Result<(), ()> {
+    let input = r#"
+        enum Error {
+            StdError,
+            TupleError(str),
+            StructError {
+                expected: str,
+                found:  str
+            }
+        }
+
+        func emit_error(err: Error) {
+            let std_error = Error::StdError;
+            let tuple_error = Error::TupleError("foo");
+            let struct_error = Error::StructError { expected: "foo", found: "bar" }; 
+
+            return;
+        }
+    "#;
+
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+
+    match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+    }
+}
+
+#[test]
 fn analyse_impl() -> Result<(), ()> {
     let input = r#"
     module erc_20 {
