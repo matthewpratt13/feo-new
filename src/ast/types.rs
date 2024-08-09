@@ -142,6 +142,7 @@ pub enum Bytes {
 }
 
 impl Bytes {
+    #[allow(dead_code)]
     pub fn to_hex_bytes(self) -> Vec<String> {
         let strings = match self {
             Bytes::B2(b) => {
@@ -261,6 +262,7 @@ impl Str {
             .unwrap_or("".to_string())
     }
 
+    #[allow(dead_code)]
     pub fn as_bytes(&self) -> &[Byte] {
         self.0.as_slice()
     }
