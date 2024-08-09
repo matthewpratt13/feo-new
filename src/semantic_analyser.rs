@@ -981,7 +981,11 @@ impl SemanticAnalyser {
 
                 // check if path expression's type is that of an existing type and analyse
                 match symbol {
-                    Some(Symbol::Struct { path, .. } | Symbol::TupleStruct { path, .. }) => {
+                    Some(
+                        Symbol::Struct { path, .. }
+                        | Symbol::TupleStruct { path, .. }
+                        | Symbol::Enum { path, .. },
+                    ) => {
                         if Type::UserDefined(path.clone()) == receiver_type {
                             let method_path =
                                 build_item_path(&path, TypePath::from(mc.method_name.clone()));
