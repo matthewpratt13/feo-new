@@ -591,7 +591,7 @@ impl SemanticAnalyser {
                             self.insert(
                                 variant_path.clone(),
                                 Symbol::Variable {
-                                    name: variant.variant_name,
+                                    name: Identifier::from(&variant_path.to_string()),
                                     var_type: Type::UserDefined(variant_path),
                                 },
                             )?;
