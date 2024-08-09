@@ -539,7 +539,7 @@ impl SemanticAnalyser {
                                         },
                                     )?;
                                 }
-                                EnumVariantType::Tuple(t) => {
+                                EnumVariantType::TupleStruct(t) => {
                                     self.insert(
                                         variant_path.clone(),
                                         Symbol::TupleStruct {

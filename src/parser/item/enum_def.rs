@@ -2,8 +2,8 @@ use super::ParseDefItem;
 
 use crate::{
     ast::{
-        Delimiter, EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTuple, EnumVariantType,
-        Identifier, Keyword, OuterAttr, StructDefField, Type, Visibility,
+        Delimiter, EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTupleStruct,
+        EnumVariantType, Identifier, Keyword, OuterAttr, StructDefField, Type, Visibility,
     },
     error::ErrorsEmitted,
     parser::{collection, Parser},
@@ -151,7 +151,7 @@ fn parse_enum_variant(
         }
         Some(Token::LParen { .. }) => {
             let variant_tuple = parse_enum_variant_tuple(parser)?;
-            Some(EnumVariantType::Tuple(variant_tuple))
+            Some(EnumVariantType::TupleStruct(variant_tuple))
         }
         _ => None,
     };
@@ -201,7 +201,7 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
     }
 }
 
-fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTuple, ErrorsEmitted> {
+fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTupleStruct, ErrorsEmitted> {
     let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
         let position = Position::new(parser.current, &parser.stream.span().input());
         parser.next_token();
@@ -223,7 +223,7 @@ fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTuple, Err
         Some(Token::RParen { .. }) => {
             parser.next_token();
 
-            Ok(EnumVariantTuple { element_types })
+            Ok(EnumVariantTupleStruct { element_types })
         }
         Some(Token::EOF) | None => {
             parser.log_unmatched_delimiter(&open_paren);

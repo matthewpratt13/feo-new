@@ -17,7 +17,7 @@ use core::fmt;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum EnumVariantType {
     Struct(EnumVariantStruct),
-    Tuple(EnumVariantTuple),
+    TupleStruct(EnumVariantTupleStruct),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,7 +84,7 @@ pub(crate) struct EnumVariantStruct {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct EnumVariantTuple {
+pub(crate) struct EnumVariantTupleStruct {
     pub(crate) element_types: Vec<Type>,
 }
 
