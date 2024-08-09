@@ -195,7 +195,7 @@ fn analyse_impl() -> Result<(), ()> {
             const CREATOR_ADDRESS: h160 = $0x67890_ABCDE_67890_ABCDE_67890_ABCDE_67890_ABCDE;
 
             pub func address() -> h160 {
-                SomeToken::Contract::CONTRACT_ADDRESS
+                SomeToken::CONTRACT_ADDRESS
             }
 
             pub func balance(&self) -> u64 {
@@ -203,11 +203,11 @@ fn analyse_impl() -> Result<(), ()> {
             }
 
             pub func msg_sender() -> h160 {
-                SomeToken::Contract::CREATOR_ADDRESS
+                SomeToken::CREATOR_ADDRESS
             }
 
             pub func creator_address() -> h160 {
-                SomeToken::Contract::CREATOR_ADDRESS
+                SomeToken::CREATOR_ADDRESS
             }
         }
 
@@ -356,7 +356,7 @@ fn analyse_let_stmt() -> Result<(), ()> {
 }
 
 #[test]
-fn analyse_method_call() {
+fn analyse_method_call() -> Result<(), ()> {
     let input = r#"
     module foo {
         #![contract]
@@ -407,8 +407,8 @@ fn analyse_method_call() {
         .expect("unable to set up semantic analyser");
 
     match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
-        Ok(_) => println!("{:#?}", analyser.logger.messages()),
-        Err(_) => panic!("{:#?}", analyser.logger.messages()),
+        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
+        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
     }
 }
 
