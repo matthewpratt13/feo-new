@@ -93,7 +93,7 @@ use crate::{
         ClosureExpr, ComparisonExpr, CompoundAssignmentExpr, ContinueExpr, Delimiter,
         DereferenceExpr, Expression, FieldAccessExpr, ForInExpr, GroupedExpr, GroupedPatt,
         Identifier, IdentifierPatt, IfExpr, IndexExpr, Item, Keyword, LetStmt, Literal,
-        LiteralPatt, MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, PathExpr,
+        LiteralPatt, MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, OrPatt, PathExpr,
         PathPatt, Pattern, RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferencePatt, RestPatt,
         ResultExpr, ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt,
         TupleExpr, TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr,
@@ -928,6 +928,12 @@ impl Parser {
             Some(Token::IntLiteral { value, .. }) => {
                 let patt = Pattern::LiteralPatt(LiteralPatt::Int { value: *value });
 
+                let next_token = self.peek_ahead_by(1);
+
+                if let Some(Token::Pipe { .. }) = next_token {
+                    return self.parse_or_patt(next_token.cloned(), patt);
+                }
+
                 self.next_token();
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
@@ -947,6 +953,12 @@ impl Parser {
 
             Some(Token::UIntLiteral { value, .. }) => {
                 let patt = Pattern::LiteralPatt(LiteralPatt::UInt { value: *value });
+
+                let next_token = self.peek_ahead_by(1);
+
+                if let Some(Token::Pipe { .. }) = next_token {
+                    return self.parse_or_patt(next_token.cloned(), patt);
+                }
 
                 self.next_token();
 
@@ -968,6 +980,12 @@ impl Parser {
             Some(Token::BigUIntLiteral { value, .. }) => {
                 let patt = Pattern::LiteralPatt(LiteralPatt::BigUInt { value: *value });
 
+                let next_token = self.peek_ahead_by(1);
+
+                if let Some(Token::Pipe { .. }) = next_token {
+                    return self.parse_or_patt(next_token.cloned(), patt);
+                }
+
                 self.next_token();
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
@@ -988,6 +1006,12 @@ impl Parser {
             Some(Token::ByteLiteral { value, .. }) => {
                 let patt = Pattern::LiteralPatt(LiteralPatt::Byte { value: *value });
 
+                let next_token = self.peek_ahead_by(1);
+
+                if let Some(Token::Pipe { .. }) = next_token {
+                    return self.parse_or_patt(next_token.cloned(), patt);
+                }
+
                 self.next_token();
 
                 if let Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) =
@@ -1007,24 +1031,52 @@ impl Parser {
             }
 
             Some(Token::BytesLiteral { value, .. }) => {
+                let patt = Pattern::LiteralPatt(LiteralPatt::Bytes { value: *value });
+                let next_token = self.peek_ahead_by(1);
+
+                if let Some(Token::Pipe { .. }) = next_token {
+                    return self.parse_or_patt(next_token.cloned(), patt);
+                }
+
                 self.next_token();
-                Ok(Pattern::LiteralPatt(LiteralPatt::Bytes { value: *value }))
+                Ok(patt)
             }
 
             Some(Token::HashLiteral { value, .. }) => {
+                let patt = Pattern::LiteralPatt(LiteralPatt::Hash { value: *value });
+                let next_token = self.peek_ahead_by(1);
+
+                if let Some(Token::Pipe { .. }) = next_token {
+                    return self.parse_or_patt(next_token.cloned(), patt);
+                }
+
                 self.next_token();
-                Ok(Pattern::LiteralPatt(LiteralPatt::Hash { value: *value }))
+                Ok(patt)
             }
 
             Some(Token::StrLiteral { value, .. }) => {
-                self.next_token();
-                Ok(Pattern::LiteralPatt(LiteralPatt::Str {
+                let patt = Pattern::LiteralPatt(LiteralPatt::Str {
                     value: value.clone(),
-                }))
+                });
+
+                let next_token = self.peek_ahead_by(1);
+
+                if let Some(Token::Pipe { .. }) = next_token {
+                    return self.parse_or_patt(next_token.cloned(), patt);
+                }
+
+                self.next_token();
+                Ok(patt)
             }
 
             Some(Token::CharLiteral { value, .. }) => {
                 let patt = Pattern::LiteralPatt(LiteralPatt::Char { value: *value });
+
+                let next_token = self.peek_ahead_by(1);
+
+                if let Some(Token::Pipe { .. }) = next_token {
+                    return self.parse_or_patt(next_token.cloned(), patt);
+                }
 
                 self.next_token();
 
@@ -1044,39 +1096,99 @@ impl Parser {
             }
 
             Some(Token::BoolLiteral { value, .. }) => {
+                let patt = Pattern::LiteralPatt(LiteralPatt::Bool { value: *value });
+                let next_token = self.peek_ahead_by(1);
+
+                if let Some(Token::Pipe { .. }) = next_token {
+                    return self.parse_or_patt(next_token.cloned(), patt);
+                }
+
                 self.next_token();
-                Ok(Pattern::LiteralPatt(LiteralPatt::Bool { value: *value }))
+                Ok(patt)
             }
 
             Some(Token::LParen { .. }) => {
                 if let Some(Token::Comma { .. }) = self.peek_ahead_by(2) {
-                    Ok(Pattern::TuplePatt(TuplePatt::parse_patt(self)?))
+                    let patt = Pattern::TuplePatt(TuplePatt::parse_patt(self)?);
+
+                    let curr_token = self.current_token();
+
+                    if let Some(Token::Pipe { .. }) = curr_token {
+                        return self.parse_or_patt(curr_token.cloned(), patt);
+                    }
+
+                    Ok(patt)
                 } else {
-                    let patt = GroupedPatt::parse_patt(self)?;
-                    self.next_token();
-                    Ok(Pattern::GroupedPatt(patt))
+                    let patt = Pattern::GroupedPatt(GroupedPatt::parse_patt(self)?);
+
+                    let curr_token = self.current_token();
+
+                    if let Some(Token::Pipe { .. }) = curr_token {
+                        return self.parse_or_patt(curr_token.cloned(), patt);
+                    }
+
+                    // self.next_token();
+                    Ok(patt)
                 }
             }
 
             Some(Token::Identifier { name, .. }) => {
                 if name == "_" {
-                    self.next_token();
-                    Ok(Pattern::WildcardPatt(WildcardPatt {
+                    let patt = Pattern::WildcardPatt(WildcardPatt {
                         underscore: Identifier::from(name),
-                    }))
+                    });
+
+                    let next_token = self.peek_ahead_by(1);
+
+                    if let Some(Token::Pipe { .. }) = next_token {
+                        return self.parse_or_patt(next_token.cloned(), patt);
+                    }
+
+                    self.next_token();
+                    Ok(patt)
                 } else {
                     match self.peek_ahead_by(1) {
                         Some(Token::LBrace { .. }) => {
-                            Ok(Pattern::StructPatt(StructPatt::parse_patt(self)?))
+                            let patt = Pattern::StructPatt(StructPatt::parse_patt(self)?);
+
+                            let curr_token = self.current_token();
+
+                            if let Some(Token::Pipe { .. }) = curr_token {
+                                return self.parse_or_patt(curr_token.cloned(), patt);
+                            }
+
+                            Ok(patt)
                         }
                         Some(Token::LParen { .. }) => {
-                            Ok(Pattern::TupleStructPatt(TupleStructPatt::parse_patt(self)?))
+                            let patt = Pattern::TupleStructPatt(TupleStructPatt::parse_patt(self)?);
+
+                            let curr_token = self.current_token();
+
+                            if let Some(Token::Pipe { .. }) = curr_token {
+                                return self.parse_or_patt(curr_token.cloned(), patt);
+                            }
+
+                            Ok(patt)
                         }
                         Some(Token::DblColon { .. }) => {
-                            Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?))
+                            let patt = Pattern::PathPatt(PathPatt::parse_patt(self)?);
+
+                            let curr_token = self.current_token();
+
+                            if let Some(Token::Pipe { .. }) = curr_token {
+                                return self.parse_or_patt(curr_token.cloned(), patt);
+                            }
+
+                            Ok(patt)
                         }
                         Some(Token::DblDot { .. } | Token::DotDotEquals { .. }) => {
                             let patt = self.parse_pattern()?;
+
+                            let curr_token = self.current_token();
+
+                            if let Some(Token::Pipe { .. }) = curr_token {
+                                return self.parse_or_patt(curr_token.cloned(), patt);
+                            }
 
                             if self.is_range() {
                                 Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
@@ -1086,55 +1198,160 @@ impl Parser {
                                 }))
                             }
                         }
-                        _ => Ok(Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?)),
+                        _ => {
+                            let patt = Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?);
+
+                            let curr_token = self.current_token();
+
+                            if let Some(Token::Pipe { .. }) = curr_token {
+                                return self.parse_or_patt(curr_token.cloned(), patt);
+                            }
+
+                            Ok(patt)
+                        }
                     }
                 }
             }
 
             Some(Token::Ref { .. } | Token::Mut { .. }) => {
-                Ok(Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?))
+                let patt = Pattern::IdentifierPatt(IdentifierPatt::parse_patt(self)?);
+
+                let next_next_token = self.peek_ahead_by(2);
+                let next_next_next_token = self.peek_ahead_by(3);
+
+                if let Some(Token::Pipe { .. }) = next_next_token {
+                    return self.parse_or_patt(next_next_token.cloned(), patt);
+                } else if let Some(Token::Pipe { .. }) = next_next_next_token {
+                    return self.parse_or_patt(next_next_next_token.cloned(), patt);
+                }
+
+                Ok(patt)
             }
 
             Some(Token::SelfType { .. }) => match self.peek_ahead_by(1) {
                 Some(Token::LBrace { .. }) => {
-                    Ok(Pattern::StructPatt(StructPatt::parse_patt(self)?))
+                    let patt = Pattern::StructPatt(StructPatt::parse_patt(self)?);
+
+                    let curr_token = self.current_token();
+
+                    if let Some(Token::Pipe { .. }) = curr_token {
+                        return self.parse_or_patt(curr_token.cloned(), patt);
+                    }
+
+                    Ok(patt)
                 }
                 Some(Token::LParen { .. }) => {
-                    Ok(Pattern::TupleStructPatt(TupleStructPatt::parse_patt(self)?))
+                    let patt = Pattern::TupleStructPatt(TupleStructPatt::parse_patt(self)?);
+
+                    let curr_token = self.current_token();
+
+                    if let Some(Token::Pipe { .. }) = curr_token {
+                        return self.parse_or_patt(curr_token.cloned(), patt);
+                    }
+
+                    Ok(patt)
                 }
-                _ => Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?)),
+                _ => {
+                    let patt = Pattern::PathPatt(PathPatt::parse_patt(self)?);
+
+                    let curr_token = self.current_token();
+
+                    if let Some(Token::Pipe { .. }) = curr_token {
+                        return self.parse_or_patt(curr_token.cloned(), patt);
+                    }
+
+                    Ok(patt)
+                }
             },
 
             Some(Token::SelfKeyword { .. } | Token::Lib { .. } | Token::Super { .. }) => {
-                Ok(Pattern::PathPatt(PathPatt::parse_patt(self)?))
+                let patt = Pattern::PathPatt(PathPatt::parse_patt(self)?);
+
+                let curr_token = self.current_token();
+
+                if let Some(Token::Pipe { .. }) = curr_token {
+                    return self.parse_or_patt(curr_token.cloned(), patt);
+                }
+
+                Ok(patt)
             }
 
             Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) => {
-                Ok(Pattern::ReferencePatt(ReferencePatt::parse_patt(self)?))
+                let patt = Pattern::ReferencePatt(ReferencePatt::parse_patt(self)?);
+
+                let curr_token = self.current_token();
+
+                if let Some(Token::Pipe { .. }) = curr_token {
+                    return self.parse_or_patt(curr_token.cloned(), patt);
+                }
+
+                Ok(patt)
             }
 
             Some(Token::DblDot { .. }) => {
-                self.next_token();
-                Ok(Pattern::RestPatt(RestPatt {
+                let patt = Pattern::RestPatt(RestPatt {
                     dbl_dot: RangeOp::RangeExclusive,
-                }))
+                });
+
+                let next_token = self.peek_ahead_by(1);
+
+                if let Some(Token::Pipe { .. }) = next_token {
+                    return self.parse_or_patt(next_token.cloned(), patt);
+                }
+
+                self.next_token();
+                Ok(patt)
             }
 
             Some(Token::DotDotEquals { .. }) => {
-                Ok(Pattern::RangePatt(RangePatt::parse_to_incl(self)?))
+                let patt = Pattern::RangePatt(RangePatt::parse_to_incl(self)?);
+
+                let curr_token = self.current_token();
+
+                if let Some(Token::Pipe { .. }) = curr_token {
+                    return self.parse_or_patt(curr_token.cloned(), patt);
+                }
+
+                Ok(patt)
             }
 
-            Some(Token::Some { .. }) => Ok(Pattern::SomePatt(SomePatt::parse_patt(self)?)),
+            Some(Token::Some { .. }) => {
+                let patt = Pattern::SomePatt(SomePatt::parse_patt(self)?);
+
+                let curr_token = self.current_token();
+
+                if let Some(Token::Pipe { .. }) = curr_token {
+                    return self.parse_or_patt(curr_token.cloned(), patt);
+                }
+
+                Ok(patt)
+            }
 
             Some(Token::None { .. }) => {
-                self.next_token();
-                Ok(Pattern::NonePatt(NonePatt {
+                let patt = Pattern::NonePatt(NonePatt {
                     kw_none: Keyword::None,
-                }))
+                });
+
+                let next_token = self.peek_ahead_by(1);
+
+                if let Some(Token::Pipe { .. }) = next_token {
+                    return self.parse_or_patt(next_token.cloned(), patt);
+                }
+
+                self.next_token();
+                Ok(patt)
             }
 
             Some(Token::Ok { .. } | Token::Err { .. }) => {
-                Ok(Pattern::ResultPatt(ResultPatt::parse_patt(self)?))
+                let patt = Pattern::ResultPatt(ResultPatt::parse_patt(self)?);
+
+                let curr_token = self.current_token();
+
+                if let Some(Token::Pipe { .. }) = curr_token {
+                    return self.parse_or_patt(curr_token.cloned(), patt);
+                }
+
+                Ok(patt)
             }
 
             Some(Token::EOF) | None => {
@@ -1149,6 +1366,27 @@ impl Parser {
 
                 Err(ErrorsEmitted)
             }
+        }
+    }
+
+    fn parse_or_patt(
+        &mut self,
+        token: Option<Token>,
+        first_pattern: Pattern,
+    ) -> Result<Pattern, ErrorsEmitted> {
+        if token
+            .as_ref()
+            .is_some_and(|tok| tok.token_type() == TokenType::Pipe)
+        {
+            Ok(Pattern::OrPatt(OrPatt::parse_patt(
+                self,
+                Box::new(first_pattern),
+            )?))
+        } else {
+            self.log_error(ParserErrorKind::InvalidTokenContext { token });
+            self.next_token();
+
+            Err(ErrorsEmitted)
         }
     }
 

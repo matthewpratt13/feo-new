@@ -2691,6 +2691,23 @@ impl SemanticAnalyser {
                 name: Identifier::from(".."),
             })),
 
+            Pattern::OrPatt(o) => {
+                let first_patt_type = self.analyse_patt(&o.first_pattern.clone())?;
+
+                for patt in o.subsequent_patterns.iter() {
+                    let subsequent_patt_type = self.analyse_patt(patt)?;
+
+                    if subsequent_patt_type != first_patt_type {
+                        return Err(SemanticErrorKind::TypeMismatchOrPatt {
+                            expected: first_patt_type.to_string(),
+                            found: subsequent_patt_type.to_string(),
+                        });
+                    }
+                }
+
+                Ok(first_patt_type)
+            }
+
             Pattern::SomePatt(s) => {
                 let ty = self.analyse_patt(&s.pattern.clone().inner_pattern)?;
 

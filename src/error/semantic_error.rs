@@ -70,6 +70,11 @@ pub enum SemanticErrorKind {
         found: String,
     },
 
+    TypeMismatchOrPatt {
+        expected: String,
+        found: String,
+    },
+
     TypeMismatchReturnType {
         expected: String,
         found: String,
@@ -182,6 +187,10 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::TypeMismatchMatchExpr { loc, expected, found } => write!(
                 f,
                 "{loc} types do not match in match expression. Expected {expected}, found {found}"
+            ),
+            SemanticErrorKind::TypeMismatchOrPatt { expected, found } => write!(
+                f,
+                "pattern types do not match. Expected {expected}, found {found}"
             ),
             SemanticErrorKind::TypeMismatchArgument { name, expected, found } => write!(
                 f,
