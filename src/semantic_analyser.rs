@@ -9,7 +9,7 @@ use crate::{
         FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Hash, Identifier,
         ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt,
         ModuleItem, PathExpr, PathRoot, Pattern, SelfType, Statement, Str, StructDef, TraitDefItem,
-        TraitImplItem, TupleStructDef, TupleStructDefElement, Type, TypePath, UInt, UnaryOp,
+        TraitImplItem, TupleStructDef, TupleStructDefField, Type, TypePath, UInt, UnaryOp,
         UnitType, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
@@ -551,15 +551,15 @@ impl SemanticAnalyser {
                                                 struct_name: Identifier::from(
                                                     &variant_path.to_string(),
                                                 ),
-                                                elements_opt: {
-                                                    let mut elements: Vec<TupleStructDefElement> =
+                                                fields_opt: {
+                                                    let mut elements: Vec<TupleStructDefField> =
                                                         Vec::new();
 
                                                     for elem_type in t.element_types {
-                                                        let elem = TupleStructDefElement {
+                                                        let elem = TupleStructDefField {
                                                             attributes_opt: None,
                                                             visibility: Visibility::Private,
-                                                            element_type: Box::new(elem_type),
+                                                            field_type: Box::new(elem_type),
                                                         };
 
                                                         elements.push(elem);
@@ -2040,7 +2040,82 @@ impl SemanticAnalyser {
                 }
             }
 
-            Expression::TupleStruct(_) => todo!(),
+            Expression::TupleStruct(ts) => {
+                let type_path = build_item_path(root, TypePath::from(ts.struct_path.clone()));
+
+                match self.lookup(&type_path).cloned() {
+                    Some(Symbol::TupleStruct {
+                        tuple_struct_def,
+                        path,
+                    }) => {
+                        self.insert(
+                            TypePath::from(ts.struct_path.clone()),
+                            Symbol::TupleStruct {
+                                path: path.clone(),
+                                tuple_struct_def: tuple_struct_def.clone(),
+                            },
+                        )?;
+
+                        let elements_opt = ts.struct_elements_opt.clone();
+                        let fields_opt = tuple_struct_def.fields_opt;
+
+                        match (&elements_opt, &fields_opt) {
+                            (None, None) => Ok(Type::UnitType(UnitType)),
+
+                            (None, Some(fields)) => Err(SemanticErrorKind::ArgumentCountMismatch {
+                                name: tuple_struct_def.struct_name.clone(),
+                                expected: fields.len(),
+                                found: 0,
+                            }),
+
+                            (Some(elements), None) => {
+                                Err(SemanticErrorKind::ArgumentCountMismatch {
+                                    name: tuple_struct_def.struct_name.clone(),
+                                    expected: 0,
+                                    found: elements.len(),
+                                })
+                            }
+                            (Some(elements), Some(fields)) => {
+                                if elements.len() != fields.len() {
+                                    return Err(SemanticErrorKind::ArgumentCountMismatch {
+                                        name: tuple_struct_def.struct_name.clone(),
+                                        expected: fields.len(),
+                                        found: elements.len(),
+                                    });
+                                }
+
+                                for (elem, field) in elements.iter().zip(fields) {
+                                    let elem_type = self.analyse_expr(
+                                        &elem,
+                                        &TypePath::from(Identifier::from("")),
+                                    )?;
+                                    let field_type = *field.field_type.clone();
+
+                                    if elem_type != field_type {
+                                        return Err(SemanticErrorKind::TypeMismatchArgument {
+                                            name: tuple_struct_def.struct_name.clone(),
+                                            expected: format!("`{}`", field_type),
+                                            found: format!("`{}`", elem_type),
+                                        });
+                                    }
+                                }
+
+                                Ok(Type::UserDefined(path))
+                            }
+                        }
+                    }
+
+                    None => Err(SemanticErrorKind::UndefinedStruct {
+                        name: type_path.type_name,
+                    }),
+
+                    Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
+                        name: type_path.type_name,
+                        expected: "tuple struct".to_string(),
+                        found: sym.to_string(),
+                    }),
+                }
+            }
 
             Expression::Mapping(m) => match &m.pairs_opt {
                 Some(pairs) => match pairs.first() {
@@ -2466,7 +2541,7 @@ impl SemanticAnalyser {
                 path,
                 tuple_struct_def,
             }) => {
-                let elements = tuple_struct_def.elements_opt.clone();
+                let elements = tuple_struct_def.fields_opt.clone();
 
                 match (&args_opt, &elements) {
                     (None, None) => Ok(Type::UnitType(UnitType)),
@@ -2495,7 +2570,7 @@ impl SemanticAnalyser {
                         for (arg, elem) in args.iter().zip(elements) {
                             let arg_type =
                                 self.analyse_expr(&arg, &TypePath::from(Identifier::from("")))?;
-                            let element_type = elem.element_type.clone();
+                            let element_type = elem.field_type.clone();
 
                             if arg_type != *element_type {
                                 return Err(SemanticErrorKind::TypeMismatchArgument {
@@ -2777,16 +2852,16 @@ impl SemanticAnalyser {
                             }
                         }
 
-                        if tuple_struct_def.elements_opt.is_some() {
+                        if tuple_struct_def.fields_opt.is_some() {
                             for (i, def_elem) in
-                                tuple_struct_def.elements_opt.unwrap().iter().enumerate()
+                                tuple_struct_def.fields_opt.unwrap().iter().enumerate()
                             {
                                 match element_map.get(&i) {
-                                    Some(patt_type) if *patt_type == *def_elem.element_type => (),
+                                    Some(patt_type) if *patt_type == *def_elem.field_type => (),
                                     Some(patt_type) => {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
                                             name: path.type_name,
-                                            expected: format!("`{}`", def_elem.element_type),
+                                            expected: format!("`{}`", def_elem.field_type),
                                             found: format!("`{}`", patt_type),
                                         })
                                     }
@@ -2794,7 +2869,7 @@ impl SemanticAnalyser {
                                         return Err(SemanticErrorKind::MissingTupleStructElement {
                                             expected: format!(
                                                 "`{}.{}: {}`",
-                                                &type_path, i, *def_elem.element_type
+                                                &type_path, i, *def_elem.field_type
                                             ),
                                         })
                                     }

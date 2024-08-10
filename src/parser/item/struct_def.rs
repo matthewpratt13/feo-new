@@ -3,7 +3,7 @@ use super::{collection, ParseDefItem, Parser};
 use crate::{
     ast::{
         Delimiter, Identifier, Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef,
-        TupleStructDefElement, Type, Visibility,
+        TupleStructDefField, Type, Visibility,
     },
     error::ErrorsEmitted,
     span::Position,
@@ -165,7 +165,7 @@ impl ParseDefItem for TupleStructDef {
                     visibility,
                     kw_struct,
                     struct_name,
-                    elements_opt: tuple_struct_fields_opt,
+                    fields_opt: tuple_struct_fields_opt,
                     span,
                 })
             }
@@ -187,7 +187,7 @@ impl fmt::Debug for TupleStructDef {
             .field("attributes_opt", &self.attributes_opt)
             .field("visibility", &self.visibility)
             .field("struct_name", &self.struct_name)
-            .field("elements_opt", &self.elements_opt)
+            .field("elements_opt", &self.fields_opt)
             .finish()
     }
 }
@@ -235,19 +235,17 @@ impl StructDefField {
     }
 }
 
-fn parse_tuple_struct_def_field(
-    parser: &mut Parser,
-) -> Result<TupleStructDefElement, ErrorsEmitted> {
+fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefField, ErrorsEmitted> {
     let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
     let visibility = Visibility::visibility(parser)?;
 
     let field_type = Box::new(Type::parse(parser)?);
 
-    let field = TupleStructDefElement {
+    let field = TupleStructDefField {
         attributes_opt,
         visibility,
-        element_type: field_type,
+        field_type,
     };
 
     Ok(field)
