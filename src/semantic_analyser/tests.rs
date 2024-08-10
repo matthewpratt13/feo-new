@@ -167,14 +167,18 @@ fn analyse_impl() -> Result<(), ()> {
         
         import lib::erc_20::{ Contract, ERC20 };
 
+        
         struct SomeToken {
             name: str,
             symbol: str,
             decimals: u64,
             total_supply: u64,
             balances: Mapping<h160, u64>,        
-        }
+            }
 
+        alias Foo = SomeToken;
+        alias Bar;
+            
         impl SomeToken {
             #[constructor]
             func new(name: str, symbol: str, decimals: u64, total_supply: u64, balances: Mapping<h160, u64>) -> SomeToken {
