@@ -179,6 +179,7 @@ mod tests {
         let input = r#"
         pub import lib::some_module::{
             SomeObject,
+            AnotherObject::another_method,
             inner_module::{ 
                 SomeInnerObject,
                 AnotherInnerObject

@@ -870,27 +870,29 @@ impl SemanticAnalyser {
         import_decl: &ImportDecl,
         module_root: &TypePath,
     ) -> Result<(), SemanticErrorKind> {
+        println!("import declaration: {:#?}", import_decl);
+
         let mut import_paths: Vec<TypePath> = Vec::new();
 
         let mut segments = import_decl.import_tree.path_segments.clone();
 
-        let mut import_root = if !segments.is_empty() {
-            let mut paths = Vec::<TypePath>::from(segments.remove(0));
+        let mut import_root = if let Some(s) = segments.first() {
+            // let mut paths = Vec::<TypePath>::from(segments.remove(0));
 
-            if !paths.is_empty() {
-                let mut path = paths.remove(0);
+            // if !paths.is_empty() {
+            //     let mut path = paths.remove(0);
 
-                for p in paths {
-                    path = build_item_path(&path, p);
-                }
+            //     path
+            // } else {
+            //     TypePath::from(Identifier::from(""))
+            // }
 
-                path
-            } else {
-                TypePath::from(Identifier::from(""))
-            }
+            s.root.clone()
         } else {
             module_root.clone()
         };
+
+        println!("import root: {import_root}");
 
         let num_segments = segments.len();
 
@@ -918,6 +920,8 @@ impl SemanticAnalyser {
                 }
             }
         }
+
+        println!("import paths: {import_paths:#?}");
 
         // TODO: handle `super` and `self` path roots
         // TODO: handle public imports / re-exports

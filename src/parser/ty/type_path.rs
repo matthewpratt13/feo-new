@@ -54,6 +54,8 @@ impl TypePath {
 
         path.push(Identifier::from(&path_root.to_string()));
 
+        parser.next_token();
+
         while let Some(Token::DblColon { .. }) = parser.current_token() {
             match parser.peek_ahead_by(1).cloned() {
                 Some(Token::Identifier { name, .. }) => {
@@ -78,7 +80,7 @@ impl TypePath {
 
         let prefix = path;
 
-        parser.next_token();
+        // parser.next_token();
 
         let path_type = TypePath {
             associated_type_path_prefix_opt: {
