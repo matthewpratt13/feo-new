@@ -117,7 +117,7 @@ impl fmt::Display for Statement {
                     "{}struct {} {{ {:?} }}",
                     tsd.visibility,
                     tsd.struct_name,
-                    tsd.elements_opt.unwrap_or(Vec::new())
+                    tsd.fields_opt.unwrap_or(Vec::new())
                 ),
                 Item::InherentImplDef(iid) => write!(
                     f,

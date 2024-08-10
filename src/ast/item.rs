@@ -243,10 +243,10 @@ pub(crate) struct StructDefField {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct TupleStructDefElement {
+pub(crate) struct TupleStructDefField {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
-    pub(crate) element_type: Box<Type>,
+    pub(crate) field_type: Box<Type>,
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -375,7 +375,7 @@ pub struct TupleStructDef {
     pub(crate) visibility: Visibility,
     pub(crate) kw_struct: Keyword,
     pub(crate) struct_name: Identifier,
-    pub(crate) elements_opt: Option<Vec<TupleStructDefElement>>,
+    pub(crate) fields_opt: Option<Vec<TupleStructDefField>>,
     pub(crate) span: Span,
 }
 
@@ -466,7 +466,7 @@ impl fmt::Debug for Item {
                 .field("attributes_opt", &arg0.attributes_opt)
                 .field("visibility", &arg0.visibility)
                 .field("struct_name", &arg0.struct_name)
-                .field("elements_opt", &arg0.elements_opt)
+                .field("elements_opt", &arg0.fields_opt)
                 .finish(),
             Self::InherentImplDef(arg0) => f
                 .debug_struct("InherentImplDef")
