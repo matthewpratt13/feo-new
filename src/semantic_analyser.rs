@@ -2040,6 +2040,8 @@ impl SemanticAnalyser {
                 }
             }
 
+            Expression::TupleStruct(_) => todo!(),
+
             Expression::Mapping(m) => match &m.pairs_opt {
                 Some(pairs) => match pairs.first() {
                     Some(pair) => {

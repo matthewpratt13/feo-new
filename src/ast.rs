@@ -452,6 +452,7 @@ pub(crate) enum Expression {
     Array(ArrayExpr),
     Tuple(TupleExpr),
     Struct(StructExpr),
+    TupleStruct(TupleStructExpr),
     Mapping(MappingExpr),
     Block(BlockExpr),
     If(IfExpr),       // condition, true, false
@@ -486,6 +487,7 @@ impl From<ValueExpr> for Expression {
             ValueExpr::ArrayExpr(a) => Expression::Array(a),
             ValueExpr::TupleExpr(t) => Expression::Tuple(t),
             ValueExpr::StructExpr(s) => Expression::Struct(s),
+            ValueExpr::TupleStructExpr(ts) => Expression::TupleStruct(ts),
             ValueExpr::MappingExpr(map) => Expression::Mapping(map),
             ValueExpr::BlockExpr(b) => Expression::Block(b),
             ValueExpr::IfExpr(i) => Expression::If(i),
@@ -577,6 +579,26 @@ impl From<AssigneeExpr> for Expression {
                 },
                 span,
             }),
+            AssigneeExpr::TupleStructExpr {
+                struct_path,
+                elements,
+                span,
+            } => Expression::TupleStruct(TupleStructExpr {
+                struct_path,
+                struct_elements_opt: {
+                    let assignee_elements = elements
+                        .into_iter()
+                        .map(|ae| Expression::from(ae))
+                        .collect::<Vec<_>>();
+
+                    if !assignee_elements.is_empty() {
+                        Some(assignee_elements)
+                    } else {
+                        None
+                    }
+                },
+                span,
+            }),
         }
     }
 }
@@ -606,6 +628,7 @@ pub(crate) enum ValueExpr {
     ArrayExpr(ArrayExpr),
     TupleExpr(TupleExpr),
     StructExpr(StructExpr),
+    TupleStructExpr(TupleStructExpr),
     MappingExpr(MappingExpr),
     BlockExpr(BlockExpr),
     IfExpr(IfExpr),
@@ -640,6 +663,7 @@ impl Spanned for ValueExpr {
             ValueExpr::ArrayExpr(a) => a.span,
             ValueExpr::TupleExpr(t) => t.span,
             ValueExpr::StructExpr(s) => s.span,
+            ValueExpr::TupleStructExpr(ts) => ts.span,
             ValueExpr::MappingExpr(m) => m.span,
             ValueExpr::BlockExpr(b) => b.span,
             ValueExpr::IfExpr(i) => i.span,
@@ -680,6 +704,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::Array(a) => Ok(ValueExpr::ArrayExpr(a)),
             Expression::Tuple(t) => Ok(ValueExpr::TupleExpr(t)),
             Expression::Struct(s) => Ok(ValueExpr::StructExpr(s)),
+            Expression::TupleStruct(ts) => Ok(ValueExpr::TupleStructExpr(ts)),
             Expression::Mapping(m) => Ok(ValueExpr::MappingExpr(m)),
             Expression::Block(b) => Ok(ValueExpr::BlockExpr(b)),
             Expression::If(i) => Ok(ValueExpr::IfExpr(i)),
@@ -720,6 +745,7 @@ impl fmt::Display for ValueExpr {
             ValueExpr::ArrayExpr(a) => write!(f, "{}", Expression::Array(a)),
             ValueExpr::TupleExpr(t) => write!(f, "{}", Expression::Tuple(t)),
             ValueExpr::StructExpr(s) => write!(f, "{}", Expression::Struct(s)),
+            ValueExpr::TupleStructExpr(ts) => write!(f, "{}", Expression::TupleStruct(ts)),
             ValueExpr::MappingExpr(m) => write!(f, "{}", Expression::Mapping(m)),
             ValueExpr::BlockExpr(b) => write!(f, "{}", Expression::Block(b)),
             ValueExpr::IfExpr(ifex) => write!(f, "{}", Expression::If(ifex)),
@@ -764,6 +790,11 @@ pub(crate) enum AssigneeExpr {
         fields: Vec<StructAssigneeExprField>,
         span: Span,
     },
+    TupleStructExpr {
+        struct_path: PathExpr,
+        elements: Vec<AssigneeExpr>,
+        span: Span,
+    },
 }
 
 impl Spanned for AssigneeExpr {
@@ -781,6 +812,7 @@ impl Spanned for AssigneeExpr {
             AssigneeExpr::ArrayExpr { span, .. } => span,
             AssigneeExpr::TupleExpr { span, .. } => span,
             AssigneeExpr::StructExpr { span, .. } => span,
+            AssigneeExpr::TupleStructExpr { span, .. } => span,
         }
     }
 }
@@ -882,6 +914,25 @@ impl TryFrom<Expression> for AssigneeExpr {
                 })
             }
 
+            Expression::TupleStruct(ts) => {
+                let mut elements: Vec<AssigneeExpr> = Vec::new();
+
+                ts.struct_elements_opt.map(|v| {
+                    v.into_iter().for_each(|e| {
+                        let element = AssigneeExpr::try_from(e).expect(
+                            "conversion error: unable to convert `Expression` into `AssigneeExpr`",
+                        );
+                        elements.push(element);
+                    })
+                });
+
+                Ok(AssigneeExpr::TupleStructExpr {
+                    struct_path: ts.struct_path,
+                    elements,
+                    span: ts.span,
+                })
+            }
+
             _ => Err(ParserErrorKind::UnexpectedExpression {
                 expected: "assignee expression".to_string(),
                 found: format!("{}", value),
@@ -911,6 +962,11 @@ impl fmt::Display for AssigneeExpr {
                 fields,
                 ..
             } => write!(f, "{} {{ {:?} }}", struct_path, fields),
+            AssigneeExpr::TupleStructExpr {
+                struct_path,
+                elements,
+                ..
+            } => write!(f, "{}({:?})", struct_path, elements),
         }
     }
 }

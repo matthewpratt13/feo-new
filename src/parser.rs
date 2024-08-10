@@ -96,8 +96,8 @@ use crate::{
         LiteralPatt, MappingExpr, MatchExpr, MethodCallExpr, NoneExpr, NonePatt, OrPatt, PathExpr,
         PathPatt, Pattern, RangeExpr, RangeOp, RangePatt, ReferenceExpr, ReferencePatt, RestPatt,
         ResultExpr, ResultPatt, ReturnExpr, SomeExpr, SomePatt, Statement, StructExpr, StructPatt,
-        TupleExpr, TupleIndexExpr, TuplePatt, TupleStructPatt, TypeCastExpr, UnaryExpr,
-        UnderscoreExpr, UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
+        TupleExpr, TupleIndexExpr, TuplePatt, TupleStructExpr, TupleStructPatt, TypeCastExpr,
+        UnaryExpr, UnderscoreExpr, UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
     logger::{LogLevel, Logger},
@@ -117,6 +117,7 @@ enum ParserContext {
     LogicalOr,   // `||`
     BitwiseOr,   // `|`
     Unary,       // `&`, `*`, `-`
+    Call,        // `callee()` or `TupleStruct()`
     TupleIndex,  // `.`
     FieldAccess, // `.`
     MethodCall,  // `.`
@@ -166,7 +167,7 @@ impl Parser {
                     self.precedences.insert(t, Precedence::Path)
                 }
                 TokenType::Dot => self.precedences.insert(t, Precedence::FieldAccess), // default
-                TokenType::LParen => self.precedences.insert(t, Precedence::Call),
+                TokenType::LParen => self.precedences.insert(t, Precedence::Call),     // default
                 TokenType::LBracket => self.precedences.insert(t, Precedence::Index),
                 TokenType::QuestionMark => self.precedences.insert(t, Precedence::Unwrap),
                 TokenType::Ampersand => self.precedences.insert(t, Precedence::BitwiseAnd), // default,
@@ -714,7 +715,17 @@ impl Parser {
                 }
             }
 
-            Some(Token::LParen { .. }) => Ok(Some(CallExpr::parse)),
+            Some(Token::LParen { .. }) => {
+                if self.is_call_expr() {
+                    self.set_context(ParserContext::Call)
+                }
+
+                if self.context == ParserContext::Call {
+                    Ok(Some(CallExpr::parse))
+                } else {
+                    Ok(Some(TupleStructExpr::parse))
+                }
+            }
 
             Some(Token::LBracket { .. }) => Ok(Some(IndexExpr::parse)),
 
@@ -1739,6 +1750,20 @@ impl Parser {
                 !self.is_method_call() && !self.is_tuple_index()
             }
 
+            _ => false,
+        }
+    }
+
+    /// Determine if `Token::LParen` indicates field access.
+    fn is_call_expr(&self) -> bool {
+        match (self.peek_behind_by(1), self.current_token()) {
+            (Some(Token::Identifier { name, .. }), Some(Token::LParen { .. })) => {
+                if name.chars().nth(0).is_some_and(|c| c.is_ascii_uppercase()) {
+                    false
+                } else {
+                    true
+                }
+            }
             _ => false,
         }
     }

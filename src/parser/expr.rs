@@ -19,6 +19,7 @@ mod return_expr;
 mod some_expr;
 mod struct_expr;
 mod tuple_expr;
+mod tuple_struct_expr;
 mod type_cast_expr;
 mod unary_expr;
 mod unwrap_expr;

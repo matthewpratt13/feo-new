@@ -339,6 +339,13 @@ pub struct TupleIndexExpr {
 }
 
 #[derive(Clone, PartialEq, Eq)]
+pub struct TupleStructExpr {
+    pub(crate) struct_path: PathExpr,
+    pub(crate) struct_elements_opt: Option<Vec<Expression>>,
+    pub(crate) span: Span,
+}
+
+#[derive(Clone, PartialEq, Eq)]
 pub struct TypeCastExpr {
     pub(crate) value: Box<ValueExpr>,
     pub(crate) type_cast_op: TypeCastOp, // `as`
@@ -403,6 +410,7 @@ impl Spanned for Expression {
             Expression::Array(a) => a.span,
             Expression::Tuple(t) => t.span,
             Expression::Struct(s) => s.span,
+            Expression::TupleStruct(ts) => ts.span,
             Expression::Mapping(m) => m.span,
             Expression::Block(b) => b.span,
             Expression::If(i) => i.span,
@@ -495,6 +503,9 @@ impl fmt::Display for Expression {
                     strc.struct_path,
                     strc.struct_fields_opt.unwrap_or(Vec::new())
                 )
+            }
+            Expression::TupleStruct(tstrc) => {
+                write!(f, "{}({:?})", tstrc.struct_path, tstrc.struct_elements_opt)
             }
             Expression::Mapping(map) => write!(f, "{{ {:?} }}", map.pairs_opt),
             Expression::Block(blk) => {
@@ -686,6 +697,11 @@ impl fmt::Debug for Expression {
                 .debug_struct("Struct")
                 .field("struct_path", &TypePath::from(arg0.struct_path.clone()))
                 .field("struct_fields_opt", &arg0.struct_fields_opt)
+                .finish(),
+            Self::TupleStruct(arg0) => f
+                .debug_struct("TupleStruct")
+                .field("struct_path", &TypePath::from(arg0.struct_path.clone()))
+                .field("struct_elements_opt", &arg0.struct_elements_opt)
                 .finish(),
             Self::Mapping(arg0) => f
                 .debug_struct("Mapping")
