@@ -193,4 +193,18 @@ mod tests {
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
+    
+    #[test]
+    fn parse_tuple_struct_expr() -> Result<(), ()> {
+        let input = r#"SomeStruct("bar", false, -1)"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
+
+        let expression = parser.parse_expression(Precedence::Lowest);
+
+        match expression {
+            Ok(e) => Ok(println!("{:#?}", e)),
+            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+        }
+    }
 }
