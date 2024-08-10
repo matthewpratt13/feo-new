@@ -2839,45 +2839,50 @@ impl SemanticAnalyser {
                         tuple_struct_def,
                         path,
                     }) => {
-                        let mut element_map: HashMap<usize, Type> = HashMap::new();
-                        let mut element_counter = 0usize;
+                        let elements_opt = ts.struct_elements_opt.clone();
+                        let fields_opt = tuple_struct_def.fields_opt;
 
-                        let tuple_struct_elements = ts.struct_elements_opt.clone();
+                        match (&elements_opt, &fields_opt) {
+                            (None, None) => Ok(Type::UnitType(UnitType)),
 
-                        if tuple_struct_elements.is_some() {
-                            for elem in &tuple_struct_elements.unwrap() {
-                                let element_type = self.analyse_patt(&elem)?.clone();
-                                element_map.insert(element_counter, element_type);
-                                element_counter += 1;
+                            (None, Some(fields)) => Err(SemanticErrorKind::ArgumentCountMismatch {
+                                name: tuple_struct_def.struct_name.clone(),
+                                expected: fields.len(),
+                                found: 0,
+                            }),
+
+                            (Some(elements), None) => {
+                                Err(SemanticErrorKind::ArgumentCountMismatch {
+                                    name: tuple_struct_def.struct_name.clone(),
+                                    expected: 0,
+                                    found: elements.len(),
+                                })
                             }
-                        }
+                            (Some(elements), Some(fields)) => {
+                                if elements.len() != fields.len() {
+                                    return Err(SemanticErrorKind::ArgumentCountMismatch {
+                                        name: tuple_struct_def.struct_name.clone(),
+                                        expected: fields.len(),
+                                        found: elements.len(),
+                                    });
+                                }
 
-                        if tuple_struct_def.fields_opt.is_some() {
-                            for (i, def_elem) in
-                                tuple_struct_def.fields_opt.unwrap().iter().enumerate()
-                            {
-                                match element_map.get(&i) {
-                                    Some(patt_type) if *patt_type == *def_elem.field_type => (),
-                                    Some(patt_type) => {
-                                        return Err(SemanticErrorKind::TypeMismatchVariable {
-                                            name: path.type_name,
-                                            expected: format!("`{}`", def_elem.field_type),
-                                            found: format!("`{}`", patt_type),
-                                        })
-                                    }
-                                    _ => {
-                                        return Err(SemanticErrorKind::MissingTupleStructElement {
-                                            expected: format!(
-                                                "`{}.{}: {}`",
-                                                &type_path, i, *def_elem.field_type
-                                            ),
-                                        })
+                                for (elem, field) in elements.iter().zip(fields) {
+                                    let elem_type = self.analyse_patt(&elem)?;
+                                    let field_type = *field.field_type.clone();
+
+                                    if elem_type != field_type {
+                                        return Err(SemanticErrorKind::TypeMismatchArgument {
+                                            name: tuple_struct_def.struct_name.clone(),
+                                            expected: format!("`{}`", field_type),
+                                            found: format!("`{}`", elem_type),
+                                        });
                                     }
                                 }
+
+                                Ok(Type::UserDefined(path))
                             }
                         }
-
-                        Ok(Type::UserDefined(path))
                     }
 
                     None => Err(SemanticErrorKind::UndefinedStruct {
