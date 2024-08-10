@@ -474,6 +474,8 @@ impl Parser {
                                     Ok(Expression::Struct(StructExpr::parse(self)?))
                                 } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(5) {
                                     Ok(Expression::Struct(StructExpr::parse(self)?))
+                                } else if let Some(Token::LBrace { .. }) = self.peek_ahead_by(7) {
+                                    Ok(Expression::Struct(StructExpr::parse(self)?))
                                 } else {
                                     Ok(Expression::Path(PathExpr::parse(self)?))
                                 }
