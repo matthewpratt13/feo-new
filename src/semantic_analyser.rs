@@ -1155,7 +1155,7 @@ impl SemanticAnalyser {
             }
 
             Expression::Index(i) => {
-                let collection_type =
+                let array_type =
                     self.analyse_expr(&wrap_into_expression(*i.array.clone()), root)?;
 
                 let index_type =
@@ -1172,11 +1172,11 @@ impl SemanticAnalyser {
                     }
                 }
 
-                match collection_type {
+                match array_type {
                     Type::Array { element_type, .. } => Ok(*element_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "array".to_string(),
-                        found: format!("`{}`", collection_type),
+                        found: format!("`{}`", array_type),
                     }),
                 }
             }

@@ -154,11 +154,9 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ConstantReassignment{ name } => {
                 write!(f, "cannot reassign constant: `{name}`")
             }  
-            
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }
-         
             SemanticErrorKind::MethodParamCountError => {
                 write!(f, "too many `self` parameters")
             }
