@@ -1989,43 +1989,65 @@ impl SemanticAnalyser {
 
                         let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
-                        let struct_fields = s.struct_fields_opt.clone();
+                        let def_fields_opt = struct_def.fields_opt;
+                        let obj_fields_opt = s.struct_fields_opt.clone();
 
-                        if struct_fields.is_some() {
-                            for field in &struct_fields.unwrap() {
-                                let field_name = field.field_name.clone();
-                                let field_value = *field.field_value.clone();
+                        if let Some(obj_fields) = obj_fields_opt {
+                            for obj_field in obj_fields {
+                                let field_name = obj_field.field_name.clone();
+                                let field_value = *obj_field.field_value.clone();
                                 let field_type = self.analyse_expr(&field_value, root)?;
                                 field_map.insert(field_name, field_type);
                             }
                         }
 
-                        if struct_def.fields_opt.is_some() {
-                            for def_fld in &struct_def.fields_opt.unwrap() {
-                                match field_map.get(&def_fld.field_name) {
-                                    Some(obj_fld_type) if *obj_fld_type == *def_fld.field_type => {
-                                        ()
+                        if let Some(ref def_fields) = def_fields_opt {
+                            if field_map.len() > def_fields.len() {
+                                return Err(SemanticErrorKind::StructArgCountMismatch {
+                                    name: struct_def.struct_name.clone(),
+                                    expected: def_fields.len(),
+                                    found: field_map.len(),
+                                });
+                            }
+
+                            let field_names = def_fields
+                                .into_iter()
+                                .cloned()
+                                .map(|sdf| sdf.field_name)
+                                .collect::<Vec<_>>();
+
+                            for (name, _) in field_map.iter() {
+                                if !field_names.contains(name) {
+                                    return Err(SemanticErrorKind::UnexpectedStructField {
+                                        name: struct_def.struct_name,
+                                        found: name.clone(),
+                                    });
+                                }
+                            }
+
+                            for def_field in def_fields {
+                                match field_map.get(&def_field.field_name) {
+                                    Some(obj_field_type) => {
+                                        if *obj_field_type != *def_field.field_type {
+                                            return Err(SemanticErrorKind::TypeMismatchVariable {
+                                                name: path.type_name,
+                                                expected: format!("`{}`", *def_field.field_type),
+                                                found: format!("`{}`", obj_field_type),
+                                            });
+                                        }
                                     }
-                                    Some(obj_fld_type) => {
-                                        return Err(SemanticErrorKind::TypeMismatchVariable {
-                                            name: path.type_name,
-                                            expected: format!("`{}`", *def_fld.field_type),
-                                            found: format!("`{}`", obj_fld_type),
-                                        })
-                                    }
-                                    _ => {
+
+                                    None => {
                                         return Err(SemanticErrorKind::MissingStructField {
                                             expected: format!(
                                                 "`{}: {}`",
-                                                &def_fld.field_name, *def_fld.field_type
+                                                &def_field.field_name, *def_field.field_type
                                             ),
                                         })
                                     }
                                 }
                             }
                         }
-
-                        // what if there are too many fields, or fields that don't exist ?
 
                         Ok(Type::UserDefined(path))
                     }
@@ -2064,14 +2086,16 @@ impl SemanticAnalyser {
                         match (&elements_opt, &fields_opt) {
                             (None, None) => Ok(Type::UnitType(UnitType)),
 
-                            (None, Some(fields)) => Err(SemanticErrorKind::ElementCountMismatch {
-                                name: tuple_struct_def.struct_name.clone(),
-                                expected: fields.len(),
-                                found: 0,
-                            }),
+                            (None, Some(fields)) => {
+                                Err(SemanticErrorKind::StructArgCountMismatch {
+                                    name: tuple_struct_def.struct_name.clone(),
+                                    expected: fields.len(),
+                                    found: 0,
+                                })
+                            }
 
                             (Some(elements), None) => {
-                                Err(SemanticErrorKind::ElementCountMismatch {
+                                Err(SemanticErrorKind::StructArgCountMismatch {
                                     name: tuple_struct_def.struct_name.clone(),
                                     expected: 0,
                                     found: elements.len(),
@@ -2079,7 +2103,7 @@ impl SemanticAnalyser {
                             }
                             (Some(elements), Some(fields)) => {
                                 if elements.len() != fields.len() {
-                                    return Err(SemanticErrorKind::ElementCountMismatch {
+                                    return Err(SemanticErrorKind::StructArgCountMismatch {
                                         name: tuple_struct_def.struct_name.clone(),
                                         expected: fields.len(),
                                         found: elements.len(),
@@ -2477,7 +2501,7 @@ impl SemanticAnalyser {
                         }
 
                         if self_counter != params.len() {
-                            return Err(SemanticErrorKind::ArgumentCountMismatch {
+                            return Err(SemanticErrorKind::FuncArgCountMismatch {
                                 name: function.function_name.clone(),
                                 expected: self_counter,
                                 found: self_counter + func_param_counter,
@@ -2489,7 +2513,7 @@ impl SemanticAnalyser {
                             _ => Ok(Type::UnitType(UnitType)),
                         }
                     }
-                    (Some(args), None) => Err(SemanticErrorKind::ArgumentCountMismatch {
+                    (Some(args), None) => Err(SemanticErrorKind::FuncArgCountMismatch {
                         name: function.function_name.clone(),
                         expected: 0,
                         found: args.len(),
@@ -2510,7 +2534,7 @@ impl SemanticAnalyser {
                         let num_func_params = params.len() - self_counter;
 
                         if args.len() != num_func_params {
-                            return Err(SemanticErrorKind::ArgumentCountMismatch {
+                            return Err(SemanticErrorKind::FuncArgCountMismatch {
                                 name: function.function_name.clone(),
                                 expected: params.len(),
                                 found: args.len(),
@@ -2734,43 +2758,65 @@ impl SemanticAnalyser {
                     Some(Symbol::Struct { struct_def, path }) => {
                         let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
-                        let struct_fields = s.struct_fields_opt.clone();
+                        let def_fields_opt = struct_def.fields_opt;
+                        let patt_fields_opt = s.struct_fields_opt.clone();
 
-                        if struct_fields.is_some() {
-                            for field in &struct_fields.unwrap() {
-                                let field_name = field.field_name.clone();
-                                let field_value = field.field_value.clone();
-                                let field_type = self.analyse_patt(&field_value)?.clone();
+                        if let Some(patt_fields) = patt_fields_opt {
+                            for patt_field in patt_fields {
+                                let field_name = patt_field.field_name.clone();
+                                let field_value = patt_field.field_value.clone();
+                                let field_type = self.analyse_patt(&field_value)?;
                                 field_map.insert(field_name, field_type);
                             }
                         }
 
-                        if struct_def.fields_opt.is_some() {
-                            for def_fld in &struct_def.fields_opt.unwrap() {
-                                match field_map.get(&def_fld.field_name) {
-                                    Some(obj_fld_type) if *obj_fld_type == *def_fld.field_type => {
-                                        ()
+                        if let Some(ref def_fields) = def_fields_opt {
+                            if field_map.len() > def_fields.len() {
+                                return Err(SemanticErrorKind::StructArgCountMismatch {
+                                    name: struct_def.struct_name.clone(),
+                                    expected: def_fields.len(),
+                                    found: field_map.len(),
+                                });
+                            }
+
+                            let field_names = def_fields
+                                .into_iter()
+                                .cloned()
+                                .map(|sdf| sdf.field_name)
+                                .collect::<Vec<_>>();
+
+                            for (name, _) in field_map.iter() {
+                                if !field_names.contains(name) {
+                                    return Err(SemanticErrorKind::UnexpectedStructField {
+                                        name: struct_def.struct_name,
+                                        found: name.clone(),
+                                    });
+                                }
+                            }
+
+                            for def_field in def_fields {
+                                match field_map.get(&def_field.field_name) {
+                                    Some(patt_field_type) => {
+                                        if *patt_field_type != *def_field.field_type {
+                                            return Err(SemanticErrorKind::TypeMismatchVariable {
+                                                name: path.type_name,
+                                                expected: format!("`{}`", *def_field.field_type),
+                                                found: format!("`{}`", patt_field_type),
+                                            });
+                                        }
                                     }
-                                    Some(obj_fld_type) => {
-                                        return Err(SemanticErrorKind::TypeMismatchVariable {
-                                            name: path.type_name,
-                                            expected: format!("`{}`", def_fld.field_type),
-                                            found: format!("`{}`", obj_fld_type),
-                                        })
-                                    }
-                                    _ => {
+
+                                    None => {
                                         return Err(SemanticErrorKind::MissingStructField {
                                             expected: format!(
                                                 "`{}: {}`",
-                                                &def_fld.field_name, *def_fld.field_type
+                                                &def_field.field_name, *def_field.field_type
                                             ),
                                         })
                                     }
                                 }
                             }
                         }
-
-                        // what if there are too many fields, or fields that don't exist ?
 
                         Ok(Type::UserDefined(path))
                     }
@@ -2801,14 +2847,16 @@ impl SemanticAnalyser {
                         match (&elements_opt, &fields_opt) {
                             (None, None) => Ok(Type::UnitType(UnitType)),
 
-                            (None, Some(fields)) => Err(SemanticErrorKind::ElementCountMismatch {
-                                name: tuple_struct_def.struct_name.clone(),
-                                expected: fields.len(),
-                                found: 0,
-                            }),
+                            (None, Some(fields)) => {
+                                Err(SemanticErrorKind::StructArgCountMismatch {
+                                    name: tuple_struct_def.struct_name.clone(),
+                                    expected: fields.len(),
+                                    found: 0,
+                                })
+                            }
 
                             (Some(elements), None) => {
-                                Err(SemanticErrorKind::ElementCountMismatch {
+                                Err(SemanticErrorKind::StructArgCountMismatch {
                                     name: tuple_struct_def.struct_name.clone(),
                                     expected: 0,
                                     found: elements.len(),
@@ -2816,7 +2864,7 @@ impl SemanticAnalyser {
                             }
                             (Some(elements), Some(fields)) => {
                                 if elements.len() != fields.len() {
-                                    return Err(SemanticErrorKind::ElementCountMismatch {
+                                    return Err(SemanticErrorKind::StructArgCountMismatch {
                                         name: tuple_struct_def.struct_name.clone(),
                                         expected: fields.len(),
                                         found: elements.len(),

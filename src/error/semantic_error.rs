@@ -5,17 +5,11 @@ use crate::ast::{Identifier, UInt};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {
-    ArgumentCountMismatch {
-        name: Identifier,
-        expected: usize,
-        found: usize,
-    },
-
     ConstantReassignment {
         name: Identifier,
     },
-    
-    ElementCountMismatch {
+
+    FuncArgCountMismatch {
         name: Identifier,
         expected: usize,
         found: usize,
@@ -24,7 +18,7 @@ pub enum SemanticErrorKind {
     InvalidVariableIdentifier {
         name: Identifier,
     },
-
+    
     MethodParamCountError,
 
     MissingStructField {
@@ -33,6 +27,12 @@ pub enum SemanticErrorKind {
 
     MissingValue {
         expected: String,
+    },
+
+    StructArgCountMismatch {
+        name: Identifier,
+        expected: usize,
+        found: usize,
     },
 
     TupleIndexOutOfBounds {
@@ -119,11 +119,16 @@ pub enum SemanticErrorKind {
     UndefinedType {
         name: Identifier,
     },
-    
+
     UnexpectedKeyword {
         expected: String,
         found: String,
     }, 
+
+    UnexpectedStructField {
+        name: Identifier,
+        found: Identifier,
+    },
     
     UnexpectedSymbol {
         name: Identifier,
@@ -147,20 +152,17 @@ pub enum SemanticErrorKind {
 impl fmt::Display for SemanticErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SemanticErrorKind::ArgumentCountMismatch {name,  expected, found } => {
+            SemanticErrorKind::ConstantReassignment{ name } => {
+                write!(f, "cannot reassign constant: `{name}`")
+            }  
+            SemanticErrorKind::FuncArgCountMismatch {name,  expected, found } => {
                 write!(
                     f,
                     "argument count mismatch in function `{name}()`. Expected {expected} arguments, found {found}"
                 )
             }
-            SemanticErrorKind::ConstantReassignment{ name } => {
-                write!(f, "cannot reassign constant: `{name}`")
-            }  
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
-            }  
-            SemanticErrorKind::ElementCountMismatch { name, expected, found } => {
-                write!(f, "element count mismatch in struct `{name}`. Expected {expected} elements, found {found}")
             }
             SemanticErrorKind::MethodParamCountError => {
                 write!(f, "too many `self` parameters")
@@ -170,6 +172,9 @@ impl fmt::Display for SemanticErrorKind {
             }
             SemanticErrorKind::MissingValue { expected } => {
                 write!(f, "value not found. Expected {expected}, found none")
+            }
+            SemanticErrorKind::StructArgCountMismatch { name, expected, found } => {
+                write!(f, "argument count mismatch in struct `{name}`. Expected {expected} arguments, found {found}")
             }
             SemanticErrorKind::TupleIndexOutOfBounds { len, i } => {
                 write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
@@ -238,6 +243,8 @@ impl fmt::Display for SemanticErrorKind {
             }
           
             SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found {found}"),
+
+            SemanticErrorKind::UnexpectedStructField { name, found } => write!(f, "unexpected field in struct `{name}`: `{found}`"),
             
             SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found {found}"),
             
