@@ -14,6 +14,12 @@ pub enum SemanticErrorKind {
     ConstantReassignment {
         name: Identifier,
     },
+    
+    ElementCountMismatch {
+        name: Identifier,
+        expected: usize,
+        found: usize,
+    },
 
     InvalidVariableIdentifier {
         name: Identifier,
@@ -22,10 +28,6 @@ pub enum SemanticErrorKind {
     MethodParamCountError,
 
     MissingStructField {
-        expected: String,
-    },
-
-    MissingTupleStructElement {
         expected: String,
     },
 
@@ -79,7 +81,7 @@ pub enum SemanticErrorKind {
         expected: String,
         found: String,
     },
-
+    
     TypeMismatchValues {
         expected: String,
         found: String,
@@ -156,6 +158,9 @@ impl fmt::Display for SemanticErrorKind {
             }  
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
+            }  
+            SemanticErrorKind::ElementCountMismatch { name, expected, found } => {
+                write!(f, "element count mismatch in struct `{name}`. Expected {expected} elements, found {found}")
             }
             SemanticErrorKind::MethodParamCountError => {
                 write!(f, "too many `self` parameters")
@@ -163,12 +168,6 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::MissingStructField { expected } => {
                 write!(f, "struct field not found. Expected {expected}, found none")
             }
-            SemanticErrorKind::MissingTupleStructElement { expected } => {
-                write!(
-                    f,
-                    "tuple struct element not found. Expected {expected}, found none"
-                )
-            } 
             SemanticErrorKind::MissingValue { expected } => {
                 write!(f, "value not found. Expected {expected}, found none")
             }
@@ -235,7 +234,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UndefinedType { name } => write!(f, "no type `{name}` in current scope"),
             
             SemanticErrorKind::UndefinedVariable { name } => {
-                write!(f, "undefined variable: `{name}`",)
+                write!(f, "undefined variable: `{name}`")
             }
           
             SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found {found}"),
@@ -245,7 +244,6 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UnexpectedType { expected, found } => {
                 write!(f, "unexpected type(s). Expected {expected}, found {found}")
             }
-
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
         }
