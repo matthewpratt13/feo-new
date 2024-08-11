@@ -317,7 +317,7 @@ impl SemanticAnalyser {
                     self.logger
                         .info(&format!("analysing import declaration: `{statement}` …"));
 
-                    self.analyse_import(&id, root)?
+                    self.analyse_import(&id, root)?;
                 }
 
                 Item::AliasDecl(ad) => {
@@ -2161,6 +2161,8 @@ impl SemanticAnalyser {
                     let mut cloned_iter = stmts.iter().peekable().clone();
 
                     for stmt in stmts {
+                        self.logger.info(&format!("analysing statement: {stmt} …"));
+
                         cloned_iter.next();
 
                         match stmt {
@@ -2181,7 +2183,7 @@ impl SemanticAnalyser {
                             },
                             _ => match self.analyse_stmt(stmt, root) {
                                 Ok(_) => (),
-                                Err(e) => return Err(e),
+                                Err(e) => self.log_error(e, &stmt.span()),
                             },
                         }
                     }
