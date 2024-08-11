@@ -14,7 +14,7 @@ use crate::{
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
-    parser::{ty::build_item_path, Program},
+    parser::{ty::build_item_path, ty::get_type_paths, Program},
     span::{Span, Spanned},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
@@ -865,75 +865,97 @@ impl SemanticAnalyser {
         Ok(())
     }
 
+    // fn analyse_import(
+    //     &mut self,
+    //     import_decl: &ImportDecl,
+    //     module_root: &TypePath,
+    // ) -> Result<(), SemanticErrorKind> {
+    //     println!("import declaration: {:#?}", import_decl);
+
+    //     let mut import_paths: Vec<TypePath> = Vec::new();
+
+    //     let mut segments = import_decl.import_tree.path_segments.clone();
+
+    //     let mut import_root = if let Some(s) = segments.first() {
+    //         // let mut paths = Vec::<TypePath>::from(segments.remove(0));
+
+    //         // if !paths.is_empty() {
+    //         //     let mut path = paths.remove(0);
+
+    //         //     path
+    //         // } else {
+    //         //     TypePath::from(Identifier::from(""))
+    //         // }
+
+    //         s.root.clone()
+    //     } else {
+    //         module_root.clone()
+    //     };
+
+    //     println!("import root: {import_root}");
+
+    //     // let num_segments = segments.len();
+
+    //     // for (i, seg) in segments.into_iter().enumerate() {
+    //     //     let path = build_item_path(&import_root, seg.root);
+
+    //     //     if let Some(subset) = seg.subset_opt {
+    //     //         import_root = path.clone();
+
+    //     //         for tree in subset.nested_trees {
+    //     //             for tree_seg in tree.path_segments {
+    //     //                 for seg_path in Vec::<TypePath>::from(tree_seg) {
+    //     //                     let path = build_item_path(&path.clone(), seg_path);
+    //     //                     import_paths.push(path);
+    //     //                 }
+    //     //             }
+    //     //         }
+    //     //     } else {
+    //     //         if i == num_segments - 1 {
+    //     //             import_paths.push(path.clone());
+    //     //         }
+
+    //     //         if i < num_segments - 1 {
+    //     //             import_root = path.clone();
+    //     //         }
+    //     //     }
+    //     // }
+
+    //     println!("import paths: {import_paths:#?}");
+
+    //     // TODO: handle `super` and `self` path roots
+    //     // TODO: handle public imports / re-exports
+
+    //     Ok(())
+    // }
+
     fn analyse_import(
         &mut self,
         import_decl: &ImportDecl,
         module_root: &TypePath,
     ) -> Result<(), SemanticErrorKind> {
-        println!("import declaration: {:#?}", import_decl);
+        let path_segments = import_decl.import_tree.path_segments.clone();
 
-        let mut import_paths: Vec<TypePath> = Vec::new();
+        let import_paths = get_type_paths(path_segments);
 
-        let mut segments = import_decl.import_tree.path_segments.clone();
-
-        let mut import_root = if let Some(s) = segments.first() {
-            // let mut paths = Vec::<TypePath>::from(segments.remove(0));
-
-            // if !paths.is_empty() {
-            //     let mut path = paths.remove(0);
-
-            //     path
-            // } else {
-            //     TypePath::from(Identifier::from(""))
-            // }
-
-            s.root.clone()
-        } else {
-            module_root.clone()
-        };
-
-        println!("import root: {import_root}");
-
-        let num_segments = segments.len();
-
-        for (i, seg) in segments.into_iter().enumerate() {
-            let path = build_item_path(&import_root, seg.root);
-
-            if let Some(subset) = seg.subset_opt {
-                import_root = path.clone();
-
-                for tree in subset.nested_trees {
-                    for tree_seg in tree.path_segments {
-                        for seg_path in Vec::<TypePath>::from(tree_seg) {
-                            let path = build_item_path(&path.clone(), seg_path);
-                            import_paths.push(path);
-                        }
-                    }
-                }
-            } else {
-                if i == num_segments - 1 {
-                    import_paths.push(path.clone());
-                }
-
-                if i < num_segments - 1 {
-                    import_root = path.clone();
-                }
-            }
-        }
-
-        println!("import paths: {import_paths:#?}");
-
-        // TODO: handle `super` and `self` path roots
-        // TODO: handle public imports / re-exports
+        println!("import_paths: {:#?}", import_paths);
 
         for path in import_paths {
+            let import_root = if let Some(ref ids) = path.associated_type_path_prefix_opt {
+                if let Some(p) = ids.first() {
+                    TypePath::from(p.clone())
+                } else {
+                    TypePath::from(path.type_name.clone())
+                }
+            } else {
+                module_root.clone()
+            };
+
+            println!("import root: {import_root}");
+
             if let Some(module) = self.module_registry.get(&import_root).cloned() {
                 for (item_path, symbol) in module.clone() {
-                    let short_path = build_item_path(
-                        &TypePath::from(path.type_name.clone()),
-                        TypePath::from(item_path.type_name),
-                    );
-                    self.insert(short_path, symbol)?;
+                    self.insert(item_path, symbol)?;
                 }
 
                 if let Some(sym) = module.get(&path) {
@@ -947,7 +969,7 @@ impl SemanticAnalyser {
                 self.insert(path, sym)?;
             } else {
                 return Err(SemanticErrorKind::UndefinedModule {
-                    name: import_root.type_name,
+                    name: path.type_name,
                 });
             }
         }

@@ -268,6 +268,27 @@ impl fmt::Display for TypePath {
     }
 }
 
+pub(crate) fn get_type_paths(segments: Vec<PathSegment>) -> Vec<TypePath> {
+    let mut paths: Vec<TypePath> = Vec::new();
+
+    for seg in segments {
+        let root = seg.root;
+
+        if let Some(subset) = seg.subset_opt {
+            for tree in subset.nested_trees {
+                for tree_seg in tree.path_segments {
+                    let path = build_item_path(&root, tree_seg.root);
+                    paths.push(path);
+                }
+            }
+        } else {
+            paths.push(root);
+        }
+    }
+
+    paths
+}
+
 pub(crate) fn build_item_path(root: &TypePath, item_path: TypePath) -> TypePath {
     if let Some(prefix) = &root.associated_type_path_prefix_opt {
         let mut path = prefix.to_vec();
