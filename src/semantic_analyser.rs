@@ -14,7 +14,10 @@ use crate::{
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
-    parser::{ty::build_item_path, ty::get_type_paths, Program},
+    parser::{
+        ty::{build_item_path, get_type_paths},
+        Program,
+    },
     span::{Span, Spanned},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
@@ -71,7 +74,7 @@ impl SemanticAnalyser {
 
     fn enter_scope(&mut self, scope_kind: ScopeKind) {
         self.logger
-            .debug(&format!("entering new scope: `{:?}` …", scope_kind));
+            .debug(&format!("entering new scope: `{scope_kind:?}` …"));
 
         self.scope_stack.push(Scope {
             scope_kind,
@@ -228,7 +231,7 @@ impl SemanticAnalyser {
         match statement {
             Statement::Let(ls) => {
                 self.logger
-                    .info(&format!("analysing let statement: `{}` …", statement));
+                    .info(&format!("analysing let statement: `{statement}` …"));
 
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors
@@ -247,8 +250,8 @@ impl SemanticAnalyser {
                 // check that the value matches the type annotation
                 if &value_type != declared_type {
                     return Err(SemanticErrorKind::TypeMismatchDeclaredType {
-                        actual_type: format!("`{}`", value_type),
-                        declared_type: format!("`{}`", declared_type),
+                        actual_type: value_type.clone(),
+                        declared_type: declared_type.clone(),
                     });
                 }
 
@@ -293,7 +296,7 @@ impl SemanticAnalyser {
                         var_type: value_type.clone(),
                     },
                     Type::UserDefined(tp) => {
-                        let type_path = self.check_path(tp, root, String::from("type"))?;
+                        let type_path = self.check_path(tp, root, "type".to_string())?;
 
                         match self.lookup(&type_path) {
                             Some(sym) => sym.clone(),
@@ -312,14 +315,14 @@ impl SemanticAnalyser {
             Statement::Item(item) => match item {
                 Item::ImportDecl(id) => {
                     self.logger
-                        .info(&format!("analysing import declaration: `{}` …", statement));
+                        .info(&format!("analysing import declaration: `{statement}` …"));
 
                     self.analyse_import(&id, root)?
                 }
 
                 Item::AliasDecl(ad) => {
                     self.logger
-                        .info(&format!("analysing alias declaration: `{}` …", statement));
+                        .info(&format!("analysing alias declaration: `{statement}` …"));
 
                     let alias_path = build_item_path(root, TypePath::from(ad.alias_name.clone()));
 
@@ -335,10 +338,8 @@ impl SemanticAnalyser {
                 }
 
                 Item::ConstantDecl(cd) => {
-                    self.logger.info(&format!(
-                        "analysing constant declaration: `{}` …",
-                        statement
-                    ));
+                    self.logger
+                        .info(&format!("analysing constant declaration: `{statement}` …"));
 
                     let value_type = match &cd.value_opt {
                         Some(val) => {
@@ -350,8 +351,8 @@ impl SemanticAnalyser {
 
                     if value_type.clone().is_some_and(|t| t != *cd.constant_type) {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
-                            declared_type: format!("`{}`", cd.constant_type),
-                            actual_type: format!("`{}`", value_type.unwrap()),
+                            declared_type: *cd.constant_type.clone(),
+                            actual_type: value_type.unwrap(),
                         });
                     }
 
@@ -373,8 +374,7 @@ impl SemanticAnalyser {
 
                 Item::StaticVarDecl(s) => {
                     self.logger.info(&format!(
-                        "analysing static variable declaration: `{}` …",
-                        statement
+                        "analysing static variable declaration: `{statement}` …"
                     ));
 
                     let assignee_type = match &s.assignee_opt {
@@ -389,8 +389,8 @@ impl SemanticAnalyser {
 
                     if assignee_type != s.var_type.clone() {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
-                            declared_type: format!("`{}`", s.var_type),
-                            actual_type: format!("`{}`", assignee_type),
+                            declared_type: s.var_type.clone(),
+                            actual_type: assignee_type,
                         });
                     }
 
@@ -429,7 +429,7 @@ impl SemanticAnalyser {
 
                     if let Some(curr_scope) = self.scope_stack.pop() {
                         self.logger
-                            .debug(&format!("exiting scope: `{:?}`", curr_scope.scope_kind));
+                            .debug(&format!("exiting scope: `{:?}` …", curr_scope.scope_kind));
 
                         module_scope = curr_scope;
                     }
@@ -444,8 +444,7 @@ impl SemanticAnalyser {
                     )?;
 
                     self.logger.info(&format!(
-                        "inserting symbols into module at path: `{}`",
-                        module_path,
+                        "inserting symbols into module at path: `{module_path}` …"
                     ));
 
                     self.module_registry
@@ -453,6 +452,9 @@ impl SemanticAnalyser {
                 }
 
                 Item::TraitDef(t) => {
+                    self.logger
+                        .info(&format!("analysing trait definition: `{statement}` …"));
+
                     let trait_name_path = TypePath::from(t.trait_name.clone());
                     let trait_def_path = build_item_path(root, trait_name_path.clone());
 
@@ -503,7 +505,7 @@ impl SemanticAnalyser {
 
                 Item::EnumDef(e) => {
                     self.logger
-                        .info(&format!("analysing enum definition: `{}` …", statement));
+                        .info(&format!("analysing enum definition: `{statement}` …"));
 
                     let enum_name_path = TypePath::from(e.enum_name.clone());
                     let enum_def_path = build_item_path(root, enum_name_path.clone());
@@ -588,7 +590,7 @@ impl SemanticAnalyser {
 
                 Item::StructDef(s) => {
                     self.logger
-                        .info(&format!("analysing struct definition: `{}` …", statement));
+                        .info(&format!("analysing struct definition: `{statement}` …"));
 
                     let struct_name_path = TypePath::from(s.struct_name.clone());
                     let struct_def_path = build_item_path(root, struct_name_path.clone());
@@ -604,8 +606,7 @@ impl SemanticAnalyser {
 
                 Item::TupleStructDef(ts) => {
                     self.logger.info(&format!(
-                        "analysing tuple struct definition: `{}` …",
-                        statement
+                        "analysing tuple struct definition: `{statement}` …"
                     ));
 
                     let struct_name_path = TypePath::from(ts.struct_name.clone());
@@ -661,7 +662,7 @@ impl SemanticAnalyser {
                         ty => {
                             return Err(SemanticErrorKind::UnexpectedType {
                                 expected: "user-defined type".to_string(),
-                                found: format!("`{}`", ty),
+                                found: ty.clone(),
                             })
                         }
                     };
@@ -700,7 +701,7 @@ impl SemanticAnalyser {
 
                 Item::FunctionItem(f) => {
                     self.logger
-                        .info(&format!("analysing function item: `{}` …", statement));
+                        .info(&format!("analysing function item: `{statement}` …"));
 
                     let function_name_path = TypePath::from(f.function_name.clone());
                     let function_item_path = build_item_path(root, function_name_path.clone());
@@ -718,10 +719,8 @@ impl SemanticAnalyser {
             },
 
             Statement::Expression(expr) => {
-                self.logger.info(&format!(
-                    "analysing expression statement: `{}` …",
-                    statement
-                ));
+                self.logger
+                    .info(&format!("analysing expression statement: `{statement}` …"));
 
                 self.analyse_expr(expr, root)?;
             }
@@ -743,7 +742,7 @@ impl SemanticAnalyser {
         // * object implementation (e.g., `lib::some_module::SomeObject`)
         // * trait implementation (e.g., `lib::some_module::SomeObject::SomeTrait`)
 
-        println!("enter `analyse_function_def()`");
+        println!("entering `SemanticAnalyser::analyse_function_def()` …");
 
         let function_root = if is_trait_impl {
             if let Some(prefix) = &path.associated_type_path_prefix_opt {
@@ -774,7 +773,7 @@ impl SemanticAnalyser {
 
                 let param_path = TypePath::from(param.param_name());
 
-                println!("param path: `{param_path}`, param_type: {param_type:?}");
+                println!("param path: `{param_path}`, param_type: `{param_type:?}`");
 
                 let symbol = match param_type {
                     Type::FunctionPtr(fp) => Symbol::Function {
@@ -809,7 +808,7 @@ impl SemanticAnalyser {
                     },
                 };
 
-                println!("parameter symbol: {symbol:?}");
+                println!("parameter symbol: `{symbol:?}`");
 
                 self.insert(param_path, symbol)?;
             }
@@ -832,9 +831,14 @@ impl SemanticAnalyser {
             }
         };
 
-        println!("function type: {function_type}");
+        println!("function type: `{function_type}`");
 
-        println!("return type: {:?}", f.return_type_opt);
+        println!(
+            "return type: `{}`",
+            f.return_type_opt
+                .clone()
+                .unwrap_or(Box::new(Type::UnitType(UnitType)))
+        );
 
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
@@ -853,8 +857,8 @@ impl SemanticAnalyser {
                         ()
                     } else {
                         return Err(SemanticErrorKind::TypeMismatchReturnType {
-                            expected: format!("`{}`", return_type),
-                            found: format!("`{}`", function_type),
+                            expected: *return_type.clone(),
+                            found: function_type,
                         });
                     }
                 }
@@ -875,7 +879,7 @@ impl SemanticAnalyser {
 
         let import_paths = get_type_paths(path_segments);
 
-        println!("import_paths: {:#?}", import_paths);
+        // println!("import_paths: {:#?}", import_paths);
 
         for path in import_paths {
             let import_root = if let Some(ref ids) = path.associated_type_path_prefix_opt {
@@ -888,7 +892,7 @@ impl SemanticAnalyser {
                 module_root
             };
 
-            println!("import root: {import_root}");
+            // println!("import root: {import_root}");
 
             if let Some(module) = self.module_registry.get(import_root).cloned() {
                 for (item_path, symbol) in module.clone() {
@@ -901,7 +905,7 @@ impl SemanticAnalyser {
                     }
                 } else {
                     return Err(SemanticErrorKind::UndefinedSymbol {
-                        name: path.to_string(),
+                        name: format!("`{path}`"),
                     });
                 }
             } else if let Some(sym) = self.lookup(&path).cloned() {
@@ -975,12 +979,12 @@ impl SemanticAnalyser {
                     },
                 };
 
-                let variable_path = self.check_path(&path, root, String::from("variable"))?;
+                let variable_path = self.check_path(&path, root, "variable".to_string())?;
 
-                println!("variable path: {variable_path}");
+                println!("variable path: `{variable_path}`");
 
                 if let Some(sym) = self.lookup(&variable_path) {
-                    println!("variable symbol: {sym}");
+                    println!("variable symbol: `{sym}`");
 
                     Ok(sym.symbol_type())
                 } else {
@@ -1038,7 +1042,7 @@ impl SemanticAnalyser {
 
                 let symbol = self.lookup(&receiver_path).cloned();
 
-                println!("receiver path: `{receiver_path:?}`, symbol: {symbol:?}");
+                println!("receiver path: `{receiver_path:?}`, symbol: `{symbol:?}`");
 
                 // check if path expression's type is that of an existing type and analyse
                 match symbol {
@@ -1059,7 +1063,7 @@ impl SemanticAnalyser {
                             Err(SemanticErrorKind::TypeMismatchVariable {
                                 name: receiver_path.type_name,
                                 expected: format!("`{path}`"),
-                                found: format!("`{}`", receiver_type),
+                                found: receiver_type,
                             })
                         }
                     }
@@ -1071,7 +1075,7 @@ impl SemanticAnalyser {
                     Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: receiver_path.type_name,
                         expected: "struct".to_string(),
-                        found: sym.to_string(),
+                        found: format!("`{sym}`"),
                     }),
                 }
             }
@@ -1100,13 +1104,13 @@ impl SemanticAnalyser {
                     },
 
                     None => Err(SemanticErrorKind::UndefinedType {
-                        name: Identifier::from(&format!("{}", object_type)),
+                        name: Identifier::from(&object_type.to_string()),
                     }),
 
                     Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: Identifier::from(&format!("{}", object_type)),
+                        name: Identifier::from(&object_type.to_string()),
                         expected: "struct".to_string(),
-                        found: sym.to_string(),
+                        found: format!("`{sym}`"),
                     }),
                 }
             }
@@ -1117,7 +1121,7 @@ impl SemanticAnalyser {
                 let callee_path = self.check_path(
                     &TypePath::from(PathExpr::from(callee)),
                     root,
-                    String::from("function"),
+                    "function".to_string(),
                 )?;
 
                 self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
@@ -1136,7 +1140,7 @@ impl SemanticAnalyser {
                     _ => {
                         return Err(SemanticErrorKind::UnexpectedType {
                             expected: "array index".to_string(),
-                            found: format!("`{}`", index_type),
+                            found: index_type,
                         })
                     }
                 }
@@ -1145,7 +1149,7 @@ impl SemanticAnalyser {
                     Type::Array { element_type, .. } => Ok(*element_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "array".to_string(),
-                        found: format!("`{}`", array_type),
+                        found: array_type,
                     }),
                 }
             }
@@ -1172,7 +1176,7 @@ impl SemanticAnalyser {
                             _ => Err(SemanticErrorKind::UnexpectedSymbol {
                                 name: tp.type_name.clone(),
                                 expected: "tuple struct".to_string(),
-                                found: sym.to_string(),
+                                found: format!("`{sym}`"),
                             }),
                         },
                         None => Err(SemanticErrorKind::UndefinedType {
@@ -1181,7 +1185,7 @@ impl SemanticAnalyser {
                     },
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "tuple or tuple struct".to_string(),
-                        found: format!("`{}`", tuple_type),
+                        found: tuple_type,
                     }),
                 }
             }
@@ -1208,14 +1212,14 @@ impl SemanticAnalyser {
                         | Type::F64(_) => Ok(expr_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric value".to_string(),
-                            found: format!("`{}`", expr_type),
+                            found: expr_type,
                         }),
                     },
                     UnaryOp::Not => match &expr_type {
                         Type::Bool(_) => Ok(expr_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "boolean".to_string(),
-                            found: format!("`{}`", expr_type),
+                            found: expr_type,
                         }),
                     },
                 }
@@ -1311,8 +1315,8 @@ impl SemanticAnalyser {
                         Ok(new_type)
                     }
                     (t, u) => Err(SemanticErrorKind::TypeCastError {
-                        from: format!("`{}`", t),
-                        to: format!("`{}`", u),
+                        from: t.clone(),
+                        to: u.clone(),
                     }),
                 }
             }
@@ -1330,7 +1334,7 @@ impl SemanticAnalyser {
 
                     (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`i32` or unsigned integer".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (
@@ -1345,14 +1349,14 @@ impl SemanticAnalyser {
 
                     (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "integer or unsigned integer".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
 
                     (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u8`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U16(_), Type::U8(_) | Type::U16(_)) => {
@@ -1361,7 +1365,7 @@ impl SemanticAnalyser {
 
                     (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u16` or `u8`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
@@ -1370,7 +1374,7 @@ impl SemanticAnalyser {
 
                     (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u32` or smaller unsigned integer".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U64(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
@@ -1379,7 +1383,7 @@ impl SemanticAnalyser {
 
                     (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u64` or smaller unsigned integer".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U256(_), Type::U256(_)) => {
@@ -1388,7 +1392,7 @@ impl SemanticAnalyser {
 
                     (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u256`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
@@ -1397,14 +1401,14 @@ impl SemanticAnalyser {
 
                     (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u512` or `u256`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
 
                     (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`f32`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::F64(_), Type::F32(_) | Type::F64(_)) => {
@@ -1413,12 +1417,12 @@ impl SemanticAnalyser {
 
                     (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`f64` or `f32`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
-                    _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                    (_, t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "numeric values with matching types".to_string(),
-                        found: format!("`{} {} {}`", &lhs_type, b.binary_op, &rhs_type),
+                        found: t.clone(),
                     }),
                 }
             }
@@ -1436,7 +1440,7 @@ impl SemanticAnalyser {
 
                     (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`i32` or unsigned integer".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (
@@ -1451,35 +1455,35 @@ impl SemanticAnalyser {
 
                     (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "integer or unsigned integer".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
 
                     (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u8`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U16(_), Type::U16(_)) => Ok(Type::U16(UInt::U16(u16::default()))),
 
                     (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u16`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U32(_), Type::U32(_)) => Ok(Type::U32(UInt::U32(u32::default()))),
 
                     (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u32`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U64(_), Type::U64(_)) => Ok(Type::U64(UInt::U64(u64::default()))),
 
                     (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u64`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U256(_), Type::U256(_)) => {
@@ -1488,7 +1492,7 @@ impl SemanticAnalyser {
 
                     (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u256`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
@@ -1497,26 +1501,26 @@ impl SemanticAnalyser {
 
                     (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`u512`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
 
                     (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`f32`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
                     (Type::F64(_), Type::F64(_)) => Ok(Type::F64(Float::F64(F64::default()))),
 
                     (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "`f64`".to_string(),
-                        found: format!("`{}`", t),
+                        found: t.clone(),
                     }),
 
-                    _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                    (_, t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                         expected: "numeric values with matching types".to_string(),
-                        found: format!("`{} {} {}`", &lhs_type, c.comparison_op, &rhs_type),
+                        found: t.clone(),
                     }),
                 }
             }
@@ -1539,7 +1543,7 @@ impl SemanticAnalyser {
                         | Type::U512(_) => Ok(to_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type".to_string(),
-                            found: format!("`{}`", to_type),
+                            found: to_type,
                         }),
                     }
                 }
@@ -1558,7 +1562,7 @@ impl SemanticAnalyser {
                         | Type::U512(_) => Ok(from_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type".to_string(),
-                            found: format!("`{}`", from_type),
+                            found: from_type,
                         }),
                     }
                 }
@@ -1578,7 +1582,7 @@ impl SemanticAnalyser {
                         _ => {
                             return Err(SemanticErrorKind::UnexpectedType {
                                 expected: "numeric type".to_string(),
-                                found: format!("`{}`", from_type),
+                                found: from_type,
                             })
                         }
                     }
@@ -1597,7 +1601,7 @@ impl SemanticAnalyser {
                         _ => {
                             return Err(SemanticErrorKind::UnexpectedType {
                                 expected: "numeric type".to_string(),
-                                found: format!("`{}`", to_type),
+                                found: to_type,
                             })
                         }
                     }
@@ -1606,8 +1610,8 @@ impl SemanticAnalyser {
                         Ok(to_type)
                     } else {
                         Err(SemanticErrorKind::TypeMismatchValues {
-                            expected: format!("`{}`", from_type),
-                            found: format!("`{}`", to_type),
+                            expected: from_type,
+                            found: to_type,
                         })
                     }
                 }
@@ -1621,8 +1625,8 @@ impl SemanticAnalyser {
 
                 if value_type != assignee_type {
                     return Err(SemanticErrorKind::TypeMismatchValues {
-                        expected: format!("`{}`", assignee_type),
-                        found: format!("`{}`", value_type),
+                        expected: assignee_type,
+                        found: value_type,
                     });
                 }
 
@@ -1630,7 +1634,7 @@ impl SemanticAnalyser {
                 let assignee_path = self.check_path(
                     &TypePath::from(assignee_as_path_expr),
                     root,
-                    String::from("assignee expression"),
+                    "assignee expression".to_string(),
                 )?;
 
                 match self.lookup(&assignee_path).cloned() {
@@ -1641,8 +1645,8 @@ impl SemanticAnalyser {
                         }
                         false => Err(SemanticErrorKind::TypeMismatchVariable {
                             name: assignee_path.type_name,
-                            expected: format!("`{}`", assignee_type),
-                            found: format!("`{}`", var_type),
+                            expected: format!("`{assignee_type}`"),
+                            found: var_type,
                         }),
                     },
                     Some(Symbol::Constant { constant_name, .. }) => {
@@ -1652,8 +1656,8 @@ impl SemanticAnalyser {
                     }
                     Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: assignee_path.type_name,
-                        expected: format!("`{}`", assignee_type),
-                        found: sym.to_string(),
+                        expected: format!("`{assignee_type}`"),
+                        found: format!("`{sym}`"),
                     }),
                     _ => Err(SemanticErrorKind::UndefinedVariable {
                         name: assignee_path.type_name,
@@ -1671,7 +1675,7 @@ impl SemanticAnalyser {
                 let assignee_path = self.check_path(
                     &TypePath::from(assignee_as_path_expr),
                     root,
-                    String::from("assignee expression"),
+                    "assignee expression".to_string(),
                 )?;
 
                 match self.lookup(&assignee_path) {
@@ -1683,7 +1687,7 @@ impl SemanticAnalyser {
 
                         (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`i32` or unsigned integer".to_string(),
-                            found: format!("`{}`", t),
+                            found: t.clone(),
                         }),
 
                         (
@@ -1698,14 +1702,14 @@ impl SemanticAnalyser {
 
                         (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "integer or unsigned integer".to_string(),
-                            found: format!("`{}`", t),
+                            found: t.clone(),
                         }),
 
                         (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
 
                         (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`u8`".to_string(),
-                            found: format!("`{}`", t),
+                            found: t.clone(),
                         }),
 
                         (Type::U16(_), Type::U8(_) | Type::U16(_)) => {
@@ -1714,7 +1718,7 @@ impl SemanticAnalyser {
 
                         (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`u16`".to_string(),
-                            found: format!("`{}`", t),
+                            found: t.clone(),
                         }),
 
                         (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
@@ -1723,7 +1727,7 @@ impl SemanticAnalyser {
 
                         (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`u32`".to_string(),
-                            found: format!("`{}`", t),
+                            found: t.clone(),
                         }),
 
                         (
@@ -1733,7 +1737,7 @@ impl SemanticAnalyser {
 
                         (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`u64`".to_string(),
-                            found: format!("`{}`", t),
+                            found: t.clone(),
                         }),
 
                         (Type::U256(_), Type::U256(_)) => {
@@ -1742,7 +1746,7 @@ impl SemanticAnalyser {
 
                         (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`u256`".to_string(),
-                            found: format!("`{}`", t),
+                            found: t.clone(),
                         }),
 
                         (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
@@ -1751,14 +1755,14 @@ impl SemanticAnalyser {
 
                         (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`u512`".to_string(),
-                            found: format!("`{}`", t),
+                            found: t.clone(),
                         }),
 
                         (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
 
                         (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`f32`".to_string(),
-                            found: format!("`{}`", t),
+                            found: t.clone(),
                         }),
 
                         (Type::F64(_), Type::F32(_) | Type::F64(_)) => {
@@ -1767,15 +1771,12 @@ impl SemanticAnalyser {
 
                         (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "`f64`".to_string(),
-                            found: format!("`{}`", t),
+                            found: t.clone(),
                         }),
 
-                        _ => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
+                        (_, t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
                             expected: "numeric values with matching types".to_string(),
-                            found: format!(
-                                "`{} {} {}`",
-                                &assignee_type, ca.compound_assignment_op, &value_type
-                            ),
+                            found: t.clone(),
                         }),
                     },
                     Some(Symbol::Constant { constant_name, .. }) => {
@@ -1785,8 +1786,8 @@ impl SemanticAnalyser {
                     }
                     Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: assignee_path.type_name,
-                        expected: format!("`{}`", assignee_type),
-                        found: sym.to_string(),
+                        expected: format!("`{assignee_type}`"),
+                        found: format!("`{sym}`"),
                     }),
                     _ => Err(SemanticErrorKind::UndefinedVariable {
                         name: assignee_path.type_name,
@@ -1834,9 +1835,7 @@ impl SemanticAnalyser {
                         _ => None,
                     };
 
-                self.enter_scope(ScopeKind::Function(
-                    TypePath::from(Identifier::from("")).to_string(),
-                ));
+                self.enter_scope(ScopeKind::Function("".to_string()));
 
                 if let Some(params) = &params_opt {
                     let param_types: Vec<Type> = params.iter().map(|p| p.param_type()).collect();
@@ -1877,8 +1876,8 @@ impl SemanticAnalyser {
                             ()
                         } else {
                             return Err(SemanticErrorKind::TypeMismatchReturnType {
-                                expected: format!("`{}`", return_type),
-                                found: format!("`{}`", expression_type),
+                                expected: return_type,
+                                found: expression_type,
                             });
                         }
                     }
@@ -1908,8 +1907,8 @@ impl SemanticAnalyser {
 
                             if element_type != first_element_type {
                                 return Err(SemanticErrorKind::TypeMismatchArray {
-                                    expected: format!("`{}`", first_element_type),
-                                    found: format!("`{}`", element_type),
+                                    expected: format!("`{first_element_type}`"),
+                                    found: element_type,
                                 });
                             }
                         }
@@ -2001,7 +2000,7 @@ impl SemanticAnalyser {
                                             return Err(SemanticErrorKind::TypeMismatchVariable {
                                                 name: path.type_name,
                                                 expected: format!("`{}`", *def_field.field_type),
-                                                found: format!("`{}`", obj_field_type),
+                                                found: obj_field_type.clone(),
                                             });
                                         }
                                     }
@@ -2028,7 +2027,7 @@ impl SemanticAnalyser {
                     Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: type_path.type_name,
                         expected: "struct".to_string(),
-                        found: sym.to_string(),
+                        found: format!("`{sym}`"),
                     }),
                 }
             }
@@ -2089,8 +2088,8 @@ impl SemanticAnalyser {
                                     if elem_type != field_type {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
                                             name: tuple_struct_def.struct_name.clone(),
-                                            expected: format!("`{}`", field_type),
-                                            found: format!("`{}`", elem_type),
+                                            expected: format!("`{field_type}`"),
+                                            found: elem_type,
                                         });
                                     }
                                 }
@@ -2107,7 +2106,7 @@ impl SemanticAnalyser {
                     Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: type_path.type_name,
                         expected: "tuple struct".to_string(),
-                        found: sym.to_string(),
+                        found: format!("`{sym}`"),
                     }),
                 }
             }
@@ -2124,14 +2123,15 @@ impl SemanticAnalyser {
 
                             if (&pair_key_type, &pair_value_type) != (&key_type, &value_type) {
                                 return Err(SemanticErrorKind::UnexpectedType {
-                                    expected: format!(
-                                        "{{ key: `{}`, value: `{}` }}",
-                                        &key_type, &value_type
-                                    ),
-                                    found: format!(
-                                        "{{ key: `{}`, value: `{}` }}",
-                                        &pair_key_type, &pair_value_type
-                                    ),
+                                    expected: (Type::Mapping {
+                                        key_type: Box::new(key_type),
+                                        value_type: Box::new(value_type),
+                                    })
+                                    .to_string(),
+                                    found: Type::Mapping {
+                                        key_type: Box::new(pair_key_type),
+                                        value_type: Box::new(pair_value_type),
+                                    },
                                 });
                             }
                         }
@@ -2217,8 +2217,8 @@ impl SemanticAnalyser {
 
                                 if block_type != if_block_type {
                                     return Err(SemanticErrorKind::TypeMismatchValues {
-                                        expected: format!("`{}`", if_block_type),
-                                        found: format!("`{}`", block_type),
+                                        expected: if_block_type,
+                                        found: block_type,
                                     });
                                 }
                             }
@@ -2237,15 +2237,15 @@ impl SemanticAnalyser {
 
                 if i.else_if_blocks_opt.is_some() && else_if_blocks_type != if_block_type {
                     return Err(SemanticErrorKind::TypeMismatchValues {
-                        expected: format!("`{}`", if_block_type),
-                        found: format!("`{}`", else_if_blocks_type),
+                        expected: if_block_type,
+                        found: else_if_blocks_type,
                     });
                 }
 
                 if trailing_else_block_type != if_block_type {
                     return Err(SemanticErrorKind::TypeMismatchValues {
-                        expected: format!("`{}`", if_block_type),
-                        found: format!("`{}`", trailing_else_block_type),
+                        expected: if_block_type,
+                        found: trailing_else_block_type,
                     });
                 }
 
@@ -2266,8 +2266,8 @@ impl SemanticAnalyser {
                     } else {
                         return Err(SemanticErrorKind::TypeMismatchMatchExpr {
                             loc: "scrutinee and matched pattern".to_string(),
-                            expected: format!("`{}`", scrutinee_type),
-                            found: format!("`{}`", patt_type),
+                            expected: scrutinee_type,
+                            found: patt_type,
                         });
                     }
                 }
@@ -2284,8 +2284,8 @@ impl SemanticAnalyser {
                             } else {
                                 return Err(SemanticErrorKind::TypeMismatchMatchExpr {
                                     loc: "matched pattern".to_string(),
-                                    expected: format!("`{}`", patt_type),
-                                    found: format!("`{}`", arm_patt_type),
+                                    expected: patt_type,
+                                    found: arm_patt_type,
                                 });
                             }
                         }
@@ -2295,8 +2295,8 @@ impl SemanticAnalyser {
                         if arm_expr_type != expr_type {
                             return Err(SemanticErrorKind::TypeMismatchMatchExpr {
                                 loc: "match arm expression".to_string(),
-                                expected: format!("`{}`", expr_type),
-                                found: format!("`{}`", arm_expr_type),
+                                expected: expr_type,
+                                found: arm_expr_type,
                             });
                         }
                     }
@@ -2324,7 +2324,7 @@ impl SemanticAnalyser {
                         _ => {
                             return Err(SemanticErrorKind::TypeMismatchArray {
                                 expected: "iterable type".to_string(),
-                                found: iter_type.to_string(),
+                                found: iter_type,
                             })
                         }
                     },
@@ -2332,7 +2332,7 @@ impl SemanticAnalyser {
                     _ => {
                         return Err(SemanticErrorKind::TypeMismatchArray {
                             expected: "iterable type".to_string(),
-                            found: iter_type.to_string(),
+                            found: iter_type,
                         });
                     }
                 };
@@ -2404,7 +2404,7 @@ impl SemanticAnalyser {
                     }),
                     keyword => Err(SemanticErrorKind::UnexpectedKeyword {
                         expected: "`Ok` or `Err`".to_string(),
-                        found: format!("`{}`", keyword),
+                        found: keyword,
                     }),
                 }
             }
@@ -2547,8 +2547,8 @@ impl SemanticAnalyser {
                             if arg_type != param_type {
                                 return Err(SemanticErrorKind::TypeMismatchArgument {
                                     name: function.function_name.clone(),
-                                    expected: format!("`{}`", param_type),
-                                    found: format!("`{}`", arg_type),
+                                    expected: param_type,
+                                    found: arg_type,
                                 });
                             }
                         }
@@ -2567,7 +2567,7 @@ impl SemanticAnalyser {
             Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                 name: path.type_name,
                 expected: "function".to_string(),
-                found: sym.to_string(),
+                found: format!("`{sym}`"),
             }),
         }
     }
@@ -2579,7 +2579,7 @@ impl SemanticAnalyser {
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: i.name.clone(),
                     expected: "variable".to_string(),
-                    found: sym.to_string(),
+                    found: format!("`{sym}`"),
                 }),
                 _ => Err(SemanticErrorKind::UndefinedVariable {
                     name: i.name.clone(),
@@ -2660,7 +2660,7 @@ impl SemanticAnalyser {
                         | Type::Char(_) => Ok(to_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type, `byte` or `char`".to_string(),
-                            found: format!("`{}`", to_type),
+                            found: to_type,
                         }),
                     }
                 }
@@ -2680,7 +2680,7 @@ impl SemanticAnalyser {
                         | Type::Char(_) => Ok(from_type),
                         _ => Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type, `byte` or `char`".to_string(),
-                            found: format!("`{}`", from_type),
+                            found: from_type,
                         }),
                     }
                 }
@@ -2701,7 +2701,7 @@ impl SemanticAnalyser {
                         _ => {
                             return Err(SemanticErrorKind::UnexpectedType {
                                 expected: "numeric type, `byte` or `char`".to_string(),
-                                found: format!("`{}`", from_type),
+                                found: from_type,
                             })
                         }
                     }
@@ -2722,7 +2722,7 @@ impl SemanticAnalyser {
                         _ => {
                             return Err(SemanticErrorKind::UnexpectedType {
                                 expected: "numeric type, `byte` or `char`".to_string(),
-                                found: format!("`{}`", from_type),
+                                found: from_type,
                             })
                         }
                     }
@@ -2731,8 +2731,8 @@ impl SemanticAnalyser {
                         Ok(to_type)
                     } else {
                         Err(SemanticErrorKind::TypeMismatchValues {
-                            expected: format!("`{}`", from_type),
-                            found: format!("`{}`", to_type),
+                            expected: from_type,
+                            found: to_type,
                         })
                     }
                 }
@@ -2799,7 +2799,7 @@ impl SemanticAnalyser {
                                             return Err(SemanticErrorKind::TypeMismatchVariable {
                                                 name: path.type_name,
                                                 expected: format!("`{}`", *def_field.field_type),
-                                                found: format!("`{}`", patt_field_type),
+                                                found: patt_field_type.clone(),
                                             });
                                         }
                                     }
@@ -2826,7 +2826,7 @@ impl SemanticAnalyser {
                     Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: type_path.type_name,
                         expected: "struct".to_string(),
-                        found: sym.to_string(),
+                        found: format!("`{sym}`"),
                     }),
                 }
             }
@@ -2876,8 +2876,8 @@ impl SemanticAnalyser {
                                     if elem_type != field_type {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
                                             name: tuple_struct_def.struct_name.clone(),
-                                            expected: format!("`{}`", field_type),
-                                            found: format!("`{}`", elem_type),
+                                            expected: format!("`{field_type}`"),
+                                            found: elem_type,
                                         });
                                     }
                                 }
@@ -2894,7 +2894,7 @@ impl SemanticAnalyser {
                     Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                         name: type_path.type_name,
                         expected: "struct".to_string(),
-                        found: sym.to_string(),
+                        found: format!("`{sym}`"),
                     }),
                 }
             }
@@ -2915,8 +2915,8 @@ impl SemanticAnalyser {
 
                     if subsequent_patt_type != first_patt_type {
                         return Err(SemanticErrorKind::TypeMismatchOrPatt {
-                            expected: first_patt_type.to_string(),
-                            found: subsequent_patt_type.to_string(),
+                            expected: first_patt_type,
+                            found: subsequent_patt_type,
                         });
                     }
                 }
@@ -2954,7 +2954,7 @@ impl SemanticAnalyser {
                     }),
                     keyword => Err(SemanticErrorKind::UnexpectedKeyword {
                         expected: "`Ok` or `Err`".to_string(),
-                        found: format!("`{}`", keyword),
+                        found: keyword,
                     }),
                 }
             }
