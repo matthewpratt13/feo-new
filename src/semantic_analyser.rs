@@ -71,7 +71,7 @@ impl SemanticAnalyser {
 
     fn enter_scope(&mut self, scope_kind: ScopeKind) {
         self.logger
-            .info(&format!("entering new scope: `{:?}` …", scope_kind));
+            .debug(&format!("entering new scope: `{:?}` …", scope_kind));
 
         self.scope_stack.push(Scope {
             scope_kind,
@@ -82,7 +82,7 @@ impl SemanticAnalyser {
     fn exit_scope(&mut self) -> Option<Scope> {
         if let Some(exited_scope) = self.scope_stack.pop() {
             self.logger
-                .info(&format!("exited scope: `{:?}`", exited_scope.scope_kind));
+                .debug(&format!("exited scope: `{:?}`", exited_scope.scope_kind));
 
             Some(exited_scope)
         } else {
@@ -429,7 +429,7 @@ impl SemanticAnalyser {
 
                     if let Some(curr_scope) = self.scope_stack.pop() {
                         self.logger
-                            .info(&format!("exiting scope: `{:?}`", curr_scope.scope_kind));
+                            .debug(&format!("exiting scope: `{:?}`", curr_scope.scope_kind));
 
                         module_scope = curr_scope;
                     }
@@ -2459,11 +2459,11 @@ impl SemanticAnalyser {
 
         // if the path is a concatenation of `root` and `path`
         if self.lookup(&full_path).is_some() {
-            return Ok(full_path);
+            Ok(full_path)
         } else {
-            return Err(SemanticErrorKind::MissingValue {
+            Err(SemanticErrorKind::MissingValue {
                 expected: expected_value,
-            });
+            })
         }
     }
 
