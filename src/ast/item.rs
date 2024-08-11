@@ -4,7 +4,7 @@ use super::{
 };
 
 use crate::{
-    parser::ty::build_item_path,
+    parser::ty::get_type_paths,
     span::{Span, Spanned},
 };
 
@@ -117,105 +117,7 @@ pub(crate) struct ImportTree {
 
 impl fmt::Display for ImportTree {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // let mut paths: Vec<TypePath> = Vec::new();
-
-        // let mut segments = self.path_segments.clone();
-
-        // let mut import_root = if !segments.is_empty() {
-        //     let mut paths = Vec::<TypePath>::from(segments.remove(0));
-
-        //     if !paths.is_empty() {
-        //         let mut path = paths.remove(0);
-
-        //         for p in paths {
-        //             path = build_item_path(&path, p);
-        //         }
-
-        //         path
-        //     } else {
-        //         TypePath::from(Identifier::from(""))
-        //     }
-        // } else {
-        //     TypePath::from(Identifier::from(""))
-        // };
-
-        // let mut segment_counter: usize = 0;
-
-        // for seg in segments.clone() {
-        //     segment_counter += 1;
-
-        //     let path = build_item_path(&import_root, seg.root);
-
-        //     if let Some(sub) = seg.subset_opt {
-        //         import_root = path.clone();
-
-        //         for t in sub.nested_trees {
-        //             for ps in t.path_segments {
-        //                 for p in Vec::<TypePath>::from(ps) {
-        //                     let path = build_item_path(&path.clone(), p);
-        //                     paths.push(path);
-        //                 }
-        //             }
-        //         }
-        //     } else {
-        //         if segment_counter == segments.len() {
-        //             paths.push(path.clone());
-        //         }
-
-        //         if segment_counter < segments.len() {
-        //             import_root = path.clone();
-        //         }
-        //     }
-        // }
-
-        let mut import_paths: Vec<TypePath> = Vec::new();
-
-        let mut segments = self.path_segments.clone();
-
-        let mut import_root = if !segments.is_empty() {
-            let mut paths = Vec::<TypePath>::from(segments.remove(0));
-
-            if !paths.is_empty() {
-                let mut path = paths.remove(0);
-
-                for p in paths {
-                    path = build_item_path(&path, p);
-                }
-
-                path
-            } else {
-                TypePath::from(Identifier::from(""))
-            }
-        } else {
-            TypePath::from(Identifier::from(""))
-        };
-
-        let num_segments = segments.len();
-
-        for (i, seg) in segments.into_iter().enumerate() {
-            let path = build_item_path(&import_root, seg.root);
-
-            if let Some(subset) = seg.subset_opt {
-                import_root = path.clone();
-
-                for tree in subset.nested_trees {
-                    for tree_seg in tree.path_segments {
-                        for seg_path in Vec::<TypePath>::from(tree_seg) {
-                            let path = build_item_path(&path.clone(), seg_path);
-                            import_paths.push(path);
-                        }
-                    }
-                }
-            } else {
-                if i == num_segments - 1 {
-                    import_paths.push(path.clone());
-                }
-
-                if i < num_segments - 1 {
-                    import_root = path.clone();
-                }
-            }
-        }
+        let import_paths = get_type_paths(self.path_segments.clone());
 
         let path_strings = import_paths
             .clone()
