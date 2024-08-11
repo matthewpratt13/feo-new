@@ -41,7 +41,7 @@ impl SemanticAnalyser {
 
         // add external code (e.g., library functions) to the global scope if there is any
         if let Some(ext) = external_code {
-            logger.debug(&format!("importing external code …"));
+            logger.info(&format!("importing external code …"));
 
             for (path, ref sym) in ext {
                 if let Symbol::Module { path, symbols, .. } = sym.clone() {
@@ -116,6 +116,7 @@ impl SemanticAnalyser {
                 return Some(symbol);
             }
         }
+
         self.logger
             .warn(&format!("path `{path}` not found in any scope"));
 
@@ -879,23 +880,25 @@ impl SemanticAnalyser {
         for path in import_paths {
             let import_root = if let Some(ref ids) = path.associated_type_path_prefix_opt {
                 if let Some(p) = ids.first() {
-                    TypePath::from(p.clone())
+                    &TypePath::from(p.clone())
                 } else {
-                    TypePath::from(path.type_name.clone())
+                    &TypePath::from(path.type_name.clone())
                 }
             } else {
-                module_root.clone()
+                module_root
             };
 
             println!("import root: {import_root}");
 
-            if let Some(module) = self.module_registry.get(&import_root).cloned() {
+            if let Some(module) = self.module_registry.get(import_root).cloned() {
                 for (item_path, symbol) in module.clone() {
                     self.insert(item_path, symbol)?;
                 }
 
                 if let Some(sym) = module.get(&path) {
-                    self.insert(TypePath::from(path.type_name), sym.clone())?;
+                    if !module.contains_key(&path) {
+                        self.insert(TypePath::from(path), sym.clone())?;
+                    }
                 } else {
                     return Err(SemanticErrorKind::UndefinedSymbol {
                         name: path.to_string(),
@@ -1047,6 +1050,10 @@ impl SemanticAnalyser {
                         if Type::UserDefined(path.clone()) == receiver_type {
                             let method_path =
                                 build_item_path(&path, TypePath::from(mc.method_name.clone()));
+
+                            let method_path =
+                                self.check_path(&method_path, root, "method".to_string())?;
+
                             self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                         } else {
                             Err(SemanticErrorKind::TypeMismatchVariable {
@@ -2410,25 +2417,54 @@ impl SemanticAnalyser {
         root: &TypePath,
         expected_value: String,
     ) -> Result<TypePath, SemanticErrorKind> {
-        let item_path = if self.lookup(path).is_some() {
-            path.clone()
-        } else {
-            let full_path = build_item_path(root, path.clone());
+        if self.lookup(path).is_some() {
+            return Ok(path.clone());
+        }
 
-            self.logger.debug(&format!(
-                "cannot find symbol at path `{path}`, trying `{full_path}` …",
-            ));
+        // check the module registry
+        for (module_name, module_items) in self.module_registry.clone().into_iter() {
+            // iterate over a module
+            for (item_name, symbol) in module_items.iter() {
+                // if the path is an item inside a module root
+                if *path == TypePath::from(item_name.type_name.clone()) {
+                    let item_path = build_item_path(&module_name, path.clone());
 
-            if self.lookup(&full_path).is_some() {
-                full_path
-            } else {
-                return Err(SemanticErrorKind::MissingValue {
-                    expected: expected_value,
-                });
+                    self.logger
+                        .debug(&format!("trying to find path at `{item_path}` …",));
+
+                    self.logger.debug(&format!("found path at `{item_path}`",));
+
+                    return Ok(item_path);
+                }
+
+                // if the path is a symbol inside an item
+                if *path == TypePath::from(symbol.type_path().type_name) {
+                    let symbol_path = build_item_path(item_name, path.clone());
+
+                    self.logger
+                        .debug(&format!("trying to find path at `{symbol_path}` …",));
+
+                    self.logger
+                        .debug(&format!("found path at `{symbol_path}`",));
+
+                    return Ok(symbol_path);
+                }
             }
-        };
+        }
 
-        Ok(item_path)
+        let full_path = build_item_path(root, path.clone());
+
+        self.logger
+            .debug(&format!("trying to find path at `{full_path}` …",));
+
+        // if the path is a concatenation of `root` and `path`
+        if self.lookup(&full_path).is_some() {
+            return Ok(full_path);
+        } else {
+            return Err(SemanticErrorKind::MissingValue {
+                expected: expected_value,
+            });
+        }
     }
 
     fn analyse_call_or_method_call_expr(

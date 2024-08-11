@@ -82,6 +82,20 @@ impl Symbol {
             Symbol::Module { .. } => Type::UnitType(UnitType),
         }
     }
+
+    pub(crate) fn type_path(&self) -> TypePath {
+        match self.clone() {
+            Symbol::Variable { name, .. } => TypePath::from(name.clone()),
+            Symbol::Struct { path, .. }
+            | Symbol::TupleStruct { path, .. }
+            | Symbol::Enum { path, .. }
+            | Symbol::Trait { path, .. }
+            | Symbol::Alias { path, .. }
+            | Symbol::Constant { path, .. }
+            | Symbol::Function { path, .. }
+            | Symbol::Module { path, .. } => path,
+        }
+    }
 }
 
 impl fmt::Display for Symbol {
