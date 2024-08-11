@@ -896,7 +896,9 @@ impl SemanticAnalyser {
 
             if let Some(module) = self.module_registry.get(import_root).cloned() {
                 for (item_path, symbol) in module.clone() {
-                    self.insert(item_path, symbol)?;
+                    if item_path != *module_root && item_path.type_name != Identifier::from("lib") {
+                        self.insert(item_path, symbol)?;
+                    }
                 }
 
                 if let Some(sym) = module.get(&path) {
@@ -2161,7 +2163,8 @@ impl SemanticAnalyser {
                     let mut cloned_iter = stmts.iter().peekable().clone();
 
                     for stmt in stmts {
-                        self.logger.info(&format!("analysing statement: `{stmt}` …"));
+                        self.logger
+                            .info(&format!("analysing statement: `{stmt}` …"));
 
                         cloned_iter.next();
 
