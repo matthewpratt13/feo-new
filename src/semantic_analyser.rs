@@ -2161,7 +2161,7 @@ impl SemanticAnalyser {
                     let mut cloned_iter = stmts.iter().peekable().clone();
 
                     for stmt in stmts {
-                        self.logger.info(&format!("analysing statement: {stmt} …"));
+                        self.logger.info(&format!("analysing statement: `{stmt}` …"));
 
                         cloned_iter.next();
 
