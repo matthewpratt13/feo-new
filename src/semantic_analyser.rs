@@ -407,6 +407,9 @@ impl SemanticAnalyser {
 
                 Item::ModuleItem(m) => {
                     // TODO: sort out visibility
+
+                    let mut module_errors: Vec<SemanticErrorKind> = Vec::new();
+
                     let module_path = build_item_path(root, TypePath::from(m.module_name.clone()));
 
                     self.logger
@@ -427,9 +430,16 @@ impl SemanticAnalyser {
                                 Ok(_) => (),
                                 Err(err) => {
                                     self.log_error(err.clone(), &item.span());
+                                    module_errors.push(err)
                                 }
                             }
                         }
+                    }
+
+                    if !module_errors.is_empty() {
+                        return Err(SemanticErrorKind::ModuleErrors {
+                            name: m.module_name.clone(),
+                        });
                     }
 
                     if let Some(curr_scope) = self.scope_stack.pop() {
@@ -1161,7 +1171,9 @@ impl SemanticAnalyser {
                     "function".to_string(),
                 )?;
 
-                self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
+                let res = self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone());
+                println!("tried to analyse call expression");
+                res
             }
 
             Expression::Index(i) => {
@@ -2228,17 +2240,17 @@ impl SemanticAnalyser {
 
                     let ty = match stmts.last() {
                         Some(stmt) => match stmt {
-                            Statement::Expression(expr) => self.analyse_expr(expr, root)?,
-                            _ => Type::UnitType(UnitType),
+                            Statement::Expression(expr) => self.analyse_expr(expr, root),
+                            _ => Ok(Type::UnitType(UnitType)),
                         },
-                        _ => Type::UnitType(UnitType),
+                        _ => Ok(Type::UnitType(UnitType)),
                     };
 
                     println!("analysed block expression");
 
                     self.exit_scope();
 
-                    Ok(ty)
+                    ty
                 }
 
                 _ => Ok(Type::UnitType(UnitType)),
@@ -2514,6 +2526,8 @@ impl SemanticAnalyser {
         path: TypePath,
         args_opt: Option<Vec<Expression>>,
     ) -> Result<Type, SemanticErrorKind> {
+        println!("entering `SemanticAnalyser::analyse_call_or_method_call()` …");
+
         match self.lookup(&path).cloned() {
             Some(Symbol::Function { function, .. }) => {
                 let params = function.params_opt.clone();
@@ -2603,9 +2617,13 @@ impl SemanticAnalyser {
                 }
             }
 
-            None => Err(SemanticErrorKind::UndefinedFunction {
-                name: path.type_name,
-            }),
+            None => {
+                println!("undefined function");
+
+                Err(SemanticErrorKind::UndefinedFunction {
+                    name: path.type_name,
+                })
+            }
             Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                 name: path.type_name,
                 expected: "function".to_string(),
