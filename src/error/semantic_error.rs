@@ -178,7 +178,7 @@ impl fmt::Display for SemanticErrorKind {
                 write!(f, "value not found. Expected {expected}, found none")
             }
             SemanticErrorKind::ModuleErrors { name } => {
-                write!(f, "detected errors in module `name`")
+                write!(f, "detected errors in module `{name}`")
             }
             SemanticErrorKind::StructArgCountMismatch { name, expected, found } => {
                 write!(f, "argument count mismatch in struct `{name}`. Expected {expected} arguments, found {found}")
