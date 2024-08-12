@@ -214,7 +214,11 @@ impl SemanticAnalyser {
 
         for stmt in &program.statements {
             self.analyse_stmt(stmt, &program_path)
-                .map_err(|_| self.errors.clone())?;
+                .map_err(|_| self.errors.clone())?
+        }
+
+        if !self.errors.is_empty() {
+            return Err(self.errors.clone());
         }
 
         self.logger
@@ -293,7 +297,7 @@ impl SemanticAnalyser {
                     | Type::Option { .. }
                     | Type::Result { .. } => Symbol::Variable {
                         name: ls.assignee.name.clone(),
-                        var_type: value_type.clone(),
+                        var_type: value_type,
                     },
                     Type::UserDefined(tp) => {
                         let type_path = self.check_path(tp, root, "type".to_string())?;
@@ -317,7 +321,10 @@ impl SemanticAnalyser {
                     self.logger
                         .info(&format!("analysing import declaration: `{statement}` …"));
 
-                    self.analyse_import(&id, root)?;
+                    match self.analyse_import(&id, root) {
+                        Ok(_) => (),
+                        Err(err) => self.log_error(err, &id.span),
+                    }
                 }
 
                 Item::AliasDecl(ad) => {
@@ -744,7 +751,12 @@ impl SemanticAnalyser {
                         },
                     )?;
 
-                    self.analyse_function_def(f, root, false, false)?;
+                    match self.analyse_function_def(f, root, false, false) {
+                        Ok(_) => (),
+                        Err(err) => {
+                            self.log_error(err, &f.span);
+                        }
+                    }
                 }
             },
 
@@ -841,15 +853,13 @@ impl SemanticAnalyser {
                     },
                 };
 
-                println!("parameter symbol: `{symbol:?}`");
+                println!("parameter symbol: `{:?}`", symbol.type_path());
 
                 self.insert(param_path, symbol)?;
             }
         }
 
         let function_type = if let Some(block) = &f.block_opt {
-            println!("detected function body");
-
             // split path into a vector to remove the last element (if needed), then convert back
             let mut path_vec = Vec::<Identifier>::from(path.clone());
 
@@ -862,8 +872,6 @@ impl SemanticAnalyser {
 
             let block_expr_analysis =
                 self.analyse_expr(&Expression::Block(block.clone()), &TypePath::from(path_vec))?;
-
-            println!("analysed function body");
 
             block_expr_analysis
         } else {
@@ -908,8 +916,6 @@ impl SemanticAnalyser {
             }
         }
 
-        println!("analysed function");
-
         self.exit_scope();
 
         Ok(())
@@ -928,8 +934,8 @@ impl SemanticAnalyser {
 
         for path in import_paths {
             let import_root = if let Some(ref ids) = path.associated_type_path_prefix_opt {
-                if let Some(p) = ids.first() {
-                    &TypePath::from(p.clone())
+                if !ids.is_empty() {
+                    &TypePath::from(ids.to_vec())
                 } else {
                     &TypePath::from(path.type_name.clone())
                 }
@@ -948,7 +954,13 @@ impl SemanticAnalyser {
 
                 if let Some(sym) = module.get(&path) {
                     if !module.contains_key(&path) {
-                        self.insert(TypePath::from(path), sym.clone())?;
+                        self.insert(TypePath::from(path.type_name), sym.clone())?;
+                    }
+
+                    // in case the symbol was added without the full path (i.e., just `Symbol`)
+                } else if let Some(sym) = module.get(&TypePath::from(path.type_name.clone())) {
+                    if !module.contains_key(&TypePath::from(path.type_name.clone())) {
+                        self.insert(TypePath::from(path.type_name), sym.clone())?;
                     }
                 } else {
                     return Err(SemanticErrorKind::UndefinedSymbol {
@@ -956,7 +968,9 @@ impl SemanticAnalyser {
                     });
                 }
             } else if let Some(sym) = self.lookup(&path).cloned() {
-                self.insert(path, sym)?;
+                if !self.module_registry.contains_key(&path) {
+                    self.insert(path, sym)?;
+                }
             } else {
                 return Err(SemanticErrorKind::UndefinedModule {
                     name: path.type_name,
@@ -1171,9 +1185,7 @@ impl SemanticAnalyser {
                     "function".to_string(),
                 )?;
 
-                let res = self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone());
-                println!("tried to analyse call expression");
-                res
+                self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
             }
 
             Expression::Index(i) => {
@@ -2236,8 +2248,6 @@ impl SemanticAnalyser {
                         }
                     }
 
-                    println!("analysed statements in block");
-
                     let ty = match stmts.last() {
                         Some(stmt) => match stmt {
                             Statement::Expression(expr) => self.analyse_expr(expr, root),
@@ -2245,8 +2255,6 @@ impl SemanticAnalyser {
                         },
                         _ => Ok(Type::UnitType(UnitType)),
                     };
-
-                    println!("analysed block expression");
 
                     self.exit_scope();
 
@@ -2526,8 +2534,6 @@ impl SemanticAnalyser {
         path: TypePath,
         args_opt: Option<Vec<Expression>>,
     ) -> Result<Type, SemanticErrorKind> {
-        println!("entering `SemanticAnalyser::analyse_call_or_method_call()` …");
-
         match self.lookup(&path).cloned() {
             Some(Symbol::Function { function, .. }) => {
                 let params = function.params_opt.clone();
@@ -2617,13 +2623,9 @@ impl SemanticAnalyser {
                 }
             }
 
-            None => {
-                println!("undefined function");
-
-                Err(SemanticErrorKind::UndefinedFunction {
-                    name: path.type_name,
-                })
-            }
+            None => Err(SemanticErrorKind::UndefinedFunction {
+                name: path.type_name,
+            }),
             Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                 name: path.type_name,
                 expected: "function".to_string(),
