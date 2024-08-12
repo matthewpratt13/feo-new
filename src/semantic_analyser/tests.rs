@@ -154,7 +154,7 @@ fn analyse_impl() -> Result<(), ()> {
 
             func approve(&self, spender: h160, amount: u256) -> Result<(), ()>;
 
-            func transfer(&mut self, from: h160, to: Entity, amount: u256) -> Result<(), ()>;
+            func transfer(&mut self, from: h160, to: h160, amount: u256) -> Result<(), ()>;
 
             func mint(&mut self, to: h160, amount: u256) -> Result<(), ()>;
 
@@ -198,7 +198,7 @@ fn analyse_impl() -> Result<(), ()> {
             const CREATOR_ADDRESS: h160 = $0x67890_ABCDE_67890_ABCDE_67890_ABCDE_67890_ABCDE;
 
             pub func address() -> h160 {
-                SomeToken::CONTRACT_ADDRESS
+                CONTRACT_ADDRESS
             }
 
             pub func balance(&self) -> u64 {
@@ -206,11 +206,11 @@ fn analyse_impl() -> Result<(), ()> {
             }
 
             pub func msg_sender() -> h160 {
-                SomeToken::CREATOR_ADDRESS
+                CREATOR_ADDRESS
             }
 
             pub func creator_address() -> h160 {
-                SomeToken::CREATOR_ADDRESS
+                CREATOR_ADDRESS
             }
         }
 
@@ -219,7 +219,7 @@ fn analyse_impl() -> Result<(), ()> {
                 Ok(())
             }
 
-            func transfer(&mut self, from: h160, to: Entity, amount: u256) -> Result<(), ()> {
+            func transfer(&mut self, from: h160, to: h160, amount: u256) -> Result<(), ()> {
                Ok(())
             }
 

@@ -489,6 +489,8 @@ impl SemanticAnalyser {
                     )?;
 
                     if let Some(items) = &t.trait_items_opt {
+                        // self.enter_scope(ScopeKind::TraitDef(trait_def_path.to_string()));
+
                         for i in items.iter() {
                             match i {
                                 TraitDefItem::AliasDecl(ad) => {
@@ -518,10 +520,20 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(fi, &trait_def_path, true, false)?;
+                                    match self.analyse_function_def(
+                                        fi,
+                                        &trait_def_path,
+                                        true,
+                                        false,
+                                    ) {
+                                        Ok(_) => (),
+                                        Err(err) => self.log_error(err, &t.span),
+                                    }
                                 }
                             }
                         }
+
+                        // self.exit_scope();
                     }
                 }
 
@@ -644,14 +656,16 @@ impl SemanticAnalyser {
                     )?;
                 }
 
-                Item::InherentImplDef(i) => {
-                    let type_path = build_item_path(root, i.nominal_type.clone());
+                Item::InherentImplDef(iid) => {
+                    let type_path = build_item_path(root, iid.nominal_type.clone());
 
                     self.logger.info(&format!(
                         "analysing inherent implementation for type: `{type_path}` …"
                     ));
 
-                    if let Some(items) = &i.associated_items_opt {
+                    if let Some(items) = &iid.associated_items_opt {
+                        // self.enter_scope(ScopeKind::Impl(type_path.to_string()));
+
                         for i in items.iter() {
                             match i {
                                 InherentImplItem::ConstantDecl(cd) => self.analyse_stmt(
@@ -673,10 +687,15 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(fi, &type_path, true, false)?;
+                                    match self.analyse_function_def(fi, &type_path, true, false) {
+                                        Ok(_) => (),
+                                        Err(err) => self.log_error(err, &iid.span),
+                                    }
                                 }
                             }
                         }
+
+                        // self.exit_scope();
                     }
                 }
 
@@ -695,11 +714,13 @@ impl SemanticAnalyser {
                     };
 
                     self.logger.info(&format!(
-                        "analysing trait `{}` implementation for type: `{}` …",
+                        "analysing trait `{}` implementation for type `{}` …",
                         t.implemented_trait_path, t.implementing_type
                     ));
 
                     if let Some(items) = &t.associated_items_opt {
+                        // self.enter_scope(ScopeKind::TraitImpl(trait_impl_path.to_string()));
+
                         for i in items.iter() {
                             match i {
                                 TraitImplItem::AliasDecl(ad) => self.analyse_stmt(
@@ -724,7 +745,15 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    self.analyse_function_def(fi, &trait_impl_path, true, true)?;
+                                    match self.analyse_function_def(
+                                        fi,
+                                        &trait_impl_path,
+                                        true,
+                                        true,
+                                    ) {
+                                        Ok(_) => (),
+                                        Err(err) => self.log_error(err, &t.span),
+                                    }
                                 }
                             }
                         }
@@ -870,10 +899,7 @@ impl SemanticAnalyser {
             self.logger
                 .info(&format!("analysing body of function `{full_path}()` …"));
 
-            let block_expr_analysis =
-                self.analyse_expr(&Expression::Block(block.clone()), &TypePath::from(path_vec))?;
-
-            block_expr_analysis
+            self.analyse_expr(&Expression::Block(block.clone()), &TypePath::from(path_vec))?
         } else {
             if let Some(ty) = &f.return_type_opt {
                 *ty.clone()
@@ -2514,19 +2540,71 @@ impl SemanticAnalyser {
             }
         }
 
+        // just concatenate `root` and `path`
         let full_path = build_item_path(root, path.clone());
+
+        // if the path is just a concatenation of `root` and `path`
+        if self.lookup(&full_path).is_some() {
+            return Ok(full_path);
+        }
+
+        // concatenate only `path` type name to `root` (e.g, `path` is an associated item)
+        let associated_item = build_item_path(root, TypePath::from(path.type_name.clone()));
+
+        self.logger
+            .debug(&format!("trying to find path at `{associated_item}` …",));
+
+        if self.lookup(&associated_item).is_some() {
+            return Ok(associated_item);
+        }
+
+        // concatenate `path` to `root` prefix (e.g., `path` is a trait item)
+        let root_prefix = if let Some(p) = &root.associated_type_path_prefix_opt {
+            TypePath::from(p.clone())
+        } else {
+            TypePath::from(Identifier::from(""))
+        };
+
+        let trait_item = build_item_path(&root_prefix, path.clone());
+
+        self.logger
+            .debug(&format!("trying to find path at `{trait_item}` …",));
+
+        if self.lookup(&trait_item).is_some() {
+            return Ok(trait_item);
+        }
+
+        // construct path to a trait implementation item (e.g., `root` is a trait)
+        let path_prefix = if let Some(p) = &path.associated_type_path_prefix_opt {
+            // maybe `path` is a trait implementation item without the trait name (`root`)
+            // we cut the item and save the nominal type, then append the trait name, then item
+            TypePath::from(p.clone())
+        } else {
+            // maybe `path` is just a nominal type
+            path.clone()
+        };
+
+        // append trait name
+        let trait_impl = build_item_path(&path_prefix, TypePath::from(root.type_name.clone()));
+
+        let full_path = if path_prefix != *path {
+            // append item name
+            build_item_path(&trait_impl, TypePath::from(path.type_name.clone()))
+        } else {
+            // just return `path` (nominal type?)
+            path.clone()
+        };
 
         self.logger
             .debug(&format!("trying to find path at `{full_path}` …",));
 
-        // if the path is a concatenation of `root` and `path`
         if self.lookup(&full_path).is_some() {
-            Ok(full_path)
-        } else {
-            Err(SemanticErrorKind::MissingValue {
-                expected: expected_value,
-            })
+            return Ok(full_path);
         }
+
+        Err(SemanticErrorKind::MissingValue {
+            expected: expected_value,
+        })
     }
 
     fn analyse_call_or_method_call_expr(
