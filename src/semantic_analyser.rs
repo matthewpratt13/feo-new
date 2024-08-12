@@ -409,6 +409,9 @@ impl SemanticAnalyser {
                     // TODO: sort out visibility
                     let module_path = build_item_path(root, TypePath::from(m.module_name.clone()));
 
+                    self.logger
+                        .info(&format!("analysing module item: `{module_path}` …"));
+
                     let scope_kind = ScopeKind::Module(module_path.to_string());
 
                     let mut module_scope = Scope {
@@ -452,11 +455,11 @@ impl SemanticAnalyser {
                 }
 
                 Item::TraitDef(t) => {
-                    self.logger
-                        .info(&format!("analysing trait definition: `{statement}` …"));
-
                     let trait_name_path = TypePath::from(t.trait_name.clone());
                     let trait_def_path = build_item_path(root, trait_name_path.clone());
+
+                    self.logger
+                        .info(&format!("analysing trait definition: `{trait_def_path}` …",));
 
                     self.insert(
                         trait_def_path.clone(),
@@ -504,11 +507,11 @@ impl SemanticAnalyser {
                 }
 
                 Item::EnumDef(e) => {
-                    self.logger
-                        .info(&format!("analysing enum definition: `{statement}` …"));
-
                     let enum_name_path = TypePath::from(e.enum_name.clone());
                     let enum_def_path = build_item_path(root, enum_name_path.clone());
+
+                    self.logger
+                        .info(&format!("analysing enum definition: `{enum_def_path}` …"));
 
                     self.insert(
                         enum_def_path.clone(),
@@ -589,11 +592,12 @@ impl SemanticAnalyser {
                 }
 
                 Item::StructDef(s) => {
-                    self.logger
-                        .info(&format!("analysing struct definition: `{statement}` …"));
-
                     let struct_name_path = TypePath::from(s.struct_name.clone());
                     let struct_def_path = build_item_path(root, struct_name_path.clone());
+
+                    self.logger.info(&format!(
+                        "analysing struct definition: `{struct_def_path}` …"
+                    ));
 
                     self.insert(
                         struct_def_path,
@@ -605,12 +609,12 @@ impl SemanticAnalyser {
                 }
 
                 Item::TupleStructDef(ts) => {
-                    self.logger.info(&format!(
-                        "analysing tuple struct definition: `{statement}` …"
-                    ));
-
                     let struct_name_path = TypePath::from(ts.struct_name.clone());
                     let tuple_struct_path = build_item_path(root, struct_name_path.clone());
+
+                    self.logger.info(&format!(
+                        "analysing tuple struct definition: `{tuple_struct_path}` …"
+                    ));
 
                     self.insert(
                         tuple_struct_path,
@@ -623,6 +627,10 @@ impl SemanticAnalyser {
 
                 Item::InherentImplDef(i) => {
                     let type_path = build_item_path(root, i.nominal_type.clone());
+
+                    self.logger.info(&format!(
+                        "analysing inherent implementation for type: `{type_path}` …"
+                    ));
 
                     if let Some(items) = &i.associated_items_opt {
                         for i in items.iter() {
@@ -667,6 +675,11 @@ impl SemanticAnalyser {
                         }
                     };
 
+                    self.logger.info(&format!(
+                        "analysing trait `{}` implementation for type: `{}` …",
+                        t.implemented_trait_path, t.implementing_type
+                    ));
+
                     if let Some(items) = &t.associated_items_opt {
                         for i in items.iter() {
                             match i {
@@ -700,11 +713,16 @@ impl SemanticAnalyser {
                 }
 
                 Item::FunctionItem(f) => {
-                    self.logger
-                        .info(&format!("analysing function item: `{statement}` …"));
-
                     let function_name_path = TypePath::from(f.function_name.clone());
                     let function_item_path = build_item_path(root, function_name_path.clone());
+
+                    self.logger.info(&format!(
+                        "analysing function item: `{function_item_path}({:?}) -> {}` …",
+                        f.params_opt.clone().unwrap_or(Vec::new()),
+                        f.return_type_opt
+                            .clone()
+                            .unwrap_or(Box::new(Type::UnitType(UnitType)))
+                    ));
 
                     self.insert(
                         function_item_path,

@@ -234,7 +234,7 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::UndefinedStruct { name } => write!(f, "no struct `{name}` in current scope"),  
 
-            SemanticErrorKind::UndefinedSymbol { name } => write!(f, "undefined symbol: `{name}"),     
+            SemanticErrorKind::UndefinedSymbol { name } => write!(f, "undefined symbol: {name}"),     
 
             SemanticErrorKind::UndefinedType { name } => write!(f, "no type `{name}` in current scope"),
             
