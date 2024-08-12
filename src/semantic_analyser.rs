@@ -425,7 +425,9 @@ impl SemanticAnalyser {
                         for item in items.iter() {
                             match self.analyse_stmt(&Statement::Item(item.clone()), &module_path) {
                                 Ok(_) => (),
-                                Err(e) => self.log_error(e, &item.span()),
+                                Err(err) => {
+                                    self.log_error(err.clone(), &item.span());
+                                }
                             }
                         }
                     }
@@ -740,7 +742,10 @@ impl SemanticAnalyser {
                 self.logger
                     .info(&format!("analysing expression statement: `{statement}` …"));
 
-                self.analyse_expr(expr, root)?;
+                match self.analyse_expr(expr, root) {
+                    Ok(_) => (),
+                    Err(e) => self.log_error(e, &expr.span()),
+                }
             }
         }
 
@@ -833,6 +838,8 @@ impl SemanticAnalyser {
         }
 
         let function_type = if let Some(block) = &f.block_opt {
+            println!("detected function body");
+
             // split path into a vector to remove the last element (if needed), then convert back
             let mut path_vec = Vec::<Identifier>::from(path.clone());
 
@@ -840,7 +847,15 @@ impl SemanticAnalyser {
                 path_vec.pop(); // remove associated type name
             }
 
-            self.analyse_expr(&Expression::Block(block.clone()), &TypePath::from(path_vec))?
+            self.logger
+                .info(&format!("analysing body of function `{full_path}()` …"));
+
+            let block_expr_analysis =
+                self.analyse_expr(&Expression::Block(block.clone()), &TypePath::from(path_vec))?;
+
+            println!("analysed function body");
+
+            block_expr_analysis
         } else {
             if let Some(ty) = &f.return_type_opt {
                 *ty.clone()
@@ -882,6 +897,8 @@ impl SemanticAnalyser {
                 }
             }
         }
+
+        println!("analysed function");
 
         self.exit_scope();
 
@@ -2187,35 +2204,37 @@ impl SemanticAnalyser {
                         cloned_iter.next();
 
                         match stmt {
-                            Statement::Expression(e) => match e {
+                            Statement::Expression(expr) => match expr {
                                 Expression::Return(_)
                                 | Expression::Break(_)
                                 | Expression::Continue(_) => {
-                                    self.analyse_expr(e, root)?;
+                                    self.analyse_expr(expr, root)?;
 
                                     match cloned_iter.peek() {
                                         Some(_) => self.logger.warn("unreachable code"),
                                         _ => (),
                                     }
                                 }
-                                _ => {
-                                    self.analyse_expr(e, root)?;
-                                }
+                                expression => match self.analyse_expr(expression, root) {
+                                    Ok(_) => (),
+                                    Err(err) => self.log_error(err, &expression.span()),
+                                },
                             },
-                            _ => match self.analyse_stmt(stmt, root) {
-                                Ok(_) => (),
-                                Err(e) => self.log_error(e, &stmt.span()),
-                            },
+                            statement => self.analyse_stmt(statement, root)?,
                         }
                     }
 
+                    println!("analysed statements in block");
+
                     let ty = match stmts.last() {
                         Some(stmt) => match stmt {
-                            Statement::Expression(e) => self.analyse_expr(e, root)?,
+                            Statement::Expression(expr) => self.analyse_expr(expr, root)?,
                             _ => Type::UnitType(UnitType),
                         },
                         _ => Type::UnitType(UnitType),
                     };
+
+                    println!("analysed block expression");
 
                     self.exit_scope();
 
