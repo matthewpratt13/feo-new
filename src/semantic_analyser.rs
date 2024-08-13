@@ -2424,7 +2424,7 @@ impl SemanticAnalyser {
             Expression::ResultExpr(r) => {
                 let ty = self.analyse_expr(&r.expression.clone().inner_expression, root)?;
 
-                let ty = if ty == Type::Tuple([].to_vec()) {
+                let ty = if ty == Type::Tuple(Vec::new()) {
                     Type::UnitType(UnitType)
                 } else {
                     ty
