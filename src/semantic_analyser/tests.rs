@@ -198,7 +198,7 @@ fn analyse_impl() -> Result<(), ()> {
             const CREATOR_ADDRESS: h160 = $0x67890_ABCDE_67890_ABCDE_67890_ABCDE_67890_ABCDE;
 
             pub func address() -> h160 {
-                CONTRACT_ADDRESS
+                SomeToken::CONTRACT_ADDRESS
             }
 
             pub func balance(&self) -> u64 {
@@ -206,11 +206,11 @@ fn analyse_impl() -> Result<(), ()> {
             }
 
             pub func msg_sender() -> h160 {
-                CREATOR_ADDRESS
+                SomeToken::CREATOR_ADDRESS
             }
 
             pub func creator_address() -> h160 {
-                CREATOR_ADDRESS
+                SomeToken::CREATOR_ADDRESS
             }
         }
 

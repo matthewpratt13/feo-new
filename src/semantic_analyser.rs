@@ -2483,9 +2483,28 @@ impl SemanticAnalyser {
                     self.logger
                         .debug(&format!("trying to find path at `{item_path}` …",));
 
-                    self.logger.debug(&format!("found path at `{item_path}`",));
+                    if self.lookup(&item_path).is_some() {
+                        return Ok(item_path);
+                    }
 
-                    return Ok(item_path);
+                    let item_prefix = if let Some(ids) = &item_name.associated_type_path_prefix_opt
+                    {
+                        TypePath::from(ids.last().cloned().unwrap())
+                    } else {
+                        item_name.clone()
+                    };
+
+                    let trait_path = build_item_path(&module_name, item_prefix);
+
+                    let full_path =
+                        build_item_path(&trait_path, TypePath::from(path.type_name.clone()));
+
+                    self.logger
+                        .debug(&format!("trying to find path at `{full_path}` …",));
+
+                    if self.lookup(&full_path).is_some() {
+                        return Ok(full_path);
+                    }
                 }
 
                 // if the path is a symbol inside an item
@@ -2495,10 +2514,9 @@ impl SemanticAnalyser {
                     self.logger
                         .debug(&format!("trying to find path at `{symbol_path}` …",));
 
-                    self.logger
-                        .debug(&format!("found path at `{symbol_path}`",));
-
-                    return Ok(symbol_path);
+                    if self.lookup(&symbol_path).is_some() {
+                        return Ok(symbol_path);
+                    }
                 }
             }
         }
