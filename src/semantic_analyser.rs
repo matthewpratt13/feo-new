@@ -8,7 +8,7 @@ use crate::{
         BigUInt, Bool, Byte, Bytes, Char, ClosureParams, EnumVariantType, Expression, Float,
         FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Hash, Identifier,
         ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt,
-        ModuleItem, PathExpr, PathRoot, Pattern, SelfType, Statement, Str, StructDef, TraitDefItem,
+        PathExpr, PathRoot, Pattern, SelfType, Statement, Str, StructDef, TraitDefItem,
         TraitImplItem, TupleStructDef, TupleStructDefField, Type, TypePath, UInt, UnaryOp,
         UnitType, Visibility,
     },
@@ -158,59 +158,6 @@ impl SemanticAnalyser {
         };
 
         self.enter_scope(ScopeKind::RootModule(program_path.to_string()));
-
-        // let mut module_items: Vec<Item> = Vec::new();
-
-        // program.statements.clone().into_iter().for_each(|stmt| {
-        //     match stmt {
-        //         Statement::Item(i) => module_items.push(i),
-        //         _ => (),
-        //     };
-        // });
-
-        // let start_span = if let Some(stmt) = program.statements.first() {
-        //     stmt.span()
-        // } else {
-        //     Span::default()
-        // };
-
-        // let end_span = if let Some(stmt) = program.statements.last() {
-        //     stmt.span()
-        // } else {
-        //     Span::default()
-        // };
-
-        // let module_span = Span::new(&start_span.input(), start_span.start(), end_span.end());
-
-        // let root_module = ModuleItem {
-        //     outer_attributes_opt: None,
-        //     visibility: Visibility::Pub,
-        //     kw_module: Keyword::Anonymous,
-        //     module_name: program_path.type_name.clone(),
-        //     inner_attributes_opt: None,
-        //     items_opt: {
-        //         if module_items.is_empty() {
-        //             None
-        //         } else {
-        //             Some(module_items)
-        //         }
-        //     },
-        //     span: module_span,
-        // };
-
-        // let mut module_contents: SymbolTable = HashMap::new();
-
-        // module_contents.insert(
-        //     program_path.clone(),
-        //     Symbol::Module {
-        //         path: TypePath::from(root_module.module_name.clone()),
-        //         module: root_module,
-        //         symbols: HashMap::new(),
-        //     },
-        // );
-
-        // self.module_registry
-        //     .insert(program_path.clone(), module_contents);
 
         for stmt in &program.statements {
             self.analyse_stmt(stmt, &program_path)
@@ -532,8 +479,6 @@ impl SemanticAnalyser {
                                 }
                             }
                         }
-
-                        // self.exit_scope();
                     }
                 }
 
