@@ -124,9 +124,19 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
+        
+    UndefinedVariable {
+        name: Identifier,
+    },
+
     UnexpectedKeyword {
         expected: String,
         found: Keyword,
+    },
+
+    UnexpectedPath {
+        expected: String,
+        found: Identifier,
     }, 
 
     UnexpectedStructField {
@@ -143,10 +153,6 @@ pub enum SemanticErrorKind {
     UnexpectedType {
         expected: String,
         found: Type,
-    },
-    
-    UndefinedVariable {
-        name: Identifier,
     },
 
     #[default]
@@ -250,6 +256,8 @@ impl fmt::Display for SemanticErrorKind {
             }
           
             SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found `{found}`"),
+
+            SemanticErrorKind::UnexpectedPath { expected, found } => write!(f, "unexpected path. Expected {expected}, found `{found}`"),
 
             SemanticErrorKind::UnexpectedStructField { name, found } => write!(f, "unexpected field in struct `{name}`: `{found}`"),
             

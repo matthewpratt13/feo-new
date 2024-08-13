@@ -159,58 +159,58 @@ impl SemanticAnalyser {
 
         self.enter_scope(ScopeKind::RootModule(program_path.to_string()));
 
-        let mut module_items: Vec<Item> = Vec::new();
+        // let mut module_items: Vec<Item> = Vec::new();
 
-        program.statements.clone().into_iter().for_each(|stmt| {
-            match stmt {
-                Statement::Item(i) => module_items.push(i),
-                _ => (),
-            };
-        });
+        // program.statements.clone().into_iter().for_each(|stmt| {
+        //     match stmt {
+        //         Statement::Item(i) => module_items.push(i),
+        //         _ => (),
+        //     };
+        // });
 
-        let start_span = if let Some(stmt) = program.statements.first() {
-            stmt.span()
-        } else {
-            Span::default()
-        };
+        // let start_span = if let Some(stmt) = program.statements.first() {
+        //     stmt.span()
+        // } else {
+        //     Span::default()
+        // };
 
-        let end_span = if let Some(stmt) = program.statements.last() {
-            stmt.span()
-        } else {
-            Span::default()
-        };
+        // let end_span = if let Some(stmt) = program.statements.last() {
+        //     stmt.span()
+        // } else {
+        //     Span::default()
+        // };
 
-        let module_span = Span::new(&start_span.input(), start_span.start(), end_span.end());
+        // let module_span = Span::new(&start_span.input(), start_span.start(), end_span.end());
 
-        let root_module = ModuleItem {
-            outer_attributes_opt: None,
-            visibility: Visibility::Pub,
-            kw_module: Keyword::Anonymous,
-            module_name: program_path.type_name.clone(),
-            inner_attributes_opt: None,
-            items_opt: {
-                if module_items.is_empty() {
-                    None
-                } else {
-                    Some(module_items)
-                }
-            },
-            span: module_span,
-        };
+        // let root_module = ModuleItem {
+        //     outer_attributes_opt: None,
+        //     visibility: Visibility::Pub,
+        //     kw_module: Keyword::Anonymous,
+        //     module_name: program_path.type_name.clone(),
+        //     inner_attributes_opt: None,
+        //     items_opt: {
+        //         if module_items.is_empty() {
+        //             None
+        //         } else {
+        //             Some(module_items)
+        //         }
+        //     },
+        //     span: module_span,
+        // };
 
-        let mut module_contents: SymbolTable = HashMap::new();
+        // let mut module_contents: SymbolTable = HashMap::new();
 
-        module_contents.insert(
-            program_path.clone(),
-            Symbol::Module {
-                path: TypePath::from(root_module.module_name.clone()),
-                module: root_module,
-                symbols: HashMap::new(),
-            },
-        );
+        // module_contents.insert(
+        //     program_path.clone(),
+        //     Symbol::Module {
+        //         path: TypePath::from(root_module.module_name.clone()),
+        //         module: root_module,
+        //         symbols: HashMap::new(),
+        //     },
+        // );
 
-        self.module_registry
-            .insert(program_path.clone(), module_contents);
+        // self.module_registry
+        //     .insert(program_path.clone(), module_contents);
 
         for stmt in &program.statements {
             self.analyse_stmt(stmt, &program_path)
@@ -908,6 +908,8 @@ impl SemanticAnalyser {
             }
         };
 
+        println!("analysed function body");
+
         println!("function type: `{function_type}`");
 
         println!(
@@ -941,6 +943,8 @@ impl SemanticAnalyser {
                 }
             }
         }
+
+        println!("function analysed");
 
         self.exit_scope();
 
@@ -1205,11 +1209,15 @@ impl SemanticAnalyser {
             Expression::Call(c) => {
                 let callee = wrap_into_expression(c.callee.clone());
 
+                println!("calling `SemanticAnalyser::check_path()` on callee: `{callee}`");
+
                 let callee_path = self.check_path(
                     &TypePath::from(PathExpr::from(callee)),
                     root,
                     "function".to_string(),
                 )?;
+
+                println!("function callee path: `{callee_path}`");
 
                 self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
             }
@@ -2505,8 +2513,18 @@ impl SemanticAnalyser {
         root: &TypePath,
         expected_value: String,
     ) -> Result<TypePath, SemanticErrorKind> {
+        self.logger
+            .debug(&format!("trying to find path at `{path}` …",));
+
         if self.lookup(path).is_some() {
             return Ok(path.clone());
+        }
+
+        if path.type_name == Identifier::from("lib") {
+            return Err(SemanticErrorKind::UnexpectedPath {
+                expected: "path to item or variable".to_string(),
+                found: Identifier::from("lib"),
+            });
         }
 
         // check the module registry
@@ -2514,7 +2532,7 @@ impl SemanticAnalyser {
             // iterate over a module
             for (item_name, symbol) in module_items.iter() {
                 // if the path is an item inside a module root
-                if *path == TypePath::from(item_name.type_name.clone()) {
+                if path.type_name == item_name.type_name {
                     let item_path = build_item_path(&module_name, path.clone());
 
                     self.logger
@@ -2526,7 +2544,7 @@ impl SemanticAnalyser {
                 }
 
                 // if the path is a symbol inside an item
-                if *path == TypePath::from(symbol.type_path().type_name) {
+                if path.type_name == symbol.type_path().type_name {
                     let symbol_path = build_item_path(item_name, path.clone());
 
                     self.logger
@@ -2543,57 +2561,15 @@ impl SemanticAnalyser {
         // just concatenate `root` and `path`
         let full_path = build_item_path(root, path.clone());
 
-        // if the path is just a concatenation of `root` and `path`
+        self.logger
+            .debug(&format!("trying to find path at `{full_path}` …",));
+
         if self.lookup(&full_path).is_some() {
             return Ok(full_path);
         }
 
         // concatenate only `path` type name to `root` (e.g, `path` is an associated item)
-        let associated_item = build_item_path(root, TypePath::from(path.type_name.clone()));
-
-        self.logger
-            .debug(&format!("trying to find path at `{associated_item}` …",));
-
-        if self.lookup(&associated_item).is_some() {
-            return Ok(associated_item);
-        }
-
-        // concatenate `path` to `root` prefix (e.g., `path` is a trait item)
-        let root_prefix = if let Some(p) = &root.associated_type_path_prefix_opt {
-            TypePath::from(p.clone())
-        } else {
-            TypePath::from(Identifier::from(""))
-        };
-
-        let trait_item = build_item_path(&root_prefix, path.clone());
-
-        self.logger
-            .debug(&format!("trying to find path at `{trait_item}` …",));
-
-        if self.lookup(&trait_item).is_some() {
-            return Ok(trait_item);
-        }
-
-        // construct path to a trait implementation item (e.g., `root` is a trait)
-        let path_prefix = if let Some(p) = &path.associated_type_path_prefix_opt {
-            // maybe `path` is a trait implementation item without the trait name (`root`)
-            // we cut the item and save the nominal type, then append the trait name, then item
-            TypePath::from(p.clone())
-        } else {
-            // maybe `path` is just a nominal type
-            path.clone()
-        };
-
-        // append trait name
-        let trait_impl = build_item_path(&path_prefix, TypePath::from(root.type_name.clone()));
-
-        let full_path = if path_prefix != *path {
-            // append item name
-            build_item_path(&trait_impl, TypePath::from(path.type_name.clone()))
-        } else {
-            // just return `path` (nominal type?)
-            path.clone()
-        };
+        let full_path = build_item_path(root, TypePath::from(path.type_name.clone()));
 
         self.logger
             .debug(&format!("trying to find path at `{full_path}` …",));
@@ -2612,6 +2588,8 @@ impl SemanticAnalyser {
         path: TypePath,
         args_opt: Option<Vec<Expression>>,
     ) -> Result<Type, SemanticErrorKind> {
+        println!("entering `SemanticAnalyser::analyse_call_or_method_call_expr()` …");
+
         match self.lookup(&path).cloned() {
             Some(Symbol::Function { function, .. }) => {
                 let params = function.params_opt.clone();
@@ -2701,9 +2679,13 @@ impl SemanticAnalyser {
                 }
             }
 
-            None => Err(SemanticErrorKind::UndefinedFunction {
-                name: path.type_name,
-            }),
+            None => {
+                println!("error: undefined function: `{path}`");
+
+                Err(SemanticErrorKind::UndefinedFunction {
+                    name: path.type_name,
+                })
+            }
             Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                 name: path.type_name,
                 expected: "function".to_string(),
