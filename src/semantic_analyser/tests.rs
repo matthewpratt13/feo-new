@@ -154,7 +154,7 @@ fn analyse_impl() -> Result<(), ()> {
 
             func approve(&self, spender: h160, amount: u256) -> Result<(), ()>;
 
-            func transfer(&mut self, from: h160, to: Entity, amount: u256) -> Result<(), ()>;
+            func transfer(&mut self, from: h160, to: h160, amount: u256) -> Result<(), ()>;
 
             func mint(&mut self, to: h160, amount: u256) -> Result<(), ()>;
 
@@ -219,7 +219,7 @@ fn analyse_impl() -> Result<(), ()> {
                 Ok(())
             }
 
-            func transfer(&mut self, from: h160, to: Entity, amount: u256) -> Result<(), ()> {
+            func transfer(&mut self, from: h160, to: h160, amount: u256) -> Result<(), ()> {
                Ok(())
             }
 

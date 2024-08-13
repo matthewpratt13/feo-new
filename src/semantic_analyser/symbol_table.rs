@@ -14,6 +14,9 @@ pub(crate) enum ScopeKind {
     MatchExpr,
     ForInLoop,
     Function(String),
+    // TraitImpl(String),
+    // Impl(String),
+    // TraitDef(String),
     Module(String),
     RootModule(String),
     Lib,
@@ -82,20 +85,34 @@ impl Symbol {
             Symbol::Module { .. } => Type::UnitType(UnitType),
         }
     }
+
+    pub(crate) fn type_path(&self) -> TypePath {
+        match self.clone() {
+            Symbol::Variable { name, .. } => TypePath::from(name.clone()),
+            Symbol::Struct { path, .. }
+            | Symbol::TupleStruct { path, .. }
+            | Symbol::Enum { path, .. }
+            | Symbol::Trait { path, .. }
+            | Symbol::Alias { path, .. }
+            | Symbol::Constant { path, .. }
+            | Symbol::Function { path, .. }
+            | Symbol::Module { path, .. } => path,
+        }
+    }
 }
 
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Symbol::Variable { name, .. } => write!(f, "Variable(\"{name}\")"),
-            Symbol::Struct { path, .. } => write!(f, "Struct({path})"),
-            Symbol::TupleStruct { path, .. } => write!(f, "TupleStruct({path})"),
-            Symbol::Enum { path, .. } => write!(f, "Enum({path})"),
-            Symbol::Trait { path, .. } => write!(f, "Trait({path})"),
-            Symbol::Alias { path, .. } => write!(f, "Alias({path})"),
-            Symbol::Constant { path, .. } => write!(f, "Constant({path})"),
-            Symbol::Function { path, .. } => write!(f, "Function({path})"),
-            Symbol::Module { path, .. } => write!(f, "Module({path})"),
+            Symbol::Struct { path, .. } => write!(f, "Struct(\"{path}\")"),
+            Symbol::TupleStruct { path, .. } => write!(f, "TupleStruct(\"{path}\")"),
+            Symbol::Enum { path, .. } => write!(f, "Enum(\"{path}\")"),
+            Symbol::Trait { path, .. } => write!(f, "Trait(\"{path}\")"),
+            Symbol::Alias { path, .. } => write!(f, "Alias(\"{path}\")"),
+            Symbol::Constant { path, .. } => write!(f, "Constant(\"{path}\")"),
+            Symbol::Function { path, .. } => write!(f, "Function(\"{path}\")"),
+            Symbol::Module { path, .. } => write!(f, "Module(\"{path}\")"),
         }
     }
 }

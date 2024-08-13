@@ -42,7 +42,7 @@ impl Logger {
         if self.level <= msg.level {
             self.messages.push(msg);
         } else {
-            self.messages.push(LogMsg { level: msg.level, text: format!("tried to log message and failed. Verbosity level ({:?}) is lower than the initialized one({:?})", msg.level, self.level)});
+            self.messages.push(LogMsg { level: msg.level, text: format!("tried to log message and failed. Verbosity level ({}) is lower than the initialized one ({})", msg.level, self.level)});
         }
     }
 
@@ -76,13 +76,17 @@ impl Logger {
 
     /// Retrieve the log messages.
     #[allow(dead_code)]
-    pub fn messages(&self) -> &[LogMsg] {
-        &self.messages
+    pub fn messages(&self) -> Vec<String> {
+        self.messages
+            .iter()
+            .map(|m| m.to_string())
+            .collect::<Vec<_>>()
+            .clone()
     }
 
     /// Clear all log messages.
     pub fn clear_messages(&mut self) {
-        self.info("clearing log messages…");
+        self.info("clearing log messages …");
         self.messages.clear()
     }
 }

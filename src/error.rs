@@ -15,14 +15,14 @@ use std::error::Error;
 /// Generic error struct that encapsulates custom error kinds and provides the precise location
 /// of the error in the source code.
 #[derive(Debug, Clone)]
-pub struct CompilerError<T: Clone> {
+pub struct CompilerError<T: Clone + fmt::Debug> {
     error_kind: T,
     position: Position,
 }
 
 impl<T> CompilerError<T>
 where
-    T: Clone,
+    T: Clone + fmt::Debug,
 {
     /// Create a new `CompilerError` that provides details at a precise location in the source code.
     pub(crate) fn new(error_kind: T, pos: usize, source: &str) -> Self {
@@ -35,7 +35,7 @@ where
 
 impl<T> fmt::Display for CompilerError<T>
 where
-    T: Clone + fmt::Display,
+    T: Clone + fmt::Display + fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -46,7 +46,10 @@ where
     }
 }
 
-impl<T> Error for CompilerError<T> where T: Clone + fmt::Display + fmt::Debug {}
+impl<T> Error for CompilerError<T> where
+    T: Clone + fmt::Display + fmt::Debug + std::error::Error + 'static
+{
+}
 
 /// Dummy struct that has no real functionality of its own.
 /// Used as a placeholder for some `Err` in functions that return a `Result`, to prove

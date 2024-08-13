@@ -54,6 +54,8 @@ impl TypePath {
 
         path.push(Identifier::from(&path_root.to_string()));
 
+        parser.next_token();
+
         while let Some(Token::DblColon { .. }) = parser.current_token() {
             match parser.peek_ahead_by(1).cloned() {
                 Some(Token::Identifier { name, .. }) => {
@@ -78,7 +80,7 @@ impl TypePath {
 
         let prefix = path;
 
-        parser.next_token();
+        // parser.next_token();
 
         let path_type = TypePath {
             associated_type_path_prefix_opt: {
@@ -264,6 +266,27 @@ impl fmt::Display for TypePath {
 
         write!(f, "{}", full_path)
     }
+}
+
+pub(crate) fn get_type_paths(segments: Vec<PathSegment>) -> Vec<TypePath> {
+    let mut paths: Vec<TypePath> = Vec::new();
+
+    for seg in segments {
+        let root = seg.root;
+
+        if let Some(subset) = seg.subset_opt {
+            for tree in subset.nested_trees {
+                for tree_seg in tree.path_segments {
+                    let path = build_item_path(&root, tree_seg.root);
+                    paths.push(path);
+                }
+            }
+        } else {
+            paths.push(root);
+        }
+    }
+
+    paths
 }
 
 pub(crate) fn build_item_path(root: &TypePath, item_path: TypePath) -> TypePath {
