@@ -86,6 +86,12 @@ pub enum SemanticErrorKind {
         found: Type,
     },
     
+    TypeMismatchResultExpr {
+        variant: Keyword,
+        expected: Type,
+        found: Type,
+    },
+
     TypeMismatchValues {
         expected: Type,
         found: Type,
@@ -221,7 +227,11 @@ impl fmt::Display for SemanticErrorKind {
             ),
             SemanticErrorKind::TypeMismatchReturnType { expected, found } => write!(
                 f,
-                "value type does not match return type. Expected `{expected}`, found `{found}"
+                "value type does not match return type. Expected `{expected}`, found `{found}`"
+            ),
+            SemanticErrorKind::TypeMismatchResultExpr { variant, expected, found } => write!(
+                f,
+                "type does not match expected `{variant}` type. Expected `{expected}`, found `{found}"
             ),
             SemanticErrorKind::TypeMismatchValues { expected, found } => write!(
                 f,

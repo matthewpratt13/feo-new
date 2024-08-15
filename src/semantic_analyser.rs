@@ -833,7 +833,7 @@ impl SemanticAnalyser {
             }
         }
 
-        let function_type = if let Some(block) = &f.block_opt {
+        let mut function_type = if let Some(block) = &f.block_opt {
             // split path into a vector to remove the last element (if needed), then convert back
             let mut path_vec = Vec::<Identifier>::from(path.clone());
 
@@ -867,24 +867,13 @@ impl SemanticAnalyser {
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
             if function_type != *return_type.clone() {
-                // if the `Ok` or `Err` type cannot be determined during analysis, do nothing
-                if let Type::Result { ok_type, err_type } = function_type.clone() {
-                    if *ok_type
-                        == Type::InferredType(InferredType {
-                            name: Identifier::from("_"),
-                        })
-                        || *err_type
-                            == Type::InferredType(InferredType {
-                                name: Identifier::from("_"),
-                            })
-                    {
-                        ()
-                    } else {
-                        return Err(SemanticErrorKind::TypeMismatchReturnType {
-                            expected: *return_type.clone(),
-                            found: function_type,
-                        });
-                    }
+                if let Type::Result { .. } = function_type {
+                    unify_result_types(&mut function_type, return_type)?
+                } else {
+                    return Err(SemanticErrorKind::TypeMismatchReturnType {
+                        expected: *return_type.clone(),
+                        found: function_type,
+                    });
                 }
             }
         }
@@ -1267,16 +1256,20 @@ impl SemanticAnalyser {
 
             Expression::Reference(r) => {
                 let reference_op = r.reference_op.clone();
-                let inner_type = self.analyse_expr(&r.expression, root)?;
+                let expr_type = self.analyse_expr(&r.expression, root)?;
 
                 Ok(Type::Reference {
                     reference_op,
-                    inner_type: Box::new(inner_type),
+                    inner_type: Box::new(expr_type),
                 })
             }
 
             Expression::Dereference(d) => {
-                self.analyse_expr(&wrap_into_expression(d.assignee_expr.clone()), root)
+                match self.analyse_expr(&wrap_into_expression(d.assignee_expr.clone()), root) {
+                    Ok(Type::Reference { inner_type, .. }) => Ok(*inner_type),
+                    Ok(ty) => Ok(ty),
+                    Err(e) => Err(e),
+                }
             }
 
             Expression::TypeCast(tc) => {
@@ -2378,6 +2371,8 @@ impl SemanticAnalyser {
                     }
                 };
 
+                println!("element type: {element_type}");
+
                 if let Pattern::IdentifierPatt(id) = *fi.pattern.clone() {
                     self.insert(
                         TypePath::from(id.name.clone()),
@@ -2390,17 +2385,17 @@ impl SemanticAnalyser {
 
                 self.analyse_patt(&fi.pattern.clone())?;
 
-                let ty = self.analyse_expr(&Expression::Block(fi.block.clone()), root)?;
+                self.analyse_expr(&Expression::Block(fi.block.clone()), root)?;
 
                 self.exit_scope();
 
-                Ok(ty)
+                Ok(Type::UnitType(UnitType))
             }
 
             Expression::While(w) => {
                 self.analyse_expr(&Expression::Grouped(*w.condition.clone()), root)?;
-                let ty = self.analyse_expr(&Expression::Block(w.block.clone()), root)?;
-                Ok(ty)
+                self.analyse_expr(&Expression::Block(w.block.clone()), root)?;
+                Ok(Type::UnitType(UnitType))
             }
 
             Expression::SomeExpr(s) => {
@@ -2473,12 +2468,12 @@ impl SemanticAnalyser {
         }
 
         // check the module registry
-        for (module_name, module_items) in self.module_registry.clone().into_iter() {
+        for (ref module_name, module_items) in self.module_registry.clone().into_iter() {
             // iterate over a module
             for (item_name, symbol) in module_items.iter() {
                 // if the path is an item inside a module root
                 if path.type_name == item_name.type_name {
-                    let item_path = build_item_path(&module_name, path.clone());
+                    let item_path = build_item_path(&module_name.clone(), path.clone());
 
                     self.logger
                         .debug(&format!("trying to find path at `{item_path}` …",));
@@ -2487,23 +2482,29 @@ impl SemanticAnalyser {
                         return Ok(item_path);
                     }
 
-                    let item_prefix = if let Some(ids) = &item_name.associated_type_path_prefix_opt
+                    // let item_prefix = if let Some(ids) = &item_name.associated_type_path_prefix_opt
+                    // {
+                    //     TypePath::from(ids.last().cloned().unwrap())
+                    // } else {
+                    //     item_name.clone()
+                    // };
+
+                    // let trait_path = build_item_path(&module_name, item_prefix);
+
+                    // let full_path =
+                    //     build_item_path(&trait_path, TypePath::from(path.type_name.clone()));
+
+                    // self.logger
+                    //     .debug(&format!("trying to find path at `{full_path}` …",));
+
+                    // if self.lookup(&full_path).is_some() {
+                    //     return Ok(full_path);
+                    // }
+
+                    if let Some(value) =
+                        self.build_associated_item_path(path, module_name, item_name)
                     {
-                        TypePath::from(ids.last().cloned().unwrap())
-                    } else {
-                        item_name.clone()
-                    };
-
-                    let trait_path = build_item_path(&module_name, item_prefix);
-
-                    let full_path =
-                        build_item_path(&trait_path, TypePath::from(path.type_name.clone()));
-
-                    self.logger
-                        .debug(&format!("trying to find path at `{full_path}` …",));
-
-                    if self.lookup(&full_path).is_some() {
-                        return Ok(full_path);
+                        return Ok(value);
                     }
                 }
 
@@ -2541,9 +2542,60 @@ impl SemanticAnalyser {
             return Ok(full_path);
         }
 
+        let root_prefix = if let Some(ids) = &root.associated_type_path_prefix_opt {
+            TypePath::from(ids.clone())
+        } else {
+            root.clone()
+        };
+
+        // concatenate only `path` to `root` without type name (e.g, `path` is an associated item)
+        let full_path = build_item_path(&root_prefix, path.clone());
+
+        self.logger
+            .debug(&format!("trying to find path at `{full_path}` …",));
+
+        if self.lookup(&full_path).is_some() {
+            return Ok(full_path);
+        }
+
         Err(SemanticErrorKind::MissingValue {
             expected: expected_value,
         })
+    }
+
+    fn build_associated_item_path(
+        &mut self,
+        path: &TypePath,
+        module_name: &TypePath,
+        item_name: &TypePath,
+    ) -> Option<TypePath> {
+        let path_prefix = if let Some(ids) = &path.associated_type_path_prefix_opt {
+            let prefix = TypePath::from(ids.clone());
+            build_item_path(&module_name, prefix)
+        } else {
+            module_name.clone()
+        };
+
+        let item_prefix = if let Some(ids) = &item_name.associated_type_path_prefix_opt {
+            TypePath::from(ids.last().cloned().unwrap())
+        } else {
+            item_name.clone()
+        };
+
+        let trait_impl_path = build_item_path(&path_prefix, item_prefix);
+
+        let associated_item_path =
+            build_item_path(&trait_impl_path, TypePath::from(path.type_name.clone()));
+
+        self.logger.debug(&format!(
+            "trying to find path at `{associated_item_path}` …",
+        ));
+
+        if self.lookup(&associated_item_path).is_some() {
+            return Some(associated_item_path);
+        }
+
+        None
     }
 
     fn analyse_call_or_method_call_expr(
@@ -3061,4 +3113,67 @@ where
     Expression: From<T>,
 {
     Expression::from(value.clone())
+}
+
+fn unify_result_types(
+    inferred_type: &mut Type,
+    context_type: &Type,
+) -> Result<(), SemanticErrorKind> {
+    let inferred_type_clone = inferred_type.clone();
+
+    match (inferred_type, context_type) {
+        (
+            Type::Result {
+                ok_type: inf_t,
+                err_type: inf_e,
+            },
+            Type::Result {
+                ok_type: ctx_t,
+                err_type: ctx_e,
+            },
+        ) => {
+            if **inf_t
+                == Type::InferredType(InferredType {
+                    name: Identifier::from("_"),
+                })
+            {
+                *inf_t = ctx_t.clone();
+            } else if **ctx_t
+                != Type::InferredType(InferredType {
+                    name: Identifier::from("_"),
+                })
+                && **inf_t != **ctx_t
+            {
+                return Err(SemanticErrorKind::TypeMismatchResultExpr {
+                    variant: Keyword::Ok,
+                    expected: *ctx_t.clone(),
+                    found: *(*inf_t).clone(),
+                });
+            }
+
+            if **inf_e
+                == Type::InferredType(InferredType {
+                    name: Identifier::from("_"),
+                })
+            {
+                *inf_e = ctx_e.clone();
+            } else if **ctx_e
+                != Type::InferredType(InferredType {
+                    name: Identifier::from("_"),
+                })
+                && **inf_e != **ctx_e
+            {
+                return Err(SemanticErrorKind::TypeMismatchResultExpr {
+                    variant: Keyword::Err,
+                    expected: *ctx_e.clone(),
+                    found: *(*inf_e).clone(),
+                });
+            }
+            Ok(())
+        }
+        _ => Err(SemanticErrorKind::UnexpectedType {
+            expected: context_type.to_string(),
+            found: inferred_type_clone,
+        }),
+    }
 }
