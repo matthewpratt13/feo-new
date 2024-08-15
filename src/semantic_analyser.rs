@@ -27,6 +27,9 @@ use std::collections::HashMap;
 
 use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 
+/// Struct responsible for performing semantic analysis on the abstract syntax tree (AST)
+/// of the program. It manages the scopes, symbol tables, and errors encountered during
+/// the analysis phase.
 #[allow(dead_code)]
 struct SemanticAnalyser {
     scope_stack: Vec<Scope>,
@@ -37,12 +40,14 @@ struct SemanticAnalyser {
 
 #[allow(dead_code)]
 impl SemanticAnalyser {
+    /// Construct a new `SemanticAnalyser` instance. Initialize the logger, external symbols
+    /// and module registry. Add any external code (e.g., library functions) to the global scope
+    /// if provided.
     pub(crate) fn new(log_level: LogLevel, external_code: Option<SymbolTable>) -> Self {
         let mut logger = Logger::new(log_level);
         let mut external_symbols: SymbolTable = HashMap::new();
         let mut module_registry: HashMap<TypePath, SymbolTable> = HashMap::new();
 
-        // add external code (e.g., library functions) to the global scope if there is any
         if let Some(ext) = external_code {
             logger.info(&format!("importing external code …"));
 
@@ -72,6 +77,7 @@ impl SemanticAnalyser {
         }
     }
 
+    /// Push a new scope onto the scope stack and log the action.
     fn enter_scope(&mut self, scope_kind: ScopeKind) {
         self.logger
             .debug(&format!("entering new scope: `{scope_kind:?}` …"));
@@ -82,6 +88,7 @@ impl SemanticAnalyser {
         });
     }
 
+    /// Pop the top scope from the scope stack and log the action.
     fn exit_scope(&mut self) -> Option<Scope> {
         if let Some(exited_scope) = self.scope_stack.pop() {
             self.logger
@@ -93,6 +100,7 @@ impl SemanticAnalyser {
         }
     }
 
+    /// Insert a symbol into the current scope's symbol table.
     fn insert(&mut self, path: TypePath, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             self.logger.info(&format!(
@@ -108,6 +116,8 @@ impl SemanticAnalyser {
         }
     }
 
+    /// Look up a symbol by its path in the current scope stack, starting from the innermost scope,
+    /// and log the lookup result.
     fn lookup(&mut self, path: &TypePath) -> Option<&Symbol> {
         for scope in self.scope_stack.iter().rev() {
             if let Some(symbol) = scope.symbols.get(path) {
@@ -126,6 +136,8 @@ impl SemanticAnalyser {
         None
     }
 
+    /// Initiate semantic analysis on the provided program. This involves analysing all statements
+    /// within the program, checking for type mismatches and validating symbol definitions.
     fn analyse_program(
         &mut self,
         program: &Program,
@@ -174,6 +186,10 @@ impl SemanticAnalyser {
         Ok(())
     }
 
+    /// Analyse individual statements within the program, determining their validity and handling
+    /// specific types of statements, such as variable declarations, item definitions and expressions.
+    /// Check for semantic correctness and ensures that the statement adheres to the expected types
+    /// and scope rules.
     fn analyse_stmt(
         &mut self,
         statement: &Statement,
