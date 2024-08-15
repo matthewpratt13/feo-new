@@ -2482,25 +2482,6 @@ impl SemanticAnalyser {
                         return Ok(item_path);
                     }
 
-                    // let item_prefix = if let Some(ids) = &item_name.associated_type_path_prefix_opt
-                    // {
-                    //     TypePath::from(ids.last().cloned().unwrap())
-                    // } else {
-                    //     item_name.clone()
-                    // };
-
-                    // let trait_path = build_item_path(&module_name, item_prefix);
-
-                    // let full_path =
-                    //     build_item_path(&trait_path, TypePath::from(path.type_name.clone()));
-
-                    // self.logger
-                    //     .debug(&format!("trying to find path at `{full_path}` …",));
-
-                    // if self.lookup(&full_path).is_some() {
-                    //     return Ok(full_path);
-                    // }
-
                     if let Some(value) =
                         self.build_associated_item_path(path, module_name, item_name)
                     {
