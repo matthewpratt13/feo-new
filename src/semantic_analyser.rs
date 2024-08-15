@@ -3090,49 +3090,49 @@ fn unify_result_types(
     match (inferred_type, context_type) {
         (
             Type::Result {
-                ok_type: inf_t,
-                err_type: inf_e,
+                ok_type: inf_ok,
+                err_type: inf_err,
             },
             Type::Result {
-                ok_type: ctx_t,
-                err_type: ctx_e,
+                ok_type: ctx_ok,
+                err_type: ctx_err,
             },
         ) => {
-            if **inf_t
+            if **inf_ok
                 == Type::InferredType(InferredType {
                     name: Identifier::from("_"),
                 })
             {
-                *inf_t = ctx_t.clone();
-            } else if **ctx_t
+                *inf_ok = ctx_ok.clone();
+            } else if **ctx_ok
                 != Type::InferredType(InferredType {
                     name: Identifier::from("_"),
                 })
-                && **inf_t != **ctx_t
+                && **inf_ok != **ctx_ok
             {
                 return Err(SemanticErrorKind::TypeMismatchResultExpr {
                     variant: Keyword::Ok,
-                    expected: *ctx_t.clone(),
-                    found: *(*inf_t).clone(),
+                    expected: *ctx_ok.clone(),
+                    found: *(*inf_ok).clone(),
                 });
             }
 
-            if **inf_e
+            if **inf_err
                 == Type::InferredType(InferredType {
                     name: Identifier::from("_"),
                 })
             {
-                *inf_e = ctx_e.clone();
-            } else if **ctx_e
+                *inf_err = ctx_err.clone();
+            } else if **ctx_err
                 != Type::InferredType(InferredType {
                     name: Identifier::from("_"),
                 })
-                && **inf_e != **ctx_e
+                && **inf_err != **ctx_err
             {
                 return Err(SemanticErrorKind::TypeMismatchResultExpr {
                     variant: Keyword::Err,
-                    expected: *ctx_e.clone(),
-                    found: *(*inf_e).clone(),
+                    expected: *ctx_err.clone(),
+                    found: *(*inf_err).clone(),
                 });
             }
             Ok(())
