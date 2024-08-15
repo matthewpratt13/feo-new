@@ -2481,11 +2481,31 @@ impl SemanticAnalyser {
                     if self.lookup(&item_path).is_some() {
                         return Ok(item_path);
                     }
+                    let path_prefix = if let Some(ids) = &path.associated_type_path_prefix_opt {
+                        let prefix = TypePath::from(ids.clone());
+                        build_item_path(&module_name, prefix)
+                    } else {
+                        module_name.clone()
+                    };
 
-                    if let Some(value) =
-                        self.build_associated_item_path(path, module_name, item_name)
+                    let item_prefix = if let Some(ids) = &item_name.associated_type_path_prefix_opt
                     {
-                        return Ok(value);
+                        TypePath::from(ids.last().cloned().unwrap())
+                    } else {
+                        item_name.clone()
+                    };
+
+                    let trait_impl_path = build_item_path(&path_prefix, item_prefix);
+
+                    let associated_item_path =
+                        build_item_path(&trait_impl_path, TypePath::from(path.type_name.clone()));
+
+                    self.logger.debug(&format!(
+                        "trying to find path at `{associated_item_path}` …",
+                    ));
+
+                    if self.lookup(&associated_item_path).is_some() {
+                        return Ok(associated_item_path);
                     }
                 }
 
@@ -2542,41 +2562,6 @@ impl SemanticAnalyser {
         Err(SemanticErrorKind::MissingValue {
             expected: expected_value,
         })
-    }
-
-    fn build_associated_item_path(
-        &mut self,
-        path: &TypePath,
-        module_name: &TypePath,
-        item_name: &TypePath,
-    ) -> Option<TypePath> {
-        let path_prefix = if let Some(ids) = &path.associated_type_path_prefix_opt {
-            let prefix = TypePath::from(ids.clone());
-            build_item_path(&module_name, prefix)
-        } else {
-            module_name.clone()
-        };
-
-        let item_prefix = if let Some(ids) = &item_name.associated_type_path_prefix_opt {
-            TypePath::from(ids.last().cloned().unwrap())
-        } else {
-            item_name.clone()
-        };
-
-        let trait_impl_path = build_item_path(&path_prefix, item_prefix);
-
-        let associated_item_path =
-            build_item_path(&trait_impl_path, TypePath::from(path.type_name.clone()));
-
-        self.logger.debug(&format!(
-            "trying to find path at `{associated_item_path}` …",
-        ));
-
-        if self.lookup(&associated_item_path).is_some() {
-            return Some(associated_item_path);
-        }
-
-        None
     }
 
     fn analyse_call_or_method_call_expr(
