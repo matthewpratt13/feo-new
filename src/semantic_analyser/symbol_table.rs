@@ -6,8 +6,10 @@ use crate::ast::{
 use core::fmt;
 use std::collections::HashMap;
 
+/// Type alias representing a symbol table that maps `TypePath` to `Symbol`.
 pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
 
+/// Enumeration of the different kinds of scopes that can be encountered during semantic analysis.
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub(crate) enum ScopeKind {
     LocalBlock,
@@ -23,6 +25,7 @@ pub(crate) enum ScopeKind {
     Public,
 }
 
+/// Enum representing different types of symbols that can be encountered during semantic analysis.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Symbol {
     Variable {
@@ -117,6 +120,7 @@ impl fmt::Display for Symbol {
     }
 }
 
+/// Struct that represents a single scope in the semantic analyser.
 #[derive(Debug, Clone)]
 pub(crate) struct Scope {
     pub(crate) scope_kind: ScopeKind,
