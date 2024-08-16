@@ -764,6 +764,8 @@ impl SemanticAnalyser {
         Ok(())
     }
 
+    /// Analyse a function definition within a specific context, including its parameters,
+    /// body, and return type.
     fn analyse_function_def(
         &mut self,
         f: &FunctionItem,
@@ -901,6 +903,8 @@ impl SemanticAnalyser {
         Ok(())
     }
 
+    /// Analyse an import declaration, resolving and inserting symbols from the imported
+    /// modules into the current scope.
     fn analyse_import(
         &mut self,
         import_decl: &ImportDecl,
@@ -961,6 +965,7 @@ impl SemanticAnalyser {
         Ok(())
     }
 
+    /// Analyse the given expression to determine its type within a specific context.
     fn analyse_expr(
         &mut self,
         expression: &Expression,
@@ -2463,6 +2468,8 @@ impl SemanticAnalyser {
         }
     }
 
+    /// Attempt to resolve a given `TypePath` within the current context, searching through various
+    /// namespaces and fallback mechanisms.
     fn check_path(
         &mut self,
         path: &TypePath,
@@ -2580,6 +2587,8 @@ impl SemanticAnalyser {
         })
     }
 
+    /// Analyse a function or method call expression by resolving the provided path, validating
+    /// arguments and determining the return type.
     fn analyse_call_or_method_call_expr(
         &mut self,
         path: TypePath,
@@ -2691,6 +2700,8 @@ impl SemanticAnalyser {
         }
     }
 
+    /// Analyse a pattern in the context of semantic analysis, returning the inferred type of
+    /// the pattern or an appropriate semantic error.
     fn analyse_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
         match pattern {
             Pattern::IdentifierPatt(i) => match self.lookup(&TypePath::from(i.name.clone())) {
@@ -3097,6 +3108,9 @@ where
     Expression::from(value.clone())
 }
 
+/// Attempt to unify the types of two `Result` types, specifically between an inferred type
+/// and a context type. This function is used to ensure that the `Ok` and `Err` variants of
+/// an inferred `Result` type match the expected types defined in the context.
 fn unify_result_types(
     inferred_type: &mut Type,
     context_type: &Type,
