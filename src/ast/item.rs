@@ -54,7 +54,7 @@ impl fmt::Display for FunctionOrMethodParam {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct GenericParam {
     pub(crate) name: Identifier,
-    pub(crate) param_bound_opt: Option<Identifier>,
+    pub(crate) type_bound_opt: Option<TypePath>,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -211,6 +211,13 @@ pub(crate) struct TupleStructDefField {
     pub(crate) field_type: Box<Type>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct WhereClause {
+    pub(crate) kw_where: Keyword,
+    pub(crate) self_type: SelfType,
+    pub(crate) trait_bounds: Vec<TypePath>,
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // AST NODE STRUCTURES
 ///////////////////////////////////////////////////////////////////////////
@@ -320,6 +327,7 @@ pub struct TraitDef {
     pub(crate) kw_trait: Keyword,
     pub(crate) trait_name: Identifier,
     pub(crate) generic_params_opt: Option<GenericParams>,
+    pub(crate) where_clause_opt: Option<WhereClause>,
     pub(crate) inner_attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) trait_items_opt: Option<Vec<TraitDefItem>>,
     pub(crate) span: Span,
@@ -334,6 +342,7 @@ pub struct TraitImplDef {
     pub(crate) kw_for: Keyword,
     pub(crate) implementing_type: Type,
     pub(crate) implementing_type_generic_params_opt: Option<GenericParams>,
+    pub(crate) where_clause_opt: Option<WhereClause>,
     pub(crate) associated_items_opt: Option<Vec<TraitImplItem>>,
     pub(crate) span: Span,
 }
