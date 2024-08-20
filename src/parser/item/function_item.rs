@@ -41,6 +41,8 @@ impl ParseDefItem for FunctionItem {
             }
         }?;
 
+        // TODO: optional generic annotation here
+
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());

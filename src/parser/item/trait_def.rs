@@ -41,6 +41,8 @@ impl ParseDefItem for TraitDef {
             }
         }?;
 
+        // TODO: optional generic annotation here
+
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());

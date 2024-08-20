@@ -40,6 +40,8 @@ impl ParseDefItem for StructDef {
                 Err(ErrorsEmitted)
             }
         }?;
+        
+        // TODO: optional generic annotation here
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {

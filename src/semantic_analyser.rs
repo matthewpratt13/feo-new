@@ -2511,6 +2511,7 @@ impl SemanticAnalyser {
                     if self.lookup(&item_path).is_some() {
                         return Ok(item_path);
                     }
+                    
                     let path_prefix = if let Some(ids) = &path.associated_type_path_prefix_opt {
                         let prefix = TypePath::from(ids.clone());
                         build_item_path(&module_name, prefix)

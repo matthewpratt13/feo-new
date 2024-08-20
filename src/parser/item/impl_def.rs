@@ -28,7 +28,11 @@ impl ParseDefItem for InherentImplDef {
             Err(ErrorsEmitted)
         }?;
 
+        // TODO: optional generic annotation here – required if there is one after `nominal_type`
+
         let nominal_type = TypePath::parse(parser, parser.current_token().cloned())?;
+
+        // TODO: optional generic annotation here – annotation after `impl` required
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
@@ -101,6 +105,9 @@ impl ParseDefItem for TraitImplDef {
             Err(ErrorsEmitted)
         }?;
 
+        // TODO: optional generic annotation here – required if there is one after
+        // TODO: `implemented_trait_path` or `implementing_type`
+
         let token = parser.current_token().cloned();
 
         let implemented_trait_path = match &token {
@@ -121,6 +128,8 @@ impl ParseDefItem for TraitImplDef {
             }
         }?;
 
+        // TODO: optional generic annotation here – annotation after `impl` required
+
         let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
             parser.next_token();
             Ok(Keyword::For)
@@ -130,6 +139,8 @@ impl ParseDefItem for TraitImplDef {
         }?;
 
         let implementing_type = Type::parse(parser)?;
+
+        // TODO: optional generic annotation here – annotation after `impl` required
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
