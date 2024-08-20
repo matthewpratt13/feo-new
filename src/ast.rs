@@ -123,6 +123,11 @@ impl fmt::Display for Identifier {
     }
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub(crate) struct GenericAnnotation {
+    pub(crate) generics: Option<Vec<Identifier>>,
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // KEYWORDS
 ///////////////////////////////////////////////////////////////////////////
@@ -235,6 +240,7 @@ pub(crate) enum Delimiter {
     LBracket { position: Position },
     LBrace { position: Position },
     Pipe { position: Position },
+    LAngleBracket { position: Position },
 }
 
 impl Delimiter {
@@ -244,6 +250,7 @@ impl Delimiter {
             Delimiter::LBracket { position } => position,
             Delimiter::LBrace { position } => position,
             Delimiter::Pipe { position } => position,
+            Delimiter::LAngleBracket { position } => position,
         }
     }
 }
@@ -255,6 +262,7 @@ impl fmt::Display for Delimiter {
             Delimiter::LBracket { .. } => write!(f, "["),
             Delimiter::LBrace { .. } => write!(f, "{{"),
             Delimiter::Pipe { .. } => write!(f, "|"),
+            Delimiter::LAngleBracket { .. } => write!(f, "<"),
         }
     }
 }

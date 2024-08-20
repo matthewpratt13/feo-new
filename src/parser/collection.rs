@@ -79,6 +79,28 @@ pub(crate) fn get_collection<T>(
             }
         }
 
+        Delimiter::LAngleBracket { .. } => {
+            while !matches!(
+                parser.current_token(),
+                Some(Token::GreaterThan { .. } | Token::EOF),
+            ) {
+                let item = f(parser)?;
+                collection.push(item);
+
+                if let Some(Token::Comma { .. }) = parser.current_token() {
+                    parser.next_token();
+                } else if let Some(Token::GreaterThan { .. }) = parser.current_token() {
+                    break;
+                } else if !matches!(
+                    parser.current_token(),
+                    Some(Token::GreaterThan { .. } | Token::EOF)
+                ) {
+                    parser.log_unexpected_token("`,` or `>`");
+                    return Err(ErrorsEmitted);
+                }
+            }
+        }
+
         _ => {
             parser.log_unexpected_token("closing delimiter type");
             return Err(ErrorsEmitted);
