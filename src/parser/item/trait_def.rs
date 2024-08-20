@@ -1,6 +1,4 @@
-use super::{
-    collection, parse_generic_annotation, ParseAssociatedItem, ParseDeclItem, ParseDefItem,
-};
+use super::{collection, parse_generic_params, ParseAssociatedItem, ParseDeclItem, ParseDefItem};
 
 use crate::{
     ast::{
@@ -43,7 +41,7 @@ impl ParseDefItem for TraitDef {
             }
         }?;
 
-        let generic_annotation_opt = parse_generic_annotation(parser)?;
+        let generic_params_opt = parse_generic_params(parser)?;
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
@@ -76,7 +74,7 @@ impl ParseDefItem for TraitDef {
                     visibility,
                     kw_trait,
                     trait_name,
-                    generic_annotation_opt,
+                    generic_params_opt,
                     inner_attributes_opt,
                     trait_items_opt,
                     span,

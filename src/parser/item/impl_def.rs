@@ -1,5 +1,5 @@
 use super::{
-    collection, parse_generic_annotation, ParseAssociatedItem, ParseDeclItem, ParseDefItem, Parser,
+    collection, parse_generic_params, ParseAssociatedItem, ParseDeclItem, ParseDefItem, Parser,
 };
 
 use crate::{
@@ -30,28 +30,27 @@ impl ParseDefItem for InherentImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let generic_declaration_opt = parse_generic_annotation(parser)?;
+        let generic_declaration_opt = parse_generic_params(parser)?;
 
         let nominal_type = TypePath::parse(parser, parser.current_token().cloned())?;
 
-        let generic_annotation_opt =
-            match (generic_declaration_opt, parse_generic_annotation(parser)?) {
-                (None, None) => None,
-                (None, Some(ga)) => {
-                    parser.log_error(ParserErrorKind::UndeclaredGenerics {
-                        found: format!("{:?}", ga.generics),
-                    });
+        let generic_params_opt = match (generic_declaration_opt, parse_generic_params(parser)?) {
+            (None, None) => None,
+            (None, Some(ga)) => {
+                parser.log_error(ParserErrorKind::UndeclaredGenerics {
+                    found: format!("{:?}", ga.params),
+                });
 
-                    return Err(ErrorsEmitted);
-                }
-                (Some(ga), None) => {
-                    parser
-                        .logger
-                        .warn(&format!("unused generics declared: {:?}", ga.generics));
-                    None
-                }
-                (Some(_), Some(ga)) => Some(ga),
-            };
+                return Err(ErrorsEmitted);
+            }
+            (Some(ga), None) => {
+                parser
+                    .logger
+                    .warn(&format!("unused generics declared: {:?}", ga.params));
+                None
+            }
+            (Some(_), Some(ga)) => Some(ga),
+        };
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
@@ -81,7 +80,7 @@ impl ParseDefItem for InherentImplDef {
                     attributes_opt,
                     kw_impl,
                     nominal_type,
-                    generic_annotation_opt,
+                    generic_params_opt,
                     associated_items_opt,
                     span,
                 })
@@ -125,7 +124,7 @@ impl ParseDefItem for TraitImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        let generic_declaration_opt = parse_generic_annotation(parser)?;
+        let generic_declaration_opt = parse_generic_params(parser)?;
 
         let token = parser.current_token().cloned();
 
@@ -147,12 +146,12 @@ impl ParseDefItem for TraitImplDef {
             }
         }?;
 
-        let implemented_trait_generic_annotation_opt =
-            match (generic_declaration_opt, parse_generic_annotation(parser)?) {
+        let implemented_trait_generic_params_opt =
+            match (generic_declaration_opt, parse_generic_params(parser)?) {
                 (None, None) => None,
                 (None, Some(ga)) => {
                     parser.log_error(ParserErrorKind::UndeclaredGenerics {
-                        found: format!("{:?}", ga.generics),
+                        found: format!("{:?}", ga.params),
                     });
 
                     return Err(ErrorsEmitted);
@@ -160,7 +159,7 @@ impl ParseDefItem for TraitImplDef {
                 (Some(ga), None) => {
                     parser
                         .logger
-                        .warn(&format!("unused generics declared: {:?}", ga.generics));
+                        .warn(&format!("unused generics declared: {:?}", ga.params));
                     None
                 }
                 (Some(_), Some(ga)) => Some(ga),
@@ -176,7 +175,7 @@ impl ParseDefItem for TraitImplDef {
 
         let implementing_type = Type::parse(parser)?;
 
-        let implementing_type_generic_annotation_opt = parse_generic_annotation(parser)?;
+        let implementing_type_generic_params_opt = parse_generic_params(parser)?;
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
@@ -206,10 +205,10 @@ impl ParseDefItem for TraitImplDef {
                     attributes_opt,
                     kw_impl,
                     implemented_trait_path,
-                    implemented_trait_generic_annotation_opt,
+                    implemented_trait_generic_params_opt,
                     kw_for,
                     implementing_type,
-                    implementing_type_generic_annotation_opt,
+                    implementing_type_generic_params_opt,
                     associated_items_opt,
                     span,
                 })

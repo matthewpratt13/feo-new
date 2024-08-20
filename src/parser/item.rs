@@ -15,8 +15,8 @@ use super::{collection, ParseStatement, Parser};
 
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionItem, GenericAnnotation, Identifier,
-        ImportDecl, InherentImplDef, Item, Keyword, ModuleItem, OuterAttr, Statement,
+        AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionItem, GenericParam, GenericParams,
+        Identifier, ImportDecl, InherentImplDef, Item, Keyword, ModuleItem, OuterAttr, Statement,
         StaticVarDecl, StructDef, TraitDef, TraitImplDef, TupleStructDef, Visibility,
     },
     error::ErrorsEmitted,
@@ -99,7 +99,7 @@ impl Item {
                 visibility,
                 kw_enum: Keyword::Anonymous,
                 enum_name: Identifier::from(""),
-                generic_annotation_opt: None,
+                generic_params_opt: None,
                 variants: Vec::new(),
                 span: Span::default(),
             })),
@@ -198,16 +198,21 @@ impl ParseStatement for Item {
     }
 }
 
-pub(crate) fn parse_generic_annotation(
+pub(crate) fn parse_generic_params(
     parser: &mut Parser,
-) -> Result<Option<GenericAnnotation>, ErrorsEmitted> {
+) -> Result<Option<GenericParams>, ErrorsEmitted> {
     if let Some(Token::LessThan { .. }) = parser.current_token() {
         let position = parser.current_position();
         let left_angle_bracket = Delimiter::LAngleBracket { position };
 
         parser.next_token();
 
-        let generics = collection::get_collection(parser, parse_generic, &left_angle_bracket)?;
+        let generics =
+            collection::get_collection(parser, parse_generic_param, &left_angle_bracket)?
+                .ok_or_else(|| {
+                    parser.log_missing("ty", "generic annotations");
+                    ErrorsEmitted
+                })?;
 
         match parser.current_token() {
             Some(Token::GreaterThan { .. }) => {
@@ -223,14 +228,14 @@ pub(crate) fn parse_generic_annotation(
             }
         }
 
-        Ok(Some(GenericAnnotation { generics }))
+        Ok(Some(GenericParams { params: generics }))
     } else {
         Ok(None)
     }
 }
 
-pub(crate) fn parse_generic(parser: &mut Parser) -> Result<Identifier, ErrorsEmitted> {
-    match parser.current_token() {
+pub(crate) fn parse_generic_param(parser: &mut Parser) -> Result<GenericParam, ErrorsEmitted> {
+    let name = match parser.current_token() {
         Some(Token::Identifier { name, .. }) => {
             if name.len() == 1
                 && name
@@ -239,7 +244,7 @@ pub(crate) fn parse_generic(parser: &mut Parser) -> Result<Identifier, ErrorsEmi
                     .next()
                     .is_some_and(|c| c.is_uppercase() || c == '_')
             {
-                return Ok(Identifier::from(name));
+                Identifier::from(name)
             } else {
                 parser.log_unexpected_token("single uppercase alphabetic character or `_`");
                 return Err(ErrorsEmitted);
@@ -255,5 +260,29 @@ pub(crate) fn parse_generic(parser: &mut Parser) -> Result<Identifier, ErrorsEmi
             parser.log_unexpected_token("identifier");
             return Err(ErrorsEmitted);
         }
-    }
+    };
+
+    let param_bound_opt = if let Some(Token::Colon { .. }) = parser.peek_ahead_by(1) {
+        parser.next_token();
+        parser.next_token();
+
+        match parser.current_token() {
+            Some(Token::Identifier { name, .. }) => Some(Identifier::from(name)),
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                return Err(ErrorsEmitted);
+            }
+            _ => {
+                parser.log_unexpected_token("identifier");
+                return Err(ErrorsEmitted);
+            }
+        }
+    } else {
+        None
+    };
+
+    Ok(GenericParam {
+        name,
+        param_bound_opt,
+    })
 }

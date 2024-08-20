@@ -248,7 +248,7 @@ fn analyse_import_decl() -> Result<(), ()> {
         visibility: Visibility::Pub,
         kw_func: Keyword::Anonymous,
         function_name: Identifier::from("external_func"),
-        generic_annotation_opt: None,
+        generic_params_opt: None,
         params_opt: None,
         return_type_opt: None,
         block_opt: None,
