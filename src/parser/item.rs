@@ -210,7 +210,7 @@ pub(crate) fn parse_generic_params(
         let generics =
             collection::get_collection(parser, parse_generic_param, &left_angle_bracket)?
                 .ok_or_else(|| {
-                    parser.log_missing("ty", "generic annotations");
+                    parser.log_missing("ty", "generic params");
                     ErrorsEmitted
                 })?;
 
