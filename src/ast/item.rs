@@ -211,6 +211,14 @@ pub(crate) struct TupleStructDefField {
     pub(crate) field_type: Box<Type>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct WhereClause {
+    pub(crate) kw_where: Keyword,
+    pub(crate) ty: Type,
+    pub(crate) type_bounds: Vec<TypePath>
+
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // AST NODE STRUCTURES
 ///////////////////////////////////////////////////////////////////////////

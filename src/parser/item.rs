@@ -17,7 +17,8 @@ use crate::{
     ast::{
         AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionItem, GenericParam, GenericParams,
         Identifier, ImportDecl, InherentImplDef, Item, Keyword, ModuleItem, OuterAttr, Statement,
-        StaticVarDecl, StructDef, TraitDef, TraitImplDef, TupleStructDef, Visibility,
+        StaticVarDecl, StructDef, TraitDef, TraitImplDef, TupleStructDef, Type, TypePath,
+        Visibility, WhereClause,
     },
     error::ErrorsEmitted,
     span::Span,
@@ -284,5 +285,58 @@ pub(crate) fn parse_generic_param(parser: &mut Parser) -> Result<GenericParam, E
     Ok(GenericParam {
         name,
         type_bound_opt,
+    })
+}
+
+pub(crate) fn parse_where_clause(parser: &mut Parser) -> Result<WhereClause, ErrorsEmitted> {
+    let kw_where = if let Some(Token::Where { .. }) = parser.current_token() {
+        parser.next_token();
+        Ok(Keyword::Where)
+    } else {
+        parser.log_unexpected_token("`where`");
+        Err(ErrorsEmitted)
+    }?;
+
+    let ty = Type::parse(parser)?;
+
+    let type_bounds = if let Some(Token::Colon { .. }) = parser.current_token() {
+        parser.next_token();
+
+        if let Some(Token::Identifier { .. }) = parser.current_token() {
+            let mut bounds: Vec<TypePath> = Vec::new();
+
+            while let Ok(tp) = TypePath::parse(parser, parser.current_token().cloned()) {
+                bounds.push(tp);
+
+                match parser.current_token() {
+                    Some(Token::Plus { .. }) => {
+                        parser.next_token();
+                    }
+                    Some(Token::Comma { .. } | Token::LBrace { .. }) => break,
+                    Some(Token::EOF) | None => {
+                        parser.log_unexpected_eoi();
+                        return Err(ErrorsEmitted);
+                    }
+                    _ => {
+                        parser.log_unexpected_token("type path");
+                        return Err(ErrorsEmitted);
+                    }
+                }
+            }
+
+            bounds
+        } else {
+            parser.log_unexpected_token("identifier");
+            return Err(ErrorsEmitted);
+        }
+    } else {
+        parser.log_unexpected_token("type bound");
+        return Err(ErrorsEmitted);
+    };
+
+    Ok(WhereClause {
+        kw_where,
+        ty,
+        type_bounds,
     })
 }
