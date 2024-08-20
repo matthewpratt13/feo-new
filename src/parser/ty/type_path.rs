@@ -1,12 +1,8 @@
 use super::Parser;
 
 use crate::{
-    ast::{
-        Delimiter, GenericAnnotation, Identifier, PathExpr, PathPatt, PathRoot, PathSegment,
-        SelfType, Type, TypePath,
-    },
+    ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, SelfType, Type, TypePath},
     error::ErrorsEmitted,
-    parser::collection,
     token::Token,
 };
 
@@ -53,15 +49,6 @@ impl TypePath {
             return Ok(TypePath {
                 associated_type_path_prefix_opt: None,
                 type_name: Identifier::from(&path_root.to_string()),
-                generic_annotation_opt: None,
-            });
-        } else if let Some(Token::LessThan { .. }) = parser.current_token() {
-            let generic_annotation_opt = parse_generic_annotation(parser)?;
-
-            return Ok(TypePath {
-                associated_type_path_prefix_opt: None,
-                type_name: Identifier::from(&path_root.to_string()),
-                generic_annotation_opt,
             });
         }
 
@@ -93,8 +80,6 @@ impl TypePath {
 
         let prefix = path;
 
-        let generic_annotation_opt = parse_generic_annotation(parser)?;
-
         let path_type = TypePath {
             associated_type_path_prefix_opt: {
                 if prefix.is_empty() {
@@ -104,7 +89,6 @@ impl TypePath {
                 }
             },
             type_name,
-            generic_annotation_opt,
         };
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -114,66 +98,6 @@ impl TypePath {
         ////////////////////////////////////////////////////////////////////////////////
 
         Ok(path_type)
-    }
-}
-
-fn parse_generic_annotation(
-    parser: &mut Parser,
-) -> Result<Option<GenericAnnotation>, ErrorsEmitted> {
-    if let Some(Token::LessThan { .. }) = parser.current_token() {
-        let position = parser.current_position();
-        let left_angle_bracket = Delimiter::LAngleBracket { position };
-
-        parser.next_token();
-
-        let generics = collection::get_collection(parser, parse_generic, &left_angle_bracket)?;
-
-        match parser.current_token() {
-            Some(Token::GreaterThan { .. }) => {
-                parser.next_token();
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                return Err(ErrorsEmitted);
-            }
-            _ => {
-                parser.log_unexpected_token("`>`");
-                return Err(ErrorsEmitted);
-            }
-        }
-
-        Ok(Some(GenericAnnotation { generics }))
-    } else {
-        Ok(None)
-    }
-}
-
-fn parse_generic(parser: &mut Parser) -> Result<Identifier, ErrorsEmitted> {
-    match parser.current_token() {
-        Some(Token::Identifier { name, .. }) => {
-            if name.len() == 1
-                && name
-                    .as_str()
-                    .chars()
-                    .next()
-                    .is_some_and(|c| c.is_uppercase() || c == '_')
-            {
-                return Ok(Identifier::from(name));
-            } else {
-                parser.log_unexpected_token("single uppercase alphabetic character or `_`");
-                return Err(ErrorsEmitted);
-            }
-        }
-
-        Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
-            return Err(ErrorsEmitted);
-        }
-
-        _ => {
-            parser.log_unexpected_token("identifier");
-            return Err(ErrorsEmitted);
-        }
     }
 }
 
@@ -201,7 +125,6 @@ impl From<PathExpr> for TypePath {
                 }
             },
             type_name,
-            generic_annotation_opt: None,
         }
     }
 }
@@ -230,7 +153,6 @@ impl From<PathPatt> for TypePath {
                 }
             },
             type_name,
-            generic_annotation_opt: None,
         }
     }
 }
@@ -282,7 +204,6 @@ impl From<Identifier> for TypePath {
         TypePath {
             associated_type_path_prefix_opt: None,
             type_name: value,
-            generic_annotation_opt: None,
         }
     }
 }
@@ -301,7 +222,6 @@ impl From<Vec<Identifier>> for TypePath {
             TypePath {
                 associated_type_path_prefix_opt: Some(path_prefix),
                 type_name,
-                generic_annotation_opt: None,
             }
         } else if value.len() == 1 {
             let type_name = value.get(0).cloned().unwrap();
@@ -309,7 +229,6 @@ impl From<Vec<Identifier>> for TypePath {
             TypePath {
                 associated_type_path_prefix_opt: None,
                 type_name,
-                generic_annotation_opt: None,
             }
         } else {
             TypePath::from(Identifier::from(""))
@@ -385,7 +304,6 @@ pub(crate) fn build_item_path(root: &TypePath, item_path: TypePath) -> TypePath 
         TypePath {
             associated_type_path_prefix_opt: Some(path),
             type_name,
-            generic_annotation_opt: None,
         }
     } else {
         if root.type_name == Identifier::from("") {
@@ -406,7 +324,6 @@ pub(crate) fn build_item_path(root: &TypePath, item_path: TypePath) -> TypePath 
                     }
                 },
                 type_name,
-                generic_annotation_opt: None,
             }
         } else {
             let mut suffix = Vec::<Identifier>::from(item_path);
@@ -434,7 +351,6 @@ pub(crate) fn build_item_path(root: &TypePath, item_path: TypePath) -> TypePath 
                     }
                 },
                 type_name,
-                generic_annotation_opt: None,
             }
         }
     }

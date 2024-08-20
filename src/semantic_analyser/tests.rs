@@ -248,6 +248,7 @@ fn analyse_import_decl() -> Result<(), ()> {
         visibility: Visibility::Pub,
         kw_func: Keyword::Anonymous,
         function_name: Identifier::from("external_func"),
+        generic_annotation_opt: None,
         params_opt: None,
         return_type_opt: None,
         block_opt: None,
@@ -267,13 +268,11 @@ fn analyse_import_decl() -> Result<(), ()> {
     let external_mod_path = TypePath {
         associated_type_path_prefix_opt: None,
         type_name: external_mod.module_name.clone(),
-        generic_annotation_opt: None,
     };
 
     let func_path = TypePath {
         associated_type_path_prefix_opt: Some(Vec::<Identifier>::from(external_mod_path.clone())),
         type_name: external_func.function_name.clone(),
-        generic_annotation_opt: None,
     };
 
     let mut symbols: SymbolTable = HashMap::new();

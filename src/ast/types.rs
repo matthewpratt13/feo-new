@@ -1,4 +1,4 @@
-use super::{FunctionOrMethodParam, GenericAnnotation, Identifier, Type};
+use super::{FunctionOrMethodParam, Identifier, Type};
 
 use crate::error::ParserErrorKind;
 
@@ -362,7 +362,6 @@ impl fmt::Display for SelfType {
 pub struct TypePath {
     pub(crate) associated_type_path_prefix_opt: Option<Vec<Identifier>>,
     pub(crate) type_name: Identifier,
-    pub(crate) generic_annotation_opt: Option<GenericAnnotation>,
 }
 
 /// Unit struct that represents the unit type `()`.

@@ -1,11 +1,13 @@
-use super::{collection, ParseAssociatedItem, ParseDeclItem, ParseDefItem, Parser};
+use super::{
+    collection, parse_generic_annotation, ParseAssociatedItem, ParseDeclItem, ParseDefItem, Parser,
+};
 
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, Delimiter, FunctionItem, InherentImplDef, InherentImplItem,
         Keyword, OuterAttr, TraitImplDef, TraitImplItem, Type, TypePath, Visibility,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     span::Position,
     token::Token,
 };
@@ -28,11 +30,28 @@ impl ParseDefItem for InherentImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        // TODO: optional generic annotation here – required if there is one after `nominal_type`
+        let generic_declaration_opt = parse_generic_annotation(parser)?;
 
         let nominal_type = TypePath::parse(parser, parser.current_token().cloned())?;
 
-        // TODO: optional generic annotation here – annotation after `impl` required
+        let generic_annotation_opt =
+            match (generic_declaration_opt, parse_generic_annotation(parser)?) {
+                (None, None) => None,
+                (None, Some(ga)) => {
+                    parser.log_error(ParserErrorKind::UndeclaredGenerics {
+                        found: format!("{:?}", ga.generics),
+                    });
+
+                    return Err(ErrorsEmitted);
+                }
+                (Some(ga), None) => {
+                    parser
+                        .logger
+                        .warn(&format!("unused generics declared: {:?}", ga.generics));
+                    None
+                }
+                (Some(_), Some(ga)) => Some(ga),
+            };
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
@@ -62,6 +81,7 @@ impl ParseDefItem for InherentImplDef {
                     attributes_opt,
                     kw_impl,
                     nominal_type,
+                    generic_annotation_opt,
                     associated_items_opt,
                     span,
                 })
@@ -105,8 +125,7 @@ impl ParseDefItem for TraitImplDef {
             Err(ErrorsEmitted)
         }?;
 
-        // TODO: optional generic annotation here – required if there is one after
-        // TODO: `implemented_trait_path` or `implementing_type`
+        let generic_declaration_opt = parse_generic_annotation(parser)?;
 
         let token = parser.current_token().cloned();
 
@@ -128,7 +147,24 @@ impl ParseDefItem for TraitImplDef {
             }
         }?;
 
-        // TODO: optional generic annotation here – annotation after `impl` required
+        let implemented_trait_generic_annotation_opt =
+            match (generic_declaration_opt, parse_generic_annotation(parser)?) {
+                (None, None) => None,
+                (None, Some(ga)) => {
+                    parser.log_error(ParserErrorKind::UndeclaredGenerics {
+                        found: format!("{:?}", ga.generics),
+                    });
+
+                    return Err(ErrorsEmitted);
+                }
+                (Some(ga), None) => {
+                    parser
+                        .logger
+                        .warn(&format!("unused generics declared: {:?}", ga.generics));
+                    None
+                }
+                (Some(_), Some(ga)) => Some(ga),
+            };
 
         let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
             parser.next_token();
@@ -140,7 +176,7 @@ impl ParseDefItem for TraitImplDef {
 
         let implementing_type = Type::parse(parser)?;
 
-        // TODO: optional generic annotation here – annotation after `impl` required
+        let implementing_type_generic_annotation_opt = parse_generic_annotation(parser)?;
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
@@ -170,8 +206,10 @@ impl ParseDefItem for TraitImplDef {
                     attributes_opt,
                     kw_impl,
                     implemented_trait_path,
+                    implemented_trait_generic_annotation_opt,
                     kw_for,
                     implementing_type,
+                    implementing_type_generic_annotation_opt,
                     associated_items_opt,
                     span,
                 })

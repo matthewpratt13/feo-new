@@ -1,4 +1,4 @@
-use super::{collection, ParseDefItem, Parser};
+use super::{collection, parse_generic_annotation, ParseDefItem, Parser};
 
 use crate::{
     ast::{
@@ -40,8 +40,8 @@ impl ParseDefItem for StructDef {
                 Err(ErrorsEmitted)
             }
         }?;
-        
-        // TODO: optional generic annotation here
+
+        let generic_annotation_opt = parse_generic_annotation(parser)?;
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
@@ -71,6 +71,7 @@ impl ParseDefItem for StructDef {
                     visibility,
                     kw_struct,
                     struct_name,
+                    generic_annotation_opt,
                     fields_opt,
                     span,
                 })

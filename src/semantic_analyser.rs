@@ -538,6 +538,7 @@ impl SemanticAnalyser {
                                                 visibility: Visibility::Private,
                                                 kw_struct: Keyword::Anonymous,
                                                 struct_name: variant.variant_name,
+                                                generic_annotation_opt: None,
                                                 fields_opt: Some(s.struct_fields),
                                                 span: Span::default(),
                                             },
@@ -827,6 +828,7 @@ impl SemanticAnalyser {
                             visibility: Visibility::Private,
                             kw_func: Keyword::Anonymous,
                             function_name: f.function_name.clone(),
+                            generic_annotation_opt: None,
                             params_opt: fp.params_opt,
                             return_type_opt: fp.return_type_opt,
                             block_opt: None,
@@ -1000,7 +1002,6 @@ impl SemanticAnalyser {
                                 TypePath {
                                     associated_type_path_prefix_opt: Some(segments.to_vec()),
                                     type_name: id,
-                                    generic_annotation_opt: None,
                                 },
                             )
                         } else {

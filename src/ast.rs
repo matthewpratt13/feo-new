@@ -123,11 +123,6 @@ impl fmt::Display for Identifier {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub(crate) struct GenericAnnotation {
-    pub(crate) generics: Option<Vec<Identifier>>,
-}
-
 ///////////////////////////////////////////////////////////////////////////
 // KEYWORDS
 ///////////////////////////////////////////////////////////////////////////

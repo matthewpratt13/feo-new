@@ -1,4 +1,4 @@
-use super::ParseDefItem;
+use super::{parse_generic_annotation, ParseDefItem};
 
 use crate::{
     ast::{
@@ -41,7 +41,7 @@ impl ParseDefItem for EnumDef {
             }
         }?;
 
-        // TODO: optional generic annotation here
+        let generic_annotation_opt = parse_generic_annotation(parser)?;
 
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
@@ -72,6 +72,7 @@ impl ParseDefItem for EnumDef {
                     visibility,
                     kw_enum,
                     enum_name,
+                    generic_annotation_opt,
                     variants,
                     span,
                 })
