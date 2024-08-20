@@ -46,9 +46,13 @@ where
     }
 }
 
-impl<T> Error for CompilerError<T> where
-    T: Clone + fmt::Display + fmt::Debug + std::error::Error + 'static
+impl<T> Error for CompilerError<T>
+where
+    T: Clone + fmt::Display + fmt::Debug + Error + 'static,
 {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.error_kind)
+    }
 }
 
 /// Dummy struct that has no real functionality of its own.

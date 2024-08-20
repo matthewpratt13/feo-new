@@ -129,8 +129,7 @@ pub enum SemanticErrorKind {
     UndefinedType {
         name: Identifier,
     },
-
-        
+    
     UndefinedVariable {
         name: Identifier,
     },

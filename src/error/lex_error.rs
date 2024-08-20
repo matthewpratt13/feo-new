@@ -134,7 +134,6 @@ impl fmt::Display for LexErrorKind {
             LexErrorKind::UnexpectedEndOfInput => {
                 write!(f, "scanning error: unexpected end of input")
             }
-
             LexErrorKind::UnexpectedHexadecimalPrefix { prefix } => {
                 write!(
                     f,

@@ -112,11 +112,9 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::MissingExpression { expected } => {
                 write!(f, "expression not found. Expected {expected}, found none")
             }
-
             ParserErrorKind::MissingItem { expected } => {
                 write!(f, "item not found. Expected {expected}, found none")
             }
-
             ParserErrorKind::MissingType { expected } => {
                 write!(
                     f,
