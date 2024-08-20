@@ -358,7 +358,7 @@ impl fmt::Display for SelfType {
 }
 
 /// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TypePath {
     pub(crate) associated_type_path_prefix_opt: Option<Vec<Identifier>>,
     pub(crate) type_name: Identifier,

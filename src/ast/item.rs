@@ -51,6 +51,17 @@ impl fmt::Display for FunctionOrMethodParam {
     }
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub(crate) struct GenericParam {
+    pub(crate) name: Identifier,
+    pub(crate) param_bound_opt: Option<Identifier>,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub(crate) struct GenericParams {
+    pub(crate) params: Vec<GenericParam>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum InherentImplItem {
     ConstantDecl(ConstantDecl),
@@ -231,6 +242,7 @@ pub struct EnumDef {
     pub(crate) visibility: Visibility,
     pub(crate) kw_enum: Keyword,
     pub(crate) enum_name: Identifier,
+    pub(crate) generic_params_opt: Option<GenericParams>,
     pub(crate) variants: Vec<EnumVariant>,
     pub(crate) span: Span,
 }
@@ -241,6 +253,7 @@ pub struct FunctionItem {
     pub(crate) visibility: Visibility,
     pub(crate) kw_func: Keyword,
     pub(crate) function_name: Identifier,
+    pub(crate) generic_params_opt: Option<GenericParams>,
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
     pub(crate) return_type_opt: Option<Box<Type>>,
     pub(crate) block_opt: Option<BlockExpr>,
@@ -261,6 +274,7 @@ pub struct InherentImplDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) kw_impl: Keyword,
     pub(crate) nominal_type: TypePath,
+    pub(crate) generic_params_opt: Option<GenericParams>,
     pub(crate) associated_items_opt: Option<Vec<InherentImplItem>>,
     pub(crate) span: Span,
 }
@@ -294,6 +308,7 @@ pub struct StructDef {
     pub(crate) visibility: Visibility,
     pub(crate) kw_struct: Keyword,
     pub(crate) struct_name: Identifier,
+    pub(crate) generic_params_opt: Option<GenericParams>,
     pub(crate) fields_opt: Option<Vec<StructDefField>>,
     pub(crate) span: Span,
 }
@@ -304,6 +319,7 @@ pub struct TraitDef {
     pub(crate) visibility: Visibility,
     pub(crate) kw_trait: Keyword,
     pub(crate) trait_name: Identifier,
+    pub(crate) generic_params_opt: Option<GenericParams>,
     pub(crate) inner_attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) trait_items_opt: Option<Vec<TraitDefItem>>,
     pub(crate) span: Span,
@@ -314,8 +330,10 @@ pub struct TraitImplDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) kw_impl: Keyword,
     pub(crate) implemented_trait_path: TypePath,
+    pub(crate) implemented_trait_generic_params_opt: Option<GenericParams>,
     pub(crate) kw_for: Keyword,
     pub(crate) implementing_type: Type,
+    pub(crate) implementing_type_generic_params_opt: Option<GenericParams>,
     pub(crate) associated_items_opt: Option<Vec<TraitImplItem>>,
     pub(crate) span: Span,
 }

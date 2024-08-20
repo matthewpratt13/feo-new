@@ -1,4 +1,4 @@
-use super::{collection, ParseDefItem, Parser};
+use super::{collection, parse_generic_params, ParseDefItem, Parser};
 
 use crate::{
     ast::{
@@ -40,6 +40,8 @@ impl ParseDefItem for FunctionItem {
                 Err(ErrorsEmitted)
             }
         }?;
+
+        let generic_params_opt = parse_generic_params(parser)?;
 
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
@@ -126,6 +128,7 @@ impl ParseDefItem for FunctionItem {
             visibility,
             kw_func,
             function_name,
+            generic_params_opt,
             params_opt,
             return_type_opt,
             block_opt,

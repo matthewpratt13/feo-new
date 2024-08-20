@@ -80,8 +80,6 @@ impl TypePath {
 
         let prefix = path;
 
-        // parser.next_token();
-
         let path_type = TypePath {
             associated_type_path_prefix_opt: {
                 if prefix.is_empty() {

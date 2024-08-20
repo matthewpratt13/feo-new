@@ -1,4 +1,4 @@
-use super::ParseDefItem;
+use super::{parse_generic_params, ParseDefItem};
 
 use crate::{
     ast::{
@@ -41,6 +41,8 @@ impl ParseDefItem for EnumDef {
             }
         }?;
 
+        let generic_params_opt = parse_generic_params(parser)?;
+
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());
@@ -70,6 +72,7 @@ impl ParseDefItem for EnumDef {
                     visibility,
                     kw_enum,
                     enum_name,
+                    generic_params_opt,
                     variants,
                     span,
                 })

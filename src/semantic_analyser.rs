@@ -538,6 +538,7 @@ impl SemanticAnalyser {
                                                 visibility: Visibility::Private,
                                                 kw_struct: Keyword::Anonymous,
                                                 struct_name: variant.variant_name,
+                                                generic_params_opt: None,
                                                 fields_opt: Some(s.struct_fields),
                                                 span: Span::default(),
                                             },
@@ -827,6 +828,7 @@ impl SemanticAnalyser {
                             visibility: Visibility::Private,
                             kw_func: Keyword::Anonymous,
                             function_name: f.function_name.clone(),
+                            generic_params_opt: None,
                             params_opt: fp.params_opt,
                             return_type_opt: fp.return_type_opt,
                             block_opt: None,
@@ -2511,6 +2513,7 @@ impl SemanticAnalyser {
                     if self.lookup(&item_path).is_some() {
                         return Ok(item_path);
                     }
+
                     let path_prefix = if let Some(ids) = &path.associated_type_path_prefix_opt {
                         let prefix = TypePath::from(ids.clone());
                         build_item_path(&module_name, prefix)
