@@ -262,7 +262,7 @@ pub(crate) fn parse_generic_param(parser: &mut Parser) -> Result<GenericParam, E
         }
     };
 
-    let param_bound_opt = if let Some(Token::Colon { .. }) = parser.peek_ahead_by(1) {
+    let type_bound_opt = if let Some(Token::Colon { .. }) = parser.peek_ahead_by(1) {
         parser.next_token();
         parser.next_token();
 
@@ -283,6 +283,6 @@ pub(crate) fn parse_generic_param(parser: &mut Parser) -> Result<GenericParam, E
 
     Ok(GenericParam {
         name,
-        param_bound_opt,
+        type_bound_opt,
     })
 }
