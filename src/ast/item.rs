@@ -54,7 +54,7 @@ impl fmt::Display for FunctionOrMethodParam {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct GenericParam {
     pub(crate) name: Identifier,
-    pub(crate) type_bound_opt: Option<Identifier>,
+    pub(crate) type_bound_opt: Option<TypePath>,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]

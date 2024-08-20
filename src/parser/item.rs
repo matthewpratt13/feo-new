@@ -268,7 +268,9 @@ pub(crate) fn parse_generic_param(parser: &mut Parser) -> Result<GenericParam, E
         parser.next_token();
 
         match parser.current_token() {
-            Some(Token::Identifier { name, .. }) => Some(Identifier::from(name)),
+            Some(Token::Identifier { .. }) => {
+                TypePath::parse(parser, parser.current_token().cloned()).ok()
+            }
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
                 return Err(ErrorsEmitted);
@@ -304,7 +306,23 @@ pub(crate) fn parse_where_clause(
 
             while let Ok(item) = parse_where_clause_item(parser) {
                 items.push(item);
-                parser.next_token();
+
+                match parser.current_token() {
+                    Some(Token::Comma { .. }) => {
+                        parser.next_token();
+                    }
+                    
+                    Some(Token::LBrace { .. }) => break,
+
+                    Some(Token::EOF) | None => {
+                        parser.log_unexpected_eoi();
+                        return Err(ErrorsEmitted);
+                    }
+                    _ => {
+                        parser.log_unexpected_token("`,` or `{`");
+                        return Err(ErrorsEmitted);
+                    }
+                }
             }
 
             items

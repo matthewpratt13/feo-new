@@ -1,5 +1,6 @@
 use super::{
-    collection, parse_generic_params, ParseAssociatedItem, ParseDeclItem, ParseDefItem, Parser,
+    collection, parse_generic_params, parse_where_clause, ParseAssociatedItem, ParseDeclItem,
+    ParseDefItem, Parser,
 };
 
 use crate::{
@@ -177,6 +178,8 @@ impl ParseDefItem for TraitImplDef {
 
         let implementing_type_generic_params_opt = parse_generic_params(parser)?;
 
+        let where_clause_opt = parse_where_clause(parser)?;
+
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());
@@ -209,6 +212,7 @@ impl ParseDefItem for TraitImplDef {
                     kw_for,
                     implementing_type,
                     implementing_type_generic_params_opt,
+                    where_clause_opt,
                     associated_items_opt,
                     span,
                 })
