@@ -18,7 +18,7 @@ use crate::{
         AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionItem, GenericParam, GenericParams,
         Identifier, ImportDecl, InherentImplDef, Item, Keyword, ModuleItem, OuterAttr, Statement,
         StaticVarDecl, StructDef, TraitDef, TraitImplDef, TupleStructDef, Type, TypePath,
-        Visibility, WhereClause,
+        Visibility, WhereClause, WhereClauseItem,
     },
     error::ErrorsEmitted,
     span::Span,
@@ -288,15 +288,45 @@ pub(crate) fn parse_generic_param(parser: &mut Parser) -> Result<GenericParam, E
     })
 }
 
-pub(crate) fn parse_where_clause(parser: &mut Parser) -> Result<WhereClause, ErrorsEmitted> {
+pub(crate) fn parse_where_clause(
+    parser: &mut Parser,
+) -> Result<Option<WhereClause>, ErrorsEmitted> {
     let kw_where = if let Some(Token::Where { .. }) = parser.current_token() {
         parser.next_token();
         Ok(Keyword::Where)
     } else {
-        parser.log_unexpected_token("`where`");
-        Err(ErrorsEmitted)
+        return Ok(None);
     }?;
 
+    let items = match parser.next_token() {
+        Some(Token::Identifier { .. }) => {
+            let mut items: Vec<WhereClauseItem> = Vec::new();
+
+            while let Ok(item) = parse_where_clause_item(parser) {
+                items.push(item);
+                parser.next_token();
+            }
+
+            items
+        }
+
+        Some(Token::EOF) | None => {
+            parser.log_unexpected_eoi();
+            return Err(ErrorsEmitted);
+        }
+
+        _ => {
+            parser.log_unexpected_token("identifier");
+            return Err(ErrorsEmitted);
+        }
+    };
+
+    Ok(Some(WhereClause { kw_where, items }))
+}
+
+pub(crate) fn parse_where_clause_item(
+    parser: &mut Parser,
+) -> Result<WhereClauseItem, ErrorsEmitted> {
     let ty = Type::parse(parser)?;
 
     let type_bounds = if let Some(Token::Colon { .. }) = parser.current_token() {
@@ -334,9 +364,5 @@ pub(crate) fn parse_where_clause(parser: &mut Parser) -> Result<WhereClause, Err
         return Err(ErrorsEmitted);
     };
 
-    Ok(WhereClause {
-        kw_where,
-        ty,
-        type_bounds,
-    })
+    Ok(WhereClauseItem { ty, type_bounds })
 }

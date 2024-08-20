@@ -43,6 +43,8 @@ impl ParseDefItem for TraitDef {
 
         let generic_params_opt = parse_generic_params(parser)?;
 
+        let where_clause_opt
+
         let open_brace = match parser.current_token() {
             Some(Token::LBrace { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());
