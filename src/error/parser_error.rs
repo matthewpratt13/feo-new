@@ -30,6 +30,11 @@ pub enum ParserErrorKind {
         token: Option<Token>,
     },
 
+    InvalidTypeParameter {
+        expected: String,
+        found: String,
+    },
+
     ExtraTokens {
         token: Option<Token>,
         msg: String,
@@ -98,6 +103,12 @@ impl fmt::Display for ParserErrorKind {
                     f,
                     "syntax error. Token invalid in current context: `{:?}`",
                     token
+                )
+            }
+            ParserErrorKind::InvalidTypeParameter { expected, found } => {
+                write!(
+                    f,
+                    "invalid type parameter. Expected {expected}, found {found}"
                 )
             }
             ParserErrorKind::ExtraTokens { token, msg } => {

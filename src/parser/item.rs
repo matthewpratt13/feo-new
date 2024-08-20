@@ -18,9 +18,9 @@ use crate::{
         AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionItem, GenericParam, GenericParams,
         Identifier, ImportDecl, InherentImplDef, Item, Keyword, ModuleItem, OuterAttr, Statement,
         StaticVarDecl, StructDef, TraitDef, TraitImplDef, TupleStructDef, Type, TypePath,
-        Visibility, WhereClause, WhereClauseItem,
+        Visibility, WhereClause,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     span::Span,
     token::Token,
 };
@@ -300,57 +300,21 @@ pub(crate) fn parse_where_clause(
         return Ok(None);
     }?;
 
-    let items = match parser.next_token() {
-        Some(Token::Identifier { .. }) => {
-            let mut items: Vec<WhereClauseItem> = Vec::new();
-
-            while let Ok(item) = parse_where_clause_item(parser) {
-                items.push(item);
-
-                match parser.current_token() {
-                    Some(Token::Comma { .. }) => {
-                        parser.next_token();
-                    }
-                    
-                    Some(Token::LBrace { .. }) => break,
-
-                    Some(Token::EOF) | None => {
-                        parser.log_unexpected_eoi();
-                        return Err(ErrorsEmitted);
-                    }
-                    _ => {
-                        parser.log_unexpected_token("`,` or `{`");
-                        return Err(ErrorsEmitted);
-                    }
-                }
-            }
-
-            items
-        }
-
-        Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
+    let self_type = match Type::parse(parser)? {
+        Type::SelfType(st) => Ok(st),
+        ty => {
+            parser.log_error(ParserErrorKind::InvalidTypeParameter {
+                expected: "`Self`".to_string(),
+                found: ty.to_string(),
+            });
             return Err(ErrorsEmitted);
         }
+    }?;
 
-        _ => {
-            parser.log_unexpected_token("identifier");
-            return Err(ErrorsEmitted);
-        }
-    };
-
-    Ok(Some(WhereClause { kw_where, items }))
-}
-
-pub(crate) fn parse_where_clause_item(
-    parser: &mut Parser,
-) -> Result<WhereClauseItem, ErrorsEmitted> {
-    let ty = Type::parse(parser)?;
-
-    let type_bounds = if let Some(Token::Colon { .. }) = parser.current_token() {
+    let trait_bounds = if let Some(Token::Colon { .. }) = parser.current_token() {
         parser.next_token();
 
-        if let Some(Token::Identifier { .. }) = parser.current_token() {
+        if let Some(Token::SelfType { .. }) = parser.current_token() {
             let mut bounds: Vec<TypePath> = Vec::new();
 
             while let Ok(tp) = TypePath::parse(parser, parser.current_token().cloned()) {
@@ -374,13 +338,17 @@ pub(crate) fn parse_where_clause_item(
 
             bounds
         } else {
-            parser.log_unexpected_token("identifier");
+            parser.log_unexpected_token("`Self` type");
             return Err(ErrorsEmitted);
         }
     } else {
-        parser.log_unexpected_token("type bound");
+        parser.log_unexpected_token("trait bound");
         return Err(ErrorsEmitted);
     };
 
-    Ok(WhereClauseItem { ty, type_bounds })
+    Ok(Some(WhereClause {
+        kw_where,
+        self_type,
+        trait_bounds,
+    }))
 }
