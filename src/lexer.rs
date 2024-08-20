@@ -378,6 +378,7 @@ impl<'a> Lexer<'a> {
                     span,
                 }),
                 "while" => Ok(Token::While { name, span }),
+                "where" => Ok(Token::Where { name, span }),
                 "i32" => Ok(Token::I32Type { name, span }),
                 "i64" => Ok(Token::I64Type { name, span }),
                 "u8" => Ok(Token::U8Type { name, span }),
@@ -1485,9 +1486,9 @@ fn is_keyword(value: &str) -> bool {
         "alias", "as", "break", "bytes", "const", "continue", "else", "enum", "Err", "false",
         "for", "func", "if", "impl", "import", "in", "let", "loop", "match", "module", "mut",
         "None", "Ok", "lib", "pub", "ref", "return", "self", "Some", "static", "struct", "super",
-        "trait", "true", "while", "i32", "i64", "u8", "u16", "u32", "u64", "u256", "u512", "f32",
-        "f64", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256", "h512", "String", "str",
-        "char", "bool", "Self", "Option", "Result", "Vec", "Mapping",
+        "trait", "true", "where", "while", "i32", "i64", "u8", "u16", "u32", "u64", "u256", "u512",
+        "f32", "f64", "byte", "b2", "b4", "b8", "b16", "b32", "h160", "h256", "h512", "String",
+        "str", "char", "bool", "Self", "Option", "Result", "Vec", "Mapping",
     ]
     .contains(&value)
 }
