@@ -1923,35 +1923,12 @@ impl SemanticAnalyser {
                         _ => None,
                     };
 
-                self.enter_scope(ScopeKind::Function("".to_string()));
-
-                if let Some(params) = &params_opt {
-                    let param_types: Vec<Type> = params.iter().map(|p| p.param_type()).collect();
-
-                    for (param, param_type) in params.iter().zip(param_types) {
-                        // TODO: if a param is a generic type, resolve it,
-                        // TODO: including checking if it implements a trait (where applicable)
-
-                        let param_path = TypePath::from(param.param_name());
-
-                        self.insert(
-                            param_path,
-                            Symbol::Variable {
-                                name: param.param_name(),
-                                var_type: param_type,
-                            },
-                        )?;
-                    }
-                }
-
                 let return_type = match &c.return_type_opt {
                     Some(ty) => Ok(*ty.clone()),
                     _ => Ok(Type::UnitType(UnitType)),
                 }?;
 
                 let expression_type = self.analyse_expr(&c.body_expression, root)?;
-
-                self.exit_scope();
 
                 if expression_type != return_type {
                     if let Type::Result { ok_type, err_type } = expression_type.clone() {
@@ -2044,16 +2021,6 @@ impl SemanticAnalyser {
 
                 match self.lookup(&type_path).cloned() {
                     Some(Symbol::Struct { struct_def, path }) => {
-                        self.insert(
-                            TypePath::from(s.struct_path.clone()),
-                            Symbol::Struct {
-                                path: path.clone(),
-                                struct_def: struct_def.clone(),
-                            },
-                        )?;
-
-                        // TODO: insert optional generics into scope if they are not already
-
                         let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
                         let def_fields_opt = struct_def.fields_opt;
@@ -2143,16 +2110,6 @@ impl SemanticAnalyser {
                         tuple_struct_def,
                         path,
                     }) => {
-                        self.insert(
-                            TypePath::from(ts.struct_path.clone()),
-                            Symbol::TupleStruct {
-                                path: path.clone(),
-                                tuple_struct_def: tuple_struct_def.clone(),
-                            },
-                        )?;
-
-                        // TODO: insert optional generics into scope if they are not already
-
                         let elements_opt = ts.struct_elements_opt.clone();
                         let fields_opt = tuple_struct_def.fields_opt;
 
@@ -2190,7 +2147,7 @@ impl SemanticAnalyser {
                                     )?;
                                     let field_type = *field.field_type.clone();
 
-                                    // TODO: if a field is a generic type, resolve it,
+                                    // TODO: if an element is a generic type, resolve it,
                                     // TODO: including checking if it implements a trait (where applicable)
 
                                     if elem_type != field_type {
@@ -2506,7 +2463,7 @@ impl SemanticAnalyser {
                     ty
                 };
 
-                // TODO: if an inner type is a generic type, resolve it,
+                // TODO: if any of the inner types is a generic type, resolve it,
                 // TODO: including checking if it implements its bound trait (where applicable)
 
                 match r.kw_ok_or_err.clone() {
@@ -2769,7 +2726,11 @@ impl SemanticAnalyser {
     fn analyse_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
         match pattern {
             Pattern::IdentifierPatt(i) => match self.lookup(&TypePath::from(i.name.clone())) {
-                Some(Symbol::Variable { var_type, .. }) => Ok(var_type.clone()),
+                Some(Symbol::Variable { var_type, .. }) => {
+                    // TODO: if an element is a generic type, resolve it,
+                    // TODO: including checking if it implements its bound trait (where applicable)
+                    Ok(var_type.clone())
+                }
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: i.name.clone(),
                     expected: "variable".to_string(),
@@ -2937,6 +2898,10 @@ impl SemanticAnalyser {
 
                 for patt in t.tuple_patt_elements.elements.iter() {
                     let ty = self.analyse_patt(patt)?;
+
+                    // TODO: if an element is a generic type, resolve it,
+                    // TODO: including checking if it implements its bound trait (where applicable)
+
                     element_types.push(ty)
                 }
 
@@ -2958,6 +2923,10 @@ impl SemanticAnalyser {
                                 let field_name = patt_field.field_name.clone();
                                 let field_value = patt_field.field_value.clone();
                                 let field_type = self.analyse_patt(&field_value)?;
+
+                                // TODO: if a field is a generic type, resolve it,
+                                // TODO: including checking if it implements its bound trait (where applicable)
+
                                 field_map.insert(field_name, field_type);
                             }
                         }
@@ -3067,6 +3036,9 @@ impl SemanticAnalyser {
                                     let elem_type = self.analyse_patt(&elem)?;
                                     let field_type = *field.field_type.clone();
 
+                                    // TODO: if an element is a generic type, resolve it,
+                                    // TODO: including checking if it implements its bound trait (where applicable)
+
                                     if elem_type != field_type {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
                                             name: tuple_struct_def.struct_name.clone(),
@@ -3121,6 +3093,9 @@ impl SemanticAnalyser {
             Pattern::SomePatt(s) => {
                 let ty = self.analyse_patt(&s.pattern.clone().inner_pattern)?;
 
+                // TODO: if the inner type is a generic type, resolve it,
+                // TODO: including checking if it implements its bound trait (where applicable)
+
                 Ok(Type::Option {
                     inner_type: Box::new(ty),
                 })
@@ -3132,6 +3107,9 @@ impl SemanticAnalyser {
 
             Pattern::ResultPatt(r) => {
                 let ty = self.analyse_patt(&r.pattern.clone().inner_pattern)?;
+
+                // TODO: if any of the inner types is a generic type, resolve it,
+                // TODO: including checking if it implements its bound trait (where applicable)
 
                 match r.kw_ok_or_err.clone() {
                     Keyword::Ok => Ok(Type::Result {
