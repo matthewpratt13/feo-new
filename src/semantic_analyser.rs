@@ -221,6 +221,9 @@ impl SemanticAnalyser {
                     _ => &value_type,
                 };
 
+                // TODO: if a value is a generic type, resolve it,
+                // TODO: including checking if it implements a trait (where applicable)
+
                 // check that the value matches the type annotation
                 if &value_type != declared_type {
                     return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -326,6 +329,9 @@ impl SemanticAnalyser {
                         _ => None,
                     };
 
+                    // TODO: if a value is a generic type, resolve it,
+                    // TODO: including checking if it implements a trait (where applicable)
+
                     if value_type.clone().is_some_and(|t| t != *cd.constant_type) {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
                             declared_type: *cd.constant_type.clone(),
@@ -363,6 +369,9 @@ impl SemanticAnalyser {
                             name: Identifier::from("_"),
                         }),
                     };
+
+                    // TODO: if a var is a generic type, resolve it,
+                    // TODO: including checking if it implements a trait (where applicable)
 
                     if assignee_type != s.var_type.clone() {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -826,6 +835,11 @@ impl SemanticAnalyser {
                         param_type = Type::UserDefined(function_root.clone());
                     }
                 }
+
+                // TODO: if a param is a generic type, resolve it,
+                // TODO: including checking if it implements its bound trait (where applicable)
+
+                // TODO: ditto for return types
 
                 let param_path = TypePath::from(param.param_name());
 
@@ -1915,6 +1929,9 @@ impl SemanticAnalyser {
                     let param_types: Vec<Type> = params.iter().map(|p| p.param_type()).collect();
 
                     for (param, param_type) in params.iter().zip(param_types) {
+                        // TODO: if a param is a generic type, resolve it,
+                        // TODO: including checking if it implements a trait (where applicable)
+
                         let param_path = TypePath::from(param.param_name());
 
                         self.insert(
@@ -1972,6 +1989,9 @@ impl SemanticAnalyser {
 
                         let first_element_type = self.analyse_expr(expr, root)?;
 
+                        // TODO: if an element is a generic type, resolve it,
+                        // TODO: including checking if it implements its bound trait (where applicable)
+
                         element_count += 1;
 
                         for elem in elements.iter().skip(1) {
@@ -2010,6 +2030,9 @@ impl SemanticAnalyser {
 
                 for elem in t.tuple_elements.elements.iter() {
                     let ty = self.analyse_expr(elem, root)?;
+                    // TODO: if an element is a generic type, resolve it,
+                    // TODO: including checking if it implements its bound trait (where applicable)
+
                     element_types.push(ty)
                 }
 
@@ -2029,6 +2052,8 @@ impl SemanticAnalyser {
                             },
                         )?;
 
+                        // TODO: insert optional generics into scope if they are not already
+
                         let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
                         let def_fields_opt = struct_def.fields_opt;
@@ -2039,6 +2064,10 @@ impl SemanticAnalyser {
                                 let field_name = obj_field.field_name.clone();
                                 let field_value = *obj_field.field_value.clone();
                                 let field_type = self.analyse_expr(&field_value, root)?;
+
+                                // TODO: if a field is a generic type, resolve it,
+                                // TODO: including checking if it implements a trait (where applicable)
+
                                 field_map.insert(field_name, field_type);
                             }
                         }
@@ -2122,6 +2151,8 @@ impl SemanticAnalyser {
                             },
                         )?;
 
+                        // TODO: insert optional generics into scope if they are not already
+
                         let elements_opt = ts.struct_elements_opt.clone();
                         let fields_opt = tuple_struct_def.fields_opt;
 
@@ -2159,6 +2190,9 @@ impl SemanticAnalyser {
                                     )?;
                                     let field_type = *field.field_type.clone();
 
+                                    // TODO: if a field is a generic type, resolve it,
+                                    // TODO: including checking if it implements a trait (where applicable)
+
                                     if elem_type != field_type {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
                                             name: tuple_struct_def.struct_name.clone(),
@@ -2194,6 +2228,9 @@ impl SemanticAnalyser {
                         for pair in pairs.iter().skip(1) {
                             let pair_key_type = self.analyse_patt(&pair.k.clone())?;
                             let pair_value_type = self.analyse_expr(&pair.v.clone(), root)?;
+
+                            // TODO: if a key/value is a generic type, resolve it,
+                            // TODO: including checking if it implements a trait (where applicable)
 
                             if (&pair_key_type, &pair_value_type) != (&key_type, &value_type) {
                                 return Err(SemanticErrorKind::UnexpectedType {
@@ -2448,6 +2485,9 @@ impl SemanticAnalyser {
                     ty
                 };
 
+                // TODO: if an inner type is a generic type, resolve it,
+                // TODO: including checking if it implements its bound trait (where applicable)
+
                 Ok(Type::Option {
                     inner_type: Box::new(ty),
                 })
@@ -2465,6 +2505,9 @@ impl SemanticAnalyser {
                 } else {
                     ty
                 };
+
+                // TODO: if an inner type is a generic type, resolve it,
+                // TODO: including checking if it implements its bound trait (where applicable)
 
                 match r.kw_ok_or_err.clone() {
                     Keyword::Ok => Ok(Type::Result {
