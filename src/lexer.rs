@@ -43,6 +43,8 @@ impl<'a> Lexer<'a> {
     pub(crate) fn lex(&mut self) -> Result<TokenStream, Vec<CompilerError<LexErrorKind>>> {
         let mut tokens: Vec<Token> = Vec::new();
 
+        let mut generic_ann_nesting_lvl: usize = 0;
+
         while let Some(c) = self.peek_current() {
             let start_pos = self.pos;
 
@@ -178,8 +180,57 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
-                '!' | '%' | '&' | '*' | '+' | '/' | '-' | ':' | '<' | '=' | '>' | '?' | '\\'
-                | '^' | '|' => tokens.push(
+                '<' if self.peek_next() != Some('<') && self.peek_next() != Some('=') => {
+                    generic_ann_nesting_lvl += 1;
+
+                    self.advance();
+
+                    let span = Span::new(self.input, start_pos, self.pos);
+                    tokens.push(Token::LessThan { punc: '<', span });
+                }
+
+                '>' => {
+                    self.advance();
+
+                    if generic_ann_nesting_lvl > 0 {
+                        generic_ann_nesting_lvl -= 1;
+
+                        let span = Span::new(self.input, start_pos, self.pos);
+                        tokens.push(Token::GreaterThan { punc: '>', span })
+                    } else if self.peek_current() == Some('>') {
+                        self.advance();
+                        let span = Span::new(self.input, start_pos, self.pos);
+
+                        if generic_ann_nesting_lvl > 0 {
+                            generic_ann_nesting_lvl -= 1;
+                            tokens.push(Token::GreaterThan { punc: '>', span });
+                        } else {
+                            tokens.push(Token::DblGreaterThan {
+                                punc: ">>".to_string(),
+                                span,
+                            });
+                        }
+                    } else if self.peek_current() == Some('=') {
+                        self.advance();
+                        let span = Span::new(self.input, start_pos, self.pos);
+
+                        if generic_ann_nesting_lvl > 0 {
+                            generic_ann_nesting_lvl -= 1;
+                            tokens.push(Token::GreaterThan { punc: '>', span });
+                        } else {
+                            tokens.push(Token::GreaterThanEquals {
+                                punc: ">=".to_string(),
+                                span,
+                            });
+                        }
+                    } else {
+                        let span = Span::new(self.input, start_pos, self.pos);
+                        tokens.push(Token::GreaterThan { punc: '>', span })
+                    }
+                }
+
+                '!' | '%' | '&' | '*' | '+' | '/' | '-' | ':' | '<' | '=' | '?' | '\\' | '^'
+                | '|' => tokens.push(
                     self.tokenize_punctuation()
                         .map_err(|_| self.errors().to_vec())?,
                 ),
