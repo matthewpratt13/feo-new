@@ -458,6 +458,8 @@ impl SemanticAnalyser {
                         },
                     )?;
 
+                    // TODO: insert optional generics into scope if they are not already
+
                     if let Some(items) = &t.trait_items_opt {
                         // self.enter_scope(ScopeKind::TraitDef(trait_def_path.to_string()));
 
@@ -520,6 +522,8 @@ impl SemanticAnalyser {
                         },
                     )?;
 
+                    // TODO: insert optional generics into scope if they are not already
+
                     for variant in e.variants.clone() {
                         let variant_path = build_item_path(
                             &enum_def_path,
@@ -557,6 +561,7 @@ impl SemanticAnalyser {
                                                 struct_name: Identifier::from(
                                                     &variant_path.to_string(),
                                                 ),
+                                                generic_params_opt: None,
                                                 fields_opt: {
                                                     let mut elements: Vec<TupleStructDefField> =
                                                         Vec::new();
@@ -606,6 +611,8 @@ impl SemanticAnalyser {
                             struct_def: s.clone(),
                         },
                     )?;
+
+                    // TODO: insert optional generics into scope if they are not already
                 }
 
                 Item::TupleStructDef(ts) => {
@@ -623,6 +630,8 @@ impl SemanticAnalyser {
                             tuple_struct_def: ts.clone(),
                         },
                     )?;
+
+                    // TODO: insert optional generics into scope if they are not already
                 }
 
                 Item::InherentImplDef(iid) => {
@@ -748,6 +757,8 @@ impl SemanticAnalyser {
                             function: f.clone(),
                         },
                     )?;
+
+                    // TODO: insert optional generics into scope if they are not already
 
                     match self.analyse_function_def(f, root, false, false) {
                         Ok(_) => (),

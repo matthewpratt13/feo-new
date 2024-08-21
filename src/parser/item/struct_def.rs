@@ -123,6 +123,8 @@ impl ParseDefItem for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
+        let generic_params_opt = parse_generic_params(parser)?;
+
         let open_paren = match parser.current_token() {
             Some(Token::LParen { .. }) => {
                 let position = Position::new(parser.current, &parser.stream.span().input());
@@ -168,6 +170,7 @@ impl ParseDefItem for TupleStructDef {
                     visibility,
                     kw_struct,
                     struct_name,
+                    generic_params_opt,
                     fields_opt: tuple_struct_fields_opt,
                     span,
                 })
@@ -300,5 +303,4 @@ mod tests {
     }
 
     // TODO: add test for struct def with generics (e.g., `struct Foo<T: Bar, U> { a: T, b: U, … }`)
-
 }
