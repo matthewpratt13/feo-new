@@ -180,6 +180,13 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
+                '&' if self.peek_next() == Some('$') => {
+                    self.advance();
+                    let span = Span::new(self.input, start_pos, self.pos);
+                    tokens.push(Token::Ampersand { punc: '&', span });
+
+                }
+
                 '<' if self.peek_next() != Some('<') && self.peek_next() != Some('=') => {
                     generic_ann_nesting_lvl += 1;
 
