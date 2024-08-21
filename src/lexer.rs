@@ -238,6 +238,12 @@ impl<'a> Lexer<'a> {
                     }
                 }
 
+                '?' if self.peek_next() == Some('?') => {
+                    self.advance();
+                    let span = Span::new(self.input, start_pos, self.pos);
+                    tokens.push(Token::QuestionMark { punc: '?', span });
+                }
+
                 '!' | '%' | '&' | '*' | '+' | '/' | '-' | ':' | '<' | '=' | '?' | '\\' | '^'
                 | '|' => tokens.push(
                     self.tokenize_punctuation()
