@@ -380,4 +380,10 @@ mod tests {
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
+
+    // TODO: add test for implementation def with generics and where clauses
+    // TODO: e.g., `impl<T: Bar, U, V: Baz> Foo<T, U, V> { func foo(a: T, B: U) -> V }`
+    // TODO: e.g., `impl<T: Bar, U, V: Baz> FooBar for Foo<T, U, V> 
+    // TODO where Self: BarBaz + BazBar { func foo(a: T, B: U) -> V }`
+
 }

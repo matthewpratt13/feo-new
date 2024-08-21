@@ -275,4 +275,7 @@ mod tests {
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
+
+    // TODO: add test for function item with generics
+    // TODO e.g., `func foo<T: Bar, U, V: Baz>(a: T, b: U) -> V { … }>
 }

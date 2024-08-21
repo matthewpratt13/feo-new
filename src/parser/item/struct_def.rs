@@ -298,4 +298,7 @@ mod tests {
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
+
+    // TODO: add test for struct def with generics (e.g., `struct Foo<T: Bar, U> { a: T, b: U, … }`)
+
 }
