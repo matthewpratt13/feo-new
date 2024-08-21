@@ -573,6 +573,9 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     }
 }
 
-// TODO
+// TODO: test `(T, U, V)`, `[T; n]` , `func(T) -> U`, `Result<T, E>`, `Option<T>`, `&T`, `&mut T`,
+// TODO: `Mapping<K, V>`, `Vec<T>`, `()`, `Self` and `TypePath` (and `TypePath<T: TypePath, U>`)
+// TODO: also test nested types; e.g., `Result<Option<Vec<Mapping<K, V>>>, E>` and
+// TODO: `Mapping<h256, Mapping<K, V>>`
 #[cfg(test)]
 mod tests {}

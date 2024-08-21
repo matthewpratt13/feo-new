@@ -176,4 +176,8 @@ mod tests {
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
+
+    // TODO: add test for trait def with generics and where clauses
+    // TODO: e.g., `trait Foo<T: Bar, U> where Self: Baz { func foo(a: T, b: U) -> Self {} … }`
+
 }

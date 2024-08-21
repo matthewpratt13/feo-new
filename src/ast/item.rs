@@ -353,6 +353,7 @@ pub struct TupleStructDef {
     pub(crate) visibility: Visibility,
     pub(crate) kw_struct: Keyword,
     pub(crate) struct_name: Identifier,
+    pub(crate) generic_params_opt: Option<GenericParams>,
     pub(crate) fields_opt: Option<Vec<TupleStructDefField>>,
     pub(crate) span: Span,
 }

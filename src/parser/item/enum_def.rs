@@ -263,4 +263,6 @@ mod tests {
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
+
+    // TODO: add test for enum def with generics (e.g., `enum Foo<T> { Variant<T>, … }`)
 }
