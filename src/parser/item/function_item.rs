@@ -45,21 +45,7 @@ impl ParseDefItem for FunctionItem {
         let params_opt =
             collection::get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
 
-        // TODO: replace with `expect_closing_paren()`
-        match parser.current_token() {
-            Some(Token::RParen { .. }) => {
-                parser.next_token();
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_paren);
-                parser.log_missing_token("`)`");
-                return Err(ErrorsEmitted);
-            }
-            _ => {
-                parser.log_unexpected_token("`)`");
-                return Err(ErrorsEmitted);
-            }
-        }
+        parser.expect_closing_paren(&open_paren)?;
 
         let mut last_token = parser.current_token().cloned();
 

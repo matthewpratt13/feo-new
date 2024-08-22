@@ -1596,8 +1596,24 @@ impl Parser {
         }
     }
 
-    // TODO: add `expect_closing_paren()`
-    // TODO: add `expect_grouped_expr`
+    fn expect_closing_paren(&mut self, open_paren: &Delimiter) -> Result<(), ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::RParen { .. }) => {
+                self.next_token();
+                Ok(())
+            }
+            Some(Token::EOF) | None => {
+                self.log_unmatched_delimiter(open_paren);
+                self.log_missing_token("`)`");
+                return Err(ErrorsEmitted);
+            }
+            _ => {
+                self.log_unexpected_token("`)`");
+                return Err(ErrorsEmitted);
+            }
+        }
+    }
+
     // TODO: add `get_def_item()`
 
     ///////////////////////////////////////////////////////////////////////////
