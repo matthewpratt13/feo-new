@@ -5,13 +5,12 @@ use super::{
 
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionItem, Identifier, InnerAttr, Keyword,
-        OuterAttr, TraitDef, TraitDefItem, Visibility,
+        AliasDecl, ConstantDecl, FunctionItem, Identifier, InnerAttr, Keyword, OuterAttr, TraitDef,
+        TraitDefItem, Visibility,
     },
     error::ErrorsEmitted,
     parser::Parser,
-    span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -48,21 +47,15 @@ impl ParseDefItem for TraitDef {
 
         let where_clause_opt = parse_where_clause(parser)?;
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
@@ -179,5 +172,4 @@ mod tests {
 
     // TODO: add test for trait def with generics and where clauses
     // TODO: e.g., `trait Foo<T: Bar, U> where Self: Baz { func foo(a: T, b: U) -> Self {} … }`
-
 }

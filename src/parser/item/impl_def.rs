@@ -5,11 +5,10 @@ use super::{
 
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionItem, InherentImplDef, InherentImplItem,
-        Keyword, OuterAttr, TraitImplDef, TraitImplItem, Type, TypePath, Visibility,
+        AliasDecl, ConstantDecl, FunctionItem, InherentImplDef, InherentImplItem, Keyword,
+        OuterAttr, TraitImplDef, TraitImplItem, Type, TypePath, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
-    span::Position,
     token::{Token, TokenType},
 };
 
@@ -53,21 +52,15 @@ impl ParseDefItem for InherentImplDef {
             (Some(_), Some(ga)) => Some(ga),
         };
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let associated_items_opt = collection::get_associated_items::<InherentImplItem>(parser)?;
 
@@ -176,21 +169,15 @@ impl ParseDefItem for TraitImplDef {
 
         let where_clause_opt = parse_where_clause(parser)?;
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let associated_items_opt = collection::get_associated_items::<TraitImplItem>(parser)?;
 

@@ -1498,6 +1498,45 @@ impl Parser {
         }
     }
 
+    fn expect_delimiter(
+        &mut self,
+        expected: TokenType,
+    ) -> Result<Option<Delimiter>, ErrorsEmitted> {
+        if !matches!(
+            expected,
+            TokenType::LParen | TokenType::LBrace | TokenType::LBracket
+        ) {
+            return Ok(None);
+        }
+
+        let position = self.current_position();
+
+        match self.current_token() {
+            Some(Token::LParen { .. }) => {
+                self.next_token();
+                Ok(Some(Delimiter::LParen { position }))
+            }
+            Some(Token::LBrace { .. }) => {
+                self.next_token();
+                Ok(Some(Delimiter::LBrace { position }))
+            }
+            Some(Token::LBracket { .. }) => {
+                self.next_token();
+                Ok(Some(Delimiter::LBracket { position }))
+            }
+
+            Some(Token::EOF) | None => {
+                self.log_unexpected_eoi();
+                return Err(ErrorsEmitted);
+            }
+
+            Some(_) => {
+                self.log_unexpected_token(&expected.to_string());
+                return Err(ErrorsEmitted);
+            }
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // ERROR HANDLING
     ///////////////////////////////////////////////////////////////////////////

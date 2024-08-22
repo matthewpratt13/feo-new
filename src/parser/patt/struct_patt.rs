@@ -1,11 +1,10 @@
 use crate::{
     ast::{
-        Delimiter, Identifier, PathPatt, PathRoot, Pattern, SelfType, StructPatt, StructPattField,
+        Identifier, PathPatt, PathRoot, Pattern, SelfType, StructPatt, StructPattField,
         TupleStructPatt,
     },
     error::ErrorsEmitted,
     parser::{collection, ParsePattern, Parser},
-    span::Position,
     token::{Token, TokenType},
 };
 
@@ -29,14 +28,15 @@ impl ParsePattern for StructPatt {
 
         parser.next_token();
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            let position = Position::new(parser.current, &parser.stream.span().input());
-            parser.next_token();
-            Ok(Delimiter::LBrace { position })
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let fields_opt = collection::get_collection(parser, parse_struct_patt_field, &open_brace)?;
 
@@ -102,15 +102,15 @@ impl ParsePattern for TupleStructPatt {
 
         parser.next_token();
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
-            let position = Position::new(parser.current, &parser.stream.span().input());
-            parser.next_token();
-            Ok(Delimiter::LParen { position })
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
-        }?;
-
+        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
         let elements_opt = parse_tuple_struct_patterns(parser)?;
 
         match parser.current_token() {

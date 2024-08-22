@@ -2,12 +2,11 @@ use super::{collection, ParseDeclItem, Parser};
 
 use crate::{
     ast::{
-        Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathSegment, PathSubset,
+        Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathSegment, PathSubset,
         PathWildcard, TypePath, Visibility,
     },
     error::ErrorsEmitted,
-    span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -121,14 +120,15 @@ fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted>
 }
 
 fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
-    let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
-        let position = Position::new(parser.current, &parser.stream.span().input());
-        parser.next_token();
-        Ok(Delimiter::LBrace { position })
-    } else {
-        parser.log_unexpected_token("`{`");
-        Err(ErrorsEmitted)
-    }?;
+    let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+        d.ok_or_else(|| {
+            parser.logger.warn(&format!(
+                "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                parser.current_token()
+            ));
+            ErrorsEmitted
+        })
+    })?;
 
     let nested_trees =
         if let Some(t) = collection::get_collection(parser, parse_import_tree, &open_brace)? {

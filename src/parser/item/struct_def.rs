@@ -2,11 +2,10 @@ use super::{collection, parse_generic_params, ParseDefItem, Parser};
 
 use crate::{
     ast::{
-        Delimiter, Identifier, Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef,
+        Identifier, Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef,
         TupleStructDefField, Type, Visibility,
     },
     error::ErrorsEmitted,
-    span::Position,
     token::{Token, TokenType},
 };
 
@@ -43,21 +42,15 @@ impl ParseDefItem for StructDef {
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let fields_opt = collection::get_collection(parser, StructDefField::parse, &open_brace)?;
 
@@ -125,22 +118,15 @@ impl ParseDefItem for TupleStructDef {
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_paren = match parser.current_token() {
-            Some(Token::LParen { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                Ok(Delimiter::LParen { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`(`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
-
+        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
         let tuple_struct_fields_opt =
             collection::get_collection(parser, parse_tuple_struct_def_field, &open_paren)?;
 

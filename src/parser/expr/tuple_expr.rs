@@ -1,9 +1,9 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, TupleElements, TupleExpr, TupleIndexExpr},
+    ast::{AssigneeExpr, Expression, TupleElements, TupleExpr, TupleIndexExpr},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParseOperatorExpr, Parser, Precedence},
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -12,17 +12,15 @@ impl ParseConstructExpr for TupleExpr {
     fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
         let first_token = parser.current_token().cloned();
 
-        let open_paren = match &first_token {
-            Some(Token::LParen { .. }) => {
-                let position = parser.current_position();
-                parser.next_token();
-                Ok(Delimiter::LParen { position })
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let tuple_elements = parse_tuple_elements(parser)?;
 

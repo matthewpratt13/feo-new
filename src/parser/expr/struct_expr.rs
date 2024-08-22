@@ -1,14 +1,11 @@
 use crate::{
-    ast::{
-        Delimiter, Expression, Identifier, OuterAttr, PathExpr, StructExpr, StructField,
-        TupleStructExpr,
-    },
+    ast::{Expression, Identifier, OuterAttr, PathExpr, StructExpr, StructField, TupleStructExpr},
     error::ErrorsEmitted,
     parser::{
         collection, ParseConstructExpr, ParseOperatorExpr, ParseSimpleExpr, Parser, Precedence,
     },
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -19,21 +16,15 @@ impl ParseConstructExpr for StructExpr {
 
         let struct_path = PathExpr::parse(parser)?;
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = parser.current_position();
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let struct_fields_opt =
             collection::get_collection(parser, parse_struct_field, &open_brace)?;
@@ -71,21 +62,15 @@ impl ParseOperatorExpr for TupleStructExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
         let left_expr_span = &left_expr.span();
 
-        let open_paren = match parser.current_token() {
-            Some(Token::LParen { .. }) => {
-                let position = parser.current_position();
-                parser.next_token();
-                Ok(Delimiter::LParen { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let struct_elements_opt =
             collection::get_expressions(parser, Precedence::Lowest, &open_paren)?;
@@ -193,7 +178,7 @@ mod tests {
             Err(_) => Err(println!("{:#?}", parser.logger.messages())),
         }
     }
-    
+
     #[test]
     fn parse_tuple_struct_expr() -> Result<(), ()> {
         let input = r#"SomeStruct("bar", false, -1)"#;
