@@ -140,14 +140,12 @@ impl StructDefField {
 
         let field_type = Box::new(Type::parse(parser)?);
 
-        let field = StructDefField {
+        Ok(StructDefField {
             attributes_opt,
             visibility,
             field_name,
             field_type,
-        };
-
-        Ok(field)
+        })
     }
 }
 
@@ -158,13 +156,11 @@ fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefFie
 
     let field_type = Box::new(Type::parse(parser)?);
 
-    let field = TupleStructDefField {
+    Ok(TupleStructDefField {
         attributes_opt,
         visibility,
         field_type,
-    };
-
-    Ok(field)
+    })
 }
 
 #[cfg(test)]

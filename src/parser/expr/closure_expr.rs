@@ -135,12 +135,10 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
         Ok(None)
     }?;
 
-    let param = ClosureParam {
+    Ok(ClosureParam {
         param_name,
         type_ann_opt,
-    };
-
-    Ok(param)
+    })
 }
 
 #[cfg(test)]

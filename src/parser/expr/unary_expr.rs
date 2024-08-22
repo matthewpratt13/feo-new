@@ -62,13 +62,13 @@ impl ParseSimpleExpr for ReferenceExpr {
 
         parser.next_token();
 
-        let operand = parser.parse_expression(Precedence::Unary)?;
+        let expression = parser.parse_expression(Precedence::Unary)?;
 
-        let span = parser.get_span(&first_token.unwrap().span(), &operand.span());
+        let span = parser.get_span(&first_token.unwrap().span(), &expression.span());
 
         Ok(ReferenceExpr {
             reference_op,
-            expression: Box::new(operand),
+            expression: Box::new(expression),
             span,
         })
     }

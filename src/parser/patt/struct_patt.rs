@@ -38,13 +38,14 @@ impl ParsePattern for StructPatt {
             })
         })?;
 
-        let fields_opt = collection::get_collection(parser, parse_struct_patt_field, &open_brace)?;
+        let struct_fields_opt =
+            collection::get_collection(parser, parse_struct_patt_field, &open_brace)?;
 
         let _ = parser.get_braced_item_span(None, &open_brace)?;
 
         Ok(StructPatt {
             struct_path,
-            struct_fields_opt: fields_opt,
+            struct_fields_opt,
         })
     }
 }
@@ -56,12 +57,10 @@ fn parse_struct_patt_field(parser: &mut Parser) -> Result<StructPattField, Error
 
     let field_value = parser.parse_pattern()?;
 
-    let field = StructPattField {
+    Ok(StructPattField {
         field_name,
         field_value,
-    };
-
-    Ok(field)
+    })
 }
 
 impl ParsePattern for TupleStructPatt {
@@ -77,7 +76,7 @@ impl ParsePattern for TupleStructPatt {
             }
         }?;
 
-        let tuple_struct_path = PathPatt {
+        let struct_path = PathPatt {
             path_root,
             tree_opt: None,
         };
@@ -94,13 +93,13 @@ impl ParsePattern for TupleStructPatt {
             })
         })?;
 
-        let elements_opt = parse_tuple_struct_patterns(parser)?;
+        let struct_elements_opt = parse_tuple_struct_patterns(parser)?;
 
         let _ = parser.get_parenthesized_item_span(None, &open_paren)?;
 
         Ok(TupleStructPatt {
-            struct_path: tuple_struct_path,
-            struct_elements_opt: elements_opt,
+            struct_path,
+            struct_elements_opt,
         })
     }
 }

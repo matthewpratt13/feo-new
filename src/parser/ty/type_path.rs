@@ -82,10 +82,9 @@ impl TypePath {
 
         let path_type = TypePath {
             associated_type_path_prefix_opt: {
-                if prefix.is_empty() {
-                    None
-                } else {
-                    Some(prefix)
+                match prefix.is_empty() {
+                    true => None,
+                    false => Some(prefix),
                 }
             },
             type_name,
@@ -118,10 +117,9 @@ impl From<PathExpr> for TypePath {
 
         TypePath {
             associated_type_path_prefix_opt: {
-                if path_segment_names.is_empty() {
-                    None
-                } else {
-                    Some(path_segment_names)
+                match path_segment_names.is_empty() {
+                    true => None,
+                    false => Some(path_segment_names),
                 }
             },
             type_name,
@@ -146,10 +144,9 @@ impl From<PathPatt> for TypePath {
 
         TypePath {
             associated_type_path_prefix_opt: {
-                if path_segment_names.is_empty() {
-                    None
-                } else {
-                    Some(path_segment_names)
+                match path_segment_names.is_empty() {
+                    true => None,
+                    false => Some(path_segment_names),
                 }
             },
             type_name,
@@ -317,10 +314,9 @@ pub(crate) fn build_item_path(root: &TypePath, item_path: TypePath) -> TypePath 
 
             TypePath {
                 associated_type_path_prefix_opt: {
-                    if path.is_empty() {
-                        None
-                    } else {
-                        Some(path.to_vec())
+                    match path.is_empty() {
+                        true => None,
+                        false => Some(path.to_vec()),
                     }
                 },
                 type_name,
@@ -344,10 +340,9 @@ pub(crate) fn build_item_path(root: &TypePath, item_path: TypePath) -> TypePath 
 
             TypePath {
                 associated_type_path_prefix_opt: {
-                    if path.is_empty() {
-                        None
-                    } else {
-                        Some(path)
+                    match path.is_empty() {
+                        true => None,
+                        false => Some(path),
                     }
                 },
                 type_name,
