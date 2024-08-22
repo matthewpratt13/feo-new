@@ -1479,6 +1479,25 @@ impl Parser {
         }
     }
 
+    fn expect_token(&mut self, expected: TokenType) -> Result<(), ErrorsEmitted> {
+        match self.current_token() {
+            Some(t) if t.token_type() == expected => {
+                self.next_token();
+                Ok(())
+            }
+
+            Some(Token::EOF) | None => {
+                self.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+
+            Some(_) => {
+                self.log_unexpected_token(&expected.to_string());
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // ERROR HANDLING
     ///////////////////////////////////////////////////////////////////////////
