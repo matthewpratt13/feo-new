@@ -1614,8 +1614,6 @@ impl Parser {
         }
     }
 
-    // TODO: add `get_def_item()`
-
     ///////////////////////////////////////////////////////////////////////////
     // ERROR HANDLING
     ///////////////////////////////////////////////////////////////////////////
@@ -1855,6 +1853,71 @@ impl Parser {
             first_token.span().start(),
             self.current_token().unwrap().span().end(),
         )
+    }
+
+    fn get_braced_item_span(
+        &mut self,
+        first_token: Option<&Token>,
+        open_brace: &Delimiter,
+    ) -> Result<Span, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::RBrace { .. }) => {
+                let span = self.get_span_by_token(first_token.unwrap_or(&Token::EOF));
+                self.next_token();
+                Ok(span)
+            }
+            Some(Token::EOF) | None => {
+                self.log_unmatched_delimiter(open_brace);
+                self.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("`}`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
+    fn get_parenthesized_item_span(
+        &mut self,
+        first_token: Option<&Token>,
+        open_paren: &Delimiter,
+    ) -> Result<Span, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::RParen { .. }) => {
+                let span = self.get_span_by_token(first_token.unwrap_or(&Token::EOF));
+                self.next_token();
+                Ok(span)
+            }
+            Some(Token::EOF) | None => {
+                self.log_unmatched_delimiter(open_paren);
+                self.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("`)`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
+    fn get_decl_item_span(&mut self, first_token: Option<&Token>) -> Result<Span, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::Semicolon { .. }) => {
+                let span = self.get_span_by_token(first_token.unwrap_or(&Token::EOF));
+                self.next_token();
+                Ok(span)
+            }
+            Some(Token::EOF) | None => {
+                self.log_missing_token("`;`");
+                Err(ErrorsEmitted)
+            }
+
+            _ => {
+                self.log_unexpected_token("`;`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 
     /// Determine if `Token::Dot` token indicates a tuple index operator (i.e., if it is

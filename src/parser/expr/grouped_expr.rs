@@ -27,9 +27,7 @@ impl ParseConstructExpr for GroupedExpr {
         }?;
 
         if let Some(Token::RParen { .. }) = parser.current_token() {
-            let token = first_token.unwrap();
-
-            let span = parser.get_span_by_token(&token);
+            let span = parser.get_span_by_token(&first_token.unwrap());
 
             let tuple_expr = TupleExpr {
                 tuple_elements: TupleElements {
@@ -51,27 +49,15 @@ impl ParseConstructExpr for GroupedExpr {
 
         let inner_expression = Box::new(parser.parse_expression(Precedence::Lowest)?);
 
-        match parser.current_token() {
-            Some(Token::RParen { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_parenthesized_item_span(first_token.as_ref(), &open_paren)?;
 
-                ////////////////////////////////////////////////////////////////////////////////
-                parser.logger.debug("exiting `GroupedExpr::parse()`");
-                parser.log_current_token(false);
-                ////////////////////////////////////////////////////////////////////////////////
+        parser.logger.debug("exiting `GroupedExpr::parse()`");
+        parser.log_current_token(false);
 
-                Ok(GroupedExpr {
-                    inner_expression,
-                    span,
-                })
-            }
-
-            _ => {
-                parser.log_unmatched_delimiter(&open_paren);
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(GroupedExpr {
+            inner_expression,
+            span,
+        })
     }
 }
 

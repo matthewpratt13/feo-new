@@ -2,8 +2,8 @@ use super::{collection, ParseDeclItem, Parser};
 
 use crate::{
     ast::{
-        Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathSegment, PathSubset,
-        PathWildcard, TypePath, Visibility,
+        ImportDecl, ImportTree, Keyword, OuterAttr, PathSegment, PathSubset, PathWildcard,
+        TypePath, Visibility,
     },
     error::ErrorsEmitted,
     token::{Token, TokenType},
@@ -29,28 +29,15 @@ impl ParseDeclItem for ImportDecl {
 
         let import_tree = parse_import_tree(parser)?;
 
-        match parser.current_token() {
-            Some(Token::Semicolon { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_decl_item_span(first_token.as_ref())?;
 
-                Ok(ImportDecl {
-                    attributes_opt,
-                    visibility,
-                    kw_import,
-                    import_tree,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`;`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`;`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(ImportDecl {
+            attributes_opt,
+            visibility,
+            kw_import,
+            import_tree,
+            span,
+        })
     }
 }
 
@@ -85,15 +72,7 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
 
     let as_clause_opt = if let Some(Token::As { .. }) = parser.current_token() {
         parser.next_token();
-
-        let id = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier::from(&name))
-        } else {
-            parser.log_unexpected_token("identifier");
-            Err(ErrorsEmitted)
-        }?;
-
-        Some(id)
+        Some(parser.expect_identifier()?)
     } else {
         None
     };
@@ -137,22 +116,9 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
             Err(ErrorsEmitted)
         }?;
 
-    match parser.current_token() {
-        Some(Token::RBrace { .. }) => {
-            parser.next_token();
+    let _ = parser.get_braced_item_span(None, &open_brace)?;
 
-            Ok(PathSubset { nested_trees })
-        }
-        Some(Token::EOF) | None => {
-            parser.log_unmatched_delimiter(&open_brace);
-            parser.log_unexpected_eoi();
-            Err(ErrorsEmitted)
-        }
-        _ => {
-            parser.log_unexpected_token("`}`");
-            Err(ErrorsEmitted)
-        }
-    }
+    Ok(PathSubset { nested_trees })
 }
 
 #[cfg(test)]

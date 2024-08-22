@@ -35,33 +35,20 @@ impl ParseDefItem for ModuleItem {
                 ErrorsEmitted
             })
         })?;
+
         let (inner_attributes_opt, items_opt) = parse_items(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                Ok(ModuleItem {
-                    outer_attributes_opt,
-                    visibility,
-                    kw_module,
-                    module_name,
-                    inner_attributes_opt,
-                    items_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`}`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(ModuleItem {
+            outer_attributes_opt,
+            visibility,
+            kw_module,
+            module_name,
+            inner_attributes_opt,
+            items_opt,
+            span,
+        })
     }
 }
 

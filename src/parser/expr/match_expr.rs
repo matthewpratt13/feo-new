@@ -60,32 +60,20 @@ impl ParseControlExpr for MatchExpr {
             Err(ErrorsEmitted)
         }?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                parser.next_token();
-
-                let expr = MatchExpr {
-                    kw_match,
-                    scrutinee,
-                    match_arms_opt: {
-                        match match_arms.is_empty() {
-                            true => None,
-                            false => Some(match_arms),
-                        }
-                    },
-                    final_arm,
-                    span,
-                };
-
-                Ok(expr)
-            }
-            _ => {
-                parser.log_unmatched_delimiter(&open_brace);
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(MatchExpr {
+            kw_match,
+            scrutinee,
+            match_arms_opt: {
+                match match_arms.is_empty() {
+                    true => None,
+                    false => Some(match_arms),
+                }
+            },
+            final_arm,
+            span,
+        })
     }
 }
 

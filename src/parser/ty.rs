@@ -148,7 +148,7 @@ impl Type {
                 let ok_type = Box::new(Type::parse(parser)?);
 
                 parser.expect_token(TokenType::Comma)?;
-                
+
                 let err_type = Box::new(Type::parse(parser)?);
 
                 match parser.current_token() {
@@ -350,7 +350,7 @@ fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
 
     let open_paren = match parser.current_token() {
         Some(Token::LParen { .. }) => {
-            let position = Position::new(parser.current, &parser.stream.span().input());
+            let position = parser.current_position();
             parser.next_token();
             Ok(Delimiter::LParen { position })
         }
@@ -377,20 +377,7 @@ fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         params.append(&mut subsequent_params.unwrap())
     };
 
-    match parser.current_token() {
-        Some(Token::RParen { .. }) => {
-            parser.next_token();
-        }
-        Some(Token::EOF) | None => {
-            parser.log_unmatched_delimiter(&open_paren);
-            parser.log_missing_token("`)`");
-            return Err(ErrorsEmitted);
-        }
-        _ => {
-            parser.log_unexpected_token("`)`");
-            return Err(ErrorsEmitted);
-        }
-    }
+    parser.expect_closing_paren(&open_paren)?;
 
     let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
         parser.next_token();
@@ -422,11 +409,7 @@ fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
 fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     let ty = Type::parse(parser)?;
 
-    if let Some(Token::Semicolon { .. }) = parser.current_token() {
-        parser.next_token();
-    } else {
-        parser.log_unexpected_token("`;`");
-    }
+    parser.expect_token(TokenType::Semicolon)?;
 
     let num_elements = match parser.next_token() {
         Some(Token::UIntLiteral { value, .. }) => Ok(value),
@@ -440,66 +423,38 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         }
     }?;
 
-    match parser.current_token() {
-        Some(Token::RBracket { .. }) => {
-            parser.next_token();
+    parser.expect_token(TokenType::RBracket)?;
 
-            Ok(Type::Array {
-                element_type: Box::new(ty),
-                num_elements,
-            })
-        }
-        Some(Token::EOF) | None => {
-            parser.log_missing_token("`]`");
-            Err(ErrorsEmitted)
-        }
-        _ => {
-            parser.log_unexpected_token("`]`");
-            Err(ErrorsEmitted)
-        }
-    }
+    Ok(Type::Array {
+        element_type: Box::new(ty),
+        num_elements,
+    })
 }
 
 fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
+    let open_paren = Delimiter::LParen {
+        position: Position::new(parser.current - 1, &parser.stream.span().input()),
+    };
+
     if let Some(Token::RParen { .. }) = parser.current_token() {
         parser.next_token();
         Ok(Type::UnitType(UnitType))
     } else if let Some(Token::Comma { .. }) = parser.peek_ahead_by(1) {
-        let open_delimiter = Delimiter::LParen {
-            position: Position::new(parser.current - 1, &parser.stream.span().input()),
-        };
-
-        let types =
-            if let Some(t) = collection::get_collection(parser, Type::parse, &open_delimiter)? {
-                parser.next_token();
-                Ok(t)
-            } else {
-                parser.log_missing("type", "tuple element type");
-                Err(ErrorsEmitted)
-            }?;
+        let types = if let Some(t) = collection::get_collection(parser, Type::parse, &open_paren)? {
+            parser.next_token();
+            Ok(t)
+        } else {
+            parser.log_missing("type", "tuple element type");
+            Err(ErrorsEmitted)
+        }?;
 
         Ok(Type::Tuple(types))
     } else {
         let ty = Type::parse(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RParen { .. }) => {
-                parser.next_token();
-                Ok(Type::GroupedType(Box::new(ty)))
-            }
-            Some(Token::EOF) | None => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
+        let _ = parser.get_parenthesized_item_span(None, &open_paren)?;
 
-                parser.log_unmatched_delimiter(&Delimiter::LParen { position });
-                parser.log_missing_token("`)`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`)`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(Type::GroupedType(Box::new(ty)))
     }
 }
 

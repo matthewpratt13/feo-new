@@ -38,16 +38,14 @@ impl ParseControlExpr for IfExpr {
             (Some(_), Some(b)) => parser.get_span(&first_token.unwrap().span(), &b.span),
         };
 
-        let expr = IfExpr {
+        Ok(IfExpr {
             kw_if,
             condition,
             if_block,
             else_if_blocks_opt,
             trailing_else_block_opt,
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 

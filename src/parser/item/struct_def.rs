@@ -43,31 +43,17 @@ impl ParseDefItem for StructDef {
 
         let fields_opt = collection::get_collection(parser, StructDefField::parse, &open_brace)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                Ok(StructDef {
-                    attributes_opt,
-                    visibility,
-                    kw_struct,
-                    struct_name,
-                    generic_params_opt,
-                    fields_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`}`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(StructDef {
+            attributes_opt,
+            visibility,
+            kw_struct,
+            struct_name,
+            generic_params_opt,
+            fields_opt,
+            span,
+        })
     }
 }
 
@@ -117,30 +103,17 @@ impl ParseDefItem for TupleStructDef {
 
         parser.expect_closing_paren(&open_paren)?;
 
-        match parser.current_token() {
-            Some(Token::Semicolon { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_decl_item_span(first_token.as_ref())?;
 
-                Ok(TupleStructDef {
-                    attributes_opt,
-                    visibility,
-                    kw_struct,
-                    struct_name,
-                    generic_params_opt,
-                    fields_opt: tuple_struct_fields_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`;`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`;`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(TupleStructDef {
+            attributes_opt,
+            visibility,
+            kw_struct,
+            struct_name,
+            generic_params_opt,
+            fields_opt: tuple_struct_fields_opt,
+            span,
+        })
     }
 }
 

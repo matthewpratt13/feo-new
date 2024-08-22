@@ -29,22 +29,13 @@ impl ParseConstructExpr for StructExpr {
         let struct_fields_opt =
             collection::get_collection(parser, parse_struct_field, &open_brace)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                Ok(StructExpr {
-                    struct_path,
-                    struct_fields_opt,
-                    span,
-                })
-            }
-            _ => {
-                parser.log_unmatched_delimiter(&open_brace);
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(StructExpr {
+            struct_path,
+            struct_fields_opt,
+            span,
+        })
     }
 }
 

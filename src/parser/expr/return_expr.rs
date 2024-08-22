@@ -30,13 +30,11 @@ impl ParseConstructExpr for ReturnExpr {
             parser.next_token();
         }
 
-        let expr = ReturnExpr {
+        Ok(ReturnExpr {
             kw_return,
             expression_opt,
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 

@@ -28,25 +28,16 @@ impl ParseConstructExpr for BlockExpr {
 
         let statements_opt = parse_statements(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                let expr = BlockExpr {
-                    attributes_opt,
-                    statements_opt,
-                    span,
-                };
+        parser.logger.debug("exiting `BlockExpr::parse()`");
+        parser.log_current_token(false);
 
-                parser.logger.debug("exiting `BlockExpr::parse()`");
-                parser.log_current_token(false);
-
-                Ok(expr)
-            }
-
-            _ => Err(parser.log_unmatched_delimiter(&open_brace)),
-        }
+        Ok(BlockExpr {
+            attributes_opt,
+            statements_opt,
+            span,
+        })
     }
 }
 

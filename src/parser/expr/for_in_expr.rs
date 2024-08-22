@@ -82,16 +82,14 @@ impl ParseControlExpr for ForInExpr {
 
         let span = parser.get_span(&first_token.unwrap().span(), &block.span);
 
-        let expr = ForInExpr {
+        Ok(ForInExpr {
             kw_for,
             pattern: Box::new(pattern),
             kw_in,
             iterator,
             block,
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 

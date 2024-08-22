@@ -26,15 +26,13 @@ impl ParsePattern for IdentifierPatt {
 
         let name = parser.expect_identifier()?;
 
-        let patt = IdentifierPatt {
-            kw_ref_opt,
-            kw_mut_opt,
-            name,
-        };
-
         parser.logger.debug("exiting `IdentifierPatt::parse()`");
         parser.log_current_token(false);
 
-        Ok(patt)
+        Ok(IdentifierPatt {
+            kw_ref_opt,
+            kw_mut_opt,
+            name,
+        })
     }
 }

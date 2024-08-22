@@ -44,31 +44,17 @@ impl ParseDefItem for EnumDef {
 
         let variants = parse_enum_variants(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                Ok(EnumDef {
-                    attributes_opt,
-                    visibility,
-                    kw_enum,
-                    enum_name,
-                    generic_params_opt,
-                    variants,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`}`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(EnumDef {
+            attributes_opt,
+            visibility,
+            kw_enum,
+            enum_name,
+            generic_params_opt,
+            variants,
+            span,
+        })
     }
 }
 
@@ -169,22 +155,9 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
         Err(ErrorsEmitted)
     }?;
 
-    match parser.current_token() {
-        Some(Token::RBrace { .. }) => {
-            parser.next_token();
+    let _ = parser.get_braced_item_span(None, &open_brace);
 
-            Ok(EnumVariantStruct { struct_fields })
-        }
-        Some(Token::EOF) | None => {
-            parser.log_unmatched_delimiter(&open_brace);
-            parser.log_missing_token("`}`");
-            Err(ErrorsEmitted)
-        }
-        _ => {
-            parser.log_unexpected_token("`}`");
-            Err(ErrorsEmitted)
-        }
-    }
+    Ok(EnumVariantStruct { struct_fields })
 }
 
 fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTupleStruct, ErrorsEmitted> {
@@ -206,22 +179,9 @@ fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTupleStruc
             Err(ErrorsEmitted)
         }?;
 
-    match parser.current_token() {
-        Some(Token::RParen { .. }) => {
-            parser.next_token();
+    let _ = parser.get_parenthesized_item_span(None, &open_paren);
 
-            Ok(EnumVariantTupleStruct { element_types })
-        }
-        Some(Token::EOF) | None => {
-            parser.log_unmatched_delimiter(&open_paren);
-            parser.log_missing_token("`)`");
-            Err(ErrorsEmitted)
-        }
-        _ => {
-            parser.log_unexpected_token("`)`");
-            Err(ErrorsEmitted)
-        }
-    }
+    Ok(EnumVariantTupleStruct { element_types })
 }
 
 #[cfg(test)]

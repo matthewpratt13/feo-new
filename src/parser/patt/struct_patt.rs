@@ -40,24 +40,12 @@ impl ParsePattern for StructPatt {
 
         let fields_opt = collection::get_collection(parser, parse_struct_patt_field, &open_brace)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                parser.next_token();
-                Ok(StructPatt {
-                    struct_path,
-                    struct_fields_opt: fields_opt,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`}`");
-                Err(ErrorsEmitted)
-            }
-        }
+        let _ = parser.get_braced_item_span(None, &open_brace)?;
+
+        Ok(StructPatt {
+            struct_path,
+            struct_fields_opt: fields_opt,
+        })
     }
 }
 
@@ -105,26 +93,15 @@ impl ParsePattern for TupleStructPatt {
                 ErrorsEmitted
             })
         })?;
+
         let elements_opt = parse_tuple_struct_patterns(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RParen { .. }) => {
-                parser.next_token();
-                Ok(TupleStructPatt {
-                    struct_path: tuple_struct_path,
-                    struct_elements_opt: elements_opt,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_paren);
-                parser.log_missing_token("`)`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`)`");
-                Err(ErrorsEmitted)
-            }
-        }
+        let _ = parser.get_parenthesized_item_span(None, &open_paren)?;
+
+        Ok(TupleStructPatt {
+            struct_path: tuple_struct_path,
+            struct_elements_opt: elements_opt,
+        })
     }
 }
 

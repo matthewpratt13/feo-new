@@ -10,11 +10,6 @@ impl OrPatt {
         parser: &mut Parser,
         first_pattern: Box<Pattern>,
     ) -> Result<OrPatt, ErrorsEmitted> {
-        ////////////////////////////////////////////////////////////////////////////////
-        parser.logger.debug("entering `OrPatt::parse_patt()`…");
-        parser.log_current_token(true);
-        ////////////////////////////////////////////////////////////////////////////////
-
         let first_pipe = match parser.current_token() {
             Some(Token::Pipe { .. }) => {
                 let position = parser.current_position();
@@ -28,11 +23,6 @@ impl OrPatt {
 
         let subsequent_patterns_opt =
             collection::get_collection(parser, parse_pattern, &first_pipe)?;
-
-        ////////////////////////////////////////////////////////////////////////////////
-        parser.logger.debug("exiting `OrPatt::parse_patt()`…");
-        parser.log_current_token(true);
-        ////////////////////////////////////////////////////////////////////////////////
 
         Ok(OrPatt {
             first_pattern,

@@ -57,31 +57,18 @@ impl ParseDeclItem for StaticVarDecl {
             Ok(None)
         }?;
 
-        match parser.current_token() {
-            Some(Token::Semicolon { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_decl_item_span(first_token.as_ref())?;
 
-                Ok(StaticVarDecl {
-                    attributes_opt,
-                    visibility,
-                    kw_static,
-                    kw_mut_opt,
-                    var_name,
-                    var_type,
-                    assignee_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`;`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`;`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(StaticVarDecl {
+            attributes_opt,
+            visibility,
+            kw_static,
+            kw_mut_opt,
+            var_name,
+            var_type,
+            assignee_opt,
+            span,
+        })
     }
 }
 

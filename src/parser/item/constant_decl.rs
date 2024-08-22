@@ -50,30 +50,17 @@ impl ParseDeclItem for ConstantDecl {
             Ok(None)
         }?;
 
-        match parser.current_token() {
-            Some(Token::Semicolon { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_decl_item_span(first_token.as_ref())?;
 
-                Ok(ConstantDecl {
-                    attributes_opt,
-                    visibility,
-                    kw_const,
-                    constant_name,
-                    constant_type,
-                    value_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`;`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`;`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(ConstantDecl {
+            attributes_opt,
+            visibility,
+            kw_const,
+            constant_name,
+            constant_type,
+            value_opt,
+            span,
+        })
     }
 }
 

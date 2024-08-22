@@ -22,7 +22,6 @@ impl ParseOperatorExpr for UnwrapExpr {
         match &last_token {
             Some(Token::QuestionMark { .. }) => {
                 let span = parser.get_span(left_expr_span, &last_token.unwrap().span());
-
                 parser.next_token();
 
                 let expr = UnwrapExpr {

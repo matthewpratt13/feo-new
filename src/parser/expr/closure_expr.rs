@@ -77,14 +77,12 @@ impl ParseConstructExpr for ClosureExpr {
         let start_span = first_token.unwrap().span();
         let span = parser.get_span(&start_span, &body_expression.span());
 
-        let expr = ClosureExpr {
+        Ok(ClosureExpr {
             closure_params,
             return_type_opt,
             body_expression: Box::new(body_expression),
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 

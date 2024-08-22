@@ -26,13 +26,11 @@ impl ParseConstructExpr for ResultExpr {
 
         let span = parser.get_span(&first_token.unwrap().span(), &expression.span);
 
-        let expr = ResultExpr {
+        Ok(ResultExpr {
             kw_ok_or_err,
             expression: Box::new(expression),
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 

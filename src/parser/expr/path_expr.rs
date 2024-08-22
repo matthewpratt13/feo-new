@@ -59,7 +59,10 @@ impl ParseSimpleExpr for PathExpr {
 
         let span = parser.get_span(&first_token.unwrap().span(), &last_token.unwrap().span());
 
-        let expr = PathExpr {
+        parser.logger.debug("exiting `PathExpr::parse()`");
+        parser.log_current_token(false);
+
+        Ok(PathExpr {
             path_root,
             tree_opt: {
                 match tree.is_empty() {
@@ -68,12 +71,7 @@ impl ParseSimpleExpr for PathExpr {
                 }
             },
             span,
-        };
-
-        parser.logger.debug("exiting `PathExpr::parse()`");
-        parser.log_current_token(false);
-
-        Ok(expr)
+        })
     }
 }
 

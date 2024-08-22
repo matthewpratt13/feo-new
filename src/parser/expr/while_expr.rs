@@ -25,14 +25,12 @@ impl ParseControlExpr for WhileExpr {
 
         let span = parser.get_span(&first_token.unwrap().span(), &block.span);
 
-        let expr = WhileExpr {
+        Ok(WhileExpr {
             kw_while,
             condition,
             block,
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 

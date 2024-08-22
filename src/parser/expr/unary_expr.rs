@@ -28,13 +28,11 @@ impl ParseSimpleExpr for UnaryExpr {
 
         let span = parser.get_span(&first_token.unwrap().span(), &value_expr.span());
 
-        let expr = UnaryExpr {
+        Ok(UnaryExpr {
             unary_op,
             value_expr: Box::new(value_expr),
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 
@@ -68,13 +66,11 @@ impl ParseSimpleExpr for ReferenceExpr {
 
         let span = parser.get_span(&first_token.unwrap().span(), &operand.span());
 
-        let expr = ReferenceExpr {
+        Ok(ReferenceExpr {
             reference_op,
             expression: Box::new(operand),
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 
@@ -104,13 +100,11 @@ impl ParseSimpleExpr for DereferenceExpr {
 
         let span = parser.get_span(&first_token.unwrap().span(), &assignee_expr.span());
 
-        let expr = DereferenceExpr {
+        Ok(DereferenceExpr {
             dereference_op,
             assignee_expr,
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 

@@ -64,30 +64,16 @@ impl ParseDefItem for InherentImplDef {
 
         let associated_items_opt = collection::get_associated_items::<InherentImplItem>(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                Ok(InherentImplDef {
-                    attributes_opt,
-                    kw_impl,
-                    nominal_type,
-                    generic_params_opt,
-                    associated_items_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`}`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(InherentImplDef {
+            attributes_opt,
+            kw_impl,
+            nominal_type,
+            generic_params_opt,
+            associated_items_opt,
+            span,
+        })
     }
 }
 
@@ -180,35 +166,20 @@ impl ParseDefItem for TraitImplDef {
 
         let associated_items_opt = collection::get_associated_items::<TraitImplItem>(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                parser.next_token();
-
-                Ok(TraitImplDef {
-                    attributes_opt,
-                    kw_impl,
-                    implemented_trait_path,
-                    implemented_trait_generic_params_opt,
-                    kw_for,
-                    implementing_type,
-                    implementing_type_generic_params_opt,
-                    where_clause_opt,
-                    associated_items_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`}`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(TraitImplDef {
+            attributes_opt,
+            kw_impl,
+            implemented_trait_path,
+            implemented_trait_generic_params_opt,
+            kw_for,
+            implementing_type,
+            implementing_type_generic_params_opt,
+            where_clause_opt,
+            associated_items_opt,
+            span,
+        })
     }
 }
 
