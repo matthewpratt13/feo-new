@@ -6,7 +6,7 @@ use crate::{
     error::ErrorsEmitted,
     parser::{collection, ParsePattern, Parser},
     span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 impl ParsePattern for StructPatt {
@@ -70,19 +70,7 @@ fn parse_struct_patt_field(parser: &mut Parser) -> Result<StructPattField, Error
         Err(ErrorsEmitted)
     }?;
 
-    match parser.current_token() {
-        Some(Token::Colon { .. }) => {
-            parser.next_token();
-        }
-        Some(Token::EOF) | None => {
-            parser.log_missing_token("`:`");
-            return Err(ErrorsEmitted);
-        }
-        _ => {
-            parser.log_unexpected_token("`:`");
-            return Err(ErrorsEmitted);
-        }
-    }
+    parser.expect_token(TokenType::Colon)?;
 
     let field_value = parser.parse_pattern()?;
 

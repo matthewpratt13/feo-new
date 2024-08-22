@@ -7,7 +7,7 @@ use crate::{
     },
     error::ErrorsEmitted,
     span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -213,20 +213,7 @@ impl StructDefField {
                 Err(ErrorsEmitted)
             }?;
 
-        match parser.current_token() {
-            Some(Token::Colon { .. }) => {
-                parser.next_token();
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`:`");
-                return Err(ErrorsEmitted);
-            }
-
-            _ => {
-                parser.log_unexpected_token("`:`");
-                return Err(ErrorsEmitted);
-            }
-        }
+        parser.expect_token(TokenType::Colon)?;
 
         let field_type = Box::new(Type::parse(parser)?);
 

@@ -11,7 +11,7 @@ use crate::{
     },
     error::ErrorsEmitted,
     span::Position,
-    token::Token,
+    token::{Token, TokenType},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
@@ -66,19 +66,7 @@ impl Type {
                 })
             }
             Some(Token::VecType { .. }) => {
-                match parser.current_token() {
-                    Some(Token::LessThan { .. }) => {
-                        parser.next_token();
-                    }
-                    Some(Token::EOF) | None => {
-                        parser.log_missing_token("`<`");
-                        return Err(ErrorsEmitted);
-                    }
-                    _ => {
-                        parser.log_unexpected_token("`<`");
-                        return Err(ErrorsEmitted);
-                    }
-                }
+                parser.expect_token(TokenType::LessThan)?;
 
                 let ty = Type::parse(parser)?;
 
@@ -101,35 +89,11 @@ impl Type {
             }
 
             Some(Token::MappingType { .. }) => {
-                match parser.current_token() {
-                    Some(Token::LessThan { .. }) => {
-                        parser.next_token();
-                    }
-                    Some(Token::EOF) | None => {
-                        parser.log_missing_token("`<`");
-                        return Err(ErrorsEmitted);
-                    }
-                    _ => {
-                        parser.log_unexpected_token("`<`");
-                        return Err(ErrorsEmitted);
-                    }
-                }
+                parser.expect_token(TokenType::LessThan)?;
 
                 let key_type = Box::new(Type::parse(parser)?);
 
-                match parser.current_token() {
-                    Some(Token::Comma { .. }) => {
-                        parser.next_token();
-                    }
-                    Some(Token::EOF) | None => {
-                        parser.log_missing_token("`,`");
-                        return Err(ErrorsEmitted);
-                    }
-                    _ => {
-                        parser.log_unexpected_token("`,`");
-                        return Err(ErrorsEmitted);
-                    }
-                }
+                parser.expect_token(TokenType::Comma)?;
 
                 let value_type = Box::new(Type::parse(parser)?);
 
@@ -154,19 +118,7 @@ impl Type {
             }
 
             Some(Token::OptionType { .. }) => {
-                match parser.current_token() {
-                    Some(Token::LessThan { .. }) => {
-                        parser.next_token();
-                    }
-                    Some(Token::EOF) | None => {
-                        parser.log_missing_token("`<`");
-                        return Err(ErrorsEmitted);
-                    }
-                    _ => {
-                        parser.log_unexpected_token("`<`");
-                        return Err(ErrorsEmitted);
-                    }
-                }
+                parser.expect_token(TokenType::LessThan)?;
 
                 let ty = Type::parse(parser)?;
 
@@ -191,34 +143,12 @@ impl Type {
             }
 
             Some(Token::ResultType { .. }) => {
-                match parser.current_token() {
-                    Some(Token::LessThan { .. }) => {
-                        parser.next_token();
-                    }
-                    Some(Token::EOF) | None => {
-                        parser.log_missing_token("`<`");
-                        return Err(ErrorsEmitted);
-                    }
-                    _ => {
-                        parser.log_unexpected_token("`<`");
-                        return Err(ErrorsEmitted);
-                    }
-                }
+                parser.expect_token(TokenType::LessThan)?;
+
                 let ok_type = Box::new(Type::parse(parser)?);
 
-                match parser.current_token() {
-                    Some(Token::Comma { .. }) => {
-                        parser.next_token();
-                    }
-                    Some(Token::EOF) | None => {
-                        parser.log_missing_token("`,`");
-                        return Err(ErrorsEmitted);
-                    }
-                    _ => {
-                        parser.log_unexpected_token("`,`");
-                        return Err(ErrorsEmitted);
-                    }
-                }
+                parser.expect_token(TokenType::Comma)?;
+                
                 let err_type = Box::new(Type::parse(parser)?);
 
                 match parser.current_token() {

@@ -2,7 +2,7 @@ use crate::{
     ast::{BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseConstructExpr, ParseControlExpr, Parser, Precedence},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -116,19 +116,7 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         None
     };
 
-    match parser.current_token() {
-        Some(Token::FatArrow { .. }) => {
-            parser.next_token();
-        }
-        Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
-            return Err(ErrorsEmitted);
-        }
-        _ => {
-            parser.log_unexpected_token("`=>`");
-            return Err(ErrorsEmitted);
-        }
-    }
+    parser.expect_token(TokenType::FatArrow)?;
 
     let arm_expression = if let Some(Token::LBrace { .. }) = parser.current_token() {
         Ok(Box::new(Expression::Block(BlockExpr::parse(parser)?)))
