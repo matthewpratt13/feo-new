@@ -26,22 +26,12 @@ impl ParseConstructExpr for TupleExpr {
 
         let tuple_elements = parse_tuple_elements(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RParen { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_parenthesized_item_span(first_token.as_ref(), &open_paren)?;
 
-                parser.next_token();
-
-                Ok(TupleExpr {
-                    tuple_elements,
-                    span,
-                })
-            }
-            _ => {
-                parser.log_unmatched_delimiter(&open_paren);
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(TupleExpr {
+            tuple_elements,
+            span,
+        })
     }
 }
 

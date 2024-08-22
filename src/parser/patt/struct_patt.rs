@@ -1,12 +1,11 @@
 use crate::{
     ast::{
-        Delimiter, Identifier, PathPatt, PathRoot, Pattern, SelfType, StructPatt, StructPattField,
+        Identifier, PathPatt, PathRoot, Pattern, SelfType, StructPatt, StructPattField,
         TupleStructPatt,
     },
     error::ErrorsEmitted,
     parser::{collection, ParsePattern, Parser},
-    span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 impl ParsePattern for StructPatt {
@@ -29,69 +28,39 @@ impl ParsePattern for StructPatt {
 
         parser.next_token();
 
-        let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
-            let position = Position::new(parser.current, &parser.stream.span().input());
-            parser.next_token();
-            Ok(Delimiter::LBrace { position })
-        } else {
-            parser.log_unexpected_token("`{`");
-            Err(ErrorsEmitted)
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
-        let fields_opt = collection::get_collection(parser, parse_struct_patt_field, &open_brace)?;
+        let struct_fields_opt =
+            collection::get_collection(parser, parse_struct_patt_field, &open_brace)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                parser.next_token();
-                Ok(StructPatt {
-                    struct_path,
-                    struct_fields_opt: fields_opt,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`}`");
-                Err(ErrorsEmitted)
-            }
-        }
+        let _ = parser.get_braced_item_span(None, &open_brace)?;
+
+        Ok(StructPatt {
+            struct_path,
+            struct_fields_opt,
+        })
     }
 }
 
 fn parse_struct_patt_field(parser: &mut Parser) -> Result<StructPattField, ErrorsEmitted> {
-    let field_name = if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
-        parser.next_token();
-        Ok(Identifier::from(&name))
-    } else {
-        parser.log_missing_token("struct field identifier");
-        Err(ErrorsEmitted)
-    }?;
+    let field_name = parser.expect_identifier()?;
 
-    match parser.current_token() {
-        Some(Token::Colon { .. }) => {
-            parser.next_token();
-        }
-        Some(Token::EOF) | None => {
-            parser.log_missing_token("`:`");
-            return Err(ErrorsEmitted);
-        }
-        _ => {
-            parser.log_unexpected_token("`:`");
-            return Err(ErrorsEmitted);
-        }
-    }
+    parser.expect_token(TokenType::Colon)?;
 
     let field_value = parser.parse_pattern()?;
 
-    let field = StructPattField {
+    Ok(StructPattField {
         field_name,
         field_value,
-    };
-
-    Ok(field)
+    })
 }
 
 impl ParsePattern for TupleStructPatt {
@@ -107,42 +76,31 @@ impl ParsePattern for TupleStructPatt {
             }
         }?;
 
-        let tuple_struct_path = PathPatt {
+        let struct_path = PathPatt {
             path_root,
             tree_opt: None,
         };
 
         parser.next_token();
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
-            let position = Position::new(parser.current, &parser.stream.span().input());
-            parser.next_token();
-            Ok(Delimiter::LParen { position })
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
-        }?;
+        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
-        let elements_opt = parse_tuple_struct_patterns(parser)?;
+        let struct_elements_opt = parse_tuple_struct_patterns(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RParen { .. }) => {
-                parser.next_token();
-                Ok(TupleStructPatt {
-                    struct_path: tuple_struct_path,
-                    struct_elements_opt: elements_opt,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_paren);
-                parser.log_missing_token("`)`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`)`");
-                Err(ErrorsEmitted)
-            }
-        }
+        let _ = parser.get_parenthesized_item_span(None, &open_paren)?;
+
+        Ok(TupleStructPatt {
+            struct_path,
+            struct_elements_opt,
+        })
     }
 }
 

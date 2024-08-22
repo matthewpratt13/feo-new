@@ -5,12 +5,11 @@ use super::{
 
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, FunctionItem, InherentImplDef, InherentImplItem,
-        Keyword, OuterAttr, TraitImplDef, TraitImplItem, Type, TypePath, Visibility,
+        AliasDecl, ConstantDecl, FunctionItem, InherentImplDef, InherentImplItem, Keyword,
+        OuterAttr, TraitImplDef, TraitImplItem, Type, TypePath, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
-    span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -53,49 +52,28 @@ impl ParseDefItem for InherentImplDef {
             (Some(_), Some(ga)) => Some(ga),
         };
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let associated_items_opt = collection::get_associated_items::<InherentImplItem>(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                parser.next_token();
-
-                Ok(InherentImplDef {
-                    attributes_opt,
-                    kw_impl,
-                    nominal_type,
-                    generic_params_opt,
-                    associated_items_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`}`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(InherentImplDef {
+            attributes_opt,
+            kw_impl,
+            nominal_type,
+            generic_params_opt,
+            associated_items_opt,
+            span,
+        })
     }
 }
 
@@ -166,13 +144,9 @@ impl ParseDefItem for TraitImplDef {
                 (Some(_), Some(ga)) => Some(ga),
             };
 
-        let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Keyword::For)
-        } else {
-            parser.log_unexpected_token("`for`");
-            Err(ErrorsEmitted)
-        }?;
+        let kw_for = parser
+            .expect_token(TokenType::For)
+            .and_then(|_| Ok(Keyword::For))?;
 
         let implementing_type = Type::parse(parser)?;
 
@@ -180,53 +154,32 @@ impl ParseDefItem for TraitImplDef {
 
         let where_clause_opt = parse_where_clause(parser)?;
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let associated_items_opt = collection::get_associated_items::<TraitImplItem>(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                parser.next_token();
-
-                Ok(TraitImplDef {
-                    attributes_opt,
-                    kw_impl,
-                    implemented_trait_path,
-                    implemented_trait_generic_params_opt,
-                    kw_for,
-                    implementing_type,
-                    implementing_type_generic_params_opt,
-                    where_clause_opt,
-                    associated_items_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_missing_token("`}`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`}`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(TraitImplDef {
+            attributes_opt,
+            kw_impl,
+            implemented_trait_path,
+            implemented_trait_generic_params_opt,
+            kw_for,
+            implementing_type,
+            implementing_type_generic_params_opt,
+            where_clause_opt,
+            associated_items_opt,
+            span,
+        })
     }
 }
 
@@ -383,7 +336,6 @@ mod tests {
 
     // TODO: add test for implementation def with generics and where clauses
     // TODO: e.g., `impl<T: Bar, U, V: Baz> Foo<T, U, V> { func foo(a: T, B: U) -> V }`
-    // TODO: e.g., `impl<T: Bar, U, V: Baz> FooBar for Foo<T, U, V> 
+    // TODO: e.g., `impl<T: Bar, U, V: Baz> FooBar for Foo<T, U, V>
     // TODO where Self: BarBaz + BazBar { func foo(a: T, B: U) -> V }`
-
 }

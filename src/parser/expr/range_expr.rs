@@ -38,7 +38,6 @@ impl RangeExpr {
                     if range_op == RangeOp::RangeInclusive {
                         parser.log_error(ParserErrorKind::UnexpectedRangeOp {
                             expected: format!("`{}`", RangeOp::RangeExclusive),
-
                             found: format!("`{}`", range_op),
                         });
                         return Err(ErrorsEmitted);
@@ -110,7 +109,6 @@ impl ParseOperatorExpr for RangeExpr {
                     if range_op == RangeOp::RangeInclusive {
                         parser.log_error(ParserErrorKind::UnexpectedRangeOp {
                             expected: format!("`{}`", RangeOp::RangeExclusive),
-
                             found: format!("`{}`", range_op),
                         });
                         return Err(ErrorsEmitted);

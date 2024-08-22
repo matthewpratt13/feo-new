@@ -43,7 +43,10 @@ impl ParsePattern for PathPatt {
             }
         }
 
-        let patt = PathPatt {
+        parser.logger.debug("exiting `PathPatt::parse()`");
+        parser.log_current_token(false);
+
+        Ok(PathPatt {
             path_root,
             tree_opt: {
                 match tree.is_empty() {
@@ -51,12 +54,7 @@ impl ParsePattern for PathPatt {
                     false => Some(tree),
                 }
             },
-        };
-
-        parser.logger.debug("exiting `PathPatt::parse()`");
-        parser.log_current_token(false);
-
-        Ok(patt)
+        })
     }
 }
 

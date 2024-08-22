@@ -1479,6 +1479,141 @@ impl Parser {
         }
     }
 
+    fn expect_token(&mut self, expected: TokenType) -> Result<(), ErrorsEmitted> {
+        match self.current_token() {
+            Some(t) if t.token_type() == expected => {
+                self.next_token();
+                Ok(())
+            }
+
+            Some(Token::EOF) | None => {
+                self.log_missing_token(&expected.to_string());
+                return Err(ErrorsEmitted);
+            }
+
+            Some(_) => {
+                self.log_unexpected_token(&expected.to_string());
+                return Err(ErrorsEmitted);
+            }
+        }
+    }
+
+    fn expect_delimiter(
+        &mut self,
+        expected: TokenType,
+    ) -> Result<Option<Delimiter>, ErrorsEmitted> {
+        if !matches!(
+            expected,
+            TokenType::LParen | TokenType::LBrace | TokenType::LBracket
+        ) {
+            return Ok(None);
+        }
+
+        let position = self.current_position();
+
+        match self.current_token() {
+            Some(Token::LParen { .. }) => {
+                self.next_token();
+                Ok(Some(Delimiter::LParen { position }))
+            }
+            Some(Token::LBrace { .. }) => {
+                self.next_token();
+                Ok(Some(Delimiter::LBrace { position }))
+            }
+            Some(Token::LBracket { .. }) => {
+                self.next_token();
+                Ok(Some(Delimiter::LBracket { position }))
+            }
+
+            Some(Token::EOF) | None => {
+                self.log_unexpected_eoi();
+                return Err(ErrorsEmitted);
+            }
+
+            Some(_) => {
+                self.log_unexpected_token(&expected.to_string());
+                return Err(ErrorsEmitted);
+            }
+        }
+    }
+
+    fn expect_block(&mut self) -> Result<BlockExpr, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::LBrace { .. }) => Ok(BlockExpr::parse(self)?),
+            Some(Token::EOF) | None => {
+                self.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
+    fn expect_grouped_expr(&mut self) -> Result<GroupedExpr, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::LParen { .. }) => Ok(GroupedExpr::parse(self)?),
+            Some(Token::EOF) | None => {
+                self.log_missing_token("`(`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
+    fn expect_grouped_patt(&mut self) -> Result<GroupedPatt, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::LParen { .. }) => Ok(GroupedPatt::parse_patt(self)?),
+            Some(Token::EOF) | None => {
+                self.log_missing_token("`(`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
+    fn expect_identifier(&mut self) -> Result<Identifier, ErrorsEmitted> {
+        match self.current_token().cloned() {
+            Some(Token::Identifier { name, .. }) => {
+                self.next_token();
+                Ok(Identifier::from(&name))
+            }
+            Some(Token::EOF) | None => {
+                self.log_missing_token("identifier");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("identifier");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
+    fn expect_closing_paren(&mut self, open_paren: &Delimiter) -> Result<(), ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::RParen { .. }) => {
+                self.next_token();
+                Ok(())
+            }
+            Some(Token::EOF) | None => {
+                self.log_unmatched_delimiter(open_paren);
+                self.log_missing_token("`)`");
+                return Err(ErrorsEmitted);
+            }
+            _ => {
+                self.log_unexpected_token("`)`");
+                return Err(ErrorsEmitted);
+            }
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // ERROR HANDLING
     ///////////////////////////////////////////////////////////////////////////
@@ -1524,7 +1659,7 @@ impl Parser {
     fn log_unexpected_token(&mut self, expected: &str) -> ErrorsEmitted {
         self.log_error(ParserErrorKind::UnexpectedToken {
             expected: expected.to_string(),
-            found: self.current_token().cloned(),
+            found: self.current_token().map(|t| t.token_type()).clone(),
         });
 
         self.next_token();
@@ -1718,6 +1853,71 @@ impl Parser {
             first_token.span().start(),
             self.current_token().unwrap().span().end(),
         )
+    }
+
+    fn get_braced_item_span(
+        &mut self,
+        first_token: Option<&Token>,
+        open_brace: &Delimiter,
+    ) -> Result<Span, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::RBrace { .. }) => {
+                let span = self.get_span_by_token(first_token.unwrap_or(&Token::EOF));
+                self.next_token();
+                Ok(span)
+            }
+            Some(Token::EOF) | None => {
+                self.log_unmatched_delimiter(open_brace);
+                self.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("`}`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
+    fn get_parenthesized_item_span(
+        &mut self,
+        first_token: Option<&Token>,
+        open_paren: &Delimiter,
+    ) -> Result<Span, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::RParen { .. }) => {
+                let span = self.get_span_by_token(first_token.unwrap_or(&Token::EOF));
+                self.next_token();
+                Ok(span)
+            }
+            Some(Token::EOF) | None => {
+                self.log_unmatched_delimiter(open_paren);
+                self.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("`)`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
+    fn get_decl_item_span(&mut self, first_token: Option<&Token>) -> Result<Span, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::Semicolon { .. }) => {
+                let span = self.get_span_by_token(first_token.unwrap_or(&Token::EOF));
+                self.next_token();
+                Ok(span)
+            }
+            Some(Token::EOF) | None => {
+                self.log_missing_token("`;`");
+                Err(ErrorsEmitted)
+            }
+
+            _ => {
+                self.log_unexpected_token("`;`");
+                Err(ErrorsEmitted)
+            }
+        }
     }
 
     /// Determine if `Token::Dot` token indicates a tuple index operator (i.e., if it is

@@ -2,13 +2,12 @@ use super::{collection, parse_generic_params, ParseDefItem, Parser};
 
 use crate::{
     ast::{
-        BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier,
-        IdentifierPatt, Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
+        BlockExpr, FunctionItem, FunctionOrMethodParam, FunctionParam, IdentifierPatt, Keyword,
+        OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
     },
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParsePattern},
-    span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -29,53 +28,24 @@ impl ParseDefItem for FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        let function_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("function identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let function_name = parser.expect_identifier()?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_paren = match parser.current_token() {
-            Some(Token::LParen { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                Ok(Delimiter::LParen { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`(`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let params_opt =
             collection::get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
 
-        match parser.current_token() {
-            Some(Token::RParen { .. }) => {
-                parser.next_token();
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_paren);
-                parser.log_missing_token("`)`");
-                return Err(ErrorsEmitted);
-            }
-            _ => {
-                parser.log_unexpected_token("`)`");
-                return Err(ErrorsEmitted);
-            }
-        }
+        parser.expect_closing_paren(&open_paren)?;
 
         let mut last_token = parser.current_token().cloned();
 
@@ -107,7 +77,7 @@ impl ParseDefItem for FunctionItem {
                     Ok(None)
                 }
                 Some(Token::EOF) | None => {
-                    parser.log_unmatched_delimiter(&open_paren);
+                    parser.log_unmatched_delimiter(&open_paren); // TODO: should be `{`
                     parser.log_missing_token("`}`");
                     Err(ErrorsEmitted)
                 }

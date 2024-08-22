@@ -1,7 +1,7 @@
 use crate::{
-    ast::{BlockExpr, GroupedExpr, Keyword, WhileExpr},
+    ast::{Keyword, WhileExpr},
     error::ErrorsEmitted,
-    parser::{ParseConstructExpr, ParseControlExpr, Parser},
+    parser::{ParseControlExpr, Parser},
     token::Token,
 };
 
@@ -19,40 +19,18 @@ impl ParseControlExpr for WhileExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let condition = match parser.current_token() {
-            Some(Token::LParen { .. }) => Ok(Box::new(GroupedExpr::parse(parser)?)),
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`(`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let condition = Box::new(parser.expect_grouped_expr()?);
 
-        let block = match parser.current_token() {
-            Some(Token::LBrace { .. }) => Ok(BlockExpr::parse(parser)?),
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let block = parser.expect_block()?;
 
         let span = parser.get_span(&first_token.unwrap().span(), &block.span);
 
-        let expr = WhileExpr {
+        Ok(WhileExpr {
             kw_while,
             condition,
             block,
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 

@@ -1,10 +1,10 @@
 use super::ParseDeclItem;
 
 use crate::{
-    ast::{ConstantDecl, Identifier, Keyword, OuterAttr, Type, ValueExpr, Visibility},
+    ast::{ConstantDecl, Keyword, OuterAttr, Type, ValueExpr, Visibility},
     error::ErrorsEmitted,
     parser::{Parser, Precedence},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -25,31 +25,9 @@ impl ParseDeclItem for ConstantDecl {
             Err(ErrorsEmitted)
         }?;
 
-        let constant_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let constant_name = parser.expect_identifier()?;
 
-        match parser.current_token() {
-            Some(Token::Colon { .. }) => {
-                parser.next_token();
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`:`");
-                return Err(ErrorsEmitted);
-            }
-            _ => {
-                parser.log_unexpected_token("`:`");
-                return Err(ErrorsEmitted);
-            }
-        }
+        parser.expect_token(TokenType::Colon)?;
 
         let constant_type = Box::new(Type::parse(parser)?);
 
@@ -72,31 +50,17 @@ impl ParseDeclItem for ConstantDecl {
             Ok(None)
         }?;
 
-        match parser.current_token() {
-            Some(Token::Semicolon { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_decl_item_span(first_token.as_ref())?;
 
-                parser.next_token();
-
-                Ok(ConstantDecl {
-                    attributes_opt,
-                    visibility,
-                    kw_const,
-                    constant_name,
-                    constant_type,
-                    value_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`;`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`;`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(ConstantDecl {
+            attributes_opt,
+            visibility,
+            kw_const,
+            constant_name,
+            constant_type,
+            value_opt,
+            span,
+        })
     }
 }
 

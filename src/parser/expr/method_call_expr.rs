@@ -1,9 +1,9 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, Identifier, MethodCallExpr},
+    ast::{AssigneeExpr, Expression, MethodCallExpr},
     error::ErrorsEmitted,
     parser::{collection, ParseOperatorExpr, Parser, Precedence},
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -17,36 +17,17 @@ impl ParseOperatorExpr for MethodCallExpr {
             ErrorsEmitted
         })?;
 
-        let method_name = match parser.current_token().cloned() {
-            Some(Token::Identifier { name, .. }) => {
-                parser.next_token();
-                Ok(Identifier::from(&name))
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("identifier");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let method_name = parser.expect_identifier()?;
 
-        let open_paren = match parser.current_token() {
-            Some(Token::LParen { .. }) => {
-                let position = parser.current_position();
-                parser.next_token();
-                Ok(Delimiter::LParen { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let args_opt = collection::get_expressions(parser, Precedence::Lowest, &open_paren)?;
 
@@ -55,7 +36,6 @@ impl ParseOperatorExpr for MethodCallExpr {
         match &last_token {
             Some(Token::RParen { .. }) => {
                 let span = parser.get_span(left_expr_span, &last_token.unwrap().span());
-
                 parser.next_token();
 
                 let expr = MethodCallExpr {

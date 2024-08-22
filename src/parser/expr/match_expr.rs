@@ -1,8 +1,8 @@
 use crate::{
-    ast::{BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
+    ast::{BlockExpr, Expression, Keyword, MatchArm, MatchExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseConstructExpr, ParseControlExpr, Parser, Precedence},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -29,21 +29,15 @@ impl ParseControlExpr for MatchExpr {
 
         let scrutinee = parser.parse_assignee_expr(Precedence::Lowest)?;
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = parser.current_position();
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let mut match_arms: Vec<MatchArm> = Vec::new();
 
@@ -66,32 +60,20 @@ impl ParseControlExpr for MatchExpr {
             Err(ErrorsEmitted)
         }?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                parser.next_token();
-
-                let expr = MatchExpr {
-                    kw_match,
-                    scrutinee,
-                    match_arms_opt: {
-                        match match_arms.is_empty() {
-                            true => None,
-                            false => Some(match_arms),
-                        }
-                    },
-                    final_arm,
-                    span,
-                };
-
-                Ok(expr)
-            }
-            _ => {
-                parser.log_unmatched_delimiter(&open_brace);
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(MatchExpr {
+            kw_match,
+            scrutinee,
+            match_arms_opt: {
+                match match_arms.is_empty() {
+                    true => None,
+                    false => Some(match_arms),
+                }
+            },
+            final_arm,
+            span,
+        })
     }
 }
 
@@ -116,24 +98,13 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         None
     };
 
-    match parser.current_token() {
-        Some(Token::FatArrow { .. }) => {
-            parser.next_token();
-        }
-        Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
-            return Err(ErrorsEmitted);
-        }
-        _ => {
-            parser.log_unexpected_token("`=>`");
-            return Err(ErrorsEmitted);
-        }
-    }
+    parser.expect_token(TokenType::FatArrow)?;
 
     let arm_expression = if let Some(Token::LBrace { .. }) = parser.current_token() {
         Ok(Box::new(Expression::Block(BlockExpr::parse(parser)?)))
     } else {
         let expr = Box::new(parser.parse_expression(Precedence::Lowest)?);
+
         match parser.current_token() {
             Some(Token::Comma { .. }) => {
                 parser.next_token();

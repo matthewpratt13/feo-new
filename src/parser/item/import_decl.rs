@@ -2,12 +2,11 @@ use super::{collection, ParseDeclItem, Parser};
 
 use crate::{
     ast::{
-        Delimiter, Identifier, ImportDecl, ImportTree, Keyword, OuterAttr, PathSegment, PathSubset,
-        PathWildcard, TypePath, Visibility,
+        ImportDecl, ImportTree, Keyword, OuterAttr, PathSegment, PathSubset, PathWildcard,
+        TypePath, Visibility,
     },
     error::ErrorsEmitted,
-    span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -30,29 +29,15 @@ impl ParseDeclItem for ImportDecl {
 
         let import_tree = parse_import_tree(parser)?;
 
-        match parser.current_token() {
-            Some(Token::Semicolon { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_decl_item_span(first_token.as_ref())?;
 
-                parser.next_token();
-
-                Ok(ImportDecl {
-                    attributes_opt,
-                    visibility,
-                    kw_import,
-                    import_tree,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`;`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`;`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(ImportDecl {
+            attributes_opt,
+            visibility,
+            kw_import,
+            import_tree,
+            span,
+        })
     }
 }
 
@@ -87,15 +72,7 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
 
     let as_clause_opt = if let Some(Token::As { .. }) = parser.current_token() {
         parser.next_token();
-
-        let id = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier::from(&name))
-        } else {
-            parser.log_unexpected_token("identifier");
-            Err(ErrorsEmitted)
-        }?;
-
-        Some(id)
+        Some(parser.expect_identifier()?)
     } else {
         None
     };
@@ -121,14 +98,15 @@ fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted>
 }
 
 fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
-    let open_brace = if let Some(Token::LBrace { .. }) = parser.current_token() {
-        let position = Position::new(parser.current, &parser.stream.span().input());
-        parser.next_token();
-        Ok(Delimiter::LBrace { position })
-    } else {
-        parser.log_unexpected_token("`{`");
-        Err(ErrorsEmitted)
-    }?;
+    let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+        d.ok_or_else(|| {
+            parser.logger.warn(&format!(
+                "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                parser.current_token()
+            ));
+            ErrorsEmitted
+        })
+    })?;
 
     let nested_trees =
         if let Some(t) = collection::get_collection(parser, parse_import_tree, &open_brace)? {
@@ -138,22 +116,9 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
             Err(ErrorsEmitted)
         }?;
 
-    match parser.current_token() {
-        Some(Token::RBrace { .. }) => {
-            parser.next_token();
+    let _ = parser.get_braced_item_span(None, &open_brace)?;
 
-            Ok(PathSubset { nested_trees })
-        }
-        Some(Token::EOF) | None => {
-            parser.log_unmatched_delimiter(&open_brace);
-            parser.log_unexpected_eoi();
-            Err(ErrorsEmitted)
-        }
-        _ => {
-            parser.log_unexpected_token("`}`");
-            Err(ErrorsEmitted)
-        }
-    }
+    Ok(PathSubset { nested_trees })
 }
 
 #[cfg(test)]

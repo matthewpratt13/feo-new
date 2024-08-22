@@ -22,20 +22,9 @@ impl ParseOperatorExpr for AssignmentExpr {
 
         let operator_token = parser.current_token().cloned().unwrap_or(Token::EOF);
 
-        let assignment_op = match &operator_token {
-            Token::Equals { .. } => {
-                parser.next_token();
-                Ok(AssignmentOp)
-            }
-            Token::EOF => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("assignment operator (`=`)");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let assignment_op = parser
+            .expect_token(TokenType::Equals)
+            .and_then(|_| Ok(AssignmentOp))?;
 
         let precedence = parser.get_precedence(&operator_token);
 

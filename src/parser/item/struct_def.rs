@@ -2,12 +2,11 @@ use super::{collection, parse_generic_params, ParseDefItem, Parser};
 
 use crate::{
     ast::{
-        Delimiter, Identifier, Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef,
-        TupleStructDefField, Type, Visibility,
+        Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef, TupleStructDefField, Type,
+        Visibility,
     },
     error::ErrorsEmitted,
-    span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -28,64 +27,33 @@ impl ParseDefItem for StructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-
-            _ => {
-                parser.log_unexpected_token("struct name");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let struct_name = parser.expect_identifier()?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let fields_opt = collection::get_collection(parser, StructDefField::parse, &open_brace)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                Ok(StructDef {
-                    attributes_opt,
-                    visibility,
-                    kw_struct,
-                    struct_name,
-                    generic_params_opt,
-                    fields_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`}`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(StructDef {
+            attributes_opt,
+            visibility,
+            kw_struct,
+            struct_name,
+            generic_params_opt,
+            fields_opt,
+            span,
+        })
     }
 }
 
@@ -116,74 +84,36 @@ impl ParseDefItem for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier::from(&name))
-        } else {
-            parser.log_unexpected_token("struct name");
-            Err(ErrorsEmitted)
-        }?;
+        let struct_name = parser.expect_identifier()?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_paren = match parser.current_token() {
-            Some(Token::LParen { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                Ok(Delimiter::LParen { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`(`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let tuple_struct_fields_opt =
             collection::get_collection(parser, parse_tuple_struct_def_field, &open_paren)?;
 
-        match parser.current_token() {
-            Some(Token::RParen { .. }) => {
-                parser.next_token();
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_paren);
-                parser.log_unexpected_eoi();
-                return Err(ErrorsEmitted);
-            }
-            _ => {
-                parser.log_unexpected_token("`)`");
-                return Err(ErrorsEmitted);
-            }
-        }
+        parser.expect_closing_paren(&open_paren)?;
 
-        match parser.current_token() {
-            Some(Token::Semicolon { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_decl_item_span(first_token.as_ref())?;
 
-                parser.next_token();
-
-                Ok(TupleStructDef {
-                    attributes_opt,
-                    visibility,
-                    kw_struct,
-                    struct_name,
-                    generic_params_opt,
-                    fields_opt: tuple_struct_fields_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`;`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`;`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(TupleStructDef {
+            attributes_opt,
+            visibility,
+            kw_struct,
+            struct_name,
+            generic_params_opt,
+            fields_opt: tuple_struct_fields_opt,
+            span,
+        })
     }
 }
 
@@ -204,40 +134,18 @@ impl StructDefField {
 
         let visibility = Visibility::visibility(parser)?;
 
-        let field_name =
-            if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
-                parser.next_token();
-                Ok(Identifier::from(&name))
-            } else {
-                parser.log_missing_token("struct field identifier");
-                Err(ErrorsEmitted)
-            }?;
+        let field_name = parser.expect_identifier()?;
 
-        match parser.current_token() {
-            Some(Token::Colon { .. }) => {
-                parser.next_token();
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`:`");
-                return Err(ErrorsEmitted);
-            }
-
-            _ => {
-                parser.log_unexpected_token("`:`");
-                return Err(ErrorsEmitted);
-            }
-        }
+        parser.expect_token(TokenType::Colon)?;
 
         let field_type = Box::new(Type::parse(parser)?);
 
-        let field = StructDefField {
+        Ok(StructDefField {
             attributes_opt,
             visibility,
             field_name,
             field_type,
-        };
-
-        Ok(field)
+        })
     }
 }
 
@@ -248,13 +156,11 @@ fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefFie
 
     let field_type = Box::new(Type::parse(parser)?);
 
-    let field = TupleStructDefField {
+    Ok(TupleStructDefField {
         attributes_opt,
         visibility,
         field_type,
-    };
-
-    Ok(field)
+    })
 }
 
 #[cfg(test)]

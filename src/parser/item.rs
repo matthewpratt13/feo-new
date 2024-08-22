@@ -22,7 +22,7 @@ use crate::{
     },
     error::{ErrorsEmitted, ParserErrorKind},
     span::Span,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 impl Item {
@@ -215,19 +215,7 @@ pub(crate) fn parse_generic_params(
                     ErrorsEmitted
                 })?;
 
-        match parser.current_token() {
-            Some(Token::GreaterThan { .. }) => {
-                parser.next_token();
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                return Err(ErrorsEmitted);
-            }
-            _ => {
-                parser.log_unexpected_token("`>`");
-                return Err(ErrorsEmitted);
-            }
-        }
+        parser.expect_token(TokenType::GreaterThan)?;
 
         Ok(Some(GenericParams { params: generics }))
     } else {
@@ -263,23 +251,11 @@ pub(crate) fn parse_generic_param(parser: &mut Parser) -> Result<GenericParam, E
         }
     };
 
-    let type_bound_opt = if let Some(Token::Colon { .. }) = parser.peek_ahead_by(1) {
-        parser.next_token();
-        parser.next_token();
+    parser.next_token();
 
-        match parser.current_token() {
-            Some(Token::Identifier { .. }) => {
-                TypePath::parse(parser, parser.current_token().cloned()).ok()
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                return Err(ErrorsEmitted);
-            }
-            _ => {
-                parser.log_unexpected_token("identifier");
-                return Err(ErrorsEmitted);
-            }
-        }
+    let type_bound_opt = if let Some(Token::Colon { .. }) = parser.current_token() {
+        parser.next_token();
+        TypePath::parse(parser, parser.current_token().cloned()).ok()
     } else {
         None
     };
@@ -324,15 +300,7 @@ pub(crate) fn parse_where_clause(
                     Some(Token::Plus { .. }) => {
                         parser.next_token();
                     }
-                    Some(Token::Comma { .. } | Token::LBrace { .. }) => break,
-                    Some(Token::EOF) | None => {
-                        parser.log_unexpected_eoi();
-                        return Err(ErrorsEmitted);
-                    }
-                    _ => {
-                        parser.log_unexpected_token("type path");
-                        return Err(ErrorsEmitted);
-                    }
+                    _ => break,
                 }
             }
 

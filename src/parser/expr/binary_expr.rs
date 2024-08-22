@@ -15,9 +15,6 @@ impl ParseOperatorExpr for BinaryExpr {
     /// This method parses the operator and calls `parse_expression()` recursively to handle
     /// the right-hand side of the expression.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        parser.logger.debug("entering `BinaryExpr::parse()`");
-        parser.log_current_token(true);
-
         let left_expr_span = &left_expr.span();
 
         let lhs: ValueExpr = left_expr.try_into().map_err(|e| {
@@ -80,9 +77,6 @@ impl ParseOperatorExpr for ComparisonExpr {
     /// Parse a comparison operation (i.e., `==`, `!=`, `<`, `>`, `<=` and `>=`), based on
     /// the input operator.
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
-        parser.logger.debug("entering `ComparisonExpr::parse()`");
-        parser.log_current_token(true);
-
         let left_expr_span = &left_expr.span();
 
         let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {

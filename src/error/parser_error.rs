@@ -1,4 +1,7 @@
-use crate::{span::Position, token::Token};
+use crate::{
+    span::Position,
+    token::{Token, TokenType},
+};
 
 use core::fmt;
 use std::error::Error;
@@ -14,7 +17,7 @@ pub enum ParserErrorKind {
 
     UnexpectedToken {
         expected: String,
-        found: Option<Token>,
+        found: Option<TokenType>,
     },
 
     MissingToken {
@@ -85,7 +88,7 @@ impl fmt::Display for ParserErrorKind {
             }
             ParserErrorKind::UnexpectedToken { expected, found } => write!(
                 f,
-                "unexpected token. Expected {expected}, found `{:?}`",
+                "unexpected token. Expected {expected}, found {:?}",
                 found
             ),
             ParserErrorKind::MissingToken { expected } => {

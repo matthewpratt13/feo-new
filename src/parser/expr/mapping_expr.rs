@@ -25,19 +25,9 @@ impl ParseConstructExpr for MappingExpr {
 
         let pairs_opt = collection::get_collection(parser, parse_mapping_pair, &open_brace)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                parser.next_token();
-
-                Ok(MappingExpr { pairs_opt, span })
-            }
-            _ => {
-                parser.log_unmatched_delimiter(&open_brace);
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(MappingExpr { pairs_opt, span })
     }
 }
 

@@ -1,10 +1,9 @@
 use super::{collection, ParseDefItem, Parser};
 
 use crate::{
-    ast::{Delimiter, Identifier, InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
+    ast::{InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
     error::ErrorsEmitted,
-    span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -25,63 +24,31 @@ impl ParseDefItem for ModuleItem {
             Err(ErrorsEmitted)
         }?;
 
-        let module_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("module identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let module_name = parser.expect_identifier()?;
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = Position::new(parser.current, &parser.stream.span().input());
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let (inner_attributes_opt, items_opt) = parse_items(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RBrace { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
 
-                parser.next_token();
-
-                Ok(ModuleItem {
-                    outer_attributes_opt,
-                    visibility,
-                    kw_module,
-                    module_name,
-                    inner_attributes_opt,
-                    items_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_brace);
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`}`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(ModuleItem {
+            outer_attributes_opt,
+            visibility,
+            kw_module,
+            module_name,
+            inner_attributes_opt,
+            items_opt,
+            span,
+        })
     }
 }
 

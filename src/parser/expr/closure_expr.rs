@@ -77,14 +77,12 @@ impl ParseConstructExpr for ClosureExpr {
         let start_span = first_token.unwrap().span();
         let span = parser.get_span(&start_span, &body_expression.span());
 
-        let expr = ClosureExpr {
+        Ok(ClosureExpr {
             closure_params,
             return_type_opt,
             body_expression: Box::new(body_expression),
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 
@@ -137,12 +135,10 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
         Ok(None)
     }?;
 
-    let param = ClosureParam {
+    Ok(ClosureParam {
         param_name,
         type_ann_opt,
-    };
-
-    Ok(param)
+    })
 }
 
 #[cfg(test)]

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Identifier, IdentifierPatt, Keyword},
+    ast::{IdentifierPatt, Keyword},
     error::ErrorsEmitted,
     parser::{ParsePattern, Parser},
     token::Token,
@@ -24,23 +24,15 @@ impl ParsePattern for IdentifierPatt {
             None
         };
 
-        let name = if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
-            parser.next_token();
-            Ok(Identifier::from(&name))
-        } else {
-            parser.log_unexpected_token("identifier");
-            Err(ErrorsEmitted)
-        }?;
-
-        let patt = IdentifierPatt {
-            kw_ref_opt,
-            kw_mut_opt,
-            name,
-        };
+        let name = parser.expect_identifier()?;
 
         parser.logger.debug("exiting `IdentifierPatt::parse()`");
         parser.log_current_token(false);
 
-        Ok(patt)
+        Ok(IdentifierPatt {
+            kw_ref_opt,
+            kw_mut_opt,
+            name,
+        })
     }
 }

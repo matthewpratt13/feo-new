@@ -1,7 +1,7 @@
 use super::{ParseDeclItem, Parser};
 
 use crate::{
-    ast::{AliasDecl, Identifier, Keyword, OuterAttr, Type, Visibility},
+    ast::{AliasDecl, Keyword, OuterAttr, Type, Visibility},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -24,17 +24,7 @@ impl ParseDeclItem for AliasDecl {
             Err(ErrorsEmitted)
         }?;
 
-        let alias_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let alias_name = parser.expect_identifier()?;
 
         let original_type_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
             parser.next_token();
@@ -49,31 +39,16 @@ impl ParseDeclItem for AliasDecl {
             Ok(None)
         }?;
 
-        match parser.current_token() {
-            Some(Token::Semicolon { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
+        let span = parser.get_decl_item_span(first_token.as_ref())?;
 
-                parser.next_token();
-
-                Ok(AliasDecl {
-                    attributes_opt,
-                    visibility,
-                    kw_alias,
-                    alias_name,
-                    original_type_opt,
-                    span,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`;`");
-                Err(ErrorsEmitted)
-            }
-
-            _ => {
-                parser.log_unexpected_token("`;`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(AliasDecl {
+            attributes_opt,
+            visibility,
+            kw_alias,
+            alias_name,
+            original_type_opt,
+            span,
+        })
     }
 }
 

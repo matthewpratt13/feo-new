@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, GroupedExpr, IfExpr, Keyword},
+    ast::{BlockExpr, IfExpr, Keyword},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParseControlExpr, Parser},
     token::Token,
@@ -19,29 +19,9 @@ impl ParseControlExpr for IfExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let condition = match parser.current_token() {
-            Some(Token::LParen { .. }) => Ok(Box::new(GroupedExpr::parse(parser)?)),
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`(`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let condition = Box::new(parser.expect_grouped_expr()?);
 
-        let if_block = match parser.current_token() {
-            Some(Token::LBrace { .. }) => Ok(Box::new(BlockExpr::parse(parser)?)),
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let if_block = Box::new(parser.expect_block()?);
 
         let (else_if_blocks_opt, trailing_else_block_opt) = parse_else_blocks(parser)?;
 
@@ -58,16 +38,14 @@ impl ParseControlExpr for IfExpr {
             (Some(_), Some(b)) => parser.get_span(&first_token.unwrap().span(), &b.span),
         };
 
-        let expr = IfExpr {
+        Ok(IfExpr {
             kw_if,
             condition,
             if_block,
             else_if_blocks_opt,
             trailing_else_block_opt,
             span,
-        };
-
-        Ok(expr)
+        })
     }
 }
 

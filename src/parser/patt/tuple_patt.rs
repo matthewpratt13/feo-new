@@ -19,24 +19,11 @@ impl ParsePattern for TuplePatt {
 
         let tuple_patt_elements = parse_tuple_patt_elements(parser)?;
 
-        match parser.current_token() {
-            Some(Token::RParen { .. }) => {
-                parser.next_token();
+        let _ = parser.get_parenthesized_item_span(None, &open_paren)?;
 
-                Ok(TuplePatt {
-                    tuple_patt_elements,
-                })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unmatched_delimiter(&open_paren);
-                parser.log_missing_token("`)`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`)`");
-                Err(ErrorsEmitted)
-            }
-        }
+        Ok(TuplePatt {
+            tuple_patt_elements,
+        })
     }
 }
 

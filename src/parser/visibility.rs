@@ -4,7 +4,7 @@ use crate::{
     ast::{Delimiter, Keyword, PubLibVis, Visibility},
     error::ErrorsEmitted,
     span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -22,42 +22,18 @@ impl Visibility {
                         };
                         parser.next_token();
 
-                        let kw_lib = match parser.current_token() {
-                            Some(Token::Lib { .. }) => {
-                                parser.next_token();
-                                Ok(Keyword::Lib)
-                            }
-                            Some(Token::EOF) | None => {
-                                parser.log_unexpected_eoi();
-                                Err(ErrorsEmitted)
-                            }
-                            _ => {
-                                parser.log_unexpected_token("`lib`");
-                                Err(ErrorsEmitted)
-                            }
-                        }?;
+                        let kw_lib = parser
+                            .expect_token(TokenType::Lib)
+                            .and_then(|_| Ok(Keyword::Lib))?;
 
-                        match parser.current_token() {
-                            Some(Token::RParen { .. }) => {
-                                parser.next_token();
+                        parser.expect_closing_paren(&open_paren)?;
 
-                                let pub_lib = PubLibVis {
-                                    kw_pub: Keyword::Pub,
-                                    kw_lib,
-                                };
+                        let pub_lib = PubLibVis {
+                            kw_pub: Keyword::Pub,
+                            kw_lib,
+                        };
 
-                                Ok(Visibility::PubLib(pub_lib))
-                            }
-                            Some(Token::EOF) | None => {
-                                parser.log_unmatched_delimiter(&open_paren);
-                                parser.log_unexpected_eoi();
-                                Err(ErrorsEmitted)
-                            }
-                            _ => {
-                                parser.log_unexpected_token("`)`");
-                                Err(ErrorsEmitted)
-                            }
-                        }
+                        Ok(Visibility::PubLib(pub_lib))
                     }
                     _ => Ok(Visibility::Pub),
                 }
