@@ -1479,23 +1479,27 @@ impl Parser {
         }
     }
 
-    fn expect_token(&mut self, expected: TokenType) -> Result<(), ErrorsEmitted> {
-        match self.current_token() {
-            Some(t) if t.token_type() == expected => {
-                self.next_token();
-                Ok(())
-            }
+    fn expect_token(&mut self, expected: Vec<TokenType>) -> Result<(), ErrorsEmitted> {
+        for token in expected.iter() {
+            match self.current_token() {
+                Some(t) if expected.contains(&t.token_type()) => {
+                    self.next_token();
+                    break;
+                }
 
-            Some(Token::EOF) | None => {
-                self.log_missing_token(&expected.to_string());
-                Err(ErrorsEmitted)
-            }
+                Some(Token::EOF) | None => {
+                    self.log_missing_token(&format!("{:?}", expected));
+                    return Err(ErrorsEmitted);
+                }
 
-            Some(_) => {
-                self.log_unexpected_token(&expected.to_string());
-                Err(ErrorsEmitted)
+                Some(_) => {
+                    self.log_unexpected_token(&token.to_string());
+                    return Err(ErrorsEmitted);
+                }
             }
         }
+
+        Ok(())
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1543,7 +1547,7 @@ impl Parser {
     fn log_unexpected_token(&mut self, expected: &str) -> ErrorsEmitted {
         self.log_error(ParserErrorKind::UnexpectedToken {
             expected: expected.to_string(),
-            found: self.current_token().cloned(),
+            found: self.current_token().map(|t| t.token_type()).clone(),
         });
 
         self.next_token();

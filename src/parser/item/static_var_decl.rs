@@ -44,7 +44,7 @@ impl ParseDeclItem for StaticVarDecl {
             }
         }?;
 
-        parser.expect_token(TokenType::Colon)?;
+        parser.expect_token(vec![TokenType::Colon])?;
 
         let var_type = Type::parse(parser)?;
 

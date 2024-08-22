@@ -37,7 +37,7 @@ impl ParseDeclItem for ConstantDecl {
             }
         }?;
 
-        parser.expect_token(TokenType::Colon)?;
+        parser.expect_token(vec![TokenType::Colon])?;
 
         let constant_type = Box::new(Type::parse(parser)?);
 

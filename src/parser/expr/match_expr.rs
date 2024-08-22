@@ -116,7 +116,7 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         None
     };
 
-    parser.expect_token(TokenType::FatArrow)?;
+    parser.expect_token(vec![TokenType::FatArrow])?;
 
     let arm_expression = if let Some(Token::LBrace { .. }) = parser.current_token() {
         Ok(Box::new(Expression::Block(BlockExpr::parse(parser)?)))

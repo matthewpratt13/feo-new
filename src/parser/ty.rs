@@ -66,7 +66,7 @@ impl Type {
                 })
             }
             Some(Token::VecType { .. }) => {
-                parser.expect_token(TokenType::LessThan)?;
+                parser.expect_token(vec![TokenType::LessThan])?;
 
                 let ty = Type::parse(parser)?;
 
@@ -89,11 +89,11 @@ impl Type {
             }
 
             Some(Token::MappingType { .. }) => {
-                parser.expect_token(TokenType::LessThan)?;
+                parser.expect_token(vec![TokenType::LessThan])?;
 
                 let key_type = Box::new(Type::parse(parser)?);
 
-                parser.expect_token(TokenType::Comma)?;
+                parser.expect_token(vec![TokenType::Comma])?;
 
                 let value_type = Box::new(Type::parse(parser)?);
 
@@ -118,7 +118,7 @@ impl Type {
             }
 
             Some(Token::OptionType { .. }) => {
-                parser.expect_token(TokenType::LessThan)?;
+                parser.expect_token(vec![TokenType::LessThan])?;
 
                 let ty = Type::parse(parser)?;
 
@@ -143,12 +143,12 @@ impl Type {
             }
 
             Some(Token::ResultType { .. }) => {
-                parser.expect_token(TokenType::LessThan)?;
+                parser.expect_token(vec![TokenType::LessThan])?;
 
                 let ok_type = Box::new(Type::parse(parser)?);
 
-                parser.expect_token(TokenType::Comma)?;
-                
+                parser.expect_token(vec![TokenType::Comma])?;
+
                 let err_type = Box::new(Type::parse(parser)?);
 
                 match parser.current_token() {
