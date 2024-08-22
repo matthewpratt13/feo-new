@@ -213,7 +213,7 @@ impl StructDefField {
                 Err(ErrorsEmitted)
             }?;
 
-        parser.expect_token(vec![TokenType::Colon])?;
+        parser.expect_token(TokenType::Colon)?;
 
         let field_type = Box::new(Type::parse(parser)?);
 

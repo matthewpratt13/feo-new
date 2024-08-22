@@ -70,7 +70,7 @@ fn parse_struct_patt_field(parser: &mut Parser) -> Result<StructPattField, Error
         Err(ErrorsEmitted)
     }?;
 
-    parser.expect_token(vec![TokenType::Colon])?;
+    parser.expect_token(TokenType::Colon)?;
 
     let field_value = parser.parse_pattern()?;
 

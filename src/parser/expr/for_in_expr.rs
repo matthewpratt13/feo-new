@@ -2,7 +2,7 @@ use crate::{
     ast::{BlockExpr, Expression, ForInExpr, Keyword, Literal},
     error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseConstructExpr, ParseControlExpr, Parser, Precedence},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -32,20 +32,9 @@ impl ParseControlExpr for ForInExpr {
             _ => parser.parse_pattern(),
         }?;
 
-        let kw_in = match parser.current_token() {
-            Some(Token::In { .. }) => {
-                parser.next_token();
-                Ok(Keyword::In)
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`in`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`in`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let kw_in = parser
+            .expect_token(TokenType::In)
+            .and_then(|_| Ok(Keyword::In))?;
 
         let expression = parser.parse_expression(Precedence::Lowest)?;
 

@@ -1479,27 +1479,23 @@ impl Parser {
         }
     }
 
-    fn expect_token(&mut self, expected: Vec<TokenType>) -> Result<(), ErrorsEmitted> {
-        for token in expected.iter() {
-            match self.current_token() {
-                Some(t) if expected.contains(&t.token_type()) => {
-                    self.next_token();
-                    break;
-                }
+    fn expect_token(&mut self, expected: TokenType) -> Result<(), ErrorsEmitted> {
+        match self.current_token() {
+            Some(t) if t.token_type() == expected => {
+                self.next_token();
+                Ok(())
+            }
 
-                Some(Token::EOF) | None => {
-                    self.log_missing_token(&format!("{:?}", expected));
-                    return Err(ErrorsEmitted);
-                }
+            Some(Token::EOF) | None => {
+                self.log_missing_token(&expected.to_string());
+                return Err(ErrorsEmitted);
+            }
 
-                Some(_) => {
-                    self.log_unexpected_token(&token.to_string());
-                    return Err(ErrorsEmitted);
-                }
+            Some(_) => {
+                self.log_unexpected_token(&expected.to_string());
+                return Err(ErrorsEmitted);
             }
         }
-
-        Ok(())
     }
 
     ///////////////////////////////////////////////////////////////////////////

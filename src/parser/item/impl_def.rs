@@ -10,7 +10,7 @@ use crate::{
     },
     error::{ErrorsEmitted, ParserErrorKind},
     span::Position,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -166,13 +166,9 @@ impl ParseDefItem for TraitImplDef {
                 (Some(_), Some(ga)) => Some(ga),
             };
 
-        let kw_for = if let Some(Token::For { .. }) = parser.current_token() {
-            parser.next_token();
-            Ok(Keyword::For)
-        } else {
-            parser.log_unexpected_token("`for`");
-            Err(ErrorsEmitted)
-        }?;
+        let kw_for = parser
+            .expect_token(TokenType::For)
+            .and_then(|_| Ok(Keyword::For))?;
 
         let implementing_type = Type::parse(parser)?;
 
@@ -383,7 +379,6 @@ mod tests {
 
     // TODO: add test for implementation def with generics and where clauses
     // TODO: e.g., `impl<T: Bar, U, V: Baz> Foo<T, U, V> { func foo(a: T, B: U) -> V }`
-    // TODO: e.g., `impl<T: Bar, U, V: Baz> FooBar for Foo<T, U, V> 
+    // TODO: e.g., `impl<T: Bar, U, V: Baz> FooBar for Foo<T, U, V>
     // TODO where Self: BarBaz + BazBar { func foo(a: T, B: U) -> V }`
-
 }

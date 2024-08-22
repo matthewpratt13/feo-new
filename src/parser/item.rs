@@ -22,7 +22,7 @@ use crate::{
     },
     error::{ErrorsEmitted, ParserErrorKind},
     span::Span,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 impl Item {
@@ -215,19 +215,7 @@ pub(crate) fn parse_generic_params(
                     ErrorsEmitted
                 })?;
 
-        match parser.current_token() {
-            Some(Token::GreaterThan { .. }) => {
-                parser.next_token();
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                return Err(ErrorsEmitted);
-            }
-            _ => {
-                parser.log_unexpected_token("`>`");
-                return Err(ErrorsEmitted);
-            }
-        }
+        parser.expect_token(TokenType::GreaterThan)?;
 
         Ok(Some(GenericParams { params: generics }))
     } else {

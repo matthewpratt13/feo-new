@@ -88,14 +88,11 @@ impl fmt::Display for ParserErrorKind {
             }
             ParserErrorKind::UnexpectedToken { expected, found } => write!(
                 f,
-                "unexpected token. Expected one of: {expected}, found {:?}",
+                "unexpected token. Expected {expected}, found {:?}",
                 found
             ),
             ParserErrorKind::MissingToken { expected } => {
-                write!(
-                    f,
-                    "token not found. Expected one of: {expected}, found none"
-                )
+                write!(f, "token not found. Expected {expected}, found none")
             }
             ParserErrorKind::UnmatchedDelimiter { delim, position } => {
                 write!(
