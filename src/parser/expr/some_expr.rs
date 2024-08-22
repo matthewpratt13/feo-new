@@ -1,5 +1,5 @@
 use crate::{
-    ast::{GroupedExpr, Keyword, SomeExpr},
+    ast::{Keyword, SomeExpr},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, Parser},
     token::Token,
@@ -19,17 +19,7 @@ impl ParseConstructExpr for SomeExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let expression = match parser.current_token() {
-            Some(Token::LParen { .. }) => Ok(GroupedExpr::parse(parser)?),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let expression = parser.expect_grouped_expr()?;
 
         let span = parser.get_span(&first_token.unwrap().span(), &expression.span);
 

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{GroupedPatt, Keyword, ResultPatt},
+    ast::{Keyword, ResultPatt},
     error::ErrorsEmitted,
     parser::{ParsePattern, Parser},
     token::Token,
@@ -18,17 +18,7 @@ impl ParsePattern for ResultPatt {
 
         parser.next_token();
 
-        let pattern = match parser.current_token() {
-            Some(Token::LParen { .. }) => Ok(Box::new(GroupedPatt::parse_patt(parser)?)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let pattern = Box::new(parser.expect_grouped_patt()?);
 
         Ok(ResultPatt {
             kw_ok_or_err,

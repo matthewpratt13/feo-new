@@ -1551,6 +1551,34 @@ impl Parser {
         }
     }
 
+    fn expect_grouped_expr(&mut self) -> Result<GroupedExpr, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::LParen { .. }) => Ok(GroupedExpr::parse(self)?),
+            Some(Token::EOF) | None => {
+                self.log_missing_token("`(`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
+    fn expect_grouped_patt(&mut self) -> Result<GroupedPatt, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::LParen { .. }) => Ok(GroupedPatt::parse_patt(self)?),
+            Some(Token::EOF) | None => {
+                self.log_missing_token("`(`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("`(`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
     fn expect_identifier(&mut self) -> Result<Identifier, ErrorsEmitted> {
         match self.current_token().cloned() {
             Some(Token::Identifier { name, .. }) => {
@@ -1569,7 +1597,6 @@ impl Parser {
     }
 
     // TODO: add `expect_closing_paren()`
-    // TODO: add `expect_identifier()`
     // TODO: add `expect_grouped_expr`
     // TODO: add `get_def_item()`
 

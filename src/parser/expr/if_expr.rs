@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, GroupedExpr, IfExpr, Keyword},
+    ast::{BlockExpr, IfExpr, Keyword},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParseControlExpr, Parser},
     token::Token,
@@ -19,17 +19,7 @@ impl ParseControlExpr for IfExpr {
             Err(ErrorsEmitted)
         }?;
 
-        let condition = match parser.current_token() {
-            Some(Token::LParen { .. }) => Ok(Box::new(GroupedExpr::parse(parser)?)),
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`(`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let condition = Box::new(parser.expect_grouped_expr()?);
 
         let if_block = Box::new(parser.expect_block()?);
 
