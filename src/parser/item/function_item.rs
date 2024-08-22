@@ -2,8 +2,8 @@ use super::{collection, parse_generic_params, ParseDefItem, Parser};
 
 use crate::{
     ast::{
-        BlockExpr, FunctionItem, FunctionOrMethodParam, FunctionParam, Identifier, IdentifierPatt,
-        Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
+        BlockExpr, FunctionItem, FunctionOrMethodParam, FunctionParam, IdentifierPatt, Keyword,
+        OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
     },
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParsePattern},
@@ -28,17 +28,7 @@ impl ParseDefItem for FunctionItem {
             Err(ErrorsEmitted)
         }?;
 
-        let function_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("function identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let function_name = parser.expect_identifier()?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 

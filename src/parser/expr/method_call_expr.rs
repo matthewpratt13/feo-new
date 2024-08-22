@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AssigneeExpr, Expression, Identifier, MethodCallExpr},
+    ast::{AssigneeExpr, Expression, MethodCallExpr},
     error::ErrorsEmitted,
     parser::{collection, ParseOperatorExpr, Parser, Precedence},
     span::Spanned,
@@ -17,20 +17,7 @@ impl ParseOperatorExpr for MethodCallExpr {
             ErrorsEmitted
         })?;
 
-        let method_name = match parser.current_token().cloned() {
-            Some(Token::Identifier { name, .. }) => {
-                parser.next_token();
-                Ok(Identifier::from(&name))
-            }
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("identifier");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let method_name = parser.expect_identifier()?;
 
         let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
             d.ok_or_else(|| {

@@ -2,8 +2,8 @@ use super::{collection, parse_generic_params, ParseDefItem, Parser};
 
 use crate::{
     ast::{
-        Identifier, Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef,
-        TupleStructDefField, Type, Visibility,
+        Keyword, OuterAttr, StructDef, StructDefField, TupleStructDef, TupleStructDefField, Type,
+        Visibility,
     },
     error::ErrorsEmitted,
     token::{Token, TokenType},
@@ -27,18 +27,7 @@ impl ParseDefItem for StructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-
-            _ => {
-                parser.log_unexpected_token("struct name");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let struct_name = parser.expect_identifier()?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
@@ -109,12 +98,7 @@ impl ParseDefItem for TupleStructDef {
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = if let Some(Token::Identifier { name, .. }) = parser.next_token() {
-            Ok(Identifier::from(&name))
-        } else {
-            parser.log_unexpected_token("struct name");
-            Err(ErrorsEmitted)
-        }?;
+        let struct_name = parser.expect_identifier()?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
@@ -149,7 +133,6 @@ impl ParseDefItem for TupleStructDef {
         match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
                 let span = parser.get_span_by_token(&first_token.unwrap());
-
                 parser.next_token();
 
                 Ok(TupleStructDef {
@@ -191,14 +174,7 @@ impl StructDefField {
 
         let visibility = Visibility::visibility(parser)?;
 
-        let field_name =
-            if let Some(Token::Identifier { name, .. }) = parser.current_token().cloned() {
-                parser.next_token();
-                Ok(Identifier::from(&name))
-            } else {
-                parser.log_missing_token("struct field identifier");
-                Err(ErrorsEmitted)
-            }?;
+        let field_name = parser.expect_identifier()?;
 
         parser.expect_token(TokenType::Colon)?;
 

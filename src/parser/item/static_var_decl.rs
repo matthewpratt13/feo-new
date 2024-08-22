@@ -1,7 +1,7 @@
 use super::{ParseDeclItem, Parser};
 
 use crate::{
-    ast::{AssigneeExpr, Identifier, Keyword, OuterAttr, StaticVarDecl, Type, Visibility},
+    ast::{AssigneeExpr, Keyword, OuterAttr, StaticVarDecl, Type, Visibility},
     error::ErrorsEmitted,
     parser::Precedence,
     token::{Token, TokenType},
@@ -32,17 +32,7 @@ impl ParseDeclItem for StaticVarDecl {
             None
         };
 
-        let var_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("static variable identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let var_name = parser.expect_identifier()?;
 
         parser.expect_token(TokenType::Colon)?;
 

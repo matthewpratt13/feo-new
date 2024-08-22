@@ -1,7 +1,7 @@
 use super::ParseDeclItem;
 
 use crate::{
-    ast::{ConstantDecl, Identifier, Keyword, OuterAttr, Type, ValueExpr, Visibility},
+    ast::{ConstantDecl, Keyword, OuterAttr, Type, ValueExpr, Visibility},
     error::ErrorsEmitted,
     parser::{Parser, Precedence},
     token::{Token, TokenType},
@@ -25,17 +25,7 @@ impl ParseDeclItem for ConstantDecl {
             Err(ErrorsEmitted)
         }?;
 
-        let constant_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let constant_name = parser.expect_identifier()?;
 
         parser.expect_token(TokenType::Colon)?;
 

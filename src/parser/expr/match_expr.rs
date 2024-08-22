@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, Delimiter, Expression, Keyword, MatchArm, MatchExpr},
+    ast::{BlockExpr, Expression, Keyword, MatchArm, MatchExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseConstructExpr, ParseControlExpr, Parser, Precedence},
     token::{Token, TokenType},
@@ -29,21 +29,15 @@ impl ParseControlExpr for MatchExpr {
 
         let scrutinee = parser.parse_assignee_expr(Precedence::Lowest)?;
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = parser.current_position();
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let mut match_arms: Vec<MatchArm> = Vec::new();
 
@@ -122,7 +116,7 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         Ok(Box::new(Expression::Block(BlockExpr::parse(parser)?)))
     } else {
         let expr = Box::new(parser.parse_expression(Precedence::Lowest)?);
-        
+
         match parser.current_token() {
             Some(Token::Comma { .. }) => {
                 parser.next_token();

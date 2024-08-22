@@ -1551,6 +1551,23 @@ impl Parser {
         }
     }
 
+    fn expect_identifier(&mut self) -> Result<Identifier, ErrorsEmitted> {
+        match self.current_token().cloned() {
+            Some(Token::Identifier { name, .. }) => {
+                self.next_token();
+                Ok(Identifier::from(&name))
+            }
+            Some(Token::EOF) | None => {
+                self.log_missing_token("identifier");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("identifier");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
     // TODO: add `expect_closing_paren()`
     // TODO: add `expect_identifier()`
     // TODO: add `expect_grouped_expr`

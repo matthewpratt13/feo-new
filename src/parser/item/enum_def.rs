@@ -28,17 +28,7 @@ impl ParseDefItem for EnumDef {
             Err(ErrorsEmitted)
         }?;
 
-        let enum_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("enum identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let enum_name = parser.expect_identifier()?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Identifier, OuterAttr, PathExpr, StructExpr, StructField, TupleStructExpr},
+    ast::{Expression, OuterAttr, PathExpr, StructExpr, StructField, TupleStructExpr},
     error::ErrorsEmitted,
     parser::{
         collection, ParseConstructExpr, ParseOperatorExpr, ParseSimpleExpr, Parser, Precedence,
@@ -107,20 +107,7 @@ impl fmt::Debug for TupleStructExpr {
 fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted> {
     let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
-    let field_name = match parser.current_token().cloned() {
-        Some(Token::Identifier { name, .. }) => {
-            parser.next_token();
-            Ok(Identifier::from(&name))
-        }
-        Some(Token::EOF) | None => {
-            parser.log_missing_token("identifier");
-            Err(ErrorsEmitted)
-        }
-        _ => {
-            parser.log_unexpected_token("identifier");
-            Err(ErrorsEmitted)
-        }
-    }?;
+    let field_name = parser.expect_identifier()?;
 
     match parser.current_token() {
         Some(Token::Colon { .. }) => {

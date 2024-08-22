@@ -5,7 +5,7 @@ use super::{
 
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, FunctionItem, Identifier, InnerAttr, Keyword, OuterAttr, TraitDef,
+        AliasDecl, ConstantDecl, FunctionItem, InnerAttr, Keyword, OuterAttr, TraitDef,
         TraitDefItem, Visibility,
     },
     error::ErrorsEmitted,
@@ -31,17 +31,7 @@ impl ParseDefItem for TraitDef {
             Err(ErrorsEmitted)
         }?;
 
-        let trait_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let trait_name = parser.expect_identifier()?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 

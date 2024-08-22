@@ -1,7 +1,7 @@
 use super::{ParseDeclItem, Parser};
 
 use crate::{
-    ast::{AliasDecl, Identifier, Keyword, OuterAttr, Type, Visibility},
+    ast::{AliasDecl, Keyword, OuterAttr, Type, Visibility},
     error::ErrorsEmitted,
     token::Token,
 };
@@ -24,17 +24,7 @@ impl ParseDeclItem for AliasDecl {
             Err(ErrorsEmitted)
         }?;
 
-        let alias_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let alias_name = parser.expect_identifier()?;
 
         let original_type_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
             parser.next_token();

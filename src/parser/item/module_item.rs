@@ -1,7 +1,7 @@
 use super::{collection, ParseDefItem, Parser};
 
 use crate::{
-    ast::{Identifier, InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
+    ast::{InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
     error::ErrorsEmitted,
     token::{Token, TokenType},
 };
@@ -24,17 +24,7 @@ impl ParseDefItem for ModuleItem {
             Err(ErrorsEmitted)
         }?;
 
-        let module_name = match parser.next_token() {
-            Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("module identifier");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let module_name = parser.expect_identifier()?;
 
         let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
             d.ok_or_else(|| {
