@@ -1537,6 +1537,20 @@ impl Parser {
         }
     }
 
+    fn expect_block(&mut self) -> Result<BlockExpr, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::LBrace { .. }) => Ok(BlockExpr::parse(self)?),
+            Some(Token::EOF) | None => {
+                self.log_missing_token("`{`");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("`{`");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // ERROR HANDLING
     ///////////////////////////////////////////////////////////////////////////

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, GroupedExpr, Keyword, WhileExpr},
+    ast::{GroupedExpr, Keyword, WhileExpr},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParseControlExpr, Parser},
     token::Token,
@@ -31,17 +31,7 @@ impl ParseControlExpr for WhileExpr {
             }
         }?;
 
-        let block = match parser.current_token() {
-            Some(Token::LBrace { .. }) => Ok(BlockExpr::parse(parser)?),
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let block = parser.expect_block()?;
 
         let span = parser.get_span(&first_token.unwrap().span(), &block.span);
 

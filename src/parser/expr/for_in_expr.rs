@@ -1,7 +1,7 @@
 use crate::{
-    ast::{BlockExpr, Expression, ForInExpr, Keyword, Literal},
+    ast::{Expression, ForInExpr, Keyword, Literal},
     error::{ErrorsEmitted, ParserErrorKind},
-    parser::{ParseConstructExpr, ParseControlExpr, Parser, Precedence},
+    parser::{ParseControlExpr, Parser, Precedence},
     token::{Token, TokenType},
 };
 
@@ -78,17 +78,7 @@ impl ParseControlExpr for ForInExpr {
             }
         }?;
 
-        let block = match parser.current_token() {
-            Some(Token::LBrace { .. }) => Ok(BlockExpr::parse(parser)?),
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let block = parser.expect_block()?;
 
         let span = parser.get_span(&first_token.unwrap().span(), &block.span);
 

@@ -31,17 +31,7 @@ impl ParseControlExpr for IfExpr {
             }
         }?;
 
-        let if_block = match parser.current_token() {
-            Some(Token::LBrace { .. }) => Ok(Box::new(BlockExpr::parse(parser)?)),
-            Some(Token::EOF) | None => {
-                parser.log_missing_token("`{`");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`{`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let if_block = Box::new(parser.expect_block()?);
 
         let (else_if_blocks_opt, trailing_else_block_opt) = parse_else_blocks(parser)?;
 
