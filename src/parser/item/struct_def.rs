@@ -130,6 +130,7 @@ impl ParseDefItem for TupleStructDef {
         let tuple_struct_fields_opt =
             collection::get_collection(parser, parse_tuple_struct_def_field, &open_paren)?;
 
+        // TODO: replace with `expect_closing_paren()`
         match parser.current_token() {
             Some(Token::RParen { .. }) => {
                 parser.next_token();

@@ -52,7 +52,6 @@ impl ParseDeclItem for AliasDecl {
         match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
                 let span = parser.get_span_by_token(&first_token.unwrap());
-
                 parser.next_token();
 
                 Ok(AliasDecl {

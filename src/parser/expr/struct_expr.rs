@@ -32,7 +32,6 @@ impl ParseConstructExpr for StructExpr {
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 let span = parser.get_span_by_token(&first_token.unwrap());
-
                 parser.next_token();
 
                 Ok(StructExpr {
@@ -80,7 +79,6 @@ impl ParseOperatorExpr for TupleStructExpr {
         match parser.current_token() {
             Some(Token::RParen { .. }) => {
                 let span = parser.get_span(left_expr_span, &last_token.unwrap().span());
-
                 parser.next_token();
 
                 Ok(Expression::TupleStruct(TupleStructExpr {

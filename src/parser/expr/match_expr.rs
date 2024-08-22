@@ -122,6 +122,7 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
         Ok(Box::new(Expression::Block(BlockExpr::parse(parser)?)))
     } else {
         let expr = Box::new(parser.parse_expression(Precedence::Lowest)?);
+        
         match parser.current_token() {
             Some(Token::Comma { .. }) => {
                 parser.next_token();

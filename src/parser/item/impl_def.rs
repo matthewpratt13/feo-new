@@ -67,7 +67,6 @@ impl ParseDefItem for InherentImplDef {
         match parser.current_token() {
             Some(Token::RBrace { .. }) => {
                 let span = parser.get_span_by_token(&first_token.unwrap());
-
                 parser.next_token();
 
                 Ok(InherentImplDef {

@@ -51,8 +51,8 @@ impl ParseStatement for LetStmt {
                     &first_token.unwrap().span(),
                     &value_opt.as_ref().unwrap().span(),
                 );
-
                 parser.next_token();
+                
                 let stmt = LetStmt {
                     kw_let,
                     assignee,

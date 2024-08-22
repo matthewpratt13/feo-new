@@ -1551,6 +1551,11 @@ impl Parser {
         }
     }
 
+    // TODO: add `expect_closing_paren()`
+    // TODO: add `expect_identifier()`
+    // TODO: add `expect_grouped_expr`
+    // TODO: add `get_def_item()`
+
     ///////////////////////////////////////////////////////////////////////////
     // ERROR HANDLING
     ///////////////////////////////////////////////////////////////////////////

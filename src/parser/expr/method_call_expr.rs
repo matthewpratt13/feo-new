@@ -49,7 +49,6 @@ impl ParseOperatorExpr for MethodCallExpr {
         match &last_token {
             Some(Token::RParen { .. }) => {
                 let span = parser.get_span(left_expr_span, &last_token.unwrap().span());
-
                 parser.next_token();
 
                 let expr = MethodCallExpr {

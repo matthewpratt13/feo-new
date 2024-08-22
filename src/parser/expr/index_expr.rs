@@ -1,9 +1,9 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, IndexExpr},
+    ast::{AssigneeExpr, Expression, IndexExpr},
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser, Precedence},
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -17,21 +17,15 @@ impl ParseOperatorExpr for IndexExpr {
             ErrorsEmitted
         })?;
 
-        let open_bracket = match parser.current_token() {
-            Some(Token::LBracket { .. }) => {
-                let position = parser.current_position();
-                parser.next_token();
-                Ok(Delimiter::LBracket { position })
-            }
-            Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                parser.log_unexpected_token("`[`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        let open_bracket = parser.expect_delimiter(TokenType::LBracket).and_then(|d| {
+            d.ok_or_else(|| {
+                parser.logger.warn(&format!(
+                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                    parser.current_token()
+                ));
+                ErrorsEmitted
+            })
+        })?;
 
         let index = parser.parse_value_expr(Precedence::Lowest)?;
 
@@ -40,7 +34,6 @@ impl ParseOperatorExpr for IndexExpr {
         match &token {
             Some(Token::RBracket { .. }) => {
                 let span = parser.get_span(&left_expr_span, &token.unwrap().span());
-
                 parser.next_token();
 
                 let expr = IndexExpr {
