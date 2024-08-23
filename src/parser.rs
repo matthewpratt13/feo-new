@@ -1541,11 +1541,11 @@ impl Parser {
         match self.current_token() {
             Some(Token::LBrace { .. }) => Ok(BlockExpr::parse(self)?),
             Some(Token::EOF) | None => {
-                self.log_missing_token("`{`");
+                self.log_missing_token(&TokenType::LBrace.to_string());
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token("`{`");
+                self.log_unexpected_token(&TokenType::LBrace.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1555,11 +1555,11 @@ impl Parser {
         match self.current_token() {
             Some(Token::LParen { .. }) => Ok(GroupedExpr::parse(self)?),
             Some(Token::EOF) | None => {
-                self.log_missing_token("`(`");
+                self.log_missing_token(&TokenType::LParen.to_string());
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token("`(`");
+                self.log_unexpected_token(&TokenType::LParen.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1569,11 +1569,11 @@ impl Parser {
         match self.current_token() {
             Some(Token::LParen { .. }) => Ok(GroupedPatt::parse_patt(self)?),
             Some(Token::EOF) | None => {
-                self.log_missing_token("`(`");
+                self.log_missing_token(&TokenType::LParen.to_string());
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token("`(`");
+                self.log_unexpected_token(&TokenType::LParen.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1604,12 +1604,12 @@ impl Parser {
             }
             Some(Token::EOF) | None => {
                 self.log_unmatched_delimiter(open_paren);
-                self.log_missing_token("`)`");
-                return Err(ErrorsEmitted);
+                self.log_missing_token(&TokenType::RParen.to_string());
+                Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token("`)`");
-                return Err(ErrorsEmitted);
+                self.log_unexpected_token(&TokenType::RParen.to_string());
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -1872,7 +1872,7 @@ impl Parser {
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token("`}`");
+                self.log_unexpected_token(&TokenType::RBrace.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1895,7 +1895,7 @@ impl Parser {
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token("`)`");
+                self.log_unexpected_token(&TokenType::RParen.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1909,12 +1909,11 @@ impl Parser {
                 Ok(span)
             }
             Some(Token::EOF) | None => {
-                self.log_missing_token("`;`");
+                self.log_missing_token(&TokenType::Semicolon.to_string());
                 Err(ErrorsEmitted)
             }
-
             _ => {
-                self.log_unexpected_token("`;`");
+                self.log_unexpected_token(&TokenType::Semicolon.to_string());
                 Err(ErrorsEmitted)
             }
         }
