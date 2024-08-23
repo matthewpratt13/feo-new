@@ -25,17 +25,9 @@ impl ParseConstructExpr for ArrayExpr {
 
         let elements_opt = collection::get_expressions(parser, Precedence::Lowest, &open_bracket)?;
 
-        match parser.current_token() {
-            Some(Token::RBracket { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
-                Ok(ArrayExpr { elements_opt, span })
-            }
-            _ => {
-                parser.log_unmatched_delimiter(&open_bracket);
-                Err(ErrorsEmitted)
-            }
-        }
+        let span = parser.get_array_span(first_token.as_ref(), &open_bracket)?;
+
+        Ok(ArrayExpr { elements_opt, span })
     }
 }
 

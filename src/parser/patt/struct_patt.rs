@@ -28,15 +28,7 @@ impl ParsePattern for StructPatt {
 
         parser.next_token();
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
 
         let struct_fields_opt =
             collection::get_collection(parser, parse_struct_patt_field, &open_brace)?;
@@ -83,15 +75,7 @@ impl ParsePattern for TupleStructPatt {
 
         parser.next_token();
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_paren = parser.expect_delimiter(TokenType::LParen)?;
 
         let struct_elements_opt = parse_tuple_struct_patterns(parser)?;
 

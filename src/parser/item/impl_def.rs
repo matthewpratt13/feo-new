@@ -52,15 +52,7 @@ impl ParseDefItem for InherentImplDef {
             (Some(_), Some(ga)) => Some(ga),
         };
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
 
         let associated_items_opt = collection::get_associated_items::<InherentImplItem>(parser)?;
 
@@ -154,15 +146,7 @@ impl ParseDefItem for TraitImplDef {
 
         let where_clause_opt = parse_where_clause(parser)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
 
         let associated_items_opt = collection::get_associated_items::<TraitImplItem>(parser)?;
 

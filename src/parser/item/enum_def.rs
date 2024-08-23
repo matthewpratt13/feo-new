@@ -32,15 +32,7 @@ impl ParseDefItem for EnumDef {
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
 
         let variants = parse_enum_variants(parser)?;
 
@@ -136,15 +128,7 @@ fn parse_enum_variant(
 }
 
 fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, ErrorsEmitted> {
-    let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-        d.ok_or_else(|| {
-            parser.logger.warn(&format!(
-                "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                parser.current_token()
-            ));
-            ErrorsEmitted
-        })
-    })?;
+    let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
 
     let struct_fields = if let Some(sdf) =
         collection::get_collection(parser, StructDefField::parse, &open_brace)?
@@ -161,15 +145,7 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
 }
 
 fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTupleStruct, ErrorsEmitted> {
-    let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
-        d.ok_or_else(|| {
-            parser.logger.warn(&format!(
-                "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                parser.current_token()
-            ));
-            ErrorsEmitted
-        })
-    })?;
+    let open_paren = parser.expect_delimiter(TokenType::LParen)?;
 
     let element_types =
         if let Some(t) = collection::get_collection(parser, Type::parse, &open_paren)? {

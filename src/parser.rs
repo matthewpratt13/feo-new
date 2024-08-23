@@ -1485,12 +1485,10 @@ impl Parser {
                 self.next_token();
                 Ok(())
             }
-
             Some(Token::EOF) | None => {
                 self.log_missing_token(&expected.to_string());
                 return Err(ErrorsEmitted);
             }
-
             Some(_) => {
                 self.log_unexpected_token(&expected.to_string());
                 return Err(ErrorsEmitted);
@@ -1498,15 +1496,16 @@ impl Parser {
         }
     }
 
-    fn expect_delimiter(
-        &mut self,
-        expected: TokenType,
-    ) -> Result<Option<Delimiter>, ErrorsEmitted> {
+    fn expect_delimiter(&mut self, expected: TokenType) -> Result<Delimiter, ErrorsEmitted> {
         if !matches!(
             expected,
             TokenType::LParen | TokenType::LBrace | TokenType::LBracket
         ) {
-            return Ok(None);
+            self.logger.warn(&format!(
+                "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
+                self.current_token()
+            ));
+            return Err(ErrorsEmitted);
         }
 
         let position = self.current_position();
@@ -1514,25 +1513,23 @@ impl Parser {
         match self.current_token() {
             Some(Token::LParen { .. }) => {
                 self.next_token();
-                Ok(Some(Delimiter::LParen { position }))
+                Ok(Delimiter::LParen { position })
             }
             Some(Token::LBrace { .. }) => {
                 self.next_token();
-                Ok(Some(Delimiter::LBrace { position }))
+                Ok(Delimiter::LBrace { position })
             }
             Some(Token::LBracket { .. }) => {
                 self.next_token();
-                Ok(Some(Delimiter::LBracket { position }))
+                Ok(Delimiter::LBracket { position })
             }
-
             Some(Token::EOF) | None => {
                 self.log_unexpected_eoi();
-                return Err(ErrorsEmitted);
+                Err(ErrorsEmitted)
             }
-
             Some(_) => {
                 self.log_unexpected_token(&expected.to_string());
-                return Err(ErrorsEmitted);
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -1855,6 +1852,29 @@ impl Parser {
         )
     }
 
+    fn get_parenthesized_item_span(
+        &mut self,
+        first_token: Option<&Token>,
+        open_paren: &Delimiter,
+    ) -> Result<Span, ErrorsEmitted> {
+        match self.current_token() {
+            Some(Token::RParen { .. }) => {
+                let span = self.get_span_by_token(first_token.unwrap_or(&Token::EOF));
+                self.next_token();
+                Ok(span)
+            }
+            Some(Token::EOF) | None => {
+                self.log_unmatched_delimiter(open_paren);
+                self.log_unexpected_eoi();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token(&TokenType::RParen.to_string());
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
     fn get_braced_item_span(
         &mut self,
         first_token: Option<&Token>,
@@ -1878,24 +1898,24 @@ impl Parser {
         }
     }
 
-    fn get_parenthesized_item_span(
+    fn get_array_span(
         &mut self,
         first_token: Option<&Token>,
-        open_paren: &Delimiter,
+        open_bracket: &Delimiter,
     ) -> Result<Span, ErrorsEmitted> {
         match self.current_token() {
-            Some(Token::RParen { .. }) => {
+            Some(Token::RBracket { .. }) => {
                 let span = self.get_span_by_token(first_token.unwrap_or(&Token::EOF));
                 self.next_token();
                 Ok(span)
             }
             Some(Token::EOF) | None => {
-                self.log_unmatched_delimiter(open_paren);
+                self.log_unmatched_delimiter(open_bracket);
                 self.log_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token(&TokenType::RParen.to_string());
+                self.log_unexpected_token(&TokenType::RBrace.to_string());
                 Err(ErrorsEmitted)
             }
         }

@@ -37,15 +37,7 @@ impl ParseDefItem for TraitDef {
 
         let where_clause_opt = parse_where_clause(parser)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
 
         let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 

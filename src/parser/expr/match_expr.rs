@@ -29,15 +29,7 @@ impl ParseControlExpr for MatchExpr {
 
         let scrutinee = parser.parse_assignee_expr(Precedence::Lowest)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
 
         let mut match_arms: Vec<MatchArm> = Vec::new();
 

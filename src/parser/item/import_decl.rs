@@ -98,15 +98,7 @@ fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted>
 }
 
 fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
-    let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-        d.ok_or_else(|| {
-            parser.logger.warn(&format!(
-                "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                parser.current_token()
-            ));
-            ErrorsEmitted
-        })
-    })?;
+    let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
 
     let nested_trees =
         if let Some(t) = collection::get_collection(parser, parse_import_tree, &open_brace)? {

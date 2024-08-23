@@ -17,15 +17,7 @@ impl ParseOperatorExpr for CallExpr {
             ErrorsEmitted
         })?;
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_paren = parser.expect_delimiter(TokenType::LParen)?;
 
         let args_opt = collection::get_expressions(parser, Precedence::Lowest, &open_paren)?;
 

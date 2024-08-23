@@ -32,15 +32,7 @@ impl ParseDefItem for FunctionItem {
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_paren = parser.expect_delimiter(TokenType::LParen)?;
 
         let params_opt =
             collection::get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
