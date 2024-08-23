@@ -1487,11 +1487,11 @@ impl Parser {
             }
             Some(Token::EOF) | None => {
                 self.log_missing_token(&expected.to_string());
-                return Err(ErrorsEmitted);
+                Err(ErrorsEmitted)
             }
             Some(_) => {
                 self.log_unexpected_token(&expected.to_string());
-                return Err(ErrorsEmitted);
+                Err(ErrorsEmitted)
             }
         }
     }
