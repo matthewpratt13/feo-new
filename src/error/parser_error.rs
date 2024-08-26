@@ -1,6 +1,6 @@
 use crate::token::{Token, TokenType};
 
-use core::fmt;
+use core::{char::DecodeUtf16Error, fmt};
 use std::error::Error;
 
 /// Enum representing the different types of parsing errors.
@@ -8,7 +8,7 @@ use std::error::Error;
 /// during parsing.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum ParserErrorKind {
-    StrDecodeError(core::char::DecodeUtf16Error),
+    StrDecodeError(DecodeUtf16Error),
 
     UnexpectedEndOfInput,
 

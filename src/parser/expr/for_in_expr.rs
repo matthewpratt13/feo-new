@@ -15,7 +15,7 @@ impl ParseControlExpr for ForInExpr {
             parser.next_token();
             Ok(Keyword::For)
         } else {
-            parser.log_unexpected_token("`for`");
+            parser.log_unexpected_token(&TokenType::For.to_string());
             Err(ErrorsEmitted)
         }?;
 

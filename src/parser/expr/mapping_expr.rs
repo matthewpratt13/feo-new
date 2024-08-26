@@ -2,7 +2,7 @@ use crate::{
     ast::{Delimiter, MappingExpr, MappingPair},
     error::ErrorsEmitted,
     parser::{collection, ParseConstructExpr, Parser, Precedence},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -18,7 +18,7 @@ impl ParseConstructExpr for MappingExpr {
                 Ok(Delimiter::LBrace { position })
             }
             _ => {
-                parser.log_unexpected_token("`{`");
+                parser.log_unexpected_token(&TokenType::LBrace.to_string());
                 Err(ErrorsEmitted)
             }
         }?;
@@ -55,10 +55,11 @@ fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted>
         }
         Some(Token::EOF) | None => {
             parser.log_unexpected_eoi();
+            parser.log_missing_token(&TokenType::Colon.to_string());
             return Err(ErrorsEmitted);
         }
         _ => {
-            parser.log_unexpected_token("`:`");
+            parser.log_unexpected_token(&TokenType::Colon.to_string());
             return Err(ErrorsEmitted);
         }
     }

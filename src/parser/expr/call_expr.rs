@@ -40,7 +40,7 @@ impl ParseOperatorExpr for CallExpr {
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token(&TokenType::RBracket.to_string());
+                parser.log_unexpected_token(&TokenType::RParen.to_string());
                 Err(ErrorsEmitted)
             }
         }

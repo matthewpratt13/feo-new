@@ -35,10 +35,11 @@ impl ParseOperatorExpr for FieldAccessExpr {
             }
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
+                parser.log_missing("identifier", "object field");
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("identifier in field access expression");
+                parser.log_unexpected_token("object field identifier");
                 Err(ErrorsEmitted)
             }
         }?;

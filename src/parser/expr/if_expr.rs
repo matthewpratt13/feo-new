@@ -2,7 +2,7 @@ use crate::{
     ast::{BlockExpr, IfExpr, Keyword},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParseControlExpr, Parser},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -15,7 +15,7 @@ impl ParseControlExpr for IfExpr {
             parser.next_token();
             Ok(Keyword::If)
         } else {
-            parser.log_unexpected_token("`if`");
+            parser.log_unexpected_token(&TokenType::If.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -82,11 +82,11 @@ fn parse_else_blocks(
             }
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
-                parser.log_missing_token("`if` or `{`");
+                parser.log_missing_token(&format!("{} or {}", TokenType::If, TokenType::LBrace));
                 return Err(ErrorsEmitted);
             }
             _ => {
-                parser.log_unexpected_token("`if` or `{`");
+                parser.log_unexpected_token(&format!("{} or {}", TokenType::If, TokenType::LBrace));
                 return Err(ErrorsEmitted);
             }
         }

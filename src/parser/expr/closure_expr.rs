@@ -6,7 +6,7 @@ use crate::{
     error::ErrorsEmitted,
     parser::{collection, ParseConstructExpr, ParsePattern, Parser, Precedence},
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -37,7 +37,6 @@ impl ParseConstructExpr for ClosureExpr {
                     _ => {
                         parser.log_unmatched_delimiter(&open_pipe);
                         parser.next_token();
-
                         Err(ErrorsEmitted)
                     }
                 }
@@ -47,7 +46,11 @@ impl ParseConstructExpr for ClosureExpr {
                 Ok(ClosureParams::None)
             }
             _ => {
-                parser.log_unexpected_token("`|` or `||`");
+                parser.log_unexpected_token(&format!(
+                    "{} or {}",
+                    TokenType::Pipe,
+                    TokenType::DblPipe
+                ));
                 Err(ErrorsEmitted)
             }
         }?;
@@ -116,7 +119,11 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
         }
 
         _ => {
-            parser.log_unexpected_token("identifier, `ref` or `mut`");
+            parser.log_unexpected_token(&format!(
+                "identifier, {} or {}",
+                TokenType::Ref,
+                TokenType::Mut
+            ));
             Err(ErrorsEmitted)
         }
     }?;
@@ -131,6 +138,7 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
                 Err(ErrorsEmitted)
             }
             Some(Token::EOF { .. }) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_unmatched_delimiter(&open_pipe);
                 Err(ErrorsEmitted)
             }

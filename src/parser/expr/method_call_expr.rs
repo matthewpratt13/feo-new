@@ -3,7 +3,7 @@ use crate::{
     error::ErrorsEmitted,
     parser::{collection, ParseOperatorExpr, Parser, Precedence},
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -39,9 +39,13 @@ impl ParseOperatorExpr for MethodCallExpr {
 
                 Ok(Expression::MethodCall(expr))
             }
-            _ => {
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_unmatched_delimiter(&open_paren);
-                parser.next_token();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token(&TokenType::RParen.to_string());
                 Err(ErrorsEmitted)
             }
         }

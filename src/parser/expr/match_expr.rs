@@ -15,7 +15,7 @@ impl ParseControlExpr for MatchExpr {
             parser.next_token();
             Ok(Keyword::Match)
         } else {
-            parser.log_unexpected_token("`match`");
+            parser.log_unexpected_token(&TokenType::Match.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -106,11 +106,11 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
             Some(Token::RBrace { .. }) => Ok(expr),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
-                parser.log_missing_token("`,`");
+                parser.log_missing_token(&TokenType::Comma.to_string());
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("`,`");
+                parser.log_unexpected_token(&TokenType::Comma.to_string());
                 Err(ErrorsEmitted)
             }
         }
