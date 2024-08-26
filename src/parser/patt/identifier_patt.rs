@@ -24,7 +24,7 @@ impl ParsePattern for IdentifierPatt {
             None
         };
 
-        let name = parser.expect_identifier()?;
+        let name = parser.expect_identifier("identifier name")?;
 
         parser.logger.debug("exiting `IdentifierPatt::parse()`");
         parser.log_current_token(false);

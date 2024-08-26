@@ -21,7 +21,7 @@ impl ParseDeclItem for StaticVarDecl {
             parser.next_token();
             Ok(Keyword::Static)
         } else {
-            parser.log_unexpected_token("`static`");
+            parser.log_unexpected_token(&TokenType::Static.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -32,7 +32,7 @@ impl ParseDeclItem for StaticVarDecl {
             None
         };
 
-        let var_name = parser.expect_identifier()?;
+        let var_name = parser.expect_identifier("variable name")?;
 
         parser.expect_token(TokenType::Colon)?;
 

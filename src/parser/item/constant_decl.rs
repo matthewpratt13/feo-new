@@ -21,11 +21,11 @@ impl ParseDeclItem for ConstantDecl {
             parser.next_token();
             Ok(Keyword::Const)
         } else {
-            parser.log_unexpected_token("`const`");
+            parser.log_unexpected_token(&TokenType::Const.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let constant_name = parser.expect_identifier()?;
+        let constant_name = parser.expect_identifier("constant name")?;
 
         parser.expect_token(TokenType::Colon)?;
 
@@ -43,7 +43,7 @@ impl ParseDeclItem for ConstantDecl {
 
                 Ok(Some(value_expr))
             } else {
-                parser.log_missing("expr", "value");
+                parser.log_missing("expr", "constant value");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }

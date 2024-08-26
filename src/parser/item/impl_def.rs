@@ -26,13 +26,30 @@ impl ParseDefItem for InherentImplDef {
             parser.next_token();
             Ok(Keyword::Impl)
         } else {
-            parser.log_unexpected_token("`impl`");
+            parser.log_unexpected_token(&TokenType::Impl.to_string());
             Err(ErrorsEmitted)
         }?;
 
         let generic_declaration_opt = parse_generic_params(parser)?;
 
-        let nominal_type = TypePath::parse(parser, parser.current_token().cloned())?;
+        let token = parser.current_token().cloned();
+
+        let nominal_type = match &token {
+            Some(Token::Identifier { .. } | Token::SelfType { .. }) => {
+                TypePath::parse(parser, token)
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                parser.log_missing_token("implementing object type path");
+                Err(ErrorsEmitted)
+            }
+
+            _ => {
+                parser.log_unexpected_token("implementing object type path");
+                parser.next_token();
+                Err(ErrorsEmitted)
+            }
+        }?;
 
         let generic_params_opt = match (generic_declaration_opt, parse_generic_params(parser)?) {
             (None, None) => None,
@@ -91,7 +108,7 @@ impl ParseDefItem for TraitImplDef {
             parser.next_token();
             Ok(Keyword::Impl)
         } else {
-            parser.log_unexpected_token("`impl`");
+            parser.log_unexpected_token(&TokenType::Impl.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -100,19 +117,16 @@ impl ParseDefItem for TraitImplDef {
         let token = parser.current_token().cloned();
 
         let implemented_trait_path = match &token {
-            Some(Token::Identifier { .. }) => {
-                let path = TypePath::parse(parser, token);
-                path
-            }
+            Some(Token::Identifier { .. }) => TypePath::parse(parser, token),
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
+                parser.log_missing_token("implemented trait path");
                 Err(ErrorsEmitted)
             }
 
             _ => {
                 parser.log_unexpected_token("implemented trait path");
                 parser.next_token();
-
                 Err(ErrorsEmitted)
             }
         }?;
@@ -140,7 +154,20 @@ impl ParseDefItem for TraitImplDef {
             .expect_token(TokenType::For)
             .and_then(|_| Ok(Keyword::For))?;
 
-        let implementing_type = Type::parse(parser)?;
+        let implementing_type = match parser.current_token() {
+            Some(Token::Identifier { .. } | Token::SelfType { .. }) => Type::parse(parser),
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                parser.log_missing_token("implementing type");
+                Err(ErrorsEmitted)
+            }
+
+            _ => {
+                parser.log_unexpected_token("implementing type");
+                parser.next_token();
+                Err(ErrorsEmitted)
+            }
+        }?;
 
         let implementing_type_generic_params_opt = parse_generic_params(parser)?;
 
@@ -187,6 +214,7 @@ impl ParseAssociatedItem for InherentImplItem {
         match parser.current_token() {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
+
                 if constant_decl.value_opt.is_none() {
                     parser.logger.warn("assigned value cannot be `None`");
                     Err(ErrorsEmitted)
@@ -206,7 +234,11 @@ impl ParseAssociatedItem for InherentImplItem {
                 }
             }
             _ => {
-                parser.log_unexpected_token("`const` or `func`");
+                parser.log_unexpected_token(&format!(
+                    "{} or {}",
+                    TokenType::Const,
+                    TokenType::Func
+                ));
                 Err(ErrorsEmitted)
             }
         }
@@ -222,6 +254,7 @@ impl ParseAssociatedItem for TraitImplItem {
         match parser.current_token() {
             Some(Token::Const { .. }) => {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
+
                 if constant_decl.value_opt.is_none() {
                     parser.logger.warn("assigned value cannot be `None`");
                     Err(ErrorsEmitted)
@@ -244,7 +277,12 @@ impl ParseAssociatedItem for TraitImplItem {
                 }
             }
             _ => {
-                parser.log_unexpected_token("`const`, `alias` or `func`");
+                parser.log_unexpected_token(&format!(
+                    "{}, {} or {}",
+                    TokenType::Const,
+                    TokenType::Alias,
+                    TokenType::Func
+                ));
                 Err(ErrorsEmitted)
             }
         }

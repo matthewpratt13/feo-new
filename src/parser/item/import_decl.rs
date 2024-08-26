@@ -6,7 +6,7 @@ use crate::{
         TypePath, Visibility,
     },
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -23,7 +23,7 @@ impl ParseDeclItem for ImportDecl {
             parser.next_token();
             Ok(Keyword::Import)
         } else {
-            parser.log_unexpected_token("`import`");
+            parser.log_unexpected_token(&TokenType::Import.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -72,7 +72,7 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
 
     let as_clause_opt = if let Some(Token::As { .. }) = parser.current_token() {
         parser.next_token();
-        Some(parser.expect_identifier()?)
+        Some(parser.expect_identifier("new type name")?)
     } else {
         None
     };

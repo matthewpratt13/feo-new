@@ -8,9 +8,9 @@ use crate::{
         AliasDecl, ConstantDecl, FunctionItem, InnerAttr, Keyword, OuterAttr, TraitDef,
         TraitDefItem, Visibility,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     parser::Parser,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -27,11 +27,11 @@ impl ParseDefItem for TraitDef {
             parser.next_token();
             Ok(Keyword::Trait)
         } else {
-            parser.log_unexpected_token("`trait`");
+            parser.log_unexpected_token(&TokenType::Trait.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let trait_name = parser.expect_identifier()?;
+        let trait_name = parser.expect_identifier("trait name")?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
@@ -89,7 +89,7 @@ impl ParseAssociatedItem for TraitDefItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_some() {
-                    parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
+                    parser.log_error(ParserErrorKind::ExtraTokens {
                         token: parser.current_token().cloned(),
                         msg: "Functions in trait definitions cannot have bodies".to_string(),
                     });
@@ -99,7 +99,12 @@ impl ParseAssociatedItem for TraitDefItem {
                 }
             }
             _ => {
-                parser.log_unexpected_token("`const`, `alias` or `func`");
+                parser.log_unexpected_token(&format!(
+                    "{}, {} or {}",
+                    TokenType::Const,
+                    TokenType::Alias,
+                    TokenType::Func
+                ));
                 Err(ErrorsEmitted)
             }
         }

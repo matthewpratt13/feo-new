@@ -3,7 +3,7 @@ use super::{collection, ParseDefItem, Parser};
 use crate::{
     ast::{InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -20,11 +20,11 @@ impl ParseDefItem for ModuleItem {
             parser.next_token();
             Ok(Keyword::Module)
         } else {
-            parser.log_unexpected_token("`module`");
+            parser.log_unexpected_token(&TokenType::Module.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let module_name = parser.expect_identifier()?;
+        let module_name = parser.expect_identifier("module name")?;
 
         parser.expect_open_brace()?;
 

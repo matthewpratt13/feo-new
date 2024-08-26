@@ -1,7 +1,4 @@
-use crate::{
-    span::Position,
-    token::{Token, TokenType},
-};
+use crate::token::{Token, TokenType};
 
 use core::fmt;
 use std::error::Error;
@@ -18,15 +15,6 @@ pub enum ParserErrorKind {
     UnexpectedToken {
         expected: String,
         found: Option<TokenType>,
-    },
-
-    MissingToken {
-        expected: String,
-    },
-
-    UnmatchedDelimiter {
-        delim: String,
-        position: Position,
     },
 
     InvalidTokenContext {
@@ -46,6 +34,10 @@ pub enum ParserErrorKind {
     UnexpectedExpression {
         expected: String,
         found: String,
+    },
+
+    MissingIdentifier {
+        expected: String,
     },
 
     MissingExpression {
@@ -91,16 +83,7 @@ impl fmt::Display for ParserErrorKind {
                 "unexpected token. Expected {expected}, found {:?}",
                 found
             ),
-            ParserErrorKind::MissingToken { expected } => {
-                write!(f, "token not found. Expected {expected}, found none")
-            }
-            ParserErrorKind::UnmatchedDelimiter { delim, position } => {
-                write!(
-                    f,
-                    "unmatched `{delim}` delimiter [Ln {}, Col {}]. Expected matching delimiter",
-                    position.line, position.col
-                )
-            }
+
             ParserErrorKind::InvalidTokenContext { token } => {
                 write!(
                     f,
@@ -130,13 +113,16 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::MissingExpression { expected } => {
                 write!(f, "expression not found. Expected {expected}, found none")
             }
+            ParserErrorKind::MissingIdentifier { expected } => {
+                write!(f, "{expected} not found. Expected identifier, found none")
+            }
             ParserErrorKind::MissingItem { expected } => {
                 write!(f, "item not found. Expected {expected}, found none")
             }
             ParserErrorKind::MissingType { expected } => {
                 write!(
                     f,
-                    "type annotation not found. Expected {expected}, found none"
+                    "{expected} not found. Expected type annotation, found none"
                 )
             }
             ParserErrorKind::MissingPattern { expected } => {

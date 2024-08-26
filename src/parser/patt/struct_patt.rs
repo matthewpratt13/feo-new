@@ -43,7 +43,7 @@ impl ParsePattern for StructPatt {
 }
 
 fn parse_struct_patt_field(parser: &mut Parser) -> Result<StructPattField, ErrorsEmitted> {
-    let field_name = parser.expect_identifier()?;
+    let field_name = parser.expect_identifier("struct field name")?;
 
     parser.expect_token(TokenType::Colon)?;
 

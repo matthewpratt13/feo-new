@@ -7,7 +7,7 @@ use crate::{
     },
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParsePattern},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -24,11 +24,11 @@ impl ParseDefItem for FunctionItem {
             parser.next_token();
             Ok(Keyword::Func)
         } else {
-            parser.log_unexpected_token("`func`");
+            parser.log_unexpected_token(&TokenType::Func.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let function_name = parser.expect_identifier()?;
+        let function_name = parser.expect_identifier("function name")?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
@@ -71,8 +71,8 @@ impl ParseDefItem for FunctionItem {
                 }
                 Some(Token::EOF) | None => {
                     let position = parser.current_position();
-                    parser.log_unmatched_delimiter(&Delimiter::LBrace { position });
                     parser.log_unexpected_eoi();
+                    parser.log_unmatched_delimiter(&Delimiter::LBrace { position });
                     Err(ErrorsEmitted)
                 }
                 _ => Ok(Some(BlockExpr::parse(parser)?)),
@@ -150,7 +150,7 @@ impl FunctionOrMethodParam {
                     }
 
                     Some(Token::RParen { .. } | Token::Comma { .. }) => {
-                        parser.log_missing("type", "function parameter type annotation");
+                        parser.log_missing("type", "function parameter type");
                         parser.next_token();
                         return Err(ErrorsEmitted);
                     }
@@ -160,7 +160,7 @@ impl FunctionOrMethodParam {
                         return Err(ErrorsEmitted);
                     }
                     _ => {
-                        parser.log_unexpected_token("`:`");
+                        parser.log_unexpected_token(&TokenType::Colon.to_string());
                         return Err(ErrorsEmitted);
                     }
                 }

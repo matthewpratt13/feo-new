@@ -83,7 +83,7 @@ impl fmt::Debug for TupleStructExpr {
 fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted> {
     let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
 
-    let field_name = parser.expect_identifier()?;
+    let field_name = parser.expect_identifier("struct field name")?;
 
     match parser.current_token() {
         Some(Token::Colon { .. }) => {

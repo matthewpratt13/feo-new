@@ -1506,15 +1506,14 @@ impl Parser {
         }
     }
 
-    fn expect_identifier(&mut self) -> Result<Identifier, ErrorsEmitted> {
+    fn expect_identifier(&mut self, iden_type: &str) -> Result<Identifier, ErrorsEmitted> {
         match self.current_token().cloned() {
             Some(Token::Identifier { name, .. }) => {
                 self.next_token();
                 Ok(Identifier::from(&name))
             }
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_missing_token("identifier");
+                self.log_missing("identifier", iden_type);
                 Err(ErrorsEmitted)
             }
             _ => {
@@ -1534,6 +1533,7 @@ impl Parser {
             }
             Some(Token::EOF) | None => {
                 self.log_unexpected_eoi();
+                self.log_missing_token(&TokenType::LParen.to_string());
                 Err(ErrorsEmitted)
             }
             Some(_) => {
@@ -1553,6 +1553,7 @@ impl Parser {
             }
             Some(Token::EOF) | None => {
                 self.log_unexpected_eoi();
+                self.log_missing_token(&TokenType::LBrace.to_string());
                 Err(ErrorsEmitted)
             }
             Some(_) => {
@@ -1572,6 +1573,7 @@ impl Parser {
             }
             Some(Token::EOF) | None => {
                 self.log_unexpected_eoi();
+                self.log_missing_token(&TokenType::LBracket.to_string());
                 Err(ErrorsEmitted)
             }
             Some(_) => {
@@ -1635,8 +1637,8 @@ impl Parser {
                 Ok(())
             }
             Some(Token::EOF) | None => {
-                self.log_unmatched_delimiter(&Delimiter::LParen { position });
                 self.log_unexpected_eoi();
+                self.log_unmatched_delimiter(&Delimiter::LParen { position });
                 Err(ErrorsEmitted)
             }
             _ => {
@@ -1697,24 +1699,24 @@ impl Parser {
         self.next_token();
     }
 
-    /// Log error information when an expected token is missing.
+    /// Log a warning when an expected token is missing.
     fn log_missing_token(&mut self, expected: &str) {
-        self.log_error(ParserErrorKind::MissingToken {
-            expected: expected.to_string(),
-        });
+        self.logger
+            .warn(&format!("token not found. Expected {expected}, found none"));
     }
 
-    /// Log error information about an unmatched delimiter.
-    fn log_unmatched_delimiter(&mut self, expected: &Delimiter) {
-        self.log_error(ParserErrorKind::UnmatchedDelimiter {
-            delim: format!("`{}`", *expected),
-            position: expected.position(),
-        });
+    /// Log a warning about an unmatched delimiter.
+    fn log_unmatched_delimiter(&mut self, open_delim: &Delimiter) {
+        self.logger.warn(&format!(
+            "unmatched `{open_delim}` [Ln {}, Col {}]",
+            open_delim.position().line,
+            open_delim.position().col
+        ));
     }
 
     /// Log error information when an expected node is missing.
-    fn log_missing(&mut self, ty: &str, expected: &str) {
-        match ty {
+    fn log_missing(&mut self, missing: &str, expected: &str) {
+        match missing {
             "expr" => {
                 self.log_error(ParserErrorKind::MissingExpression {
                     expected: expected.to_string(),
@@ -1735,9 +1737,15 @@ impl Parser {
                     expected: expected.to_string(),
                 });
             }
+            "identifier" => {
+                self.log_error(ParserErrorKind::MissingIdentifier {
+                    expected: expected.to_string(),
+                });
+            }
             _ => {
-                self.logger
-                    .error(&format!("{ty} not found. Expected {expected}, found none"));
+                self.logger.error(&format!(
+                    "{missing} not found. Expected {expected}, found none"
+                ));
             }
         }
     }

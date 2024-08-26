@@ -23,11 +23,11 @@ impl ParseDefItem for StructDef {
             parser.next_token();
             Ok(Keyword::Struct)
         } else {
-            parser.log_unexpected_token("`struct`");
+            parser.log_unexpected_token(&TokenType::Struct.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = parser.expect_identifier()?;
+        let struct_name = parser.expect_identifier("struct name")?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
@@ -72,11 +72,11 @@ impl ParseDefItem for TupleStructDef {
             parser.next_token();
             Ok(Keyword::Struct)
         } else {
-            parser.log_unexpected_token("`struct`");
+            parser.log_unexpected_token(&TokenType::Struct.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = parser.expect_identifier()?;
+        let struct_name = parser.expect_identifier("struct name")?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
@@ -118,7 +118,7 @@ impl StructDefField {
 
         let visibility = Visibility::visibility(parser)?;
 
-        let field_name = parser.expect_identifier()?;
+        let field_name = parser.expect_identifier("struct field name")?;
 
         parser.expect_token(TokenType::Colon)?;
 

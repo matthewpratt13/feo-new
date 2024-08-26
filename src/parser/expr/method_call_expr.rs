@@ -17,7 +17,7 @@ impl ParseOperatorExpr for MethodCallExpr {
             ErrorsEmitted
         })?;
 
-        let method_name = parser.expect_identifier()?;
+        let method_name = parser.expect_identifier("method name")?;
 
         let open_paren = parser.expect_open_paren()?;
 
