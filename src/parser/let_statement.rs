@@ -39,6 +39,7 @@ impl ParseStatement for LetStmt {
                 Ok(Some(value))
             } else {
                 parser.log_missing("expr", "value");
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
         } else {
@@ -52,7 +53,7 @@ impl ParseStatement for LetStmt {
                     &value_opt.as_ref().unwrap().span(),
                 );
                 parser.next_token();
-                
+
                 let stmt = LetStmt {
                     kw_let,
                     assignee,
@@ -64,6 +65,7 @@ impl ParseStatement for LetStmt {
                 Ok(Statement::Let(stmt))
             }
             Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_missing_token("`;`");
                 Err(ErrorsEmitted)
             }

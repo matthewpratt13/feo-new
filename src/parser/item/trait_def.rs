@@ -10,7 +10,7 @@ use crate::{
     },
     error::ErrorsEmitted,
     parser::Parser,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use core::fmt;
@@ -37,13 +37,13 @@ impl ParseDefItem for TraitDef {
 
         let where_clause_opt = parse_where_clause(parser)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
+        parser.expect_open_brace()?;
 
         let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
         let trait_items_opt = collection::get_associated_items::<TraitDefItem>(parser)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(TraitDef {
             outer_attributes_opt,

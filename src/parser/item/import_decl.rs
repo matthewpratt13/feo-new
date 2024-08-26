@@ -6,7 +6,7 @@ use crate::{
         TypePath, Visibility,
     },
     error::ErrorsEmitted,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use core::fmt;
@@ -98,17 +98,18 @@ fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted>
 }
 
 fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
-    let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
+    let open_brace = parser.expect_open_brace()?;
 
     let nested_trees =
         if let Some(t) = collection::get_collection(parser, parse_import_tree, &open_brace)? {
             Ok(t)
         } else {
             parser.log_missing("path component", "import declaration path import tree");
+            parser.next_token();
             Err(ErrorsEmitted)
         }?;
 
-    let _ = parser.get_braced_item_span(None, &open_brace)?;
+    let _ = parser.get_braced_item_span(None)?;
 
     Ok(PathSubset { nested_trees })
 }

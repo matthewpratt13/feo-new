@@ -44,6 +44,7 @@ impl ParseDeclItem for ConstantDecl {
                 Ok(Some(value_expr))
             } else {
                 parser.log_missing("expr", "value");
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
         } else {

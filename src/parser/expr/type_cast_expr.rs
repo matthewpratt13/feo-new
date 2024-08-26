@@ -27,6 +27,7 @@ impl ParseOperatorExpr for TypeCastExpr {
 
         let new_type = match parser.current_token() {
             Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_missing("type", "cast type");
                 Err(ErrorsEmitted)
             }

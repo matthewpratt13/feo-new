@@ -29,7 +29,7 @@ impl ParseControlExpr for MatchExpr {
 
         let scrutinee = parser.parse_assignee_expr(Precedence::Lowest)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
+        parser.expect_open_brace()?;
 
         let mut match_arms: Vec<MatchArm> = Vec::new();
 
@@ -49,10 +49,11 @@ impl ParseControlExpr for MatchExpr {
             Ok(Box::new(a))
         } else {
             parser.log_missing("patt", "match arm");
+            parser.next_token();
             Err(ErrorsEmitted)
         }?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(MatchExpr {
             kw_match,
@@ -104,6 +105,7 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
             }
             Some(Token::RBrace { .. }) => Ok(expr),
             Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_missing_token("`,`");
                 Err(ErrorsEmitted)
             }

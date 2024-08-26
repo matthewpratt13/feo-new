@@ -51,6 +51,7 @@ impl ParseDeclItem for StaticVarDecl {
                 Ok(Some(Box::new(assignee_expr)))
             } else {
                 parser.log_missing("expr", "assignee");
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
         } else {

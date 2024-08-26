@@ -17,7 +17,8 @@ impl OrPatt {
                 Delimiter::Pipe { position }
             }
             _ => {
-                return Err(parser.log_unexpected_token("pipe operator"));
+                parser.log_unexpected_token("pipe operator");
+                return Err(ErrorsEmitted);
             }
         };
 
@@ -30,7 +31,9 @@ impl OrPatt {
                 if let Some(patts) = subsequent_patterns_opt {
                     patts
                 } else {
-                    return Err(parser.log_missing("patt", "additional patterns"));
+                    parser.log_missing("patt", "additional patterns");
+                    parser.next_token();
+                    return Err(ErrorsEmitted);
                 }
             },
         })

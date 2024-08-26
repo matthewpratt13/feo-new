@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Delimiter, GroupedPatt, Pattern, TuplePatt, TuplePattElements},
+    ast::{GroupedPatt, Pattern, TuplePatt, TuplePattElements},
     error::ErrorsEmitted,
     parser::{ParsePattern, Parser},
     token::Token,
@@ -10,14 +10,7 @@ impl ParsePattern for GroupedPatt {
         parser.logger.debug("entering `GroupedPatt::parse()`");
         parser.log_current_token(false);
 
-        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
-            let position = parser.current_position();
-            parser.next_token();
-            Ok(Delimiter::LParen { position })
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
-        }?;
+        parser.expect_open_paren()?;
 
         if let Some(Token::RParen { .. }) = parser.current_token() {
             let tuple_patt = TuplePatt {
@@ -34,7 +27,7 @@ impl ParsePattern for GroupedPatt {
 
         let inner_pattern = Box::new(parser.parse_pattern()?);
 
-        let _ = parser.get_parenthesized_item_span(None, &open_paren)?;
+        let _ = parser.get_parenthesized_item_span(None)?;
 
         parser.logger.debug("entering `GroupedPatt:parse()`");
         parser.log_current_token(false);

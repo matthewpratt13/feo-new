@@ -1,25 +1,17 @@
 use crate::{
-    ast::{Delimiter, Pattern, TuplePatt, TuplePattElements},
+    ast::{Pattern, TuplePatt, TuplePattElements},
     error::ErrorsEmitted,
     parser::{ParsePattern, Parser},
-    span::Position,
     token::Token,
 };
 
 impl ParsePattern for TuplePatt {
     fn parse_patt(parser: &mut Parser) -> Result<TuplePatt, ErrorsEmitted> {
-        let open_paren = if let Some(Token::LParen { .. }) = parser.current_token() {
-            let position = Position::new(parser.current, &parser.stream.span().input());
-            parser.next_token();
-            Ok(Delimiter::LParen { position })
-        } else {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
-        }?;
+        parser.expect_open_paren()?;
 
         let tuple_patt_elements = parse_tuple_patt_elements(parser)?;
 
-        let _ = parser.get_parenthesized_item_span(None, &open_paren)?;
+        let _ = parser.get_parenthesized_item_span(None)?;
 
         Ok(TuplePatt {
             tuple_patt_elements,

@@ -78,6 +78,7 @@ impl Type {
                         })
                     }
                     Some(Token::EOF) | None => {
+                        parser.log_unexpected_eoi();
                         parser.log_missing_token("`>`");
                         Err(ErrorsEmitted)
                     }
@@ -107,6 +108,7 @@ impl Type {
                         })
                     }
                     Some(Token::EOF) | None => {
+                        parser.log_unexpected_eoi();
                         parser.log_missing_token("`>`");
                         Err(ErrorsEmitted)
                     }
@@ -132,6 +134,7 @@ impl Type {
                     }
 
                     Some(Token::EOF) | None => {
+                        parser.log_unexpected_eoi();
                         parser.log_missing_token("`>`");
                         Err(ErrorsEmitted)
                     }
@@ -157,6 +160,7 @@ impl Type {
                         Ok(Type::Result { ok_type, err_type })
                     }
                     Some(Token::EOF) | None => {
+                        parser.log_unexpected_eoi();
                         parser.log_missing_token("`>`");
                         Err(ErrorsEmitted)
                     }
@@ -355,6 +359,7 @@ fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
             Ok(Delimiter::LParen { position })
         }
         Some(Token::EOF) | None => {
+            parser.log_unexpected_eoi();
             parser.log_missing_token("`(`");
             Err(ErrorsEmitted)
         }
@@ -377,7 +382,7 @@ fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         params.append(&mut subsequent_params.unwrap())
     };
 
-    parser.expect_closing_paren(&open_paren)?;
+    parser.expect_closing_paren()?;
 
     let return_type_opt = if let Some(Token::ThinArrow { .. }) = parser.current_token() {
         parser.next_token();
@@ -386,6 +391,7 @@ fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
             Ok(Some(Box::new(Type::parse(parser)?)))
         } else {
             parser.log_missing("type", "function return type");
+            parser.next_token();
             Err(ErrorsEmitted)
         }
     } else {
@@ -445,6 +451,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
             Ok(t)
         } else {
             parser.log_missing("type", "tuple element type");
+            parser.next_token();
             Err(ErrorsEmitted)
         }?;
 
@@ -452,7 +459,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     } else {
         let ty = Type::parse(parser)?;
 
-        let _ = parser.get_parenthesized_item_span(None, &open_paren)?;
+        let _ = parser.get_parenthesized_item_span(None)?;
 
         Ok(Type::GroupedType(Box::new(ty)))
     }

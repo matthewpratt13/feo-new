@@ -33,6 +33,7 @@ impl ParseDeclItem for AliasDecl {
                 Ok(Some(Type::parse(parser)?))
             } else {
                 parser.log_missing_token("original type");
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
         } else {

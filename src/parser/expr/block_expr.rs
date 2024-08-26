@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BlockExpr, Delimiter, InnerAttr, Statement},
+    ast::{BlockExpr, InnerAttr, Statement},
     error::ErrorsEmitted,
     parser::{collection, ParseConstructExpr, Parser},
     token::Token,
@@ -16,19 +16,11 @@ impl ParseConstructExpr for BlockExpr {
 
         let attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
-        let open_brace = match parser.current_token() {
-            Some(Token::LBrace { .. }) => {
-                let position = parser.current_position();
-                parser.next_token();
-                Ok(Delimiter::LBrace { position })
-            }
-            Some(Token::EOF) | None => Err(parser.log_unexpected_eoi()),
-            _ => Err(parser.log_unexpected_token("`{`")),
-        }?;
+        parser.expect_open_brace()?;
 
         let statements_opt = parse_statements(parser)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         parser.logger.debug("exiting `BlockExpr::parse()`");
         parser.log_current_token(false);

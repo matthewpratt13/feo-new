@@ -33,6 +33,7 @@ impl ParseOperatorExpr for UnwrapExpr {
                 Ok(Expression::Unwrap(expr))
             }
             Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_missing_token("unwrap operator (`?`)");
                 Err(ErrorsEmitted)
             }

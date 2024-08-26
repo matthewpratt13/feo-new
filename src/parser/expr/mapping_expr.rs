@@ -25,7 +25,7 @@ impl ParseConstructExpr for MappingExpr {
 
         let pairs_opt = collection::get_collection(parser, parse_mapping_pair, &open_brace)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(MappingExpr { pairs_opt, span })
     }
@@ -48,6 +48,8 @@ fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted>
 
             if let Some(Token::Comma { .. } | Token::RBrace { .. }) = parser.current_token() {
                 parser.log_missing("expr", &format!("value for key: \"{}\"", &key));
+                parser.next_token();
+
                 return Err(ErrorsEmitted);
             }
         }

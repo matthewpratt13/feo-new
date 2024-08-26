@@ -2,12 +2,12 @@ use super::{collection, parse_generic_params, ParseDefItem, Parser};
 
 use crate::{
     ast::{
-        BlockExpr, FunctionItem, FunctionOrMethodParam, FunctionParam, IdentifierPatt, Keyword,
-        OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
+        BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, IdentifierPatt,
+        Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
     },
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParsePattern},
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use core::fmt;
@@ -32,12 +32,12 @@ impl ParseDefItem for FunctionItem {
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen)?;
+        let open_paren = parser.expect_open_paren()?;
 
         let params_opt =
             collection::get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
 
-        parser.expect_closing_paren(&open_paren)?;
+        parser.expect_closing_paren()?;
 
         let mut last_token = parser.current_token().cloned();
 
@@ -51,6 +51,7 @@ impl ParseDefItem for FunctionItem {
                 Ok(Some(Box::new(Type::parse(parser)?)))
             } else {
                 parser.log_missing("type", "function return type");
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
         } else {
@@ -69,8 +70,9 @@ impl ParseDefItem for FunctionItem {
                     Ok(None)
                 }
                 Some(Token::EOF) | None => {
-                    parser.log_unmatched_delimiter(&open_paren); // TODO: should be `{`
-                    parser.log_missing_token("`}`");
+                    let position = parser.current_position();
+                    parser.log_unmatched_delimiter(&Delimiter::LBrace { position });
+                    parser.log_unexpected_eoi();
                     Err(ErrorsEmitted)
                 }
                 _ => Ok(Some(BlockExpr::parse(parser)?)),
@@ -149,6 +151,7 @@ impl FunctionOrMethodParam {
 
                     Some(Token::RParen { .. } | Token::Comma { .. }) => {
                         parser.log_missing("type", "function parameter type annotation");
+                        parser.next_token();
                         return Err(ErrorsEmitted);
                     }
 

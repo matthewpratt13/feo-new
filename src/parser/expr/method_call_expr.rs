@@ -3,7 +3,7 @@ use crate::{
     error::ErrorsEmitted,
     parser::{collection, ParseOperatorExpr, Parser, Precedence},
     span::Spanned,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use core::fmt;
@@ -19,7 +19,7 @@ impl ParseOperatorExpr for MethodCallExpr {
 
         let method_name = parser.expect_identifier()?;
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen)?;
+        let open_paren = parser.expect_open_paren()?;
 
         let args_opt = collection::get_expressions(parser, Precedence::Lowest, &open_paren)?;
 
@@ -41,6 +41,7 @@ impl ParseOperatorExpr for MethodCallExpr {
             }
             _ => {
                 parser.log_unmatched_delimiter(&open_paren);
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
         }

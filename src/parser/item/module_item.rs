@@ -3,7 +3,7 @@ use super::{collection, ParseDefItem, Parser};
 use crate::{
     ast::{InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
     error::ErrorsEmitted,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use core::fmt;
@@ -26,11 +26,11 @@ impl ParseDefItem for ModuleItem {
 
         let module_name = parser.expect_identifier()?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
+        parser.expect_open_brace()?;
 
         let (inner_attributes_opt, items_opt) = parse_items(parser)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(ModuleItem {
             outer_attributes_opt,

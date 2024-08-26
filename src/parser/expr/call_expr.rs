@@ -17,7 +17,7 @@ impl ParseOperatorExpr for CallExpr {
             ErrorsEmitted
         })?;
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen)?;
+        let open_paren = parser.expect_open_paren()?;
 
         let args_opt = collection::get_expressions(parser, Precedence::Lowest, &open_paren)?;
 
@@ -34,8 +34,13 @@ impl ParseOperatorExpr for CallExpr {
                     span,
                 }))
             }
-            _ => {
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_unmatched_delimiter(&open_paren);
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token(&TokenType::RBracket.to_string());
                 Err(ErrorsEmitted)
             }
         }

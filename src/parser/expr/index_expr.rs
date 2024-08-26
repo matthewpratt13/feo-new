@@ -3,7 +3,7 @@ use crate::{
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser, Precedence},
     span::Spanned,
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use core::fmt;
@@ -17,7 +17,7 @@ impl ParseOperatorExpr for IndexExpr {
             ErrorsEmitted
         })?;
 
-        let open_bracket = parser.expect_delimiter(TokenType::LBracket)?;
+        let open_bracket = parser.expect_open_bracket()?;
 
         let index = parser.parse_value_expr(Precedence::Lowest)?;
 
@@ -38,6 +38,7 @@ impl ParseOperatorExpr for IndexExpr {
             }
             _ => {
                 parser.log_unmatched_delimiter(&open_bracket);
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
         }

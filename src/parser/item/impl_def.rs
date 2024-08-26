@@ -52,11 +52,11 @@ impl ParseDefItem for InherentImplDef {
             (Some(_), Some(ga)) => Some(ga),
         };
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
+        parser.expect_open_brace()?;
 
         let associated_items_opt = collection::get_associated_items::<InherentImplItem>(parser)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(InherentImplDef {
             attributes_opt,
@@ -146,11 +146,11 @@ impl ParseDefItem for TraitImplDef {
 
         let where_clause_opt = parse_where_clause(parser)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
+        parser.expect_open_brace()?;
 
         let associated_items_opt = collection::get_associated_items::<TraitImplItem>(parser)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(TraitImplDef {
             attributes_opt,
@@ -199,6 +199,7 @@ impl ParseAssociatedItem for InherentImplItem {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
                     parser.log_missing("item", "function implementation");
+                    parser.next_token();
                     Err(ErrorsEmitted)
                 } else {
                     Ok(InherentImplItem::FunctionItem(function_def))
@@ -236,6 +237,7 @@ impl ParseAssociatedItem for TraitImplItem {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
                     parser.log_missing("item", "trait implementation associated item");
+                    parser.next_token();
                     Err(ErrorsEmitted)
                 } else {
                     Ok(TraitImplItem::FunctionItem(function_def))

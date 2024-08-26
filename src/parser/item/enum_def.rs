@@ -7,7 +7,7 @@ use crate::{
     },
     error::ErrorsEmitted,
     parser::{collection, Parser},
-    token::{Token, TokenType},
+    token::Token,
 };
 
 use core::fmt;
@@ -32,11 +32,11 @@ impl ParseDefItem for EnumDef {
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
+        parser.expect_open_brace()?;
 
         let variants = parse_enum_variants(parser)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(EnumDef {
             attributes_opt,
@@ -128,7 +128,7 @@ fn parse_enum_variant(
 }
 
 fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, ErrorsEmitted> {
-    let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
+    let open_brace = parser.expect_open_brace()?;
 
     let struct_fields = if let Some(sdf) =
         collection::get_collection(parser, StructDefField::parse, &open_brace)?
@@ -136,26 +136,28 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
         Ok(sdf)
     } else {
         parser.log_missing("item field", "struct field");
+        parser.next_token();
         Err(ErrorsEmitted)
     }?;
 
-    let _ = parser.get_braced_item_span(None, &open_brace);
+    let _ = parser.get_braced_item_span(None);
 
     Ok(EnumVariantStruct { struct_fields })
 }
 
 fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTupleStruct, ErrorsEmitted> {
-    let open_paren = parser.expect_delimiter(TokenType::LParen)?;
+    let open_paren = parser.expect_open_paren()?;
 
     let element_types =
         if let Some(t) = collection::get_collection(parser, Type::parse, &open_paren)? {
             Ok(t)
         } else {
             parser.log_missing("type", "tuple element type annotation");
+            parser.next_token();
             Err(ErrorsEmitted)
         }?;
 
-    let _ = parser.get_parenthesized_item_span(None, &open_paren);
+    let _ = parser.get_parenthesized_item_span(None);
 
     Ok(EnumVariantTupleStruct { element_types })
 }

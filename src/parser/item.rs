@@ -185,15 +185,18 @@ impl ParseStatement for Item {
                 }
             },
             None | Some(Token::EOF { .. }) => {
-                Err(parser.log_missing_token("item definition keyword"))
+                parser.log_unexpected_eoi();
+                parser.log_missing_token("item definition keyword");
+                Err(ErrorsEmitted)
             }
             Some(_) => {
                 if attributes_opt.is_some() {
-                    return Err(parser.log_unexpected_token("item to match attributes"));
+                    parser.log_unexpected_token("item to match attributes");
+                    return Err(ErrorsEmitted);
                 }
 
-                Err(parser
-                    .log_unexpected_token("module definition, or implementation or trait item"))
+                parser.log_unexpected_token("module definition, or implementation or trait item");
+                Err(ErrorsEmitted)
             }
         }
     }
@@ -212,6 +215,7 @@ pub(crate) fn parse_generic_params(
             collection::get_collection(parser, parse_generic_param, &left_angle_bracket)?
                 .ok_or_else(|| {
                     parser.log_missing("ty", "generic params");
+                    parser.next_token();
                     ErrorsEmitted
                 })?;
 

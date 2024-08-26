@@ -31,11 +31,11 @@ impl ParseDefItem for StructDef {
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace)?;
+        let open_brace = parser.expect_open_brace()?;
 
         let fields_opt = collection::get_collection(parser, StructDefField::parse, &open_brace)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(StructDef {
             attributes_opt,
@@ -80,12 +80,12 @@ impl ParseDefItem for TupleStructDef {
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen)?;
+        let open_paren = parser.expect_open_paren()?;
 
         let tuple_struct_fields_opt =
             collection::get_collection(parser, parse_tuple_struct_def_field, &open_paren)?;
 
-        parser.expect_closing_paren(&open_paren)?;
+        parser.expect_closing_paren()?;
 
         let span = parser.get_decl_item_span(first_token.as_ref())?;
 

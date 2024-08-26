@@ -81,6 +81,7 @@ fn parse_else_blocks(
                 break;
             }
             Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_missing_token("`if` or `{`");
                 return Err(ErrorsEmitted);
             }
