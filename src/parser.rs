@@ -1506,6 +1506,24 @@ impl Parser {
         }
     }
 
+    fn expect_identifier(&mut self) -> Result<Identifier, ErrorsEmitted> {
+        match self.current_token().cloned() {
+            Some(Token::Identifier { name, .. }) => {
+                self.next_token();
+                Ok(Identifier::from(&name))
+            }
+            Some(Token::EOF) | None => {
+                self.log_unexpected_eoi();
+                self.log_missing_token("identifier");
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                self.log_unexpected_token("identifier");
+                Err(ErrorsEmitted)
+            }
+        }
+    }
+
     fn expect_open_paren(&mut self) -> Result<Delimiter, ErrorsEmitted> {
         let position = self.current_position();
 
@@ -1603,24 +1621,6 @@ impl Parser {
             }
             _ => {
                 self.log_unexpected_token(&TokenType::LParen.to_string());
-                Err(ErrorsEmitted)
-            }
-        }
-    }
-
-    fn expect_identifier(&mut self) -> Result<Identifier, ErrorsEmitted> {
-        match self.current_token().cloned() {
-            Some(Token::Identifier { name, .. }) => {
-                self.next_token();
-                Ok(Identifier::from(&name))
-            }
-            Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_missing_token("identifier");
-                Err(ErrorsEmitted)
-            }
-            _ => {
-                self.log_unexpected_token("identifier");
                 Err(ErrorsEmitted)
             }
         }
