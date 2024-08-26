@@ -658,7 +658,8 @@ impl Parser {
 
             Some(Token::EOF) | None => {
                 // log the error, then return `Err(ErrorsEmitted)`
-                Err(self.log_unexpected_eoi())
+                self.log_unexpected_eoi();
+                Err(ErrorsEmitted)
             }
 
             _ => {
@@ -701,7 +702,10 @@ impl Parser {
                 self.next_token();
 
                 match self.current_token() {
-                    Some(Token::EOF) | None => Err(self.log_unexpected_eoi()),
+                    Some(Token::EOF) | None => {
+                        self.log_unexpected_eoi();
+                        Err(ErrorsEmitted)
+                    }
 
                     Some(Token::Identifier { .. } | Token::UIntLiteral { .. }) => {
                         match self.context {
@@ -1386,7 +1390,8 @@ impl Parser {
 
             Some(Token::EOF) | None => {
                 // log the error, then return `Err(ErrorsEmitted)`
-                Err(self.log_unexpected_eoi())
+                self.log_unexpected_eoi();
+                Err(ErrorsEmitted)
             }
 
             _ => {
@@ -1738,8 +1743,8 @@ impl Parser {
     }
 
     /// Log error information when the source code has to an unexpected end.
-    fn log_unexpected_eoi(&mut self) -> ErrorsEmitted {
-        self.log_error(ParserErrorKind::UnexpectedEndOfInput)
+    fn log_unexpected_eoi(&mut self) {
+        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
     }
 
     /// Retrieve a list of any errors that occurred during parsing.
