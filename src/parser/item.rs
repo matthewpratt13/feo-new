@@ -156,16 +156,20 @@ impl ParseStatement for Item {
                 visibility,
             )?))),
             Some(Token::Struct { .. }) => match parser.peek_ahead_by(2) {
-                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::StructDef(
-                    StructDef::parse(parser, attributes_opt, visibility)?,
-                ))),
-
                 Some(Token::LParen { .. }) => Ok(Statement::Item(Item::TupleStructDef(
                     TupleStructDef::parse(parser, attributes_opt, visibility)?,
                 ))),
 
+                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::StructDef(
+                    StructDef::parse(parser, attributes_opt, visibility)?,
+                ))),
+
                 _ => {
-                    parser.log_unexpected_token("`{` or `(`");
+                    parser.log_unexpected_token(&format!(
+                        "{} or {}",
+                        TokenType::LParen,
+                        TokenType::LBrace
+                    ));
                     Err(ErrorsEmitted)
                 }
             },
@@ -180,7 +184,11 @@ impl ParseStatement for Item {
                     InherentImplDef::parse(parser, attributes_opt, visibility)?,
                 ))),
                 _ => {
-                    parser.log_unexpected_token("`for` or `{`");
+                    parser.log_unexpected_token(&format!(
+                        "{} or {}",
+                        TokenType::For,
+                        TokenType::LBrace
+                    ));
                     Err(ErrorsEmitted)
                 }
             },
@@ -239,7 +247,10 @@ pub(crate) fn parse_generic_param(parser: &mut Parser) -> Result<GenericParam, E
             {
                 Identifier::from(name)
             } else {
-                parser.log_unexpected_token("single uppercase alphabetic character or `_`");
+                parser.log_unexpected_token(&format!(
+                    "single uppercase alphabetic character or {}",
+                    TokenType::Underscore
+                ));
                 return Err(ErrorsEmitted);
             }
         }
@@ -250,7 +261,10 @@ pub(crate) fn parse_generic_param(parser: &mut Parser) -> Result<GenericParam, E
         }
 
         _ => {
-            parser.log_unexpected_token("identifier");
+            parser.log_unexpected_token(&format!(
+                "single uppercase alphabetic character or {}",
+                TokenType::Underscore
+            ));
             return Err(ErrorsEmitted);
         }
     };
@@ -284,7 +298,7 @@ pub(crate) fn parse_where_clause(
         Type::SelfType(st) => Ok(st),
         ty => {
             parser.log_error(ParserErrorKind::InvalidTypeParameter {
-                expected: "`Self`".to_string(),
+                expected: TokenType::SelfType.to_string(),
                 found: ty.to_string(),
             });
             return Err(ErrorsEmitted);
@@ -310,7 +324,7 @@ pub(crate) fn parse_where_clause(
 
             bounds
         } else {
-            parser.log_unexpected_token("`Self` type");
+            parser.log_unexpected_token(&format!("{} type", TokenType::SelfType));
             return Err(ErrorsEmitted);
         }
     } else {

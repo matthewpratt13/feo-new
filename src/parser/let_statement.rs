@@ -4,7 +4,7 @@ use crate::{
     ast::{IdentifierPatt, Keyword, LetStmt, Statement, Type},
     error::ErrorsEmitted,
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -17,7 +17,7 @@ impl ParseStatement for LetStmt {
             parser.next_token();
             Ok(Keyword::Let)
         } else {
-            parser.log_unexpected_token("`let`");
+            parser.log_unexpected_token(&TokenType::Let.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -66,11 +66,11 @@ impl ParseStatement for LetStmt {
             }
             Some(Token::EOF) | None => {
                 parser.log_unexpected_eoi();
-                parser.log_missing_token("`;`");
+                parser.log_missing_token(&TokenType::Semicolon.to_string());
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("`;`");
+                parser.log_unexpected_token(&TokenType::Semicolon.to_string());
                 Err(ErrorsEmitted)
             }
         }

@@ -2,7 +2,7 @@ use crate::{
     ast::{Delimiter, OrPatt, Pattern},
     error::ErrorsEmitted,
     parser::{collection, Parser},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 impl OrPatt {
@@ -17,7 +17,7 @@ impl OrPatt {
                 Delimiter::Pipe { position }
             }
             _ => {
-                parser.log_unexpected_token("pipe operator");
+                parser.log_unexpected_token(&format!("pipe operator ({})", TokenType::Pipe));
                 return Err(ErrorsEmitted);
             }
         };

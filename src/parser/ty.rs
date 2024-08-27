@@ -79,11 +79,11 @@ impl Type {
                     }
                     Some(Token::EOF) | None => {
                         parser.log_unexpected_eoi();
-                        parser.log_missing_token("`>`");
+                        parser.log_missing_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                     _ => {
-                        parser.log_unexpected_token("`>`");
+                        parser.log_unexpected_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                 }
@@ -109,11 +109,11 @@ impl Type {
                     }
                     Some(Token::EOF) | None => {
                         parser.log_unexpected_eoi();
-                        parser.log_missing_token("`>`");
+                        parser.log_missing_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                     _ => {
-                        parser.log_unexpected_token("`>`");
+                        parser.log_unexpected_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                 }
@@ -135,11 +135,11 @@ impl Type {
 
                     Some(Token::EOF) | None => {
                         parser.log_unexpected_eoi();
-                        parser.log_missing_token("`>`");
+                        parser.log_missing_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                     _ => {
-                        parser.log_unexpected_token("`>`");
+                        parser.log_unexpected_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                 }
@@ -161,11 +161,11 @@ impl Type {
                     }
                     Some(Token::EOF) | None => {
                         parser.log_unexpected_eoi();
-                        parser.log_missing_token("`>`");
+                        parser.log_missing_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                     _ => {
-                        parser.log_unexpected_token("`>`");
+                        parser.log_unexpected_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                 }
@@ -352,22 +352,7 @@ impl fmt::Debug for Type {
 fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     let mut params: Vec<FunctionOrMethodParam> = Vec::new();
 
-    let open_paren = match parser.current_token() {
-        Some(Token::LParen { .. }) => {
-            let position = parser.current_position();
-            parser.next_token();
-            Ok(Delimiter::LParen { position })
-        }
-        Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
-            parser.log_missing_token("`(`");
-            Err(ErrorsEmitted)
-        }
-        _ => {
-            parser.log_unexpected_token("`(`");
-            Err(ErrorsEmitted)
-        }
-    }?;
+    let open_paren = parser.expect_open_paren()?;
 
     // `&self` and `&mut self` can only occur as the first parameter in a method
     if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) = parser.current_token() {
