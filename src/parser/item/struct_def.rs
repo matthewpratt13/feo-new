@@ -122,13 +122,29 @@ impl StructDefField {
 
         parser.expect_token(TokenType::Colon)?;
 
-        let field_type = Box::new(Type::parse(parser)?);
+        let field_type = match parser.current_token() {
+            Some(Token::Comma { .. }) => {
+                parser.log_missing("type", "struct field type");
+                parser.next_token();
+                Err(ErrorsEmitted)
+            }
+            Some(Token::RBrace { .. }) => {
+                parser.log_missing("type", "struct field type");
+                Err(ErrorsEmitted)
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                parser.log_missing("type", "struct field type");
+                Err(ErrorsEmitted)
+            }
+            _ => Type::parse(parser),
+        }?;
 
         Ok(StructDefField {
             attributes_opt,
             visibility,
             field_name,
-            field_type,
+            field_type: Box::new(field_type),
         })
     }
 }
@@ -138,12 +154,28 @@ fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefFie
 
     let visibility = Visibility::visibility(parser)?;
 
-    let field_type = Box::new(Type::parse(parser)?);
+    let field_type = match parser.current_token() {
+        Some(Token::Comma { .. } | Token::RParen { .. }) => {
+            parser.log_missing("type", "struct field type");
+            parser.next_token();
+            Err(ErrorsEmitted)
+        }
+        Some(Token::Semicolon { .. }) => {
+            parser.log_missing("type", "struct field type");
+            Err(ErrorsEmitted)
+        }
+        Some(Token::EOF) | None => {
+            parser.log_unexpected_eoi();
+            parser.log_missing("type", "struct field type");
+            Err(ErrorsEmitted)
+        }
+        _ => Type::parse(parser),
+    }?;
 
     Ok(TupleStructDefField {
         attributes_opt,
         visibility,
-        field_type,
+        field_type: Box::new(field_type),
     })
 }
 

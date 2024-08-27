@@ -42,31 +42,26 @@ impl fmt::Debug for MappingExpr {
 fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted> {
     let key = parser.parse_pattern()?;
 
-    match parser.current_token() {
-        Some(Token::Colon { .. }) => {
+    parser.expect_token(TokenType::Colon)?;
+
+    let value = match parser.current_token() {
+        Some(Token::Comma { .. } | Token::RBrace { .. }) => {
+            parser.log_missing("expr", "mapping value");
             parser.next_token();
-
-            if let Some(Token::Comma { .. } | Token::RBrace { .. }) = parser.current_token() {
-                parser.log_missing("expr", &format!("value for key: \"{}\"", &key));
-                parser.next_token();
-
-                return Err(ErrorsEmitted);
-            }
+            return Err(ErrorsEmitted);
         }
         Some(Token::EOF) | None => {
             parser.log_unexpected_eoi();
-            parser.log_missing_token(&TokenType::Colon.to_string());
+            parser.log_missing("expr", "mapping value");
             return Err(ErrorsEmitted);
         }
-        _ => {
-            parser.log_unexpected_token(&TokenType::Colon.to_string());
-            return Err(ErrorsEmitted);
-        }
-    }
+        _ => parser.parse_expression(Precedence::Lowest),
+    }?;
 
-    let value = Box::new(parser.parse_expression(Precedence::Lowest)?);
-
-    Ok(MappingPair { k: key, v: value })
+    Ok(MappingPair {
+        k: key,
+        v: Box::new(value),
+    })
 }
 
 #[cfg(test)]

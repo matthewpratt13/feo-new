@@ -144,32 +144,25 @@ impl FunctionOrMethodParam {
             Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
                 let param_name = IdentifierPatt::parse_patt(parser)?;
 
-                match parser.current_token() {
-                    Some(Token::Colon { .. }) => {
-                        parser.next_token();
-                    }
+                parser.expect_token(TokenType::Colon)?;
 
-                    Some(Token::RParen { .. } | Token::Comma { .. }) => {
+                let param_type = match parser.current_token() {
+                    Some(Token::Comma { .. } | Token::RParen { .. }) => {
                         parser.log_missing("type", "function parameter type");
                         parser.next_token();
-                        return Err(ErrorsEmitted);
+                        Err(ErrorsEmitted)
                     }
-
                     Some(Token::EOF) | None => {
                         parser.log_unexpected_eoi();
-                        return Err(ErrorsEmitted);
+                        parser.log_missing("type", "function parameter type");
+                        Err(ErrorsEmitted)
                     }
-                    _ => {
-                        parser.log_unexpected_token(&TokenType::Colon.to_string());
-                        return Err(ErrorsEmitted);
-                    }
-                }
-
-                let param_type = Box::new(Type::parse(parser)?);
+                    _ => Type::parse(parser),
+                }?;
 
                 let function_param = FunctionParam {
                     param_name,
-                    param_type,
+                    param_type: Box::new(param_type),
                 };
 
                 Ok(FunctionOrMethodParam::FunctionParam(function_param))

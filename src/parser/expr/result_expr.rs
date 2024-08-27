@@ -2,7 +2,7 @@ use crate::{
     ast::{Keyword, ResultExpr},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, Parser},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -15,7 +15,7 @@ impl ParseConstructExpr for ResultExpr {
             Some(Token::Ok { .. }) => Ok(Keyword::Ok),
             Some(Token::Err { .. }) => Ok(Keyword::Err),
             _ => {
-                parser.log_unexpected_token("`Ok` or `Err`");
+                parser.log_unexpected_token(&format!("{} or {}", TokenType::Ok, TokenType::Err));
                 Err(ErrorsEmitted)
             }
         }?;

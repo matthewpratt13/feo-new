@@ -5,7 +5,7 @@ use crate::{
         collection, ParseConstructExpr, ParseOperatorExpr, ParseSimpleExpr, Parser, Precedence,
     },
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -62,9 +62,13 @@ impl ParseOperatorExpr for TupleStructExpr {
                     span,
                 }))
             }
-            _ => {
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_unmatched_delimiter(&open_paren);
-                parser.next_token();
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token(&TokenType::RParen.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -85,32 +89,26 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
 
     let field_name = parser.expect_identifier("struct field name")?;
 
-    match parser.current_token() {
-        Some(Token::Colon { .. }) => {
-            parser.next_token();
+    parser.expect_token(TokenType::Colon)?;
 
-            if let Some(Token::Comma { .. } | Token::RBrace { .. }) = parser.current_token() {
-                parser.log_missing("expr", "value for struct field name");
-                parser.next_token();
-                return Err(ErrorsEmitted);
-            }
+    let field_value = match parser.current_token() {
+        Some(Token::Comma { .. } | Token::RBrace { .. }) => {
+            parser.log_missing("expr", "struct field value");
+            parser.next_token();
+            Err(ErrorsEmitted)
         }
         Some(Token::EOF) | None => {
             parser.log_unexpected_eoi();
-            return Err(ErrorsEmitted);
+            parser.log_missing("expr", "struct field value");
+            Err(ErrorsEmitted)
         }
-        _ => {
-            parser.log_unexpected_token("`:`");
-            return Err(ErrorsEmitted);
-        }
-    }
-
-    let field_value = Box::new(parser.parse_expression(Precedence::Lowest)?);
+        _ => parser.parse_expression(Precedence::Lowest),
+    }?;
 
     let struct_field = StructField {
         attributes_opt,
         field_name,
-        field_value,
+        field_value: Box::new(field_value),
     };
 
     Ok(struct_field)

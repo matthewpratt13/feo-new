@@ -2,8 +2,8 @@ use super::{parse_generic_params, ParseDefItem};
 
 use crate::{
     ast::{
-        EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTupleStruct, EnumVariantType,
-        Identifier, Keyword, OuterAttr, StructDefField, Type, Visibility,
+        EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTupleStruct, EnumVariantType, Keyword,
+        OuterAttr, StructDefField, Type, Visibility,
     },
     error::ErrorsEmitted,
     parser::{collection, Parser},
@@ -91,22 +91,9 @@ fn parse_enum_variant(
     parser: &mut Parser,
     attributes_opt: Option<Vec<OuterAttr>>,
 ) -> Result<EnumVariant, ErrorsEmitted> {
-    let token = parser.next_token();
-
     let visibility = Visibility::visibility(parser)?;
 
-    let variant_name = match token {
-        Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-        Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
-            parser.log_missing("identifier", "enum variant");
-            Err(ErrorsEmitted)
-        }
-        _ => {
-            parser.log_unexpected_token("enum variant identifier");
-            Err(ErrorsEmitted)
-        }
-    }?;
+    let variant_name = parser.expect_identifier("enum variant name")?;
 
     let variant_type_opt = match parser.current_token() {
         Some(Token::LBrace { .. }) => {
