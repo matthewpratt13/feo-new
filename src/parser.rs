@@ -935,7 +935,11 @@ impl Parser {
                     Some(Token::RBrace { .. } | Token::EOF) | None => (),
 
                     _ => {
-                        self.log_unexpected_token("`;` or `}`");
+                        self.log_unexpected_token(&format!(
+                            "{} or {}",
+                            TokenType::RBrace,
+                            TokenType::Semicolon
+                        ));
                         return Err(self.errors().to_vec());
                     }
                 }
