@@ -3,7 +3,7 @@ use crate::{
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser},
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -21,7 +21,7 @@ impl ParseOperatorExpr for TypeCastExpr {
             parser.next_token();
             Ok(TypeCastOp)
         } else {
-            parser.log_unexpected_token("type cast operator (`as`)");
+            parser.log_unexpected_token(&format!("type cast operator ({})", TokenType::As));
             Err(ErrorsEmitted)
         }?;
 

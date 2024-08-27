@@ -3,7 +3,7 @@ use crate::{
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParseOperatorExpr, Parser, Precedence},
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -47,7 +47,7 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
             elements.push(element);
             parser.next_token();
         } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
-            parser.log_unexpected_token("`,` or `)`");
+            parser.log_unexpected_token(&format!("{} or {}", TokenType::Comma, TokenType::RParen));
         } else if matches!(parser.current_token(), Some(Token::RParen { .. })) {
             final_element_opt = Some(Box::new(element));
             break;
