@@ -20,25 +20,17 @@ impl ParseDefItem for ModuleItem {
             parser.next_token();
             Ok(Keyword::Module)
         } else {
-            parser.log_unexpected_token("`module`");
+            parser.log_unexpected_token(&TokenType::Module.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let module_name = parser.expect_identifier()?;
+        let module_name = parser.expect_identifier("module name")?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        parser.expect_open_brace()?;
 
         let (inner_attributes_opt, items_opt) = parse_items(parser)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(ModuleItem {
             outer_attributes_opt,

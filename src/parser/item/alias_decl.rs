@@ -3,7 +3,7 @@ use super::{ParseDeclItem, Parser};
 use crate::{
     ast::{AliasDecl, Keyword, OuterAttr, Type, Visibility},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -20,11 +20,11 @@ impl ParseDeclItem for AliasDecl {
             parser.next_token();
             Ok(Keyword::Alias)
         } else {
-            parser.log_unexpected_token("`alias`");
+            parser.log_unexpected_token(&TokenType::Alias.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let alias_name = parser.expect_identifier()?;
+        let alias_name = parser.expect_identifier("alias name")?;
 
         let original_type_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
             parser.next_token();
@@ -32,7 +32,8 @@ impl ParseDeclItem for AliasDecl {
             if parser.current_token().is_some() {
                 Ok(Some(Type::parse(parser)?))
             } else {
-                parser.log_missing_token("original type");
+                parser.log_missing("type", "original type");
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
         } else {

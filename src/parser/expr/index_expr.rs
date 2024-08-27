@@ -17,15 +17,7 @@ impl ParseOperatorExpr for IndexExpr {
             ErrorsEmitted
         })?;
 
-        let open_bracket = parser.expect_delimiter(TokenType::LBracket).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_bracket = parser.expect_open_bracket()?;
 
         let index = parser.parse_value_expr(Precedence::Lowest)?;
 
@@ -44,8 +36,14 @@ impl ParseOperatorExpr for IndexExpr {
 
                 Ok(Expression::Index(expr))
             }
-            _ => {
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_unmatched_delimiter(&open_bracket);
+                Err(ErrorsEmitted)
+            }
+
+            _ => {
+                parser.log_unexpected_token(&TokenType::RBracket.to_string());
                 Err(ErrorsEmitted)
             }
         }

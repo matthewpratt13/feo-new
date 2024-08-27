@@ -2,8 +2,8 @@ use super::{parse_generic_params, ParseDefItem};
 
 use crate::{
     ast::{
-        EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTupleStruct, EnumVariantType,
-        Identifier, Keyword, OuterAttr, StructDefField, Type, Visibility,
+        EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTupleStruct, EnumVariantType, Keyword,
+        OuterAttr, StructDefField, Type, Visibility,
     },
     error::ErrorsEmitted,
     parser::{collection, Parser},
@@ -24,27 +24,19 @@ impl ParseDefItem for EnumDef {
             parser.next_token();
             Ok(Keyword::Enum)
         } else {
-            parser.log_unexpected_token("enum");
+            parser.log_unexpected_token(&TokenType::Enum.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let enum_name = parser.expect_identifier()?;
+        let enum_name = parser.expect_identifier("enum name")?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        parser.expect_open_brace()?;
 
         let variants = parse_enum_variants(parser)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(EnumDef {
             attributes_opt,
@@ -87,7 +79,7 @@ fn parse_enum_variants(parser: &mut Parser) -> Result<Vec<EnumVariant>, ErrorsEm
             parser.current_token(),
             Some(Token::RBrace { .. } | Token::EOF)
         ) {
-            parser.log_unexpected_token("`,` or `}`");
+            parser.log_unexpected_token(&format!("{} or {}", TokenType::Comma, TokenType::RBrace));
             return Err(ErrorsEmitted);
         }
     }
@@ -99,21 +91,9 @@ fn parse_enum_variant(
     parser: &mut Parser,
     attributes_opt: Option<Vec<OuterAttr>>,
 ) -> Result<EnumVariant, ErrorsEmitted> {
-    let token = parser.next_token();
-
     let visibility = Visibility::visibility(parser)?;
 
-    let variant_name = match token {
-        Some(Token::Identifier { name, .. }) => Ok(Identifier::from(&name)),
-        Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
-            Err(ErrorsEmitted)
-        }
-        _ => {
-            parser.log_unexpected_token("enum variant identifier");
-            Err(ErrorsEmitted)
-        }
-    }?;
+    let variant_name = parser.expect_identifier("enum variant name")?;
 
     let variant_type_opt = match parser.current_token() {
         Some(Token::LBrace { .. }) => {
@@ -136,50 +116,36 @@ fn parse_enum_variant(
 }
 
 fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, ErrorsEmitted> {
-    let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-        d.ok_or_else(|| {
-            parser.logger.warn(&format!(
-                "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                parser.current_token()
-            ));
-            ErrorsEmitted
-        })
-    })?;
+    let open_brace = parser.expect_open_brace()?;
 
     let struct_fields = if let Some(sdf) =
         collection::get_collection(parser, StructDefField::parse, &open_brace)?
     {
         Ok(sdf)
     } else {
-        parser.log_missing("item field", "struct field");
+        parser.log_missing("identifier", "struct field");
+        parser.next_token();
         Err(ErrorsEmitted)
     }?;
 
-    let _ = parser.get_braced_item_span(None, &open_brace);
+    let _ = parser.get_braced_item_span(None);
 
     Ok(EnumVariantStruct { struct_fields })
 }
 
 fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTupleStruct, ErrorsEmitted> {
-    let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
-        d.ok_or_else(|| {
-            parser.logger.warn(&format!(
-                "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                parser.current_token()
-            ));
-            ErrorsEmitted
-        })
-    })?;
+    let open_paren = parser.expect_open_paren()?;
 
     let element_types =
         if let Some(t) = collection::get_collection(parser, Type::parse, &open_paren)? {
             Ok(t)
         } else {
-            parser.log_missing("type", "tuple element type annotation");
+            parser.log_missing("type", "tuple element type");
+            parser.next_token();
             Err(ErrorsEmitted)
         }?;
 
-    let _ = parser.get_parenthesized_item_span(None, &open_paren);
+    let _ = parser.get_parenthesized_item_span(None);
 
     Ok(EnumVariantTupleStruct { element_types })
 }

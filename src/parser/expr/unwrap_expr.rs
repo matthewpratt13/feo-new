@@ -3,7 +3,7 @@ use crate::{
     error::ErrorsEmitted,
     parser::{ParseOperatorExpr, Parser},
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -33,11 +33,15 @@ impl ParseOperatorExpr for UnwrapExpr {
                 Ok(Expression::Unwrap(expr))
             }
             Some(Token::EOF) | None => {
-                parser.log_missing_token("unwrap operator (`?`)");
+                parser.log_unexpected_eoi();
+                parser.log_missing_token(&format!("unwrap operator ({})", TokenType::QuestionMark));
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("unwrap operator (`?`)");
+                parser.log_unexpected_token(&format!(
+                    "unwrap operator ({})",
+                    TokenType::QuestionMark
+                ));
                 Err(ErrorsEmitted)
             }
         }

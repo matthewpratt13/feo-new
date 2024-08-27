@@ -2,8 +2,8 @@ use super::{collection, parse_generic_params, ParseDefItem, Parser};
 
 use crate::{
     ast::{
-        BlockExpr, FunctionItem, FunctionOrMethodParam, FunctionParam, IdentifierPatt, Keyword,
-        OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
+        BlockExpr, Delimiter, FunctionItem, FunctionOrMethodParam, FunctionParam, IdentifierPatt,
+        Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
     },
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParsePattern},
@@ -24,28 +24,20 @@ impl ParseDefItem for FunctionItem {
             parser.next_token();
             Ok(Keyword::Func)
         } else {
-            parser.log_unexpected_token("`func`");
+            parser.log_unexpected_token(&TokenType::Func.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let function_name = parser.expect_identifier()?;
+        let function_name = parser.expect_identifier("function name")?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_paren = parser.expect_open_paren()?;
 
         let params_opt =
             collection::get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
 
-        parser.expect_closing_paren(&open_paren)?;
+        parser.expect_closing_paren()?;
 
         let mut last_token = parser.current_token().cloned();
 
@@ -59,6 +51,7 @@ impl ParseDefItem for FunctionItem {
                 Ok(Some(Box::new(Type::parse(parser)?)))
             } else {
                 parser.log_missing("type", "function return type");
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
         } else {
@@ -77,8 +70,9 @@ impl ParseDefItem for FunctionItem {
                     Ok(None)
                 }
                 Some(Token::EOF) | None => {
-                    parser.log_unmatched_delimiter(&open_paren); // TODO: should be `{`
-                    parser.log_missing_token("`}`");
+                    let position = parser.current_position();
+                    parser.log_unexpected_eoi();
+                    parser.log_unmatched_delimiter(&Delimiter::LBrace { position });
                     Err(ErrorsEmitted)
                 }
                 _ => Ok(Some(BlockExpr::parse(parser)?)),
@@ -150,31 +144,25 @@ impl FunctionOrMethodParam {
             Some(Token::Identifier { .. } | Token::Ref { .. } | Token::Mut { .. }) => {
                 let param_name = IdentifierPatt::parse_patt(parser)?;
 
-                match parser.current_token() {
-                    Some(Token::Colon { .. }) => {
+                parser.expect_token(TokenType::Colon)?;
+
+                let param_type = match parser.current_token() {
+                    Some(Token::Comma { .. } | Token::RParen { .. }) => {
+                        parser.log_missing("type", "function parameter type");
                         parser.next_token();
+                        Err(ErrorsEmitted)
                     }
-
-                    Some(Token::RParen { .. } | Token::Comma { .. }) => {
-                        parser.log_missing("type", "function parameter type annotation");
-                        return Err(ErrorsEmitted);
-                    }
-
                     Some(Token::EOF) | None => {
                         parser.log_unexpected_eoi();
-                        return Err(ErrorsEmitted);
+                        parser.log_missing("type", "function parameter type");
+                        Err(ErrorsEmitted)
                     }
-                    _ => {
-                        parser.log_unexpected_token("`:`");
-                        return Err(ErrorsEmitted);
-                    }
-                }
-
-                let param_type = Box::new(Type::parse(parser)?);
+                    _ => Type::parse(parser),
+                }?;
 
                 let function_param = FunctionParam {
                     param_name,
-                    param_type,
+                    param_type: Box::new(param_type),
                 };
 
                 Ok(FunctionOrMethodParam::FunctionParam(function_param))

@@ -1,9 +1,8 @@
 use super::Parser;
 
 use crate::{
-    ast::{Delimiter, Keyword, PubLibVis, Visibility},
+    ast::{Keyword, PubLibVis, Visibility},
     error::ErrorsEmitted,
-    span::Position,
     token::{Token, TokenType},
 };
 
@@ -17,16 +16,13 @@ impl Visibility {
 
                 match parser.current_token() {
                     Some(Token::LParen { .. }) => {
-                        let open_paren = Delimiter::LParen {
-                            position: Position::new(parser.current, &parser.stream.span().input()),
-                        };
-                        parser.next_token();
+                        parser.expect_open_paren()?;
 
                         let kw_lib = parser
                             .expect_token(TokenType::Lib)
                             .and_then(|_| Ok(Keyword::Lib))?;
 
-                        parser.expect_closing_paren(&open_paren)?;
+                        parser.expect_closing_paren()?;
 
                         let pub_lib = PubLibVis {
                             kw_pub: Keyword::Pub,

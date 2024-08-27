@@ -21,7 +21,7 @@ impl ParseDeclItem for StaticVarDecl {
             parser.next_token();
             Ok(Keyword::Static)
         } else {
-            parser.log_unexpected_token("`static`");
+            parser.log_unexpected_token(&TokenType::Static.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -32,7 +32,7 @@ impl ParseDeclItem for StaticVarDecl {
             None
         };
 
-        let var_name = parser.expect_identifier()?;
+        let var_name = parser.expect_identifier("variable name")?;
 
         parser.expect_token(TokenType::Colon)?;
 
@@ -51,6 +51,7 @@ impl ParseDeclItem for StaticVarDecl {
                 Ok(Some(Box::new(assignee_expr)))
             } else {
                 parser.log_missing("expr", "assignee");
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
         } else {

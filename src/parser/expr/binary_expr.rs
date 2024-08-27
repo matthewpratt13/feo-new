@@ -39,7 +39,9 @@ impl ParseOperatorExpr for BinaryExpr {
             TokenType::DblGreaterThan => Ok(BinaryOp::ShiftRight),
             TokenType::DblAsterisk => Ok(BinaryOp::Exponentiation),
             _ => {
-                parser.log_unexpected_token("binary arithmetic (`+`, `-`, `*`, `/`, `%` or `**`), logical (`&&` or `||`) or bitwise (`&`, `|`, `^`, `<<` or `>>`) operator") ;
+                parser
+                    .log_unexpected_token(&format!("binary arithmetic ({}, {}, {}, {}, {} or {}), logical ({}, {}) or bitwise ({}, {}, {}, {}, {}) operator", TokenType::Plus, TokenType::Minus, TokenType::Asterisk, TokenType::Slash, TokenType::Percent, TokenType::DblAsterisk, TokenType::DblAmpersand, TokenType::DblPipe, TokenType::Ampersand, TokenType::Pipe, TokenType::Caret, TokenType::DblLessThan, TokenType::DblGreaterThan));
+
                 Err(ErrorsEmitted)
             }
         }?;
@@ -94,9 +96,15 @@ impl ParseOperatorExpr for ComparisonExpr {
             TokenType::LessThanEquals => Ok(ComparisonOp::LessEqual),
             TokenType::GreaterThanEquals => Ok(ComparisonOp::GreaterEqual),
             _ => {
-                parser.log_unexpected_token(
-                    "binary comparison operator (`<`, `>`, `<=`, `>=`, `==` or `!=`",
-                );
+                parser.log_unexpected_token(&format!(
+                    "binary comparison operator ({}, {}, {}, {}, {} or {}",
+                    TokenType::LessThan,
+                    TokenType::GreaterThan,
+                    TokenType::LessThanEquals,
+                    TokenType::GreaterThanEquals,
+                    TokenType::DblEquals,
+                    TokenType::BangEquals
+                ));
                 Err(ErrorsEmitted)
             }
         }?;

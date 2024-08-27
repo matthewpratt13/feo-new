@@ -2,7 +2,7 @@ use crate::{
     ast::{ReferenceOp, ReferencePatt},
     error::ErrorsEmitted,
     parser::{ParsePattern, Parser},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 impl ParsePattern for ReferencePatt {
@@ -11,7 +11,11 @@ impl ParsePattern for ReferencePatt {
             Some(Token::Ampersand { .. }) => Ok(ReferenceOp::Borrow),
             Some(Token::AmpersandMut { .. }) => Ok(ReferenceOp::MutableBorrow),
             _ => {
-                parser.log_unexpected_token("reference operator (`&` or `&mut`");
+                parser.log_unexpected_token(&format!(
+                    "reference operator ({} or {})",
+                    TokenType::Ampersand,
+                    TokenType::AmpersandMut
+                ));
                 Err(ErrorsEmitted)
             }
         }?;

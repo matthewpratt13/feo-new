@@ -17,17 +17,9 @@ impl ParseOperatorExpr for MethodCallExpr {
             ErrorsEmitted
         })?;
 
-        let method_name = parser.expect_identifier()?;
+        let method_name = parser.expect_identifier("method name")?;
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_paren = parser.expect_open_paren()?;
 
         let args_opt = collection::get_expressions(parser, Precedence::Lowest, &open_paren)?;
 
@@ -47,8 +39,13 @@ impl ParseOperatorExpr for MethodCallExpr {
 
                 Ok(Expression::MethodCall(expr))
             }
-            _ => {
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_unmatched_delimiter(&open_paren);
+                Err(ErrorsEmitted)
+            }
+            _ => {
+                parser.log_unexpected_token(&TokenType::RParen.to_string());
                 Err(ErrorsEmitted)
             }
         }

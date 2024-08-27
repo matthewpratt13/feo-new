@@ -2,7 +2,7 @@ use crate::{
     ast::{ArrayExpr, Delimiter},
     error::ErrorsEmitted,
     parser::{collection, ParseConstructExpr, Parser, Precedence},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -18,24 +18,16 @@ impl ParseConstructExpr for ArrayExpr {
                 Ok(Delimiter::LBracket { position })
             }
             _ => {
-                parser.log_unexpected_token("`[`");
+                parser.log_unexpected_token(&TokenType::LBracket.to_string());
                 Err(ErrorsEmitted)
             }
         }?;
 
         let elements_opt = collection::get_expressions(parser, Precedence::Lowest, &open_bracket)?;
 
-        match parser.current_token() {
-            Some(Token::RBracket { .. }) => {
-                let span = parser.get_span_by_token(&first_token.unwrap());
-                parser.next_token();
-                Ok(ArrayExpr { elements_opt, span })
-            }
-            _ => {
-                parser.log_unmatched_delimiter(&open_bracket);
-                Err(ErrorsEmitted)
-            }
-        }
+        let span = parser.get_array_span(first_token.as_ref())?;
+
+        Ok(ArrayExpr { elements_opt, span })
     }
 }
 

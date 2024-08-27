@@ -17,9 +17,9 @@ impl RangeExpr {
             Token::DotDotEquals { .. } => Ok(RangeOp::RangeInclusive),
             _ => {
                 parser.log_unexpected_token(&format!(
-                    "range operator (`{}` or `{}`)",
-                    RangeOp::RangeExclusive,
-                    RangeOp::RangeInclusive
+                    "range operator ({} or {})",
+                    TokenType::DblDot,
+                    TokenType::DotDotEquals
                 ));
                 Err(ErrorsEmitted)
             }
@@ -37,7 +37,7 @@ impl RangeExpr {
                 to_expr_opt: {
                     if range_op == RangeOp::RangeInclusive {
                         parser.log_error(ParserErrorKind::UnexpectedRangeOp {
-                            expected: format!("`{}`", RangeOp::RangeExclusive),
+                            expected: TokenType::DblDot.to_string(),
                             found: format!("`{}`", range_op),
                         });
                         return Err(ErrorsEmitted);
@@ -88,9 +88,9 @@ impl ParseOperatorExpr for RangeExpr {
             }
             _ => {
                 parser.log_unexpected_token(&format!(
-                    "range operator (`{}` or `{}`)",
-                    RangeOp::RangeExclusive,
-                    RangeOp::RangeInclusive
+                    "range operator ({} or {})",
+                    TokenType::DblDot,
+                    TokenType::DotDotEquals
                 ));
                 Err(ErrorsEmitted)
             }
@@ -108,7 +108,7 @@ impl ParseOperatorExpr for RangeExpr {
                 range_op: {
                     if range_op == RangeOp::RangeInclusive {
                         parser.log_error(ParserErrorKind::UnexpectedRangeOp {
-                            expected: format!("`{}`", RangeOp::RangeExclusive),
+                            expected: TokenType::DblDot.to_string(),
                             found: format!("`{}`", range_op),
                         });
                         return Err(ErrorsEmitted);

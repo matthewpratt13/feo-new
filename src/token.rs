@@ -1275,6 +1275,7 @@ pub(crate) enum DocCommentType {
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub(crate) enum TokenType {
     Iden,
+    Underscore,
     IntLit,
     UIntLit,
     BigUIntLit,
@@ -1419,6 +1420,7 @@ impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TokenType::Iden => write!(f, "identifier"),
+            TokenType::Underscore => write!(f, "`_`"),
             TokenType::IntLit => write!(f, "integer literal"),
             TokenType::UIntLit => write!(f, "unsigned integer literal"),
             TokenType::BigUIntLit => write!(f, "large unsigned integer literal"),

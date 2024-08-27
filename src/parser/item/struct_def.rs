@@ -23,27 +23,19 @@ impl ParseDefItem for StructDef {
             parser.next_token();
             Ok(Keyword::Struct)
         } else {
-            parser.log_unexpected_token("`struct`");
+            parser.log_unexpected_token(&TokenType::Struct.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = parser.expect_identifier()?;
+        let struct_name = parser.expect_identifier("struct name")?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_brace = parser.expect_open_brace()?;
 
         let fields_opt = collection::get_collection(parser, StructDefField::parse, &open_brace)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(StructDef {
             attributes_opt,
@@ -80,28 +72,20 @@ impl ParseDefItem for TupleStructDef {
             parser.next_token();
             Ok(Keyword::Struct)
         } else {
-            parser.log_unexpected_token("`struct`");
+            parser.log_unexpected_token(&TokenType::Struct.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let struct_name = parser.expect_identifier()?;
+        let struct_name = parser.expect_identifier("struct name")?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
-        let open_paren = parser.expect_delimiter(TokenType::LParen).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        let open_paren = parser.expect_open_paren()?;
 
         let tuple_struct_fields_opt =
             collection::get_collection(parser, parse_tuple_struct_def_field, &open_paren)?;
 
-        parser.expect_closing_paren(&open_paren)?;
+        parser.expect_closing_paren()?;
 
         let span = parser.get_decl_item_span(first_token.as_ref())?;
 
@@ -134,17 +118,33 @@ impl StructDefField {
 
         let visibility = Visibility::visibility(parser)?;
 
-        let field_name = parser.expect_identifier()?;
+        let field_name = parser.expect_identifier("struct field name")?;
 
         parser.expect_token(TokenType::Colon)?;
 
-        let field_type = Box::new(Type::parse(parser)?);
+        let field_type = match parser.current_token() {
+            Some(Token::Comma { .. }) => {
+                parser.log_missing("type", "struct field type");
+                parser.next_token();
+                Err(ErrorsEmitted)
+            }
+            Some(Token::RBrace { .. }) => {
+                parser.log_missing("type", "struct field type");
+                Err(ErrorsEmitted)
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                parser.log_missing("type", "struct field type");
+                Err(ErrorsEmitted)
+            }
+            _ => Type::parse(parser),
+        }?;
 
         Ok(StructDefField {
             attributes_opt,
             visibility,
             field_name,
-            field_type,
+            field_type: Box::new(field_type),
         })
     }
 }
@@ -154,12 +154,28 @@ fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefFie
 
     let visibility = Visibility::visibility(parser)?;
 
-    let field_type = Box::new(Type::parse(parser)?);
+    let field_type = match parser.current_token() {
+        Some(Token::Comma { .. } | Token::RParen { .. }) => {
+            parser.log_missing("type", "struct field type");
+            parser.next_token();
+            Err(ErrorsEmitted)
+        }
+        Some(Token::Semicolon { .. }) => {
+            parser.log_missing("type", "struct field type");
+            Err(ErrorsEmitted)
+        }
+        Some(Token::EOF) | None => {
+            parser.log_unexpected_eoi();
+            parser.log_missing("type", "struct field type");
+            Err(ErrorsEmitted)
+        }
+        _ => Type::parse(parser),
+    }?;
 
     Ok(TupleStructDefField {
         attributes_opt,
         visibility,
-        field_type,
+        field_type: Box::new(field_type),
     })
 }
 

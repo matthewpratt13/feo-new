@@ -2,7 +2,7 @@ use crate::{
     ast::{Keyword, ResultPatt},
     error::ErrorsEmitted,
     parser::{ParsePattern, Parser},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 impl ParsePattern for ResultPatt {
@@ -11,7 +11,7 @@ impl ParsePattern for ResultPatt {
             Some(Token::Ok { .. }) => Ok(Keyword::Ok),
             Some(Token::Err { .. }) => Ok(Keyword::Err),
             _ => {
-                parser.log_unexpected_token("`Ok` or `Err`");
+                parser.log_unexpected_token(&format!("{} or {}", TokenType::Ok, TokenType::Err));
                 Err(ErrorsEmitted)
             }
         }?;

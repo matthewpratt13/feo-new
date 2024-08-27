@@ -2,7 +2,7 @@ use crate::{
     ast::{Keyword, ReturnExpr},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, Parser, Precedence},
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -15,7 +15,7 @@ impl ParseConstructExpr for ReturnExpr {
             parser.next_token();
             Ok(Keyword::Return)
         } else {
-            parser.log_unexpected_token("`return`");
+            parser.log_unexpected_token(&TokenType::Return.to_string());
             Err(ErrorsEmitted)
         }?;
 

@@ -3,7 +3,7 @@ use super::Parser;
 use crate::{
     ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, SelfType, Type, TypePath},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -27,9 +27,13 @@ impl TypePath {
             Some(Token::Lib { .. }) => Ok(PathRoot::Lib),
             Some(Token::Super { .. }) => Ok(PathRoot::Super),
             _ => {
-                parser.log_unexpected_token(
-                    "path root (identifier, `lib`, `super`, `self` or `Self`)",
-                );
+                parser.log_unexpected_token(&format!(
+                    "path root (identifier, {}, {}, {} or {})",
+                    TokenType::Lib,
+                    TokenType::Super,
+                    TokenType::SelfKeyword,
+                    TokenType::SelfType,
+                ));
                 Err(ErrorsEmitted)
             }
         }?;

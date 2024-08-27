@@ -23,7 +23,7 @@ impl ParseDeclItem for ImportDecl {
             parser.next_token();
             Ok(Keyword::Import)
         } else {
-            parser.log_unexpected_token("`import`");
+            parser.log_unexpected_token(&TokenType::Import.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -72,7 +72,7 @@ fn parse_import_tree(parser: &mut Parser) -> Result<ImportTree, ErrorsEmitted> {
 
     let as_clause_opt = if let Some(Token::As { .. }) = parser.current_token() {
         parser.next_token();
-        Some(parser.expect_identifier()?)
+        Some(parser.expect_identifier("new type name")?)
     } else {
         None
     };
@@ -98,25 +98,18 @@ fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted>
 }
 
 fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
-    let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-        d.ok_or_else(|| {
-            parser.logger.warn(&format!(
-                "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                parser.current_token()
-            ));
-            ErrorsEmitted
-        })
-    })?;
+    let open_brace = parser.expect_open_brace()?;
 
     let nested_trees =
         if let Some(t) = collection::get_collection(parser, parse_import_tree, &open_brace)? {
             Ok(t)
         } else {
             parser.log_missing("path component", "import declaration path import tree");
+            parser.next_token();
             Err(ErrorsEmitted)
         }?;
 
-    let _ = parser.get_braced_item_span(None, &open_brace)?;
+    let _ = parser.get_braced_item_span(None)?;
 
     Ok(PathSubset { nested_trees })
 }

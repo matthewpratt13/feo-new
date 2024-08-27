@@ -3,7 +3,7 @@ use super::{item::ParseAssociatedItem, Parser, Precedence};
 use crate::{
     ast::{Delimiter, Expression, OuterAttr, Visibility},
     error::ErrorsEmitted,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 /// Helper function that collects a generic element into a vector based on the input function.
@@ -31,7 +31,11 @@ pub(crate) fn get_collection<T>(
                     parser.current_token(),
                     Some(Token::RParen { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token("`,` or `)`");
+                    parser.log_unexpected_token(&format!(
+                        "{} or {}",
+                        TokenType::Comma,
+                        TokenType::RParen
+                    ));
                     return Err(ErrorsEmitted);
                 }
             }
@@ -51,7 +55,11 @@ pub(crate) fn get_collection<T>(
                     parser.current_token(),
                     Some(Token::RBrace { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token("`,` or `}`");
+                    parser.log_unexpected_token(&format!(
+                        "{} or {}",
+                        TokenType::Comma,
+                        TokenType::RBrace
+                    ));
                     return Err(ErrorsEmitted);
                 }
             }
@@ -73,7 +81,11 @@ pub(crate) fn get_collection<T>(
                     parser.current_token(),
                     Some(Token::Pipe { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token("`,` or `|`");
+                    parser.log_unexpected_token(&format!(
+                        "{} or {}",
+                        TokenType::Comma,
+                        TokenType::Pipe
+                    ));
                     return Err(ErrorsEmitted);
                 }
             }
@@ -95,7 +107,11 @@ pub(crate) fn get_collection<T>(
                     parser.current_token(),
                     Some(Token::GreaterThan { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token("`,` or `>`");
+                    parser.log_unexpected_token(&format!(
+                        "{} or {}",
+                        TokenType::Comma,
+                        TokenType::GreaterThan
+                    ));
                     return Err(ErrorsEmitted);
                 }
             }
@@ -141,7 +157,11 @@ pub(crate) fn get_expressions(
                     parser.current_token(),
                     Some(Token::RParen { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token("`,` or `)`");
+                    parser.log_unexpected_token(&format!(
+                        "{} or {}",
+                        TokenType::Comma,
+                        TokenType::RParen
+                    ));
                     return Err(ErrorsEmitted);
                 }
             }
@@ -160,7 +180,11 @@ pub(crate) fn get_expressions(
                     parser.current_token(),
                     Some(Token::RBracket { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token("`,` or `]`");
+                    parser.log_unexpected_token(&format!(
+                        "{} or {}",
+                        TokenType::Comma,
+                        TokenType::RBracket
+                    ));
                     return Err(ErrorsEmitted);
                 }
             }

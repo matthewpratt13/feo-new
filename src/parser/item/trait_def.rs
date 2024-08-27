@@ -8,7 +8,7 @@ use crate::{
         AliasDecl, ConstantDecl, FunctionItem, InnerAttr, Keyword, OuterAttr, TraitDef,
         TraitDefItem, Visibility,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     parser::Parser,
     token::{Token, TokenType},
 };
@@ -27,31 +27,23 @@ impl ParseDefItem for TraitDef {
             parser.next_token();
             Ok(Keyword::Trait)
         } else {
-            parser.log_unexpected_token("`trait`");
+            parser.log_unexpected_token(&TokenType::Trait.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let trait_name = parser.expect_identifier()?;
+        let trait_name = parser.expect_identifier("trait name")?;
 
         let generic_params_opt = parse_generic_params(parser)?;
 
         let where_clause_opt = parse_where_clause(parser)?;
 
-        let open_brace = parser.expect_delimiter(TokenType::LBrace).and_then(|d| {
-            d.ok_or_else(|| {
-                parser.logger.warn(&format!(
-                    "bad input to `Parser::expect_delimiter()` function. Expected delimiter token, found {:?}",
-                    parser.current_token()
-                ));
-                ErrorsEmitted
-            })
-        })?;
+        parser.expect_open_brace()?;
 
         let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
 
         let trait_items_opt = collection::get_associated_items::<TraitDefItem>(parser)?;
 
-        let span = parser.get_braced_item_span(first_token.as_ref(), &open_brace)?;
+        let span = parser.get_braced_item_span(first_token.as_ref())?;
 
         Ok(TraitDef {
             outer_attributes_opt,
@@ -97,7 +89,7 @@ impl ParseAssociatedItem for TraitDefItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_some() {
-                    parser.log_error(crate::error::ParserErrorKind::ExtraTokens {
+                    parser.log_error(ParserErrorKind::ExtraTokens {
                         token: parser.current_token().cloned(),
                         msg: "Functions in trait definitions cannot have bodies".to_string(),
                     });
@@ -107,7 +99,12 @@ impl ParseAssociatedItem for TraitDefItem {
                 }
             }
             _ => {
-                parser.log_unexpected_token("`const`, `alias` or `func`");
+                parser.log_unexpected_token(&format!(
+                    "{}, {} or {}",
+                    TokenType::Const,
+                    TokenType::Alias,
+                    TokenType::Func
+                ));
                 Err(ErrorsEmitted)
             }
         }

@@ -2,7 +2,7 @@ use crate::{
     ast::{Pattern, RangeOp, RangePatt},
     error::{ErrorsEmitted, ParserErrorKind},
     parser::Parser,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 impl RangePatt {
@@ -20,7 +20,11 @@ impl RangePatt {
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("range operator");
+                parser.log_unexpected_token(&format!(
+                    "range operator ({} or {})",
+                    TokenType::DblDot,
+                    TokenType::DotDotEquals
+                ));
                 Err(ErrorsEmitted)
             }
         }?;
@@ -49,7 +53,7 @@ impl RangePatt {
 
                 if range_op != RangeOp::RangeExclusive {
                     parser.log_error(ParserErrorKind::UnexpectedRangeOp {
-                        expected: format!("`{}`", RangeOp::RangeExclusive),
+                        expected: TokenType::DblDot.to_string(),
                         found: format!("`{}`", range_op),
                     });
                     Err(ErrorsEmitted)
@@ -59,9 +63,12 @@ impl RangePatt {
             }
 
             _ => {
-                parser.log_unexpected_token(
-                    "numeric value, identifier, fat arrow or guard statement",
-                );
+                parser.log_unexpected_token(&format!(
+                    "numeric, {} or {} literal, identifier, {} or guard statement",
+                    TokenType::ByteType,
+                    TokenType::CharType,
+                    TokenType::FatArrow
+                ));
                 Err(ErrorsEmitted)
             }
         }?;
@@ -78,7 +85,10 @@ impl RangePatt {
         let range_op = match parser.current_token() {
             Some(Token::DotDotEquals { .. }) => Ok(RangeOp::RangeInclusive),
             _ => {
-                parser.log_unexpected_token("inclusive range operator (`..=`)");
+                parser.log_unexpected_token(&format!(
+                    "inclusive range operator ({})",
+                    TokenType::DotDotEquals
+                ));
                 Err(ErrorsEmitted)
             }
         }?;
@@ -104,7 +114,11 @@ impl RangePatt {
             }
 
             _ => {
-                parser.log_unexpected_token("numeric value or identifier");
+                parser.log_unexpected_token(&format!(
+                    "numeric, {} or {} literal, or identifier",
+                    TokenType::ByteType,
+                    TokenType::CharType
+                ));
                 Err(ErrorsEmitted)
             }
         }?;

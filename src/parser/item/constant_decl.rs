@@ -21,15 +21,26 @@ impl ParseDeclItem for ConstantDecl {
             parser.next_token();
             Ok(Keyword::Const)
         } else {
-            parser.log_unexpected_token("`const`");
+            parser.log_unexpected_token(&TokenType::Const.to_string());
             Err(ErrorsEmitted)
         }?;
 
-        let constant_name = parser.expect_identifier()?;
+        let constant_name = parser.expect_identifier("constant name")?;
 
         parser.expect_token(TokenType::Colon)?;
 
-        let constant_type = Box::new(Type::parse(parser)?);
+        let constant_type = match parser.current_token() {
+            Some(Token::Semicolon { .. }) => {
+                parser.log_missing("type", "constant type");
+                Err(ErrorsEmitted)
+            }
+            Some(Token::EOF) | None => {
+                parser.log_unexpected_eoi();
+                parser.log_missing("type", "constant type");
+                Err(ErrorsEmitted)
+            }
+            _ => Type::parse(parser),
+        }?;
 
         let value_opt = if let Some(Token::Equals { .. }) = parser.current_token() {
             parser.next_token();
@@ -43,7 +54,8 @@ impl ParseDeclItem for ConstantDecl {
 
                 Ok(Some(value_expr))
             } else {
-                parser.log_missing("expr", "value");
+                parser.log_missing("expr", "constant value");
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
         } else {
@@ -57,7 +69,7 @@ impl ParseDeclItem for ConstantDecl {
             visibility,
             kw_const,
             constant_name,
-            constant_type,
+            constant_type: Box::new(constant_type),
             value_opt,
             span,
         })

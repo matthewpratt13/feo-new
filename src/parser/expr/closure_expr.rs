@@ -6,7 +6,7 @@ use crate::{
     error::ErrorsEmitted,
     parser::{collection, ParseConstructExpr, ParsePattern, Parser, Precedence},
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -30,11 +30,13 @@ impl ParseConstructExpr for ClosureExpr {
                             Ok(ClosureParams::Some(vec_opt.unwrap()))
                         } else {
                             parser.log_missing("patt", "closure parameters");
+                            parser.next_token();
                             Err(ErrorsEmitted)
                         }
                     }
                     _ => {
                         parser.log_unmatched_delimiter(&open_pipe);
+                        parser.next_token();
                         Err(ErrorsEmitted)
                     }
                 }
@@ -44,7 +46,11 @@ impl ParseConstructExpr for ClosureExpr {
                 Ok(ClosureParams::None)
             }
             _ => {
-                parser.log_unexpected_token("`|` or `||`");
+                parser.log_unexpected_token(&format!(
+                    "{} or {}",
+                    TokenType::Pipe,
+                    TokenType::DblPipe
+                ));
                 Err(ErrorsEmitted)
             }
         }?;
@@ -55,6 +61,7 @@ impl ParseConstructExpr for ClosureExpr {
             match parser.current_token() {
                 Some(Token::LBrace { .. }) => {
                     parser.log_missing("type", "closure return type");
+                    parser.next_token();
                     Err(ErrorsEmitted)
                 }
                 Some(Token::EOF { .. }) | None => {
@@ -106,12 +113,17 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
         }
 
         Some(Token::EOF) | None => {
+            parser.log_unexpected_eoi();
             parser.log_missing("patt", "identifier pattern");
             Err(ErrorsEmitted)
         }
 
         _ => {
-            parser.log_unexpected_token("identifier, `ref` or `mut`");
+            parser.log_unexpected_token(&format!(
+                "identifier, {} or {}",
+                TokenType::Ref,
+                TokenType::Mut
+            ));
             Err(ErrorsEmitted)
         }
     }?;
@@ -122,9 +134,11 @@ fn parse_closure_param(parser: &mut Parser) -> Result<ClosureParam, ErrorsEmitte
         match parser.current_token() {
             Some(Token::Comma { .. } | Token::Pipe { .. }) => {
                 parser.log_missing("type", "closure parameter type annotation");
+                parser.next_token();
                 Err(ErrorsEmitted)
             }
             Some(Token::EOF { .. }) | None => {
+                parser.log_unexpected_eoi();
                 parser.log_unmatched_delimiter(&open_pipe);
                 Err(ErrorsEmitted)
             }

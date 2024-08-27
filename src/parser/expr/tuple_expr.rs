@@ -1,9 +1,9 @@
 use crate::{
-    ast::{AssigneeExpr, Delimiter, Expression, TupleElements, TupleExpr, TupleIndexExpr},
+    ast::{AssigneeExpr, Expression, TupleElements, TupleExpr, TupleIndexExpr},
     error::ErrorsEmitted,
     parser::{ParseConstructExpr, ParseOperatorExpr, Parser, Precedence},
     span::Spanned,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 use core::fmt;
@@ -12,21 +12,11 @@ impl ParseConstructExpr for TupleExpr {
     fn parse(parser: &mut Parser) -> Result<TupleExpr, ErrorsEmitted> {
         let first_token = parser.current_token().cloned();
 
-        let open_paren = match &first_token {
-            Some(Token::LParen { .. }) => {
-                let position = parser.current_position();
-                parser.next_token();
-                Ok(Delimiter::LParen { position })
-            }
-            _ => {
-                parser.log_unexpected_token("`(`");
-                Err(ErrorsEmitted)
-            }
-        }?;
+        parser.expect_open_paren()?;
 
         let tuple_elements = parse_tuple_elements(parser)?;
 
-        let span = parser.get_parenthesized_item_span(first_token.as_ref(), &open_paren)?;
+        let span = parser.get_parenthesized_item_span(first_token.as_ref())?;
 
         Ok(TupleExpr {
             tuple_elements,
@@ -57,7 +47,7 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
             elements.push(element);
             parser.next_token();
         } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
-            parser.log_unexpected_token("`,` or `)`");
+            parser.log_unexpected_token(&format!("{} or {}", TokenType::Comma, TokenType::RParen));
         } else if matches!(parser.current_token(), Some(Token::RParen { .. })) {
             final_element_opt = Some(Box::new(element));
             break;

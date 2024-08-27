@@ -71,9 +71,14 @@ impl ParseOperatorExpr for CompoundAssignmentExpr {
             TokenType::SlashEquals => Ok(CompoundAssignmentOp::DivideAssign),
             TokenType::PercentEquals => Ok(CompoundAssignmentOp::ModulusAssign),
             _ => {
-                parser.log_unexpected_token(
-                    "compound assignment operator (`+=`, `-=`, `*=`, `/=` or `%=`)",
-                );
+                parser.log_unexpected_token(&format!(
+                    "compound assignment operator ({}, {}, {}, {} or {})",
+                    TokenType::PlusEquals,
+                    TokenType::MinusEquals,
+                    TokenType::AsteriskEquals,
+                    TokenType::SlashEquals,
+                    TokenType::PercentEquals,
+                ));
                 Err(ErrorsEmitted)
             }
         }?;
