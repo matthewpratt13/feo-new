@@ -129,7 +129,7 @@ mod tests {
 
         match expression {
             Ok(e) => Ok(println!("{:#?}", e)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 
@@ -143,7 +143,7 @@ mod tests {
 
         match expression {
             Ok(e) => Ok(println!("{:#?}", e)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 }

@@ -323,8 +323,8 @@ mod tests {
         let statement = parser.parse_statement();
 
         match statement {
-            Ok(s) => Ok(println!("{:#?}", s)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 
@@ -353,8 +353,8 @@ mod tests {
         let statement = parser.parse_statement();
 
         match statement {
-            Ok(s) => Ok(println!("{:#?}", s)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 

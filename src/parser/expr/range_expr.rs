@@ -166,8 +166,8 @@ mod tests {
         let expression = parser.parse_expression(Precedence::Lowest);
 
         match expression {
-            Ok(e) => Ok(println!("{:#?}", e)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Ok(expr) => Ok(println!("{expr:#?}")),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 
@@ -180,8 +180,8 @@ mod tests {
         let expression = parser.parse_expression(Precedence::Lowest);
 
         match expression {
-            Ok(e) => Ok(println!("{:#?}", e)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Ok(expr) => Ok(println!("{expr:#?}")),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 
@@ -194,8 +194,8 @@ mod tests {
         let expression = parser.parse_expression(Precedence::Lowest);
 
         match expression {
-            Ok(e) => Ok(println!("{:#?}", e)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Ok(expr) => Ok(println!("{expr:#?}")),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 }

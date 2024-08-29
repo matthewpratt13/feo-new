@@ -140,8 +140,8 @@ mod tests {
         let expression = parser.parse_expression(Precedence::Lowest);
 
         match expression {
-            Ok(e) => Ok(println!("{:#?}", e)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Ok(expr) => Ok(println!("{expr:#?}")),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 
@@ -154,8 +154,8 @@ mod tests {
         let expression = parser.parse_expression(Precedence::Lowest);
 
         match expression {
-            Ok(e) => Ok(println!("{:#?}", e)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Ok(expr) => Ok(println!("{expr:#?}")),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 
@@ -169,14 +169,14 @@ mod tests {
         let expression = parser.parse_expression(Precedence::Lowest);
 
         match expression {
-            Ok(e) => Ok(println!("{:#?}", e)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Ok(expr) => Ok(println!("{expr:#?}")),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 
     #[test]
     // #[ignore]
-    fn parse_reference_expr_mut() -> Result<(), ()> {
+    fn parse_reference_expr_mut_borrow() -> Result<(), ()> {
         let input = r#"&mut x"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
@@ -184,8 +184,8 @@ mod tests {
         let expression = parser.parse_expression(Precedence::Lowest);
 
         match expression {
-            Ok(e) => Ok(println!("{:#?}", e)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Ok(expr) => Ok(println!("{expr:#?}")),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 
@@ -199,8 +199,8 @@ mod tests {
         let expression = parser.parse_expression(Precedence::Lowest);
 
         match expression {
-            Ok(e) => Ok(println!("{:#?}", e)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Ok(expr) => Ok(println!("{expr:#?}")),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 }
