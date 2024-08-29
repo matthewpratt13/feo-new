@@ -29,7 +29,7 @@ impl ParsePattern for GroupedPatt {
 
         let _ = parser.get_parenthesized_item_span(None)?;
 
-        parser.logger.debug("entering `GroupedPatt:parse()`");
+        parser.logger.debug("exiting `GroupedPatt:parse()`");
         parser.log_current_token(false);
 
         Ok(GroupedPatt { inner_pattern })

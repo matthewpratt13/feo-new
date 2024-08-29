@@ -4,6 +4,7 @@ use core::fmt;
 /// from the most to the least verbose.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {
+    Trace,
     Debug,
     Info,
     Warning,
@@ -40,10 +41,19 @@ impl Logger {
     /// will be pushed.
     fn log(&mut self, msg: LogMsg) {
         if self.level <= msg.level {
-            self.messages.push(msg);
+            self.messages.push(msg.clone());
+            println!("{msg}")
         } else {
             self.messages.push(LogMsg { level: msg.level, text: format!("tried to log message and failed. Verbosity level ({}) is lower than the initialized one ({})", msg.level, self.level)});
         }
+
+    }
+
+    pub fn trace(&mut self, msg: &str) {
+        self.log(LogMsg {
+            level: LogLevel::Trace,
+            text: String::from(msg),
+        })
     }
 
     pub fn debug(&mut self, msg: &str) {
@@ -94,6 +104,7 @@ impl Logger {
 impl fmt::Display for LogLevel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            LogLevel::Trace => write!(f, "TRACE"),
             LogLevel::Debug => write!(f, "DEBUG"),
             LogLevel::Info => write!(f, "INFO"),
             LogLevel::Warning => write!(f, "WARNING"),

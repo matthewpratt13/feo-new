@@ -9,7 +9,7 @@ use core::fmt;
 
 impl ParsePattern for PathPatt {
     fn parse_patt(parser: &mut Parser) -> Result<PathPatt, ErrorsEmitted> {
-        parser.logger.debug("entering `PathPatt::parse()`");
+        parser.logger.trace("entering `PathPatt::parse()`");
         parser.log_current_token(false);
 
         let mut tree: Vec<Identifier> = Vec::new();
@@ -47,7 +47,7 @@ impl ParsePattern for PathPatt {
             }
         }
 
-        parser.logger.debug("exiting `PathPatt::parse()`");
+        parser.logger.trace("exiting `PathPatt::parse()`");
         parser.log_current_token(false);
 
         Ok(PathPatt {

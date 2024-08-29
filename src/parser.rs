@@ -159,7 +159,7 @@ impl Parser {
 
     /// Define and initialize token precedence levels.
     fn init_precedences(&mut self, tokens: &[Token]) {
-        self.logger.info("initializing precedence levels…");
+        self.logger.trace("initializing precedence levels …");
 
         for t in tokens.to_vec() {
             match &t.token_type() {
@@ -222,7 +222,7 @@ impl Parser {
     /// struct instances.
     fn set_context(&mut self, context: ParserContext) {
         self.context = context;
-        self.logger.info("set parser context: `{context}`");
+        self.logger.debug("set parser context: `{context}`");
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -234,7 +234,7 @@ impl Parser {
 
         // clear log messages, then log status info
         self.logger.clear_messages();
-        self.logger.info("starting to parse tokens…");
+        self.logger.debug("starting to parse tokens…");
 
         while self.current < self.stream.tokens().len() {
             if self.current_token() == Some(&Token::EOF) {
@@ -245,7 +245,7 @@ impl Parser {
 
             // log status info
             self.logger
-                .info(&format!("parsed statement: `{:?}`", &statement));
+                .debug(&format!("parsed statement: `{:?}`", &statement));
 
             statements.push(statement);
         }
@@ -270,7 +270,7 @@ impl Parser {
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
         ////////////////////////////////////////////////////////////////////////////////
         self.logger.debug(&format!(
-            "entering `parse_expression()` with precedence: {:?}…",
+            "entering `parse_expression()` with precedence: `{:?}` …",
             &precedence
         ));
         self.log_current_token(true);
@@ -292,7 +292,7 @@ impl Parser {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.debug("exiting `parse_expression()`…");
+        self.logger.debug("exiting `parse_expression()` …");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -418,7 +418,7 @@ impl Parser {
     /// surrounding tokens.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.debug("entering `parse_prefix()`…");
+        self.logger.debug("entering `parse_prefix()` …");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -1448,7 +1448,7 @@ impl Parser {
             }
 
             ////////////////////////////////////////////////////////////////////////////////
-            self.logger.debug("consumed token");
+            self.logger.trace("consumed token");
             ////////////////////////////////////////////////////////////////////////////////
         } else {
             // log warning

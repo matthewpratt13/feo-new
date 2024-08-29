@@ -10,7 +10,7 @@ pub enum SemanticErrorKind {
     },
 
     FuncArgCountMismatch {
-        name: Identifier,
+        function_path: Identifier,
         expected: usize,
         found: usize,
     },
@@ -34,7 +34,7 @@ pub enum SemanticErrorKind {
     },
 
     StructArgCountMismatch {
-        name: Identifier,
+        struct_path: Identifier,
         expected: usize,
         found: usize,
     },
@@ -50,7 +50,7 @@ pub enum SemanticErrorKind {
     },
 
     TypeMismatchArgument {
-        name: Identifier,
+        arg_id: Identifier,
         expected: Type,
         found: Type,
     },
@@ -98,13 +98,13 @@ pub enum SemanticErrorKind {
     },
 
     TypeMismatchVariable {
-        name: Identifier,
+        var_id: Identifier,
         expected: String,
         found: Type,
     },
 
     UndefinedField {
-        struct_name: Identifier,
+        struct_path: Identifier,
         field_name: Identifier,
     },
 
@@ -145,7 +145,7 @@ pub enum SemanticErrorKind {
     }, 
 
     UnexpectedStructField {
-        name: Identifier,
+        field_name: Identifier,
         found: Identifier,
     },
     
@@ -170,10 +170,10 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ConstantReassignment{ name } => {
                 write!(f, "cannot reassign constant: `{name}`")
             }  
-            SemanticErrorKind::FuncArgCountMismatch {name,  expected, found } => {
+            SemanticErrorKind::FuncArgCountMismatch {function_path,  expected, found } => {
                 write!(
                     f,
-                    "argument count mismatch in function `{name}()`. Expected {expected} arguments, found {found}"
+                    "argument count mismatch in function `{function_path}()`. Expected {expected} arguments, found {found}"
                 )
             }
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
@@ -191,8 +191,8 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ModuleErrors { name } => {
                 write!(f, "detected errors in module `{name}`")
             }
-            SemanticErrorKind::StructArgCountMismatch { name, expected, found } => {
-                write!(f, "argument count mismatch in struct `{name}`. Expected {expected} arguments, found {found}")
+            SemanticErrorKind::StructArgCountMismatch { struct_path, expected, found } => {
+                write!(f, "argument count mismatch in struct `{struct_path}`. Expected {expected} arguments, found {found}")
             }
             SemanticErrorKind::TupleIndexOutOfBounds { len, i } => {
                 write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
@@ -212,7 +212,7 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "pattern types do not match. Expected `{expected}`, found `{found}`"
             ),
-            SemanticErrorKind::TypeMismatchArgument { name, expected, found } => write!(
+            SemanticErrorKind::TypeMismatchArgument { arg_id: name, expected, found } => write!(
                 f,
                 "`{name}` type does not match defined parameter type. Expected `{expected}`, found `{found}`"
             ),
@@ -237,7 +237,7 @@ impl fmt::Display for SemanticErrorKind {
                 "type mismatch between values. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchVariable {
-                name,
+                var_id: name,
                 expected,
                 found,
             } => {
@@ -246,7 +246,7 @@ impl fmt::Display for SemanticErrorKind {
                     "type mismatch for `{name}`. Expected {expected}, found `{found}`"
                 )
             }
-            SemanticErrorKind::UndefinedField { struct_name , field_name} => write!(f, "struct `{struct_name}` has no field `{field_name}`"),  
+            SemanticErrorKind::UndefinedField { struct_path: struct_name , field_name} => write!(f, "struct `{struct_name}` has no field `{field_name}`"),  
             
             SemanticErrorKind::UndefinedFunction { name } => write!(f, "no function `{name}()` in current scope"),
  
@@ -268,7 +268,7 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::UnexpectedPath { expected, found } => write!(f, "unexpected path. Expected {expected}, found `{found}`"),
 
-            SemanticErrorKind::UnexpectedStructField { name, found } => write!(f, "unexpected field in struct `{name}`: `{found}`"),
+            SemanticErrorKind::UnexpectedStructField { field_name: name, found } => write!(f, "unexpected field in struct `{name}`: `{found}`"),
             
             SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found {found}"),
             

@@ -14,7 +14,7 @@ pub fn get_parser(input: &str, log_level: LogLevel, print_tokens: bool) -> Parse
     let mut parser = Parser::new(stream, log_level);
 
     // log test parser status
-    parser.logger.info("instantiated parser");
+    parser.logger.debug("instantiated parser");
 
     parser
 }

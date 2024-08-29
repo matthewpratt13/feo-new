@@ -45,7 +45,7 @@ impl fmt::Debug for BlockExpr {
 fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, ErrorsEmitted> {
     let mut statements: Vec<Statement> = Vec::new();
 
-    parser.logger.debug("entering `parse_statements()`");
+    parser.logger.trace("entering `parse_statements()`");
     parser.log_current_token(false);
 
     while !matches!(
@@ -63,7 +63,7 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
         statements.push(statement);
     }
 
-    parser.logger.debug("exiting `parse_statements()`");
+    parser.logger.trace("exiting `parse_statements()`");
     parser.logger.debug(&format!(
         "statements.is_empty(): {}",
         &statements.is_empty()

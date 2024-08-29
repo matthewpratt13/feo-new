@@ -10,7 +10,7 @@ use core::fmt;
 
 impl ParseSimpleExpr for PathExpr {
     fn parse(parser: &mut Parser) -> Result<PathExpr, ErrorsEmitted> {
-        parser.logger.debug("entering `PathExpr::parse()`");
+        parser.logger.trace("entering `PathExpr::parse()`");
         parser.log_current_token(false);
 
         let mut tree: Vec<Identifier> = Vec::new();
@@ -63,7 +63,7 @@ impl ParseSimpleExpr for PathExpr {
 
         let span = parser.get_span(&first_token.unwrap().span(), &last_token.unwrap().span());
 
-        parser.logger.debug("exiting `PathExpr::parse()`");
+        parser.logger.trace("exiting `PathExpr::parse()`");
         parser.log_current_token(false);
 
         Ok(PathExpr {

@@ -13,12 +13,12 @@ fn setup(
     print_statements: bool,
     external_code: Option<SymbolTable>,
 ) -> Result<(SemanticAnalyser, Program), ()> {
-    let mut parser = parser::test_utils::get_parser(input, LogLevel::Debug, print_tokens);
+    let mut parser = parser::test_utils::get_parser(input, LogLevel::Warning, print_tokens);
 
     let program = match parser.parse_tokens() {
-        Ok(prog) => prog,
-        Err(_) => return Err(println!("{:#?}", parser.errors())),
-    };
+        Ok(prog) => Ok(prog),
+        Err(e) => Err(println!("error parsing tokens: {e:#?}")),
+    }?;
 
     if print_statements {
         println!("{:#?}", program.statements)
@@ -39,15 +39,16 @@ fn analyse_closure() -> Result<(), ()> {
                 x + 1
             };
 
-            do_maths(closure, x)
+            do_maths(closure)
         }
     "#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) =
+        setup(input, LogLevel::Debug ,false, false, None).expect("error setting during test setup");
 
     match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        Ok(_) => Ok(()),
+        Err(e) => Err(println!("{:#?}", e)),
     }
 }
 
@@ -63,7 +64,7 @@ fn analyse_constant_reassign() {
         .expect("unable to set up semantic analyser");
 
     match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
-        Ok(_) => println!("{:#?}", analyser.logger.messages()),
+        Ok(_) => (),
         Err(_) => panic!("{:#?}", analyser.logger.messages()),
     }
 }
@@ -99,8 +100,8 @@ fn analyse_control_flow() -> Result<(), ()> {
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
     match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        Ok(_) => Ok(()),
+        Err(e) => Err(println!("{:#?}", e)),
     }
 }
 
@@ -128,8 +129,8 @@ fn analyse_enum_variants() -> Result<(), ()> {
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
     match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        Ok(_) => Ok(()),
+        Err(e) => Err(println!("{:#?}", e)),
     }
 }
 
@@ -236,8 +237,8 @@ fn analyse_impl() -> Result<(), ()> {
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
     match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        Ok(_) => Ok(()),
+        Err(e) => Err(println!("{:#?}", e)),
     }
 }
 
@@ -336,8 +337,8 @@ fn analyse_import_decl() -> Result<(), ()> {
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, Some(external_code))?;
 
     match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        Ok(_) => Ok(()),
+        Err(e) => Err(println!("{:#?}", e)),
     }
 }
 
@@ -354,8 +355,8 @@ fn analyse_let_stmt() -> Result<(), ()> {
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
     match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        Ok(_) => Ok(()),
+        Err(e) => Err(println!("{:#?}", e)),
     }
 }
 
@@ -411,8 +412,8 @@ fn analyse_method_call() -> Result<(), ()> {
         .expect("unable to set up semantic analyser");
 
     match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        Ok(_) => Ok(()),
+        Err(e) => Err(println!("{:#?}", e)),
     }
 }
 
@@ -449,8 +450,8 @@ fn analyse_struct() -> Result<(), ()> {
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
     match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        Ok(_) => Ok(()),
+        Err(e) => Err(println!("{:#?}", e)),
     }
 }
 
@@ -472,7 +473,7 @@ fn analyse_trait_def() -> Result<(), ()> {
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
     match analyser.analyse_program(&program, TypePath::from(Identifier::from(""))) {
-        Ok(_) => Ok(println!("{:#?}", analyser.logger.messages())),
-        Err(_) => Err(println!("{:#?}", analyser.logger.messages())),
+        Ok(_) => Ok(()),
+        Err(e) => Err(println!("{:#?}", e)),
     }
 }

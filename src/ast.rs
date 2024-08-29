@@ -97,13 +97,19 @@ impl fmt::Debug for Literal {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////String////////////
 // IDENTIFIER
 ///////////////////////////////////////////////////////////////////////////
 
 /// Wrapper type, turning a `String` into an `Identifier`.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub(crate) struct Identifier(String);
+
+impl From<TypePath> for Identifier {
+    fn from(value: TypePath) -> Self {
+        Identifier::from(&value.to_string())
+    }
+}
 
 impl From<&str> for Identifier {
     fn from(value: &str) -> Self {
