@@ -39,7 +39,7 @@ fn analyse_closure() -> Result<(), ()> {
                 x + 1
             };
 
-            do_maths(closure)
+            do_maths(closure, x)
         }
     "#;
 
