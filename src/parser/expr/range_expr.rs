@@ -33,7 +33,7 @@ impl RangeExpr {
 
             let expr = RangeExpr {
                 from_expr_opt: None,
-                range_op: range_op.clone(),
+                range_op,
                 to_expr_opt: {
                     if range_op == RangeOp::RangeInclusive {
                         parser.log_error(ParserErrorKind::UnexpectedRangeOp {

@@ -102,6 +102,57 @@ impl Symbol {
             | Symbol::Module { path, .. } => path,
         }
     }
+
+    pub(crate) fn type_bounds(&self) -> Option<Vec<TypePath>> {
+        match self {
+            Symbol::Struct {
+                struct_def: StructDef {
+                    generic_params_opt, ..
+                },
+                ..
+            }
+            | Symbol::TupleStruct {
+                tuple_struct_def:
+                    TupleStructDef {
+                        generic_params_opt, ..
+                    },
+                ..
+            }
+            | Symbol::Enum {
+                enum_def: EnumDef {
+                    generic_params_opt, ..
+                },
+                ..
+            }
+            | Symbol::Trait {
+                trait_def: TraitDef {
+                    generic_params_opt, ..
+                },
+                ..
+            }
+            | Symbol::Function {
+                function:
+                    FunctionItem {
+                        generic_params_opt, ..
+                    },
+                ..
+            } => match generic_params_opt {
+                Some(gen_params) => {
+                    let mut bounds: Vec<TypePath> = Vec::new();
+
+                    for param in gen_params.params.iter() {
+                        if let Some(bound) = &param.type_bound_opt {
+                            bounds.push(bound.clone())
+                        }
+                    }
+
+                    Some(bounds)
+                }
+                _ => None,
+            },
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Symbol {

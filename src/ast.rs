@@ -134,7 +134,7 @@ impl fmt::Display for Identifier {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing the different keywords used in AST nodes.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum Keyword {
     Import,
     Module,
@@ -371,7 +371,7 @@ impl fmt::Display for CompoundAssignmentOp {
 pub(crate) struct DereferenceOp;
 
 /// Enum representing the different range operators used in AST nodes.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum RangeOp {
     RangeExclusive, // `..`
     RangeInclusive, // `..=`
@@ -1101,5 +1101,10 @@ pub(crate) enum Type {
     Result {
         ok_type: Box<Type>,
         err_type: Box<Type>,
+    },
+
+    Generic {
+        name: Identifier,
+        bound_opt: Option<TypePath>,
     },
 }

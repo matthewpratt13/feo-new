@@ -44,6 +44,12 @@ pub enum SemanticErrorKind {
         i: UInt
     },
 
+    TypeBoundNotSatisfied {
+        generic_name: Identifier,
+        bound: Identifier,
+        found: Type,
+    },
+
     TypeCastError {
         from: Type,
         to: Type,
@@ -160,6 +166,10 @@ pub enum SemanticErrorKind {
         found: Type,
     },
 
+    UnresolvedGeneric {
+        name: Identifier
+    },
+
     #[default]
     UnknownError,
 }
@@ -197,6 +207,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::TupleIndexOutOfBounds { len, i } => {
                 write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
             }
+            SemanticErrorKind::TypeBoundNotSatisfied { generic_name, bound, found } => write!(f, "type {found} has generic parameter `{generic_name}` that does not satisfy type bound `{bound}`"),
             SemanticErrorKind::TypeCastError { from, to } => {
                 write!(f, "unable to cast `{}` as `{}`", from, to)
             },
@@ -275,6 +286,8 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UnexpectedType { expected, found } => {
                 write!(f, "unexpected type(s). Expected {expected}, found `{found}`")
             }
+
+            SemanticErrorKind::UnresolvedGeneric { name } => write!(f, "unresolved generic: `{name}`"),
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
         }
