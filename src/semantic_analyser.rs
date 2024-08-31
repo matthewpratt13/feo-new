@@ -2685,7 +2685,7 @@ impl SemanticAnalyser {
                             });
                         }
 
-                        let mut inferred_types: HashMap<Identifier, Type> = HashMap::new();
+                        // let mut inferred_types: HashMap<Identifier, Type> = HashMap::new();
 
                         for (arg, param) in args.iter().zip(params) {
                             let arg_type =
@@ -2693,21 +2693,23 @@ impl SemanticAnalyser {
 
                             let param_type = param.param_type();
 
-                            // if the parameter type is a generic, attempt to unify
-                            if let Type::Generic { name, .. } = param_type {
-                                // check if we already have an inferred type for this generic
-                                if let Some(inferred_type) = inferred_types.get(&name) {
-                                    // TODO:
-                                    // unify_types(&mut inferred_type.clone(), &arg_type)?
-                                } else {
-                                    // if not, infer it as this (user-defined) type
-                                    if let Type::UserDefined(ty) = arg_type {
-                                        inferred_types.insert(name, Type::UserDefined(ty));
-                                    } else {
-                                        // TODO: return error – arg type must be user-defined type
-                                    }
-                                }
-                            } else if arg_type != param_type {
+                            // // if the parameter type is a generic, attempt to unify
+                            // if let Type::Generic { name, .. } = param_type {
+                            //     // check if we already have an inferred type for this generic
+                            //     if let Some(inferred_type) = inferred_types.get(&name) {
+                            //         // TODO:
+                            //         // unify_types(&mut inferred_type.clone(), &arg_type)?
+                            //     } else {
+                            //         // if not, infer it as this (user-defined) type
+                            //         if let Type::UserDefined(ty) = arg_type {
+                            //             inferred_types.insert(name, Type::UserDefined(ty));
+                            //         } else {
+                            //             // TODO: return error – arg type must be user-defined type
+                            //         }
+                            //     }
+                            // } else
+
+                            if arg_type != param_type {
                                 return Err(SemanticErrorKind::TypeMismatchArgument {
                                     arg_id: function.function_name.clone(),
                                     expected: param_type,
@@ -2716,37 +2718,42 @@ impl SemanticAnalyser {
                             }
                         }
 
-                        // ensure all constraints are satisfied for inferred types
-                        for (_, inferred_type) in inferred_types.iter() {
-                            if let Some(ref generic_params) = function.generic_params_opt {
-                                for param in generic_params.params.iter() {
-                                    if let Some(bound) = &param.type_bound_opt {
-                                        if !self.satisfies_bound(inferred_type, &bound) {
-                                            return Err(SemanticErrorKind::TypeBoundNotSatisfied {
-                                                generic_name: param.name.clone(),
-                                                bound: Identifier::from(bound.clone()),
-                                                found: inferred_type.clone(),
-                                            });
-                                        }
-                                    }
-                                }
-                            }
+                        // // ensure all constraints are satisfied for inferred types
+                        // for (_, inferred_type) in inferred_types.iter() {
+                        //     if let Some(ref generic_params) = function.generic_params_opt {
+                        //         for param in generic_params.params.iter() {
+                        //             if let Some(bound) = &param.type_bound_opt {
+                        //                 if !self.satisfies_bound(inferred_type, &bound) {
+                        //                     return Err(SemanticErrorKind::TypeBoundNotSatisfied {
+                        //                         generic_name: param.name.clone(),
+                        //                         bound: Identifier::from(bound.clone()),
+                        //                         found: inferred_type.clone(),
+                        //                     });
+                        //                 }
+                        //             }
+                        //         }
+                        //     }
+                        // }
+
+                        // // infer return type based on substitutions
+                        // // if `func_def_return_type` is generic, substitute it with the inferred type,
+                        // // else return `func_def_return_type`
+                        // let inferred_return_type = substitute_generics(
+                        //     &*func_def_return_type.unwrap_or(Box::new(Type::UnitType(UnitType))),
+                        //     &inferred_types,
+                        // )?;
+
+                        // // TODO: what if the function call is part of an assignment expression?
+                        // // TODO: (e.g., let statement), or as a param in another call expression?
+                        // // TODO: or any other larger expression?
+                        // // TODO: can we assume the `func_def_return_type` is the call expression type?
+
+                        // Ok(inferred_return_type)
+
+                        match func_def_return_type {
+                            Some(ty) => Ok(*ty),
+                            None => Ok(Type::UnitType(UnitType)),
                         }
-
-                        // infer return type based on substitutions
-                        // if `func_def_return_type` is generic, substitute it with the inferred type,
-                        // else return `func_def_return_type`
-                        let inferred_return_type = substitute_generics(
-                            &*func_def_return_type.unwrap_or(Box::new(Type::UnitType(UnitType))),
-                            &inferred_types,
-                        )?;
-
-                        // TODO: what if the function call is part of an assignment expression?
-                        // TODO: (e.g., let statement), or as a param in another call expression?
-                        // TODO: or any other larger expression?
-                        // TODO: can we assume the `func_def_return_type` is the call expression type?
-
-                        Ok(inferred_return_type)
                     }
                 }
             }
@@ -3174,34 +3181,171 @@ impl SemanticAnalyser {
         }
     }
 
-    /// Checks if a given type satisfies a specific trait constraint.
-    fn satisfies_bound(&mut self, ty: &Type, bound: &TypePath) -> bool {
-        if self.type_implements_trait(ty, bound) {
-            return true;
-        }
+    // /// Checks if a given type satisfies a specific trait constraint.
+    // fn satisfies_bound(&mut self, ty: &Type, bound: &TypePath) -> bool {
+    //     if self.type_implements_trait(ty, bound) {
+    //         return true;
+    //     }
 
-        // if `ty` is a generic, check if the trait is already a bound on that generic.
-        if let Type::Generic { bound_opt, .. } = ty {
-            if let Some(type_bound) = bound_opt {
-                return if type_bound == bound { true } else { false };
-            }
-        }
+    //     // if `ty` is a generic, check if the trait is already a bound on that generic.
+    //     if let Type::Generic { bound_opt, .. } = ty {
+    //         if let Some(type_bound) = bound_opt {
+    //             return if type_bound == bound { true } else { false };
+    //         }
+    //     }
 
-        false
-    }
+    //     false
+    // }
 
-    /// Helper function to check if a specific type directly implements a given trait.
-    fn type_implements_trait(&mut self, ty: &Type, bound: &TypePath) -> bool {
-        if let Type::UserDefined(type_path) = ty {
-            // TODO: this should look up a type table that maps types to their implemented traits.
-            self.lookup(type_path).map_or(false, |sym| {
-                sym.type_bounds()
-                    .is_some_and(|bounds| bounds.contains(bound))
-            })
-        } else {
-            false
-        }
-    }
+    // /// Helper function to check if a specific type directly implements a given trait.
+    // fn type_implements_trait(&mut self, ty: &Type, bound: &TypePath) -> bool {
+    //     if let Type::UserDefined(type_path) = ty {
+    //         // TODO: this should look up a type table that maps types to their implemented traits.
+    //         self.lookup(type_path).map_or(false, |sym| {
+    //             sym.type_bounds()
+    //                 .is_some_and(|bounds| bounds.contains(bound))
+    //         })
+    //     } else {
+    //         false
+    //     }
+    // }
+
+    /// Unifies two types, ensuring they are compatible. Returns `Ok` if they can be unified, or an `Err` if there is a type mismatch.
+    // fn unify_types(&mut self, type_a: &Type, type_b: &Type) -> Result<(), SemanticErrorKind> {
+    //     match (type_a, type_b) {
+    //         // If both types are the same, they are already unified
+    //         (a, b) if a == b => Ok(()),
+
+    //         // If one type is a generic and the other is concrete, substitute the generic
+    //         (Type::Generic { name, .. }, concrete) | (concrete, Type::Generic { name, .. }) => {
+    //             self.substitute_generic(name.clone(), concrete.clone())
+    //         }
+
+    //         // If both types are generics, check if they are the same or if they can be coerced
+    //         (Type::Generic { name: name_a, .. }, Type::Generic { name: name_b, .. }) => {
+    //             if name_a == name_b {
+    //                 Ok(())
+    //             } else {
+    //                 // They are different generics; we need to ensure they can both satisfy the same constraints
+    //                 self.coerce_generics(name_a.clone(), name_b.clone())
+    //             }
+    //         }
+
+    //         // If both types are composite (e.g., Result<T>), unify their inner components
+    //         (
+    //             Type::Composite {
+    //                 base: base_a,
+    //                 args: args_a,
+    //             },
+    //             Type::Composite {
+    //                 base: base_b,
+    //                 args: args_b,
+    //             },
+    //         ) if base_a == base_b => {
+    //             for (a, b) in args_a.iter().zip(args_b.iter()) {
+    //                 self.unify_types(a, b)?
+    //             }
+    //             Ok(())
+    //         }
+
+    //         // If one or both types are inferred, try to resolve them to a concrete type
+    //         (Type::InferredType(inf_type_a), Type::InferredType(inf_type_b)) => {
+    //             if inf_type_a.name == Identifier::from("_")
+    //                 || inf_type_b.name == Identifier::from("_")
+    //             {
+    //                 Ok(())
+    //             } else {
+    //                 Err(SemanticErrorKind::TypeMismatch {
+    //                     expected: inf_type_a.clone(),
+    //                     found: inf_type_b.clone(),
+    //                 })
+    //             }
+    //         }
+
+    //         // If one is inferred and the other is a concrete or generic type, resolve the inference
+    //         (Type::InferredType(inf), concrete_or_generic)
+    //         | (concrete_or_generic, Type::InferredType(inf)) => self.resolve_inferred_type(
+    //             Type::InferredType(inf.clone()),
+    //             concrete_or_generic.clone(),
+    //         ),
+
+    //         // Handle any other combination of types
+    //         _ => Err(SemanticErrorKind::TypeMismatch {
+    //             expected: type_a.clone(),
+    //             found: type_b.clone(),
+    //         }),
+    //     }
+    // }
+
+    /// Helper function to substitute a generic type parameter with a concrete type.
+    //     fn substitute_generic(
+    //         &mut self,
+    //         generic: Identifier,
+    //         concrete: Type,
+    //     ) -> Result<(), SemanticErrorKind> {
+    //         if self
+    //             .generic_substitutions
+    //             .insert(generic, concrete)
+    //             .is_none()
+    //         {
+    //             Ok(())
+    //         } else {
+    //             Err(SemanticErrorKind::GenericAlreadyBound { generic: generic })
+    //         }
+    //     }
+
+    //     /// Helper function to resolve inferred types to a more concrete type.
+    //     fn resolve_inferred_type(
+    //         &mut self,
+    //         mut inferred: Type,
+    //         concrete: Type,
+    //     ) -> Result<(), SemanticErrorKind> {
+    //         if inferred
+    //             == Type::InferredType(InferredType {
+    //                 name: Identifier::from("_"),
+    //             })
+    //         {
+    //             inferred = concrete;
+    //             Ok(())
+    //         } else if inferred == concrete {
+    //             Ok(())
+    //         } else {
+    //             Err(SemanticErrorKind::UnexpectedType {
+    //                 expected: inferred.to_string(),
+    //                 found: concrete,
+    //             })
+    //         }
+    //     }
+
+    //     /// Helper function to check if two generic types can be coerced or unified.
+    //     fn coerce_generics(
+    //         &mut self,
+    //         generic_a: Identifier,
+    //         generic_b: Identifier,
+    //     ) -> Result<(), SemanticErrorKind> {
+    //         // Check the bounds of both generics and ensure they are compatible
+    //         let bounds_a = self
+    //             .generic_bounds
+    //             .get(generic_a)
+    //             .cloned()
+    //             .unwrap_or_default();
+    //         let bounds_b = self
+    //             .generic_bounds
+    //             .get(generic_b)
+    //             .cloned()
+    //             .unwrap_or_default();
+
+    //         for bound in bounds_a.iter().chain(bounds_b.iter()) {
+    //             if !self.satisfies_bound(&Type::Generic { name: generic_a }, bound) {
+    //                 return Err(SemanticErrorKind::GenericConstraintViolation {
+    //                     generic: generic_a,
+    //                     constraint: bound.clone(),
+    //                 });
+    //             }
+    //         }
+
+    //         Ok(())
+    //     }
 
     fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {
         let error = CompilerError::new(error_kind, span.start(), &span.input());
@@ -3286,118 +3430,118 @@ fn unify_result_types(
     }
 }
 
-/// Substitutes generic type parameters in a given type with concrete types provided in a substitution map.
-fn substitute_generics(
-    ty: &Type,
-    substitutions: &HashMap<Identifier, Type>,
-) -> Result<Type, SemanticErrorKind> {
-    match ty {
-        // if the type is a generic, substitute it with the concrete type
-        Type::Generic { name, .. } => {
-            if let Some(concrete_type) = substitutions.get(name) {
-                Ok(concrete_type.clone())
-            } else {
-                // if no substitution is provided, return an error
-                Err(SemanticErrorKind::UnresolvedGeneric { name: name.clone() })
-            }
-        }
+// /// Substitutes generic type parameters in a given type with concrete types provided in a substitution map.
+// fn substitute_generics(
+//     ty: &Type,
+//     substitutions: &HashMap<Identifier, Type>,
+// ) -> Result<Type, SemanticErrorKind> {
+//     match ty {
+//         // if the type is a generic, substitute it with the concrete type
+//         Type::Generic { name, .. } => {
+//             if let Some(concrete_type) = substitutions.get(name) {
+//                 Ok(concrete_type.clone())
+//             } else {
+//                 // if no substitution is provided, return an error
+//                 Err(SemanticErrorKind::UnresolvedGeneric { name: name.clone() })
+//             }
+//         }
 
-        Type::GroupedType(inner_type) => {
-            let substituted_inner_type = substitute_generics(&*inner_type, substitutions)?;
-            Ok(Type::GroupedType(Box::new(substituted_inner_type)))
-        }
+//         Type::GroupedType(inner_type) => {
+//             let substituted_inner_type = substitute_generics(&*inner_type, substitutions)?;
+//             Ok(Type::GroupedType(Box::new(substituted_inner_type)))
+//         }
 
-        Type::Array {
-            element_type,
-            num_elements,
-        } => {
-            let substituted_element_type = substitute_generics(&*element_type, substitutions)?;
+//         Type::Array {
+//             element_type,
+//             num_elements,
+//         } => {
+//             let substituted_element_type = substitute_generics(&*element_type, substitutions)?;
 
-            Ok(Type::Array {
-                element_type: Box::new(substituted_element_type),
-                num_elements: num_elements.clone(),
-            })
-        }
+//             Ok(Type::Array {
+//                 element_type: Box::new(substituted_element_type),
+//                 num_elements: num_elements.clone(),
+//             })
+//         }
 
-        Type::Tuple(types) => {
-            let substituted_elem_types = types
-                .iter()
-                .map(|elem| substitute_generics(elem, substitutions).unwrap_or(elem.clone()))
-                .collect::<Vec<_>>();
+//         Type::Tuple(types) => {
+//             let substituted_elem_types = types
+//                 .iter()
+//                 .map(|elem| substitute_generics(elem, substitutions).unwrap_or(elem.clone()))
+//                 .collect::<Vec<_>>();
 
-            Ok(Type::Tuple(substituted_elem_types))
-        }
+//             Ok(Type::Tuple(substituted_elem_types))
+//         }
 
-        Type::FunctionPtr(ptr) => {
-            let substituted_return_type = substitute_generics(
-                &ptr.return_type_opt
-                    .clone()
-                    .unwrap_or(Box::new(Type::UnitType(UnitType))),
-                substitutions,
-            )?;
+//         Type::FunctionPtr(ptr) => {
+//             let substituted_return_type = substitute_generics(
+//                 &ptr.return_type_opt
+//                     .clone()
+//                     .unwrap_or(Box::new(Type::UnitType(UnitType))),
+//                 substitutions,
+//             )?;
 
-            Ok(Type::FunctionPtr(FunctionPtr {
-                params_opt: ptr.params_opt.clone(),
-                return_type_opt: if let Type::UnitType(_) = substituted_return_type {
-                    None
-                } else {
-                    Some(Box::new(substituted_return_type))
-                },
-            }))
-        }
+//             Ok(Type::FunctionPtr(FunctionPtr {
+//                 params_opt: ptr.params_opt.clone(),
+//                 return_type_opt: if let Type::UnitType(_) = substituted_return_type {
+//                     None
+//                 } else {
+//                     Some(Box::new(substituted_return_type))
+//                 },
+//             }))
+//         }
 
-        Type::Reference {
-            reference_op,
-            inner_type,
-        } => {
-            let substituted_inner_type = substitute_generics(&*inner_type, substitutions)?;
+//         Type::Reference {
+//             reference_op,
+//             inner_type,
+//         } => {
+//             let substituted_inner_type = substitute_generics(&*inner_type, substitutions)?;
 
-            Ok(Type::Reference {
-                reference_op: *reference_op,
-                inner_type: Box::new(substituted_inner_type),
-            })
-        }
+//             Ok(Type::Reference {
+//                 reference_op: *reference_op,
+//                 inner_type: Box::new(substituted_inner_type),
+//             })
+//         }
 
-        Type::Vec { element_type } => {
-            let substituted_element_type = substitute_generics(&*element_type, substitutions)?;
+//         Type::Vec { element_type } => {
+//             let substituted_element_type = substitute_generics(&*element_type, substitutions)?;
 
-            Ok(Type::Vec {
-                element_type: Box::new(substituted_element_type),
-            })
-        }
+//             Ok(Type::Vec {
+//                 element_type: Box::new(substituted_element_type),
+//             })
+//         }
 
-        Type::Mapping {
-            key_type,
-            value_type,
-        } => {
-            let substituted_key_type = substitute_generics(&*key_type, substitutions)?;
-            let substituted_value_type = substitute_generics(&*value_type, substitutions)?;
+//         Type::Mapping {
+//             key_type,
+//             value_type,
+//         } => {
+//             let substituted_key_type = substitute_generics(&*key_type, substitutions)?;
+//             let substituted_value_type = substitute_generics(&*value_type, substitutions)?;
 
-            Ok(Type::Mapping {
-                key_type: Box::new(substituted_key_type),
-                value_type: Box::new(substituted_value_type),
-            })
-        }
+//             Ok(Type::Mapping {
+//                 key_type: Box::new(substituted_key_type),
+//                 value_type: Box::new(substituted_value_type),
+//             })
+//         }
 
-        Type::Option { inner_type } => {
-            let substituted_inner_type = substitute_generics(&*inner_type, substitutions)?;
+//         Type::Option { inner_type } => {
+//             let substituted_inner_type = substitute_generics(&*inner_type, substitutions)?;
 
-            Ok(Type::Option {
-                inner_type: Box::new(substituted_inner_type),
-            })
-        }
+//             Ok(Type::Option {
+//                 inner_type: Box::new(substituted_inner_type),
+//             })
+//         }
 
-        Type::Result { ok_type, err_type } => {
-            let substituted_ok_type = substitute_generics(&*ok_type, substitutions)?;
-            let substituted_err_type = substitute_generics(&*err_type, substitutions)?;
+//         Type::Result { ok_type, err_type } => {
+//             let substituted_ok_type = substitute_generics(&*ok_type, substitutions)?;
+//             let substituted_err_type = substitute_generics(&*err_type, substitutions)?;
 
-            Ok(Type::Result {
-                ok_type: Box::new(substituted_ok_type),
-                err_type: Box::new(substituted_err_type),
-            })
-        }
+//             Ok(Type::Result {
+//                 ok_type: Box::new(substituted_ok_type),
+//                 err_type: Box::new(substituted_err_type),
+//             })
+//         }
 
-        // if the type is concrete (non-generic), return it as is
-        _ => Ok(ty.clone()),
-    }
-}
+//         // if the type is concrete (non-generic), return it as is
+//         _ => Ok(ty.clone()),
+//     }
+// }
