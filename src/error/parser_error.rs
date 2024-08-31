@@ -56,7 +56,7 @@ pub enum ParserErrorKind {
         expected: String,
     },
 
-    UndeclaredGenerics {
+    UndeclaredGenericParams {
         found: String,
     },
 
@@ -128,8 +128,8 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::MissingPattern { expected } => {
                 write!(f, "pattern not found. Expected {expected}, found none")
             }
-            ParserErrorKind::UndeclaredGenerics { found } => {
-                write!(f, "undeclared generic annotation ({found}). Generics must be declared after `impl` (e.g., `impl<T>`")
+            ParserErrorKind::UndeclaredGenericParams { found } => {
+                write!(f, "undeclared generic parameter ({found}). Generic parameters must be declared after `impl` (e.g., `impl<T>`)")
             }
             ParserErrorKind::UnexpectedRangeOp { expected, found } => write!(
                 f,

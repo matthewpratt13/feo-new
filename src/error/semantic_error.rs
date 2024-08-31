@@ -46,8 +46,8 @@ pub enum SemanticErrorKind {
 
     TypeBoundNotSatisfied {
         generic_name: Identifier,
-        bound: Identifier,
-        found: Type,
+        expected_bound: Identifier,
+        found_type: Type,
     },
 
     TypeCastError {
@@ -76,6 +76,11 @@ pub enum SemanticErrorKind {
         declared_type: Type,
     },
 
+    TypeMismatchUnification {
+        expected: Identifier,
+        found: Identifier,
+    },
+
     TypeMismatchMatchExpr {
         loc: String,
         expected: Type,
@@ -98,6 +103,11 @@ pub enum SemanticErrorKind {
         found: Type,
     },
 
+    TypeMismatchTypeBound {
+        expected: Identifier,
+        found: Identifier,
+    },
+
     TypeMismatchValues {
         expected: Type,
         found: Type,
@@ -107,6 +117,10 @@ pub enum SemanticErrorKind {
         var_id: Identifier,
         expected: String,
         found: Type,
+    },
+
+    UndeclaredGenericParams {
+        found: String,
     },
 
     UndefinedField {
@@ -166,10 +180,6 @@ pub enum SemanticErrorKind {
         found: Type,
     },
 
-    UnresolvedGeneric {
-        name: Identifier
-    },
-
     #[default]
     UnknownError,
 }
@@ -207,13 +217,17 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::TupleIndexOutOfBounds { len, i } => {
                 write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
             }
-            SemanticErrorKind::TypeBoundNotSatisfied { generic_name, bound, found } => write!(f, "type {found} has generic parameter `{generic_name}` that does not satisfy type bound `{bound}`"),
+            SemanticErrorKind::TypeBoundNotSatisfied { generic_name, expected_bound: bound, found_type: found } => write!(f, "type {found} has generic parameter `{generic_name}` that does not satisfy type bound `{bound}`"),
             SemanticErrorKind::TypeCastError { from, to } => {
                 write!(f, "unable to cast `{}` as `{}`", from, to)
             },
             SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
                 f,
                 "array element types do not match. Expected {expected}, found `{found}`"
+            ),
+            SemanticErrorKind::TypeMismatchUnification { expected, found } => write!(
+                f,
+                "types do not match when attempting to unify. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchMatchExpr { loc, expected, found } => write!(
                 f,
@@ -243,6 +257,10 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "type does not match expected `{variant}` type. Expected `{expected}`, found `{found}"
             ),
+            SemanticErrorKind::TypeMismatchTypeBound {  expected, found } => write!(
+                f,
+                "generic type bounds do not match. Expected `{expected}`, found `{found}"
+            ),
             SemanticErrorKind::TypeMismatchValues { expected, found } => write!(
                 f,
                 "type mismatch between values. Expected `{expected}`, found `{found}`"
@@ -256,6 +274,9 @@ impl fmt::Display for SemanticErrorKind {
                     f,
                     "type mismatch for `{name}`. Expected {expected}, found `{found}`"
                 )
+            }
+            SemanticErrorKind::UndeclaredGenericParams { found } => {
+                write!(f, "undeclared generic parameter (`{found}`) in function signature. Generic parameters must be declared after `func` keyword (e.g., `func<T>`) in function definition context; or after `impl` keyword in implementation definition context (e.g., `impl<T>`); or after `trait` keyword in trait definition context (e.g., `trait<T>`)")
             }
             SemanticErrorKind::UndefinedField { struct_path: struct_name , field_name} => write!(f, "struct `{struct_name}` has no field `{field_name}`"),  
             
@@ -286,8 +307,6 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UnexpectedType { expected, found } => {
                 write!(f, "unexpected type(s). Expected {expected}, found `{found}`")
             }
-
-            SemanticErrorKind::UnresolvedGeneric { name } => write!(f, "unresolved generic: `{name}`"),
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
         }
