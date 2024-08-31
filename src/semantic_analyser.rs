@@ -3264,6 +3264,21 @@ impl SemanticAnalyser {
                 }
             }
 
+            // if one or both types are inferred, try to resolve them to a concrete type
+            (
+                Type::InferredType(InferredType { name: name_a }),
+                Type::InferredType(InferredType { name: name_b }),
+            ) => {
+                if *name_a == Identifier::from("_") || *name_b == Identifier::from("_") {
+                    Ok(())
+                } else {
+                    Err(SemanticErrorKind::TypeMismatchUnification {
+                        expected: name_a.clone(),
+                        found: name_b.clone(),
+                    })
+                }
+            }
+
             // if one is inferred and the other is a concrete or generic type, resolve the inference
             (Type::InferredType(inf), concrete_or_generic)
             | (concrete_or_generic, Type::InferredType(inf)) => self.resolve_inferred_type(
