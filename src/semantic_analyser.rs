@@ -233,8 +233,7 @@ impl SemanticAnalyser {
                     _ => &value_type,
                 };
 
-                // TODO: if a value is a generic type, resolve it,
-                // TODO: including checking if it implements a trait (where applicable)
+                self.unify_types(&value_type, &declared_type)?;
 
                 // check that the value matches the type annotation
                 if &value_type != declared_type {
@@ -349,8 +348,14 @@ impl SemanticAnalyser {
                         _ => None,
                     };
 
-                    // TODO: if a value is a generic type, resolve it,
-                    // TODO: including checking if it implements a trait (where applicable)
+                    self.unify_types(
+                        &cd.constant_type,
+                        &value_type
+                            .clone()
+                            .unwrap_or(Type::InferredType(InferredType {
+                                name: Identifier::from("_"),
+                            })),
+                    )?;
 
                     if value_type.clone().is_some_and(|t| t != *cd.constant_type) {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -390,8 +395,7 @@ impl SemanticAnalyser {
                         }),
                     };
 
-                    // TODO: if a var is a generic type, resolve it,
-                    // TODO: including checking if it implements a trait (where applicable)
+                    self.unify_types(&s.var_type, &assignee_type)?;
 
                     if assignee_type != s.var_type.clone() {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -725,6 +729,8 @@ impl SemanticAnalyser {
                         t.implemented_trait_path, t.implementing_type
                     ));
 
+                    self.add_trait_implementation(trait_impl_path.clone(), t.clone());
+
                     if let Some(items) = &t.associated_items_opt {
                         // self.enter_scope(ScopeKind::TraitImpl(trait_impl_path.to_string()));
 
@@ -873,11 +879,6 @@ impl SemanticAnalyser {
                     }
                 }
 
-                // TODO: if a param is a generic type, resolve it,
-                // TODO: including checking if it implements its bound trait (where applicable)
-
-                // TODO: ditto for return types
-
                 let param_path = TypePath::from(param.param_name());
 
                 println!("param path: `{param_path}`, param_type: `{param_type:?}`");
@@ -961,8 +962,10 @@ impl SemanticAnalyser {
 
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
+            self.unify_types(&return_type, &function_type)?;
+
             if function_type != *return_type.clone() {
-                match function_type {
+                match function_type.clone() {
                     Type::Result { .. } => unify_result_types(&mut function_type, return_type)?,
                     Type::Generic { name, .. } => {
                         match self.lookup(&TypePath::from(name.clone())) {
@@ -1766,6 +1769,8 @@ impl SemanticAnalyser {
 
                 let value_type = self.analyse_expr(&wrap_into_expression(a.rhs.clone()), root)?;
 
+                self.unify_types(&value_type, &assignee_type)?;
+
                 if value_type != assignee_type {
                     return Err(SemanticErrorKind::TypeMismatchValues {
                         expected: assignee_type,
@@ -1774,6 +1779,7 @@ impl SemanticAnalyser {
                 }
 
                 let assignee_as_path_expr = PathExpr::from(assignee);
+
                 let assignee_path = self.check_path(
                     &TypePath::from(assignee_as_path_expr),
                     root,
@@ -2006,6 +2012,8 @@ impl SemanticAnalyser {
                     }
                 }
 
+                self.unify_types(&return_type, &expression_type)?;
+
                 let function_ptr = FunctionPtr {
                     params_opt,
                     return_type_opt: Some(Box::new(return_type)),
@@ -2021,15 +2029,14 @@ impl SemanticAnalyser {
 
                         let first_element_type = self.analyse_expr(expr, root)?;
 
-                        // TODO: if an element is a generic type, resolve it,
-                        // TODO: including checking if it implements its bound trait (where applicable)
-
                         element_count += 1;
 
                         for elem in elements.iter().skip(1) {
                             let element_type = self.analyse_expr(elem, root)?;
 
                             element_count += 1;
+
+                            self.unify_types(&first_element_type, &element_type)?;
 
                             if element_type != first_element_type {
                                 return Err(SemanticErrorKind::TypeMismatchArray {
@@ -2087,9 +2094,6 @@ impl SemanticAnalyser {
                                 let field_value = *obj_field.field_value.clone();
                                 let field_type = self.analyse_expr(&field_value, root)?;
 
-                                // TODO: if a field is a generic type, resolve it,
-                                // TODO: including checking if it implements a trait (where applicable)
-
                                 field_map.insert(field_name, field_type);
                             }
                         }
@@ -2121,6 +2125,8 @@ impl SemanticAnalyser {
                             for def_field in def_fields {
                                 match field_map.get(&def_field.field_name) {
                                     Some(obj_field_type) => {
+                                        self.unify_types(&obj_field_type, &def_field.field_type)?;
+
                                         if *obj_field_type != *def_field.field_type {
                                             return Err(SemanticErrorKind::TypeMismatchVariable {
                                                 var_id: path.type_name,
@@ -2202,8 +2208,7 @@ impl SemanticAnalyser {
                                     )?;
                                     let field_type = *field.field_type.clone();
 
-                                    // TODO: if an element is a generic type, resolve it,
-                                    // TODO: including checking if it implements a trait (where applicable)
+                                    self.unify_types(&elem_type, &field_type)?;
 
                                     if elem_type != field_type {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
@@ -2241,8 +2246,8 @@ impl SemanticAnalyser {
                             let pair_key_type = self.analyse_patt(&pair.k.clone())?;
                             let pair_value_type = self.analyse_expr(&pair.v.clone(), root)?;
 
-                            // TODO: if a key/value is a generic type, resolve it,
-                            // TODO: including checking if it implements a trait (where applicable)
+                            self.unify_types(&key_type, &pair_key_type)?;
+                            self.unify_types(&value_type, &pair_value_type)?;
 
                             if (&pair_key_type, &pair_value_type) != (&key_type, &value_type) {
                                 return Err(SemanticErrorKind::UnexpectedType {
@@ -2401,6 +2406,8 @@ impl SemanticAnalyser {
                     for arm in arms.iter() {
                         let arm_patt_type = self.analyse_patt(&arm.matched_pattern)?;
 
+                        self.unify_types(&arm_patt_type, &patt_type)?;
+
                         if arm_patt_type != patt_type {
                             if let Type::InferredType(_) = patt_type {
                                 ()
@@ -2414,6 +2421,8 @@ impl SemanticAnalyser {
                         }
 
                         let arm_expr_type = self.analyse_expr(&arm.arm_expression.clone(), root)?;
+
+                        self.unify_types(&arm_expr_type, &expr_type)?;
 
                         if arm_expr_type != expr_type {
                             return Err(SemanticErrorKind::TypeMismatchMatchExpr {
@@ -2747,23 +2756,7 @@ impl SemanticAnalyser {
 
                             let param_type = param.param_type();
 
-                            self.unify_types(&arg_type, &param_type)?; // TODO
-
-                            // // if the parameter type is a generic, attempt to unify
-                            // if let Type::Generic { name, .. } = param_type {
-                            //     // check if we already have an inferred type for this generic
-                            //     if let Some(inferred_type) = inferred_types.get(&name) {
-                            //         // TODO:
-                            //         // unify_types(&mut inferred_type.clone(), &arg_type)?
-                            //     } else {
-                            //         // if not, infer it as this (user-defined) type
-                            //         if let Type::UserDefined(ty) = arg_type {
-                            //             inferred_types.insert(name, Type::UserDefined(ty));
-                            //         } else {
-                            //             // TODO: return error – arg type must be user-defined type
-                            //         }
-                            //     }
-                            // } else
+                            self.unify_types(&arg_type, &param_type)?;
 
                             if arg_type != param_type {
                                 return Err(SemanticErrorKind::TypeMismatchArgument {
@@ -3028,9 +3021,6 @@ impl SemanticAnalyser {
                                 let field_value = patt_field.field_value.clone();
                                 let field_type = self.analyse_patt(&field_value)?;
 
-                                // TODO: if a field is a generic type, resolve it,
-                                // TODO: including checking if it implements its bound trait (where applicable)
-
                                 field_map.insert(field_name, field_type);
                             }
                         }
@@ -3062,6 +3052,8 @@ impl SemanticAnalyser {
                             for def_field in def_fields {
                                 match field_map.get(&def_field.field_name) {
                                     Some(patt_field_type) => {
+                                        self.unify_types(&def_field.field_type, &patt_field_type)?;
+
                                         if *patt_field_type != *def_field.field_type {
                                             return Err(SemanticErrorKind::TypeMismatchVariable {
                                                 var_id: path.type_name,
@@ -3140,8 +3132,7 @@ impl SemanticAnalyser {
                                     let elem_type = self.analyse_patt(&elem)?;
                                     let field_type = *field.field_type.clone();
 
-                                    // TODO: if an element is a generic type, resolve it,
-                                    // TODO: including checking if it implements its bound trait (where applicable)
+                                    self.unify_types(&elem_type, &field_type)?;
 
                                     if elem_type != field_type {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
@@ -3280,6 +3271,7 @@ impl SemanticAnalyser {
                 concrete_or_generic.clone(),
             ),
 
+            // grouped, array, tuple, function pointer, reference, vector, mapping, option, result
             // TODO: handle other cases for concrete types, inferred types, etc.
             _ => {
                 // check if one is a generic and substitute, or handle type mismatch
@@ -3339,6 +3331,7 @@ impl SemanticAnalyser {
                 Ok(())
             }
 
+            // grouped. array, tuple, function pointer, reference, vector, mapping, option, result
             // TODO: if the first type is not generic, handle other cases
             _ => {
                 // optionally handle cases where both are not generics but might still require
