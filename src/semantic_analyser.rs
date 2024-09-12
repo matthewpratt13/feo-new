@@ -30,7 +30,7 @@ use crate::{
 };
 
 use core::fmt;
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
 
@@ -221,7 +221,7 @@ impl SemanticAnalyser {
 
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors
-                let value_type = if let Some(val) = &ls.value_opt {
+                let mut value_type = if let Some(val) = &ls.value_opt {
                     self.analyse_expr(val, root)?
                 } else {
                     Type::UnitType(UnitType)
@@ -229,14 +229,14 @@ impl SemanticAnalyser {
 
                 // get the type annotation if there is one, otherwise assume the value's type
                 let declared_type = match &ls.type_ann_opt {
-                    Some(ty) => ty,
-                    _ => &value_type,
+                    Some(ty) => ty.clone(),
+                    _ => value_type.clone(),
                 };
 
-                self.unify_types(&value_type, &declared_type)?;
+                self.unify_types(&declared_type, &mut value_type)?;
 
                 // check that the value matches the type annotation
-                if &value_type != declared_type {
+                if value_type != declared_type {
                     return Err(SemanticErrorKind::TypeMismatchDeclaredType {
                         actual_type: value_type.clone(),
                         declared_type: declared_type.clone(),
@@ -350,7 +350,7 @@ impl SemanticAnalyser {
 
                     self.unify_types(
                         &cd.constant_type,
-                        &value_type
+                        &mut value_type
                             .clone()
                             .unwrap_or(Type::InferredType(InferredType {
                                 name: Identifier::from("_"),
@@ -385,7 +385,7 @@ impl SemanticAnalyser {
                         "analysing static variable declaration: `{statement}`"
                     ));
 
-                    let assignee_type = match &s.assignee_opt {
+                    let mut assignee_type = match &s.assignee_opt {
                         Some(a_expr) => {
                             let assignee = wrap_into_expression(*a_expr.clone());
                             self.analyse_expr(&assignee, root)?
@@ -395,7 +395,7 @@ impl SemanticAnalyser {
                         }),
                     };
 
-                    self.unify_types(&s.var_type, &assignee_type)?;
+                    self.unify_types(&s.var_type, &mut assignee_type)?;
 
                     if assignee_type != s.var_type.clone() {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -962,7 +962,7 @@ impl SemanticAnalyser {
 
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
-            self.unify_types(&return_type, &function_type)?;
+            self.unify_types(&return_type, &mut function_type)?;
 
             if function_type != *return_type.clone() {
                 match function_type.clone() {
@@ -1765,18 +1765,18 @@ impl SemanticAnalyser {
 
             Expression::Assignment(a) => {
                 let assignee = wrap_into_expression(a.lhs.clone());
-                let assignee_type = self.analyse_expr(&assignee, root)?;
+                let mut assignee_type = self.analyse_expr(&assignee, root)?;
 
                 let value_type = self.analyse_expr(&wrap_into_expression(a.rhs.clone()), root)?;
 
-                self.unify_types(&value_type, &assignee_type)?;
+                self.unify_types(&value_type, &mut assignee_type)?;
 
-                if value_type != assignee_type {
-                    return Err(SemanticErrorKind::TypeMismatchValues {
-                        expected: assignee_type,
-                        found: value_type,
-                    });
-                }
+                // if value_type != assignee_type {
+                //     return Err(SemanticErrorKind::TypeMismatchValues {
+                //         expected: assignee_type,
+                //         found: value_type,
+                //     });
+                // }
 
                 let assignee_as_path_expr = PathExpr::from(assignee);
 
@@ -1989,7 +1989,9 @@ impl SemanticAnalyser {
                     _ => Ok(Type::UnitType(UnitType)),
                 }?;
 
-                let expression_type = self.analyse_expr(&c.body_expression, root)?;
+                let return_type_clone = return_type.clone();
+
+                let mut expression_type = self.analyse_expr(&c.body_expression, root)?;
 
                 if expression_type != return_type {
                     if let Type::Result { ok_type, err_type } = expression_type.clone() {
@@ -2005,18 +2007,18 @@ impl SemanticAnalyser {
                             ()
                         } else {
                             return Err(SemanticErrorKind::TypeMismatchReturnType {
-                                expected: return_type,
+                                expected: return_type_clone,
                                 found: expression_type,
                             });
                         }
                     }
                 }
 
-                self.unify_types(&return_type, &expression_type)?;
+                self.unify_types(&return_type, &mut expression_type)?;
 
                 let function_ptr = FunctionPtr {
                     params_opt,
-                    return_type_opt: Some(Box::new(return_type)),
+                    return_type_opt: Some(Box::new(return_type_clone)),
                 };
 
                 Ok(Type::FunctionPtr(function_ptr))
@@ -2027,7 +2029,7 @@ impl SemanticAnalyser {
                     Some(expr) => {
                         let mut element_count = 0u64;
 
-                        let first_element_type = self.analyse_expr(expr, root)?;
+                        let mut first_element_type = self.analyse_expr(expr, root)?;
 
                         element_count += 1;
 
@@ -2036,7 +2038,7 @@ impl SemanticAnalyser {
 
                             element_count += 1;
 
-                            self.unify_types(&first_element_type, &element_type)?;
+                            self.unify_types(&element_type, &mut first_element_type)?;
 
                             if element_type != first_element_type {
                                 return Err(SemanticErrorKind::TypeMismatchArray {
@@ -2098,7 +2100,7 @@ impl SemanticAnalyser {
                             }
                         }
 
-                        if let Some(ref def_fields) = def_fields_opt {
+                        if let Some(def_fields) = def_fields_opt {
                             if field_map.len() > def_fields.len() {
                                 return Err(SemanticErrorKind::StructArgCountMismatch {
                                     struct_path: Identifier::from(type_path),
@@ -2108,7 +2110,7 @@ impl SemanticAnalyser {
                             }
 
                             let field_names = def_fields
-                                .into_iter()
+                                .iter()
                                 .cloned()
                                 .map(|sdf| sdf.field_name)
                                 .collect::<Vec<_>>();
@@ -2122,18 +2124,18 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            for def_field in def_fields {
-                                match field_map.get(&def_field.field_name) {
+                            for def_field in def_fields.iter() {
+                                match field_map.get_mut(&def_field.field_name) {
                                     Some(obj_field_type) => {
-                                        self.unify_types(&obj_field_type, &def_field.field_type)?;
+                                        self.unify_types(&*def_field.field_type, obj_field_type)?;
 
-                                        if *obj_field_type != *def_field.field_type {
-                                            return Err(SemanticErrorKind::TypeMismatchVariable {
-                                                var_id: path.type_name,
-                                                expected: format!("`{}`", *def_field.field_type),
-                                                found: obj_field_type.clone(),
-                                            });
-                                        }
+                                        // if *obj_field_type != *def_field.field_type {
+                                        //     return Err(SemanticErrorKind::TypeMismatchVariable {
+                                        //         var_id: path.type_name,
+                                        //         expected: format!("`{}`", *def_field.field_type),
+                                        //         found: obj_field_type.clone(),
+                                        //     });
+                                        // }
                                     }
 
                                     None => {
@@ -2202,13 +2204,14 @@ impl SemanticAnalyser {
                                 }
 
                                 for (elem, field) in elements.iter().zip(fields) {
-                                    let elem_type = self.analyse_expr(
+                                    let field_type = *field.field_type.clone();
+
+                                    let mut elem_type = self.analyse_expr(
                                         &elem,
                                         &TypePath::from(Identifier::from("")),
                                     )?;
-                                    let field_type = *field.field_type.clone();
 
-                                    self.unify_types(&elem_type, &field_type)?;
+                                    self.unify_types(&field_type, &mut elem_type)?;
 
                                     if elem_type != field_type {
                                         return Err(SemanticErrorKind::TypeMismatchVariable {
@@ -2243,11 +2246,11 @@ impl SemanticAnalyser {
                         let value_type = self.analyse_expr(&pair.v.clone(), root)?;
 
                         for pair in pairs.iter().skip(1) {
-                            let pair_key_type = self.analyse_patt(&pair.k.clone())?;
-                            let pair_value_type = self.analyse_expr(&pair.v.clone(), root)?;
+                            let mut pair_key_type = self.analyse_patt(&pair.k.clone())?;
+                            let mut pair_value_type = self.analyse_expr(&pair.v.clone(), root)?;
 
-                            self.unify_types(&key_type, &pair_key_type)?;
-                            self.unify_types(&value_type, &pair_value_type)?;
+                            self.unify_types(&key_type, &mut pair_key_type)?;
+                            self.unify_types(&value_type, &mut pair_value_type)?;
 
                             if (&pair_key_type, &pair_value_type) != (&key_type, &value_type) {
                                 return Err(SemanticErrorKind::UnexpectedType {
@@ -2404,9 +2407,9 @@ impl SemanticAnalyser {
 
                 if let Some(arms) = &m.match_arms_opt {
                     for arm in arms.iter() {
-                        let arm_patt_type = self.analyse_patt(&arm.matched_pattern)?;
+                        let mut arm_patt_type = self.analyse_patt(&arm.matched_pattern)?;
 
-                        self.unify_types(&arm_patt_type, &patt_type)?;
+                        self.unify_types(&patt_type, &mut arm_patt_type)?;
 
                         if arm_patt_type != patt_type {
                             if let Type::InferredType(_) = patt_type {
@@ -2420,9 +2423,10 @@ impl SemanticAnalyser {
                             }
                         }
 
-                        let arm_expr_type = self.analyse_expr(&arm.arm_expression.clone(), root)?;
+                        let mut arm_expr_type =
+                            self.analyse_expr(&arm.arm_expression.clone(), root)?;
 
-                        self.unify_types(&arm_expr_type, &expr_type)?;
+                        self.unify_types(&expr_type, &mut arm_expr_type)?;
 
                         if arm_expr_type != expr_type {
                             return Err(SemanticErrorKind::TypeMismatchMatchExpr {
@@ -2751,20 +2755,20 @@ impl SemanticAnalyser {
                         // let mut inferred_types: HashMap<Identifier, Type> = HashMap::new();
 
                         for (arg, param) in args.iter().zip(params) {
-                            let arg_type =
+                            let mut arg_type =
                                 self.analyse_expr(&arg, &TypePath::from(Identifier::from("")))?;
 
                             let param_type = param.param_type();
 
-                            self.unify_types(&arg_type, &param_type)?;
+                            self.unify_types(&param_type, &mut arg_type)?;
 
-                            if arg_type != param_type {
-                                return Err(SemanticErrorKind::TypeMismatchArgument {
-                                    arg_id: function.function_name.clone(),
-                                    expected: param_type,
-                                    found: arg_type,
-                                });
-                            }
+                            // if arg_type != param_type {
+                            //     return Err(SemanticErrorKind::TypeMismatchArgument {
+                            //         arg_id: function.function_name.clone(),
+                            //         expected: param_type,
+                            //         found: arg_type,
+                            //     });
+                            // }
                         }
 
                         // // ensure all constraints are satisfied for inferred types
@@ -3025,7 +3029,7 @@ impl SemanticAnalyser {
                             }
                         }
 
-                        if let Some(ref def_fields) = def_fields_opt {
+                        if let Some(def_fields) = def_fields_opt {
                             if field_map.len() > def_fields.len() {
                                 return Err(SemanticErrorKind::StructArgCountMismatch {
                                     struct_path: Identifier::from(type_path),
@@ -3035,7 +3039,7 @@ impl SemanticAnalyser {
                             }
 
                             let field_names = def_fields
-                                .into_iter()
+                                .iter()
                                 .cloned()
                                 .map(|sdf| sdf.field_name)
                                 .collect::<Vec<_>>();
@@ -3049,18 +3053,18 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            for def_field in def_fields {
-                                match field_map.get(&def_field.field_name) {
+                            for def_field in def_fields.into_iter() {
+                                match field_map.get_mut(&def_field.field_name) {
                                     Some(patt_field_type) => {
-                                        self.unify_types(&def_field.field_type, &patt_field_type)?;
+                                        self.unify_types(&*def_field.field_type, patt_field_type)?;
 
-                                        if *patt_field_type != *def_field.field_type {
-                                            return Err(SemanticErrorKind::TypeMismatchVariable {
-                                                var_id: path.type_name,
-                                                expected: format!("`{}`", *def_field.field_type),
-                                                found: patt_field_type.clone(),
-                                            });
-                                        }
+                                        // if *patt_field_type != *def_field.field_type {
+                                        //     return Err(SemanticErrorKind::TypeMismatchVariable {
+                                        //         var_id: path.type_name,
+                                        //         expected: format!("`{}`", *def_field.field_type),
+                                        //         found: patt_field_type.clone(),
+                                        //     });
+                                        // }
                                     }
 
                                     None => {
@@ -3101,7 +3105,7 @@ impl SemanticAnalyser {
                         let elements_opt = ts.struct_elements_opt.clone();
                         let fields_opt = tuple_struct_def.fields_opt;
 
-                        match (&elements_opt, &fields_opt) {
+                        match (elements_opt, fields_opt) {
                             (None, None) => Ok(Type::UnitType(UnitType)),
 
                             (None, Some(fields)) => {
@@ -3120,7 +3124,7 @@ impl SemanticAnalyser {
                                 })
                             }
                             (Some(elements), Some(fields)) => {
-                                if elements.len() != fields.len() {
+                                if &elements.len() != &fields.len() {
                                     return Err(SemanticErrorKind::StructArgCountMismatch {
                                         struct_path: Identifier::from(type_path),
                                         expected: fields.len(),
@@ -3129,18 +3133,20 @@ impl SemanticAnalyser {
                                 }
 
                                 for (elem, field) in elements.iter().zip(fields) {
-                                    let elem_type = self.analyse_patt(&elem)?;
-                                    let field_type = *field.field_type.clone();
+                                    let field_type = field.field_type;
+                                    // let field_type_clone = field_type.clone();
+                                    let mut elem_type = self.analyse_patt(&elem)?;
+                                    // let elem_type_clone = elem_type.clone();
 
-                                    self.unify_types(&elem_type, &field_type)?;
+                                    self.unify_types(&*field_type, &mut elem_type)?;
 
-                                    if elem_type != field_type {
-                                        return Err(SemanticErrorKind::TypeMismatchVariable {
-                                            var_id: tuple_struct_def.struct_name.clone(),
-                                            expected: format!("`{field_type}`"),
-                                            found: elem_type,
-                                        });
-                                    }
+                                    // if elem_type_clone != field_type_clone {
+                                    //     return Err(SemanticErrorKind::TypeMismatchVariable {
+                                    //         var_id: tuple_struct_def.struct_name.clone(),
+                                    //         expected: format!("`{}`", field_type_clone),
+                                    //         found: elem_type_clone,
+                                    //     });
+                                    // }
                                 }
 
                                 Ok(Type::UserDefined(path))
@@ -3230,8 +3236,11 @@ impl SemanticAnalyser {
 
     /// Unifies two types, ensuring they are compatible. Returns `Ok` if they can be unified, or
     /// an `Err` if there is a type mismatch.
-    fn unify_types(&mut self, type_a: &Type, type_b: &Type) -> Result<(), SemanticErrorKind> {
-        match (type_a, type_b) {
+    fn unify_types(&mut self, type_a: &Type, type_b: &mut Type) -> Result<(), SemanticErrorKind> {
+        let type_a_clone = type_a.clone();
+        let type_b_clone = type_b.clone();
+
+        match (type_a_clone, type_b_clone) {
             // if both types are the same, they are already unified
             _ if type_a == type_b => Ok(()),
 
@@ -3264,30 +3273,253 @@ impl SemanticAnalyser {
                 }
             }
 
-            // if one or both types are inferred, try to resolve them to a concrete type
-            (
-                Type::InferredType(InferredType { name: name_a }),
-                Type::InferredType(InferredType { name: name_b }),
-            ) => {
-                if *name_a == Identifier::from("_") || *name_b == Identifier::from("_") {
-                    Ok(())
-                } else {
-                    Err(SemanticErrorKind::TypeMismatchUnification {
-                        expected: name_a.clone(),
-                        found: name_b.clone(),
-                    })
-                }
-            }
-
-            // if one is inferred and the other is a concrete or generic type, resolve the inference
-            (Type::InferredType(inf), concrete_or_generic)
-            | (concrete_or_generic, Type::InferredType(inf)) => self.resolve_inferred_type(
-                Type::InferredType(inf.clone()),
-                concrete_or_generic.clone(),
+            (Type::Generic { name, bound_opt }, concrete) => self.unify_generic_with_concrete(
+                &mut Type::Generic {
+                    name: name.clone(),
+                    bound_opt: bound_opt.clone(),
+                },
+                &concrete,
             ),
 
-            // grouped, array, tuple, function pointer, reference, vector, mapping, option, result
-            // TODO: handle other cases for concrete types, inferred types, etc.
+            // if one is a concrete or generic type and the other is inferred, resolve the inference
+            (concrete_or_generic, Type::InferredType(_)) => {
+                self.resolve_inferred_type(type_b, concrete_or_generic)
+            }
+
+            (Type::GroupedType(grouped), matched) => {
+                if *grouped.clone() != matched {
+                    return Err(SemanticErrorKind::TypeMismatchUnification {
+                        expected: Identifier::from(&type_a.to_string()),
+                        found: Identifier::from(&type_b.to_string()),
+                    });
+                }
+
+                Ok(())
+            }
+
+            (
+                Type::Array {
+                    element_type: elem_type_a,
+                    num_elements: num_elems_a,
+                },
+                Type::Array {
+                    element_type: elem_type_b,
+                    num_elements: num_elems_b,
+                },
+            ) => {
+                if elem_type_a != elem_type_b {
+                    // array element type mismatch
+                    todo!()
+                }
+
+                if num_elems_a != num_elems_b {
+                    // array length mismatch
+                    todo!()
+                }
+
+                Ok(())
+            }
+
+            (Type::Tuple(elem_types_a), Type::Tuple(elem_types_b)) => {
+                if elem_types_a.len() != elem_types_b.len() {
+                    // tuple length mismatch
+                    todo!()
+                }
+
+                for (a, b) in elem_types_a.into_iter().zip(elem_types_b) {
+                    if a != b {
+                        // tuple element type mismatch
+                        todo!()
+                    }
+                }
+
+                Ok(())
+            }
+
+            (Type::FunctionPtr(ptr_a), Type::FunctionPtr(ptr_b)) => {
+                match (ptr_a.params_opt.clone(), ptr_b.params_opt.clone()) {
+                    (None, None) => (),
+                    (None, Some(_)) => todo!(), // too many params
+                    (Some(_), None) => todo!(), // missing params
+                    (Some(params_a), Some(params_b)) => {
+                        if params_a.len() != params_b.len() {
+                            // mismatch in num params
+                            todo!()
+                        }
+
+                        for (param_a, param_b) in params_a.iter().zip(params_b) {
+                            match (param_a, param_b) {
+                                (
+                                    FunctionOrMethodParam::FunctionParam(func_param_a),
+                                    FunctionOrMethodParam::FunctionParam(func_param_b),
+                                ) => {
+                                    if *func_param_a != func_param_b {
+                                        // func param type mismatch
+                                        todo!()
+                                    }
+                                }
+                                (
+                                    FunctionOrMethodParam::FunctionParam(_),
+                                    FunctionOrMethodParam::MethodParam(_),
+                                ) => todo!(), // unexpected `self` param
+                                (
+                                    FunctionOrMethodParam::MethodParam(_),
+                                    FunctionOrMethodParam::FunctionParam(_),
+                                ) => todo!(), // missing `self` param
+                                (
+                                    FunctionOrMethodParam::MethodParam(self_param_a),
+                                    FunctionOrMethodParam::MethodParam(self_param_b),
+                                ) => {
+                                    match (
+                                        self_param_a.reference_op_opt,
+                                        self_param_b.reference_op_opt,
+                                    ) {
+                                        (None, None) => (),
+                                        (None, Some(_)) => todo!(), // unexpected reference operator
+                                        (Some(_), None) => todo!(), // missing reference operator
+                                        (Some(ref_op_a), Some(ref_op_b)) => {
+                                            if ref_op_a != ref_op_b {
+                                                // reference operator mismatch
+                                                todo!()
+                                            }
+                                        }
+                                    }
+
+                                    match (self_param_a.kw_self, self_param_b.kw_self) {
+                                        (Keyword::SelfKeyword, Keyword::SelfKeyword) => (),
+                                        (Keyword::SelfKeyword, _) => todo!(), // unexpected keyword
+                                        (_, _) => todo!(),                    //  invalid keyword
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                match (ptr_a.return_type_opt.clone(), ptr_b.return_type_opt.clone()) {
+                    (None, None) => (),
+                    (None, Some(_)) => todo!(), // unexpected return type
+                    (Some(_), None) => todo!(), // missing return type
+                    (Some(return_type_a), Some(return_type_b)) => {
+                        if return_type_a != return_type_b {
+                            // return type mismatch
+                            todo!()
+                        }
+                    }
+                }
+
+                Ok(())
+            }
+
+            (
+                Type::Reference {
+                    reference_op: ref_op_a,
+                    inner_type: inner_type_a,
+                },
+                Type::Reference {
+                    reference_op: ref_op_b,
+                    inner_type: inner_type_b,
+                },
+            ) => {
+                if ref_op_a != ref_op_b {
+                    // reference operator mismatch
+                    todo!()
+                }
+
+                if inner_type_a != inner_type_b {
+                    // inner type mismatch
+                    todo!()
+                }
+
+                Ok(())
+            }
+
+            (
+                Type::Vec {
+                    element_type: elem_type_a,
+                },
+                Type::Vec {
+                    element_type: elem_type_b,
+                },
+            ) => {
+                if elem_type_a != elem_type_b {
+                    // vector element type mismatch
+                    todo!()
+                }
+
+                Ok(())
+            }
+
+            (
+                Type::Mapping {
+                    key_type: key_type_a,
+                    value_type: val_type_a,
+                },
+                Type::Mapping {
+                    key_type: key_type_b,
+                    value_type: val_type_b,
+                },
+            ) => {
+                if key_type_a != key_type_b {
+                    // mapping key type mismatch
+                    todo!()
+                }
+
+                if val_type_a != val_type_b {
+                    // mapping value type mismatch
+                    todo!()
+                }
+
+                Ok(())
+            }
+
+            (
+                Type::Option {
+                    inner_type: inner_type_a,
+                },
+                Type::Option {
+                    inner_type: inner_type_b,
+                },
+            ) => {
+                if inner_type_a != inner_type_b {
+                    // inner type mismatch
+                    todo!()
+                }
+
+                Ok(())
+            }
+
+            (
+                Type::Result {
+                    ok_type: ok_type_a,
+                    err_type: err_type_a,
+                },
+                Type::Result {
+                    ok_type: ok_type_b,
+                    err_type: err_type_b,
+                },
+            ) => {
+                if ok_type_a != ok_type_b {
+                    // result type  mismatch (`Ok` variant)
+                }
+
+                if err_type_a != err_type_b {
+                    // result type mismatch (`Err` variant)
+                }
+
+                Ok(())
+            }
+
+            (Type::UserDefined(type_path_a), Type::UserDefined(type_path_b)) => {
+                if type_path_a != type_path_b {
+                    // user defined type mismatch
+                    todo!()
+                }
+
+                Ok(())
+            }
+
+            // TODO: handle other cases for concrete types (numeric, str, char, bool)
             _ => {
                 // check if one is a generic and substitute, or handle type mismatch
                 Err(SemanticErrorKind::TypeMismatchUnification {
@@ -3300,21 +3532,21 @@ impl SemanticAnalyser {
 
     fn resolve_inferred_type(
         &mut self,
-        mut _inferred: Type,
+        inferred: &mut Type,
         concrete: Type,
     ) -> Result<(), SemanticErrorKind> {
-        if _inferred
+        if *inferred
             == Type::InferredType(InferredType {
                 name: Identifier::from("_"),
             })
         {
-            _inferred = concrete;
+            *inferred = concrete;
             Ok(())
-        } else if _inferred == concrete {
+        } else if *inferred == concrete {
             Ok(())
         } else {
             Err(SemanticErrorKind::UnexpectedType {
-                expected: _inferred.to_string(),
+                expected: inferred.to_string(),
                 found: concrete,
             })
         }
@@ -3322,14 +3554,14 @@ impl SemanticAnalyser {
 
     fn unify_generic_with_concrete(
         &mut self,
-        generic_type: &Type,
+        generic_type: &mut Type,
         concrete_type: &Type,
     ) -> Result<(), SemanticErrorKind> {
         match generic_type {
             Type::Generic { name, bound_opt } => {
                 // check if the concrete type satisfies the bounds of the generic type
                 if let Some(bound_path) = bound_opt {
-                    let bound_trait = self.lookup_trait(bound_path)?;
+                    let bound_trait = self.lookup_trait(&bound_path)?;
 
                     // check if the concrete type implements the required trait
                     if !self.type_satisfies_bound(concrete_type, &bound_trait) {
@@ -3346,19 +3578,7 @@ impl SemanticAnalyser {
                 Ok(())
             }
 
-            // grouped. array, tuple, function pointer, reference, vector, mapping, option, result
-            // TODO: if the first type is not generic, handle other cases
-            _ => {
-                // optionally handle cases where both are not generics but might still require
-                // unification
-                if generic_type != concrete_type {
-                    return Err(SemanticErrorKind::TypeMismatchUnification {
-                        expected: Identifier::from(&generic_type.to_string()),
-                        found: Identifier::from(&concrete_type.to_string()),
-                    });
-                }
-                Ok(())
-            }
+            _ => self.unify_types(concrete_type, generic_type),
         }
     }
 
@@ -3387,8 +3607,11 @@ impl SemanticAnalyser {
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
+        let mut stack = Rc::new(&self.scope_stack);
+        let stack_mut = Rc::make_mut(&mut stack);
+
         // iterate through the scope stack and substitute generics in all types.
-        for scope in &mut self.scope_stack.clone() {
+        for scope in stack_mut.clone().iter_mut() {
             for symbol in scope.symbols.values_mut() {
                 self.substitute_in_symbol(symbol, generic_name, concrete_type);
             }
@@ -3462,7 +3685,7 @@ impl SemanticAnalyser {
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
-        if let Some(fields) = &mut struct_def.fields_opt {
+        if let Some(fields) = struct_def.fields_opt.as_mut() {
             for field in fields {
                 self.substitute_in_type(&mut field.field_type, generic_name, concrete_type);
             }
@@ -3475,13 +3698,13 @@ impl SemanticAnalyser {
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
-        if let Some(params) = &mut function.params_opt {
+        if let Some(params) = function.params_opt.as_mut() {
             for param in params {
                 self.substitute_in_type(&mut param.param_type(), generic_name, concrete_type);
             }
         }
 
-        if let Some(return_type) = &mut function.return_type_opt {
+        if let Some(return_type) = function.return_type_opt.as_mut() {
             self.substitute_in_type(return_type, generic_name, concrete_type);
         }
     }
@@ -3493,8 +3716,8 @@ impl SemanticAnalyser {
         let trait_implementations = self.get_trait_implementations(concrete_type);
 
         // check if any of the implementations match the required trait
-        for trait_impl in trait_implementations {
-            if self.trait_matches(&trait_impl, bound_trait) {
+        for trait_impl in trait_implementations.iter() {
+            if self.trait_matches(trait_impl, bound_trait) {
                 return true;
             }
         }
@@ -3505,9 +3728,9 @@ impl SemanticAnalyser {
 
     fn get_trait_implementations(&self, concrete_type: &Type) -> Vec<TraitImplDef> {
         // convert concrete type to its `TypePath` representation
-        if let Some(type_path) = self.resolve_type_path(concrete_type) {
+        if let Some(type_path) = self.resolve_type_path(concrete_type).as_ref() {
             // look up the trait implementations in the type table
-            if let Some(trait_impls) = self.type_table.get(&type_path) {
+            if let Some(trait_impls) = self.type_table.get(type_path) {
                 return trait_impls.clone();
             }
         }
