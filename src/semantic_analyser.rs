@@ -8,7 +8,6 @@
 mod expr;
 mod patt;
 mod symbol_table;
-mod utils;
 
 #[cfg(test)]
 mod tests;
