@@ -1338,7 +1338,7 @@ pub(crate) fn analyse_expr(
             let scrutinee_type =
                 analyse_expr(analyser, &wrap_into_expression(m.scrutinee.clone()), root)?;
 
-            let patt_type = analyse_patt(analyser, &m.final_arm.matched_pattern.clone())?;
+            let mut patt_type = analyse_patt(analyser, &m.final_arm.matched_pattern.clone())?;
 
             if patt_type != scrutinee_type {
                 if let Type::InferredType(_) = patt_type {
@@ -1358,7 +1358,15 @@ pub(crate) fn analyse_expr(
                 for arm in arms.iter() {
                     let mut arm_patt_type = analyse_patt(analyser, &arm.matched_pattern)?;
 
-                    analyser.unify_types(&patt_type, &mut arm_patt_type)?;
+                    if patt_type
+                        == Type::InferredType(InferredType {
+                            name: Identifier::from("_"),
+                        })
+                    {
+                        analyser.unify_types(&arm_patt_type, &mut patt_type)?;
+                    } else {
+                        analyser.unify_types(&patt_type, &mut arm_patt_type)?;
+                    }
 
                     if arm_patt_type != patt_type {
                         if let Type::InferredType(_) = patt_type {
