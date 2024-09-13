@@ -44,6 +44,11 @@ pub enum SemanticErrorKind {
         i: UInt
     },
 
+    TypeBoundCountMismatch {
+        expected: usize,
+        found: usize
+    },
+
     TypeBoundNotSatisfied {
         generic_name: Identifier,
         expected_bound: Identifier,
@@ -76,10 +81,6 @@ pub enum SemanticErrorKind {
         declared_type: Type,
     },
 
-    TypeMismatchUnification {
-        expected: Identifier,
-        found: Identifier,
-    },
 
     TypeMismatchMatchExpr {
         loc: String,
@@ -103,7 +104,13 @@ pub enum SemanticErrorKind {
         found: Type,
     },
 
+
     TypeMismatchTypeBound {
+        expected: Identifier,
+        found: Identifier,
+    },
+
+    TypeMismatchUnification {
         expected: Identifier,
         found: Identifier,
     },
@@ -131,6 +138,8 @@ pub enum SemanticErrorKind {
     UndefinedFunction {
         name: Identifier,
     },
+
+    UnexpectedInferredType,
 
     UndefinedModule {
         name: Identifier,
@@ -174,11 +183,13 @@ pub enum SemanticErrorKind {
         expected: String,
         found: String
     },
-    
+
     UnexpectedType {
         expected: String,
         found: Type,
     },
+
+
 
     #[default]
     UnknownError,
@@ -207,7 +218,8 @@ impl fmt::Display for SemanticErrorKind {
             }
             SemanticErrorKind::MissingValue { expected } => {
                 write!(f, "value not found. Expected {expected}, found none")
-            }
+            }      
+            
             SemanticErrorKind::ModuleErrors { name } => {
                 write!(f, "detected errors in module `{name}`")
             }
@@ -216,18 +228,18 @@ impl fmt::Display for SemanticErrorKind {
             }
             SemanticErrorKind::TupleIndexOutOfBounds { len, i } => {
                 write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
-            }
+            },
+
+            SemanticErrorKind::TypeBoundCountMismatch { expected, found } => write!(f, "unexpected number of type bounds. Expected {expected}, found {found}"),
+
             SemanticErrorKind::TypeBoundNotSatisfied { generic_name, expected_bound: bound, found_type: found } => write!(f, "type {found} has generic parameter `{generic_name}` that does not satisfy type bound `{bound}`"),
+            
             SemanticErrorKind::TypeCastError { from, to } => {
                 write!(f, "unable to cast `{}` as `{}`", from, to)
             },
             SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
                 f,
                 "array element types do not match. Expected {expected}, found `{found}`"
-            ),
-            SemanticErrorKind::TypeMismatchUnification { expected, found } => write!(
-                f,
-                "types do not match when attempting to unify. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchMatchExpr { loc, expected, found } => write!(
                 f,
@@ -261,6 +273,10 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "generic type bounds do not match. Expected `{expected}`, found `{found}"
             ),
+            SemanticErrorKind::TypeMismatchUnification { expected, found } => write!(
+                f,
+                "types do not match when attempting to unify. Expected `{expected}`, found `{found}`"
+            ),
             SemanticErrorKind::TypeMismatchValues { expected, found } => write!(
                 f,
                 "type mismatch between values. Expected `{expected}`, found `{found}`"
@@ -291,18 +307,21 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UndefinedSymbol { name } => write!(f, "undefined symbol: {name}"),     
 
             SemanticErrorKind::UndefinedType { name } => write!(f, "no type `{name}` in current scope"),
-            
+
             SemanticErrorKind::UndefinedVariable { name } => {
                 write!(f, "undefined variable: `{name}`")
             }
           
             SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found `{found}`"),
 
+            SemanticErrorKind::UnexpectedInferredType => write!(f, "unexpected inferred type. Expected concrete or generic type"),
+
             SemanticErrorKind::UnexpectedPath { expected, found } => write!(f, "unexpected path. Expected {expected}, found `{found}`"),
 
             SemanticErrorKind::UnexpectedStructField { field_name: name, found } => write!(f, "unexpected field in struct `{name}`: `{found}`"),
             
             SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found {found}"),
+
             
             SemanticErrorKind::UnexpectedType { expected, found } => {
                 write!(f, "unexpected type(s). Expected {expected}, found `{found}`")

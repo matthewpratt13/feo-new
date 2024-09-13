@@ -1341,6 +1341,13 @@ impl SemanticAnalyser {
             // if both types are the same, they are already unified
             _ if type_a == type_b => Ok(()),
 
+            (Type::InferredType(_), _) => Err(SemanticErrorKind::UnexpectedInferredType),
+
+            // if one is a concrete or generic type and the other is inferred, resolve the inference
+            (concrete_or_generic, Type::InferredType(_)) => {
+                self.resolve_inferred_type(type_b, concrete_or_generic)
+            }
+
             (
                 Type::Generic {
                     name: name_a,
@@ -1352,15 +1359,30 @@ impl SemanticAnalyser {
                 },
             ) => {
                 if name_a == name_b {
-                    // same generic, check bounds
-                    if let (Some(bound_a), Some(bound_b)) = (bound_a, bound_b) {
-                        if bound_a != bound_b {
-                            return Err(SemanticErrorKind::TypeMismatchTypeBound {
-                                expected: Identifier::from(bound_a),
-                                found: Identifier::from(bound_b),
-                            });
+                    match (bound_a, bound_b) {
+                        (None, None) => (),
+                        (None, Some(_)) => {
+                            return Err(SemanticErrorKind::TypeBoundCountMismatch {
+                                expected: 0,
+                                found: 1,
+                            })
+                        }
+                        (Some(_), None) => {
+                            return Err(SemanticErrorKind::TypeBoundCountMismatch {
+                                expected: 1,
+                                found: 0,
+                            })
+                        }
+                        (Some(a), Some(b)) => {
+                            if a != b {
+                                return Err(SemanticErrorKind::TypeMismatchTypeBound {
+                                    expected: Identifier::from(a),
+                                    found: Identifier::from(b),
+                                });
+                            }
                         }
                     }
+
                     Ok(())
                 } else {
                     Err(SemanticErrorKind::TypeMismatchUnification {
@@ -1370,17 +1392,8 @@ impl SemanticAnalyser {
                 }
             }
 
-            (Type::Generic { name, bound_opt }, concrete) => self.unify_generic_with_concrete(
-                &mut Type::Generic {
-                    name,
-                    bound_opt,
-                },
-                &concrete,
-            ),
-
-            // if one is a concrete or generic type and the other is inferred, resolve the inference
-            (concrete_or_generic, Type::InferredType(_)) => {
-                self.resolve_inferred_type(type_b, concrete_or_generic)
+            (Type::Generic { name, bound_opt }, concrete) => {
+                self.unify_generic_with_concrete(&mut Type::Generic { name, bound_opt }, &concrete)
             }
 
             (Type::GroupedType(grouped), matched) => {
