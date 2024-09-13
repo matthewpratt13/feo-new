@@ -1356,8 +1356,8 @@ impl SemanticAnalyser {
                     if let (Some(bound_a), Some(bound_b)) = (bound_a, bound_b) {
                         if bound_a != bound_b {
                             return Err(SemanticErrorKind::TypeMismatchTypeBound {
-                                expected: Identifier::from(bound_a.clone()),
-                                found: Identifier::from(bound_b.clone()),
+                                expected: Identifier::from(bound_a),
+                                found: Identifier::from(bound_b),
                             });
                         }
                     }
@@ -1372,8 +1372,8 @@ impl SemanticAnalyser {
 
             (Type::Generic { name, bound_opt }, concrete) => self.unify_generic_with_concrete(
                 &mut Type::Generic {
-                    name: name.clone(),
-                    bound_opt: bound_opt.clone(),
+                    name,
+                    bound_opt,
                 },
                 &concrete,
             ),
@@ -1384,7 +1384,7 @@ impl SemanticAnalyser {
             }
 
             (Type::GroupedType(grouped), matched) => {
-                if *grouped.clone() != matched {
+                if *grouped != matched {
                     return Err(SemanticErrorKind::TypeMismatchUnification {
                         expected: Identifier::from(&type_a.to_string()),
                         found: Identifier::from(&type_b.to_string()),
@@ -1434,7 +1434,7 @@ impl SemanticAnalyser {
             }
 
             (Type::FunctionPtr(ptr_a), Type::FunctionPtr(ptr_b)) => {
-                match (ptr_a.params_opt.clone(), ptr_b.params_opt.clone()) {
+                match (ptr_a.params_opt, ptr_b.params_opt) {
                     (None, None) => (),
                     (None, Some(_)) => todo!(), // too many params
                     (Some(_), None) => todo!(), // missing params
@@ -1493,7 +1493,7 @@ impl SemanticAnalyser {
                     }
                 }
 
-                match (ptr_a.return_type_opt.clone(), ptr_b.return_type_opt.clone()) {
+                match (ptr_a.return_type_opt, ptr_b.return_type_opt) {
                     (None, None) => (),
                     (None, Some(_)) => todo!(), // unexpected return type
                     (Some(_), None) => todo!(), // missing return type
