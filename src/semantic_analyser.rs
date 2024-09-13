@@ -1418,13 +1418,17 @@ impl SemanticAnalyser {
                 },
             ) => {
                 if elem_type_a != elem_type_b {
-                    // array element type mismatch
-                    todo!()
+                    return Err(SemanticErrorKind::TypeMismatchArray {
+                        expected: format!("`{elem_type_a}`"),
+                        found: *elem_type_b,
+                    });
                 }
 
                 if num_elems_a != num_elems_b {
-                    // array length mismatch
-                    todo!()
+                    return Err(SemanticErrorKind::ArrayLengthMismatch {
+                        expected: num_elems_a.into(),
+                        found: num_elems_b.into(),
+                    });
                 }
 
                 Ok(())
@@ -1432,14 +1436,18 @@ impl SemanticAnalyser {
 
             (Type::Tuple(elem_types_a), Type::Tuple(elem_types_b)) => {
                 if elem_types_a.len() != elem_types_b.len() {
-                    // tuple length mismatch
-                    todo!()
+                    return Err(SemanticErrorKind::TupleLengthMismatch {
+                        expected: elem_types_a.len(),
+                        found: elem_types_b.len(),
+                    });
                 }
 
                 for (a, b) in elem_types_a.into_iter().zip(elem_types_b) {
                     if a != b {
-                        // tuple element type mismatch
-                        todo!()
+                        return Err(SemanticErrorKind::TypeMismatchTuple {
+                            expected: a,
+                            found: b,
+                        });
                     }
                 }
 

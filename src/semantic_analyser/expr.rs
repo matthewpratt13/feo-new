@@ -258,8 +258,8 @@ pub(crate) fn analyse_expr(
                         Ok(Type::Tuple(elem_types))
                     } else {
                         Err(SemanticErrorKind::TupleIndexOutOfBounds {
-                            len: ti.index,
-                            i: UInt::from(elem_types.len()),
+                            len: ti.index.into(),
+                            i: elem_types.len(),
                         })
                     }
                 }

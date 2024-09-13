@@ -39,6 +39,17 @@ impl From<usize> for UInt {
     }
 }
 
+impl From<UInt> for usize {
+    fn from(value: UInt) -> Self {
+        match value {
+            UInt::U8(u) => u as usize,
+            UInt::U16(u) => u as usize,
+            UInt::U32(u) => u as usize,
+            UInt::U64(u) => u as usize,
+        }
+    }
+}
+
 impl fmt::Display for UInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

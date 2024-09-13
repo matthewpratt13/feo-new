@@ -1,10 +1,15 @@
 use core::fmt;
 use std::error::Error;
 
-use crate::ast::{Identifier, Keyword, Type, UInt};
+use crate::ast::{Identifier, Keyword, Type};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {
+    ArrayLengthMismatch {
+        expected: usize,
+        found: usize
+    },
+
     ConstantReassignment {
         name: Identifier,
     },
@@ -40,8 +45,13 @@ pub enum SemanticErrorKind {
     },
 
     TupleIndexOutOfBounds {
-        len: UInt,
-        i: UInt
+        len: usize,
+        i: usize
+    },
+
+    TupleLengthMismatch {
+        expected: usize,
+        found: usize
     },
 
     TypeBoundCountMismatch {
@@ -100,6 +110,11 @@ pub enum SemanticErrorKind {
     
     TypeMismatchResultExpr {
         variant: Keyword,
+        expected: Type,
+        found: Type,
+    },
+
+    TypeMismatchTuple {
         expected: Type,
         found: Type,
     },
@@ -189,8 +204,6 @@ pub enum SemanticErrorKind {
         found: Type,
     },
 
-
-
     #[default]
     UnknownError,
 }
@@ -198,6 +211,9 @@ pub enum SemanticErrorKind {
 impl fmt::Display for SemanticErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            SemanticErrorKind::ArrayLengthMismatch { expected, found } => {
+                write!(f, "array length mismatch. Expected {expected} elements, found {found}")
+            }
             SemanticErrorKind::ConstantReassignment{ name } => {
                 write!(f, "cannot reassign constant: `{name}`")
             }  
@@ -230,10 +246,14 @@ impl fmt::Display for SemanticErrorKind {
                 write!(f, "tuple index out of bounds. Index is {i}, length is {len}")
             },
 
+            SemanticErrorKind::TupleLengthMismatch { expected, found } => {
+                write!(f, "tuple length mismatch. Expected {expected} elements, found {found}")
+            },
+
             SemanticErrorKind::TypeBoundCountMismatch { expected, found } => write!(f, "unexpected number of type bounds. Expected {expected}, found {found}"),
 
             SemanticErrorKind::TypeBoundNotSatisfied { generic_name, expected_bound: bound, found_type: found } => write!(f, "type {found} has generic parameter `{generic_name}` that does not satisfy type bound `{bound}`"),
-            
+
             SemanticErrorKind::TypeCastError { from, to } => {
                 write!(f, "unable to cast `{}` as `{}`", from, to)
             },
@@ -260,6 +280,10 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::TypeMismatchDeclaredType {actual_type, declared_type } => write!(
                 f,
                 "declared type `{declared_type}` does not match value's type: `{actual_type}`"
+            ),
+            SemanticErrorKind::TypeMismatchTuple { expected, found } => write!(
+                f,
+                "tuple element types do not match. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchReturnType { expected, found } => write!(
                 f,
