@@ -1457,12 +1457,27 @@ impl SemanticAnalyser {
             (Type::FunctionPtr(ptr_a), Type::FunctionPtr(ptr_b)) => {
                 match (ptr_a.params_opt, ptr_b.params_opt) {
                     (None, None) => (),
-                    (None, Some(_)) => todo!(), // too many params
-                    (Some(_), None) => todo!(), // missing params
+                    (None, Some(params_b)) => {
+                        return Err(SemanticErrorKind::FuncArgCountMismatch {
+                            function_path: Identifier::from(""),
+                            expected: 0,
+                            found: params_b.len(),
+                        })
+                    }
+                    (Some(params_a), None) => {
+                        return Err(SemanticErrorKind::FuncArgCountMismatch {
+                            function_path: Identifier::from(""),
+                            expected: params_a.len(),
+                            found: 0,
+                        })
+                    }
                     (Some(params_a), Some(params_b)) => {
                         if params_a.len() != params_b.len() {
-                            // mismatch in num params
-                            todo!()
+                            return Err(SemanticErrorKind::FuncArgCountMismatch {
+                                function_path: Identifier::from(""),
+                                expected: params_a.len(),
+                                found: params_b.len(),
+                            });
                         }
 
                         for (param_a, param_b) in params_a.iter().zip(params_b) {
