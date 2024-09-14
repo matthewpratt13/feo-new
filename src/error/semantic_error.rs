@@ -38,6 +38,11 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
+    ParamCountMismatch {
+        expected: usize,
+        found: usize,
+    },
+
     StructArgCountMismatch {
         struct_path: Identifier,
         expected: usize,
@@ -70,7 +75,7 @@ pub enum SemanticErrorKind {
         to: Type,
     },
 
-    TypeMismatchArgument {
+    TypeMismatchArg {
         arg_id: Identifier,
         expected: Type,
         found: Type,
@@ -91,7 +96,7 @@ pub enum SemanticErrorKind {
         declared_type: Type,
     },
 
-    TypeMismatchFunctionParam {
+    TypeMismatchParam {
         expected: Type,
         found: Type,
     },
@@ -116,6 +121,11 @@ pub enum SemanticErrorKind {
     TypeMismatchReturnType {
         expected: Type,
         found: Type,
+    },
+
+    TypeMismatchSelfParam {
+        expected: String,
+        found: String,
     },
 
     TypeMismatchTuple {
@@ -153,7 +163,7 @@ pub enum SemanticErrorKind {
         field_name: Identifier,
     },
 
-    UndefinedFunction {
+    UndefinedFunc {
         name: Identifier,
     },
 
@@ -184,6 +194,11 @@ pub enum SemanticErrorKind {
     UnexpectedKeyword {
         expected: String,
         found: Keyword,
+    },
+
+    UnexpectedParam {
+        expected: String,
+        found: Identifier,
     },
 
     UnexpectedPath {
@@ -218,14 +233,15 @@ impl fmt::Display for SemanticErrorKind {
                 write!(f, "array length mismatch. Expected {expected} elements, found {found}")
             }
             SemanticErrorKind::ConstantReassignment{ name } => {
-                write!(f, "cannot reassign constant: `{name}`")
+                write!(f, "cannot reassign constant `{name}`")
             }
             SemanticErrorKind::FuncArgCountMismatch {function_path,  expected, found } => {
                 write!(
                     f,
-                    "argument count mismatch in function `{function_path}()`. Expected {expected} arguments, found {found}"
+                    "unexpected number of arguments given for function `{function_path}()`. Expected {expected} arguments, found {found}"
                 )
             }
+
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }
@@ -240,6 +256,12 @@ impl fmt::Display for SemanticErrorKind {
             }
             SemanticErrorKind::ModuleErrors { name } => {
                 write!(f, "detected errors in module `{name}`")
+            }
+            SemanticErrorKind::ParamCountMismatch {expected, found } => {
+                write!(
+                    f,
+                    "parameter count mismatch. Expected {expected} parameters, found {found}"
+                )
             }
             SemanticErrorKind::StructArgCountMismatch { struct_path, expected, found } => {
                 write!(f, "argument count mismatch in struct `{struct_path}`. Expected {expected} arguments, found {found}")
@@ -259,9 +281,9 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::TypeCastError { from, to } => {
                 write!(f, "unable to cast `{}` as `{}`", from, to)
             },
-            SemanticErrorKind::TypeMismatchArgument { arg_id: name, expected, found } => write!(
+            SemanticErrorKind::TypeMismatchArg { arg_id: name, expected, found } => write!(
                 f,
-                "`{name}` type does not match defined parameter type. Expected `{expected}`, found `{found}`"
+                "argument `{name}` type does not match defined parameter type. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
                 f,
@@ -275,7 +297,6 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "declared type `{declared_type}` does not match value's type: `{actual_type}`"
             ),
-            SemanticErrorKind::
             SemanticErrorKind::TypeMismatchMatchExpr { loc, expected, found } => write!(
                 f,
                 "{loc} types do not match in match expression. Expected `{expected}`, found `{found}`"
@@ -284,6 +305,7 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "pattern types do not match. Expected `{expected}`, found `{found}`"
             ),
+            SemanticErrorKind::TypeMismatchParam { expected, found } => write!(f, "function parameters do not match. Expected `{expected}`, found `{found}`"),
             SemanticErrorKind::TypeMismatchResultExpr { variant, expected, found } => write!(
                 f,
                 "type does not match expected `{variant}` type. Expected `{expected}`, found `{found}"
@@ -292,6 +314,9 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "value type does not match return type. Expected `{expected}`, found `{found}`"
             ),
+            SemanticErrorKind::TypeMismatchSelfParam { expected, found } => {
+                write!(f, "type mismatch for `self` parameters. Expected `{expected}`, found `{found}`")
+            },
             SemanticErrorKind::TypeMismatchTuple { expected, found } => write!(
                 f,
                 "tuple element types do not match. Expected `{expected}`, found `{found}`"
@@ -323,7 +348,7 @@ impl fmt::Display for SemanticErrorKind {
             }
             SemanticErrorKind::UndefinedField { struct_path: struct_name , field_name} => write!(f, "struct `{struct_name}` has no field `{field_name}`"),
 
-            SemanticErrorKind::UndefinedFunction { name } => write!(f, "no function `{name}()` in current scope"),
+            SemanticErrorKind::UndefinedFunc { name } => write!(f, "no function `{name}()` in current scope"),
 
             SemanticErrorKind::UndefinedModule { name } => write!(f, "undefined module: `{name}`"),
 
@@ -342,6 +367,8 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UnexpectedInferredType => write!(f, "unexpected inferred type. Expected concrete or generic type"),
 
             SemanticErrorKind::UnexpectedKeyword { expected, found } => write!(f, "unexpected keyword. Expected {expected}, found `{found}`"),
+
+            SemanticErrorKind::UnexpectedParam { expected, found } => write!(f, "unexpected parameter. Expected {expected}, found `{found}`"),
 
             SemanticErrorKind::UnexpectedPath { expected, found } => write!(f, "unexpected path. Expected {expected}, found `{found}`"),
 

@@ -1271,13 +1271,13 @@ impl SemanticAnalyser {
 
                             self.unify_types(&param_type, &mut arg_type)?;
 
-                            // if arg_type != param_type {
-                            //     return Err(SemanticErrorKind::TypeMismatchArgument {
-                            //         arg_id: function.function_name.clone(),
-                            //         expected: param_type,
-                            //         found: arg_type,
-                            //     });
-                            // }
+                            if arg_type != param_type {
+                                return Err(SemanticErrorKind::TypeMismatchArg {
+                                    arg_id: function.function_name.clone(),
+                                    expected: param_type,
+                                    found: arg_type,
+                                });
+                            }
                         }
 
                         // // ensure all constraints are satisfied for inferred types
@@ -1320,7 +1320,7 @@ impl SemanticAnalyser {
                 }
             }
 
-            None => Err(SemanticErrorKind::UndefinedFunction {
+            None => Err(SemanticErrorKind::UndefinedFunc {
                 name: path.type_name,
             }),
             Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
@@ -1458,23 +1458,20 @@ impl SemanticAnalyser {
                 match (ptr_a.params_opt, ptr_b.params_opt) {
                     (None, None) => (),
                     (None, Some(params_b)) => {
-                        return Err(SemanticErrorKind::FuncArgCountMismatch {
-                            function_path: Identifier::from(""),
+                        return Err(SemanticErrorKind::ParamCountMismatch {
                             expected: 0,
                             found: params_b.len(),
                         })
                     }
                     (Some(params_a), None) => {
-                        return Err(SemanticErrorKind::FuncArgCountMismatch {
-                            function_path: Identifier::from(""),
+                        return Err(SemanticErrorKind::ParamCountMismatch {
                             expected: params_a.len(),
                             found: 0,
                         })
                     }
                     (Some(params_a), Some(params_b)) => {
                         if params_a.len() != params_b.len() {
-                            return Err(SemanticErrorKind::FuncArgCountMismatch {
-                                function_path: Identifier::from(""),
+                            return Err(SemanticErrorKind::ParamCountMismatch {
                                 expected: params_a.len(),
                                 found: params_b.len(),
                             });
@@ -1487,18 +1484,30 @@ impl SemanticAnalyser {
                                     FunctionOrMethodParam::FunctionParam(func_param_b),
                                 ) => {
                                     if *func_param_a != func_param_b {
-                                        // func param type mismatch
-                                        todo!()
+                                        return Err(SemanticErrorKind::TypeMismatchParam {
+                                            expected: *func_param_a.param_type.clone(),
+                                            found: *func_param_b.param_type,
+                                        });
                                     }
                                 }
                                 (
-                                    FunctionOrMethodParam::FunctionParam(_),
-                                    FunctionOrMethodParam::MethodParam(_),
-                                ) => todo!(), // unexpected `self` param
+                                    FunctionOrMethodParam::FunctionParam(param_a),
+                                    FunctionOrMethodParam::MethodParam(param_b),
+                                ) => {
+                                    return Err(SemanticErrorKind::UnexpectedParam {
+                                        expected: format!("`{}`", param_a.param_type),
+                                        found: Identifier::from(&param_b.kw_self.to_string()),
+                                    })
+                                }
                                 (
-                                    FunctionOrMethodParam::MethodParam(_),
-                                    FunctionOrMethodParam::FunctionParam(_),
-                                ) => todo!(), // missing `self` param
+                                    FunctionOrMethodParam::MethodParam(param_a),
+                                    FunctionOrMethodParam::FunctionParam(param_b),
+                                ) => {
+                                    return Err(SemanticErrorKind::UnexpectedParam {
+                                        expected: format!("`{}`", param_a.kw_self),
+                                        found: Identifier::from(&format!("{}", param_b.param_type)),
+                                    })
+                                }
                                 (
                                     FunctionOrMethodParam::MethodParam(self_param_a),
                                     FunctionOrMethodParam::MethodParam(self_param_b),
@@ -1508,20 +1517,35 @@ impl SemanticAnalyser {
                                         self_param_b.reference_op_opt,
                                     ) {
                                         (None, None) => (),
-                                        (None, Some(_)) => todo!(), // unexpected reference operator
-                                        (Some(_), None) => todo!(), // missing reference operator
+                                        (None, Some(_)) | (Some(_), None) => {
+                                            return Err(SemanticErrorKind::UnexpectedParam {
+                                                expected: format!("`{}`", self_param_a),
+                                                found: Identifier::from(&format!(
+                                                    "{}",
+                                                    self_param_b
+                                                )),
+                                            })
+                                        }
                                         (Some(ref_op_a), Some(ref_op_b)) => {
                                             if ref_op_a != ref_op_b {
-                                                // reference operator mismatch
-                                                todo!()
+                                                return Err(
+                                                    SemanticErrorKind::TypeMismatchSelfParam {
+                                                        expected: self_param_a.to_string(),
+                                                        found: self_param_b.to_string(),
+                                                    },
+                                                );
                                             }
                                         }
                                     }
 
                                     match (self_param_a.kw_self, self_param_b.kw_self) {
                                         (Keyword::SelfKeyword, Keyword::SelfKeyword) => (),
-                                        (Keyword::SelfKeyword, _) => todo!(), // unexpected keyword
-                                        (_, _) => todo!(),                    //  invalid keyword
+                                        (_, kw) => {
+                                            return Err(SemanticErrorKind::UnexpectedKeyword {
+                                                expected: Keyword::SelfKeyword.to_string(),
+                                                found: kw,
+                                            });
+                                        }
                                     }
                                 }
                             }
