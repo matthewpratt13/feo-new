@@ -105,6 +105,16 @@ pub enum SemanticErrorKind {
         declared_type: Type,
     },
 
+    TypeMismatchMappingKey {
+        expected: Type,
+        found: Type,
+    },
+
+    TypeMismatchMappingValue {
+        expected: Type,
+        found: Type,
+    },
+
     TypeMismatchMatchExpr {
         loc: String,
         expected: Type,
@@ -318,6 +328,10 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "declared type `{declared_type}` does not match value's type: `{actual_type}`"
             ),
+            SemanticErrorKind::TypeMismatchMappingKey { expected, found } => write!(f, "unexpected mapping key type. Expected {expected}, found {found}"), 
+            
+            SemanticErrorKind::TypeMismatchMappingValue { expected, found } => write!(f, "unexpected mapping value type. Expected {expected}, found {found}"),
+
             SemanticErrorKind::TypeMismatchMatchExpr { loc, expected, found } => write!(
                 f,
                 "{loc} types do not match in match expression. Expected `{expected}`, found `{found}`"

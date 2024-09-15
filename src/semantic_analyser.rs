@@ -1630,13 +1630,17 @@ impl SemanticAnalyser {
                 },
             ) => {
                 if key_type_a != key_type_b {
-                    // mapping key type mismatch
-                    todo!()
+                    return Err(SemanticErrorKind::TypeMismatchMappingKey {
+                        expected: *key_type_a,
+                        found: *key_type_b,
+                    });
                 }
 
                 if val_type_a != val_type_b {
-                    // mapping value type mismatch
-                    todo!()
+                    return Err(SemanticErrorKind::TypeMismatchMappingValue {
+                        expected: *val_type_a,
+                        found: *val_type_b,
+                    });
                 }
 
                 Ok(())
