@@ -1,4 +1,4 @@
-use crate::ast::{Identifier, Keyword, Type};
+use crate::ast::{Identifier, Keyword, ReferenceOp, Type};
 
 use core::fmt;
 use std::error::Error;
@@ -45,6 +45,11 @@ pub enum SemanticErrorKind {
     ParamCountMismatch {
         expected: usize,
         found: usize,
+    },
+
+    RefOperatorMismatch {
+        expected: ReferenceOp,
+        found: ReferenceOp,
     },
 
     StructArgCountMismatch {
@@ -100,11 +105,6 @@ pub enum SemanticErrorKind {
         declared_type: Type,
     },
 
-    TypeMismatchParam {
-        expected: Type,
-        found: Type,
-    },
-
     TypeMismatchMatchExpr {
         loc: String,
         expected: Type,
@@ -112,6 +112,16 @@ pub enum SemanticErrorKind {
     },
 
     TypeMismatchOrPatt {
+        expected: Type,
+        found: Type,
+    },
+
+    TypeMismatchParam {
+        expected: Type,
+        found: Type,
+    },
+
+    TypeMismatchRefType {
         expected: Type,
         found: Type,
     },
@@ -249,14 +259,13 @@ impl fmt::Display for SemanticErrorKind {
                     "unexpected number of arguments given for function `{function_path}()`. Expected {expected} arguments, found {found}"
                 )
             }
-
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }
             SemanticErrorKind::MethodParamCountError => {
                 write!(f, "too many `self` parameters")
             }
-            SemanticErrorKind::MissingReturnType { expected } => write!(f, "return type not found. Expected {expected}, found none"),
+            SemanticErrorKind::MissingReturnType { expected } => write!(f, "return type not found. Expected `{expected}`, found none"),
 
             SemanticErrorKind::MissingStructField { expected } => {
                 write!(f, "struct field not found. Expected {expected}, found none")
@@ -273,6 +282,8 @@ impl fmt::Display for SemanticErrorKind {
                     "parameter count mismatch. Expected {expected} parameters, found {found}"
                 )
             }
+            SemanticErrorKind::RefOperatorMismatch { expected, found } => write!(f, "reference operator mismatch. Expected {expected}, found {found}"),
+
             SemanticErrorKind::StructArgCountMismatch { struct_path, expected, found } => {
                 write!(f, "argument count mismatch in struct `{struct_path}`. Expected {expected} arguments, found {found}")
             }
@@ -316,7 +327,9 @@ impl fmt::Display for SemanticErrorKind {
                 "pattern types do not match. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchParam { expected, found } => write!(f, "function parameters do not match. Expected `{expected}`, found `{found}`"),
-            
+
+            SemanticErrorKind::TypeMismatchRefType { expected, found } => write!(f, "type mismatch between referenced types. Expected `{expected}`, found `{found}`"),
+
             SemanticErrorKind::TypeMismatchResultExpr { variant, expected, found } => write!(
                 f,
                 "type does not match expected `{variant}` type. Expected `{expected}`, found `{found}"
@@ -354,6 +367,7 @@ impl fmt::Display for SemanticErrorKind {
                     "type mismatch for `{name}`. Expected {expected}, found `{found}`"
                 )
             }
+
             SemanticErrorKind::UndeclaredGenericParams { found } => {
                 write!(f, "undeclared generic parameter (`{found}`) in function signature. Generic parameters must be declared after `func` keyword (e.g., `func<T>`) in function definition context; or after `impl` keyword in implementation definition context (e.g., `impl<T>`); or after `trait` keyword in trait definition context (e.g., `trait<T>`)")
             }

@@ -1585,13 +1585,17 @@ impl SemanticAnalyser {
                 },
             ) => {
                 if ref_op_a != ref_op_b {
-                    // reference operator mismatch
-                    todo!()
+                    return Err(SemanticErrorKind::RefOperatorMismatch {
+                        expected: ref_op_a,
+                        found: ref_op_b,
+                    });
                 }
 
                 if inner_type_a != inner_type_b {
-                    // inner type mismatch
-                    todo!()
+                    return Err(SemanticErrorKind::TypeMismatchRefType {
+                        expected: *inner_type_a,
+                        found: *inner_type_b,
+                    });
                 }
 
                 Ok(())
@@ -1606,8 +1610,10 @@ impl SemanticAnalyser {
                 },
             ) => {
                 if elem_type_a != elem_type_b {
-                    // vector element type mismatch
-                    todo!()
+                    return Err(SemanticErrorKind::TypeMismatchArray {
+                        expected: format!("`{}`", elem_type_a),
+                        found: *elem_type_b,
+                    });
                 }
 
                 Ok(())
