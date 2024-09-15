@@ -1555,12 +1555,18 @@ impl SemanticAnalyser {
 
                 match (ptr_a.return_type_opt, ptr_b.return_type_opt) {
                     (None, None) => (),
-                    (None, Some(_)) => todo!(), // unexpected return type
-                    (Some(_), None) => todo!(), // missing return type
+                    (None, Some(ty)) => {
+                        return Err(SemanticErrorKind::UnexpectedReturnType { found: *ty })
+                    }
+                    (Some(ty), None) => {
+                        return Err(SemanticErrorKind::MissingReturnType { expected: *ty })
+                    } // missing return type
                     (Some(return_type_a), Some(return_type_b)) => {
                         if return_type_a != return_type_b {
-                            // return type mismatch
-                            todo!()
+                            return Err(SemanticErrorKind::TypeMismatchReturnType {
+                                expected: *return_type_a,
+                                found: *return_type_b,
+                            });
                         }
                     }
                 }

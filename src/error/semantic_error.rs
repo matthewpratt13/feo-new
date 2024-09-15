@@ -26,6 +26,10 @@ pub enum SemanticErrorKind {
 
     MethodParamCountError,
 
+    MissingReturnType {
+        expected: Type,
+    },
+
     MissingStructField {
         expected: String,
     },
@@ -206,6 +210,10 @@ pub enum SemanticErrorKind {
         found: Identifier,
     },
 
+    UnexpectedReturnType {
+        found: Type,
+    },
+
     UnexpectedStructField {
         field_name: Identifier,
         found: Identifier,
@@ -248,6 +256,8 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::MethodParamCountError => {
                 write!(f, "too many `self` parameters")
             }
+            SemanticErrorKind::MissingReturnType { expected } => write!(f, "return type not found. Expected {expected}, found none"),
+
             SemanticErrorKind::MissingStructField { expected } => {
                 write!(f, "struct field not found. Expected {expected}, found none")
             }
@@ -306,6 +316,7 @@ impl fmt::Display for SemanticErrorKind {
                 "pattern types do not match. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchParam { expected, found } => write!(f, "function parameters do not match. Expected `{expected}`, found `{found}`"),
+            
             SemanticErrorKind::TypeMismatchResultExpr { variant, expected, found } => write!(
                 f,
                 "type does not match expected `{variant}` type. Expected `{expected}`, found `{found}"
@@ -371,6 +382,8 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UnexpectedParam { expected, found } => write!(f, "unexpected parameter. Expected {expected}, found `{found}`"),
 
             SemanticErrorKind::UnexpectedPath { expected, found } => write!(f, "unexpected path. Expected {expected}, found `{found}`"),
+
+            SemanticErrorKind::UnexpectedReturnType { found } => write!(f, "unexpected return type. Did not expected a return type, but found `{found}`"),
 
             SemanticErrorKind::UnexpectedStructField { field_name: name, found } => write!(f, "unexpected field in struct `{name}`: `{found}`"),
 
