@@ -1703,15 +1703,16 @@ impl SemanticAnalyser {
 
             (Type::UserDefined(type_path_a), Type::UserDefined(type_path_b)) => {
                 if type_path_a != type_path_b {
-                    // user defined type mismatch
-                    todo!()
+                    return Err(SemanticErrorKind::TypeMismatchUserDefined {
+                        expected: Identifier::from(type_path_a),
+                        found: Identifier::from(type_path_b),
+                    });
                 }
 
                 Ok(())
             }
 
             // TODO: handle other cases for concrete types (numeric, str, char, bool)
-            
             _ => Err(SemanticErrorKind::TypeMismatchUnification {
                 expected: Identifier::from(&type_a.to_string()),
                 found: Identifier::from(&type_b.to_string()),

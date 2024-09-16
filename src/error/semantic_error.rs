@@ -168,6 +168,11 @@ pub enum SemanticErrorKind {
         found: Identifier,
     },
 
+    TypeMismatchUserDefined {
+        expected: Identifier,
+        found: Identifier,
+    },
+
     TypeMismatchValues {
         expected: Type,
         found: Type,
@@ -368,6 +373,9 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "types do not match when attempting to unify. Expected `{expected}`, found `{found}`"
             ),
+
+            SemanticErrorKind::TypeMismatchUserDefined { expected, found } => write!(f, "user-defined types do not match. Expected `{expected}`, found `{found}`"),
+
             SemanticErrorKind::TypeMismatchValues { expected, found } => write!(
                 f,
                 "type mismatch between values. Expected `{expected}`, found `{found}`"
