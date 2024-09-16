@@ -529,6 +529,7 @@ pub(crate) fn analyse_expr(
             }
         },
 
+        // TODO: check this logic
         Expression::Assignment(a) => {
             let assignee = wrap_into_expression(a.lhs.clone());
             let mut assignee_type = analyse_expr(analyser, &assignee, root)?;
@@ -580,6 +581,7 @@ pub(crate) fn analyse_expr(
             }
         }
 
+        // TODO: check this logic
         Expression::CompoundAssignment(ca) => {
             let assignee = wrap_into_expression(ca.lhs.clone());
             let assignee_type = analyse_expr(analyser, &assignee, root)?;
@@ -607,7 +609,7 @@ pub(crate) fn analyse_expr(
                     expected: format!("`{assignee_type}`"),
                     found: format!("`{sym}`"),
                 }),
-                
+
                 _ => Err(SemanticErrorKind::UndefinedVariable {
                     name: assignee_path.type_name,
                 }),
