@@ -1,7 +1,7 @@
 mod type_path;
 pub(crate) use type_path::{build_item_path, get_type_paths};
 
-use super::{collection, Parser};
+use super::{collection, item::parse_generic_param, Parser};
 
 use crate::{
     ast::{
@@ -179,8 +179,23 @@ impl Type {
 
                     Ok(Type::InferredType(ty))
                 } else {
-                    let path = TypePath::parse(parser, token)?;
-                    Ok(Type::UserDefined(path))
+                    if name.len() == 1
+                        && name
+                            .as_str()
+                            .chars()
+                            .next()
+                            .is_some_and(|c| c.is_uppercase())
+                    {
+                        let generic_param = parse_generic_param(parser)?;
+
+                        Ok(Type::Generic {
+                            name: generic_param.name,
+                            bound_opt: generic_param.type_bound_opt,
+                        })
+                    } else {
+                        let path = TypePath::parse(parser, token)?;
+                        Ok(Type::UserDefined(path))
+                    }
                 }
             }
 
@@ -257,10 +272,7 @@ impl fmt::Display for Type {
             Type::Reference {
                 reference_op,
                 inner_type,
-            } => match reference_op {
-                ReferenceOp::Borrow => write!(f, "{}{}", reference_op, *inner_type),
-                ReferenceOp::MutableBorrow => write!(f, "{} {}", reference_op, *inner_type),
-            },
+            } => write!(f, "{}{}", reference_op, *inner_type),
             Type::SelfType(_) => write!(f, "Self"),
             Type::InferredType(_) => write!(f, "_"),
             Type::Vec { element_type } => write!(f, "Vec<{}>", *element_type),
@@ -272,6 +284,17 @@ impl fmt::Display for Type {
             Type::Result { ok_type, err_type } => {
                 write!(f, "Result<{}, {}>", *ok_type, *err_type)
             }
+            Type::Generic {
+                name,
+                bound_opt: bounds_opt,
+            } => write!(
+                f,
+                "{}: {}",
+                name,
+                bounds_opt
+                    .clone()
+                    .unwrap_or(TypePath::from(Identifier::from("_")))
+            ),
         }
     }
 }
@@ -344,6 +367,11 @@ impl fmt::Debug for Type {
                 .debug_struct("Result")
                 .field("ok_type", ok_type)
                 .field("err_type", err_type)
+                .finish(),
+            Self::Generic { name, bound_opt } => f
+                .debug_struct("Generic")
+                .field("name", name)
+                .field("bound_opt", bound_opt)
                 .finish(),
         }
     }

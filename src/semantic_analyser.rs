@@ -5,6 +5,8 @@
 //! the language's rules, checking for issues such as type mismatches, undefined variables
 //! and incorrect patterns in the code.
 
+mod expr;
+mod patt;
 mod symbol_table;
 
 #[cfg(test)]
@@ -12,12 +14,10 @@ mod tests;
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, ClosureParams, EnumVariantType, Expression, Float,
-        FunctionItem, FunctionOrMethodParam, FunctionParam, FunctionPtr, Hash, Identifier,
-        ImportDecl, InferredType, InherentImplItem, Int, Item, Keyword, Literal, LiteralPatt,
-        PathExpr, PathRoot, Pattern, SelfType, Statement, Str, StructDef, TraitDefItem,
-        TraitImplItem, TupleStructDef, TupleStructDefField, Type, TypePath, UInt, UnaryOp,
-        UnitType, Visibility,
+        EnumVariantType, Expression, FunctionItem, FunctionOrMethodParam, Identifier, ImportDecl,
+        InferredType, InherentImplItem, Item, Keyword, SelfType, Statement, StructDef, TraitDef,
+        TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type,
+        TypePath, UnitType, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -26,13 +26,16 @@ use crate::{
         Program,
     },
     span::{Span, Spanned},
-    B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
-use core::fmt;
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
+use expr::{analyse_expr, wrap_into_expression};
 use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
+
+/// Mapping from a `TypePath`` (representing a concrete type) to a vector of `TraitImplDef`
+/// (representing implemented traits)
+type TypeTable = HashMap<TypePath, Vec<TraitImplDef>>;
 
 /// Struct responsible for performing semantic analysis on the abstract syntax tree (AST)
 /// of the program. It manages the scopes, symbol tables, and errors encountered during
@@ -43,6 +46,7 @@ struct SemanticAnalyser {
     module_registry: HashMap<TypePath, SymbolTable>,
     errors: Vec<CompilerError<SemanticErrorKind>>,
     logger: Logger,
+    type_table: TypeTable,
 }
 
 #[allow(dead_code)]
@@ -62,6 +66,10 @@ impl SemanticAnalyser {
                 if let Symbol::Module { path, symbols, .. } = sym.clone() {
                     module_registry.insert(path, symbols);
                 }
+
+                // if the symbol is a trait implementation, also update the `TypeTable` to add
+                // trait implementations for a given implementing type (replace the current empty
+                // `HashMap`)
 
                 external_symbols.insert(path, sym.clone());
             }
@@ -83,6 +91,7 @@ impl SemanticAnalyser {
             module_registry,
             errors: Vec::new(),
             logger,
+            type_table: HashMap::new(),
         }
     }
 
@@ -211,23 +220,22 @@ impl SemanticAnalyser {
 
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors
-                let value_type = if let Some(val) = &ls.value_opt {
-                    self.analyse_expr(val, root)?
+                let mut value_type = if let Some(val) = &ls.value_opt {
+                    analyse_expr(self, val, root)?
                 } else {
                     Type::UnitType(UnitType)
                 };
 
                 // get the type annotation if there is one, otherwise assume the value's type
                 let declared_type = match &ls.type_ann_opt {
-                    Some(ty) => ty,
-                    _ => &value_type,
+                    Some(ty) => ty.clone(),
+                    _ => value_type.clone(),
                 };
 
-                // TODO: if a value is a generic type, resolve it,
-                // TODO: including checking if it implements a trait (where applicable)
+                self.unify_types(&declared_type, &mut value_type)?;
 
                 // check that the value matches the type annotation
-                if &value_type != declared_type {
+                if value_type != declared_type {
                     return Err(SemanticErrorKind::TypeMismatchDeclaredType {
                         actual_type: value_type.clone(),
                         declared_type: declared_type.clone(),
@@ -275,7 +283,7 @@ impl SemanticAnalyser {
                         var_type: value_type,
                     },
                     Type::UserDefined(tp) => {
-                        let type_path = self.check_path(tp, root, "type".to_string())?;
+                        let type_path = self.check_path(&tp, root, "type".to_string())?;
 
                         match self.lookup(&type_path) {
                             Some(sym) => sym.clone(),
@@ -285,6 +293,14 @@ impl SemanticAnalyser {
                             },
                         }
                     }
+                    Type::Generic { name, bound_opt } => Symbol::Variable {
+                        name: name.clone(),
+                        var_type: Type::UserDefined(
+                            bound_opt
+                                .clone()
+                                .unwrap_or(TypePath::from(Identifier::from("_"))),
+                        ),
+                    },
                 };
 
                 // add the variable to the symbol table
@@ -326,13 +342,19 @@ impl SemanticAnalyser {
                     let value_type = match &cd.value_opt {
                         Some(val) => {
                             let value = wrap_into_expression(val.clone());
-                            Some(self.analyse_expr(&value, root)?)
+                            Some(analyse_expr(self, &value, root)?)
                         }
                         _ => None,
                     };
 
-                    // TODO: if a value is a generic type, resolve it,
-                    // TODO: including checking if it implements a trait (where applicable)
+                    self.unify_types(
+                        &cd.constant_type,
+                        &mut value_type
+                            .clone()
+                            .unwrap_or(Type::InferredType(InferredType {
+                                name: Identifier::from("_"),
+                            })),
+                    )?;
 
                     if value_type.clone().is_some_and(|t| t != *cd.constant_type) {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -362,18 +384,17 @@ impl SemanticAnalyser {
                         "analysing static variable declaration: `{statement}`"
                     ));
 
-                    let assignee_type = match &s.assignee_opt {
+                    let mut assignee_type = match &s.assignee_opt {
                         Some(a_expr) => {
                             let assignee = wrap_into_expression(*a_expr.clone());
-                            self.analyse_expr(&assignee, root)?
+                            analyse_expr(self, &assignee, root)?
                         }
                         _ => Type::InferredType(InferredType {
                             name: Identifier::from("_"),
                         }),
                     };
 
-                    // TODO: if a var is a generic type, resolve it,
-                    // TODO: including checking if it implements a trait (where applicable)
+                    self.unify_types(&s.var_type, &mut assignee_type)?;
 
                     if assignee_type != s.var_type.clone() {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -707,6 +728,8 @@ impl SemanticAnalyser {
                         t.implemented_trait_path, t.implementing_type
                     ));
 
+                    self.add_trait_implementation(trait_impl_path.clone(), t.clone());
+
                     if let Some(items) = &t.associated_items_opt {
                         // self.enter_scope(ScopeKind::TraitImpl(trait_impl_path.to_string()));
 
@@ -784,7 +807,7 @@ impl SemanticAnalyser {
                 self.logger
                     .trace(&format!("analysing expression statement: `{statement}`"));
 
-                match self.analyse_expr(expr, root) {
+                match analyse_expr(self, expr, root) {
                     Ok(_) => (),
                     Err(e) => self.log_error(e, &expr.span()),
                 }
@@ -829,6 +852,22 @@ impl SemanticAnalyser {
 
         self.enter_scope(ScopeKind::Function(full_path.to_string()));
 
+        // register generic parameters in the local scope
+        if let Some(generic_params) = &f.generic_params_opt {
+            for generic_param in &generic_params.params {
+                self.insert(
+                    TypePath::from(generic_param.name.clone()),
+                    Symbol::Variable {
+                        name: generic_param.name.clone(),
+                        var_type: Type::Generic {
+                            name: generic_param.name.clone(),
+                            bound_opt: generic_param.type_bound_opt.clone(),
+                        },
+                    },
+                )?;
+            }
+        }
+
         if let Some(params) = &f.params_opt {
             let param_types: Vec<Type> = params.iter().map(|p| p.param_type()).collect();
 
@@ -839,52 +878,64 @@ impl SemanticAnalyser {
                     }
                 }
 
-                // TODO: if a param is a generic type, resolve it,
-                // TODO: including checking if it implements its bound trait (where applicable)
-
-                // TODO: ditto for return types
-
                 let param_path = TypePath::from(param.param_name());
 
                 println!("param path: `{param_path}`, param_type: `{param_type:?}`");
 
-                let symbol = match param_type {
-                    Type::FunctionPtr(fp) => Symbol::Function {
-                        path: param_path.clone(),
-                        function: FunctionItem {
-                            attributes_opt: None,
-                            visibility: Visibility::Private,
-                            kw_func: Keyword::Anonymous,
-                            function_name: f.function_name.clone(),
-                            generic_params_opt: None,
-                            params_opt: fp.params_opt,
-                            return_type_opt: fp.return_type_opt,
-                            block_opt: None,
-                            span: f.span.clone(),
-                        },
-                    },
+                match param_type {
+                    Type::Generic { name, .. } => {
+                        match self.lookup(&TypePath::from(name.clone())) {
+                            Some(_) => (),
+                            None => {
+                                return Err(SemanticErrorKind::UndeclaredGenericParams {
+                                    found: format!("`{name}`"),
+                                })
+                            }
+                        }
+                    }
+
+                    Type::FunctionPtr(fp) => {
+                        self.insert(
+                            param_path.clone(),
+                            Symbol::Function {
+                                path: param_path.clone(),
+                                function: FunctionItem {
+                                    attributes_opt: None,
+                                    visibility: Visibility::Private,
+                                    kw_func: Keyword::Anonymous,
+                                    function_name: Identifier::from(""),
+                                    generic_params_opt: None,
+                                    params_opt: fp.params_opt,
+                                    return_type_opt: fp.return_type_opt,
+                                    block_opt: None,
+                                    span: Span::default(),
+                                },
+                            },
+                        )?;
+                    }
 
                     Type::UserDefined(tp) => {
                         let type_path =
                             self.check_path(&tp, &path, "user-defined type".to_string())?;
 
-                        match self.lookup(&type_path) {
-                            Some(sym) => sym.clone(),
+                        match self.lookup(&type_path).cloned() {
+                            Some(sym) => self.insert(param_path, sym.clone())?,
                             None => {
-                                return Err(SemanticErrorKind::UndefinedType { name: tp.type_name })
+                                return Err(SemanticErrorKind::UndefinedType {
+                                    name: tp.type_name,
+                                });
                             }
                         }
                     }
 
-                    ty => Symbol::Variable {
-                        name: param.param_name(),
-                        var_type: ty,
-                    },
-                };
-
-                println!("parameter symbol: `{:?}`", symbol.type_path());
-
-                self.insert(param_path, symbol)?;
+                    ty => self.insert(
+                        param_path,
+                        Symbol::Variable {
+                            name: param.param_name(),
+                            var_type: ty,
+                        },
+                    )?,
+                }
             }
         }
 
@@ -899,7 +950,11 @@ impl SemanticAnalyser {
             self.logger
                 .trace(&format!("analysing body of function `{full_path}()` …"));
 
-            self.analyse_expr(&Expression::Block(block.clone()), &TypePath::from(path_vec))?
+            analyse_expr(
+                self,
+                &Expression::Block(block.clone()),
+                &TypePath::from(path_vec),
+            )?
         } else {
             if let Some(ty) = &f.return_type_opt {
                 *ty.clone()
@@ -910,14 +965,27 @@ impl SemanticAnalyser {
 
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
+            self.unify_types(&return_type, &mut function_type)?;
+
             if function_type != *return_type.clone() {
-                if let Type::Result { .. } = function_type {
-                    unify_result_types(&mut function_type, return_type)?
-                } else {
-                    return Err(SemanticErrorKind::TypeMismatchReturnType {
-                        expected: *return_type.clone(),
-                        found: function_type,
-                    });
+                match function_type.clone() {
+                    Type::Result { .. } => unify_result_types(&mut function_type, return_type)?,
+                    Type::Generic { name, .. } => {
+                        match self.lookup(&TypePath::from(name.clone())) {
+                            Some(_) => (),
+                            None => {
+                                return Err(SemanticErrorKind::UndeclaredGenericParams {
+                                    found: format!("`{name}`"),
+                                })
+                            }
+                        }
+                    }
+                    _ => {
+                        return Err(SemanticErrorKind::TypeMismatchReturnType {
+                            expected: *return_type.clone(),
+                            found: function_type,
+                        });
+                    }
                 }
             }
         }
@@ -994,1490 +1062,6 @@ impl SemanticAnalyser {
         }
 
         Ok(())
-    }
-
-    /// Analyse the given expression to determine its type within a specific context.
-    fn analyse_expr(
-        &mut self,
-        expression: &Expression,
-        root: &TypePath,
-    ) -> Result<Type, SemanticErrorKind> {
-        match expression {
-            Expression::Path(p) => {
-                let path = match p.tree_opt.clone() {
-                    Some(mut segments) => {
-                        if let Some(id) = segments.pop() {
-                            let root = match &p.path_root {
-                                PathRoot::Identifier(id) => TypePath::from(id.clone()),
-                                PathRoot::SelfKeyword => TypePath::from(Identifier::from("self")),
-                                PathRoot::SelfType(_) => TypePath::from(Identifier::from("Self")),
-
-                                path_root => {
-                                    return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                        name: Identifier::from(&path_root.to_string()),
-                                    })
-                                }
-                            };
-
-                            build_item_path(
-                                &root,
-                                TypePath {
-                                    associated_type_path_prefix_opt: Some(segments.to_vec()),
-                                    type_name: id,
-                                },
-                            )
-                        } else {
-                            match &p.path_root {
-                                PathRoot::Identifier(i) => {
-                                    build_item_path(root, TypePath::from(i.clone()))
-                                }
-                                PathRoot::SelfType(_) => root.clone(),
-                                PathRoot::SelfKeyword => root.clone(),
-
-                                path_root => {
-                                    return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                        name: Identifier::from(&path_root.to_string()),
-                                    })
-                                }
-                            }
-                        }
-                    }
-
-                    _ => match &p.path_root {
-                        PathRoot::Identifier(i) => TypePath::from(i.clone()),
-                        PathRoot::SelfType(_) => root.clone(),
-                        PathRoot::SelfKeyword => root.clone(),
-
-                        path_root => {
-                            return Err(SemanticErrorKind::InvalidVariableIdentifier {
-                                name: Identifier::from(&path_root.to_string()),
-                            })
-                        }
-                    },
-                };
-
-                let variable_path = self.check_path(&path, root, "variable".to_string())?;
-
-                println!("variable path: `{variable_path}`");
-
-                if let Some(sym) = self.lookup(&variable_path) {
-                    println!("variable symbol: `{sym}`");
-
-                    Ok(sym.symbol_type())
-                } else {
-                    Err(SemanticErrorKind::UndefinedVariable {
-                        name: path.type_name,
-                    })
-                }
-            }
-
-            Expression::Literal(l) => match l {
-                Literal::Int { value, .. } => match value {
-                    Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
-                    Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
-                },
-                Literal::UInt { value, .. } => match value {
-                    UInt::U8(_) => Ok(Type::U8(UInt::U8(u8::default()))),
-                    UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
-                    UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
-                    UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
-                },
-                Literal::BigUInt { value, .. } => match value {
-                    BigUInt::U256(_) => Ok(Type::U256(BigUInt::U256(U256::default()))),
-                    BigUInt::U512(_) => Ok(Type::U512(BigUInt::U512(U512::default()))),
-                },
-                Literal::Float { value, .. } => match value {
-                    Float::F32(_) => Ok(Type::F32(Float::F32(F32::default()))),
-                    Float::F64(_) => Ok(Type::F64(Float::F64(F64::default()))),
-                },
-                Literal::Byte { .. } => Ok(Type::Byte(Byte::from(u8::default()))),
-                Literal::Bytes { value, .. } => match value {
-                    Bytes::B2(_) => Ok(Type::B2(Bytes::B2(B2::default()))),
-                    Bytes::B4(_) => Ok(Type::B4(Bytes::B4(B4::default()))),
-                    Bytes::B8(_) => Ok(Type::B8(Bytes::B8(B8::default()))),
-                    Bytes::B16(_) => Ok(Type::B16(Bytes::B16(B16::default()))),
-                    Bytes::B32(_) => Ok(Type::B32(Bytes::B32(B32::default()))),
-                },
-                Literal::Hash { value, .. } => match value {
-                    Hash::H160(_) => Ok(Type::H160(Hash::H160(H160::default()))),
-                    Hash::H256(_) => Ok(Type::H256(Hash::H256(H256::default()))),
-                    Hash::H512(_) => Ok(Type::H512(Hash::H512(H512::default()))),
-                },
-                Literal::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
-                Literal::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
-                Literal::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
-            },
-
-            Expression::MethodCall(mc) => {
-                let receiver = wrap_into_expression(*mc.receiver.clone());
-                let receiver_type = self.analyse_expr(&receiver, root)?;
-
-                // convert receiver expression to path expression (i.e., check if receiver
-                // is a valid path)
-                let receiver_as_path_expr = PathExpr::from(receiver);
-                let receiver_path = TypePath::from(receiver_as_path_expr);
-
-                let symbol = self.lookup(&receiver_path).cloned();
-
-                println!("receiver path: `{receiver_path:?}`, symbol: `{symbol:?}`");
-
-                // check if path expression's type is that of an existing type and analyse
-                match symbol {
-                    Some(
-                        Symbol::Struct { path, .. }
-                        | Symbol::TupleStruct { path, .. }
-                        | Symbol::Enum { path, .. },
-                    ) => {
-                        if Type::UserDefined(path.clone()) == receiver_type {
-                            let method_path =
-                                build_item_path(&path, TypePath::from(mc.method_name.clone()));
-
-                            let method_path =
-                                self.check_path(&method_path, root, "method".to_string())?;
-
-                            self.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
-                        } else {
-                            Err(SemanticErrorKind::TypeMismatchVariable {
-                                var_id: receiver_path.type_name,
-                                expected: format!("`{path}`"),
-                                found: receiver_type,
-                            })
-                        }
-                    }
-
-                    None => Err(SemanticErrorKind::UndefinedType {
-                        name: receiver_path.type_name,
-                    }),
-
-                    Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: receiver_path.type_name,
-                        expected: "struct".to_string(),
-                        found: format!("`{sym}`"),
-                    }),
-                }
-            }
-
-            Expression::FieldAccess(fa) => {
-                let object = wrap_into_expression(*fa.object.clone());
-
-                // convert object to path expression (i.e., check if object
-                // is a valid path)
-                let object_as_path_expr = PathExpr::from(object.clone());
-
-                let object_path = TypePath::from(object_as_path_expr);
-                let object_type = self.analyse_expr(&object, &object_path)?;
-
-                match self.lookup(&object_path).cloned() {
-                    Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
-                        Some(fields) => match fields.iter().find(|f| f.field_name == fa.field_name)
-                        {
-                            Some(sdf) => Ok(*sdf.field_type.clone()),
-                            _ => Err(SemanticErrorKind::UndefinedField {
-                                struct_path: Identifier::from(object_path),
-                                field_name: fa.field_name.clone(),
-                            }),
-                        },
-                        _ => Ok(Type::UnitType(UnitType)),
-                    },
-
-                    None => Err(SemanticErrorKind::UndefinedType {
-                        name: Identifier::from(&object_type.to_string()),
-                    }),
-
-                    Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: Identifier::from(&object_type.to_string()),
-                        expected: "struct".to_string(),
-                        found: format!("`{sym}`"),
-                    }),
-                }
-            }
-
-            Expression::Call(c) => {
-                let callee = wrap_into_expression(c.callee.clone());
-
-                let callee_path = self.check_path(
-                    &TypePath::from(PathExpr::from(callee)),
-                    root,
-                    "function".to_string(),
-                )?;
-
-                self.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
-            }
-
-            Expression::Index(i) => {
-                let array_type =
-                    self.analyse_expr(&wrap_into_expression(*i.array.clone()), root)?;
-
-                let index_type =
-                    self.analyse_expr(&wrap_into_expression(*i.index.clone()), root)?;
-
-                match index_type {
-                    Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) => (),
-
-                    _ => {
-                        return Err(SemanticErrorKind::UnexpectedType {
-                            expected: "array index".to_string(),
-                            found: index_type,
-                        })
-                    }
-                }
-
-                match array_type {
-                    Type::Array { element_type, .. } => Ok(*element_type),
-                    _ => Err(SemanticErrorKind::UnexpectedType {
-                        expected: "array".to_string(),
-                        found: array_type,
-                    }),
-                }
-            }
-
-            Expression::TupleIndex(ti) => {
-                let tuple_type =
-                    self.analyse_expr(&wrap_into_expression(*ti.tuple.clone()), root)?;
-
-                match tuple_type {
-                    Type::Tuple(elem_types) => {
-                        if ti.index < UInt::from(elem_types.len()) {
-                            Ok(Type::Tuple(elem_types))
-                        } else {
-                            Err(SemanticErrorKind::TupleIndexOutOfBounds {
-                                len: ti.index,
-                                i: UInt::from(elem_types.len()),
-                            })
-                        }
-                    }
-                    Type::UserDefined(ref tp) => match self.lookup(&tp) {
-                        Some(sym) => match sym {
-                            Symbol::TupleStruct { .. } => Ok(Type::UserDefined(tp.clone())),
-
-                            _ => Err(SemanticErrorKind::UnexpectedSymbol {
-                                name: tp.type_name.clone(),
-                                expected: "tuple struct".to_string(),
-                                found: format!("`{sym}`"),
-                            }),
-                        },
-                        None => Err(SemanticErrorKind::UndefinedType {
-                            name: tp.type_name.clone(),
-                        }),
-                    },
-                    _ => Err(SemanticErrorKind::UnexpectedType {
-                        expected: "tuple or tuple struct".to_string(),
-                        found: tuple_type,
-                    }),
-                }
-            }
-
-            Expression::Unwrap(u) => {
-                self.analyse_expr(&wrap_into_expression(*u.value_expr.clone()), root)
-            }
-
-            Expression::Unary(u) => {
-                let expr_type =
-                    self.analyse_expr(&wrap_into_expression(*u.value_expr.clone()), root)?;
-
-                match u.unary_op {
-                    UnaryOp::Negate => match &expr_type {
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_)
-                        | Type::F32(_)
-                        | Type::F64(_) => Ok(expr_type),
-                        _ => Err(SemanticErrorKind::UnexpectedType {
-                            expected: "numeric value".to_string(),
-                            found: expr_type,
-                        }),
-                    },
-                    UnaryOp::Not => match &expr_type {
-                        Type::Bool(_) => Ok(expr_type),
-                        _ => Err(SemanticErrorKind::UnexpectedType {
-                            expected: "boolean".to_string(),
-                            found: expr_type,
-                        }),
-                    },
-                }
-            }
-
-            Expression::Reference(r) => {
-                let reference_op = r.reference_op.clone();
-                let expr_type = self.analyse_expr(&r.expression, root)?;
-
-                Ok(Type::Reference {
-                    reference_op,
-                    inner_type: Box::new(expr_type),
-                })
-            }
-
-            Expression::Dereference(d) => {
-                match self.analyse_expr(&wrap_into_expression(d.assignee_expr.clone()), root) {
-                    Ok(Type::Reference { inner_type, .. }) => Ok(*inner_type),
-                    Ok(ty) => Ok(ty),
-                    Err(e) => Err(e),
-                }
-            }
-
-            Expression::TypeCast(tc) => {
-                let value_type =
-                    self.analyse_expr(&wrap_into_expression(*tc.value.clone()), root)?;
-
-                let new_type = *tc.new_type.clone();
-
-                match (&value_type, &new_type) {
-                    (
-                        Type::I32(_) | Type::I64(_),
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_)
-                        | Type::F32(_)
-                        | Type::F64(_),
-                    )
-                    | (
-                        Type::U8(_) | Type::Byte(_),
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_)
-                        | Type::F32(_)
-                        | Type::F64(_)
-                        | Type::Byte(_)
-                        | Type::Char(_),
-                    )
-                    | (
-                        Type::U16(_) | Type::U32(_),
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_)
-                        | Type::F32(_)
-                        | Type::F64(_)
-                        | Type::Char(_),
-                    )
-                    | (
-                        Type::U64(_),
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_)
-                        | Type::F32(_)
-                        | Type::F64(_),
-                    )
-                    | (Type::U256(_) | Type::U512(_), Type::U256(_) | Type::U512(_))
-                    | (Type::F32(_) | Type::F64(_), Type::F32(_) | Type::F64(_))
-                    | (
-                        Type::B2(_) | Type::B4(_) | Type::B16(_) | Type::B32(_),
-                        Type::B2(_) | Type::B4(_) | Type::B16(_) | Type::B32(_),
-                    )
-                    | (
-                        Type::H160(_) | Type::H256(_) | Type::H512(_),
-                        Type::H160(_) | Type::H256(_) | Type::H512(_),
-                    )
-                    | (Type::Char(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
-                        Ok(new_type)
-                    }
-                    (t, u) => Err(SemanticErrorKind::TypeCastError {
-                        from: t.clone(),
-                        to: u.clone(),
-                    }),
-                }
-            }
-
-            Expression::Binary(b) => {
-                let lhs_type = self.analyse_expr(&wrap_into_expression(*b.lhs.clone()), root)?;
-
-                let rhs_type = self.analyse_expr(&wrap_into_expression(*b.rhs.clone()), root)?;
-
-                match (&lhs_type, &rhs_type) {
-                    (
-                        Type::I32(_),
-                        Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
-                    ) => Ok(Type::I32(Int::I32(i32::default()))),
-
-                    (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i32` or unsigned integer".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (
-                        Type::I64(_),
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_),
-                    ) => Ok(Type::I64(Int::I64(i64::default()))),
-
-                    (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "integer or unsigned integer".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
-
-                    (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u8`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U16(_), Type::U8(_) | Type::U16(_)) => {
-                        Ok(Type::U16(UInt::U16(u16::default())))
-                    }
-
-                    (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u16` or `u8`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
-                        Ok(Type::U32(UInt::U32(u32::default())))
-                    }
-
-                    (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u32` or smaller unsigned integer".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U64(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
-                        Ok(Type::U64(UInt::U64(u64::default())))
-                    }
-
-                    (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u64` or smaller unsigned integer".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U256(_), Type::U256(_)) => {
-                        Ok(Type::U256(BigUInt::U256(U256::default())))
-                    }
-
-                    (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u256`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
-                        Ok(Type::U512(BigUInt::U512(U512::default())))
-                    }
-
-                    (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u512` or `u256`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
-
-                    (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`f32`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::F64(_), Type::F32(_) | Type::F64(_)) => {
-                        Ok(Type::F64(Float::F64(F64::default())))
-                    }
-
-                    (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`f64` or `f32`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (_, t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "numeric values with matching types".to_string(),
-                        found: t.clone(),
-                    }),
-                }
-            }
-
-            Expression::Comparison(c) => {
-                let lhs_type = self.analyse_expr(&wrap_into_expression(c.lhs.clone()), root)?;
-
-                let rhs_type = self.analyse_expr(&wrap_into_expression(c.rhs.clone()), root)?;
-
-                match (&lhs_type, &rhs_type) {
-                    (
-                        Type::I32(_),
-                        Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
-                    ) => Ok(Type::I32(Int::I32(i32::default()))),
-
-                    (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`i32` or unsigned integer".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (
-                        Type::I64(_),
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_),
-                    ) => Ok(Type::I64(Int::I64(i64::default()))),
-
-                    (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "integer or unsigned integer".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
-
-                    (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u8`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U16(_), Type::U16(_)) => Ok(Type::U16(UInt::U16(u16::default()))),
-
-                    (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u16`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U32(_), Type::U32(_)) => Ok(Type::U32(UInt::U32(u32::default()))),
-
-                    (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u32`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U64(_), Type::U64(_)) => Ok(Type::U64(UInt::U64(u64::default()))),
-
-                    (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u64`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U256(_), Type::U256(_)) => {
-                        Ok(Type::U256(BigUInt::U256(U256::default())))
-                    }
-
-                    (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u256`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
-                        Ok(Type::U512(BigUInt::U512(U512::default())))
-                    }
-
-                    (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`u512`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
-
-                    (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`f32`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (Type::F64(_), Type::F64(_)) => Ok(Type::F64(Float::F64(F64::default()))),
-
-                    (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "`f64`".to_string(),
-                        found: t.clone(),
-                    }),
-
-                    (_, t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                        expected: "numeric values with matching types".to_string(),
-                        found: t.clone(),
-                    }),
-                }
-            }
-
-            Expression::Grouped(g) => self.analyse_expr(&g.inner_expression, root),
-
-            Expression::Range(r) => match (&r.from_expr_opt, &r.to_expr_opt) {
-                (None, None) => Ok(Type::UnitType(UnitType)),
-                (None, Some(to)) => {
-                    let to_type = self.analyse_expr(&wrap_into_expression(*to.clone()), root)?;
-
-                    match to_type {
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_) => Ok(to_type),
-                        _ => Err(SemanticErrorKind::UnexpectedType {
-                            expected: "numeric type".to_string(),
-                            found: to_type,
-                        }),
-                    }
-                }
-                (Some(from), None) => {
-                    let from_type =
-                        self.analyse_expr(&wrap_into_expression(*from.clone()), root)?;
-
-                    match from_type {
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_) => Ok(from_type),
-                        _ => Err(SemanticErrorKind::UnexpectedType {
-                            expected: "numeric type".to_string(),
-                            found: from_type,
-                        }),
-                    }
-                }
-                (Some(from), Some(to)) => {
-                    let from_type =
-                        self.analyse_expr(&wrap_into_expression(*from.clone()), root)?;
-
-                    match from_type {
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_) => (),
-                        _ => {
-                            return Err(SemanticErrorKind::UnexpectedType {
-                                expected: "numeric type".to_string(),
-                                found: from_type,
-                            })
-                        }
-                    }
-
-                    let to_type = self.analyse_expr(&wrap_into_expression(*to.clone()), root)?;
-
-                    match to_type {
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_) => (),
-                        _ => {
-                            return Err(SemanticErrorKind::UnexpectedType {
-                                expected: "numeric type".to_string(),
-                                found: to_type,
-                            })
-                        }
-                    }
-
-                    if from_type == to_type {
-                        Ok(to_type)
-                    } else {
-                        Err(SemanticErrorKind::TypeMismatchValues {
-                            expected: from_type,
-                            found: to_type,
-                        })
-                    }
-                }
-            },
-
-            Expression::Assignment(a) => {
-                let assignee = wrap_into_expression(a.lhs.clone());
-                let assignee_type = self.analyse_expr(&assignee, root)?;
-
-                let value_type = self.analyse_expr(&wrap_into_expression(a.rhs.clone()), root)?;
-
-                if value_type != assignee_type {
-                    return Err(SemanticErrorKind::TypeMismatchValues {
-                        expected: assignee_type,
-                        found: value_type,
-                    });
-                }
-
-                let assignee_as_path_expr = PathExpr::from(assignee);
-                let assignee_path = self.check_path(
-                    &TypePath::from(assignee_as_path_expr),
-                    root,
-                    "assignee expression".to_string(),
-                )?;
-
-                match self.lookup(&assignee_path).cloned() {
-                    Some(Symbol::Variable { var_type, .. }) => match var_type == assignee_type {
-                        true => {
-                            self.analyse_expr(&wrap_into_expression(a.rhs.clone()), root)?;
-                            Ok(var_type)
-                        }
-                        false => Err(SemanticErrorKind::TypeMismatchVariable {
-                            var_id: assignee_path.type_name,
-                            expected: format!("`{assignee_type}`"),
-                            found: var_type,
-                        }),
-                    },
-                    Some(Symbol::Constant { constant_name, .. }) => {
-                        Err(SemanticErrorKind::ConstantReassignment {
-                            name: constant_name,
-                        })
-                    }
-                    Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: assignee_path.type_name,
-                        expected: format!("`{assignee_type}`"),
-                        found: format!("`{sym}`"),
-                    }),
-                    _ => Err(SemanticErrorKind::UndefinedVariable {
-                        name: assignee_path.type_name,
-                    }),
-                }
-            }
-
-            Expression::CompoundAssignment(ca) => {
-                let assignee = wrap_into_expression(ca.lhs.clone());
-                let assignee_type = self.analyse_expr(&assignee, root)?;
-
-                let value_type = self.analyse_expr(&wrap_into_expression(ca.rhs.clone()), root)?;
-
-                let assignee_as_path_expr = PathExpr::from(assignee);
-                let assignee_path = self.check_path(
-                    &TypePath::from(assignee_as_path_expr),
-                    root,
-                    "assignee expression".to_string(),
-                )?;
-
-                match self.lookup(&assignee_path) {
-                    Some(Symbol::Variable { .. }) => match (&assignee_type, &value_type) {
-                        (
-                            Type::I32(_),
-                            Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
-                        ) => Ok(Type::I32(Int::I32(i32::default()))),
-
-                        (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "`i32` or unsigned integer".to_string(),
-                            found: t.clone(),
-                        }),
-
-                        (
-                            Type::I64(_),
-                            Type::I32(_)
-                            | Type::I64(_)
-                            | Type::U8(_)
-                            | Type::U16(_)
-                            | Type::U32(_)
-                            | Type::U64(_),
-                        ) => Ok(Type::I64(Int::I64(i64::default()))),
-
-                        (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "integer or unsigned integer".to_string(),
-                            found: t.clone(),
-                        }),
-
-                        (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
-
-                        (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "`u8`".to_string(),
-                            found: t.clone(),
-                        }),
-
-                        (Type::U16(_), Type::U8(_) | Type::U16(_)) => {
-                            Ok(Type::U16(UInt::U16(u16::default())))
-                        }
-
-                        (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "`u16`".to_string(),
-                            found: t.clone(),
-                        }),
-
-                        (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
-                            Ok(Type::U32(UInt::U32(u32::default())))
-                        }
-
-                        (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "`u32`".to_string(),
-                            found: t.clone(),
-                        }),
-
-                        (
-                            Type::U64(_),
-                            Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
-                        ) => Ok(Type::U64(UInt::U64(u64::default()))),
-
-                        (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "`u64`".to_string(),
-                            found: t.clone(),
-                        }),
-
-                        (Type::U256(_), Type::U256(_)) => {
-                            Ok(Type::U256(BigUInt::U256(U256::default())))
-                        }
-
-                        (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "`u256`".to_string(),
-                            found: t.clone(),
-                        }),
-
-                        (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
-                            Ok(Type::U512(BigUInt::U512(U512::default())))
-                        }
-
-                        (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "`u512`".to_string(),
-                            found: t.clone(),
-                        }),
-
-                        (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
-
-                        (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "`f32`".to_string(),
-                            found: t.clone(),
-                        }),
-
-                        (Type::F64(_), Type::F32(_) | Type::F64(_)) => {
-                            Ok(Type::F64(Float::F64(F64::default())))
-                        }
-
-                        (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "`f64`".to_string(),
-                            found: t.clone(),
-                        }),
-
-                        (_, t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-                            expected: "numeric values with matching types".to_string(),
-                            found: t.clone(),
-                        }),
-                    },
-                    Some(Symbol::Constant { constant_name, .. }) => {
-                        Err(SemanticErrorKind::ConstantReassignment {
-                            name: constant_name.clone(),
-                        })
-                    }
-                    Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: assignee_path.type_name,
-                        expected: format!("`{assignee_type}`"),
-                        found: format!("`{sym}`"),
-                    }),
-                    _ => Err(SemanticErrorKind::UndefinedVariable {
-                        name: assignee_path.type_name,
-                    }),
-                }
-            }
-
-            Expression::Return(r) => match &r.expression_opt {
-                Some(expr) => self.analyse_expr(&expr.clone(), root),
-                _ => Ok(Type::UnitType(UnitType)),
-            },
-
-            Expression::Break(_) => Ok(Type::UnitType(UnitType)),
-
-            Expression::Continue(_) => Ok(Type::UnitType(UnitType)),
-
-            Expression::Underscore(_) => Ok(Type::InferredType(InferredType {
-                name: Identifier::from("_"),
-            })),
-
-            Expression::Closure(c) => {
-                let params_opt =
-                    match &c.closure_params {
-                        ClosureParams::Some(params) => {
-                            let mut function_params: Vec<FunctionOrMethodParam> = Vec::new();
-
-                            for param in params {
-                                let param_type = param.type_ann_opt.clone().unwrap_or(Box::new(
-                                    Type::InferredType(InferredType {
-                                        name: Identifier::from("_"),
-                                    }),
-                                ));
-
-                                let function_param = FunctionParam {
-                                    param_name: param.param_name.clone(),
-                                    param_type,
-                                };
-
-                                function_params
-                                    .push(FunctionOrMethodParam::FunctionParam(function_param))
-                            }
-
-                            Some(function_params)
-                        }
-                        _ => None,
-                    };
-
-                let return_type = match &c.return_type_opt {
-                    Some(ty) => Ok(*ty.clone()),
-                    _ => Ok(Type::UnitType(UnitType)),
-                }?;
-
-                let expression_type = self.analyse_expr(&c.body_expression, root)?;
-
-                if expression_type != return_type {
-                    if let Type::Result { ok_type, err_type } = expression_type.clone() {
-                        if *ok_type
-                            == Type::InferredType(InferredType {
-                                name: Identifier::from("_"),
-                            })
-                            || *err_type
-                                == Type::InferredType(InferredType {
-                                    name: Identifier::from("_"),
-                                })
-                        {
-                            ()
-                        } else {
-                            return Err(SemanticErrorKind::TypeMismatchReturnType {
-                                expected: return_type,
-                                found: expression_type,
-                            });
-                        }
-                    }
-                }
-
-                let function_ptr = FunctionPtr {
-                    params_opt,
-                    return_type_opt: Some(Box::new(return_type)),
-                };
-
-                Ok(Type::FunctionPtr(function_ptr))
-            }
-
-            Expression::Array(a) => match &a.elements_opt {
-                Some(elements) => match elements.first() {
-                    Some(expr) => {
-                        let mut element_count = 0u64;
-
-                        let first_element_type = self.analyse_expr(expr, root)?;
-
-                        // TODO: if an element is a generic type, resolve it,
-                        // TODO: including checking if it implements its bound trait (where applicable)
-
-                        element_count += 1;
-
-                        for elem in elements.iter().skip(1) {
-                            let element_type = self.analyse_expr(elem, root)?;
-
-                            element_count += 1;
-
-                            if element_type != first_element_type {
-                                return Err(SemanticErrorKind::TypeMismatchArray {
-                                    expected: format!("`{first_element_type}`"),
-                                    found: element_type,
-                                });
-                            }
-                        }
-
-                        Ok(Type::Array {
-                            element_type: Box::new(first_element_type),
-                            num_elements: UInt::U64(element_count),
-                        })
-                    }
-                    _ => {
-                        let element_type = Type::UnitType(UnitType);
-                        let array = Type::Array {
-                            element_type: Box::new(element_type),
-                            num_elements: UInt::U64(0u64),
-                        };
-
-                        Ok(array)
-                    }
-                },
-                _ => Ok(Type::UnitType(UnitType)),
-            },
-
-            Expression::Tuple(t) => {
-                let mut element_types: Vec<Type> = Vec::new();
-
-                for elem in t.tuple_elements.elements.iter() {
-                    let ty = self.analyse_expr(elem, root)?;
-                    // TODO: if an element is a generic type, resolve it,
-                    // TODO: including checking if it implements its bound trait (where applicable)
-
-                    element_types.push(ty)
-                }
-
-                Ok(Type::Tuple(element_types))
-            }
-
-            Expression::Struct(s) => {
-                let type_path = build_item_path(root, TypePath::from(s.struct_path.clone()));
-
-                match self.lookup(&type_path).cloned() {
-                    Some(Symbol::Struct { struct_def, path }) => {
-                        let mut field_map: HashMap<Identifier, Type> = HashMap::new();
-
-                        let def_fields_opt = struct_def.fields_opt;
-                        let obj_fields_opt = s.struct_fields_opt.clone();
-
-                        if let Some(obj_fields) = obj_fields_opt {
-                            for obj_field in obj_fields {
-                                let field_name = obj_field.field_name.clone();
-                                let field_value = *obj_field.field_value.clone();
-                                let field_type = self.analyse_expr(&field_value, root)?;
-
-                                // TODO: if a field is a generic type, resolve it,
-                                // TODO: including checking if it implements a trait (where applicable)
-
-                                field_map.insert(field_name, field_type);
-                            }
-                        }
-
-                        if let Some(ref def_fields) = def_fields_opt {
-                            if field_map.len() > def_fields.len() {
-                                return Err(SemanticErrorKind::StructArgCountMismatch {
-                                    struct_path: Identifier::from(type_path),
-                                    expected: def_fields.len(),
-                                    found: field_map.len(),
-                                });
-                            }
-
-                            let field_names = def_fields
-                                .into_iter()
-                                .cloned()
-                                .map(|sdf| sdf.field_name)
-                                .collect::<Vec<_>>();
-
-                            for (name, _) in field_map.iter() {
-                                if !field_names.contains(name) {
-                                    return Err(SemanticErrorKind::UnexpectedStructField {
-                                        field_name: struct_def.struct_name,
-                                        found: name.clone(),
-                                    });
-                                }
-                            }
-
-                            for def_field in def_fields {
-                                match field_map.get(&def_field.field_name) {
-                                    Some(obj_field_type) => {
-                                        if *obj_field_type != *def_field.field_type {
-                                            return Err(SemanticErrorKind::TypeMismatchVariable {
-                                                var_id: path.type_name,
-                                                expected: format!("`{}`", *def_field.field_type),
-                                                found: obj_field_type.clone(),
-                                            });
-                                        }
-                                    }
-
-                                    None => {
-                                        return Err(SemanticErrorKind::MissingStructField {
-                                            expected: format!(
-                                                "`{}: {}`",
-                                                &def_field.field_name, *def_field.field_type
-                                            ),
-                                        })
-                                    }
-                                }
-                            }
-                        }
-
-                        Ok(Type::UserDefined(path))
-                    }
-
-                    None => Err(SemanticErrorKind::UndefinedStruct {
-                        name: type_path.type_name,
-                    }),
-
-                    Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: type_path.type_name,
-                        expected: "struct".to_string(),
-                        found: format!("`{sym}`"),
-                    }),
-                }
-            }
-
-            Expression::TupleStruct(ts) => {
-                let type_path = build_item_path(root, TypePath::from(ts.struct_path.clone()));
-
-                match self.lookup(&type_path).cloned() {
-                    Some(Symbol::TupleStruct {
-                        tuple_struct_def,
-                        path,
-                    }) => {
-                        let elements_opt = ts.struct_elements_opt.clone();
-                        let fields_opt = tuple_struct_def.fields_opt;
-
-                        match (&elements_opt, &fields_opt) {
-                            (None, None) => Ok(Type::UnitType(UnitType)),
-
-                            (None, Some(fields)) => {
-                                Err(SemanticErrorKind::StructArgCountMismatch {
-                                    struct_path: Identifier::from(type_path),
-                                    expected: fields.len(),
-                                    found: 0,
-                                })
-                            }
-
-                            (Some(elements), None) => {
-                                Err(SemanticErrorKind::StructArgCountMismatch {
-                                    struct_path: Identifier::from(type_path),
-                                    expected: 0,
-                                    found: elements.len(),
-                                })
-                            }
-                            (Some(elements), Some(fields)) => {
-                                if elements.len() != fields.len() {
-                                    return Err(SemanticErrorKind::StructArgCountMismatch {
-                                        struct_path: Identifier::from(type_path),
-                                        expected: fields.len(),
-                                        found: elements.len(),
-                                    });
-                                }
-
-                                for (elem, field) in elements.iter().zip(fields) {
-                                    let elem_type = self.analyse_expr(
-                                        &elem,
-                                        &TypePath::from(Identifier::from("")),
-                                    )?;
-                                    let field_type = *field.field_type.clone();
-
-                                    // TODO: if an element is a generic type, resolve it,
-                                    // TODO: including checking if it implements a trait (where applicable)
-
-                                    if elem_type != field_type {
-                                        return Err(SemanticErrorKind::TypeMismatchVariable {
-                                            var_id: tuple_struct_def.struct_name.clone(),
-                                            expected: format!("`{field_type}`"),
-                                            found: elem_type,
-                                        });
-                                    }
-                                }
-
-                                Ok(Type::UserDefined(path))
-                            }
-                        }
-                    }
-
-                    None => Err(SemanticErrorKind::UndefinedStruct {
-                        name: type_path.type_name,
-                    }),
-
-                    Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: type_path.type_name,
-                        expected: "tuple struct".to_string(),
-                        found: format!("`{sym}`"),
-                    }),
-                }
-            }
-
-            Expression::Mapping(m) => match &m.pairs_opt {
-                Some(pairs) => match pairs.first() {
-                    Some(pair) => {
-                        let key_type = self.analyse_patt(&pair.k.clone())?;
-                        let value_type = self.analyse_expr(&pair.v.clone(), root)?;
-
-                        for pair in pairs.iter().skip(1) {
-                            let pair_key_type = self.analyse_patt(&pair.k.clone())?;
-                            let pair_value_type = self.analyse_expr(&pair.v.clone(), root)?;
-
-                            // TODO: if a key/value is a generic type, resolve it,
-                            // TODO: including checking if it implements a trait (where applicable)
-
-                            if (&pair_key_type, &pair_value_type) != (&key_type, &value_type) {
-                                return Err(SemanticErrorKind::UnexpectedType {
-                                    expected: (Type::Mapping {
-                                        key_type: Box::new(key_type),
-                                        value_type: Box::new(value_type),
-                                    })
-                                    .to_string(),
-                                    found: Type::Mapping {
-                                        key_type: Box::new(pair_key_type),
-                                        value_type: Box::new(pair_value_type),
-                                    },
-                                });
-                            }
-                        }
-
-                        Ok(Type::Mapping {
-                            key_type: Box::new(key_type),
-                            value_type: Box::new(value_type),
-                        })
-                    }
-                    _ => {
-                        let key_type = Box::new(Type::UnitType(UnitType));
-                        let value_type = Box::new(Type::UnitType(UnitType));
-
-                        Ok(Type::Mapping {
-                            key_type,
-                            value_type,
-                        })
-                    }
-                },
-                _ => Ok(Type::UnitType(UnitType)),
-            },
-
-            Expression::Block(b) => match &b.statements_opt {
-                Some(stmts) => {
-                    self.enter_scope(ScopeKind::LocalBlock);
-
-                    let mut cloned_iter = stmts.iter().peekable().clone();
-
-                    for stmt in stmts {
-                        self.logger.trace(&format!("analysing statement: `{stmt}`"));
-
-                        cloned_iter.next();
-
-                        match stmt {
-                            Statement::Expression(expr) => match expr {
-                                Expression::Return(_)
-                                | Expression::Break(_)
-                                | Expression::Continue(_) => {
-                                    self.analyse_expr(expr, root)?;
-
-                                    match cloned_iter.peek() {
-                                        Some(_) => self.logger.warn("unreachable code"),
-                                        _ => (),
-                                    }
-                                }
-                                expression => match self.analyse_expr(expression, root) {
-                                    Ok(_) => (),
-                                    Err(err) => self.log_error(err, &expression.span()),
-                                },
-                            },
-                            statement => self.analyse_stmt(statement, root)?,
-                        }
-                    }
-
-                    let ty = match stmts.last() {
-                        Some(stmt) => match stmt {
-                            Statement::Expression(expr) => self.analyse_expr(expr, root),
-                            _ => Ok(Type::UnitType(UnitType)),
-                        },
-                        _ => Ok(Type::UnitType(UnitType)),
-                    };
-
-                    self.exit_scope();
-
-                    ty
-                }
-
-                _ => Ok(Type::UnitType(UnitType)),
-            },
-
-            Expression::If(i) => {
-                self.analyse_expr(&Expression::Grouped(*i.condition.clone()), root)?;
-
-                let if_block_type =
-                    self.analyse_expr(&Expression::Block(*i.if_block.clone()), root)?;
-
-                let else_if_blocks_type = match &i.else_if_blocks_opt {
-                    Some(blocks) => match blocks.first() {
-                        Some(_) => {
-                            for block in blocks.iter() {
-                                let block_type =
-                                    self.analyse_expr(&Expression::If(*block.clone()), root)?;
-
-                                if block_type != if_block_type {
-                                    return Err(SemanticErrorKind::TypeMismatchValues {
-                                        expected: if_block_type,
-                                        found: block_type,
-                                    });
-                                }
-                            }
-
-                            if_block_type.clone()
-                        }
-                        _ => Type::UnitType(UnitType),
-                    },
-                    _ => Type::UnitType(UnitType),
-                };
-
-                let trailing_else_block_type = match &i.trailing_else_block_opt {
-                    Some(block) => self.analyse_expr(&Expression::Block(block.clone()), root)?,
-                    _ => Type::UnitType(UnitType),
-                };
-
-                if i.else_if_blocks_opt.is_some() && else_if_blocks_type != if_block_type {
-                    return Err(SemanticErrorKind::TypeMismatchValues {
-                        expected: if_block_type,
-                        found: else_if_blocks_type,
-                    });
-                }
-
-                if trailing_else_block_type != if_block_type {
-                    return Err(SemanticErrorKind::TypeMismatchValues {
-                        expected: if_block_type,
-                        found: trailing_else_block_type,
-                    });
-                }
-
-                Ok(if_block_type)
-            }
-
-            Expression::Match(m) => {
-                self.enter_scope(ScopeKind::MatchExpr);
-
-                let scrutinee_type =
-                    self.analyse_expr(&wrap_into_expression(m.scrutinee.clone()), root)?;
-
-                let patt_type = self.analyse_patt(&m.final_arm.matched_pattern.clone())?;
-
-                if patt_type != scrutinee_type {
-                    if let Type::InferredType(_) = patt_type {
-                        ()
-                    } else {
-                        return Err(SemanticErrorKind::TypeMismatchMatchExpr {
-                            loc: "scrutinee and matched pattern".to_string(),
-                            expected: scrutinee_type,
-                            found: patt_type,
-                        });
-                    }
-                }
-
-                let expr_type = self.analyse_expr(&m.final_arm.arm_expression.clone(), root)?;
-
-                if let Some(arms) = &m.match_arms_opt {
-                    for arm in arms.iter() {
-                        let arm_patt_type = self.analyse_patt(&arm.matched_pattern)?;
-
-                        if arm_patt_type != patt_type {
-                            if let Type::InferredType(_) = patt_type {
-                                ()
-                            } else {
-                                return Err(SemanticErrorKind::TypeMismatchMatchExpr {
-                                    loc: "matched pattern".to_string(),
-                                    expected: patt_type,
-                                    found: arm_patt_type,
-                                });
-                            }
-                        }
-
-                        let arm_expr_type = self.analyse_expr(&arm.arm_expression.clone(), root)?;
-
-                        if arm_expr_type != expr_type {
-                            return Err(SemanticErrorKind::TypeMismatchMatchExpr {
-                                loc: "match arm expression".to_string(),
-                                expected: expr_type,
-                                found: arm_expr_type,
-                            });
-                        }
-                    }
-                }
-
-                self.exit_scope();
-
-                Ok(expr_type)
-            }
-
-            Expression::ForIn(fi) => {
-                self.enter_scope(ScopeKind::ForInLoop);
-
-                let iter_type = self.analyse_expr(&fi.iterator.clone(), root)?;
-
-                let element_type = match iter_type.clone() {
-                    Type::Array { element_type, .. } | Type::Vec { element_type, .. } => {
-                        *element_type
-                    }
-
-                    Type::Reference { inner_type, .. } => match *inner_type {
-                        Type::Array { element_type, .. } | Type::Vec { element_type, .. } => {
-                            *element_type
-                        }
-                        _ => {
-                            return Err(SemanticErrorKind::TypeMismatchArray {
-                                expected: "iterable type".to_string(),
-                                found: iter_type,
-                            })
-                        }
-                    },
-
-                    _ => {
-                        return Err(SemanticErrorKind::TypeMismatchArray {
-                            expected: "iterable type".to_string(),
-                            found: iter_type,
-                        });
-                    }
-                };
-
-                println!("element type: {element_type}");
-
-                if let Pattern::IdentifierPatt(id) = *fi.pattern.clone() {
-                    self.insert(
-                        TypePath::from(id.name.clone()),
-                        Symbol::Variable {
-                            name: id.name,
-                            var_type: element_type,
-                        },
-                    )?;
-                }
-
-                self.analyse_patt(&fi.pattern.clone())?;
-
-                self.analyse_expr(&Expression::Block(fi.block.clone()), root)?;
-
-                self.exit_scope();
-
-                Ok(Type::UnitType(UnitType))
-            }
-
-            Expression::While(w) => {
-                self.analyse_expr(&Expression::Grouped(*w.condition.clone()), root)?;
-                self.analyse_expr(&Expression::Block(w.block.clone()), root)?;
-                Ok(Type::UnitType(UnitType))
-            }
-
-            Expression::SomeExpr(s) => {
-                let ty = self.analyse_expr(&s.expression.clone().inner_expression, root)?;
-
-                let ty = if ty == Type::Tuple(Vec::new()) {
-                    Type::UnitType(UnitType)
-                } else {
-                    ty
-                };
-
-                // TODO: if an inner type is a generic type, resolve it,
-                // TODO: including checking if it implements its bound trait (where applicable)
-
-                Ok(Type::Option {
-                    inner_type: Box::new(ty),
-                })
-            }
-
-            Expression::NoneExpr(_) => Ok(Type::Option {
-                inner_type: Box::new(Type::UnitType(UnitType)),
-            }),
-
-            Expression::ResultExpr(r) => {
-                let ty = self.analyse_expr(&r.expression.clone().inner_expression, root)?;
-
-                let ty = if ty == Type::Tuple(Vec::new()) {
-                    Type::UnitType(UnitType)
-                } else {
-                    ty
-                };
-
-                // TODO: if any of the inner types is a generic type, resolve it,
-                // TODO: including checking if it implements its bound trait (where applicable)
-
-                match r.kw_ok_or_err.clone() {
-                    Keyword::Ok => Ok(Type::Result {
-                        ok_type: Box::new(ty),
-                        err_type: Box::new(Type::InferredType(InferredType {
-                            name: Identifier::from("_"),
-                        })),
-                    }),
-                    Keyword::Err => Ok(Type::Result {
-                        ok_type: Box::new(Type::InferredType(InferredType {
-                            name: Identifier::from("_"),
-                        })),
-                        err_type: Box::new(ty),
-                    }),
-                    keyword => Err(SemanticErrorKind::UnexpectedKeyword {
-                        expected: "`Ok` or `Err`".to_string(),
-                        found: keyword,
-                    }),
-                }
-            }
-        }
     }
 
     /// Attempt to resolve a given `TypePath` within the current context, searching through various
@@ -2612,11 +1196,11 @@ impl SemanticAnalyser {
 
         match self.lookup(&path).cloned() {
             Some(Symbol::Function { function, .. }) => {
-                let params = function.params_opt.clone();
-                let return_type = function.return_type_opt.clone();
+                let func_params = function.params_opt.clone();
+                let func_def_return_type = function.return_type_opt.clone();
 
-                match (&args_opt, &params) {
-                    (None, None) => match return_type {
+                match (&args_opt, &func_params) {
+                    (None, None) => match func_def_return_type {
                         Some(ty) => Ok(*ty),
                         _ => Ok(Type::UnitType(UnitType)),
                     },
@@ -2644,7 +1228,7 @@ impl SemanticAnalyser {
                             });
                         }
 
-                        match return_type {
+                        match func_def_return_type {
                             Some(ty) => Ok(*ty),
                             _ => Ok(Type::UnitType(UnitType)),
                         }
@@ -2677,13 +1261,18 @@ impl SemanticAnalyser {
                             });
                         }
 
+                        // let mut inferred_types: HashMap<Identifier, Type> = HashMap::new();
+
                         for (arg, param) in args.iter().zip(params) {
-                            let arg_type =
-                                self.analyse_expr(&arg, &TypePath::from(Identifier::from("")))?;
+                            let mut arg_type =
+                                analyse_expr(self, &arg, &TypePath::from(Identifier::from("")))?;
+
                             let param_type = param.param_type();
 
+                            self.unify_types(&param_type, &mut arg_type)?;
+
                             if arg_type != param_type {
-                                return Err(SemanticErrorKind::TypeMismatchArgument {
+                                return Err(SemanticErrorKind::TypeMismatchArg {
                                     arg_id: function.function_name.clone(),
                                     expected: param_type,
                                     found: arg_type,
@@ -2691,15 +1280,47 @@ impl SemanticAnalyser {
                             }
                         }
 
-                        match return_type {
+                        // // ensure all constraints are satisfied for inferred types
+                        // for (_, inferred_type) in inferred_types.iter() {
+                        //     if let Some(ref generic_params) = function.generic_params_opt {
+                        //         for param in generic_params.params.iter() {
+                        //             if let Some(bound) = &param.type_bound_opt {
+                        //                 if !self.satisfies_bound(inferred_type, &bound) {
+                        //                     return Err(SemanticErrorKind::TypeBoundNotSatisfied {
+                        //                         generic_name: param.name.clone(),
+                        //                         bound: Identifier::from(bound.clone()),
+                        //                         found: inferred_type.clone(),
+                        //                     });
+                        //                 }
+                        //             }
+                        //         }
+                        //     }
+                        // }
+
+                        // // infer return type based on substitutions
+                        // // if `func_def_return_type` is generic, substitute it with the inferred type,
+                        // // else return `func_def_return_type`
+                        // let inferred_return_type = substitute_generics(
+                        //     &*func_def_return_type.unwrap_or(Box::new(Type::UnitType(UnitType))),
+                        //     &inferred_types,
+                        // )?;
+
+                        // // TODO: what if the function call is part of an assignment expression?
+                        // // TODO: (e.g., let statement), or as a param in another call expression?
+                        // // TODO: or any other larger expression?
+                        // // TODO: can we assume the `func_def_return_type` is the call expression type?
+
+                        // Ok(inferred_return_type)
+
+                        match func_def_return_type {
                             Some(ty) => Ok(*ty),
-                            _ => Ok(Type::UnitType(UnitType)),
+                            None => Ok(Type::UnitType(UnitType)),
                         }
                     }
                 }
             }
 
-            None => Err(SemanticErrorKind::UndefinedFunction {
+            None => Err(SemanticErrorKind::UndefinedFunc {
                 name: path.type_name,
             }),
             Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
@@ -2710,416 +1331,618 @@ impl SemanticAnalyser {
         }
     }
 
-    /// Analyse a pattern in the context of semantic analysis, returning the inferred type of
-    /// the pattern or an appropriate semantic error.
-    fn analyse_patt(&mut self, pattern: &Pattern) -> Result<Type, SemanticErrorKind> {
-        match pattern {
-            Pattern::IdentifierPatt(i) => match self.lookup(&TypePath::from(i.name.clone())) {
-                Some(Symbol::Variable { var_type, .. }) => {
-                    // TODO: if an element is a generic type, resolve it,
-                    // TODO: including checking if it implements its bound trait (where applicable)
-                    Ok(var_type.clone())
-                }
-                Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                    name: i.name.clone(),
-                    expected: "variable".to_string(),
-                    found: format!("`{sym}`"),
-                }),
-                _ => Err(SemanticErrorKind::UndefinedVariable {
-                    name: i.name.clone(),
-                }),
-            },
+    /// Unifies two types, ensuring they are compatible. Returns `Ok` if they can be unified, or
+    /// an `Err` if there is a type mismatch.
+    fn unify_types(&mut self, type_a: &Type, type_b: &mut Type) -> Result<(), SemanticErrorKind> {
+        let type_a_clone = type_a.clone();
+        let type_b_clone = type_b.clone();
 
-            Pattern::PathPatt(p) => {
-                let path = TypePath::from(p.clone());
+        match (type_a_clone, type_b_clone) {
+            // if both types are the same, they are already unified
+            _ if type_a == type_b => Ok(()),
 
-                if let Some(sym) = self.lookup(&path) {
-                    Ok(sym.symbol_type())
+            (Type::InferredType(_), _) => Err(SemanticErrorKind::UnexpectedInferredType),
+
+            // if one is a concrete or generic type and the other is inferred, resolve the inference
+            (concrete_or_generic, Type::InferredType(_)) => {
+                self.resolve_inferred_type(type_b, concrete_or_generic)
+            }
+
+            (
+                Type::Generic {
+                    name: name_a,
+                    bound_opt: bound_a,
+                },
+                Type::Generic {
+                    name: name_b,
+                    bound_opt: bound_b,
+                },
+            ) => {
+                if name_a == name_b {
+                    match (bound_a, bound_b) {
+                        (None, None) => (),
+                        (None, Some(_)) => {
+                            return Err(SemanticErrorKind::TypeBoundCountMismatch {
+                                expected: 0,
+                                found: 1,
+                            })
+                        }
+                        (Some(_), None) => {
+                            return Err(SemanticErrorKind::TypeBoundCountMismatch {
+                                expected: 1,
+                                found: 0,
+                            })
+                        }
+                        (Some(a), Some(b)) => {
+                            if a != b {
+                                return Err(SemanticErrorKind::TypeMismatchTypeBound {
+                                    expected: Identifier::from(a),
+                                    found: Identifier::from(b),
+                                });
+                            }
+                        }
+                    }
+
+                    Ok(())
                 } else {
-                    Err(SemanticErrorKind::UndefinedVariable {
-                        name: path.type_name,
+                    Err(SemanticErrorKind::TypeMismatchUnification {
+                        expected: Identifier::from(&type_a.to_string()),
+                        found: Identifier::from(&type_b.to_string()),
                     })
                 }
             }
 
-            Pattern::LiteralPatt(l) => match l {
-                LiteralPatt::Int { value } => match value {
-                    Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
-                    Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
-                },
-                LiteralPatt::UInt { value } => match value {
-                    UInt::U8(_) => Ok(Type::U8(UInt::U8(u8::default()))),
-                    UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
-                    UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
-                    UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
-                },
-                LiteralPatt::BigUInt { value } => match value {
-                    BigUInt::U256(_) => Ok(Type::U256(BigUInt::U256(U256::default()))),
-                    BigUInt::U512(_) => Ok(Type::U512(BigUInt::U512(U512::default()))),
-                },
-                LiteralPatt::Float { value } => match value {
-                    Float::F32(_) => Ok(Type::F32(Float::F32(F32::default()))),
-                    Float::F64(_) => Ok(Type::F64(Float::F64(F64::default()))),
-                },
-                LiteralPatt::Byte { .. } => Ok(Type::Byte(Byte::from(u8::default()))),
-                LiteralPatt::Bytes { value } => match value {
-                    Bytes::B2(_) => Ok(Type::B2(Bytes::B2(B2::default()))),
-                    Bytes::B4(_) => Ok(Type::B4(Bytes::B4(B4::default()))),
-                    Bytes::B8(_) => Ok(Type::B8(Bytes::B8(B8::default()))),
-                    Bytes::B16(_) => Ok(Type::B16(Bytes::B16(B16::default()))),
-                    Bytes::B32(_) => Ok(Type::B32(Bytes::B32(B32::default()))),
-                },
-                LiteralPatt::Hash { value } => match value {
-                    Hash::H160(_) => Ok(Type::H160(Hash::H160(H160::default()))),
-                    Hash::H256(_) => Ok(Type::H256(Hash::H256(H256::default()))),
-                    Hash::H512(_) => Ok(Type::H512(Hash::H512(H512::default()))),
-                },
-                LiteralPatt::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
-                LiteralPatt::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
-                LiteralPatt::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
-            },
-
-            Pattern::ReferencePatt(r) => Ok(Type::Reference {
-                reference_op: r.reference_op,
-                inner_type: Box::new(self.analyse_patt(&r.pattern)?),
-            }),
-
-            Pattern::GroupedPatt(g) => self.analyse_patt(&g.inner_pattern),
-
-            Pattern::RangePatt(r) => match (&r.from_pattern_opt, &r.to_pattern_opt) {
-                (None, None) => Ok(Type::UnitType(UnitType)),
-                (None, Some(to)) => {
-                    let to_type = self.analyse_patt(&to.clone())?;
-
-                    match to_type {
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_)
-                        | Type::Byte(_)
-                        | Type::Char(_) => Ok(to_type),
-                        _ => Err(SemanticErrorKind::UnexpectedType {
-                            expected: "numeric type, `byte` or `char`".to_string(),
-                            found: to_type,
-                        }),
-                    }
-                }
-                (Some(from), None) => {
-                    let from_type = self.analyse_patt(&from.clone())?;
-
-                    match from_type {
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_)
-                        | Type::Byte(_)
-                        | Type::Char(_) => Ok(from_type),
-                        _ => Err(SemanticErrorKind::UnexpectedType {
-                            expected: "numeric type, `byte` or `char`".to_string(),
-                            found: from_type,
-                        }),
-                    }
-                }
-                (Some(from), Some(to)) => {
-                    let from_type = self.analyse_patt(&from.clone())?;
-
-                    match from_type {
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_)
-                        | Type::Byte(_)
-                        | Type::Char(_) => (),
-                        _ => {
-                            return Err(SemanticErrorKind::UnexpectedType {
-                                expected: "numeric type, `byte` or `char`".to_string(),
-                                found: from_type,
-                            })
-                        }
-                    }
-
-                    let to_type = self.analyse_patt(&to.clone())?;
-
-                    match to_type {
-                        Type::I32(_)
-                        | Type::I64(_)
-                        | Type::U8(_)
-                        | Type::U16(_)
-                        | Type::U32(_)
-                        | Type::U64(_)
-                        | Type::U256(_)
-                        | Type::U512(_)
-                        | Type::Byte(_)
-                        | Type::Char(_) => (),
-                        _ => {
-                            return Err(SemanticErrorKind::UnexpectedType {
-                                expected: "numeric type, `byte` or `char`".to_string(),
-                                found: from_type,
-                            })
-                        }
-                    }
-
-                    if from_type == to_type {
-                        Ok(to_type)
-                    } else {
-                        Err(SemanticErrorKind::TypeMismatchValues {
-                            expected: from_type,
-                            found: to_type,
-                        })
-                    }
-                }
-            },
-
-            Pattern::TuplePatt(t) => {
-                let mut element_types: Vec<Type> = Vec::new();
-
-                for patt in t.tuple_patt_elements.elements.iter() {
-                    let ty = self.analyse_patt(patt)?;
-
-                    // TODO: if an element is a generic type, resolve it,
-                    // TODO: including checking if it implements its bound trait (where applicable)
-
-                    element_types.push(ty)
-                }
-
-                Ok(Type::Tuple(element_types))
+            (Type::Generic { name, bound_opt }, concrete) => {
+                self.unify_generic_with_concrete(&mut Type::Generic { name, bound_opt }, &concrete)
             }
 
-            Pattern::StructPatt(s) => {
-                let type_path = TypePath::from(s.struct_path.clone());
-
-                match self.lookup(&type_path).cloned() {
-                    Some(Symbol::Struct { struct_def, path }) => {
-                        let mut field_map: HashMap<Identifier, Type> = HashMap::new();
-
-                        let def_fields_opt = struct_def.fields_opt;
-                        let patt_fields_opt = s.struct_fields_opt.clone();
-
-                        if let Some(patt_fields) = patt_fields_opt {
-                            for patt_field in patt_fields {
-                                let field_name = patt_field.field_name.clone();
-                                let field_value = patt_field.field_value.clone();
-                                let field_type = self.analyse_patt(&field_value)?;
-
-                                // TODO: if a field is a generic type, resolve it,
-                                // TODO: including checking if it implements its bound trait (where applicable)
-
-                                field_map.insert(field_name, field_type);
-                            }
-                        }
-
-                        if let Some(ref def_fields) = def_fields_opt {
-                            if field_map.len() > def_fields.len() {
-                                return Err(SemanticErrorKind::StructArgCountMismatch {
-                                    struct_path: Identifier::from(type_path),
-                                    expected: def_fields.len(),
-                                    found: field_map.len(),
-                                });
-                            }
-
-                            let field_names = def_fields
-                                .into_iter()
-                                .cloned()
-                                .map(|sdf| sdf.field_name)
-                                .collect::<Vec<_>>();
-
-                            for (name, _) in field_map.iter() {
-                                if !field_names.contains(name) {
-                                    return Err(SemanticErrorKind::UnexpectedStructField {
-                                        field_name: struct_def.struct_name,
-                                        found: name.clone(),
-                                    });
-                                }
-                            }
-
-                            for def_field in def_fields {
-                                match field_map.get(&def_field.field_name) {
-                                    Some(patt_field_type) => {
-                                        if *patt_field_type != *def_field.field_type {
-                                            return Err(SemanticErrorKind::TypeMismatchVariable {
-                                                var_id: path.type_name,
-                                                expected: format!("`{}`", *def_field.field_type),
-                                                found: patt_field_type.clone(),
-                                            });
-                                        }
-                                    }
-
-                                    None => {
-                                        return Err(SemanticErrorKind::MissingStructField {
-                                            expected: format!(
-                                                "`{}: {}`",
-                                                &def_field.field_name, *def_field.field_type
-                                            ),
-                                        })
-                                    }
-                                }
-                            }
-                        }
-
-                        Ok(Type::UserDefined(path))
-                    }
-
-                    None => Err(SemanticErrorKind::UndefinedStruct {
-                        name: type_path.type_name,
-                    }),
-
-                    Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: type_path.type_name,
-                        expected: "struct".to_string(),
-                        found: format!("`{sym}`"),
-                    }),
+            (Type::GroupedType(grouped), matched) => {
+                if *grouped != matched {
+                    return Err(SemanticErrorKind::TypeMismatchInnerType {
+                        context: "grouped".to_string(),
+                        expected: format!("`{}`", grouped),
+                        found: matched,
+                    });
                 }
+
+                Ok(())
             }
 
-            Pattern::TupleStructPatt(ts) => {
-                let type_path = TypePath::from(ts.struct_path.clone());
-
-                match self.lookup(&type_path).cloned() {
-                    Some(Symbol::TupleStruct {
-                        tuple_struct_def,
-                        path,
-                    }) => {
-                        let elements_opt = ts.struct_elements_opt.clone();
-                        let fields_opt = tuple_struct_def.fields_opt;
-
-                        match (&elements_opt, &fields_opt) {
-                            (None, None) => Ok(Type::UnitType(UnitType)),
-
-                            (None, Some(fields)) => {
-                                Err(SemanticErrorKind::StructArgCountMismatch {
-                                    struct_path: Identifier::from(type_path),
-                                    expected: fields.len(),
-                                    found: 0,
-                                })
-                            }
-
-                            (Some(elements), None) => {
-                                Err(SemanticErrorKind::StructArgCountMismatch {
-                                    struct_path: Identifier::from(type_path),
-                                    expected: 0,
-                                    found: elements.len(),
-                                })
-                            }
-                            (Some(elements), Some(fields)) => {
-                                if elements.len() != fields.len() {
-                                    return Err(SemanticErrorKind::StructArgCountMismatch {
-                                        struct_path: Identifier::from(type_path),
-                                        expected: fields.len(),
-                                        found: elements.len(),
-                                    });
-                                }
-
-                                for (elem, field) in elements.iter().zip(fields) {
-                                    let elem_type = self.analyse_patt(&elem)?;
-                                    let field_type = *field.field_type.clone();
-
-                                    // TODO: if an element is a generic type, resolve it,
-                                    // TODO: including checking if it implements its bound trait (where applicable)
-
-                                    if elem_type != field_type {
-                                        return Err(SemanticErrorKind::TypeMismatchVariable {
-                                            var_id: tuple_struct_def.struct_name.clone(),
-                                            expected: format!("`{field_type}`"),
-                                            found: elem_type,
-                                        });
-                                    }
-                                }
-
-                                Ok(Type::UserDefined(path))
-                            }
-                        }
-                    }
-
-                    None => Err(SemanticErrorKind::UndefinedStruct {
-                        name: type_path.type_name,
-                    }),
-
-                    Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                        name: type_path.type_name,
-                        expected: "struct".to_string(),
-                        found: format!("`{sym}`"),
-                    }),
+            (
+                Type::Array {
+                    element_type: elem_type_a,
+                    num_elements: num_elems_a,
+                },
+                Type::Array {
+                    element_type: elem_type_b,
+                    num_elements: num_elems_b,
+                },
+            ) => {
+                if elem_type_a != elem_type_b {
+                    return Err(SemanticErrorKind::TypeMismatchArrayElems {
+                        expected: format!("`{elem_type_a}`"),
+                        found: *elem_type_b,
+                    });
                 }
+
+                if num_elems_a != num_elems_b {
+                    return Err(SemanticErrorKind::ArrayLengthMismatch {
+                        expected: num_elems_a.into(),
+                        found: num_elems_b.into(),
+                    });
+                }
+
+                Ok(())
             }
 
-            Pattern::WildcardPatt(_) => Ok(Type::InferredType(InferredType {
-                name: Identifier::from("_"),
-            })),
+            (Type::Tuple(elem_types_a), Type::Tuple(elem_types_b)) => {
+                if elem_types_a.len() != elem_types_b.len() {
+                    return Err(SemanticErrorKind::TupleLengthMismatch {
+                        expected: elem_types_a.len(),
+                        found: elem_types_b.len(),
+                    });
+                }
 
-            Pattern::RestPatt(_) => Ok(Type::InferredType(InferredType {
-                name: Identifier::from(".."),
-            })),
-
-            Pattern::OrPatt(o) => {
-                let first_patt_type = self.analyse_patt(&o.first_pattern.clone())?;
-
-                for patt in o.subsequent_patterns.iter() {
-                    let subsequent_patt_type = self.analyse_patt(patt)?;
-
-                    if subsequent_patt_type != first_patt_type {
-                        return Err(SemanticErrorKind::TypeMismatchOrPatt {
-                            expected: first_patt_type,
-                            found: subsequent_patt_type,
+                for (a, b) in elem_types_a.into_iter().zip(elem_types_b) {
+                    if a != b {
+                        return Err(SemanticErrorKind::TypeMismatchTupleElems {
+                            expected: a,
+                            found: b,
                         });
                     }
                 }
 
-                Ok(first_patt_type)
+                Ok(())
             }
 
-            Pattern::SomePatt(s) => {
-                let ty = self.analyse_patt(&s.pattern.clone().inner_pattern)?;
+            (Type::FunctionPtr(ptr_a), Type::FunctionPtr(ptr_b)) => {
+                match (ptr_a.params_opt, ptr_b.params_opt) {
+                    (None, None) => (),
+                    (None, Some(params_b)) => {
+                        return Err(SemanticErrorKind::ParamCountMismatch {
+                            expected: 0,
+                            found: params_b.len(),
+                        })
+                    }
+                    (Some(params_a), None) => {
+                        return Err(SemanticErrorKind::ParamCountMismatch {
+                            expected: params_a.len(),
+                            found: 0,
+                        })
+                    }
+                    (Some(params_a), Some(params_b)) => {
+                        if params_a.len() != params_b.len() {
+                            return Err(SemanticErrorKind::ParamCountMismatch {
+                                expected: params_a.len(),
+                                found: params_b.len(),
+                            });
+                        }
 
-                // TODO: if the inner type is a generic type, resolve it,
-                // TODO: including checking if it implements its bound trait (where applicable)
+                        for (param_a, param_b) in params_a.iter().zip(params_b) {
+                            match (param_a, param_b) {
+                                (
+                                    FunctionOrMethodParam::FunctionParam(func_param_a),
+                                    FunctionOrMethodParam::FunctionParam(func_param_b),
+                                ) => {
+                                    if *func_param_a != func_param_b {
+                                        return Err(SemanticErrorKind::TypeMismatchParam {
+                                            expected: *func_param_a.param_type.clone(),
+                                            found: *func_param_b.param_type,
+                                        });
+                                    }
+                                }
+                                (
+                                    FunctionOrMethodParam::FunctionParam(param_a),
+                                    FunctionOrMethodParam::MethodParam(param_b),
+                                ) => {
+                                    return Err(SemanticErrorKind::UnexpectedParam {
+                                        expected: format!("`{}`", param_a.param_type),
+                                        found: Identifier::from(&param_b.kw_self.to_string()),
+                                    })
+                                }
+                                (
+                                    FunctionOrMethodParam::MethodParam(param_a),
+                                    FunctionOrMethodParam::FunctionParam(param_b),
+                                ) => {
+                                    return Err(SemanticErrorKind::UnexpectedParam {
+                                        expected: format!("`{}`", param_a.kw_self),
+                                        found: Identifier::from(&format!("{}", param_b.param_type)),
+                                    })
+                                }
+                                (
+                                    FunctionOrMethodParam::MethodParam(self_param_a),
+                                    FunctionOrMethodParam::MethodParam(self_param_b),
+                                ) => {
+                                    match (
+                                        self_param_a.reference_op_opt,
+                                        self_param_b.reference_op_opt,
+                                    ) {
+                                        (None, None) => (),
+                                        (None, Some(_)) | (Some(_), None) => {
+                                            return Err(SemanticErrorKind::TypeMismatchSelfParam {
+                                                expected: format!("`{}`", self_param_a),
+                                                found: format!("`{}`", self_param_b),
+                                            });
+                                        }
+                                        (Some(ref_op_a), Some(ref_op_b)) => {
+                                            if ref_op_a != ref_op_b {
+                                                return Err(
+                                                    SemanticErrorKind::TypeMismatchSelfParam {
+                                                        expected: format!("`{}`", self_param_a),
+                                                        found: format!("`{}`", self_param_b),
+                                                    },
+                                                );
+                                            }
+                                        }
+                                    }
 
-                Ok(Type::Option {
-                    inner_type: Box::new(ty),
-                })
-            }
-
-            Pattern::NonePatt(_) => Ok(Type::Option {
-                inner_type: Box::new(Type::UnitType(UnitType)),
-            }),
-
-            Pattern::ResultPatt(r) => {
-                let ty = self.analyse_patt(&r.pattern.clone().inner_pattern)?;
-
-                // TODO: if any of the inner types is a generic type, resolve it,
-                // TODO: including checking if it implements its bound trait (where applicable)
-
-                match r.kw_ok_or_err.clone() {
-                    Keyword::Ok => Ok(Type::Result {
-                        ok_type: Box::new(ty),
-                        err_type: Box::new(Type::InferredType(InferredType {
-                            name: Identifier::from("_"),
-                        })),
-                    }),
-                    Keyword::Err => Ok(Type::Result {
-                        ok_type: Box::new(Type::InferredType(InferredType {
-                            name: Identifier::from("_"),
-                        })),
-                        err_type: Box::new(ty),
-                    }),
-                    keyword => Err(SemanticErrorKind::UnexpectedKeyword {
-                        expected: "`Ok` or `Err`".to_string(),
-                        found: keyword,
-                    }),
+                                    match (self_param_a.kw_self, self_param_b.kw_self) {
+                                        (Keyword::SelfKeyword, Keyword::SelfKeyword) => (),
+                                        (_, kw) => {
+                                            return Err(SemanticErrorKind::UnexpectedKeyword {
+                                                expected: Keyword::SelfKeyword.to_string(),
+                                                found: kw,
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
+
+                match (ptr_a.return_type_opt, ptr_b.return_type_opt) {
+                    (None, None) => (),
+                    (None, Some(ty)) => {
+                        if let Type::UnitType(UnitType) = *ty {
+                            ()
+                        } else {
+                            return Err(SemanticErrorKind::UnexpectedReturnType { found: *ty });
+                        }
+                    }
+                    (Some(ty), None) => {
+                        if let Type::UnitType(UnitType) = *ty {
+                            ()
+                        } else {
+                            return Err(SemanticErrorKind::MissingReturnType { expected: *ty });
+                        }
+                    }
+                    (Some(return_type_a), Some(return_type_b)) => {
+                        if return_type_a != return_type_b {
+                            return Err(SemanticErrorKind::TypeMismatchReturnType {
+                                expected: *return_type_a,
+                                found: *return_type_b,
+                            });
+                        }
+                    }
+                }
+
+                Ok(())
+            }
+
+            (
+                Type::Reference {
+                    reference_op: ref_op_a,
+                    inner_type: inner_type_a,
+                },
+                Type::Reference {
+                    reference_op: ref_op_b,
+                    inner_type: inner_type_b,
+                },
+            ) => {
+                if ref_op_a != ref_op_b {
+                    return Err(SemanticErrorKind::RefOperatorMismatch {
+                        expected: ref_op_a,
+                        found: ref_op_b,
+                    });
+                }
+
+                if inner_type_a != inner_type_b {
+                    return Err(SemanticErrorKind::TypeMismatchInnerType {
+                        context: "reference".to_string(),
+                        expected: format!("`{}{}`", ref_op_a, inner_type_a),
+                        found: *inner_type_b,
+                    });
+                }
+
+                Ok(())
+            }
+
+            (
+                Type::Vec {
+                    element_type: elem_type_a,
+                },
+                Type::Vec {
+                    element_type: elem_type_b,
+                },
+            ) => {
+                if elem_type_a != elem_type_b {
+                    return Err(SemanticErrorKind::TypeMismatchArrayElems {
+                        expected: format!("`{}`", elem_type_a),
+                        found: *elem_type_b,
+                    });
+                }
+
+                Ok(())
+            }
+
+            (
+                Type::Mapping {
+                    key_type: key_type_a,
+                    value_type: val_type_a,
+                },
+                Type::Mapping {
+                    key_type: key_type_b,
+                    value_type: val_type_b,
+                },
+            ) => {
+                if key_type_a != key_type_b {
+                    return Err(SemanticErrorKind::TypeMismatchMappingKey {
+                        expected: *key_type_a,
+                        found: *key_type_b,
+                    });
+                }
+
+                if val_type_a != val_type_b {
+                    return Err(SemanticErrorKind::TypeMismatchMappingValue {
+                        expected: *val_type_a,
+                        found: *val_type_b,
+                    });
+                }
+
+                Ok(())
+            }
+
+            (
+                Type::Option {
+                    inner_type: inner_type_a,
+                },
+                Type::Option {
+                    inner_type: inner_type_b,
+                },
+            ) => {
+                if inner_type_a != inner_type_b {
+                    return Err(SemanticErrorKind::TypeMismatchInnerType {
+                        context: "`Some` variant in `Option<T>`".to_string(),
+                        expected: format!("`{}`", inner_type_a),
+                        found: *inner_type_b,
+                    });
+                }
+
+                Ok(())
+            }
+
+            (
+                Type::Result {
+                    ok_type: ok_type_a,
+                    err_type: err_type_a,
+                },
+                Type::Result {
+                    ok_type: ok_type_b,
+                    err_type: err_type_b,
+                },
+            ) => {
+                if ok_type_a != ok_type_b {
+                    return Err(SemanticErrorKind::TypeMismatchInnerType {
+                        context: "`Ok` variant in `Result<T, E>`".to_string(),
+                        expected: format!("`{}`", ok_type_a),
+                        found: *ok_type_b,
+                    });
+                }
+
+                if err_type_a != err_type_b {
+                    return Err(SemanticErrorKind::TypeMismatchInnerType {
+                        context: "`Err` variant in `Result<T, E>`".to_string(),
+                        expected: format!("`{}`", err_type_a),
+                        found: *err_type_b,
+                    });
+                }
+
+                Ok(())
+            }
+
+            (Type::UserDefined(type_path_a), Type::UserDefined(type_path_b)) => {
+                if type_path_a != type_path_b {
+                    return Err(SemanticErrorKind::TypeMismatchUserDefined {
+                        expected: Identifier::from(type_path_a),
+                        found: Identifier::from(type_path_b),
+                    });
+                }
+
+                Ok(())
+            }
+
+            // TODO: handle other cases for concrete types (numeric, str, char, bool)
+            // TODO: e.g., casting `i32` as `i64` if needed, etc.
+            _ => Err(SemanticErrorKind::TypeMismatchUnification {
+                expected: Identifier::from(&type_a.to_string()),
+                found: Identifier::from(&type_b.to_string()),
+            }),
+        }
+    }
+
+    fn resolve_inferred_type(
+        &mut self,
+        inferred: &mut Type,
+        concrete: Type,
+    ) -> Result<(), SemanticErrorKind> {
+        if *inferred
+            == Type::InferredType(InferredType {
+                name: Identifier::from("_"),
+            })
+        {
+            *inferred = concrete;
+            Ok(())
+        } else if *inferred == concrete {
+            Ok(())
+        } else {
+            Err(SemanticErrorKind::UnexpectedType {
+                expected: inferred.to_string(),
+                found: concrete,
+            })
+        }
+    }
+
+    fn unify_generic_with_concrete(
+        &mut self,
+        generic_type: &mut Type,
+        concrete_type: &Type,
+    ) -> Result<(), SemanticErrorKind> {
+        match generic_type {
+            Type::Generic { name, bound_opt } => {
+                // check if the concrete type satisfies the bounds of the generic type
+                if let Some(bound_path) = bound_opt {
+                    let bound_trait = self.lookup_trait(&bound_path)?;
+
+                    // check if the concrete type implements the required trait
+                    if !self.type_satisfies_bound(concrete_type, &bound_trait) {
+                        return Err(SemanticErrorKind::TypeBoundNotSatisfied {
+                            generic_name: name.clone(),
+                            expected_bound: Identifier::from(bound_path.clone()),
+                            found_type: concrete_type.clone(),
+                        });
+                    }
+                }
+
+                // if bounds are satisfied, perform the substitution
+                self.substitute_generic_with_concrete(name, concrete_type);
+                Ok(())
+            }
+
+            _ => self.unify_types(concrete_type, generic_type),
+        }
+    }
+
+    /// Add a trait implementation to the type table.
+    fn add_trait_implementation(&mut self, concrete_type: TypePath, trait_impl: TraitImplDef) {
+        self.type_table
+            .entry(concrete_type)
+            .or_insert_with(Vec::new)
+            .push(trait_impl);
+    }
+
+    /// Lookup logic to find the trait definition in the current scope
+    fn lookup_trait(&mut self, bound_path: &TypePath) -> Result<TraitDef, SemanticErrorKind> {
+        if let Some(Symbol::Trait { trait_def, .. }) = self.lookup(bound_path) {
+            Ok(trait_def.clone())
+        } else {
+            Err(SemanticErrorKind::UndefinedSymbol {
+                name: bound_path.type_name.to_string(),
+            })
+        }
+    }
+
+    /// Replace all occurrences of `generic_name` with `concrete_type`.
+    fn substitute_generic_with_concrete(
+        &mut self,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        let mut stack = Rc::new(&self.scope_stack);
+        let stack_mut = Rc::make_mut(&mut stack);
+
+        // iterate through the scope stack and substitute generics in all types.
+        for scope in stack_mut.clone().iter_mut() {
+            for symbol in scope.symbols.values_mut() {
+                self.substitute_in_symbol(symbol, generic_name, concrete_type);
             }
         }
+    }
+
+    fn substitute_in_symbol(
+        &mut self,
+        symbol: &mut Symbol,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        match symbol {
+            Symbol::Variable { var_type, .. } => {
+                self.substitute_in_type(var_type, generic_name, concrete_type);
+            }
+            Symbol::Struct { struct_def, .. } => {
+                self.substitute_in_struct_def(struct_def, generic_name, concrete_type);
+            }
+            // TODO: tuple struct
+            // TODO: enum
+            // TODO: trait
+            Symbol::Function { function, .. } => {
+                self.substitute_in_function(function, generic_name, concrete_type);
+            }
+            _ => {}
+        }
+    }
+
+    fn substitute_in_type(
+        &mut self,
+        ty: &mut Type,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        match ty {
+            Type::Generic { name, .. } if name == generic_name => {
+                *ty = concrete_type.clone();
+            }
+            // TODO: grouped
+            Type::Array { element_type, .. } => {
+                self.substitute_in_type(element_type, generic_name, concrete_type);
+            }
+            Type::Tuple(element_types) => {
+                for elem_type in element_types {
+                    self.substitute_in_type(elem_type, generic_name, concrete_type);
+                }
+            }
+            // TODO: function pointer
+            Type::Reference { inner_type, .. } => {
+                self.substitute_in_type(inner_type, generic_name, concrete_type);
+            }
+            Type::Vec { element_type } => {
+                self.substitute_in_type(element_type, generic_name, concrete_type);
+            }
+            // TODO: mapping
+            Type::Option { inner_type } => {
+                self.substitute_in_type(inner_type, generic_name, concrete_type);
+            }
+            Type::Result { ok_type, err_type } => {
+                self.substitute_in_type(ok_type, generic_name, concrete_type);
+                self.substitute_in_type(err_type, generic_name, concrete_type);
+            }
+            _ => {}
+        }
+    }
+
+    fn substitute_in_struct_def(
+        &mut self,
+        struct_def: &mut StructDef,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(fields) = struct_def.fields_opt.as_mut() {
+            for field in fields {
+                self.substitute_in_type(&mut field.field_type, generic_name, concrete_type);
+            }
+        }
+    }
+
+    fn substitute_in_function(
+        &mut self,
+        function: &mut FunctionItem,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(params) = function.params_opt.as_mut() {
+            for param in params {
+                self.substitute_in_type(&mut param.param_type(), generic_name, concrete_type);
+            }
+        }
+
+        if let Some(return_type) = function.return_type_opt.as_mut() {
+            self.substitute_in_type(return_type, generic_name, concrete_type);
+        }
+    }
+
+    /// Checks if a given type satisfies a specific trait bound.
+    fn type_satisfies_bound(&self, concrete_type: &Type, bound_trait: &TraitDef) -> bool {
+        // retrieve all the trait implementations for the concrete type from the symbol table
+        // or registry
+        let trait_implementations = self.get_trait_implementations(concrete_type);
+
+        // check if any of the implementations match the required trait
+        for trait_impl in trait_implementations.iter() {
+            if self.trait_matches(trait_impl, bound_trait) {
+                return true;
+            }
+        }
+
+        // if no matching trait implementations were found, the bound is not satisfied
+        false
+    }
+
+    fn get_trait_implementations(&self, concrete_type: &Type) -> Vec<TraitImplDef> {
+        // convert concrete type to its `TypePath` representation
+        if let Some(type_path) = self.resolve_type_path(concrete_type).as_ref() {
+            // look up the trait implementations in the type table
+            if let Some(trait_impls) = self.type_table.get(type_path) {
+                return trait_impls.clone();
+            }
+        }
+
+        // if no implementations are found, return an empty vector
+        Vec::new()
+    }
+
+    /// Helper function to resolve `Type` to `TypePath`.
+    fn resolve_type_path(&self, ty: &Type) -> Option<TypePath> {
+        match ty {
+            Type::UserDefined(type_path) => Some(type_path.clone()),
+            _ => None,
+        }
+    }
+
+    /// Check if the trait implementation matches the required trait.
+    fn trait_matches(&self, trait_impl: &TraitImplDef, bound_trait: &TraitDef) -> bool {
+        // TODO: check the path and the associated generic parameters
+        // TODO: compare full paths and resolve them properly.
+        trait_impl.implemented_trait_path.type_name == bound_trait.trait_name
     }
 
     fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {
@@ -3129,14 +1952,6 @@ impl SemanticAnalyser {
 
         self.errors.push(error);
     }
-}
-
-fn wrap_into_expression<T>(value: T) -> Expression
-where
-    T: Clone + fmt::Debug + TryFrom<Expression>,
-    Expression: From<T>,
-{
-    Expression::from(value.clone())
 }
 
 /// Attempt to unify the types of two `Result` types, specifically between an inferred type

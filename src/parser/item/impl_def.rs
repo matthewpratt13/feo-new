@@ -54,7 +54,7 @@ impl ParseDefItem for InherentImplDef {
         let generic_params_opt = match (generic_declaration_opt, parse_generic_params(parser)?) {
             (None, None) => None,
             (None, Some(ga)) => {
-                parser.log_error(ParserErrorKind::UndeclaredGenerics {
+                parser.log_error(ParserErrorKind::UndeclaredGenericParams {
                     found: format!("{:?}", ga.params),
                 });
 
@@ -135,7 +135,7 @@ impl ParseDefItem for TraitImplDef {
             match (generic_declaration_opt, parse_generic_params(parser)?) {
                 (None, None) => None,
                 (None, Some(ga)) => {
-                    parser.log_error(ParserErrorKind::UndeclaredGenerics {
+                    parser.log_error(ParserErrorKind::UndeclaredGenericParams {
                         found: format!("{:?}", ga.params),
                     });
 

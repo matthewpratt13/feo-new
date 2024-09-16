@@ -39,6 +39,17 @@ impl From<usize> for UInt {
     }
 }
 
+impl From<UInt> for usize {
+    fn from(value: UInt) -> Self {
+        match value {
+            UInt::U8(u) => u as usize,
+            UInt::U16(u) => u as usize,
+            UInt::U32(u) => u as usize,
+            UInt::U64(u) => u as usize,
+        }
+    }
+}
+
 impl fmt::Display for UInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -348,7 +359,7 @@ impl fmt::Display for InferredType {
 }
 
 /// Unit struct that represents the `Self` type.
-#[derive(Debug, Clone, PartialEq, Hash, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Hash, Eq, PartialOrd, Ord)]
 pub struct SelfType;
 
 impl fmt::Display for SelfType {
