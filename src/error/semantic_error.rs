@@ -90,7 +90,7 @@ pub enum SemanticErrorKind {
         found: Type,
     },
 
-    TypeMismatchArray {
+    TypeMismatchArrayElems {
         expected: String,
         found: Type,
     },
@@ -103,6 +103,12 @@ pub enum SemanticErrorKind {
     TypeMismatchDeclaredType {
         actual_type: Type,
         declared_type: Type,
+    },
+
+    TypeMismatchInnerType {
+        context: String,
+        expected: String,
+        found: Type,
     },
 
     TypeMismatchMappingKey {
@@ -131,11 +137,6 @@ pub enum SemanticErrorKind {
         found: Type,
     },
 
-    TypeMismatchRefType {
-        expected: Type,
-        found: Type,
-    },
-
     TypeMismatchResultExpr {
         variant: Keyword,
         expected: Type,
@@ -152,7 +153,7 @@ pub enum SemanticErrorKind {
         found: String,
     },
 
-    TypeMismatchTuple {
+    TypeMismatchTupleElems {
         expected: Type,
         found: Type,
     },
@@ -260,10 +261,10 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ArrayLengthMismatch { expected, found } => {
                 write!(f, "array length mismatch. Expected {expected} elements, found {found}")
             }
-            SemanticErrorKind::ConstantReassignment{ name } => {
+            SemanticErrorKind::ConstantReassignment { name } => {
                 write!(f, "cannot reassign constant `{name}`")
             }
-            SemanticErrorKind::FuncArgCountMismatch {function_path,  expected, found } => {
+            SemanticErrorKind::FuncArgCountMismatch { function_path,  expected, found } => {
                 write!(
                     f,
                     "unexpected number of arguments given for function `{function_path}()`. Expected {expected} arguments, found {found}"
@@ -316,7 +317,7 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "argument `{name}` type does not match defined parameter type. Expected `{expected}`, found `{found}`"
             ),
-            SemanticErrorKind::TypeMismatchArray { expected, found } => write!(
+            SemanticErrorKind::TypeMismatchArrayElems { expected, found } => write!(
                 f,
                 "array element types do not match. Expected {expected}, found `{found}`"
             ),
@@ -328,8 +329,10 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "declared type `{declared_type}` does not match value's type: `{actual_type}`"
             ),
-            SemanticErrorKind::TypeMismatchMappingKey { expected, found } => write!(f, "unexpected mapping key type. Expected {expected}, found {found}"), 
-            
+            SemanticErrorKind::TypeMismatchInnerType { context, expected, found } => write!(f, "inner type mismatch for {context} type. Expected {expected}, found {found}"),
+
+            SemanticErrorKind::TypeMismatchMappingKey { expected, found } => write!(f, "unexpected mapping key type. Expected {expected}, found {found}"),
+
             SemanticErrorKind::TypeMismatchMappingValue { expected, found } => write!(f, "unexpected mapping value type. Expected {expected}, found {found}"),
 
             SemanticErrorKind::TypeMismatchMatchExpr { loc, expected, found } => write!(
@@ -342,8 +345,6 @@ impl fmt::Display for SemanticErrorKind {
             ),
             SemanticErrorKind::TypeMismatchParam { expected, found } => write!(f, "function parameters do not match. Expected `{expected}`, found `{found}`"),
 
-            SemanticErrorKind::TypeMismatchRefType { expected, found } => write!(f, "type mismatch between referenced types. Expected `{expected}`, found `{found}`"),
-
             SemanticErrorKind::TypeMismatchResultExpr { variant, expected, found } => write!(
                 f,
                 "type does not match expected `{variant}` type. Expected `{expected}`, found `{found}"
@@ -353,9 +354,9 @@ impl fmt::Display for SemanticErrorKind {
                 "value type does not match return type. Expected `{expected}`, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchSelfParam { expected, found } => {
-                write!(f, "type mismatch for `self` parameters. Expected `{expected}`, found `{found}`")
+                write!(f, "type mismatch between `self` parameters. Expected {expected}, found {found}")
             },
-            SemanticErrorKind::TypeMismatchTuple { expected, found } => write!(
+            SemanticErrorKind::TypeMismatchTupleElems { expected, found } => write!(
                 f,
                 "tuple element types do not match. Expected `{expected}`, found `{found}`"
             ),

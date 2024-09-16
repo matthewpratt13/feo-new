@@ -990,7 +990,7 @@ pub(crate) fn analyse_expr(
                         analyser.unify_types(&element_type, &mut first_element_type)?;
 
                         if element_type != first_element_type {
-                            return Err(SemanticErrorKind::TypeMismatchArray {
+                            return Err(SemanticErrorKind::TypeMismatchArrayElems {
                                 expected: format!("`{first_element_type}`"),
                                 found: element_type,
                             });
@@ -1413,7 +1413,7 @@ pub(crate) fn analyse_expr(
                         *element_type
                     }
                     _ => {
-                        return Err(SemanticErrorKind::TypeMismatchArray {
+                        return Err(SemanticErrorKind::TypeMismatchArrayElems {
                             expected: "iterable type".to_string(),
                             found: iter_type,
                         })
@@ -1421,7 +1421,7 @@ pub(crate) fn analyse_expr(
                 },
 
                 _ => {
-                    return Err(SemanticErrorKind::TypeMismatchArray {
+                    return Err(SemanticErrorKind::TypeMismatchArrayElems {
                         expected: "iterable type".to_string(),
                         found: iter_type,
                     });

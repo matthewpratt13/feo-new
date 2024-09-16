@@ -192,7 +192,7 @@ pub(crate) struct SelfParam {
 
 impl fmt::Display for SelfParam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}{}", self.reference_op_opt, self.kw_self)
+        write!(f, "{:?}{}", self.reference_op_opt.unwrap_or_default(), self.kw_self)
     }
 }
 

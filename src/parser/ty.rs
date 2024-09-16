@@ -272,10 +272,7 @@ impl fmt::Display for Type {
             Type::Reference {
                 reference_op,
                 inner_type,
-            } => match reference_op {
-                ReferenceOp::Borrow => write!(f, "{}{}", reference_op, *inner_type),
-                ReferenceOp::MutableBorrow => write!(f, "{} {}", reference_op, *inner_type),
-            },
+            } => write!(f, "{}{}", reference_op, *inner_type),
             Type::SelfType(_) => write!(f, "Self"),
             Type::InferredType(_) => write!(f, "_"),
             Type::Vec { element_type } => write!(f, "Vec<{}>", *element_type),

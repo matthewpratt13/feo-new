@@ -1398,9 +1398,10 @@ impl SemanticAnalyser {
 
             (Type::GroupedType(grouped), matched) => {
                 if *grouped != matched {
-                    return Err(SemanticErrorKind::TypeMismatchUnification {
-                        expected: Identifier::from(&type_a.to_string()),
-                        found: Identifier::from(&type_b.to_string()),
+                    return Err(SemanticErrorKind::TypeMismatchInnerType {
+                        context: "grouped".to_string(),
+                        expected: format!("`{}`", grouped),
+                        found: matched,
                     });
                 }
 
@@ -1418,7 +1419,7 @@ impl SemanticAnalyser {
                 },
             ) => {
                 if elem_type_a != elem_type_b {
-                    return Err(SemanticErrorKind::TypeMismatchArray {
+                    return Err(SemanticErrorKind::TypeMismatchArrayElems {
                         expected: format!("`{elem_type_a}`"),
                         found: *elem_type_b,
                     });
@@ -1444,7 +1445,7 @@ impl SemanticAnalyser {
 
                 for (a, b) in elem_types_a.into_iter().zip(elem_types_b) {
                     if a != b {
-                        return Err(SemanticErrorKind::TypeMismatchTuple {
+                        return Err(SemanticErrorKind::TypeMismatchTupleElems {
                             expected: a,
                             found: b,
                         });
@@ -1518,20 +1519,17 @@ impl SemanticAnalyser {
                                     ) {
                                         (None, None) => (),
                                         (None, Some(_)) | (Some(_), None) => {
-                                            return Err(SemanticErrorKind::UnexpectedParam {
+                                            return Err(SemanticErrorKind::TypeMismatchSelfParam {
                                                 expected: format!("`{}`", self_param_a),
-                                                found: Identifier::from(&format!(
-                                                    "{}",
-                                                    self_param_b
-                                                )),
-                                            })
+                                                found: format!("`{}`", self_param_b),
+                                            });
                                         }
                                         (Some(ref_op_a), Some(ref_op_b)) => {
                                             if ref_op_a != ref_op_b {
                                                 return Err(
                                                     SemanticErrorKind::TypeMismatchSelfParam {
-                                                        expected: self_param_a.to_string(),
-                                                        found: self_param_b.to_string(),
+                                                        expected: format!("`{}`", self_param_a),
+                                                        found: format!("`{}`", self_param_b),
                                                     },
                                                 );
                                             }
@@ -1556,11 +1554,19 @@ impl SemanticAnalyser {
                 match (ptr_a.return_type_opt, ptr_b.return_type_opt) {
                     (None, None) => (),
                     (None, Some(ty)) => {
-                        return Err(SemanticErrorKind::UnexpectedReturnType { found: *ty })
+                        if let Type::UnitType(UnitType) = *ty {
+                            ()
+                        } else {
+                            return Err(SemanticErrorKind::UnexpectedReturnType { found: *ty });
+                        }
                     }
                     (Some(ty), None) => {
-                        return Err(SemanticErrorKind::MissingReturnType { expected: *ty })
-                    } // missing return type
+                        if let Type::UnitType(UnitType) = *ty {
+                            ()
+                        } else {
+                            return Err(SemanticErrorKind::MissingReturnType { expected: *ty });
+                        }
+                    }
                     (Some(return_type_a), Some(return_type_b)) => {
                         if return_type_a != return_type_b {
                             return Err(SemanticErrorKind::TypeMismatchReturnType {
@@ -1592,8 +1598,9 @@ impl SemanticAnalyser {
                 }
 
                 if inner_type_a != inner_type_b {
-                    return Err(SemanticErrorKind::TypeMismatchRefType {
-                        expected: *inner_type_a,
+                    return Err(SemanticErrorKind::TypeMismatchInnerType {
+                        context: "reference".to_string(),
+                        expected: format!("`{}{}`", ref_op_a, inner_type_a),
                         found: *inner_type_b,
                     });
                 }
@@ -1610,7 +1617,7 @@ impl SemanticAnalyser {
                 },
             ) => {
                 if elem_type_a != elem_type_b {
-                    return Err(SemanticErrorKind::TypeMismatchArray {
+                    return Err(SemanticErrorKind::TypeMismatchArrayElems {
                         expected: format!("`{}`", elem_type_a),
                         found: *elem_type_b,
                     });
@@ -1655,8 +1662,11 @@ impl SemanticAnalyser {
                 },
             ) => {
                 if inner_type_a != inner_type_b {
-                    // inner type mismatch
-                    todo!()
+                    return Err(SemanticErrorKind::TypeMismatchInnerType {
+                        context: "`Some` variant in `Option<T>`".to_string(),
+                        expected: format!("`{}`", inner_type_a),
+                        found: *inner_type_b,
+                    });
                 }
 
                 Ok(())
@@ -1673,11 +1683,19 @@ impl SemanticAnalyser {
                 },
             ) => {
                 if ok_type_a != ok_type_b {
-                    // result type  mismatch (`Ok` variant)
+                    return Err(SemanticErrorKind::TypeMismatchInnerType {
+                        context: "`Ok` variant in `Result<T, E>`".to_string(),
+                        expected: format!("`{}`", ok_type_a),
+                        found: *ok_type_b,
+                    });
                 }
 
                 if err_type_a != err_type_b {
-                    // result type mismatch (`Err` variant)
+                    return Err(SemanticErrorKind::TypeMismatchInnerType {
+                        context: "`Err` variant in `Result<T, E>`".to_string(),
+                        expected: format!("`{}`", err_type_a),
+                        found: *err_type_b,
+                    });
                 }
 
                 Ok(())
@@ -1693,13 +1711,11 @@ impl SemanticAnalyser {
             }
 
             // TODO: handle other cases for concrete types (numeric, str, char, bool)
-            _ => {
-                // check if one is a generic and substitute, or handle type mismatch
-                Err(SemanticErrorKind::TypeMismatchUnification {
-                    expected: Identifier::from(&type_a.to_string()),
-                    found: Identifier::from(&type_b.to_string()),
-                })
-            }
+            
+            _ => Err(SemanticErrorKind::TypeMismatchUnification {
+                expected: Identifier::from(&type_a.to_string()),
+                found: Identifier::from(&type_b.to_string()),
+            }),
         }
     }
 
