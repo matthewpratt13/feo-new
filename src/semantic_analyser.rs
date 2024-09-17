@@ -1712,8 +1712,6 @@ impl SemanticAnalyser {
                 Ok(())
             }
 
-            // TODO: handle other cases for concrete types (numeric, str, char, bool)
-            // TODO: e.g., casting `i32` as `i64` if needed, etc.
             _ => Err(SemanticErrorKind::TypeMismatchUnification {
                 expected: Identifier::from(&type_a.to_string()),
                 found: Identifier::from(&type_b.to_string()),
