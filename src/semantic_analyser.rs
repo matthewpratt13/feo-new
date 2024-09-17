@@ -1840,7 +1840,7 @@ impl SemanticAnalyser {
             Type::Generic { name, .. } if name == generic_name => {
                 *ty = concrete_type.clone();
             }
-            // TODO: grouped
+            Type::GroupedType(inner_type) => *ty = *inner_type.clone(),
             Type::Array { element_type, .. } => {
                 self.substitute_in_type(element_type, generic_name, concrete_type);
             }
