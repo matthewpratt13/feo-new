@@ -428,7 +428,7 @@ pub(crate) fn analyse_expr(
 
             let rhs_type = analyse_expr(analyser, &wrap_into_expression(*b.rhs.clone()), root)?;
 
-            analyse_binary(&lhs_type, &rhs_type)
+            resolve_binary(&lhs_type, &rhs_type)
         }
 
         Expression::Comparison(c) => {
@@ -436,7 +436,7 @@ pub(crate) fn analyse_expr(
 
             let rhs_type = analyse_expr(analyser, &wrap_into_expression(c.rhs.clone()), root)?;
 
-            analyse_binary(&lhs_type, &rhs_type)
+            resolve_binary(&lhs_type, &rhs_type)
         }
 
         Expression::Grouped(g) => analyse_expr(analyser, &g.inner_expression, root),
@@ -580,6 +580,7 @@ pub(crate) fn analyse_expr(
             let value_type = analyse_expr(analyser, &wrap_into_expression(ca.rhs.clone()), root)?;
 
             let assignee_as_path_expr = PathExpr::from(assignee);
+
             let assignee_path = analyser.check_path(
                 &TypePath::from(assignee_as_path_expr),
                 root,
@@ -587,7 +588,7 @@ pub(crate) fn analyse_expr(
             )?;
 
             match analyser.lookup(&assignee_path) {
-                Some(Symbol::Variable { .. }) => analyse_binary(&assignee_type, &value_type),
+                Some(Symbol::Variable { .. }) => resolve_binary(&assignee_type, &value_type),
 
                 Some(Symbol::Constant { constant_name, .. }) => {
                     Err(SemanticErrorKind::ConstantReassignment {
@@ -1224,7 +1225,7 @@ pub(crate) fn analyse_expr(
     }
 }
 
-fn analyse_binary(lhs_type: &Type, rhs_type: &Type) -> Result<Type, SemanticErrorKind> {
+fn resolve_binary(lhs_type: &Type, rhs_type: &Type) -> Result<Type, SemanticErrorKind> {
     match (lhs_type, rhs_type) {
         (Type::I32(_), Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
             Ok(Type::I32(Int::I32(i32::default())))
