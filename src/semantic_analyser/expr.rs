@@ -529,7 +529,6 @@ pub(crate) fn analyse_expr(
             }
         },
 
-        // TODO: check this logic
         Expression::Assignment(a) => {
             let assignee = wrap_into_expression(a.lhs.clone());
             let mut assignee_type = analyse_expr(analyser, &assignee, root)?;
@@ -537,13 +536,6 @@ pub(crate) fn analyse_expr(
             let value_type = analyse_expr(analyser, &wrap_into_expression(a.rhs.clone()), root)?;
 
             analyser.unify_types(&value_type, &mut assignee_type)?;
-
-            // if value_type != assignee_type {
-            //     return Err(SemanticErrorKind::TypeMismatchValues {
-            //         expected: assignee_type,
-            //         found: value_type,
-            //     });
-            // }
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
@@ -581,7 +573,6 @@ pub(crate) fn analyse_expr(
             }
         }
 
-        // TODO: check this logic
         Expression::CompoundAssignment(ca) => {
             let assignee = wrap_into_expression(ca.lhs.clone());
             let assignee_type = analyse_expr(analyser, &assignee, root)?;
