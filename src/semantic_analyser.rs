@@ -15,10 +15,11 @@ mod tests;
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, EnumDef, EnumVariantStruct, EnumVariantTupleStruct,
-        EnumVariantType, Expression, FunctionItem, FunctionOrMethodParam, Identifier, ImportDecl,
-        InferredType, InherentImplItem, Item, Keyword, ModuleItem, SelfType, Statement, StructDef,
-        TraitDef, TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField,
-        Type, TypePath, UnitType, Visibility,
+        EnumVariantType, Expression, FunctionItem, FunctionOrMethodParam, FunctionParam,
+        Identifier, ImportDecl, InferredType, InherentImplDef, InherentImplItem, Item, Keyword,
+        ModuleItem, SelfType, Statement, StaticVarDecl, StructDef, StructDefField, TraitDef,
+        TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type,
+        TypePath, UnitType, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -1889,11 +1890,10 @@ impl SemanticAnalyser {
                 if let Some(params) = ptr.params_opt.as_mut() {
                     for param in params {
                         match param {
-                            FunctionOrMethodParam::FunctionParam(fp) => self.substitute_in_type(
-                                &mut fp.param_type,
-                                generic_name,
-                                concrete_type,
-                            ),
+                            FunctionOrMethodParam::FunctionParam(FunctionParam {
+                                param_type,
+                                ..
+                            }) => self.substitute_in_type(param_type, generic_name, concrete_type),
                             FunctionOrMethodParam::MethodParam(_) => (),
                         }
                     }
@@ -1937,8 +1937,8 @@ impl SemanticAnalyser {
         concrete_type: &Type,
     ) {
         if let Some(fields) = struct_def.fields_opt.as_mut() {
-            for field in fields {
-                self.substitute_in_type(&mut field.field_type, generic_name, concrete_type);
+            for StructDefField { field_type, .. } in fields {
+                self.substitute_in_type(field_type, generic_name, concrete_type);
             }
         }
     }
@@ -1950,8 +1950,8 @@ impl SemanticAnalyser {
         concrete_type: &Type,
     ) {
         if let Some(fields) = tuple_struct_def.fields_opt.as_mut() {
-            for field in fields {
-                self.substitute_in_type(&mut field.field_type, generic_name, concrete_type);
+            for TupleStructDefField { field_type, .. } in fields {
+                self.substitute_in_type(field_type, generic_name, concrete_type);
             }
         }
     }
@@ -1966,12 +1966,8 @@ impl SemanticAnalyser {
             if let Some(ty) = variant.variant_type_opt.as_mut() {
                 match ty {
                     EnumVariantType::Struct(EnumVariantStruct { struct_fields }) => {
-                        for field in struct_fields {
-                            self.substitute_in_type(
-                                &mut field.field_type,
-                                generic_name,
-                                concrete_type,
-                            );
+                        for StructDefField { field_type, .. } in struct_fields {
+                            self.substitute_in_type(field_type, generic_name, concrete_type);
                         }
                     }
                     EnumVariantType::TupleStruct(EnumVariantTupleStruct { element_types }, ..) => {
@@ -1991,17 +1987,16 @@ impl SemanticAnalyser {
         concrete_type: &Type,
     ) {
         if let Some(items) = trait_def.trait_items_opt.as_mut() {
-            for item in items.iter_mut() {
+            for item in items {
                 match item {
                     TraitDefItem::AliasDecl(AliasDecl {
                         original_type_opt, ..
                     }) => {
                         self.substitute_opt_type(original_type_opt, generic_name, concrete_type);
                     }
-                    TraitDefItem::ConstantDecl(ConstantDecl {
-                        ref mut constant_type,
-                        ..
-                    }) => self.substitute_in_type(constant_type, generic_name, concrete_type),
+                    TraitDefItem::ConstantDecl(ConstantDecl { constant_type, .. }) => {
+                        self.substitute_in_type(constant_type, generic_name, concrete_type)
+                    }
                     TraitDefItem::FunctionItem(function_item) => {
                         self.substitute_in_function(function_item, generic_name, concrete_type)
                     }
@@ -2036,21 +2031,15 @@ impl SemanticAnalyser {
         if let Some(items) = module.items_opt.as_mut() {
             for item in items {
                 match item {
-                    Item::AliasDecl(alias_decl) => self.substitute_opt_type(
-                        &mut alias_decl.original_type_opt,
-                        generic_name,
-                        concrete_type,
-                    ),
-                    Item::ConstantDecl(constant_decl) => self.substitute_in_type(
-                        &mut constant_decl.constant_type,
-                        generic_name,
-                        concrete_type,
-                    ),
-                    Item::StaticVarDecl(static_var_decl) => self.substitute_in_type(
-                        &mut static_var_decl.var_type,
-                        generic_name,
-                        concrete_type,
-                    ),
+                    Item::AliasDecl(AliasDecl {
+                        original_type_opt, ..
+                    }) => self.substitute_opt_type(original_type_opt, generic_name, concrete_type),
+                    Item::ConstantDecl(ConstantDecl { constant_type, .. }) => {
+                        self.substitute_in_type(constant_type, generic_name, concrete_type)
+                    }
+                    Item::StaticVarDecl(StaticVarDecl { var_type, .. }) => {
+                        self.substitute_in_type(var_type, generic_name, concrete_type)
+                    }
                     Item::ModuleItem(module) => {
                         self.substitute_in_module(module, generic_name, concrete_type)
                     }
@@ -2071,16 +2060,21 @@ impl SemanticAnalyser {
                     Item::FunctionItem(function) => {
                         self.substitute_in_function(function, generic_name, concrete_type)
                     }
-                    Item::InherentImplDef(inherent_impl_def) => {
-                        if let Some(assoc_items) = inherent_impl_def.associated_items_opt.as_mut() {
+                    Item::InherentImplDef(InherentImplDef {
+                        associated_items_opt,
+                        ..
+                    }) => {
+                        if let Some(assoc_items) = associated_items_opt.as_mut() {
                             for item in assoc_items {
                                 match item {
-                                    InherentImplItem::ConstantDecl(constant_decl) => self
-                                        .substitute_in_type(
-                                            &mut constant_decl.constant_type,
-                                            generic_name,
-                                            concrete_type,
-                                        ),
+                                    InherentImplItem::ConstantDecl(ConstantDecl {
+                                        constant_type,
+                                        ..
+                                    }) => self.substitute_in_type(
+                                        constant_type,
+                                        generic_name,
+                                        concrete_type,
+                                    ),
                                     InherentImplItem::FunctionItem(function) => self
                                         .substitute_in_function(
                                             function,
@@ -2091,22 +2085,29 @@ impl SemanticAnalyser {
                             }
                         }
                     }
-                    Item::TraitImplDef(trait_impl_def) => {
-                        if let Some(assoc_items) = trait_impl_def.associated_items_opt.as_mut() {
+                    Item::TraitImplDef(TraitImplDef {
+                        associated_items_opt,
+                        ..
+                    }) => {
+                        if let Some(assoc_items) = associated_items_opt.as_mut() {
                             for item in assoc_items {
                                 match item {
-                                    TraitImplItem::AliasDecl(alias_decl) => self
-                                        .substitute_opt_type(
-                                            &mut alias_decl.original_type_opt,
-                                            generic_name,
-                                            concrete_type,
-                                        ),
-                                    TraitImplItem::ConstantDecl(constant_decl) => self
-                                        .substitute_in_type(
-                                            &mut constant_decl.constant_type,
-                                            generic_name,
-                                            concrete_type,
-                                        ),
+                                    TraitImplItem::AliasDecl(AliasDecl {
+                                        original_type_opt,
+                                        ..
+                                    }) => self.substitute_opt_type(
+                                        original_type_opt,
+                                        generic_name,
+                                        concrete_type,
+                                    ),
+                                    TraitImplItem::ConstantDecl(ConstantDecl {
+                                        constant_type,
+                                        ..
+                                    }) => self.substitute_in_type(
+                                        constant_type,
+                                        generic_name,
+                                        concrete_type,
+                                    ),
                                     TraitImplItem::FunctionItem(function) => self
                                         .substitute_in_function(
                                             function,
@@ -2130,8 +2131,8 @@ impl SemanticAnalyser {
         let trait_implementations = self.get_trait_implementations(concrete_type);
 
         // check if any of the implementations match the required trait
-        for trait_impl in trait_implementations.iter() {
-            if self.trait_matches(trait_impl, bound_trait) {
+        for trait_impl in trait_implementations {
+            if self.trait_matches(&trait_impl, bound_trait) {
                 return true;
             }
         }
@@ -2142,9 +2143,9 @@ impl SemanticAnalyser {
 
     fn get_trait_implementations(&self, concrete_type: &Type) -> Vec<TraitImplDef> {
         // convert concrete type to its `TypePath` representation
-        if let Some(type_path) = self.resolve_type_path(concrete_type).as_ref() {
+        if let Some(type_path) = self.resolve_type_path(concrete_type) {
             // look up the trait implementations in the type table
-            if let Some(trait_impls) = self.type_table.get(type_path) {
+            if let Some(trait_impls) = self.type_table.get(&type_path) {
                 return trait_impls.clone();
             }
         }
