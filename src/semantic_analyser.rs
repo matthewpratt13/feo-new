@@ -1840,30 +1840,7 @@ impl SemanticAnalyser {
             Type::Generic { name, .. } if name == generic_name => {
                 *ty = concrete_type.clone();
             }
-            Type::GroupedType(inner_type) => *ty = *inner_type.clone(),
-            Type::Array { element_type, .. } => {
-                self.substitute_in_type(element_type, generic_name, concrete_type);
-            }
-            Type::Tuple(element_types) => {
-                for elem_type in element_types {
-                    self.substitute_in_type(elem_type, generic_name, concrete_type);
-                }
-            }
-            // TODO: function pointer
-            Type::Reference { inner_type, .. } => {
-                self.substitute_in_type(inner_type, generic_name, concrete_type);
-            }
-            Type::Vec { element_type } => {
-                self.substitute_in_type(element_type, generic_name, concrete_type);
-            }
-            // TODO: mapping
-            Type::Option { inner_type } => {
-                self.substitute_in_type(inner_type, generic_name, concrete_type);
-            }
-            Type::Result { ok_type, err_type } => {
-                self.substitute_in_type(ok_type, generic_name, concrete_type);
-                self.substitute_in_type(err_type, generic_name, concrete_type);
-            }
+
             _ => {}
         }
     }
