@@ -1876,6 +1876,8 @@ impl SemanticAnalyser {
             Type::Reference { inner_type, .. } => {
                 self.substitute_in_type(inner_type, generic_name, concrete_type);
             }
+            // TODO: user-defined type (look up symbol table to check for generics)
+            // TODO: self type (handle in trait / implementation contexts)
             Type::Vec { element_type } => {
                 self.substitute_in_type(element_type, generic_name, concrete_type);
             }
