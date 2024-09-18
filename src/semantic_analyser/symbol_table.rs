@@ -26,7 +26,7 @@ pub(crate) enum ScopeKind {
 }
 
 /// Enum representing different types of symbols that can be encountered during semantic analysis.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug,  Clone, PartialEq, Eq)]
 pub(crate) enum Symbol {
     Variable {
         name: Identifier,

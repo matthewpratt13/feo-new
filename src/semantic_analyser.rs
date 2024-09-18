@@ -137,8 +137,8 @@ impl SemanticAnalyser {
     /// Look up a symbol by its path in the current scope stack, starting from the innermost scope,
     /// and log the lookup result.
     fn lookup(&mut self, path: &TypePath) -> Option<&Symbol> {
-        for scope in self.scope_stack.iter().rev() {
-            if let Some(symbol) = scope.symbols.get(path) {
+        for scope in self.scope_stack.iter_mut().rev() {
+            if let Some(symbol) = scope.symbols.get_mut(path) {
                 self.logger.debug(&format!(
                     "found symbol `{symbol}` in scope `{:?}` at path `{path}`",
                     scope.scope_kind
@@ -1813,6 +1813,8 @@ impl SemanticAnalyser {
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
+        // apply substitution to each symbol within the current scope by delegating to specific
+        // substitution functions
         match symbol {
             Symbol::Variable { var_type, .. } => {
                 self.substitute_in_type(var_type, generic_name, concrete_type);
@@ -1836,9 +1838,60 @@ impl SemanticAnalyser {
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
+        // perform substitution for types
+        // if we encounter a generic type param, replace it with the concrete type
         match ty {
             Type::Generic { name, .. } if name == generic_name => {
                 *ty = concrete_type.clone();
+            }
+            Type::GroupedType(inner_type) => {
+                self.substitute_in_type(inner_type, generic_name, concrete_type)
+            }
+            Type::Array { element_type, .. } => {
+                self.substitute_in_type(element_type, generic_name, concrete_type);
+            }
+            Type::Tuple(element_types) => {
+                for elem_type in element_types {
+                    self.substitute_in_type(elem_type, generic_name, concrete_type);
+                }
+            }
+            Type::FunctionPtr(ptr) => {
+                if let Some(params) = ptr.params_opt.as_mut() {
+                    for param in params {
+                        match param {
+                            FunctionOrMethodParam::FunctionParam(fp) => self.substitute_in_type(
+                                &mut fp.param_type,
+                                generic_name,
+                                concrete_type,
+                            ),
+                            FunctionOrMethodParam::MethodParam(_) => (),
+                        }
+                    }
+                }
+
+                if let Some(ty) = ptr.return_type_opt.as_mut() {
+                    self.substitute_in_type(ty, generic_name, concrete_type);
+                }
+            }
+            Type::Reference { inner_type, .. } => {
+                self.substitute_in_type(inner_type, generic_name, concrete_type);
+            }
+            Type::Vec { element_type } => {
+                self.substitute_in_type(element_type, generic_name, concrete_type);
+            }
+            Type::Mapping {
+                key_type,
+                value_type,
+            } => {
+                self.substitute_in_type(key_type, generic_name, concrete_type);
+                self.substitute_in_type(value_type, generic_name, concrete_type);
+            }
+            Type::Option { inner_type } => {
+                self.substitute_in_type(inner_type, generic_name, concrete_type);
+            }
+            Type::Result { ok_type, err_type } => {
+                self.substitute_in_type(ok_type, generic_name, concrete_type);
+                self.substitute_in_type(err_type, generic_name, concrete_type);
             }
 
             _ => {}
