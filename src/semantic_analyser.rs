@@ -14,10 +14,11 @@ mod tests;
 
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, EnumVariantType, Expression, FunctionItem, FunctionOrMethodParam,
-        Identifier, ImportDecl, InferredType, InherentImplItem, Item, Keyword, SelfType, Statement,
-        StructDef, TraitDef, TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef,
-        TupleStructDefField, Type, TypePath, UnitType, Visibility,
+        AliasDecl, ConstantDecl, EnumDef, EnumVariantStruct, EnumVariantTupleStruct,
+        EnumVariantType, Expression, FunctionItem, FunctionOrMethodParam, Identifier, ImportDecl,
+        InferredType, InherentImplItem, Item, Keyword, ModuleItem, SelfType, Statement, StructDef,
+        TraitDef, TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField,
+        Type, TypePath, UnitType, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -1820,30 +1821,44 @@ impl SemanticAnalyser {
                 self.substitute_in_type(var_type, generic_name, concrete_type);
             }
             Symbol::Struct { struct_def, .. } => {
-                self.substitute_in_struct_def(struct_def, generic_name, concrete_type);
+                self.substitute_in_struct(struct_def, generic_name, concrete_type);
             }
-
             Symbol::TupleStruct {
                 tuple_struct_def, ..
             } => {
-                self.substitute_in_tuple_struct_def(tuple_struct_def, generic_name, concrete_type);
+                self.substitute_in_tuple_struct(tuple_struct_def, generic_name, concrete_type);
+            }
+            Symbol::Enum { enum_def, .. } => {
+                self.substitute_in_enum(enum_def, generic_name, concrete_type);
+            }
+            Symbol::Trait { trait_def, .. } => {
+                self.substitute_in_trait(trait_def, generic_name, concrete_type)
             }
             Symbol::Alias {
                 original_type_opt, ..
             } => {
-                if let Some(ty) = original_type_opt {
-                    self.substitute_in_type(ty, generic_name, concrete_type);
-                }
+                self.substitute_opt_type(original_type_opt, generic_name, concrete_type);
             }
             Symbol::Constant { constant_type, .. } => {
                 self.substitute_in_type(constant_type, generic_name, concrete_type);
             }
-            // TODO: enum
-            // TODO: trait
             Symbol::Function { function, .. } => {
                 self.substitute_in_function(function, generic_name, concrete_type);
             }
-            _ => {}
+            Symbol::Module { module, .. } => {
+                self.substitute_in_module(module, generic_name, concrete_type)
+            }
+        }
+    }
+
+    fn substitute_opt_type(
+        &mut self,
+        original_type_opt: &mut Option<Type>,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(ty) = original_type_opt {
+            self.substitute_in_type(ty, generic_name, concrete_type);
         }
     }
 
@@ -1915,7 +1930,7 @@ impl SemanticAnalyser {
         }
     }
 
-    fn substitute_in_struct_def(
+    fn substitute_in_struct(
         &mut self,
         struct_def: &mut StructDef,
         generic_name: &Identifier,
@@ -1928,7 +1943,7 @@ impl SemanticAnalyser {
         }
     }
 
-    fn substitute_in_tuple_struct_def(
+    fn substitute_in_tuple_struct(
         &mut self,
         tuple_struct_def: &mut TupleStructDef,
         generic_name: &Identifier,
@@ -1937,6 +1952,60 @@ impl SemanticAnalyser {
         if let Some(fields) = tuple_struct_def.fields_opt.as_mut() {
             for field in fields {
                 self.substitute_in_type(&mut field.field_type, generic_name, concrete_type);
+            }
+        }
+    }
+
+    fn substitute_in_enum(
+        &mut self,
+        enum_def: &mut EnumDef,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        for variant in enum_def.variants.iter_mut() {
+            if let Some(ty) = variant.variant_type_opt.as_mut() {
+                match ty {
+                    EnumVariantType::Struct(EnumVariantStruct { struct_fields }) => {
+                        for field in struct_fields {
+                            self.substitute_in_type(
+                                &mut field.field_type,
+                                generic_name,
+                                concrete_type,
+                            );
+                        }
+                    }
+                    EnumVariantType::TupleStruct(EnumVariantTupleStruct { element_types }, ..) => {
+                        for ty in element_types {
+                            self.substitute_in_type(ty, generic_name, concrete_type);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn substitute_in_trait(
+        &mut self,
+        trait_def: &mut TraitDef,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(items) = trait_def.trait_items_opt.as_mut() {
+            for item in items.iter_mut() {
+                match item {
+                    TraitDefItem::AliasDecl(AliasDecl {
+                        original_type_opt, ..
+                    }) => {
+                        self.substitute_opt_type(original_type_opt, generic_name, concrete_type);
+                    }
+                    TraitDefItem::ConstantDecl(ConstantDecl {
+                        ref mut constant_type,
+                        ..
+                    }) => self.substitute_in_type(constant_type, generic_name, concrete_type),
+                    TraitDefItem::FunctionItem(function_item) => {
+                        self.substitute_in_function(function_item, generic_name, concrete_type)
+                    }
+                }
             }
         }
     }
@@ -1955,6 +2024,102 @@ impl SemanticAnalyser {
 
         if let Some(return_type) = function.return_type_opt.as_mut() {
             self.substitute_in_type(return_type, generic_name, concrete_type);
+        }
+    }
+
+    fn substitute_in_module(
+        &mut self,
+        module: &mut ModuleItem,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(items) = module.items_opt.as_mut() {
+            for item in items {
+                match item {
+                    Item::AliasDecl(alias_decl) => self.substitute_opt_type(
+                        &mut alias_decl.original_type_opt,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::ConstantDecl(constant_decl) => self.substitute_in_type(
+                        &mut constant_decl.constant_type,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::StaticVarDecl(static_var_decl) => self.substitute_in_type(
+                        &mut static_var_decl.var_type,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::ModuleItem(module) => {
+                        self.substitute_in_module(module, generic_name, concrete_type)
+                    }
+                    Item::TraitDef(trait_def) => {
+                        self.substitute_in_trait(trait_def, generic_name, concrete_type)
+                    }
+                    Item::EnumDef(enum_def) => {
+                        self.substitute_in_enum(enum_def, generic_name, concrete_type);
+                    }
+                    Item::StructDef(struct_def) => {
+                        self.substitute_in_struct(struct_def, generic_name, concrete_type)
+                    }
+                    Item::TupleStructDef(tuple_struct_def) => self.substitute_in_tuple_struct(
+                        tuple_struct_def,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::FunctionItem(function) => {
+                        self.substitute_in_function(function, generic_name, concrete_type)
+                    }
+                    Item::InherentImplDef(inherent_impl_def) => {
+                        if let Some(assoc_items) = inherent_impl_def.associated_items_opt.as_mut() {
+                            for item in assoc_items {
+                                match item {
+                                    InherentImplItem::ConstantDecl(constant_decl) => self
+                                        .substitute_in_type(
+                                            &mut constant_decl.constant_type,
+                                            generic_name,
+                                            concrete_type,
+                                        ),
+                                    InherentImplItem::FunctionItem(function) => self
+                                        .substitute_in_function(
+                                            function,
+                                            generic_name,
+                                            concrete_type,
+                                        ),
+                                }
+                            }
+                        }
+                    }
+                    Item::TraitImplDef(trait_impl_def) => {
+                        if let Some(assoc_items) = trait_impl_def.associated_items_opt.as_mut() {
+                            for item in assoc_items {
+                                match item {
+                                    TraitImplItem::AliasDecl(alias_decl) => self
+                                        .substitute_opt_type(
+                                            &mut alias_decl.original_type_opt,
+                                            generic_name,
+                                            concrete_type,
+                                        ),
+                                    TraitImplItem::ConstantDecl(constant_decl) => self
+                                        .substitute_in_type(
+                                            &mut constant_decl.constant_type,
+                                            generic_name,
+                                            concrete_type,
+                                        ),
+                                    TraitImplItem::FunctionItem(function) => self
+                                        .substitute_in_function(
+                                            function,
+                                            generic_name,
+                                            concrete_type,
+                                        ),
+                                }
+                            }
+                        }
+                    }
+                    _ => (),
+                }
+            }
         }
     }
 
