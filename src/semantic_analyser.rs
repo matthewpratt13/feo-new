@@ -1347,7 +1347,7 @@ impl SemanticAnalyser {
 
             // if one is a concrete or generic type and the other is inferred, resolve the inference
             (concrete_or_generic, Type::InferredType(_)) => {
-                self.resolve_inferred_type(type_b, concrete_or_generic)
+                resolve_inferred_type(type_b, concrete_or_generic)
             }
 
             (
@@ -1721,28 +1721,6 @@ impl SemanticAnalyser {
         }
     }
 
-    fn resolve_inferred_type(
-        &mut self,
-        inferred: &mut Type,
-        concrete: Type,
-    ) -> Result<(), SemanticErrorKind> {
-        if *inferred
-            == Type::InferredType(InferredType {
-                name: Identifier::from("_"),
-            })
-        {
-            *inferred = concrete;
-            Ok(())
-        } else if *inferred == concrete {
-            Ok(())
-        } else {
-            Err(SemanticErrorKind::UnexpectedType {
-                expected: inferred.to_string(),
-                found: concrete,
-            })
-        }
-    }
-
     fn unify_generic_with_concrete(
         &mut self,
         generic_type: &mut Type,
@@ -1806,60 +1784,6 @@ impl SemanticAnalyser {
             for symbol in scope.symbols.values_mut() {
                 self.substitute_in_symbol(symbol, generic_name, concrete_type);
             }
-        }
-    }
-
-    fn substitute_in_symbol(
-        &mut self,
-        symbol: &mut Symbol,
-        generic_name: &Identifier,
-        concrete_type: &Type,
-    ) {
-        // apply substitution to each symbol within the current scope by delegating to specific
-        // substitution functions
-        match symbol {
-            Symbol::Variable { var_type, .. } => {
-                self.substitute_in_type(var_type, generic_name, concrete_type);
-            }
-            Symbol::Struct { struct_def, .. } => {
-                self.substitute_in_struct(struct_def, generic_name, concrete_type);
-            }
-            Symbol::TupleStruct {
-                tuple_struct_def, ..
-            } => {
-                self.substitute_in_tuple_struct(tuple_struct_def, generic_name, concrete_type);
-            }
-            Symbol::Enum { enum_def, .. } => {
-                self.substitute_in_enum(enum_def, generic_name, concrete_type);
-            }
-            Symbol::Trait { trait_def, .. } => {
-                self.substitute_in_trait(trait_def, generic_name, concrete_type)
-            }
-            Symbol::Alias {
-                original_type_opt, ..
-            } => {
-                self.substitute_opt_type(original_type_opt, generic_name, concrete_type);
-            }
-            Symbol::Constant { constant_type, .. } => {
-                self.substitute_in_type(constant_type, generic_name, concrete_type);
-            }
-            Symbol::Function { function, .. } => {
-                self.substitute_in_function(function, generic_name, concrete_type);
-            }
-            Symbol::Module { module, .. } => {
-                self.substitute_in_module(module, generic_name, concrete_type)
-            }
-        }
-    }
-
-    fn substitute_opt_type(
-        &mut self,
-        original_type_opt: &mut Option<Type>,
-        generic_name: &Identifier,
-        concrete_type: &Type,
-    ) {
-        if let Some(ty) = original_type_opt {
-            self.substitute_in_type(ty, generic_name, concrete_type);
         }
     }
 
@@ -1927,6 +1851,49 @@ impl SemanticAnalyser {
             }
 
             _ => {}
+        }
+    }
+
+    fn substitute_in_symbol(
+        &mut self,
+        symbol: &mut Symbol,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        // apply substitution to each symbol within the current scope by delegating to specific
+        // substitution functions
+        match symbol {
+            Symbol::Variable { var_type, .. } => {
+                self.substitute_in_type(var_type, generic_name, concrete_type);
+            }
+            Symbol::Struct { struct_def, .. } => {
+                self.substitute_in_struct(struct_def, generic_name, concrete_type);
+            }
+            Symbol::TupleStruct {
+                tuple_struct_def, ..
+            } => {
+                self.substitute_in_tuple_struct(tuple_struct_def, generic_name, concrete_type);
+            }
+            Symbol::Enum { enum_def, .. } => {
+                self.substitute_in_enum(enum_def, generic_name, concrete_type);
+            }
+            Symbol::Trait { trait_def, .. } => {
+                self.substitute_in_trait(trait_def, generic_name, concrete_type)
+            }
+            Symbol::Alias {
+                original_type_opt, ..
+            } => {
+                self.substitute_opt_type(original_type_opt, generic_name, concrete_type);
+            }
+            Symbol::Constant { constant_type, .. } => {
+                self.substitute_in_type(constant_type, generic_name, concrete_type);
+            }
+            Symbol::Function { function, .. } => {
+                self.substitute_in_function(function, generic_name, concrete_type);
+            }
+            Symbol::Module { module, .. } => {
+                self.substitute_in_module(module, generic_name, concrete_type)
+            }
         }
     }
 
@@ -2124,6 +2091,69 @@ impl SemanticAnalyser {
         }
     }
 
+    fn substitute_opt_type(
+        &mut self,
+        original_type_opt: &mut Option<Type>,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(ty) = original_type_opt {
+            self.substitute_in_type(ty, generic_name, concrete_type);
+        }
+    }
+
+    // fn substitute_user_defined_type(
+    //     &mut self,
+    //     ty: &mut Type,
+    //     symbol_table: &mut SymbolTable,
+    //     generic_name: &Identifier,
+    //     concrete_type: &Type,
+    // ) {
+    //     match ty {
+    //         Type::UserDefined(type_path) => {
+    //             if let Some(sym) = symbol_table.get_mut(type_path) {
+    //                 match sym {
+    //                     Symbol::Variable { var_type, .. } => {
+    //                         self.substitute_in_type(var_type, generic_name, concrete_type)
+    //                     }
+    //                     Symbol::Struct { struct_def, .. } => {
+    //                         self.substitute_in_struct(struct_def, generic_name, concrete_type);
+    //                     }
+    //                     Symbol::TupleStruct {
+    //                         tuple_struct_def, ..
+    //                     } => self.substitute_in_tuple_struct(
+    //                         tuple_struct_def,
+    //                         generic_name,
+    //                         concrete_type,
+    //                     ),
+    //                     Symbol::Enum { enum_def, .. } => {
+    //                         self.substitute_in_enum(enum_def, generic_name, concrete_type);
+    //                     }
+    //                     Symbol::Trait { trait_def, .. } => {
+    //                         self.substitute_in_trait(trait_def, generic_name, concrete_type);
+    //                     }
+    //                     Symbol::Alias {
+    //                         original_type_opt, ..
+    //                     } => {
+    //                         self.substitute_opt_type(original_type_opt, generic_name, concrete_type)
+    //                     }
+    //                     Symbol::Constant { constant_type, .. } => {
+    //                         self.substitute_in_type(constant_type, generic_name, concrete_type)
+    //                     }
+    //                     Symbol::Function { function, .. } => {
+    //                         self.substitute_in_function(function, generic_name, concrete_type)
+    //                     }
+    //                     Symbol::Module { module, .. } => {
+    //                         self.substitute_in_module(module, generic_name, concrete_type)
+    //                     }
+    //                 }
+    //             }
+    //         }
+
+    //         built_in_type => self.substitute_in_type(built_in_type, generic_name, concrete_type),
+    //     }
+    // }
+
     /// Checks if a given type satisfies a specific trait bound.
     fn type_satisfies_bound(&self, concrete_type: &Type, bound_trait: &TraitDef) -> bool {
         // retrieve all the trait implementations for the concrete type from the symbol table
@@ -2143,7 +2173,7 @@ impl SemanticAnalyser {
 
     fn get_trait_implementations(&self, concrete_type: &Type) -> Vec<TraitImplDef> {
         // convert concrete type to its `TypePath` representation
-        if let Some(type_path) = self.resolve_type_path(concrete_type) {
+        if let Some(type_path) = resolve_type_path(concrete_type) {
             // look up the trait implementations in the type table
             if let Some(trait_impls) = self.type_table.get(&type_path) {
                 return trait_impls.clone();
@@ -2152,14 +2182,6 @@ impl SemanticAnalyser {
 
         // if no implementations are found, return an empty vector
         Vec::new()
-    }
-
-    /// Helper function to resolve `Type` to `TypePath`.
-    fn resolve_type_path(&self, ty: &Type) -> Option<TypePath> {
-        match ty {
-            Type::UserDefined(type_path) => Some(type_path.clone()),
-            _ => None,
-        }
     }
 
     /// Check if the trait implementation matches the required trait.
@@ -2175,6 +2197,32 @@ impl SemanticAnalyser {
         self.logger.error(&error.to_string());
 
         self.errors.push(error);
+    }
+}
+
+fn resolve_inferred_type(inferred: &mut Type, concrete: Type) -> Result<(), SemanticErrorKind> {
+    if *inferred
+        == Type::InferredType(InferredType {
+            name: Identifier::from("_"),
+        })
+    {
+        *inferred = concrete;
+        Ok(())
+    } else if *inferred == concrete {
+        Ok(())
+    } else {
+        Err(SemanticErrorKind::UnexpectedType {
+            expected: inferred.to_string(),
+            found: concrete,
+        })
+    }
+}
+
+/// Helper function to resolve `Type` to `TypePath`.
+fn resolve_type_path(ty: &Type) -> Option<TypePath> {
+    match ty {
+        Type::UserDefined(type_path) => Some(type_path.clone()),
+        _ => None,
     }
 }
 
