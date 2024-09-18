@@ -14,10 +14,10 @@ mod tests;
 
 use crate::{
     ast::{
-        EnumVariantType, Expression, FunctionItem, FunctionOrMethodParam, Identifier, ImportDecl,
-        InferredType, InherentImplItem, Item, Keyword, SelfType, Statement, StructDef, TraitDef,
-        TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type,
-        TypePath, UnitType, Visibility,
+        AliasDecl, ConstantDecl, EnumVariantType, Expression, FunctionItem, FunctionOrMethodParam,
+        Identifier, ImportDecl, InferredType, InherentImplItem, Item, Keyword, SelfType, Statement,
+        StructDef, TraitDef, TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef,
+        TupleStructDefField, Type, TypePath, UnitType, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -1822,7 +1822,22 @@ impl SemanticAnalyser {
             Symbol::Struct { struct_def, .. } => {
                 self.substitute_in_struct_def(struct_def, generic_name, concrete_type);
             }
-            // TODO: tuple struct
+
+            Symbol::TupleStruct {
+                tuple_struct_def, ..
+            } => {
+                self.substitute_in_tuple_struct_def(tuple_struct_def, generic_name, concrete_type);
+            }
+            Symbol::Alias {
+                original_type_opt, ..
+            } => {
+                if let Some(ty) = original_type_opt {
+                    self.substitute_in_type(ty, generic_name, concrete_type);
+                }
+            }
+            Symbol::Constant { constant_type, .. } => {
+                self.substitute_in_type(constant_type, generic_name, concrete_type);
+            }
             // TODO: enum
             // TODO: trait
             Symbol::Function { function, .. } => {
@@ -1907,6 +1922,19 @@ impl SemanticAnalyser {
         concrete_type: &Type,
     ) {
         if let Some(fields) = struct_def.fields_opt.as_mut() {
+            for field in fields {
+                self.substitute_in_type(&mut field.field_type, generic_name, concrete_type);
+            }
+        }
+    }
+
+    fn substitute_in_tuple_struct_def(
+        &mut self,
+        tuple_struct_def: &mut TupleStructDef,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(fields) = tuple_struct_def.fields_opt.as_mut() {
             for field in fields {
                 self.substitute_in_type(&mut field.field_type, generic_name, concrete_type);
             }
