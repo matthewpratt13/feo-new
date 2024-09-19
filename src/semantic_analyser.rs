@@ -30,7 +30,7 @@ use crate::{
     span::{Span, Spanned},
 };
 
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use expr::{analyse_expr, wrap_into_expression};
 use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
@@ -1832,11 +1832,10 @@ impl SemanticAnalyser {
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
-        let mut stack = Rc::new(&self.scope_stack);
-        let stack_mut = Rc::make_mut(&mut stack);
+        let scope_stack = &self.scope_stack;
 
         // iterate through the scope stack and substitute generics in all types.
-        for scope in stack_mut.clone().iter_mut() {
+        for scope in scope_stack.to_owned().iter_mut() {
             for symbol in scope.symbols.values_mut() {
                 self.substitute_in_symbol(symbol, symbol_table, generic_name, concrete_type);
             }
