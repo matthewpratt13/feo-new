@@ -535,7 +535,16 @@ pub(crate) fn analyse_expr(
 
             let value_type = analyse_expr(analyser, &wrap_into_expression(a.rhs.clone()), root)?;
 
-            analyser.unify_types(&value_type, &mut assignee_type)?;
+            let current_module_path = analyser.current_module_path();
+
+            let mut symbol_table =
+                if let Some(table) = analyser.module_registry.get(&current_module_path) {
+                    table.to_owned()
+                } else {
+                    return Err(SemanticErrorKind::UnknownError);
+                };
+
+            analyser.unify_types(&mut symbol_table, &value_type, &mut assignee_type)?;
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
@@ -678,7 +687,16 @@ pub(crate) fn analyse_expr(
                 }
             }
 
-            analyser.unify_types(&return_type, &mut expression_type)?;
+            let current_module_path = analyser.current_module_path();
+
+            let mut symbol_table =
+                if let Some(table) = analyser.module_registry.get(&current_module_path) {
+                    table.to_owned()
+                } else {
+                    return Err(SemanticErrorKind::UnknownError);
+                };
+
+            analyser.unify_types(&mut symbol_table, &return_type, &mut expression_type)?;
 
             let function_ptr = FunctionPtr {
                 params_opt,
@@ -702,7 +720,21 @@ pub(crate) fn analyse_expr(
 
                         element_count += 1;
 
-                        analyser.unify_types(&element_type, &mut first_element_type)?;
+                        let current_module_path = analyser.current_module_path();
+
+                        let mut symbol_table = if let Some(table) =
+                            analyser.module_registry.get(&current_module_path)
+                        {
+                            table.to_owned()
+                        } else {
+                            return Err(SemanticErrorKind::UnknownError);
+                        };
+
+                        analyser.unify_types(
+                            &mut symbol_table,
+                            &element_type,
+                            &mut first_element_type,
+                        )?;
 
                         if element_type != first_element_type {
                             return Err(SemanticErrorKind::TypeMismatchArrayElems {
@@ -792,7 +824,21 @@ pub(crate) fn analyse_expr(
                         for def_field in def_fields.iter() {
                             match field_map.get_mut(&def_field.field_name) {
                                 Some(obj_field_type) => {
-                                    analyser.unify_types(&*def_field.field_type, obj_field_type)?;
+                                    let current_module_path = analyser.current_module_path();
+
+                                    let mut symbol_table = if let Some(table) =
+                                        analyser.module_registry.get(&current_module_path)
+                                    {
+                                        table.to_owned()
+                                    } else {
+                                        return Err(SemanticErrorKind::UnknownError);
+                                    };
+
+                                    analyser.unify_types(
+                                        &mut symbol_table,
+                                        &*def_field.field_type,
+                                        obj_field_type,
+                                    )?;
 
                                     // if *obj_field_type != *def_field.field_type {
                                     //     return Err(SemanticErrorKind::TypeMismatchVariable {
@@ -873,7 +919,21 @@ pub(crate) fn analyse_expr(
                                     &TypePath::from(Identifier::from("")),
                                 )?;
 
-                                analyser.unify_types(&field_type, &mut elem_type)?;
+                                let current_module_path = analyser.current_module_path();
+
+                                let mut symbol_table = if let Some(table) =
+                                    analyser.module_registry.get(&current_module_path)
+                                {
+                                    table.to_owned()
+                                } else {
+                                    return Err(SemanticErrorKind::UnknownError);
+                                };
+
+                                analyser.unify_types(
+                                    &mut symbol_table,
+                                    &field_type,
+                                    &mut elem_type,
+                                )?;
 
                                 if elem_type != field_type {
                                     return Err(SemanticErrorKind::TypeMismatchVariable {
@@ -911,8 +971,23 @@ pub(crate) fn analyse_expr(
                         let mut pair_key_type = analyse_patt(analyser, &pair.k.clone())?;
                         let mut pair_value_type = analyse_expr(analyser, &pair.v.clone(), root)?;
 
-                        analyser.unify_types(&key_type, &mut pair_key_type)?;
-                        analyser.unify_types(&value_type, &mut pair_value_type)?;
+                        let current_module_path = analyser.current_module_path();
+
+                        let mut symbol_table = if let Some(table) =
+                            analyser.module_registry.get(&current_module_path)
+                        {
+                            table.to_owned()
+                        } else {
+                            return Err(SemanticErrorKind::UnknownError);
+                        };
+
+                        analyser.unify_types(&mut symbol_table, &key_type, &mut pair_key_type)?;
+
+                        analyser.unify_types(
+                            &mut symbol_table,
+                            &value_type,
+                            &mut pair_value_type,
+                        )?;
 
                         if (&pair_key_type, &pair_value_type) != (&key_type, &value_type) {
                             return Err(SemanticErrorKind::UnexpectedType {
@@ -1073,14 +1148,23 @@ pub(crate) fn analyse_expr(
                 for arm in arms.iter() {
                     let mut arm_patt_type = analyse_patt(analyser, &arm.matched_pattern)?;
 
+                    let current_module_path = analyser.current_module_path();
+
+                    let mut symbol_table =
+                        if let Some(table) = analyser.module_registry.get(&current_module_path) {
+                            table.to_owned()
+                        } else {
+                            return Err(SemanticErrorKind::UnknownError);
+                        };
+
                     if patt_type
                         == Type::InferredType(InferredType {
                             name: Identifier::from("_"),
                         })
                     {
-                        analyser.unify_types(&arm_patt_type, &mut patt_type)?;
+                        analyser.unify_types(&mut symbol_table, &arm_patt_type, &mut patt_type)?;
                     } else {
-                        analyser.unify_types(&patt_type, &mut arm_patt_type)?;
+                        analyser.unify_types(&mut symbol_table, &patt_type, &mut arm_patt_type)?;
                     }
 
                     if arm_patt_type != patt_type {
@@ -1098,7 +1182,7 @@ pub(crate) fn analyse_expr(
                     let mut arm_expr_type =
                         analyse_expr(analyser, &arm.arm_expression.clone(), root)?;
 
-                    analyser.unify_types(&expr_type, &mut arm_expr_type)?;
+                    analyser.unify_types(&mut symbol_table, &expr_type, &mut arm_expr_type)?;
 
                     if arm_expr_type != expr_type {
                         return Err(SemanticErrorKind::TypeMismatchMatchExpr {

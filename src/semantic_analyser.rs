@@ -234,7 +234,16 @@ impl SemanticAnalyser {
                     _ => value_type.clone(),
                 };
 
-                self.unify_types(&declared_type, &mut value_type)?;
+                let current_module_path = self.current_module_path();
+
+                let mut symbol_table =
+                    if let Some(table) = self.module_registry.get(&current_module_path) {
+                        table.to_owned()
+                    } else {
+                        return Err(SemanticErrorKind::UnknownError);
+                    };
+
+                self.unify_types(&mut symbol_table, &declared_type, &mut value_type)?;
 
                 // check that the value matches the type annotation
                 if value_type != declared_type {
@@ -349,7 +358,17 @@ impl SemanticAnalyser {
                         _ => None,
                     };
 
+                    let current_module_path = self.current_module_path();
+
+                    let mut symbol_table =
+                        if let Some(table) = self.module_registry.get(&current_module_path) {
+                            table.to_owned()
+                        } else {
+                            return Err(SemanticErrorKind::UnknownError);
+                        };
+
                     self.unify_types(
+                        &mut symbol_table,
                         &cd.constant_type,
                         &mut value_type
                             .clone()
@@ -396,7 +415,16 @@ impl SemanticAnalyser {
                         }),
                     };
 
-                    self.unify_types(&s.var_type, &mut assignee_type)?;
+                    let current_module_path = self.current_module_path();
+
+                    let mut symbol_table =
+                        if let Some(table) = self.module_registry.get(&current_module_path) {
+                            table.to_owned()
+                        } else {
+                            return Err(SemanticErrorKind::UnknownError);
+                        };
+
+                    self.unify_types(&mut symbol_table, &s.var_type, &mut assignee_type)?;
 
                     if assignee_type != s.var_type.clone() {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -967,7 +995,16 @@ impl SemanticAnalyser {
 
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
-            self.unify_types(&return_type, &mut function_type)?;
+            let current_module_path = self.current_module_path();
+
+            let mut symbol_table =
+                if let Some(table) = self.module_registry.get(&current_module_path) {
+                    table.to_owned()
+                } else {
+                    return Err(SemanticErrorKind::UnknownError);
+                };
+
+            self.unify_types(&mut symbol_table, &return_type, &mut function_type)?;
 
             if function_type != *return_type.clone() {
                 match function_type.clone() {
@@ -1271,7 +1308,17 @@ impl SemanticAnalyser {
 
                             let param_type = param.param_type();
 
-                            self.unify_types(&param_type, &mut arg_type)?;
+                            let current_module_path = self.current_module_path();
+
+                            let mut symbol_table = if let Some(table) =
+                                self.module_registry.get(&current_module_path)
+                            {
+                                table.to_owned()
+                            } else {
+                                return Err(SemanticErrorKind::UnknownError);
+                            };
+
+                            self.unify_types(&mut symbol_table, &param_type, &mut arg_type)?;
 
                             if arg_type != param_type {
                                 return Err(SemanticErrorKind::TypeMismatchArg {
@@ -1335,7 +1382,12 @@ impl SemanticAnalyser {
 
     /// Unifies two types, ensuring they are compatible. Returns `Ok` if they can be unified, or
     /// an `Err` if there is a type mismatch.
-    fn unify_types(&mut self, type_a: &Type, type_b: &mut Type) -> Result<(), SemanticErrorKind> {
+    fn unify_types(
+        &mut self,
+        symbol_table: &mut SymbolTable,
+        type_a: &Type,
+        type_b: &mut Type,
+    ) -> Result<(), SemanticErrorKind> {
         let type_a_clone = type_a.clone();
         let type_b_clone = type_b.clone();
 
@@ -1394,9 +1446,11 @@ impl SemanticAnalyser {
                 }
             }
 
-            (Type::Generic { name, bound_opt }, concrete) => {
-                self.unify_generic_with_concrete(&mut Type::Generic { name, bound_opt }, &concrete)
-            }
+            (Type::Generic { name, bound_opt }, concrete) => self.unify_generic_with_concrete(
+                symbol_table,
+                &mut Type::Generic { name, bound_opt },
+                &concrete,
+            ),
 
             (Type::GroupedType(grouped), matched) => {
                 if *grouped != matched {
@@ -1723,6 +1777,7 @@ impl SemanticAnalyser {
 
     fn unify_generic_with_concrete(
         &mut self,
+        symbol_table: &mut SymbolTable,
         generic_type: &mut Type,
         concrete_type: &Type,
     ) -> Result<(), SemanticErrorKind> {
@@ -1743,11 +1798,11 @@ impl SemanticAnalyser {
                 }
 
                 // if bounds are satisfied, perform the substitution
-                self.substitute_generic_with_concrete(name, concrete_type);
+                self.substitute_generic_with_concrete(symbol_table, name, concrete_type);
                 Ok(())
             }
 
-            _ => self.unify_types(concrete_type, generic_type),
+            _ => self.unify_types(symbol_table, concrete_type, generic_type),
         }
     }
 
@@ -1773,6 +1828,7 @@ impl SemanticAnalyser {
     /// Replace all occurrences of `generic_name` with `concrete_type`.
     fn substitute_generic_with_concrete(
         &mut self,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
@@ -1782,7 +1838,7 @@ impl SemanticAnalyser {
         // iterate through the scope stack and substitute generics in all types.
         for scope in stack_mut.clone().iter_mut() {
             for symbol in scope.symbols.values_mut() {
-                self.substitute_in_symbol(symbol, generic_name, concrete_type);
+                self.substitute_in_symbol(symbol, symbol_table, generic_name, concrete_type);
             }
         }
     }
@@ -1790,6 +1846,7 @@ impl SemanticAnalyser {
     fn substitute_in_type(
         &mut self,
         ty: &mut Type,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
@@ -1800,14 +1857,14 @@ impl SemanticAnalyser {
                 *ty = concrete_type.clone();
             }
             Type::GroupedType(inner_type) => {
-                self.substitute_in_type(inner_type, generic_name, concrete_type)
+                self.substitute_in_type(inner_type, symbol_table, generic_name, concrete_type)
             }
             Type::Array { element_type, .. } => {
-                self.substitute_in_type(element_type, generic_name, concrete_type);
+                self.substitute_in_type(element_type, symbol_table, generic_name, concrete_type);
             }
             Type::Tuple(element_types) => {
                 for elem_type in element_types {
-                    self.substitute_in_type(elem_type, generic_name, concrete_type);
+                    self.substitute_in_type(elem_type, symbol_table, generic_name, concrete_type);
                 }
             }
             Type::FunctionPtr(ptr) => {
@@ -1817,37 +1874,42 @@ impl SemanticAnalyser {
                             FunctionOrMethodParam::FunctionParam(FunctionParam {
                                 param_type,
                                 ..
-                            }) => self.substitute_in_type(param_type, generic_name, concrete_type),
+                            }) => self.substitute_in_type(
+                                param_type,
+                                symbol_table,
+                                generic_name,
+                                concrete_type,
+                            ),
                             FunctionOrMethodParam::MethodParam(_) => (),
                         }
                     }
                 }
 
                 if let Some(ty) = ptr.return_type_opt.as_mut() {
-                    self.substitute_in_type(ty, generic_name, concrete_type);
+                    self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
                 }
             }
             Type::Reference { inner_type, .. } => {
-                self.substitute_in_type(inner_type, generic_name, concrete_type);
+                self.substitute_in_type(inner_type, symbol_table, generic_name, concrete_type);
             }
             // TODO: user-defined type (look up symbol table to check for generics)
             // TODO: self type (handle in trait / implementation contexts)
             Type::Vec { element_type } => {
-                self.substitute_in_type(element_type, generic_name, concrete_type);
+                self.substitute_in_type(element_type, symbol_table, generic_name, concrete_type);
             }
             Type::Mapping {
                 key_type,
                 value_type,
             } => {
-                self.substitute_in_type(key_type, generic_name, concrete_type);
-                self.substitute_in_type(value_type, generic_name, concrete_type);
+                self.substitute_in_type(key_type, symbol_table, generic_name, concrete_type);
+                self.substitute_in_type(value_type, symbol_table, generic_name, concrete_type);
             }
             Type::Option { inner_type } => {
-                self.substitute_in_type(inner_type, generic_name, concrete_type);
+                self.substitute_in_type(inner_type, symbol_table, generic_name, concrete_type);
             }
             Type::Result { ok_type, err_type } => {
-                self.substitute_in_type(ok_type, generic_name, concrete_type);
-                self.substitute_in_type(err_type, generic_name, concrete_type);
+                self.substitute_in_type(ok_type, symbol_table, generic_name, concrete_type);
+                self.substitute_in_type(err_type, symbol_table, generic_name, concrete_type);
             }
 
             _ => {}
@@ -1857,6 +1919,7 @@ impl SemanticAnalyser {
     fn substitute_in_symbol(
         &mut self,
         symbol: &mut Symbol,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
@@ -1864,35 +1927,45 @@ impl SemanticAnalyser {
         // substitution functions
         match symbol {
             Symbol::Variable { var_type, .. } => {
-                self.substitute_in_type(var_type, generic_name, concrete_type);
+                self.substitute_in_type(var_type, symbol_table, generic_name, concrete_type);
             }
             Symbol::Struct { struct_def, .. } => {
-                self.substitute_in_struct(struct_def, generic_name, concrete_type);
+                self.substitute_in_struct(struct_def, symbol_table, generic_name, concrete_type);
             }
             Symbol::TupleStruct {
                 tuple_struct_def, ..
             } => {
-                self.substitute_in_tuple_struct(tuple_struct_def, generic_name, concrete_type);
+                self.substitute_in_tuple_struct(
+                    tuple_struct_def,
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
             }
             Symbol::Enum { enum_def, .. } => {
-                self.substitute_in_enum(enum_def, generic_name, concrete_type);
+                self.substitute_in_enum(enum_def, symbol_table, generic_name, concrete_type);
             }
             Symbol::Trait { trait_def, .. } => {
-                self.substitute_in_trait(trait_def, generic_name, concrete_type)
+                self.substitute_in_trait(trait_def, symbol_table, generic_name, concrete_type)
             }
             Symbol::Alias {
                 original_type_opt, ..
             } => {
-                self.substitute_opt_type(original_type_opt, generic_name, concrete_type);
+                self.substitute_opt_type(
+                    original_type_opt,
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
             }
             Symbol::Constant { constant_type, .. } => {
-                self.substitute_in_type(constant_type, generic_name, concrete_type);
+                self.substitute_in_type(constant_type, symbol_table, generic_name, concrete_type);
             }
             Symbol::Function { function, .. } => {
-                self.substitute_in_function(function, generic_name, concrete_type);
+                self.substitute_in_function(function, symbol_table, generic_name, concrete_type);
             }
             Symbol::Module { module, .. } => {
-                self.substitute_in_module(module, generic_name, concrete_type)
+                self.substitute_in_module(module, symbol_table, generic_name, concrete_type)
             }
         }
     }
@@ -1900,12 +1973,13 @@ impl SemanticAnalyser {
     fn substitute_in_struct(
         &mut self,
         struct_def: &mut StructDef,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
         if let Some(fields) = struct_def.fields_opt.as_mut() {
             for StructDefField { field_type, .. } in fields {
-                self.substitute_in_type(field_type, generic_name, concrete_type);
+                self.substitute_in_type(field_type, symbol_table, generic_name, concrete_type);
             }
         }
     }
@@ -1913,12 +1987,13 @@ impl SemanticAnalyser {
     fn substitute_in_tuple_struct(
         &mut self,
         tuple_struct_def: &mut TupleStructDef,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
         if let Some(fields) = tuple_struct_def.fields_opt.as_mut() {
             for TupleStructDefField { field_type, .. } in fields {
-                self.substitute_in_type(field_type, generic_name, concrete_type);
+                self.substitute_in_type(field_type, symbol_table, generic_name, concrete_type);
             }
         }
     }
@@ -1926,6 +2001,7 @@ impl SemanticAnalyser {
     fn substitute_in_enum(
         &mut self,
         enum_def: &mut EnumDef,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
@@ -1934,12 +2010,17 @@ impl SemanticAnalyser {
                 match ty {
                     EnumVariantType::Struct(EnumVariantStruct { struct_fields }) => {
                         for StructDefField { field_type, .. } in struct_fields {
-                            self.substitute_in_type(field_type, generic_name, concrete_type);
+                            self.substitute_in_type(
+                                field_type,
+                                symbol_table,
+                                generic_name,
+                                concrete_type,
+                            );
                         }
                     }
                     EnumVariantType::TupleStruct(EnumVariantTupleStruct { element_types }, ..) => {
                         for ty in element_types {
-                            self.substitute_in_type(ty, generic_name, concrete_type);
+                            self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
                         }
                     }
                 }
@@ -1950,6 +2031,7 @@ impl SemanticAnalyser {
     fn substitute_in_trait(
         &mut self,
         trait_def: &mut TraitDef,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
@@ -1959,14 +2041,26 @@ impl SemanticAnalyser {
                     TraitDefItem::AliasDecl(AliasDecl {
                         original_type_opt, ..
                     }) => {
-                        self.substitute_opt_type(original_type_opt, generic_name, concrete_type);
+                        self.substitute_opt_type(
+                            original_type_opt,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        );
                     }
-                    TraitDefItem::ConstantDecl(ConstantDecl { constant_type, .. }) => {
-                        self.substitute_in_type(constant_type, generic_name, concrete_type)
-                    }
-                    TraitDefItem::FunctionItem(function_item) => {
-                        self.substitute_in_function(function_item, generic_name, concrete_type)
-                    }
+                    TraitDefItem::ConstantDecl(ConstantDecl { constant_type, .. }) => self
+                        .substitute_in_type(
+                            constant_type,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                    TraitDefItem::FunctionItem(function_item) => self.substitute_in_function(
+                        function_item,
+                        symbol_table,
+                        generic_name,
+                        concrete_type,
+                    ),
                 }
             }
         }
@@ -1975,23 +2069,30 @@ impl SemanticAnalyser {
     fn substitute_in_function(
         &mut self,
         function: &mut FunctionItem,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
         if let Some(params) = function.params_opt.as_mut() {
             for param in params {
-                self.substitute_in_type(&mut param.param_type(), generic_name, concrete_type);
+                self.substitute_in_type(
+                    &mut param.param_type(),
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
             }
         }
 
         if let Some(return_type) = function.return_type_opt.as_mut() {
-            self.substitute_in_type(return_type, generic_name, concrete_type);
+            self.substitute_in_type(return_type, symbol_table, generic_name, concrete_type);
         }
     }
 
     fn substitute_in_module(
         &mut self,
         module: &mut ModuleItem,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
@@ -2000,33 +2101,57 @@ impl SemanticAnalyser {
                 match item {
                     Item::AliasDecl(AliasDecl {
                         original_type_opt, ..
-                    }) => self.substitute_opt_type(original_type_opt, generic_name, concrete_type),
-                    Item::ConstantDecl(ConstantDecl { constant_type, .. }) => {
-                        self.substitute_in_type(constant_type, generic_name, concrete_type)
-                    }
-                    Item::StaticVarDecl(StaticVarDecl { var_type, .. }) => {
-                        self.substitute_in_type(var_type, generic_name, concrete_type)
-                    }
-                    Item::ModuleItem(module) => {
-                        self.substitute_in_module(module, generic_name, concrete_type)
-                    }
-                    Item::TraitDef(trait_def) => {
-                        self.substitute_in_trait(trait_def, generic_name, concrete_type)
-                    }
-                    Item::EnumDef(enum_def) => {
-                        self.substitute_in_enum(enum_def, generic_name, concrete_type);
-                    }
-                    Item::StructDef(struct_def) => {
-                        self.substitute_in_struct(struct_def, generic_name, concrete_type)
-                    }
-                    Item::TupleStructDef(tuple_struct_def) => self.substitute_in_tuple_struct(
-                        tuple_struct_def,
+                    }) => self.substitute_opt_type(
+                        original_type_opt,
+                        symbol_table,
                         generic_name,
                         concrete_type,
                     ),
-                    Item::FunctionItem(function) => {
-                        self.substitute_in_function(function, generic_name, concrete_type)
+                    Item::ConstantDecl(ConstantDecl { constant_type, .. }) => self
+                        .substitute_in_type(
+                            constant_type,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                    Item::StaticVarDecl(StaticVarDecl { var_type, .. }) => {
+                        self.substitute_in_type(var_type, symbol_table, generic_name, concrete_type)
                     }
+                    Item::ModuleItem(module) => {
+                        self.substitute_in_module(module, symbol_table, generic_name, concrete_type)
+                    }
+                    Item::TraitDef(trait_def) => self.substitute_in_trait(
+                        trait_def,
+                        symbol_table,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::EnumDef(enum_def) => {
+                        self.substitute_in_enum(
+                            enum_def,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        );
+                    }
+                    Item::StructDef(struct_def) => self.substitute_in_struct(
+                        struct_def,
+                        symbol_table,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::TupleStructDef(tuple_struct_def) => self.substitute_in_tuple_struct(
+                        tuple_struct_def,
+                        symbol_table,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::FunctionItem(function) => self.substitute_in_function(
+                        function,
+                        symbol_table,
+                        generic_name,
+                        concrete_type,
+                    ),
                     Item::InherentImplDef(InherentImplDef {
                         associated_items_opt,
                         ..
@@ -2039,12 +2164,14 @@ impl SemanticAnalyser {
                                         ..
                                     }) => self.substitute_in_type(
                                         constant_type,
+                                        symbol_table,
                                         generic_name,
                                         concrete_type,
                                     ),
                                     InherentImplItem::FunctionItem(function) => self
                                         .substitute_in_function(
                                             function,
+                                            symbol_table,
                                             generic_name,
                                             concrete_type,
                                         ),
@@ -2064,6 +2191,7 @@ impl SemanticAnalyser {
                                         ..
                                     }) => self.substitute_opt_type(
                                         original_type_opt,
+                                        symbol_table,
                                         generic_name,
                                         concrete_type,
                                     ),
@@ -2072,12 +2200,14 @@ impl SemanticAnalyser {
                                         ..
                                     }) => self.substitute_in_type(
                                         constant_type,
+                                        symbol_table,
                                         generic_name,
                                         concrete_type,
                                     ),
                                     TraitImplItem::FunctionItem(function) => self
                                         .substitute_in_function(
                                             function,
+                                            symbol_table,
                                             generic_name,
                                             concrete_type,
                                         ),
@@ -2094,11 +2224,12 @@ impl SemanticAnalyser {
     fn substitute_opt_type(
         &mut self,
         original_type_opt: &mut Option<Type>,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
         if let Some(ty) = original_type_opt {
-            self.substitute_in_type(ty, generic_name, concrete_type);
+            self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
         }
     }
 
@@ -2197,6 +2328,25 @@ impl SemanticAnalyser {
         self.logger.error(&error.to_string());
 
         self.errors.push(error);
+    }
+
+    fn current_module_path(&self) -> TypePath {
+        let mut current_module_scope: Vec<Identifier> = Vec::new();
+
+        for scope in self.scope_stack.iter() {
+            match &scope.scope_kind {
+                ScopeKind::LocalBlock => (),
+                ScopeKind::MatchExpr => (),
+                ScopeKind::ForInLoop => (),
+                ScopeKind::Function(f) => current_module_scope.push(Identifier::from(f)),
+                ScopeKind::Module(m) => current_module_scope.push(Identifier::from(m)),
+                ScopeKind::RootModule(rm) => current_module_scope.push(Identifier::from(rm)),
+                ScopeKind::Lib => current_module_scope.push(Identifier::from("lib")),
+                ScopeKind::Public => (),
+            }
+        }
+
+        TypePath::from(current_module_scope)
     }
 }
 

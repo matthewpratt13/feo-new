@@ -248,8 +248,21 @@ pub(crate) fn analyse_patt(
                         for def_field in def_fields.into_iter() {
                             match field_map.get_mut(&def_field.field_name) {
                                 Some(patt_field_type) => {
-                                    analyser
-                                        .unify_types(&*def_field.field_type, patt_field_type)?;
+                                    let current_module_path = analyser.current_module_path();
+
+                                    let mut symbol_table = if let Some(table) =
+                                        analyser.module_registry.get(&current_module_path)
+                                    {
+                                        table.to_owned()
+                                    } else {
+                                        return Err(SemanticErrorKind::UnknownError);
+                                    };
+
+                                    analyser.unify_types(
+                                        &mut symbol_table,
+                                        &*def_field.field_type,
+                                        patt_field_type,
+                                    )?;
 
                                     // if *patt_field_type != *def_field.field_type {
                                     //     return Err(SemanticErrorKind::TypeMismatchVariable {
@@ -327,7 +340,21 @@ pub(crate) fn analyse_patt(
                                 let mut elem_type = analyse_patt(analyser, &elem)?;
                                 // let elem_type_clone = elem_type.clone();
 
-                                analyser.unify_types(&*field_type, &mut elem_type)?;
+                                let current_module_path = analyser.current_module_path();
+
+                                let mut symbol_table = if let Some(table) =
+                                    analyser.module_registry.get(&current_module_path)
+                                {
+                                    table.to_owned()
+                                } else {
+                                    return Err(SemanticErrorKind::UnknownError);
+                                };
+
+                                analyser.unify_types(
+                                    &mut symbol_table,
+                                    &*field_type,
+                                    &mut elem_type,
+                                )?;
 
                                 // if elem_type_clone != field_type_clone {
                                 //     return Err(SemanticErrorKind::TypeMismatchVariable {
