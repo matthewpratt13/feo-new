@@ -1892,7 +1892,76 @@ impl SemanticAnalyser {
             Type::Reference { inner_type, .. } => {
                 self.substitute_in_type(inner_type, symbol_table, generic_name, concrete_type);
             }
-            // TODO: user-defined type (look up symbol table to check for generics)
+            Type::UserDefined(type_path) => {
+                if let Some(sym) = symbol_table.to_owned().get_mut(type_path) {
+                    match sym {
+                        Symbol::Variable { var_type, .. } => self.substitute_in_type(
+                            var_type,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                        Symbol::Struct { struct_def, .. } => {
+                            self.substitute_in_struct(
+                                struct_def,
+                                symbol_table,
+                                generic_name,
+                                concrete_type,
+                            );
+                        }
+                        Symbol::TupleStruct {
+                            tuple_struct_def, ..
+                        } => self.substitute_in_tuple_struct(
+                            tuple_struct_def,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                        Symbol::Enum { enum_def, .. } => {
+                            self.substitute_in_enum(
+                                enum_def,
+                                symbol_table,
+                                generic_name,
+                                concrete_type,
+                            );
+                        }
+                        Symbol::Trait { trait_def, .. } => {
+                            self.substitute_in_trait(
+                                trait_def,
+                                symbol_table,
+                                generic_name,
+                                concrete_type,
+                            );
+                        }
+                        Symbol::Alias {
+                            original_type_opt, ..
+                        } => self.substitute_opt_type(
+                            original_type_opt,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                        Symbol::Constant { constant_type, .. } => self.substitute_in_type(
+                            constant_type,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                        Symbol::Function { function, .. } => self.substitute_in_function(
+                            function,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                        Symbol::Module { module, .. } => self.substitute_in_module(
+                            module,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                    }
+                }
+            }
             // TODO: self type (handle in trait / implementation contexts)
             Type::Vec { element_type } => {
                 self.substitute_in_type(element_type, symbol_table, generic_name, concrete_type);
@@ -2232,58 +2301,6 @@ impl SemanticAnalyser {
             self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
         }
     }
-
-    // fn substitute_user_defined_type(
-    //     &mut self,
-    //     ty: &mut Type,
-    //     symbol_table: &mut SymbolTable,
-    //     generic_name: &Identifier,
-    //     concrete_type: &Type,
-    // ) {
-    //     match ty {
-    //         Type::UserDefined(type_path) => {
-    //             if let Some(sym) = symbol_table.get_mut(type_path) {
-    //                 match sym {
-    //                     Symbol::Variable { var_type, .. } => {
-    //                         self.substitute_in_type(var_type, generic_name, concrete_type)
-    //                     }
-    //                     Symbol::Struct { struct_def, .. } => {
-    //                         self.substitute_in_struct(struct_def, generic_name, concrete_type);
-    //                     }
-    //                     Symbol::TupleStruct {
-    //                         tuple_struct_def, ..
-    //                     } => self.substitute_in_tuple_struct(
-    //                         tuple_struct_def,
-    //                         generic_name,
-    //                         concrete_type,
-    //                     ),
-    //                     Symbol::Enum { enum_def, .. } => {
-    //                         self.substitute_in_enum(enum_def, generic_name, concrete_type);
-    //                     }
-    //                     Symbol::Trait { trait_def, .. } => {
-    //                         self.substitute_in_trait(trait_def, generic_name, concrete_type);
-    //                     }
-    //                     Symbol::Alias {
-    //                         original_type_opt, ..
-    //                     } => {
-    //                         self.substitute_opt_type(original_type_opt, generic_name, concrete_type)
-    //                     }
-    //                     Symbol::Constant { constant_type, .. } => {
-    //                         self.substitute_in_type(constant_type, generic_name, concrete_type)
-    //                     }
-    //                     Symbol::Function { function, .. } => {
-    //                         self.substitute_in_function(function, generic_name, concrete_type)
-    //                     }
-    //                     Symbol::Module { module, .. } => {
-    //                         self.substitute_in_module(module, generic_name, concrete_type)
-    //                     }
-    //                 }
-    //             }
-    //         }
-
-    //         built_in_type => self.substitute_in_type(built_in_type, generic_name, concrete_type),
-    //     }
-    // }
 
     /// Checks if a given type satisfies a specific trait bound.
     fn type_satisfies_bound(&self, concrete_type: &Type, bound_trait: &TraitDef) -> bool {
