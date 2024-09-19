@@ -29,8 +29,8 @@ pub(crate) fn analyse_expr(
                     if let Some(id) = segments.pop() {
                         let root = match &p.path_root {
                             PathRoot::Identifier(id) => TypePath::from(id.clone()),
-                            PathRoot::SelfKeyword => TypePath::from(Identifier::from("analyser")),
-                            PathRoot::SelfType(_) => TypePath::from(Identifier::from("analyser")),
+                            PathRoot::SelfKeyword => TypePath::from(Identifier::from("self")),
+                            PathRoot::SelfType(_) => TypePath::from(Identifier::from("Self")),
 
                             path_root => {
                                 return Err(SemanticErrorKind::InvalidVariableIdentifier {
