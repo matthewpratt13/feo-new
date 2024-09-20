@@ -14,8 +14,10 @@ mod tests;
 
 use crate::{
     ast::{
-        EnumVariantType, Expression, FunctionItem, FunctionOrMethodParam, Identifier, ImportDecl,
-        InferredType, InherentImplItem, Item, Keyword, SelfType, Statement, StructDef, TraitDef,
+        AliasDecl, ConstantDecl, EnumDef, EnumVariantStruct, EnumVariantTupleStruct,
+        EnumVariantType, Expression, FunctionItem, FunctionOrMethodParam, FunctionParam,
+        Identifier, ImportDecl, InferredType, InherentImplDef, InherentImplItem, Item, Keyword,
+        ModuleItem, SelfType, Statement, StaticVarDecl, StructDef, StructDefField, TraitDef,
         TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type,
         TypePath, UnitType, Visibility,
     },
@@ -28,7 +30,7 @@ use crate::{
     span::{Span, Spanned},
 };
 
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use expr::{analyse_expr, wrap_into_expression};
 use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
@@ -137,8 +139,8 @@ impl SemanticAnalyser {
     /// Look up a symbol by its path in the current scope stack, starting from the innermost scope,
     /// and log the lookup result.
     fn lookup(&mut self, path: &TypePath) -> Option<&Symbol> {
-        for scope in self.scope_stack.iter().rev() {
-            if let Some(symbol) = scope.symbols.get(path) {
+        for scope in self.scope_stack.iter_mut().rev() {
+            if let Some(symbol) = scope.symbols.get_mut(path) {
                 self.logger.debug(&format!(
                     "found symbol `{symbol}` in scope `{:?}` at path `{path}`",
                     scope.scope_kind
@@ -232,7 +234,16 @@ impl SemanticAnalyser {
                     _ => value_type.clone(),
                 };
 
-                self.unify_types(&declared_type, &mut value_type)?;
+                let current_module_path = self.current_module_path();
+
+                let mut symbol_table =
+                    if let Some(table) = self.module_registry.get(&current_module_path) {
+                        table.to_owned()
+                    } else {
+                        return Err(SemanticErrorKind::UnknownError);
+                    };
+
+                self.unify_types(&mut symbol_table, &declared_type, &mut value_type)?;
 
                 // check that the value matches the type annotation
                 if value_type != declared_type {
@@ -347,7 +358,17 @@ impl SemanticAnalyser {
                         _ => None,
                     };
 
+                    let current_module_path = self.current_module_path();
+
+                    let mut symbol_table =
+                        if let Some(table) = self.module_registry.get(&current_module_path) {
+                            table.to_owned()
+                        } else {
+                            return Err(SemanticErrorKind::UnknownError);
+                        };
+
                     self.unify_types(
+                        &mut symbol_table,
                         &cd.constant_type,
                         &mut value_type
                             .clone()
@@ -394,7 +415,16 @@ impl SemanticAnalyser {
                         }),
                     };
 
-                    self.unify_types(&s.var_type, &mut assignee_type)?;
+                    let current_module_path = self.current_module_path();
+
+                    let mut symbol_table =
+                        if let Some(table) = self.module_registry.get(&current_module_path) {
+                            table.to_owned()
+                        } else {
+                            return Err(SemanticErrorKind::UnknownError);
+                        };
+
+                    self.unify_types(&mut symbol_table, &s.var_type, &mut assignee_type)?;
 
                     if assignee_type != s.var_type.clone() {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -965,7 +995,16 @@ impl SemanticAnalyser {
 
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
-            self.unify_types(&return_type, &mut function_type)?;
+            let current_module_path = self.current_module_path();
+
+            let mut symbol_table =
+                if let Some(table) = self.module_registry.get(&current_module_path) {
+                    table.to_owned()
+                } else {
+                    return Err(SemanticErrorKind::UnknownError);
+                };
+
+            self.unify_types(&mut symbol_table, &return_type, &mut function_type)?;
 
             if function_type != *return_type.clone() {
                 match function_type.clone() {
@@ -1269,7 +1308,21 @@ impl SemanticAnalyser {
 
                             let param_type = param.param_type();
 
-                            self.unify_types(&param_type, &mut arg_type)?;
+                            let current_module_path = self.current_module_path();
+
+                            println!("current module path: {current_module_path}");
+
+                            println!("module registry keys: {:?}", self.module_registry.keys());
+
+                            let mut symbol_table = if let Some(table) =
+                                self.module_registry.get(&current_module_path)
+                            {
+                                table.to_owned()
+                            } else {
+                                return Err(SemanticErrorKind::UnknownError);
+                            };
+
+                            self.unify_types(&mut symbol_table, &param_type, &mut arg_type)?;
 
                             if arg_type != param_type {
                                 return Err(SemanticErrorKind::TypeMismatchArg {
@@ -1333,7 +1386,12 @@ impl SemanticAnalyser {
 
     /// Unifies two types, ensuring they are compatible. Returns `Ok` if they can be unified, or
     /// an `Err` if there is a type mismatch.
-    fn unify_types(&mut self, type_a: &Type, type_b: &mut Type) -> Result<(), SemanticErrorKind> {
+    fn unify_types(
+        &mut self,
+        symbol_table: &mut SymbolTable,
+        type_a: &Type,
+        type_b: &mut Type,
+    ) -> Result<(), SemanticErrorKind> {
         let type_a_clone = type_a.clone();
         let type_b_clone = type_b.clone();
 
@@ -1345,7 +1403,7 @@ impl SemanticAnalyser {
 
             // if one is a concrete or generic type and the other is inferred, resolve the inference
             (concrete_or_generic, Type::InferredType(_)) => {
-                self.resolve_inferred_type(type_b, concrete_or_generic)
+                resolve_inferred_type(type_b, concrete_or_generic)
             }
 
             (
@@ -1392,9 +1450,11 @@ impl SemanticAnalyser {
                 }
             }
 
-            (Type::Generic { name, bound_opt }, concrete) => {
-                self.unify_generic_with_concrete(&mut Type::Generic { name, bound_opt }, &concrete)
-            }
+            (Type::Generic { name, bound_opt }, concrete) => self.unify_generic_with_concrete(
+                symbol_table,
+                &mut Type::Generic { name, bound_opt },
+                &concrete,
+            ),
 
             (Type::GroupedType(grouped), matched) => {
                 if *grouped != matched {
@@ -1712,8 +1772,6 @@ impl SemanticAnalyser {
                 Ok(())
             }
 
-            // TODO: handle other cases for concrete types (numeric, str, char, bool)
-            // TODO: e.g., casting `i32` as `i64` if needed, etc.
             _ => Err(SemanticErrorKind::TypeMismatchUnification {
                 expected: Identifier::from(&type_a.to_string()),
                 found: Identifier::from(&type_b.to_string()),
@@ -1721,30 +1779,9 @@ impl SemanticAnalyser {
         }
     }
 
-    fn resolve_inferred_type(
-        &mut self,
-        inferred: &mut Type,
-        concrete: Type,
-    ) -> Result<(), SemanticErrorKind> {
-        if *inferred
-            == Type::InferredType(InferredType {
-                name: Identifier::from("_"),
-            })
-        {
-            *inferred = concrete;
-            Ok(())
-        } else if *inferred == concrete {
-            Ok(())
-        } else {
-            Err(SemanticErrorKind::UnexpectedType {
-                expected: inferred.to_string(),
-                found: concrete,
-            })
-        }
-    }
-
     fn unify_generic_with_concrete(
         &mut self,
+        symbol_table: &mut SymbolTable,
         generic_type: &mut Type,
         concrete_type: &Type,
     ) -> Result<(), SemanticErrorKind> {
@@ -1765,11 +1802,11 @@ impl SemanticAnalyser {
                 }
 
                 // if bounds are satisfied, perform the substitution
-                self.substitute_generic_with_concrete(name, concrete_type);
+                self.substitute_generic_with_concrete(symbol_table, name, concrete_type);
                 Ok(())
             }
 
-            _ => self.unify_types(concrete_type, generic_type),
+            _ => self.unify_types(symbol_table, concrete_type, generic_type),
         }
     }
 
@@ -1795,90 +1832,308 @@ impl SemanticAnalyser {
     /// Replace all occurrences of `generic_name` with `concrete_type`.
     fn substitute_generic_with_concrete(
         &mut self,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
-        let mut stack = Rc::new(&self.scope_stack);
-        let stack_mut = Rc::make_mut(&mut stack);
+        let scope_stack = &self.scope_stack;
 
         // iterate through the scope stack and substitute generics in all types.
-        for scope in stack_mut.clone().iter_mut() {
+        for scope in scope_stack.to_owned().iter_mut() {
             for symbol in scope.symbols.values_mut() {
-                self.substitute_in_symbol(symbol, generic_name, concrete_type);
+                self.substitute_in_symbol(symbol, symbol_table, generic_name, concrete_type);
             }
-        }
-    }
-
-    fn substitute_in_symbol(
-        &mut self,
-        symbol: &mut Symbol,
-        generic_name: &Identifier,
-        concrete_type: &Type,
-    ) {
-        match symbol {
-            Symbol::Variable { var_type, .. } => {
-                self.substitute_in_type(var_type, generic_name, concrete_type);
-            }
-            Symbol::Struct { struct_def, .. } => {
-                self.substitute_in_struct_def(struct_def, generic_name, concrete_type);
-            }
-            // TODO: tuple struct
-            // TODO: enum
-            // TODO: trait
-            Symbol::Function { function, .. } => {
-                self.substitute_in_function(function, generic_name, concrete_type);
-            }
-            _ => {}
         }
     }
 
     fn substitute_in_type(
         &mut self,
         ty: &mut Type,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
+        // perform substitution for types
+        // if we encounter a generic type param, replace it with the concrete type
         match ty {
             Type::Generic { name, .. } if name == generic_name => {
                 *ty = concrete_type.clone();
             }
-            // TODO: grouped
+            Type::GroupedType(inner_type) => {
+                self.substitute_in_type(inner_type, symbol_table, generic_name, concrete_type)
+            }
             Type::Array { element_type, .. } => {
-                self.substitute_in_type(element_type, generic_name, concrete_type);
+                self.substitute_in_type(element_type, symbol_table, generic_name, concrete_type);
             }
             Type::Tuple(element_types) => {
                 for elem_type in element_types {
-                    self.substitute_in_type(elem_type, generic_name, concrete_type);
+                    self.substitute_in_type(elem_type, symbol_table, generic_name, concrete_type);
                 }
             }
-            // TODO: function pointer
+            Type::FunctionPtr(ptr) => {
+                if let Some(params) = ptr.params_opt.as_mut() {
+                    for param in params {
+                        match param {
+                            FunctionOrMethodParam::FunctionParam(FunctionParam {
+                                param_type,
+                                ..
+                            }) => self.substitute_in_type(
+                                param_type,
+                                symbol_table,
+                                generic_name,
+                                concrete_type,
+                            ),
+                            FunctionOrMethodParam::MethodParam(_) => (),
+                        }
+                    }
+                }
+
+                if let Some(ty) = ptr.return_type_opt.as_mut() {
+                    self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
+                }
+            }
             Type::Reference { inner_type, .. } => {
-                self.substitute_in_type(inner_type, generic_name, concrete_type);
+                self.substitute_in_type(inner_type, symbol_table, generic_name, concrete_type);
             }
+            Type::UserDefined(type_path) => {
+                if let Some(sym) = symbol_table.to_owned().get_mut(type_path) {
+                    match sym {
+                        Symbol::Variable { var_type, .. } => self.substitute_in_type(
+                            var_type,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                        Symbol::Struct { struct_def, .. } => {
+                            self.substitute_in_struct(
+                                struct_def,
+                                symbol_table,
+                                generic_name,
+                                concrete_type,
+                            );
+                        }
+                        Symbol::TupleStruct {
+                            tuple_struct_def, ..
+                        } => self.substitute_in_tuple_struct(
+                            tuple_struct_def,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                        Symbol::Enum { enum_def, .. } => {
+                            self.substitute_in_enum(
+                                enum_def,
+                                symbol_table,
+                                generic_name,
+                                concrete_type,
+                            );
+                        }
+                        Symbol::Trait { trait_def, .. } => {
+                            self.substitute_in_trait(
+                                trait_def,
+                                symbol_table,
+                                generic_name,
+                                concrete_type,
+                            );
+                        }
+                        Symbol::Alias {
+                            original_type_opt, ..
+                        } => self.substitute_opt_type(
+                            original_type_opt,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                        Symbol::Constant { constant_type, .. } => self.substitute_in_type(
+                            constant_type,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                        Symbol::Function { function, .. } => self.substitute_in_function(
+                            function,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                        Symbol::Module { module, .. } => self.substitute_in_module(
+                            module,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                    }
+                }
+            }
+            // TODO: self type (handle in trait / implementation contexts)
             Type::Vec { element_type } => {
-                self.substitute_in_type(element_type, generic_name, concrete_type);
+                self.substitute_in_type(element_type, symbol_table, generic_name, concrete_type);
             }
-            // TODO: mapping
+            Type::Mapping {
+                key_type,
+                value_type,
+            } => {
+                self.substitute_in_type(key_type, symbol_table, generic_name, concrete_type);
+                self.substitute_in_type(value_type, symbol_table, generic_name, concrete_type);
+            }
             Type::Option { inner_type } => {
-                self.substitute_in_type(inner_type, generic_name, concrete_type);
+                self.substitute_in_type(inner_type, symbol_table, generic_name, concrete_type);
             }
             Type::Result { ok_type, err_type } => {
-                self.substitute_in_type(ok_type, generic_name, concrete_type);
-                self.substitute_in_type(err_type, generic_name, concrete_type);
+                self.substitute_in_type(ok_type, symbol_table, generic_name, concrete_type);
+                self.substitute_in_type(err_type, symbol_table, generic_name, concrete_type);
             }
+
             _ => {}
         }
     }
 
-    fn substitute_in_struct_def(
+    fn substitute_in_symbol(
+        &mut self,
+        symbol: &mut Symbol,
+        symbol_table: &mut SymbolTable,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        // apply substitution to each symbol within the current scope by delegating to specific
+        // substitution functions
+        match symbol {
+            Symbol::Variable { var_type, .. } => {
+                self.substitute_in_type(var_type, symbol_table, generic_name, concrete_type);
+            }
+            Symbol::Struct { struct_def, .. } => {
+                self.substitute_in_struct(struct_def, symbol_table, generic_name, concrete_type);
+            }
+            Symbol::TupleStruct {
+                tuple_struct_def, ..
+            } => {
+                self.substitute_in_tuple_struct(
+                    tuple_struct_def,
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
+            }
+            Symbol::Enum { enum_def, .. } => {
+                self.substitute_in_enum(enum_def, symbol_table, generic_name, concrete_type);
+            }
+            Symbol::Trait { trait_def, .. } => {
+                self.substitute_in_trait(trait_def, symbol_table, generic_name, concrete_type)
+            }
+            Symbol::Alias {
+                original_type_opt, ..
+            } => {
+                self.substitute_opt_type(
+                    original_type_opt,
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
+            }
+            Symbol::Constant { constant_type, .. } => {
+                self.substitute_in_type(constant_type, symbol_table, generic_name, concrete_type);
+            }
+            Symbol::Function { function, .. } => {
+                self.substitute_in_function(function, symbol_table, generic_name, concrete_type);
+            }
+            Symbol::Module { module, .. } => {
+                self.substitute_in_module(module, symbol_table, generic_name, concrete_type)
+            }
+        }
+    }
+
+    fn substitute_in_struct(
         &mut self,
         struct_def: &mut StructDef,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
         if let Some(fields) = struct_def.fields_opt.as_mut() {
-            for field in fields {
-                self.substitute_in_type(&mut field.field_type, generic_name, concrete_type);
+            for StructDefField { field_type, .. } in fields {
+                self.substitute_in_type(field_type, symbol_table, generic_name, concrete_type);
+            }
+        }
+    }
+
+    fn substitute_in_tuple_struct(
+        &mut self,
+        tuple_struct_def: &mut TupleStructDef,
+        symbol_table: &mut SymbolTable,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(fields) = tuple_struct_def.fields_opt.as_mut() {
+            for TupleStructDefField { field_type, .. } in fields {
+                self.substitute_in_type(field_type, symbol_table, generic_name, concrete_type);
+            }
+        }
+    }
+
+    fn substitute_in_enum(
+        &mut self,
+        enum_def: &mut EnumDef,
+        symbol_table: &mut SymbolTable,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        for variant in enum_def.variants.iter_mut() {
+            if let Some(ty) = variant.variant_type_opt.as_mut() {
+                match ty {
+                    EnumVariantType::Struct(EnumVariantStruct { struct_fields }) => {
+                        for StructDefField { field_type, .. } in struct_fields {
+                            self.substitute_in_type(
+                                field_type,
+                                symbol_table,
+                                generic_name,
+                                concrete_type,
+                            );
+                        }
+                    }
+                    EnumVariantType::TupleStruct(EnumVariantTupleStruct { element_types }, ..) => {
+                        for ty in element_types {
+                            self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn substitute_in_trait(
+        &mut self,
+        trait_def: &mut TraitDef,
+        symbol_table: &mut SymbolTable,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(items) = trait_def.trait_items_opt.as_mut() {
+            for item in items {
+                match item {
+                    TraitDefItem::AliasDecl(AliasDecl {
+                        original_type_opt, ..
+                    }) => {
+                        self.substitute_opt_type(
+                            original_type_opt,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        );
+                    }
+                    TraitDefItem::ConstantDecl(ConstantDecl { constant_type, .. }) => self
+                        .substitute_in_type(
+                            constant_type,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                    TraitDefItem::FunctionItem(function_item) => self.substitute_in_function(
+                        function_item,
+                        symbol_table,
+                        generic_name,
+                        concrete_type,
+                    ),
+                }
             }
         }
     }
@@ -1886,17 +2141,167 @@ impl SemanticAnalyser {
     fn substitute_in_function(
         &mut self,
         function: &mut FunctionItem,
+        symbol_table: &mut SymbolTable,
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
         if let Some(params) = function.params_opt.as_mut() {
             for param in params {
-                self.substitute_in_type(&mut param.param_type(), generic_name, concrete_type);
+                self.substitute_in_type(
+                    &mut param.param_type(),
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
             }
         }
 
         if let Some(return_type) = function.return_type_opt.as_mut() {
-            self.substitute_in_type(return_type, generic_name, concrete_type);
+            self.substitute_in_type(return_type, symbol_table, generic_name, concrete_type);
+        }
+    }
+
+    fn substitute_in_module(
+        &mut self,
+        module: &mut ModuleItem,
+        symbol_table: &mut SymbolTable,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(items) = module.items_opt.as_mut() {
+            for item in items {
+                match item {
+                    Item::AliasDecl(AliasDecl {
+                        original_type_opt, ..
+                    }) => self.substitute_opt_type(
+                        original_type_opt,
+                        symbol_table,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::ConstantDecl(ConstantDecl { constant_type, .. }) => self
+                        .substitute_in_type(
+                            constant_type,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        ),
+                    Item::StaticVarDecl(StaticVarDecl { var_type, .. }) => {
+                        self.substitute_in_type(var_type, symbol_table, generic_name, concrete_type)
+                    }
+                    Item::ModuleItem(module) => {
+                        self.substitute_in_module(module, symbol_table, generic_name, concrete_type)
+                    }
+                    Item::TraitDef(trait_def) => self.substitute_in_trait(
+                        trait_def,
+                        symbol_table,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::EnumDef(enum_def) => {
+                        self.substitute_in_enum(
+                            enum_def,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        );
+                    }
+                    Item::StructDef(struct_def) => self.substitute_in_struct(
+                        struct_def,
+                        symbol_table,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::TupleStructDef(tuple_struct_def) => self.substitute_in_tuple_struct(
+                        tuple_struct_def,
+                        symbol_table,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::FunctionItem(function) => self.substitute_in_function(
+                        function,
+                        symbol_table,
+                        generic_name,
+                        concrete_type,
+                    ),
+                    Item::InherentImplDef(InherentImplDef {
+                        associated_items_opt,
+                        ..
+                    }) => {
+                        if let Some(assoc_items) = associated_items_opt.as_mut() {
+                            for item in assoc_items {
+                                match item {
+                                    InherentImplItem::ConstantDecl(ConstantDecl {
+                                        constant_type,
+                                        ..
+                                    }) => self.substitute_in_type(
+                                        constant_type,
+                                        symbol_table,
+                                        generic_name,
+                                        concrete_type,
+                                    ),
+                                    InherentImplItem::FunctionItem(function) => self
+                                        .substitute_in_function(
+                                            function,
+                                            symbol_table,
+                                            generic_name,
+                                            concrete_type,
+                                        ),
+                                }
+                            }
+                        }
+                    }
+                    Item::TraitImplDef(TraitImplDef {
+                        associated_items_opt,
+                        ..
+                    }) => {
+                        if let Some(assoc_items) = associated_items_opt.as_mut() {
+                            for item in assoc_items {
+                                match item {
+                                    TraitImplItem::AliasDecl(AliasDecl {
+                                        original_type_opt,
+                                        ..
+                                    }) => self.substitute_opt_type(
+                                        original_type_opt,
+                                        symbol_table,
+                                        generic_name,
+                                        concrete_type,
+                                    ),
+                                    TraitImplItem::ConstantDecl(ConstantDecl {
+                                        constant_type,
+                                        ..
+                                    }) => self.substitute_in_type(
+                                        constant_type,
+                                        symbol_table,
+                                        generic_name,
+                                        concrete_type,
+                                    ),
+                                    TraitImplItem::FunctionItem(function) => self
+                                        .substitute_in_function(
+                                            function,
+                                            symbol_table,
+                                            generic_name,
+                                            concrete_type,
+                                        ),
+                                }
+                            }
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+    }
+
+    fn substitute_opt_type(
+        &mut self,
+        original_type_opt: &mut Option<Type>,
+        symbol_table: &mut SymbolTable,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(ty) = original_type_opt {
+            self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
         }
     }
 
@@ -1907,8 +2312,8 @@ impl SemanticAnalyser {
         let trait_implementations = self.get_trait_implementations(concrete_type);
 
         // check if any of the implementations match the required trait
-        for trait_impl in trait_implementations.iter() {
-            if self.trait_matches(trait_impl, bound_trait) {
+        for trait_impl in trait_implementations {
+            if self.trait_matches(&trait_impl, bound_trait) {
                 return true;
             }
         }
@@ -1919,23 +2324,15 @@ impl SemanticAnalyser {
 
     fn get_trait_implementations(&self, concrete_type: &Type) -> Vec<TraitImplDef> {
         // convert concrete type to its `TypePath` representation
-        if let Some(type_path) = self.resolve_type_path(concrete_type).as_ref() {
+        if let Some(type_path) = resolve_type_path(concrete_type) {
             // look up the trait implementations in the type table
-            if let Some(trait_impls) = self.type_table.get(type_path) {
+            if let Some(trait_impls) = self.type_table.get(&type_path) {
                 return trait_impls.clone();
             }
         }
 
         // if no implementations are found, return an empty vector
         Vec::new()
-    }
-
-    /// Helper function to resolve `Type` to `TypePath`.
-    fn resolve_type_path(&self, ty: &Type) -> Option<TypePath> {
-        match ty {
-            Type::UserDefined(type_path) => Some(type_path.clone()),
-            _ => None,
-        }
     }
 
     /// Check if the trait implementation matches the required trait.
@@ -1951,6 +2348,51 @@ impl SemanticAnalyser {
         self.logger.error(&error.to_string());
 
         self.errors.push(error);
+    }
+
+    fn current_module_path(&self) -> TypePath {
+        let mut current_module_scope: Vec<Identifier> = Vec::new();
+
+        for scope in self.scope_stack.iter() {
+            match &scope.scope_kind {
+                ScopeKind::LocalBlock => (),
+                ScopeKind::MatchExpr => (),
+                ScopeKind::ForInLoop => (),
+                ScopeKind::Function(_) => (),
+                ScopeKind::Module(m) => current_module_scope.push(Identifier::from(m)),
+                ScopeKind::RootModule(rm) => current_module_scope.push(Identifier::from(rm)),
+                ScopeKind::Lib => (),
+                ScopeKind::Public => (),
+            }
+        }
+
+        TypePath::from(current_module_scope)
+    }
+}
+
+fn resolve_inferred_type(inferred: &mut Type, concrete: Type) -> Result<(), SemanticErrorKind> {
+    if *inferred
+        == Type::InferredType(InferredType {
+            name: Identifier::from("_"),
+        })
+    {
+        *inferred = concrete;
+        Ok(())
+    } else if *inferred == concrete {
+        Ok(())
+    } else {
+        Err(SemanticErrorKind::UnexpectedType {
+            expected: inferred.to_string(),
+            found: concrete,
+        })
+    }
+}
+
+/// Helper function to resolve `Type` to `TypePath`.
+fn resolve_type_path(ty: &Type) -> Option<TypePath> {
+    match ty {
+        Type::UserDefined(type_path) => Some(type_path.clone()),
+        _ => None,
     }
 }
 
