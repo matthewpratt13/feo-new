@@ -1310,6 +1310,10 @@ impl SemanticAnalyser {
 
                             let current_module_path = self.current_module_path();
 
+                            println!("current module path: {current_module_path}");
+
+                            println!("module registry keys: {:?}", self.module_registry.keys());
+
                             let mut symbol_table = if let Some(table) =
                                 self.module_registry.get(&current_module_path)
                             {
@@ -2354,10 +2358,10 @@ impl SemanticAnalyser {
                 ScopeKind::LocalBlock => (),
                 ScopeKind::MatchExpr => (),
                 ScopeKind::ForInLoop => (),
-                ScopeKind::Function(f) => current_module_scope.push(Identifier::from(f)),
+                ScopeKind::Function(_) => (),
                 ScopeKind::Module(m) => current_module_scope.push(Identifier::from(m)),
                 ScopeKind::RootModule(rm) => current_module_scope.push(Identifier::from(rm)),
-                ScopeKind::Lib => current_module_scope.push(Identifier::from("lib")),
+                ScopeKind::Lib => (),
                 ScopeKind::Public => (),
             }
         }
