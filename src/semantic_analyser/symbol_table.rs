@@ -10,18 +10,18 @@ use std::collections::HashMap;
 pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
 
 /// Enumeration of the different kinds of scopes that can be encountered during semantic analysis.
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum ScopeKind {
     LocalBlock,
     MatchExpr,
     ForInLoop,
-    Function(String),
+    Function(TypePath),
     // TraitImpl(String),
     // Impl(String),
     // TraitDef(String),
-    Module(String),
-    RootModule(String),
-    Lib,
+    Module(TypePath),
+    // RootModule(String),
+    ProgramRoot,
     Public,
 }
 

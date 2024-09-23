@@ -248,15 +248,12 @@ pub(crate) fn analyse_patt(
                         for def_field in def_fields.into_iter() {
                             match field_map.get_mut(&def_field.field_name) {
                                 Some(patt_field_type) => {
-                                    let current_module_path = analyser.current_module_path();
-
-                                    let mut symbol_table = if let Some(table) =
-                                        analyser.module_registry.get(&current_module_path)
-                                    {
-                                        table.to_owned()
-                                    } else {
-                                        return Err(SemanticErrorKind::UnknownError);
-                                    };
+                                    let mut symbol_table =
+                                        if let Some(scope) = analyser.scope_stack.last() {
+                                            scope.symbols.to_owned()
+                                        } else {
+                                            HashMap::new()
+                                        };
 
                                     analyser.unify_types(
                                         &mut symbol_table,
@@ -340,15 +337,12 @@ pub(crate) fn analyse_patt(
                                 let mut elem_type = analyse_patt(analyser, &elem)?;
                                 // let elem_type_clone = elem_type.clone();
 
-                                let current_module_path = analyser.current_module_path();
-
-                                let mut symbol_table = if let Some(table) =
-                                    analyser.module_registry.get(&current_module_path)
-                                {
-                                    table.to_owned()
-                                } else {
-                                    return Err(SemanticErrorKind::UnknownError);
-                                };
+                                let mut symbol_table =
+                                    if let Some(scope) = analyser.scope_stack.last() {
+                                        scope.symbols.to_owned()
+                                    } else {
+                                        HashMap::new()
+                                    };
 
                                 analyser.unify_types(
                                     &mut symbol_table,
