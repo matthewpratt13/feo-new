@@ -105,6 +105,12 @@ impl fmt::Debug for Literal {
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub(crate) struct Identifier(String);
 
+impl Identifier {
+    pub(crate) fn to_type_path(&self) -> TypePath {
+        self.clone().into()
+    }
+}
+
 impl From<TypePath> for Identifier {
     fn from(value: TypePath) -> Self {
         Identifier::from(&value.to_string())
