@@ -1248,6 +1248,7 @@ pub(crate) fn analyse_expr(
 
             if let Pattern::IdentifierPatt(id) = *fi.pattern.clone() {
                 analyser.insert(
+                    &root.clone().into(),
                     TypePath::from(id.name.clone()),
                     Symbol::Variable {
                         name: id.name,

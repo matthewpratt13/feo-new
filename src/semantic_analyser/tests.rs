@@ -11,7 +11,7 @@ fn setup(
     log_level: LogLevel,
     print_tokens: bool,
     print_statements: bool,
-    external_code: Option<SymbolTable>,
+    external_code: Option<HashMap<Identifier, Vec<Module>>>,
 ) -> Result<(SemanticAnalyser, Program), ()> {
     let mut parser = parser::test_utils::get_parser(input, LogLevel::Warning, print_tokens);
 
@@ -244,6 +244,8 @@ fn analyse_impl() -> Result<(), ()> {
 
 #[test]
 fn analyse_import_decl() -> Result<(), ()> {
+    let external_lib_root_id = Identifier::from("external_lib");
+
     let external_func = FunctionItem {
         attributes_opt: None,
         visibility: Visibility::Pub,
@@ -267,37 +269,44 @@ fn analyse_import_decl() -> Result<(), ()> {
     };
 
     let external_mod_path = TypePath {
-        associated_type_path_prefix_opt: None,
+        associated_type_path_prefix_opt: Some(vec![external_lib_root_id.clone()]),
         type_name: external_mod.module_name.clone(),
     };
 
-    let func_path = TypePath {
-        associated_type_path_prefix_opt: Some(Vec::<Identifier>::from(external_mod_path.clone())),
+    let external_func_path = TypePath {
+        associated_type_path_prefix_opt: Some(vec![external_mod_path.clone().into()]),
         type_name: external_func.function_name.clone(),
     };
 
     let mut symbols: SymbolTable = HashMap::new();
-
     symbols.insert(
-        func_path,
+        external_func_path.clone(),
         Symbol::Function {
-            path: TypePath::from(external_func.function_name.clone()),
+            path: external_func_path,
             function: external_func,
         },
     );
 
-    let mut external_code: SymbolTable = HashMap::new();
-    external_code.insert(
+    let mut table: SymbolTable = HashMap::new();
+    table.insert(
         external_mod_path.clone(),
         Symbol::Module {
             path: external_mod_path,
-            module: external_mod,
+            module: external_mod.clone(),
             symbols,
         },
     );
 
+    let module = Module {
+        name: external_mod.module_name,
+        table,
+    };
+
+    let mut external_code: HashMap<Identifier, Vec<Module>> = HashMap::new();
+    external_code.insert(external_lib_root_id, vec![module]);
+
     let input = r#" 
-    import external_mod::external_func;
+    import external_lib::external_mod::external_func;
 
     module some_mod { 
         struct SomeObject {}
@@ -332,7 +341,8 @@ fn analyse_import_decl() -> Result<(), ()> {
 
     func call_another_func() -> AnotherObject {
         another_func()
-    }"#;
+    }
+    "#;
 
     let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, Some(external_code))?;
 

@@ -126,3 +126,9 @@ pub(crate) struct Scope {
     pub(crate) scope_kind: ScopeKind,
     pub(crate) symbols: SymbolTable,
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct Module {
+    pub(crate) name: Identifier,
+    pub(crate) table: SymbolTable,
+}

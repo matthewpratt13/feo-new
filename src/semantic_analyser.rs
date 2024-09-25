@@ -33,7 +33,7 @@ use crate::{
 use std::collections::HashMap;
 
 use expr::{analyse_expr, wrap_into_expression};
-use symbol_table::{Scope, ScopeKind, Symbol, SymbolTable};
+use symbol_table::{Module, Scope, ScopeKind, Symbol, SymbolTable};
 
 /// Mapping from a `TypePath`` (representing a concrete type) to a vector of `TraitImplDef`
 /// (representing implemented traits)
@@ -45,7 +45,7 @@ type TypeTable = HashMap<TypePath, Vec<TraitImplDef>>;
 #[allow(dead_code)]
 struct SemanticAnalyser {
     scope_stack: Vec<Scope>,
-    module_registry: HashMap<Identifier, SymbolTable>,
+    lib_registry: HashMap<Identifier, Vec<Module>>,
     errors: Vec<CompilerError<SemanticErrorKind>>,
     logger: Logger,
     type_table: TypeTable,
@@ -56,30 +56,45 @@ impl SemanticAnalyser {
     /// Construct a new `SemanticAnalyser` instance. Initialize the logger, external symbols
     /// and module registry. Add any external code (e.g., library functions) to the global scope
     /// if provided.
-    pub(crate) fn new(log_level: LogLevel, external_code: Option<SymbolTable>) -> Self {
+    pub(crate) fn new(
+        log_level: LogLevel,
+        external_code: Option<HashMap<Identifier, Vec<Module>>>,
+    ) -> Self {
         let mut logger = Logger::new(log_level);
-        let mut external_symbols: SymbolTable = HashMap::new();
+        let mut symbols: SymbolTable = HashMap::new();
+        let mut lib_registry: HashMap<Identifier, Vec<Module>> = HashMap::new();
 
-        if let Some(ext) = external_code {
-            logger.debug("external code detected – importing …");
+        if let Some(code) = external_code {
+            logger.debug(&format!(
+                "external code detected – importing code from {:?}",
+                code.keys()
+            ));
 
-            for (path, ref sym) in ext {
-                // if the symbol is a trait implementation, also update the `TypeTable` to add
-                // trait implementations for a given implementing type (replace the current empty
-                // `HashMap`)
+            for (name, modules) in code {
+                for module in modules.iter() {
+                    for (path, sym) in module.table.iter() {
+                        symbols.insert(path.clone(), sym.clone());
+                    }
+                }
 
-                external_symbols.insert(path, sym.clone());
+                lib_registry.insert(name, modules);
+
+                // TODO: if the symbol is a trait implementation, also update the `TypeTable` to add
+                // TODO: trait implementations for a given implementing type (replace the current
+                // TODO: empty `HashMap`)
             }
-
-            logger.info("imported external code");
         }
 
+        let public_scope = Scope {
+            scope_kind: ScopeKind::Public,
+            symbols,
+        };
+
+        logger.info("entering public scope…");
+
         SemanticAnalyser {
-            scope_stack: vec![Scope {
-                scope_kind: ScopeKind::Public,
-                symbols: external_symbols,
-            }],
-            module_registry: HashMap::new(),
+            scope_stack: vec![public_scope],
+            lib_registry,
             errors: Vec::new(),
             logger,
             type_table: HashMap::new(),
@@ -110,14 +125,27 @@ impl SemanticAnalyser {
     }
 
     /// Insert a symbol into the current scope's symbol table.
-    fn insert(&mut self, path: TypePath, symbol: Symbol) -> Result<(), SemanticErrorKind> {
+    fn insert(
+        &mut self,
+        module_name: &Identifier,
+        path: TypePath,
+        symbol: Symbol,
+    ) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             self.logger.debug(&format!(
                 "inserting symbol `{symbol}` into scope `{:?}` at path `{path}` …",
                 curr_scope.scope_kind
             ));
 
-            curr_scope.symbols.insert(path, symbol);
+            curr_scope.symbols.insert(path.clone(), symbol.clone());
+
+            if let Some(modules) = self.lib_registry.get_mut(&Identifier::from("lib")) {
+                for module in modules.iter_mut() {
+                    if module.name == *module_name {
+                        module.table.insert(path.clone(), symbol.clone());
+                    }
+                }
+            }
 
             Ok(())
         } else {
@@ -140,7 +168,7 @@ impl SemanticAnalyser {
         }
 
         self.logger
-            .warn(&format!("path `{path}` not found in any scope"));
+            .warn(&format!("path `{path}` not found in current scope"));
 
         None
     }
@@ -179,8 +207,11 @@ impl SemanticAnalyser {
 
         self.enter_scope(ScopeKind::ProgramRoot);
 
+        self.lib_registry
+            .insert(Identifier::from("lib"), Vec::new());
+
         for stmt in &program.statements {
-            self.analyse_stmt(stmt, Identifier::from("lib"))
+            self.analyse_stmt(stmt, Identifier::from(""))
                 .map_err(|_| self.errors.clone())?
         }
 
@@ -289,7 +320,7 @@ impl SemanticAnalyser {
                     },
                     Type::UserDefined(tp) => {
                         let type_path =
-                            self.check_path(&tp, &root_module.into(), "type".to_string())?;
+                            self.check_path(&tp, &root_module.clone().into(), "type".to_string())?;
 
                         match self.lookup(&type_path) {
                             Some(sym) => sym.clone(),
@@ -310,7 +341,7 @@ impl SemanticAnalyser {
                 };
 
                 // add the variable to the symbol table
-                self.insert(assignee_path, symbol)?;
+                self.insert(&root_module, assignee_path, symbol)?;
             }
 
             Statement::Item(item) => match item {
@@ -328,10 +359,13 @@ impl SemanticAnalyser {
                     self.logger
                         .trace(&format!("analysing alias declaration: `{statement}`"));
 
-                    let alias_path =
-                        build_item_path(&root_module.into(), TypePath::from(ad.alias_name.clone()));
+                    let alias_path = build_item_path(
+                        &root_module.clone().into(),
+                        TypePath::from(ad.alias_name.clone()),
+                    );
 
                     self.insert(
+                        &root_module,
                         alias_path.clone(),
                         Symbol::Alias {
                             path: alias_path,
@@ -378,11 +412,12 @@ impl SemanticAnalyser {
                     }
 
                     let constant_path = build_item_path(
-                        &root_module.into(),
+                        &root_module.clone().into(),
                         TypePath::from(cd.constant_name.clone()),
                     );
 
                     self.insert(
+                        &root_module,
                         constant_path.clone(),
                         Symbol::Constant {
                             path: constant_path,
@@ -426,11 +461,12 @@ impl SemanticAnalyser {
                     }
 
                     let static_var_path = build_item_path(
-                        &TypePath::from(root_module),
+                        &TypePath::from(root_module.clone()),
                         TypePath::from(s.var_name.clone()),
                     );
 
                     self.insert(
+                        &root_module,
                         static_var_path,
                         Symbol::Variable {
                             name: s.var_name.clone(),
@@ -491,6 +527,7 @@ impl SemanticAnalyser {
                     }
 
                     self.insert(
+                        &m.module_name,
                         module_path.clone(),
                         Symbol::Module {
                             path: module_path.clone(),
@@ -503,6 +540,20 @@ impl SemanticAnalyser {
                         "inserting symbols into module at path: `{}` …",
                         module_path.clone()
                     ));
+
+                    if let Some(modules) = self.lib_registry.get_mut(&Identifier::from("lib")) {
+                        self.logger.debug(&format!(
+                            "inserting module `{}` into library registry under local library …",
+                            m.module_name
+                        ));
+
+                        let module = Module {
+                            name: m.module_name.clone(),
+                            table: module_scope.symbols,
+                        };
+
+                        modules.push(module);
+                    }
                 }
 
                 Item::TraitDef(t) => {
@@ -516,6 +567,7 @@ impl SemanticAnalyser {
                     ));
 
                     self.insert(
+                        &root_module,
                         trait_def_path.clone(),
                         Symbol::Trait {
                             path: trait_name_path,
@@ -550,6 +602,7 @@ impl SemanticAnalyser {
                                     );
 
                                     self.insert(
+                                        &root_module,
                                         function_def_path,
                                         Symbol::Function {
                                             path: function_name_path,
@@ -575,12 +628,13 @@ impl SemanticAnalyser {
                 Item::EnumDef(e) => {
                     let enum_name_path = TypePath::from(e.enum_name.clone());
                     let enum_def_path =
-                        build_item_path(&root_module.into(), enum_name_path.clone());
+                        build_item_path(&root_module.clone().into(), enum_name_path.clone());
 
                     self.logger
                         .debug(&format!("analysing enum definition: `{enum_def_path}` …"));
 
                     self.insert(
+                        &root_module,
                         enum_def_path.clone(),
                         Symbol::Enum {
                             path: enum_name_path,
@@ -600,6 +654,7 @@ impl SemanticAnalyser {
                             match variant_type {
                                 EnumVariantType::Struct(s) => {
                                     self.insert(
+                                        &root_module,
                                         variant_path.clone(),
                                         Symbol::Struct {
                                             path: variant_path,
@@ -617,6 +672,7 @@ impl SemanticAnalyser {
                                 }
                                 EnumVariantType::TupleStruct(t) => {
                                     self.insert(
+                                        &root_module,
                                         variant_path.clone(),
                                         Symbol::TupleStruct {
                                             path: variant_path.clone(),
@@ -652,6 +708,7 @@ impl SemanticAnalyser {
                             }
                         } else {
                             self.insert(
+                                &root_module,
                                 variant_path.clone(),
                                 Symbol::Variable {
                                     name: Identifier::from(&variant_path.to_string()),
@@ -665,13 +722,14 @@ impl SemanticAnalyser {
                 Item::StructDef(s) => {
                     let struct_name_path = TypePath::from(s.struct_name.clone());
                     let struct_def_path =
-                        build_item_path(&root_module.into(), struct_name_path.clone());
+                        build_item_path(&root_module.clone().into(), struct_name_path.clone());
 
                     self.logger.debug(&format!(
                         "analysing struct definition: `{struct_def_path}` …"
                     ));
 
                     self.insert(
+                        &root_module,
                         struct_def_path,
                         Symbol::Struct {
                             path: struct_name_path,
@@ -685,13 +743,14 @@ impl SemanticAnalyser {
                 Item::TupleStructDef(ts) => {
                     let struct_name_path = TypePath::from(ts.struct_name.clone());
                     let tuple_struct_path =
-                        build_item_path(&root_module.into(), struct_name_path.clone());
+                        build_item_path(&root_module.clone().into(), struct_name_path.clone());
 
                     self.logger.debug(&format!(
                         "analysing tuple struct definition: `{tuple_struct_path}` …"
                     ));
 
                     self.insert(
+                        &root_module,
                         tuple_struct_path,
                         Symbol::TupleStruct {
                             path: struct_name_path,
@@ -728,6 +787,7 @@ impl SemanticAnalyser {
                                         build_item_path(&type_path, function_name_path.clone());
 
                                     self.insert(
+                                        &root_module,
                                         function_def_path.clone(),
                                         Symbol::Function {
                                             path: function_name_path,
@@ -788,6 +848,7 @@ impl SemanticAnalyser {
                                     );
 
                                     self.insert(
+                                        &root_module,
                                         function_impl_path.clone(),
                                         Symbol::Function {
                                             path: function_impl_path,
@@ -824,6 +885,7 @@ impl SemanticAnalyser {
                     ));
 
                     self.insert(
+                        &root_module,
                         function_item_path,
                         Symbol::Function {
                             path: function_name_path,
@@ -895,6 +957,7 @@ impl SemanticAnalyser {
         if let Some(generic_params) = &f.generic_params_opt {
             for generic_param in &generic_params.params {
                 self.insert(
+                    &path.clone().into(),
                     TypePath::from(generic_param.name.clone()),
                     Symbol::Variable {
                         name: generic_param.name.clone(),
@@ -935,6 +998,7 @@ impl SemanticAnalyser {
 
                     Type::FunctionPtr(fp) => {
                         self.insert(
+                            &path.clone().into(),
                             param_path.clone(),
                             Symbol::Function {
                                 path: param_path.clone(),
@@ -958,7 +1022,9 @@ impl SemanticAnalyser {
                             self.check_path(&tp, &path, "user-defined type".to_string())?;
 
                         match self.lookup(&type_path).cloned() {
-                            Some(sym) => self.insert(param_path, sym.clone())?,
+                            Some(sym) => {
+                                self.insert(&path.clone().into(), param_path, sym.clone())?
+                            }
                             None => {
                                 return Err(SemanticErrorKind::UndefinedType {
                                     name: tp.type_name,
@@ -968,6 +1034,7 @@ impl SemanticAnalyser {
                     }
 
                     ty => self.insert(
+                        &path.clone().into(),
                         param_path,
                         Symbol::Variable {
                             name: param.param_name(),
@@ -1052,7 +1119,7 @@ impl SemanticAnalyser {
     fn analyse_import(
         &mut self,
         import_decl: &ImportDecl,
-        module_root: &Identifier,
+        lib_root: &Identifier,
     ) -> Result<(), SemanticErrorKind> {
         let path_segments = import_decl.import_tree.path_segments.clone();
 
@@ -1060,50 +1127,93 @@ impl SemanticAnalyser {
 
         println!("import_paths: {:#?}", import_paths);
 
-        for path in import_paths {
-            let import_root = if let Some(ref ids) = path.associated_type_path_prefix_opt {
-                if !ids.is_empty() {
-                    &TypePath::from(ids.to_vec())
+        for import_path in import_paths {
+            let import_root =
+                if let Some(ids) = import_path.associated_type_path_prefix_opt.as_ref() {
+                    if !ids.is_empty() {
+                        ids.first().cloned().unwrap()
+                    } else {
+                        import_path.type_name.clone()
+                    }
                 } else {
-                    &TypePath::from(path.type_name.clone())
-                }
-            } else {
-                &TypePath::from(module_root.clone())
-            };
+                    lib_root.clone()
+                };
 
             println!("import root: {import_root}");
 
-            if let Some(module) = self.module_registry.get(module_root).cloned() {
-                for (item_path, symbol) in module.clone() {
-                    if item_path != TypePath::from(module_root.clone())
-                        && item_path.type_name != Identifier::from("lib")
-                    {
-                        self.insert(item_path, symbol)?;
+            // bring external libraries into scope
+            if let Some(modules) = self.lib_registry.get(&import_root).cloned() {
+                self.logger.debug(&format!(
+                    "detected library `{:?}` in library registry",
+                    import_root
+                ));
+
+                for module in modules {
+                    for (item_path, symbol) in module.table.iter() {
+                        if let Some(scope) = self.scope_stack.last().cloned() {
+                            if let Symbol::Module { symbols, .. } = symbol {
+                                for (path, sym) in symbols {
+                                    if !scope.symbols.contains_key(&import_path) {
+                                        self.insert(&module.name, path.clone(), sym.clone())?;
+                                    } else if !scope.symbols.contains_key(&TypePath::from(
+                                        import_path.type_name.clone(),
+                                    )) {
+                                        self.insert(
+                                            &module.name,
+                                            path.type_name.clone().into(),
+                                            symbol.clone(),
+                                        )?;
+                                    }
+                                }
+                            } else {
+                                if !scope.symbols.contains_key(&import_path) {
+                                    self.insert(&module.name, item_path.clone(), symbol.clone())?;
+                                } else if !scope
+                                    .symbols
+                                    .contains_key(&TypePath::from(import_path.type_name.clone()))
+                                {
+                                    self.insert(
+                                        &module.name,
+                                        item_path.type_name.clone().into(),
+                                        symbol.clone(),
+                                    )?;
+                                }
+                            }
+                        }
                     }
                 }
 
-                if let Some(sym) = module.get(&path) {
-                    if !module.contains_key(&path) {
-                        self.insert(TypePath::from(path.type_name), sym.clone())?;
-                    }
+                // import local library items (i.e., modules, functions, structs, etc.)
+                // if import_root == *lib_root {
+                //     if let Some(sym) = modules.table.get(&import_path) {
+                //         for scope in self.scope_stack.clone().iter() {
+                //             if !scope.symbols.contains_key(&import_path) {
+                //                 self.insert(import_path.clone(), sym.clone())?;
+                //             }
+                //         }
 
-                    // in case the symbol was added without the full path (i.e., just `Symbol`)
-                } else if let Some(sym) = module.get(&TypePath::from(path.type_name.clone())) {
-                    if !module.contains_key(&TypePath::from(path.type_name.clone())) {
-                        self.insert(TypePath::from(path.type_name), sym.clone())?;
-                    }
-                } else {
-                    return Err(SemanticErrorKind::UndefinedSymbol {
-                        name: format!("`{path}`"),
-                    });
-                }
-            } else if let Some(sym) = self.lookup(&path).cloned() {
-                if !self.module_registry.contains_key(&path.type_name) {
-                    self.insert(path, sym)?;
-                }
+                //     // in case the symbol was added without the full path (i.e., just `Symbol`)
+                //     } else if let Some(sym) = modules
+                //         .table
+                //         .get(&TypePath::from(import_path.type_name.clone()))
+                //     {
+                //         for scope in self.scope_stack.clone().iter() {
+                //             if !scope
+                //                 .symbols
+                //                 .contains_key(&import_path.type_name.clone().into())
+                //             {
+                //                 self.insert(import_path.type_name.clone().into(), sym.clone())?;
+                //             }
+                //         }
+                //     } else {
+                //         return Err(SemanticErrorKind::UndefinedSymbol {
+                //             name: format!("`{import_path}`"),
+                //         });
+                //     }
+                // }
             } else {
-                return Err(SemanticErrorKind::UndefinedModule {
-                    name: path.type_name,
+                return Err(SemanticErrorKind::UndefinedLibrary {
+                    name: import_root.into(),
                 });
             }
         }
@@ -1133,58 +1243,60 @@ impl SemanticAnalyser {
             });
         }
 
-        // check the module registry
-        for (ref module_name, module_items) in self.module_registry.clone().into_iter() {
-            // iterate over a module
-            for (item_name, symbol) in module_items.iter() {
-                // if the path is an item inside a module root
-                if path.type_name == item_name.type_name {
-                    let item_path =
-                        build_item_path(&TypePath::from(module_name.clone()), path.clone());
+        for (_, modules) in self.lib_registry.clone().into_iter() {
+            for module in modules {
+                // iterate over a module
+                for (item_name, symbol) in module.table {
+                    // if the path is an item inside a module root
+                    if path.type_name == item_name.type_name {
+                        let item_path =
+                            build_item_path(&TypePath::from(module.name.clone()), path.clone());
 
-                    self.logger
-                        .trace(&format!("trying to find path at `{item_path}` …",));
+                        self.logger
+                            .trace(&format!("trying to find path at `{item_path}` …",));
 
-                    if self.lookup(&item_path).is_some() {
-                        return Ok(item_path);
+                        if self.lookup(&item_path).is_some() {
+                            return Ok(item_path);
+                        }
+
+                        let path_prefix = if let Some(ids) = &path.associated_type_path_prefix_opt {
+                            let prefix = TypePath::from(ids.clone());
+                            build_item_path(&TypePath::from(module.name.clone()), prefix)
+                        } else {
+                            TypePath::from(module.name.clone())
+                        };
+
+                        let item_prefix =
+                            if let Some(ids) = &item_name.associated_type_path_prefix_opt {
+                                TypePath::from(ids.last().cloned().unwrap())
+                            } else {
+                                item_name.clone()
+                            };
+
+                        let trait_impl_path = build_item_path(&path_prefix, item_prefix);
+
+                        let associated_item_path = build_item_path(
+                            &trait_impl_path,
+                            TypePath::from(path.type_name.clone()),
+                        );
+
+                        self.logger.trace(&format!(
+                            "trying to find path at `{associated_item_path}` …",
+                        ));
+
+                        if self.lookup(&associated_item_path).is_some() {
+                            return Ok(associated_item_path);
+                        }
                     }
 
-                    let path_prefix = if let Some(ids) = &path.associated_type_path_prefix_opt {
-                        let prefix = TypePath::from(ids.clone());
-                        build_item_path(&TypePath::from(module_name.clone()), prefix)
-                    } else {
-                        TypePath::from(module_name.clone())
-                    };
+                    // if the path is a symbol inside an item
+                    if path.type_name == symbol.type_path().type_name {
+                        let symbol_path = build_item_path(&item_name, path.clone());
 
-                    let item_prefix = if let Some(ids) = &item_name.associated_type_path_prefix_opt
-                    {
-                        TypePath::from(ids.last().cloned().unwrap())
-                    } else {
-                        item_name.clone()
-                    };
+                        self.logger
+                            .trace(&format!("trying to find path at `{symbol_path}` …",));
 
-                    let trait_impl_path = build_item_path(&path_prefix, item_prefix);
-
-                    let associated_item_path =
-                        build_item_path(&trait_impl_path, TypePath::from(path.type_name.clone()));
-
-                    self.logger.trace(&format!(
-                        "trying to find path at `{associated_item_path}` …",
-                    ));
-
-                    if self.lookup(&associated_item_path).is_some() {
-                        return Ok(associated_item_path);
-                    }
-                }
-
-                // if the path is a symbol inside an item
-                if path.type_name == symbol.type_path().type_name {
-                    let symbol_path = build_item_path(item_name, path.clone());
-
-                    self.logger
-                        .trace(&format!("trying to find path at `{symbol_path}` …",));
-
-                    if self.lookup(&symbol_path).is_some() {
+                        if self.lookup(&symbol_path).is_some() {}
                         return Ok(symbol_path);
                     }
                 }

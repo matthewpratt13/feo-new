@@ -197,7 +197,7 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
-    UndefinedModule {
+    UndefinedLibrary {
         name: Identifier,
     },
 
@@ -398,7 +398,7 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::UndefinedFunc { name } => write!(f, "no function `{name}()` in current scope"),
 
-            SemanticErrorKind::UndefinedModule { name } => write!(f, "undefined module: `{name}`"),
+            SemanticErrorKind::UndefinedLibrary { name } => write!(f, "undefined library: `{name}`"),
 
             SemanticErrorKind::UndefinedScope => write!(f, "attempted to access undefined scope"),
 
