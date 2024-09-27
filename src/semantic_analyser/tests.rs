@@ -199,7 +199,7 @@ fn analyse_impl() -> Result<(), ()> {
             const CREATOR_ADDRESS: h160 = $0x67890_ABCDE_67890_ABCDE_67890_ABCDE_67890_ABCDE;
 
             pub func address() -> h160 {
-                some_token::SomeToken::Contract::CONTRACT_ADDRESS
+                SomeToken::Contract::CONTRACT_ADDRESS
             }
 
             pub func balance(&self) -> u64 {
@@ -207,11 +207,11 @@ fn analyse_impl() -> Result<(), ()> {
             }
 
             pub func msg_sender() -> h160 {
-                some_token::SomeToken::Contract::CREATOR_ADDRESS
+               SomeToken::Contract::CREATOR_ADDRESS
             }
 
             pub func creator_address() -> h160 {
-                some_token::SomeToken::Contract::CREATOR_ADDRESS
+               SomeToken::Contract::CREATOR_ADDRESS
             }
         }
 
@@ -409,7 +409,7 @@ fn analyse_method_call() -> Result<(), ()> {
     import lib::foo::Foo;
 
     func main() {
-        let foo = foo::Foo::new("Foo", "FOO", { $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE: 0x1234_ABCD });
+        let foo = Foo::new("Foo", "FOO", { $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE: 0x1234_ABCD });
 
         let name = foo.name();
 
@@ -418,7 +418,7 @@ fn analyse_method_call() -> Result<(), ()> {
         return;
     }"#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)
         .expect("unable to set up semantic analyser");
 
     match analyser.analyse_program(&program) {
