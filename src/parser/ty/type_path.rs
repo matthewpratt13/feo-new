@@ -102,10 +102,6 @@ impl TypePath {
 
         Ok(path_type)
     }
-
-    pub(crate) fn to_identifier(&self) -> Identifier {
-        self.clone().into()
-    }
 }
 
 impl From<PathExpr> for TypePath {

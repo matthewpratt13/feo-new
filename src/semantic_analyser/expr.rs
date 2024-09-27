@@ -16,6 +16,8 @@ use crate::{
 use core::fmt;
 use std::collections::HashMap;
 
+// TODO: alphabetize match arms
+
 /// Analyse the given expression to determine its type within a specific context.
 pub(crate) fn analyse_expr(
     analyser: &mut SemanticAnalyser,
@@ -76,11 +78,9 @@ pub(crate) fn analyse_expr(
                 },
             };
 
-            let variable_path = analyser.check_item_path(&path, &root, "variable".to_string())?;
+            println!("variable path: `{path}`");
 
-            println!("variable path: `{variable_path}`");
-
-            if let Some(sym) = analyser.lookup(&variable_path) {
+            if let Some(sym) = analyser.lookup(&path) {
                 println!("variable symbol: `{sym}`");
 
                 Ok(sym.symbol_type())
@@ -152,9 +152,6 @@ pub(crate) fn analyse_expr(
                         let method_path =
                             build_item_path(&path, TypePath::from(mc.method_name.clone()));
 
-                        let method_path =
-                            analyser.check_item_path(&method_path, &root, "method".to_string())?;
-
                         analyser.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                     } else {
                         Err(SemanticErrorKind::TypeMismatchVariable {
@@ -214,13 +211,10 @@ pub(crate) fn analyse_expr(
         Expression::Call(c) => {
             let callee = wrap_into_expression(c.callee.clone());
 
-            let callee_path = analyser.check_item_path(
-                &TypePath::from(PathExpr::from(callee)),
-                &root,
-                "function".to_string(),
-            )?;
-
-            analyser.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
+            analyser.analyse_call_or_method_call_expr(
+                TypePath::from(PathExpr::from(callee)),
+                c.args_opt.clone(),
+            )
         }
 
         Expression::Index(i) => {
@@ -545,11 +539,7 @@ pub(crate) fn analyse_expr(
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
-            let assignee_path = analyser.check_item_path(
-                &TypePath::from(assignee_as_path_expr),
-                &root,
-                "assignee expression".to_string(),
-            )?;
+            let assignee_path = TypePath::from(assignee_as_path_expr);
 
             match analyser.lookup(&assignee_path).cloned() {
                 Some(Symbol::Variable { var_type, .. }) => match var_type == assignee_type {
@@ -587,11 +577,7 @@ pub(crate) fn analyse_expr(
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
-            let assignee_path = analyser.check_item_path(
-                &TypePath::from(assignee_as_path_expr),
-                &root,
-                "assignee expression".to_string(),
-            )?;
+            let assignee_path = TypePath::from(assignee_as_path_expr);
 
             match analyser.lookup(&assignee_path) {
                 Some(Symbol::Variable { .. }) => resolve_binary(&assignee_type, &value_type),
@@ -1035,7 +1021,7 @@ pub(crate) fn analyse_expr(
                                 Err(err) => analyser.log_error(err, &expression.span()),
                             },
                         },
-                        statement => analyser.analyse_stmt(statement, root.to_identifier())?,
+                        statement => analyser.analyse_stmt(statement, root.clone())?,
                     }
                 }
 
@@ -1211,7 +1197,6 @@ pub(crate) fn analyse_expr(
 
             if let Pattern::IdentifierPatt(id) = *fi.pattern.clone() {
                 analyser.insert(
-                    &root.to_identifier(),
                     TypePath::from(id.name.clone()),
                     Symbol::Variable {
                         name: id.name,

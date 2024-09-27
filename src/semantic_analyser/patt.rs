@@ -11,6 +11,8 @@ use crate::{
 
 use std::collections::HashMap;
 
+// TODO: alphabetize match arms
+
 /// Analyse a pattern in the context of semantic analysis, returning the inferred type of
 /// the pattern or an appropriate semantic error.
 pub(crate) fn analyse_patt(
