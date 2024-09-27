@@ -127,7 +127,7 @@ impl SemanticAnalyser {
     /// Insert a symbol into the current scope's symbol table.
     fn insert(&mut self, path: TypePath, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
-            self.logger.debug(&format!(
+            self.logger.trace(&format!(
                 "inserting symbol `{symbol}` into scope `{:?}` at path `{path}` …",
                 curr_scope.scope_kind
             ));
@@ -208,6 +208,8 @@ impl SemanticAnalyser {
     }
 
     // TODO: alphabetize match arms
+    // TODO: add custom errors to specify context when unifying types
+    // TODO: (e.g., function args / struct fields)
 
     /// Analyse individual statements within the program, determining their validity and handling
     /// specific types of statements, such as variable declarations, item definitions and expressions.
@@ -879,9 +881,6 @@ impl SemanticAnalyser {
         // * object implementation (e.g., `lib::some_module::SomeObject`)
         // * trait implementation (e.g., `lib::some_module::SomeObject::SomeTrait`)
 
-        self.logger
-            .trace("entering `SemanticAnalyser::analyse_function_def()` …");
-
         let function_root = if is_trait_impl {
             if let Some(prefix) = &path.associated_type_path_prefix_opt {
                 TypePath::from(prefix.clone())
@@ -1096,9 +1095,6 @@ impl SemanticAnalyser {
         path: TypePath,
         args_opt: Option<Vec<Expression>>,
     ) -> Result<Type, SemanticErrorKind> {
-        self.logger
-            .trace("entering `SemanticAnalyser::analyse_call_or_method_call_expr()` …");
-
         match self.lookup(&path).cloned() {
             Some(Symbol::Function { function, .. }) => {
                 let func_params = function.params_opt.clone();
@@ -1217,6 +1213,10 @@ impl SemanticAnalyser {
     ) -> Result<(), SemanticErrorKind> {
         let type_a_clone = type_a.clone();
         let type_b_clone = type_b.clone();
+
+        self.logger.trace(&format!(
+            "unifying types `{type_a_clone}` and `{type_b_clone}`"
+        ));
 
         match (type_a_clone, type_b_clone) {
             // if both types are the same, they are already unified
