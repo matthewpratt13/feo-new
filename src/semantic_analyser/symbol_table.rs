@@ -127,6 +127,7 @@ pub(crate) struct Scope {
     pub(crate) symbols: SymbolTable,
 }
 
+// TODO: add docs
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Module {
     pub(crate) name: Identifier,
