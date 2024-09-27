@@ -381,12 +381,8 @@ impl SemanticAnalyser {
                         });
                     }
 
-                    println!("root: {root:?}");
-
                     let constant_path =
                         build_item_path(&root, TypePath::from(cd.constant_name.clone()));
-
-                    println!("constant path: `{constant_path}`");
 
                     self.insert(
                         constant_path.clone(),
@@ -899,8 +895,6 @@ impl SemanticAnalyser {
         // append the function name to the root
         let full_path = build_item_path(&function_root, TypePath::from(f.function_name.clone()));
 
-        println!("function path: `{full_path}`");
-
         self.enter_scope(ScopeKind::Function(full_path.clone()));
 
         // register generic parameters in the local scope
@@ -930,8 +924,6 @@ impl SemanticAnalyser {
                 }
 
                 let param_path = TypePath::from(param.param_name());
-
-                println!("param path: `{param_path}`, param_type: `{param_type:?}`");
 
                 match param_type {
                     Type::Generic { name, .. } => {
@@ -994,8 +986,6 @@ impl SemanticAnalyser {
             self.logger
                 .trace(&format!("analysing body of function `{full_path}()` …"));
 
-            println!("path_vec: {path_vec:?}");
-
             analyse_expr(
                 self,
                 &Expression::Block(block.clone()),
@@ -1043,8 +1033,6 @@ impl SemanticAnalyser {
 
         let import_paths = get_type_paths(path_segments);
 
-        println!("import_paths: {:#?}", import_paths);
-
         for import_path in import_paths {
             let import_root =
                 if let Some(ids) = import_path.associated_type_path_prefix_opt.as_ref() {
@@ -1056,8 +1044,6 @@ impl SemanticAnalyser {
                 } else {
                     lib_root.clone()
                 };
-
-            println!("import root: {import_root}");
 
             // bring external libraries into scope
             if let Some(modules) = self.lib_registry.get(&import_root).cloned() {

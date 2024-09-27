@@ -78,11 +78,7 @@ pub(crate) fn analyse_expr(
                 },
             };
 
-            println!("variable path: `{path}`");
-
             if let Some(sym) = analyser.lookup(&path) {
-                println!("variable symbol: `{sym}`");
-
                 Ok(sym.symbol_type())
             } else {
                 Err(SemanticErrorKind::UndefinedVariable {
@@ -138,8 +134,6 @@ pub(crate) fn analyse_expr(
             let receiver_path = TypePath::from(receiver_as_path_expr);
 
             let symbol = analyser.lookup(&receiver_path).cloned();
-
-            println!("receiver path: `{receiver_path:?}`, symbol: `{symbol:?}`");
 
             // check if path expression's type is that of an existing type and analyse
             match symbol {
@@ -1192,8 +1186,6 @@ pub(crate) fn analyse_expr(
                     });
                 }
             };
-
-            println!("element type: {element_type}");
 
             if let Pattern::IdentifierPatt(id) = *fi.pattern.clone() {
                 analyser.insert(
