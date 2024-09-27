@@ -187,30 +187,6 @@ impl SemanticAnalyser {
     ) -> Result<(), Vec<CompilerError<SemanticErrorKind>>> {
         self.logger.debug(&format!("starting semantic analysis …"));
 
-        // let program_path = if let Some(Scope {
-        //     scope_kind: ScopeKind::ProgramRoot(name),
-        //     ..
-        // }) = self.scope_stack.last()
-        // {
-        //     let mut prefix = vec![Identifier::from("lib")];
-
-        //     if let Some(mut segments) = path.associated_type_path_prefix_opt {
-        //         if segments.get(0) == Some(&Identifier::from("lib")) {
-        //             segments.remove(0);
-        //         }
-
-        //         prefix.append(&mut segments);
-        //     }
-
-        //     if path.type_name != Identifier::from("") {
-        //         prefix.push(path.type_name);
-        //     }
-
-        //     TypePath::from(prefix)
-        // } else {
-        //     path
-        // };
-
         self.enter_scope(ScopeKind::ProgramRoot);
 
         self.lib_registry
@@ -1042,28 +1018,6 @@ impl SemanticAnalyser {
             };
 
             self.unify_types(&mut symbol_table, &return_type, &mut function_type)?;
-
-            // if function_type != *return_type.clone() {
-            //     match function_type.clone() {
-            //         Type::Result { .. } => unify_result_types(&mut function_type, return_type)?,
-            //         Type::Generic { name, .. } => {
-            //             match self.lookup(&TypePath::from(name.clone())) {
-            //                 Some(_) => (),
-            //                 None => {
-            //                     return Err(SemanticErrorKind::UndeclaredGenericParams {
-            //                         found: format!("`{name}`"),
-            //                     })
-            //                 }
-            //             }
-            //         }
-            //         _ => {
-            //             return Err(SemanticErrorKind::TypeMismatchReturnType {
-            //                 expected: *return_type.clone(),
-            //                 found: function_type,
-            //             });
-            //         }
-            //     }
-            // }
         }
 
         self.logger.trace(&format!(
@@ -1141,35 +1095,6 @@ impl SemanticAnalyser {
                         }
                     }
                 }
-
-                // import local library items (i.e., modules, functions, structs, etc.)
-                // if import_root == *lib_root {
-                //     if let Some(sym) = modules.table.get(&import_path) {
-                //         for scope in self.scope_stack.clone().iter() {
-                //             if !scope.symbols.contains_key(&import_path) {
-                //                 self.insert(import_path.clone(), sym.clone())?;
-                //             }
-                //         }
-
-                //     // in case the symbol was added without the full path (i.e., just `Symbol`)
-                //     } else if let Some(sym) = modules
-                //         .table
-                //         .get(&TypePath::from(import_path.type_name.clone()))
-                //     {
-                //         for scope in self.scope_stack.clone().iter() {
-                //             if !scope
-                //                 .symbols
-                //                 .contains_key(&import_path.type_name.to_type_path())
-                //             {
-                //                 self.insert(import_path.type_name.to_type_path(), sym.clone())?;
-                //             }
-                //         }
-                //     } else {
-                //         return Err(SemanticErrorKind::UndefinedSymbol {
-                //             name: format!("`{import_path}`"),
-                //         });
-                //     }
-                // }
             } else {
                 return Err(SemanticErrorKind::UndefinedLibrary { name: import_root });
             }
@@ -1177,146 +1102,6 @@ impl SemanticAnalyser {
 
         Ok(())
     }
-
-    // /// Attempt to resolve a given `TypePath` within the current context, searching through various
-    // /// namespaces and fallback mechanisms.
-    // fn check_item_path(
-    //     &mut self,
-    //     item_path: &TypePath,
-    //     root_path: &TypePath,
-    //     expected: String,
-    // ) -> Result<TypePath, SemanticErrorKind> {
-    //     // self.logger
-    //     //     .trace(&format!("trying to find path at `{item_path}` …",));
-
-    //     // path is ok
-    //     if self.lookup(item_path).is_some() {
-    //         return Ok(item_path.clone());
-    //     }
-
-    //     // item path cannot be root path
-    //     if item_path == root_path {
-    //         return Err(SemanticErrorKind::UnexpectedPath {
-    //             expected: "path to item or variable".to_string(),
-    //             found: item_path.to_identifier(),
-    //         });
-    //     }
-
-    //     for (lib_name, modules) in self.lib_registry.clone().iter() {
-    //         self.logger.trace(&format!(
-    //             "searching for item path `{item_path}` in library `{lib_name}` …",
-    //         ));
-
-    //         for module in modules {
-    //             for (path, symbol) in module.table.iter() {
-    //                 // if `item_path` is an item in the root module
-    //                 if item_path.type_name == path.type_name {
-    //                     if item_path == path {
-    //                         self.logger.debug(&format!(
-    //                             "found symbol `{symbol}` in current scope at path `{path}`",
-    //                         ));
-
-    //                         return Ok(item_path.clone());
-    //                     }
-
-    //                     // e.g. struct, enum, etc.
-    //                     let root_module_item_path =
-    //                         build_item_path(&module.name.to_type_path(), item_path.clone());
-
-    //                     self.logger.trace(&format!(
-    //                         "trying to find path at `{root_module_item_path}` …",
-    //                     ));
-
-    //                     if self.lookup(&root_module_item_path).is_some() {
-    //                         return Ok(root_module_item_path);
-    //                     }
-
-    //                     // build prefix from `module.name` and `item_path` prefix
-    //                     // (e.g., for trait implementations)
-    //                     let path_prefix =
-    //                         if let Some(ids) = &item_path.associated_type_path_prefix_opt {
-    //                             let prefix = TypePath::from(ids.clone());
-    //                             build_item_path(&module.name.to_type_path(), prefix)
-    //                         } else {
-    //                             module.name.to_type_path()
-    //                         };
-
-    //                     // build prefix from `path_prefix` and the current module's prefix
-    //                     // (e.g., for trait definitions)
-    //                     let item_prefix = if let Some(ids) = &path.associated_type_path_prefix_opt {
-    //                         TypePath::from(ids.last().cloned().unwrap())
-    //                     } else {
-    //                         path.clone()
-    //                     };
-
-    //                     let trait_impl_path = build_item_path(&path_prefix, item_prefix);
-
-    //                     let associated_item_path =
-    //                         build_item_path(&trait_impl_path, path.type_name.to_type_path());
-
-    //                     self.logger.trace(&format!(
-    //                         "trying to find path at `{associated_item_path}` …",
-    //                     ));
-
-    //                     if self.lookup(&associated_item_path).is_some() {
-    //                         return Ok(associated_item_path);
-    //                     }
-    //                 }
-
-    //                 // if `item_path` is a symbol inside an item (e.g., constant inside a trait def)
-    //                 if item_path.type_name == symbol.type_path().type_name {
-    //                     let symbol_path = build_item_path(&path, item_path.clone());
-
-    //                     self.logger
-    //                         .trace(&format!("trying to find path at `{symbol_path}` …",));
-
-    //                     if self.lookup(&symbol_path).is_some() {
-    //                         return Ok(symbol_path);
-    //                     }
-    //                 }
-    //             }
-    //         }
-
-    //         // just concatenate `root` and `path`
-    //         let full_path = build_item_path(root_path, item_path.clone());
-
-    //         self.logger
-    //             .trace(&format!("trying to find path at `{full_path}` …",));
-
-    //         if self.lookup(&full_path).is_some() {
-    //             return Ok(full_path);
-    //         }
-
-    //         // concatenate only `item_path` type name to `root` (e.g, `path` is an associated item)
-    //         let full_path = build_item_path(root_path, item_path.type_name.to_type_path());
-
-    //         self.logger
-    //             .trace(&format!("trying to find path at `{full_path}` …",));
-
-    //         if self.lookup(&full_path).is_some() {
-    //             return Ok(full_path);
-    //         }
-
-    //         let root_prefix = if let Some(ids) = &root_path.associated_type_path_prefix_opt {
-    //             TypePath::from(ids.clone())
-    //         } else {
-    //             root_path.clone()
-    //         };
-
-    //         // concatenate only `item_path` to `root` without type name
-    //         // (e.g, `item_path` is an associated item)
-    //         let full_path = build_item_path(&root_prefix, item_path.clone());
-
-    //         self.logger
-    //             .trace(&format!("trying to find path at `{full_path}` …",));
-
-    //         if self.lookup(&full_path).is_some() {
-    //             return Ok(full_path);
-    //         }
-    //     }
-
-    //     Err(SemanticErrorKind::MissingValue { expected })
-    // }
 
     /// Analyse a function or method call expression by resolving the provided path, validating
     /// arguments and determining the return type.
@@ -1395,8 +1180,6 @@ impl SemanticAnalyser {
                             });
                         }
 
-                        // let mut inferred_types: HashMap<Identifier, Type> = HashMap::new();
-
                         for (arg, param) in args.iter().zip(params) {
                             let mut arg_type = analyse_expr(self, &arg, &path)?;
 
@@ -1418,38 +1201,6 @@ impl SemanticAnalyser {
                                 });
                             }
                         }
-
-                        // // ensure all constraints are satisfied for inferred types
-                        // for (_, inferred_type) in inferred_types.iter() {
-                        //     if let Some(ref generic_params) = function.generic_params_opt {
-                        //         for param in generic_params.params.iter() {
-                        //             if let Some(bound) = &param.type_bound_opt {
-                        //                 if !self.satisfies_bound(inferred_type, &bound) {
-                        //                     return Err(SemanticErrorKind::TypeBoundNotSatisfied {
-                        //                         generic_name: param.name.clone(),
-                        //                         bound: Identifier::from(bound.clone()),
-                        //                         found: inferred_type.clone(),
-                        //                     });
-                        //                 }
-                        //             }
-                        //         }
-                        //     }
-                        // }
-
-                        // // infer return type based on substitutions
-                        // // if `func_def_return_type` is generic, substitute it with the inferred type,
-                        // // else return `func_def_return_type`
-                        // let inferred_return_type = substitute_generics(
-                        //     &*func_def_return_type.unwrap_or(Box::new(Type::UnitType(UnitType))),
-                        //     &inferred_types,
-                        // )?;
-
-                        // // TODO: what if the function call is part of an assignment expression?
-                        // // TODO: (e.g., let statement), or as a param in another call expression?
-                        // // TODO: or any other larger expression?
-                        // // TODO: can we assume the `func_def_return_type` is the call expression type?
-
-                        // Ok(inferred_return_type)
 
                         match func_def_return_type {
                             Some(ty) => Ok(*ty),
