@@ -16,6 +16,8 @@ use crate::{
 use core::fmt;
 use std::collections::HashMap;
 
+// TODO: alphabetize match arms
+
 /// Analyse the given expression to determine its type within a specific context.
 pub(crate) fn analyse_expr(
     analyser: &mut SemanticAnalyser,
@@ -49,7 +51,7 @@ pub(crate) fn analyse_expr(
                     } else {
                         match &p.path_root {
                             PathRoot::Identifier(i) => {
-                                build_item_path(root, TypePath::from(i.clone()))
+                                build_item_path(&root, TypePath::from(i.clone()))
                             }
                             PathRoot::SelfType(_) => root.clone(),
                             PathRoot::SelfKeyword => root.clone(),
@@ -76,11 +78,9 @@ pub(crate) fn analyse_expr(
                 },
             };
 
-            let variable_path = analyser.check_path(&path, root, "variable".to_string())?;
+            println!("variable path: `{path}`");
 
-            println!("variable path: `{variable_path}`");
-
-            if let Some(sym) = analyser.lookup(&variable_path) {
+            if let Some(sym) = analyser.lookup(&path) {
                 println!("variable symbol: `{sym}`");
 
                 Ok(sym.symbol_type())
@@ -152,9 +152,6 @@ pub(crate) fn analyse_expr(
                         let method_path =
                             build_item_path(&path, TypePath::from(mc.method_name.clone()));
 
-                        let method_path =
-                            analyser.check_path(&method_path, root, "method".to_string())?;
-
                         analyser.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                     } else {
                         Err(SemanticErrorKind::TypeMismatchVariable {
@@ -214,13 +211,10 @@ pub(crate) fn analyse_expr(
         Expression::Call(c) => {
             let callee = wrap_into_expression(c.callee.clone());
 
-            let callee_path = analyser.check_path(
-                &TypePath::from(PathExpr::from(callee)),
-                root,
-                "function".to_string(),
-            )?;
-
-            analyser.analyse_call_or_method_call_expr(callee_path, c.args_opt.clone())
+            analyser.analyse_call_or_method_call_expr(
+                TypePath::from(PathExpr::from(callee)),
+                c.args_opt.clone(),
+            )
         }
 
         Expression::Index(i) => {
@@ -535,24 +529,17 @@ pub(crate) fn analyse_expr(
 
             let value_type = analyse_expr(analyser, &wrap_into_expression(a.rhs.clone()), root)?;
 
-            let current_module_path = analyser.current_module_path();
-
-            let mut symbol_table =
-                if let Some(table) = analyser.module_registry.get(&current_module_path) {
-                    table.to_owned()
-                } else {
-                    return Err(SemanticErrorKind::UnknownError);
-                };
+            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
+                scope.symbols.to_owned()
+            } else {
+                HashMap::new()
+            };
 
             analyser.unify_types(&mut symbol_table, &value_type, &mut assignee_type)?;
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
-            let assignee_path = analyser.check_path(
-                &TypePath::from(assignee_as_path_expr),
-                root,
-                "assignee expression".to_string(),
-            )?;
+            let assignee_path = TypePath::from(assignee_as_path_expr);
 
             match analyser.lookup(&assignee_path).cloned() {
                 Some(Symbol::Variable { var_type, .. }) => match var_type == assignee_type {
@@ -590,11 +577,7 @@ pub(crate) fn analyse_expr(
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
-            let assignee_path = analyser.check_path(
-                &TypePath::from(assignee_as_path_expr),
-                root,
-                "assignee expression".to_string(),
-            )?;
+            let assignee_path = TypePath::from(assignee_as_path_expr);
 
             match analyser.lookup(&assignee_path) {
                 Some(Symbol::Variable { .. }) => resolve_binary(&assignee_type, &value_type),
@@ -687,14 +670,11 @@ pub(crate) fn analyse_expr(
                 }
             }
 
-            let current_module_path = analyser.current_module_path();
-
-            let mut symbol_table =
-                if let Some(table) = analyser.module_registry.get(&current_module_path) {
-                    table.to_owned()
-                } else {
-                    return Err(SemanticErrorKind::UnknownError);
-                };
+            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
+                scope.symbols.to_owned()
+            } else {
+                HashMap::new()
+            };
 
             analyser.unify_types(&mut symbol_table, &return_type, &mut expression_type)?;
 
@@ -720,14 +700,10 @@ pub(crate) fn analyse_expr(
 
                         element_count += 1;
 
-                        let current_module_path = analyser.current_module_path();
-
-                        let mut symbol_table = if let Some(table) =
-                            analyser.module_registry.get(&current_module_path)
-                        {
-                            table.to_owned()
+                        let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
+                            scope.symbols.to_owned()
                         } else {
-                            return Err(SemanticErrorKind::UnknownError);
+                            HashMap::new()
                         };
 
                         analyser.unify_types(
@@ -777,7 +753,10 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::Struct(s) => {
-            let type_path = build_item_path(root, TypePath::from(s.struct_path.clone()));
+            let type_path = build_item_path(
+                &TypePath::from(root.clone()),
+                TypePath::from(s.struct_path.clone()),
+            );
 
             match analyser.lookup(&type_path).cloned() {
                 Some(Symbol::Struct { struct_def, path }) => {
@@ -824,15 +803,12 @@ pub(crate) fn analyse_expr(
                         for def_field in def_fields.iter() {
                             match field_map.get_mut(&def_field.field_name) {
                                 Some(obj_field_type) => {
-                                    let current_module_path = analyser.current_module_path();
-
-                                    let mut symbol_table = if let Some(table) =
-                                        analyser.module_registry.get(&current_module_path)
-                                    {
-                                        table.to_owned()
-                                    } else {
-                                        return Err(SemanticErrorKind::UnknownError);
-                                    };
+                                    let mut symbol_table =
+                                        if let Some(scope) = analyser.scope_stack.last() {
+                                            scope.symbols.to_owned()
+                                        } else {
+                                            HashMap::new()
+                                        };
 
                                     analyser.unify_types(
                                         &mut symbol_table,
@@ -919,15 +895,12 @@ pub(crate) fn analyse_expr(
                                     &TypePath::from(Identifier::from("")),
                                 )?;
 
-                                let current_module_path = analyser.current_module_path();
-
-                                let mut symbol_table = if let Some(table) =
-                                    analyser.module_registry.get(&current_module_path)
-                                {
-                                    table.to_owned()
-                                } else {
-                                    return Err(SemanticErrorKind::UnknownError);
-                                };
+                                let mut symbol_table =
+                                    if let Some(scope) = analyser.scope_stack.last() {
+                                        scope.symbols.to_owned()
+                                    } else {
+                                        HashMap::new()
+                                    };
 
                                 analyser.unify_types(
                                     &mut symbol_table,
@@ -971,14 +944,10 @@ pub(crate) fn analyse_expr(
                         let mut pair_key_type = analyse_patt(analyser, &pair.k.clone())?;
                         let mut pair_value_type = analyse_expr(analyser, &pair.v.clone(), root)?;
 
-                        let current_module_path = analyser.current_module_path();
-
-                        let mut symbol_table = if let Some(table) =
-                            analyser.module_registry.get(&current_module_path)
-                        {
-                            table.to_owned()
+                        let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
+                            scope.symbols.to_owned()
                         } else {
-                            return Err(SemanticErrorKind::UnknownError);
+                            HashMap::new()
                         };
 
                         analyser.unify_types(&mut symbol_table, &key_type, &mut pair_key_type)?;
@@ -1052,7 +1021,7 @@ pub(crate) fn analyse_expr(
                                 Err(err) => analyser.log_error(err, &expression.span()),
                             },
                         },
-                        statement => analyser.analyse_stmt(statement, root)?,
+                        statement => analyser.analyse_stmt(statement, root.clone())?,
                     }
                 }
 
@@ -1148,14 +1117,11 @@ pub(crate) fn analyse_expr(
                 for arm in arms.iter() {
                     let mut arm_patt_type = analyse_patt(analyser, &arm.matched_pattern)?;
 
-                    let current_module_path = analyser.current_module_path();
-
-                    let mut symbol_table =
-                        if let Some(table) = analyser.module_registry.get(&current_module_path) {
-                            table.to_owned()
-                        } else {
-                            return Err(SemanticErrorKind::UnknownError);
-                        };
+                    let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
+                        scope.symbols.to_owned()
+                    } else {
+                        HashMap::new()
+                    };
 
                     if patt_type
                         == Type::InferredType(InferredType {

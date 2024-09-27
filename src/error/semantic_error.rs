@@ -34,10 +34,9 @@ pub enum SemanticErrorKind {
         expected: String,
     },
 
-    MissingValue {
-        expected: String,
-    },
-
+    // MissingValue {
+    //     expected: String,
+    // },
     ModuleErrors {
         name: Identifier,
     },
@@ -197,7 +196,7 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
-    UndefinedModule {
+    UndefinedLibrary {
         name: Identifier,
     },
 
@@ -231,11 +230,10 @@ pub enum SemanticErrorKind {
         found: Identifier,
     },
 
-    UnexpectedPath {
-        expected: String,
-        found: Identifier,
-    },
-
+    // UnexpectedPath {
+    //     expected: String,
+    //     found: Identifier,
+    // },
     UnexpectedReturnType {
         found: Type,
     },
@@ -286,9 +284,9 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::MissingStructField { expected } => {
                 write!(f, "struct field not found. Expected {expected}, found none")
             }
-            SemanticErrorKind::MissingValue { expected } => {
-                write!(f, "value not found. Expected {expected}, found none")
-            }
+            // SemanticErrorKind::MissingValue { expected } => {
+            //     write!(f, "value not found. Expected {expected}, found none")
+            // }
             SemanticErrorKind::ModuleErrors { name } => {
                 write!(f, "detected errors in module `{name}`")
             }
@@ -398,7 +396,7 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::UndefinedFunc { name } => write!(f, "no function `{name}()` in current scope"),
 
-            SemanticErrorKind::UndefinedModule { name } => write!(f, "undefined module: `{name}`"),
+            SemanticErrorKind::UndefinedLibrary { name } => write!(f, "undefined library: `{name}`"),
 
             SemanticErrorKind::UndefinedScope => write!(f, "attempted to access undefined scope"),
 
@@ -418,7 +416,7 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::UnexpectedParam { expected, found } => write!(f, "unexpected parameter. Expected {expected}, found `{found}`"),
 
-            SemanticErrorKind::UnexpectedPath { expected, found } => write!(f, "unexpected path. Expected {expected}, found `{found}`"),
+            // SemanticErrorKind::UnexpectedPath { expected, found } => write!(f, "unexpected path. Expected {expected}, found `{found}`"),
 
             SemanticErrorKind::UnexpectedReturnType { found } => write!(f, "unexpected return type. Did not expected a return type, but found `{found}`"),
 

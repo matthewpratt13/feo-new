@@ -10,18 +10,18 @@ use std::collections::HashMap;
 pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
 
 /// Enumeration of the different kinds of scopes that can be encountered during semantic analysis.
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum ScopeKind {
     LocalBlock,
     MatchExpr,
     ForInLoop,
-    Function(String),
+    Function(TypePath),
     // TraitImpl(String),
     // Impl(String),
     // TraitDef(String),
-    Module(String),
-    RootModule(String),
-    Lib,
+    Module(TypePath),
+    // RootModule(String),
+    ProgramRoot,
     Public,
 }
 
@@ -89,19 +89,19 @@ impl Symbol {
         }
     }
 
-    pub(crate) fn type_path(&self) -> TypePath {
-        match self.clone() {
-            Symbol::Variable { name, .. } => TypePath::from(name.clone()),
-            Symbol::Struct { path, .. }
-            | Symbol::TupleStruct { path, .. }
-            | Symbol::Enum { path, .. }
-            | Symbol::Trait { path, .. }
-            | Symbol::Alias { path, .. }
-            | Symbol::Constant { path, .. }
-            | Symbol::Function { path, .. }
-            | Symbol::Module { path, .. } => path,
-        }
-    }
+    // pub(crate) fn type_path(&self) -> TypePath {
+    //     match self.clone() {
+    //         Symbol::Variable { name, .. } => TypePath::from(name.clone()),
+    //         Symbol::Struct { path, .. }
+    //         | Symbol::TupleStruct { path, .. }
+    //         | Symbol::Enum { path, .. }
+    //         | Symbol::Trait { path, .. }
+    //         | Symbol::Alias { path, .. }
+    //         | Symbol::Constant { path, .. }
+    //         | Symbol::Function { path, .. }
+    //         | Symbol::Module { path, .. } => path,
+    //     }
+    // }
 }
 
 impl fmt::Display for Symbol {
@@ -125,4 +125,10 @@ impl fmt::Display for Symbol {
 pub(crate) struct Scope {
     pub(crate) scope_kind: ScopeKind,
     pub(crate) symbols: SymbolTable,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct Module {
+    pub(crate) name: Identifier,
+    pub(crate) table: SymbolTable,
 }
