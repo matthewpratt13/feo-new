@@ -1194,6 +1194,19 @@ impl SemanticAnalyser {
 
             (Type::InferredType(_), _) => Err(SemanticErrorKind::UnexpectedInferredType),
 
+            // TODO: custom error
+            (Type::SelfType(_), _) => Err(SemanticErrorKind::UnexpectedType {
+                expected: "non-`Self` type".to_string(),
+                found: Type::SelfType(SelfType),
+            }),
+
+            (Type::UserDefined(_), Type::SelfType(_)) => resolve_self_type(type_b, type_a),
+
+            (ty, Type::SelfType(_)) => Err(SemanticErrorKind::UnexpectedType {
+                expected: "user-defined type".to_string(),
+                found: ty,
+            }),
+
             // if one is a concrete or generic type and the other is inferred, resolve the inference
             (concrete_or_generic, Type::InferredType(_)) => {
                 resolve_inferred_type(type_b, concrete_or_generic)
@@ -1243,17 +1256,16 @@ impl SemanticAnalyser {
                 }
             }
 
-            (Type::Generic { name, bound_opt }, concrete) => self.unify_generic_with_concrete(
-                symbol_table,
-                &mut Type::Generic { name, bound_opt },
-                &concrete,
-            ),
-
-            (concrete, Type::Generic { name, bound_opt }) => {
+            // TODO: custom error
+            (Type::Generic { name, bound_opt }, _) => {
                 return Err(SemanticErrorKind::UnexpectedType {
-                    expected: format!("`{concrete}`"),
+                    expected: "non-generic type".to_string(),
                     found: Type::Generic { name, bound_opt },
                 });
+            }
+
+            (concrete, Type::Generic { .. }) => {
+                self.unify_generic_with_concrete(symbol_table, type_b, &concrete)
             }
 
             (Type::GroupedType(grouped), matched) => {
@@ -1532,7 +1544,7 @@ impl SemanticAnalyser {
                 Ok(())
             }
 
-            (_, Type::Result { .. }) => unify_result_types(type_b, &type_a),
+            (Type::Result { .. }, Type::Result { .. }) => unify_result_types(type_b, &type_a),
 
             (Type::UserDefined(type_path_a), Type::UserDefined(type_path_b)) => {
                 if type_path_a != type_path_b {
@@ -1544,8 +1556,6 @@ impl SemanticAnalyser {
 
                 Ok(())
             }
-
-            // TODO: handle `(Type::SelfType, _)` and `(_, Type::SelfType)` cases
 
             _ => Err(SemanticErrorKind::TypeMismatchUnification {
                 expected: Identifier::from(&type_a.to_string()),
@@ -2150,16 +2160,16 @@ fn resolve_inferred_type(inferred: &mut Type, concrete: Type) -> Result<(), Sema
             name: Identifier::from("_"),
         })
     {
-        *inferred = concrete;
-        Ok(())
-    } else if *inferred == concrete {
-        Ok(())
-    } else {
-        Err(SemanticErrorKind::UnexpectedType {
-            expected: inferred.to_string(),
-            found: concrete,
-        })
+        if concrete
+            != Type::InferredType(InferredType {
+                name: Identifier::from("_"),
+            })
+        {
+            *inferred = concrete;
+        }
     }
+
+    Ok(())
 }
 
 /// Helper function to resolve `Type` to `TypePath`.
@@ -2234,4 +2244,16 @@ fn unify_result_types(
             found: inferred_type_clone,
         }),
     }
+}
+
+fn resolve_self_type(inferred: &mut Type, object_type: &Type) -> Result<(), SemanticErrorKind> {
+    let object_type_clone = object_type.clone();
+
+    if *inferred == Type::SelfType(SelfType) {
+        if *object_type != Type::SelfType(SelfType) {
+            *inferred = object_type_clone;
+        }
+    }
+
+    Ok(())
 }
