@@ -29,7 +29,7 @@ pub(crate) fn analyse_expr(
                 Some(mut segments) => {
                     if let Some(id) = segments.pop() {
                         let root = match &p.path_root {
-                            PathRoot::Identifier(id) => TypePath::from(id.clone()),
+                            PathRoot::Identifier(id) => id.to_type_path(),
                             PathRoot::SelfKeyword => TypePath::from(Identifier::from("self")),
                             PathRoot::SelfType(_) => TypePath::from(Identifier::from("Self")),
 
@@ -46,7 +46,7 @@ pub(crate) fn analyse_expr(
                         })
                     } else {
                         match &p.path_root {
-                            PathRoot::Identifier(i) => root.join(TypePath::from(i.clone())),
+                            PathRoot::Identifier(i) => root.join(i.to_type_path()),
                             PathRoot::SelfType(_) => root.clone(),
                             PathRoot::SelfKeyword => root.clone(),
 
@@ -60,7 +60,7 @@ pub(crate) fn analyse_expr(
                 }
 
                 _ => match &p.path_root {
-                    PathRoot::Identifier(i) => TypePath::from(i.clone()),
+                    PathRoot::Identifier(i) => i.to_type_path(),
                     PathRoot::SelfType(_) => root.clone(),
                     PathRoot::SelfKeyword => root.clone(),
 
@@ -137,7 +137,7 @@ pub(crate) fn analyse_expr(
                     | Symbol::Enum { path, .. },
                 ) => {
                     if Type::UserDefined(path.clone()) == receiver_type {
-                        let method_path = path.join(TypePath::from(mc.method_name.clone()));
+                        let method_path = path.join(mc.method_name.to_type_path());
 
                         analyser.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                     } else {
@@ -1179,7 +1179,7 @@ pub(crate) fn analyse_expr(
 
             if let Pattern::IdentifierPatt(id) = *fi.pattern.clone() {
                 analyser.insert(
-                    TypePath::from(id.name.clone()),
+                    id.name.to_type_path(),
                     Symbol::Variable {
                         name: id.name,
                         var_type: element_type,

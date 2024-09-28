@@ -252,7 +252,7 @@ impl SemanticAnalyser {
                     });
                 }
 
-                let assignee_path = TypePath::from(ls.assignee.name.clone());
+                let assignee_path = ls.assignee.name.to_type_path();
 
                 let symbol = match &value_type {
                     Type::I32(_)
@@ -332,7 +332,7 @@ impl SemanticAnalyser {
                     self.logger
                         .trace(&format!("analysing alias declaration: `{statement}`"));
 
-                    let alias_path = root.join(TypePath::from(ad.alias_name.clone()));
+                    let alias_path = root.join(ad.alias_name.to_type_path());
 
                     self.insert(
                         alias_path.clone(),
@@ -380,7 +380,7 @@ impl SemanticAnalyser {
                         });
                     }
 
-                    let constant_path = root.join(TypePath::from(cd.constant_name.clone()));
+                    let constant_path = root.join(cd.constant_name.to_type_path());
 
                     self.insert(
                         constant_path.clone(),
@@ -425,7 +425,7 @@ impl SemanticAnalyser {
                         });
                     }
 
-                    let static_var_path = root.join(TypePath::from(s.var_name.clone()));
+                    let static_var_path = root.join(s.var_name.to_type_path());
 
                     self.insert(
                         static_var_path,
@@ -441,7 +441,7 @@ impl SemanticAnalyser {
 
                     let mut module_errors: Vec<SemanticErrorKind> = Vec::new();
 
-                    let module_path = root.join(TypePath::from(m.module_name.clone()));
+                    let module_path = root.join(m.module_name.to_type_path());
 
                     self.logger.trace(&format!(
                         "analysing module item: `{}` …",
@@ -515,7 +515,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::TraitDef(t) => {
-                    let trait_name_path = TypePath::from(t.trait_name.clone());
+                    let trait_name_path = t.trait_name.to_type_path();
                     let trait_def_path = root.join(trait_name_path.clone());
 
                     self.logger.trace(&format!(
@@ -549,8 +549,7 @@ impl SemanticAnalyser {
                                     trait_def_path.clone(),
                                 )?,
                                 TraitDefItem::FunctionItem(fi) => {
-                                    let function_name_path =
-                                        TypePath::from(fi.function_name.clone());
+                                    let function_name_path = fi.function_name.to_type_path();
 
                                     let function_def_path =
                                         trait_def_path.join(function_name_path.clone());
@@ -579,7 +578,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::EnumDef(e) => {
-                    let enum_name_path = TypePath::from(e.enum_name.clone());
+                    let enum_name_path = e.enum_name.to_type_path();
                     let enum_def_path = root.join(enum_name_path.clone());
 
                     self.logger
@@ -596,8 +595,7 @@ impl SemanticAnalyser {
                     // TODO: insert optional generics into scope if they are not already
 
                     for variant in e.variants.clone() {
-                        let variant_path =
-                            enum_def_path.join(TypePath::from(variant.variant_name.clone()));
+                        let variant_path = enum_def_path.join(variant.variant_name.to_type_path());
 
                         if let Some(variant_type) = variant.variant_type_opt {
                             match variant_type {
@@ -666,7 +664,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::StructDef(s) => {
-                    let struct_name_path = TypePath::from(s.struct_name.clone());
+                    let struct_name_path = s.struct_name.to_type_path();
                     let struct_def_path = root.join(struct_name_path.clone());
 
                     self.logger.trace(&format!(
@@ -685,7 +683,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::TupleStructDef(ts) => {
-                    let struct_name_path = TypePath::from(ts.struct_name.clone());
+                    let struct_name_path = ts.struct_name.to_type_path();
                     let tuple_struct_path = root.join(struct_name_path.clone());
 
                     self.logger.trace(&format!(
@@ -721,8 +719,7 @@ impl SemanticAnalyser {
                                     type_path.clone(),
                                 )?,
                                 InherentImplItem::FunctionItem(fi) => {
-                                    let function_name_path =
-                                        TypePath::from(fi.function_name.clone());
+                                    let function_name_path = fi.function_name.to_type_path();
 
                                     let function_def_path =
                                         type_path.join(function_name_path.clone());
@@ -751,7 +748,7 @@ impl SemanticAnalyser {
                     let trait_impl_path = match &t.implementing_type {
                         Type::UserDefined(tp) => root
                             .join(tp.clone())
-                            .join(TypePath::from(t.implemented_trait_path.type_name.clone())),
+                            .join(t.implemented_trait_path.type_name.to_type_path()),
 
                         ty => {
                             return Err(SemanticErrorKind::UnexpectedType {
@@ -782,8 +779,8 @@ impl SemanticAnalyser {
                                     trait_impl_path.clone(),
                                 )?,
                                 TraitImplItem::FunctionItem(fi) => {
-                                    let function_impl_path = trait_impl_path
-                                        .join(TypePath::from(fi.function_name.clone()));
+                                    let function_impl_path =
+                                        trait_impl_path.join(fi.function_name.to_type_path());
 
                                     self.insert(
                                         function_impl_path.clone(),
@@ -809,7 +806,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::FunctionItem(f) => {
-                    let function_name_path = TypePath::from(f.function_name.clone());
+                    let function_name_path = f.function_name.to_type_path();
                     let function_item_path = root.join(function_name_path.clone());
 
                     self.logger.trace(&format!(
@@ -879,9 +876,7 @@ impl SemanticAnalyser {
         };
 
         // append the function name to the root
-        // let full_path = build_item_path(&function_root, TypePath::from(f.function_name.clone()));
-
-        let full_path = function_root.join(TypePath::from(f.function_name.clone()));
+        let full_path = function_root.join(f.function_name.to_type_path());
 
         self.enter_scope(ScopeKind::Function(full_path.clone()));
 
@@ -889,7 +884,7 @@ impl SemanticAnalyser {
         if let Some(generic_params) = &f.generic_params_opt {
             for generic_param in &generic_params.params {
                 self.insert(
-                    TypePath::from(generic_param.name.clone()),
+                    generic_param.name.to_type_path(),
                     Symbol::Variable {
                         name: generic_param.name.clone(),
                         var_type: Type::Generic {
@@ -911,19 +906,17 @@ impl SemanticAnalyser {
                     }
                 }
 
-                let param_path = TypePath::from(param.param_name());
+                let param_path = param.param_name().to_type_path();
 
                 match param_type {
-                    Type::Generic { name, .. } => {
-                        match self.lookup(&TypePath::from(name.clone())) {
-                            Some(_) => (),
-                            None => {
-                                return Err(SemanticErrorKind::UndeclaredGenericParams {
-                                    found: format!("`{name}`"),
-                                })
-                            }
+                    Type::Generic { name, .. } => match self.lookup(&name.to_type_path()) {
+                        Some(_) => (),
+                        None => {
+                            return Err(SemanticErrorKind::UndeclaredGenericParams {
+                                found: format!("`{name}`"),
+                            })
                         }
-                    }
+                    },
 
                     Type::FunctionPtr(fp) => {
                         self.insert(
@@ -1047,9 +1040,10 @@ impl SemanticAnalyser {
                                 for (path, sym) in symbols {
                                     if !scope.symbols.contains_key(&import_path) {
                                         self.insert(path.clone(), sym.clone())?;
-                                    } else if !scope.symbols.contains_key(&TypePath::from(
-                                        import_path.type_name.clone(),
-                                    )) {
+                                    } else if !scope
+                                        .symbols
+                                        .contains_key(&import_path.type_name.to_type_path())
+                                    {
                                         self.insert(path.type_name.to_type_path(), symbol.clone())?;
                                     }
                                 }
@@ -1058,7 +1052,7 @@ impl SemanticAnalyser {
                                     self.insert(item_path.clone(), symbol.clone())?;
                                 } else if !scope
                                     .symbols
-                                    .contains_key(&TypePath::from(import_path.type_name.clone()))
+                                    .contains_key(&import_path.type_name.to_type_path())
                                 {
                                     self.insert(
                                         item_path.type_name.to_type_path(),

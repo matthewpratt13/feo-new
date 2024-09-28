@@ -20,7 +20,7 @@ pub(crate) fn analyse_patt(
     pattern: &Pattern,
 ) -> Result<Type, SemanticErrorKind> {
     match pattern {
-        Pattern::IdentifierPatt(i) => match analyser.lookup(&TypePath::from(i.name.clone())) {
+        Pattern::IdentifierPatt(i) => match analyser.lookup(&i.name.to_type_path()) {
             Some(Symbol::Variable { var_type, .. }) => {
                 // TODO: if an element is a generic type, resolve it,
                 // TODO: including checking if it implements its bound trait (where applicable)
