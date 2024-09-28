@@ -18,9 +18,9 @@ impl TypePath {
 
         let mut path: Vec<Identifier> = Vec::new();
 
-        let path_root = match token {
+        let path_root = match &token {
             Some(Token::Identifier { name, .. }) => {
-                Ok(PathRoot::Identifier(Identifier::from(&name)))
+                Ok(PathRoot::Identifier(Identifier::from(name)))
             }
             Some(Token::SelfKeyword { .. }) => Ok(PathRoot::SelfKeyword),
             Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),

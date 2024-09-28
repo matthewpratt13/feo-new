@@ -1006,7 +1006,7 @@ impl SemanticAnalyser {
 
         let import_paths = get_type_paths(path_segments);
 
-        for import_path in import_paths {
+        for import_path in import_paths.iter() {
             let import_root =
                 if let Some(ids) = import_path.associated_type_path_prefix_opt.as_ref() {
                     if !ids.is_empty() {
@@ -1024,7 +1024,7 @@ impl SemanticAnalyser {
                     "detected library `{import_root:?}` in library registry"
                 ));
 
-                for module in modules {
+                for module in modules.iter() {
                     for (item_path, symbol) in module.table.iter() {
                         if let Some(scope) = self.scope_stack.last().cloned() {
                             if let Symbol::Module { symbols, .. } = symbol {
@@ -1320,7 +1320,7 @@ impl SemanticAnalyser {
             }
 
             (Type::FunctionPtr(ptr_a), Type::FunctionPtr(ptr_b)) => {
-                match (ptr_a.params_opt, ptr_b.params_opt) {
+                match (&ptr_a.params_opt, ptr_b.params_opt) {
                     (None, None) => (),
                     (None, Some(params_b)) => {
                         return Err(SemanticErrorKind::ParamCountMismatch {
@@ -1378,8 +1378,8 @@ impl SemanticAnalyser {
                                     FunctionOrMethodParam::MethodParam(self_param_b),
                                 ) => {
                                     match (
-                                        self_param_a.reference_op_opt,
-                                        self_param_b.reference_op_opt,
+                                        &self_param_a.reference_op_opt,
+                                        &self_param_b.reference_op_opt,
                                     ) {
                                         (None, None) => (),
                                         (None, Some(_)) | (Some(_), None) => {
@@ -2089,8 +2089,8 @@ impl SemanticAnalyser {
         let trait_implementations = self.get_trait_implementations(concrete_type);
 
         // check if any of the implementations match the required trait
-        for trait_impl in trait_implementations {
-            if self.trait_matches(&trait_impl, bound_trait) {
+        for trait_impl in trait_implementations.iter() {
+            if self.trait_matches(trait_impl, bound_trait) {
                 return true;
             }
         }

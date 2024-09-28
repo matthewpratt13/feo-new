@@ -214,7 +214,7 @@ pub(crate) fn analyse_patt(
                     let patt_fields_opt = s.struct_fields_opt.clone();
 
                     if let Some(patt_fields) = patt_fields_opt {
-                        for patt_field in patt_fields {
+                        for patt_field in patt_fields.iter() {
                             let field_name = patt_field.field_name.clone();
                             let field_value = patt_field.field_value.clone();
                             let field_type = analyse_patt(analyser, &field_value)?;
@@ -247,7 +247,7 @@ pub(crate) fn analyse_patt(
                             }
                         }
 
-                        for def_field in def_fields.into_iter() {
+                        for def_field in def_fields {
                             match field_map.get_mut(&def_field.field_name) {
                                 Some(patt_field_type) => {
                                     let mut symbol_table =

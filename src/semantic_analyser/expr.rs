@@ -209,7 +209,7 @@ pub(crate) fn analyse_expr(
 
             let index_type = analyse_expr(analyser, &wrap_into_expression(*i.index.clone()), root)?;
 
-            match index_type {
+            match &index_type {
                 Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) => (),
 
                 _ => {
@@ -445,7 +445,7 @@ pub(crate) fn analyse_expr(
             (Some(from), None) => {
                 let from_type = analyse_expr(analyser, &wrap_into_expression(*from.clone()), root)?;
 
-                match from_type {
+                match &from_type {
                     Type::I32(_)
                     | Type::I64(_)
                     | Type::U8(_)
@@ -463,7 +463,7 @@ pub(crate) fn analyse_expr(
             (Some(from), Some(to)) => {
                 let from_type = analyse_expr(analyser, &wrap_into_expression(*from.clone()), root)?;
 
-                match from_type {
+                match &from_type {
                     Type::I32(_)
                     | Type::I64(_)
                     | Type::U8(_)
@@ -482,7 +482,7 @@ pub(crate) fn analyse_expr(
 
                 let to_type = analyse_expr(analyser, &wrap_into_expression(*to.clone()), root)?;
 
-                match to_type {
+                match &to_type {
                     Type::I32(_)
                     | Type::I64(_)
                     | Type::U8(_)
@@ -751,7 +751,7 @@ pub(crate) fn analyse_expr(
                     let obj_fields_opt = s.struct_fields_opt.clone();
 
                     if let Some(obj_fields) = obj_fields_opt {
-                        for obj_field in obj_fields {
+                        for obj_field in obj_fields.iter() {
                             let field_name = obj_field.field_name.clone();
                             let field_value = *obj_field.field_value.clone();
                             let field_type = analyse_expr(analyser, &field_value, root)?;
