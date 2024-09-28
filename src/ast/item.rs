@@ -131,7 +131,6 @@ impl fmt::Display for ImportTree {
         let import_paths = get_type_paths(self.path_segments.clone());
 
         let path_strings = import_paths
-            .clone()
             .into_iter()
             .map(|p| p.to_string())
             .collect::<Vec<String>>();
@@ -161,7 +160,7 @@ impl fmt::Display for PathSubset {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut trees_strings: Vec<String> = Vec::new();
 
-        for t in self.clone().nested_trees {
+        for t in &self.nested_trees {
             trees_strings.push(t.to_string())
         }
 
@@ -192,7 +191,12 @@ pub(crate) struct SelfParam {
 
 impl fmt::Display for SelfParam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}{}", self.reference_op_opt.unwrap_or_default(), self.kw_self)
+        write!(
+            f,
+            "{:?}{}",
+            self.reference_op_opt.unwrap_or_default(),
+            self.kw_self
+        )
     }
 }
 

@@ -244,18 +244,18 @@ pub(crate) fn analyse_expr(
                         })
                     }
                 }
-                Type::UserDefined(ref tp) => match analyser.lookup(&tp) {
+                Type::UserDefined(tp) => match analyser.lookup(&tp) {
                     Some(sym) => match sym {
-                        Symbol::TupleStruct { .. } => Ok(Type::UserDefined(tp.clone())),
+                        Symbol::TupleStruct { .. } => Ok(Type::UserDefined(tp)),
 
                         _ => Err(SemanticErrorKind::UnexpectedSymbol {
-                            name: tp.type_name.clone(),
+                            name: tp.type_name,
                             expected: "tuple struct".to_string(),
                             found: format!("`{sym}`"),
                         }),
                     },
                     None => Err(SemanticErrorKind::UndefinedType {
-                        name: tp.type_name.clone(),
+                        name: tp.type_name,
                     }),
                 },
                 _ => Err(SemanticErrorKind::UnexpectedType {
@@ -894,7 +894,7 @@ pub(crate) fn analyse_expr(
 
                                 if elem_type != field_type {
                                     return Err(SemanticErrorKind::TypeMismatchVariable {
-                                        var_id: tuple_struct_def.struct_name.clone(),
+                                        var_id: tuple_struct_def.struct_name,
                                         expected: format!("`{field_type}`"),
                                         found: elem_type,
                                     });

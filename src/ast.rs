@@ -69,10 +69,10 @@ impl fmt::Display for Literal {
             Literal::BigUInt { value, .. } => write!(f, "{}", value),
             Literal::Float { value, .. } => write!(f, "{}", value),
             Literal::Byte { value, .. } => write!(f, "{}", value),
-            Literal::Bytes { value, .. } => write!(f, "{}", value.clone().as_string()),
+            Literal::Bytes { value, .. } => write!(f, "{}", value.as_string()),
             Literal::Hash { value, .. } => write!(f, "{}", value),
             Literal::Str { value, .. } => {
-                write!(f, "{}", value.clone().as_string())
+                write!(f, "{}", value.as_string())
             }
             Literal::Char { value, .. } => write!(f, "{}", value),
             Literal::Bool { value, .. } => write!(f, "{}", value),

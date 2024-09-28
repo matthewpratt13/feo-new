@@ -245,10 +245,10 @@ impl SemanticAnalyser {
                 self.unify_types(&mut symbol_table, &declared_type, &mut value_type)?;
 
                 // check that the value matches the type annotation
-                if value_type != declared_type {
+                if &value_type != &declared_type {
                     return Err(SemanticErrorKind::TypeMismatchDeclaredType {
-                        actual_type: value_type.clone(),
-                        declared_type: declared_type.clone(),
+                        actual_type: value_type,
+                        declared_type: declared_type,
                     });
                 }
 
@@ -322,7 +322,7 @@ impl SemanticAnalyser {
                     self.logger
                         .trace(&format!("analysing import declaration: `{statement}`"));
 
-                    match self.analyse_import(&id, &root.type_name) {
+                    match self.analyse_import(id, &root.type_name) {
                         Ok(_) => (),
                         Err(err) => self.log_error(err, &id.span),
                     }
@@ -418,7 +418,7 @@ impl SemanticAnalyser {
 
                     self.unify_types(&mut symbol_table, &s.var_type, &mut assignee_type)?;
 
-                    if assignee_type != s.var_type.clone() {
+                    if &assignee_type != &s.var_type {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
                             declared_type: s.var_type.clone(),
                             actual_type: assignee_type,

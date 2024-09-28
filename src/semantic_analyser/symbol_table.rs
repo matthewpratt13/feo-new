@@ -82,7 +82,7 @@ impl Symbol {
             Symbol::Alias { path, .. } => Type::UserDefined(path),
             Symbol::Constant { constant_type, .. } => constant_type,
             Symbol::Function { function, .. } => match function.return_type_opt {
-                Some(t) => *t.clone(),
+                Some(t) => *t,
                 None => Type::UnitType(UnitType),
             },
             Symbol::Module { .. } => Type::UnitType(UnitType),
