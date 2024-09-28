@@ -1,5 +1,5 @@
 mod type_path;
-pub(crate) use type_path::{build_item_path, get_type_paths};
+pub(crate) use type_path::get_type_paths;
 
 use super::{collection, item::parse_generic_param, Parser};
 

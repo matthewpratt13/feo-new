@@ -102,6 +102,73 @@ impl TypePath {
 
         Ok(path_type)
     }
+
+    pub(crate) fn join(&self, item_path: TypePath) -> TypePath {
+        if let Some(prefix) = &self.associated_type_path_prefix_opt {
+            let mut path = prefix.to_vec();
+
+            path.push(self.type_name.clone());
+
+            path.append(&mut Vec::<Identifier>::from(item_path));
+
+            let type_name = if let Some(id) = path.pop() {
+                id
+            } else {
+                Identifier::from("")
+            };
+
+            TypePath {
+                associated_type_path_prefix_opt: Some(path),
+                type_name,
+            }
+        } else {
+            if self.type_name == Identifier::from("") {
+                let path = &mut Vec::<Identifier>::from(item_path);
+
+                let type_name = if let Some(id) = path.pop() {
+                    id
+                } else {
+                    Identifier::from("")
+                };
+
+                TypePath {
+                    associated_type_path_prefix_opt: {
+                        match path.is_empty() {
+                            true => None,
+                            false => Some(path.to_vec()),
+                        }
+                    },
+                    type_name,
+                }
+            } else {
+                let mut suffix = Vec::<Identifier>::from(item_path);
+
+                let mut path = vec![self.type_name.clone()];
+
+                if suffix.get(0) == path.get(0) {
+                    path.clear();
+                }
+
+                path.append(&mut suffix);
+
+                let type_name = if let Some(id) = path.pop() {
+                    id
+                } else {
+                    Identifier::from("")
+                };
+
+                TypePath {
+                    associated_type_path_prefix_opt: {
+                        match path.is_empty() {
+                            true => None,
+                            false => Some(path),
+                        }
+                    },
+                    type_name,
+                }
+            }
+        }
+    }
 }
 
 impl From<PathExpr> for TypePath {
@@ -175,7 +242,7 @@ impl From<PathSegment> for Vec<TypePath> {
                 for t in p_sub.nested_trees {
                     for p_seg in t.path_segments {
                         for p in Vec::<TypePath>::from(p_seg) {
-                            let path = build_item_path(&TypePath::from(root.clone()), p);
+                            let path = TypePath::from(root.clone()).join(p);
                             paths.push(path)
                         }
                     }
@@ -276,7 +343,7 @@ pub(crate) fn get_type_paths(segments: Vec<PathSegment>) -> Vec<TypePath> {
         if let Some(subset) = seg.subset_opt {
             for tree in subset.nested_trees {
                 for tree_seg in tree.path_segments {
-                    let path = build_item_path(&root, tree_seg.root);
+                    let path = root.join(tree_seg.root);
                     paths.push(path);
                 }
             }
@@ -288,69 +355,69 @@ pub(crate) fn get_type_paths(segments: Vec<PathSegment>) -> Vec<TypePath> {
     paths
 }
 
-pub(crate) fn build_item_path(root: &TypePath, item_path: TypePath) -> TypePath {
-    if let Some(prefix) = &root.associated_type_path_prefix_opt {
-        let mut path = prefix.to_vec();
+// pub(crate) fn build_item_path(root: &TypePath, item_path: TypePath) -> TypePath {
+//     if let Some(prefix) = &root.associated_type_path_prefix_opt {
+//         let mut path = prefix.to_vec();
 
-        path.push(root.type_name.clone());
+//         path.push(root.type_name.clone());
 
-        path.append(&mut Vec::<Identifier>::from(item_path));
+//         path.append(&mut Vec::<Identifier>::from(item_path));
 
-        let type_name = if let Some(id) = path.pop() {
-            id
-        } else {
-            Identifier::from("")
-        };
+//         let type_name = if let Some(id) = path.pop() {
+//             id
+//         } else {
+//             Identifier::from("")
+//         };
 
-        TypePath {
-            associated_type_path_prefix_opt: Some(path),
-            type_name,
-        }
-    } else {
-        if root.type_name == Identifier::from("") {
-            let path = &mut Vec::<Identifier>::from(item_path);
+//         TypePath {
+//             associated_type_path_prefix_opt: Some(path),
+//             type_name,
+//         }
+//     } else {
+//         if root.type_name == Identifier::from("") {
+//             let path = &mut Vec::<Identifier>::from(item_path);
 
-            let type_name = if let Some(id) = path.pop() {
-                id
-            } else {
-                Identifier::from("")
-            };
+//             let type_name = if let Some(id) = path.pop() {
+//                 id
+//             } else {
+//                 Identifier::from("")
+//             };
 
-            TypePath {
-                associated_type_path_prefix_opt: {
-                    match path.is_empty() {
-                        true => None,
-                        false => Some(path.to_vec()),
-                    }
-                },
-                type_name,
-            }
-        } else {
-            let mut suffix = Vec::<Identifier>::from(item_path);
+//             TypePath {
+//                 associated_type_path_prefix_opt: {
+//                     match path.is_empty() {
+//                         true => None,
+//                         false => Some(path.to_vec()),
+//                     }
+//                 },
+//                 type_name,
+//             }
+//         } else {
+//             let mut suffix = Vec::<Identifier>::from(item_path);
 
-            let mut path = vec![root.type_name.clone()];
+//             let mut path = vec![root.type_name.clone()];
 
-            if suffix.get(0) == path.get(0) {
-                path.clear();
-            }
+//             if suffix.get(0) == path.get(0) {
+//                 path.clear();
+//             }
 
-            path.append(&mut suffix);
+//             path.append(&mut suffix);
 
-            let type_name = if let Some(id) = path.pop() {
-                id
-            } else {
-                Identifier::from("")
-            };
+//             let type_name = if let Some(id) = path.pop() {
+//                 id
+//             } else {
+//                 Identifier::from("")
+//             };
 
-            TypePath {
-                associated_type_path_prefix_opt: {
-                    match path.is_empty() {
-                        true => None,
-                        false => Some(path),
-                    }
-                },
-                type_name,
-            }
-        }
-    }
-}
+//             TypePath {
+//                 associated_type_path_prefix_opt: {
+//                     match path.is_empty() {
+//                         true => None,
+//                         false => Some(path),
+//                     }
+//                 },
+//                 type_name,
+//             }
+//         }
+//     }
+// }

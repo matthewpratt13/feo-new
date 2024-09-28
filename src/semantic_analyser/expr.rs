@@ -7,7 +7,6 @@ use crate::{
         PathExpr, PathRoot, Pattern, Statement, Str, Type, TypePath, UInt, UnaryOp, UnitType,
     },
     error::SemanticErrorKind,
-    parser::ty::build_item_path,
     semantic_analyser::symbol_table::Symbol,
     span::Spanned,
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
@@ -41,18 +40,13 @@ pub(crate) fn analyse_expr(
                             }
                         };
 
-                        build_item_path(
-                            &root,
-                            TypePath {
-                                associated_type_path_prefix_opt: Some(segments.to_vec()),
-                                type_name: id,
-                            },
-                        )
+                        root.join(TypePath {
+                            associated_type_path_prefix_opt: Some(segments.to_vec()),
+                            type_name: id,
+                        })
                     } else {
                         match &p.path_root {
-                            PathRoot::Identifier(i) => {
-                                build_item_path(&root, TypePath::from(i.clone()))
-                            }
+                            PathRoot::Identifier(i) => root.join(TypePath::from(i.clone())),
                             PathRoot::SelfType(_) => root.clone(),
                             PathRoot::SelfKeyword => root.clone(),
 
@@ -143,8 +137,7 @@ pub(crate) fn analyse_expr(
                     | Symbol::Enum { path, .. },
                 ) => {
                     if Type::UserDefined(path.clone()) == receiver_type {
-                        let method_path =
-                            build_item_path(&path, TypePath::from(mc.method_name.clone()));
+                        let method_path = path.join(TypePath::from(mc.method_name.clone()));
 
                         analyser.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
                     } else {
@@ -747,10 +740,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::Struct(s) => {
-            let type_path = build_item_path(
-                &TypePath::from(root.clone()),
-                TypePath::from(s.struct_path.clone()),
-            );
+            let type_path = root.join(TypePath::from(s.struct_path.clone()));
 
             match analyser.lookup(&type_path).cloned() {
                 Some(Symbol::Struct { struct_def, path }) => {
@@ -847,7 +837,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::TupleStruct(ts) => {
-            let type_path = build_item_path(root, TypePath::from(ts.struct_path.clone()));
+            let type_path = root.join(TypePath::from(ts.struct_path.clone()));
 
             match analyser.lookup(&type_path).cloned() {
                 Some(Symbol::TupleStruct {
