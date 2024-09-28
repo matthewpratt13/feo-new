@@ -737,7 +737,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::ResultExpr(r) => Ok(ValueExpr::ResultExpr(r)),
             _ => Err(ParserErrorKind::UnexpectedExpression {
                 expected: "value expression".to_string(),
-                found: format!("`{}`", value),
+                found: format!("`{value}`"),
             }),
         }
     }
@@ -956,7 +956,7 @@ impl TryFrom<Expression> for AssigneeExpr {
 
             _ => Err(ParserErrorKind::UnexpectedExpression {
                 expected: "assignee expression".to_string(),
-                found: format!("{}", value),
+                found: format!("{value}"),
             }),
         }
     }

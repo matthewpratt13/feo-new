@@ -226,7 +226,7 @@ pub(crate) fn analyse_patt(
                     if let Some(def_fields) = def_fields_opt {
                         if field_map.len() > def_fields.len() {
                             return Err(SemanticErrorKind::StructArgCountMismatch {
-                                struct_path: Identifier::from(type_path),
+                                struct_path: type_path.to_identifier(),
                                 expected: def_fields.len(),
                                 found: field_map.len(),
                             });
@@ -314,20 +314,20 @@ pub(crate) fn analyse_patt(
                         (None, None) => Ok(Type::UnitType(UnitType)),
 
                         (None, Some(fields)) => Err(SemanticErrorKind::StructArgCountMismatch {
-                            struct_path: Identifier::from(type_path),
+                            struct_path: type_path.to_identifier(),
                             expected: fields.len(),
                             found: 0,
                         }),
 
                         (Some(elements), None) => Err(SemanticErrorKind::StructArgCountMismatch {
-                            struct_path: Identifier::from(type_path),
+                            struct_path: type_path.to_identifier(),
                             expected: 0,
                             found: elements.len(),
                         }),
                         (Some(elements), Some(fields)) => {
                             if &elements.len() != &fields.len() {
                                 return Err(SemanticErrorKind::StructArgCountMismatch {
-                                    struct_path: Identifier::from(type_path),
+                                    struct_path: type_path.to_identifier(),
                                     expected: fields.len(),
                                     found: elements.len(),
                                 });

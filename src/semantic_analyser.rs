@@ -190,7 +190,7 @@ impl SemanticAnalyser {
             .insert(Identifier::from("lib"), Vec::new());
 
         for stmt in &program.statements {
-            self.analyse_stmt(stmt, Identifier::from("").to_type_path())
+            self.analyse_stmt(stmt, TypePath::from(Identifier::from("")))
                 .map_err(|_| self.errors.clone())?
         }
 
@@ -443,10 +443,8 @@ impl SemanticAnalyser {
 
                     let module_path = root.join(m.module_name.to_type_path());
 
-                    self.logger.trace(&format!(
-                        "analysing module item: `{}` …",
-                        module_path.clone()
-                    ));
+                    self.logger
+                        .trace(&format!("analysing module item: `{module_path}` …"));
 
                     let scope_kind = ScopeKind::Module(module_path.clone());
 
@@ -495,8 +493,7 @@ impl SemanticAnalyser {
                     )?;
 
                     self.logger.trace(&format!(
-                        "inserting symbols into module at path: `{}` …",
-                        module_path.clone()
+                        "inserting symbols into module at path: `{module_path}` …",
                     ));
 
                     if let Some(modules) = self.lib_registry.get_mut(&Identifier::from("lib")) {
@@ -518,10 +515,8 @@ impl SemanticAnalyser {
                     let trait_name_path = t.trait_name.to_type_path();
                     let trait_def_path = root.join(trait_name_path.clone());
 
-                    self.logger.trace(&format!(
-                        "analysing trait definition: `{}` …",
-                        trait_def_path.clone()
-                    ));
+                    self.logger
+                        .trace(&format!("analysing trait definition: `{trait_def_path}` …",));
 
                     self.insert(
                         trait_def_path.clone(),
@@ -625,9 +620,7 @@ impl SemanticAnalyser {
                                                 attributes_opt: None,
                                                 visibility: Visibility::Private,
                                                 kw_struct: Keyword::Anonymous,
-                                                struct_name: Identifier::from(
-                                                    &variant_path.to_string(),
-                                                ),
+                                                struct_name: variant_path.to_identifier(),
                                                 generic_params_opt: None,
                                                 fields_opt: {
                                                     let mut elements: Vec<TupleStructDefField> =
@@ -655,7 +648,7 @@ impl SemanticAnalyser {
                             self.insert(
                                 variant_path.clone(),
                                 Symbol::Variable {
-                                    name: Identifier::from(&variant_path.to_string()),
+                                    name: variant_path.to_identifier(),
                                     var_type: Type::UserDefined(variant_path),
                                 },
                             )?;
@@ -705,8 +698,7 @@ impl SemanticAnalyser {
                     let type_path = root.join(iid.nominal_type.clone());
 
                     self.logger.trace(&format!(
-                        "analysing inherent implementation for type: `{}` …",
-                        type_path.clone()
+                        "analysing inherent implementation for type: `{type_path}` …",
                     ));
 
                     if let Some(items) = &iid.associated_items_opt {
@@ -1029,8 +1021,7 @@ impl SemanticAnalyser {
             // bring external libraries into scope
             if let Some(modules) = self.lib_registry.get(&import_root).cloned() {
                 self.logger.debug(&format!(
-                    "detected library `{:?}` in library registry",
-                    import_root
+                    "detected library `{import_root:?}` in library registry"
                 ));
 
                 for module in modules {
@@ -1106,7 +1097,7 @@ impl SemanticAnalyser {
 
                         if self_counter != params.len() {
                             return Err(SemanticErrorKind::FuncArgCountMismatch {
-                                function_path: Identifier::from(path),
+                                function_path: path.to_identifier(),
                                 expected: self_counter,
                                 found: self_counter + func_param_counter,
                             });
@@ -1118,7 +1109,7 @@ impl SemanticAnalyser {
                         }
                     }
                     (Some(args), None) => Err(SemanticErrorKind::FuncArgCountMismatch {
-                        function_path: Identifier::from(path),
+                        function_path: path.to_identifier(),
                         expected: 0,
                         found: args.len(),
                     }),
@@ -1139,7 +1130,7 @@ impl SemanticAnalyser {
 
                         if args.len() != num_func_params {
                             return Err(SemanticErrorKind::FuncArgCountMismatch {
-                                function_path: Identifier::from(path),
+                                function_path: path.to_identifier(),
                                 expected: params.len(),
                                 found: args.len(),
                             });
@@ -1240,8 +1231,8 @@ impl SemanticAnalyser {
                         (Some(a), Some(b)) => {
                             if a != b {
                                 return Err(SemanticErrorKind::TypeMismatchTypeBound {
-                                    expected: Identifier::from(a),
-                                    found: Identifier::from(b),
+                                    expected: a.to_identifier(),
+                                    found: b.to_identifier(),
                                 });
                             }
                         }
@@ -1273,7 +1264,7 @@ impl SemanticAnalyser {
                 if *grouped != matched {
                     return Err(SemanticErrorKind::TypeMismatchInnerType {
                         context: "grouped".to_string(),
-                        expected: format!("`{}`", grouped),
+                        expected: format!("`{grouped}`"),
                         found: matched,
                     });
                 }
@@ -1393,16 +1384,16 @@ impl SemanticAnalyser {
                                         (None, None) => (),
                                         (None, Some(_)) | (Some(_), None) => {
                                             return Err(SemanticErrorKind::TypeMismatchSelfParam {
-                                                expected: format!("`{}`", self_param_a),
-                                                found: format!("`{}`", self_param_b),
+                                                expected: format!("`{self_param_a}`"),
+                                                found: format!("`{self_param_b}`"),
                                             });
                                         }
                                         (Some(ref_op_a), Some(ref_op_b)) => {
                                             if ref_op_a != ref_op_b {
                                                 return Err(
                                                     SemanticErrorKind::TypeMismatchSelfParam {
-                                                        expected: format!("`{}`", self_param_a),
-                                                        found: format!("`{}`", self_param_b),
+                                                        expected: format!("`{self_param_a}`"),
+                                                        found: format!("`{self_param_b}`"),
                                                     },
                                                 );
                                             }
@@ -1473,7 +1464,7 @@ impl SemanticAnalyser {
                 if inner_type_a != inner_type_b {
                     return Err(SemanticErrorKind::TypeMismatchInnerType {
                         context: "reference".to_string(),
-                        expected: format!("`{}{}`", ref_op_a, inner_type_a),
+                        expected: format!("`{ref_op_a}{inner_type_a}`"),
                         found: *inner_type_b,
                     });
                 }
@@ -1491,7 +1482,7 @@ impl SemanticAnalyser {
             ) => {
                 if elem_type_a != elem_type_b {
                     return Err(SemanticErrorKind::TypeMismatchArrayElems {
-                        expected: format!("`{}`", elem_type_a),
+                        expected: format!("`{elem_type_a}`"),
                         found: *elem_type_b,
                     });
                 }
@@ -1537,7 +1528,7 @@ impl SemanticAnalyser {
                 if inner_type_a != inner_type_b {
                     return Err(SemanticErrorKind::TypeMismatchInnerType {
                         context: "`Some` variant in `Option<T>`".to_string(),
-                        expected: format!("`{}`", inner_type_a),
+                        expected: format!("`{inner_type_a}`"),
                         found: *inner_type_b,
                     });
                 }
@@ -1550,8 +1541,8 @@ impl SemanticAnalyser {
             (Type::UserDefined(type_path_a), Type::UserDefined(type_path_b)) => {
                 if type_path_a != type_path_b {
                     return Err(SemanticErrorKind::TypeMismatchUserDefined {
-                        expected: Identifier::from(type_path_a),
-                        found: Identifier::from(type_path_b),
+                        expected: type_path_a.to_identifier(),
+                        found: type_path_b.to_identifier(),
                     });
                 }
 
@@ -1581,7 +1572,7 @@ impl SemanticAnalyser {
                     if !self.type_satisfies_bound(concrete_type, &bound_trait) {
                         return Err(SemanticErrorKind::TypeBoundNotSatisfied {
                             generic_name: name.clone(),
-                            expected_bound: Identifier::from(bound_path.clone()),
+                            expected_bound: bound_path.to_identifier(),
                             found_type: concrete_type.clone(),
                         });
                     }

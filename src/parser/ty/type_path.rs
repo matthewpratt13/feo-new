@@ -96,7 +96,7 @@ impl TypePath {
 
         ////////////////////////////////////////////////////////////////////////////////
         parser.logger.debug("exiting `PathType::parse()`");
-        parser.logger.debug(&format!("parsed path: {}", path_type));
+        parser.logger.debug(&format!("parsed path: {path_type}"));
         parser.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -168,6 +168,10 @@ impl TypePath {
                 }
             }
         }
+    }
+
+    pub(crate) fn to_identifier(&self) -> Identifier {
+        self.clone().into()
     }
 }
 
