@@ -1545,6 +1545,8 @@ impl SemanticAnalyser {
                 Ok(())
             }
 
+            // TODO: handle `(Type::SelfType, _)` and `(_, Type::SelfType)` cases
+
             _ => Err(SemanticErrorKind::TypeMismatchUnification {
                 expected: Identifier::from(&type_a.to_string()),
                 found: Identifier::from(&type_b.to_string()),
@@ -1615,6 +1617,60 @@ impl SemanticAnalyser {
         for scope in scope_stack.to_owned().iter_mut() {
             for symbol in scope.symbols.values_mut() {
                 self.substitute_in_symbol(symbol, symbol_table, generic_name, concrete_type);
+            }
+        }
+    }
+
+    fn substitute_in_symbol(
+        &mut self,
+        symbol: &mut Symbol,
+        symbol_table: &mut SymbolTable,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        // apply substitution to each symbol within the current scope by delegating to specific
+        // substitution functions
+        match symbol {
+            Symbol::Variable { var_type, .. } => {
+                self.substitute_in_type(var_type, symbol_table, generic_name, concrete_type);
+            }
+            Symbol::Struct { struct_def, .. } => {
+                self.substitute_in_struct(struct_def, symbol_table, generic_name, concrete_type);
+            }
+            Symbol::TupleStruct {
+                tuple_struct_def, ..
+            } => {
+                self.substitute_in_tuple_struct(
+                    tuple_struct_def,
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
+            }
+            Symbol::Enum { enum_def, .. } => {
+                self.substitute_in_enum(enum_def, symbol_table, generic_name, concrete_type);
+            }
+            Symbol::Trait { trait_def, .. } => {
+                self.substitute_in_trait(trait_def, symbol_table, generic_name, concrete_type)
+            }
+            Symbol::Alias {
+                original_type_opt, ..
+            } => {
+                self.substitute_opt_type(
+                    original_type_opt,
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
+            }
+            Symbol::Constant { constant_type, .. } => {
+                self.substitute_in_type(constant_type, symbol_table, generic_name, concrete_type);
+            }
+            Symbol::Function { function, .. } => {
+                self.substitute_in_function(function, symbol_table, generic_name, concrete_type);
+            }
+            Symbol::Module { module, .. } => {
+                self.substitute_in_module(module, symbol_table, generic_name, concrete_type)
             }
         }
     }
@@ -1758,60 +1814,6 @@ impl SemanticAnalyser {
             }
 
             _ => {}
-        }
-    }
-
-    fn substitute_in_symbol(
-        &mut self,
-        symbol: &mut Symbol,
-        symbol_table: &mut SymbolTable,
-        generic_name: &Identifier,
-        concrete_type: &Type,
-    ) {
-        // apply substitution to each symbol within the current scope by delegating to specific
-        // substitution functions
-        match symbol {
-            Symbol::Variable { var_type, .. } => {
-                self.substitute_in_type(var_type, symbol_table, generic_name, concrete_type);
-            }
-            Symbol::Struct { struct_def, .. } => {
-                self.substitute_in_struct(struct_def, symbol_table, generic_name, concrete_type);
-            }
-            Symbol::TupleStruct {
-                tuple_struct_def, ..
-            } => {
-                self.substitute_in_tuple_struct(
-                    tuple_struct_def,
-                    symbol_table,
-                    generic_name,
-                    concrete_type,
-                );
-            }
-            Symbol::Enum { enum_def, .. } => {
-                self.substitute_in_enum(enum_def, symbol_table, generic_name, concrete_type);
-            }
-            Symbol::Trait { trait_def, .. } => {
-                self.substitute_in_trait(trait_def, symbol_table, generic_name, concrete_type)
-            }
-            Symbol::Alias {
-                original_type_opt, ..
-            } => {
-                self.substitute_opt_type(
-                    original_type_opt,
-                    symbol_table,
-                    generic_name,
-                    concrete_type,
-                );
-            }
-            Symbol::Constant { constant_type, .. } => {
-                self.substitute_in_type(constant_type, symbol_table, generic_name, concrete_type);
-            }
-            Symbol::Function { function, .. } => {
-                self.substitute_in_function(function, symbol_table, generic_name, concrete_type);
-            }
-            Symbol::Module { module, .. } => {
-                self.substitute_in_module(module, symbol_table, generic_name, concrete_type)
-            }
         }
     }
 
