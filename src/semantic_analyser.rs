@@ -87,7 +87,7 @@ impl SemanticAnalyser {
             symbols,
         };
 
-        logger.trace("entering public scope…");
+        logger.trace("entering public scope …");
 
         SemanticAnalyser {
             scope_stack: vec![public_scope],
