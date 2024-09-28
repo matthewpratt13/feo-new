@@ -248,7 +248,7 @@ impl SemanticAnalyser {
                 if &value_type != &declared_type {
                     return Err(SemanticErrorKind::TypeMismatchDeclaredType {
                         actual_type: value_type,
-                        declared_type: declared_type,
+                        declared_type,
                     });
                 }
 
@@ -292,17 +292,13 @@ impl SemanticAnalyser {
                         name: ls.assignee.name.clone(),
                         var_type: value_type,
                     },
-                    Type::UserDefined(tp) => {
-                        // let type_path = self.check_item_path(&tp, &root, "type".to_string())?;
-
-                        match self.lookup(&tp) {
-                            Some(sym) => sym.clone(),
-                            _ => Symbol::Variable {
-                                name: ls.assignee.name.clone(),
-                                var_type: value_type,
-                            },
-                        }
-                    }
+                    Type::UserDefined(tp) => match self.lookup(&tp) {
+                        Some(sym) => sym.clone(),
+                        _ => Symbol::Variable {
+                            name: ls.assignee.name.clone(),
+                            var_type: value_type,
+                        },
+                    },
                     Type::Generic { name, bound_opt } => Symbol::Variable {
                         name: name.clone(),
                         var_type: Type::UserDefined(
