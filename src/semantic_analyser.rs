@@ -252,7 +252,7 @@ impl SemanticAnalyser {
                     HashMap::new()
                 };
 
-                self.check_type(&mut symbol_table, &declared_type, &mut value_type)?;
+                self.check_types(&mut symbol_table, &declared_type, &mut value_type)?;
 
                 // check that the value matches the type annotation
                 if &value_type != &declared_type {
@@ -366,7 +366,7 @@ impl SemanticAnalyser {
                         HashMap::new()
                     };
 
-                    self.check_type(
+                    self.check_types(
                         &mut symbol_table,
                         &cd.constant_type,
                         &mut value_type.clone().unwrap_or(Type::inferred_type("_")),
@@ -412,7 +412,7 @@ impl SemanticAnalyser {
                         HashMap::new()
                     };
 
-                    self.check_type(&mut symbol_table, &s.var_type, &mut assignee_type)?;
+                    self.check_types(&mut symbol_table, &s.var_type, &mut assignee_type)?;
 
                     if &assignee_type != &s.var_type {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -984,7 +984,7 @@ impl SemanticAnalyser {
                 HashMap::new()
             };
 
-            self.check_type(&mut symbol_table, &return_type, &mut function_type)?;
+            self.check_types(&mut symbol_table, &return_type, &mut function_type)?;
         }
 
         println!(
@@ -1152,7 +1152,7 @@ impl SemanticAnalyser {
                                 HashMap::new()
                             };
 
-                            self.check_type(&mut symbol_table, &param_type, &mut arg_type)?;
+                            self.check_types(&mut symbol_table, &param_type, &mut arg_type)?;
 
                             if arg_type != param_type {
                                 return Err(SemanticErrorKind::TypeMismatchArg {
@@ -1184,20 +1184,20 @@ impl SemanticAnalyser {
 
     /// Check if two types match. Returns `Ok` if they are compatible or can be unified, or
     /// an `Err` if there is a type mismatch.
-    fn check_type(
+    fn check_types(
         &mut self,
         symbol_table: &mut SymbolTable,
-        type_a: &Type,
-        type_b: &mut Type,
+        expected_type: &Type,
+        matched_type: &mut Type,
     ) -> Result<(), SemanticErrorKind> {
         log_trace!(
             self.logger,
-            "checking compatibility between types `{type_a}` and `{type_b} …"
+            "checking compatibility between types `{expected_type}` and `{matched_type} …"
         );
 
-        match (type_a.clone(), type_b.clone()) {
+        match (expected_type.clone(), matched_type.clone()) {
             // if both types are the same, they are already unified
-            _ if type_a == type_b => Ok(()),
+            _ if expected_type == matched_type => Ok(()),
 
             (Type::InferredType(_), _) => Err(SemanticErrorKind::UnexpectedInferredType),
 
@@ -1210,7 +1210,7 @@ impl SemanticAnalyser {
             (Type::UserDefined(_), Type::SelfType(_)) => {
                 log_trace!(self.logger, "attempting to unify `Self` type …");
 
-                unify_self_type(type_b, type_a.clone());
+                unify_self_type(matched_type, expected_type.clone());
                 Ok(())
             }
 
@@ -1223,7 +1223,7 @@ impl SemanticAnalyser {
             (concrete_or_generic, Type::InferredType(_)) => {
                 log_trace!(self.logger, "attempting to unify inferred type …");
 
-                unify_inferred_type(type_b, concrete_or_generic);
+                unify_inferred_type(matched_type, concrete_or_generic);
                 Ok(())
             }
 
@@ -1265,8 +1265,8 @@ impl SemanticAnalyser {
                     Ok(())
                 } else {
                     Err(SemanticErrorKind::TypeMismatchUnification {
-                        expected: Identifier::from(&type_a.to_string()),
-                        found: Identifier::from(&type_b.to_string()),
+                        expected: Identifier::from(&expected_type.to_string()),
+                        found: Identifier::from(&matched_type.to_string()),
                     })
                 }
             }
@@ -1280,7 +1280,7 @@ impl SemanticAnalyser {
             }
 
             (concrete, Type::Generic { .. }) => {
-                self.unify_generic_with_concrete(symbol_table, type_b, &concrete)
+                self.unify_generic_with_concrete(symbol_table, matched_type, &concrete)
             }
 
             (Type::GroupedType(grouped), matched) => {
@@ -1561,7 +1561,7 @@ impl SemanticAnalyser {
 
             (Type::Result { .. }, Type::Result { .. }) => {
                 log_trace!(self.logger, "attempting to unify `Result<T, E>` types …");
-                unify_result_types(type_b, &type_a)
+                unify_result_types(matched_type, &expected_type)
             }
 
             (Type::UserDefined(type_path_a), Type::UserDefined(type_path_b)) => {
@@ -1576,8 +1576,8 @@ impl SemanticAnalyser {
             }
 
             _ => Err(SemanticErrorKind::TypeMismatchUnification {
-                expected: Identifier::from(&type_a.to_string()),
-                found: Identifier::from(&type_b.to_string()),
+                expected: Identifier::from(&expected_type.to_string()),
+                found: Identifier::from(&matched_type.to_string()),
             }),
         }
     }
@@ -1609,7 +1609,7 @@ impl SemanticAnalyser {
                 Ok(())
             }
 
-            _ => self.check_type(symbol_table, concrete_type, generic_type),
+            _ => self.check_types(symbol_table, concrete_type, generic_type),
         }
     }
 
