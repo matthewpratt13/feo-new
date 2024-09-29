@@ -2154,7 +2154,7 @@ fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {
 /// and a context type. This function is used to ensure that the `Ok` and `Err` variants of
 /// an inferred `Result` type match the expected types defined in the context.
 fn unify_result_types(ty: &mut Type, context_type: &Type) -> Result<(), SemanticErrorKind> {
-    let inferred_type_clone = ty.clone();
+    let ty_clone = ty.clone();
 
     match (ty, context_type) {
         (
@@ -2190,7 +2190,7 @@ fn unify_result_types(ty: &mut Type, context_type: &Type) -> Result<(), Semantic
         }
         _ => Err(SemanticErrorKind::UnexpectedType {
             expected: context_type.to_string(),
-            found: inferred_type_clone,
+            found: ty_clone,
         }),
     }
 }
