@@ -252,7 +252,7 @@ impl SemanticAnalyser {
                     HashMap::new()
                 };
 
-                self.unify_types(&mut symbol_table, &declared_type, &mut value_type)?;
+                self.check_type(&mut symbol_table, &declared_type, &mut value_type)?;
 
                 // check that the value matches the type annotation
                 if &value_type != &declared_type {
@@ -366,7 +366,7 @@ impl SemanticAnalyser {
                         HashMap::new()
                     };
 
-                    self.unify_types(
+                    self.check_type(
                         &mut symbol_table,
                         &cd.constant_type,
                         &mut value_type.clone().unwrap_or(Type::inferred_type("_")),
@@ -412,7 +412,7 @@ impl SemanticAnalyser {
                         HashMap::new()
                     };
 
-                    self.unify_types(&mut symbol_table, &s.var_type, &mut assignee_type)?;
+                    self.check_type(&mut symbol_table, &s.var_type, &mut assignee_type)?;
 
                     if &assignee_type != &s.var_type {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -961,7 +961,7 @@ impl SemanticAnalyser {
                 path_vec.pop(); // remove associated type name
             }
 
-            log_trace!(self.logger, "analysing body of function `{full_path}()` …");
+            println!("analysing body of function `{full_path}()` …");
 
             analyse_expr(
                 self,
@@ -984,11 +984,10 @@ impl SemanticAnalyser {
                 HashMap::new()
             };
 
-            self.unify_types(&mut symbol_table, &return_type, &mut function_type)?;
+            self.check_type(&mut symbol_table, &return_type, &mut function_type)?;
         }
 
-        log_trace!(
-            self.logger,
+        println!(
             "analysed function: `{full_path}() -> {}`",
             f.return_type_opt
                 .clone()
@@ -1153,7 +1152,7 @@ impl SemanticAnalyser {
                                 HashMap::new()
                             };
 
-                            self.unify_types(&mut symbol_table, &param_type, &mut arg_type)?;
+                            self.check_type(&mut symbol_table, &param_type, &mut arg_type)?;
 
                             if arg_type != param_type {
                                 return Err(SemanticErrorKind::TypeMismatchArg {
@@ -1183,23 +1182,20 @@ impl SemanticAnalyser {
         }
     }
 
-    /// Unifies two types, ensuring they are compatible. Returns `Ok` if they can be unified, or
+    /// Check if two types match. Returns `Ok` if they are compatible or can be unified, or
     /// an `Err` if there is a type mismatch.
-    fn unify_types(
+    fn check_type(
         &mut self,
         symbol_table: &mut SymbolTable,
         type_a: &Type,
         type_b: &mut Type,
     ) -> Result<(), SemanticErrorKind> {
-        let type_a_clone = type_a.clone();
-        let type_b_clone = type_b.clone();
-
         log_trace!(
             self.logger,
-            "unifying types `{type_a_clone}` and `{type_b_clone}`"
+            "checking compatibility between types `{type_a}` and `{type_b} …"
         );
 
-        match (type_a_clone, type_b_clone) {
+        match (type_a.clone(), type_b.clone()) {
             // if both types are the same, they are already unified
             _ if type_a == type_b => Ok(()),
 
@@ -1212,6 +1208,8 @@ impl SemanticAnalyser {
             }),
 
             (Type::UserDefined(_), Type::SelfType(_)) => {
+                log_trace!(self.logger, "attempting to unify `Self` type …");
+
                 unify_self_type(type_b, type_a.clone());
                 Ok(())
             }
@@ -1223,6 +1221,8 @@ impl SemanticAnalyser {
 
             // if one is a concrete or generic type and the other is inferred, resolve the inference
             (concrete_or_generic, Type::InferredType(_)) => {
+                log_trace!(self.logger, "attempting to unify inferred type …");
+
                 unify_inferred_type(type_b, concrete_or_generic);
                 Ok(())
             }
@@ -1559,7 +1559,10 @@ impl SemanticAnalyser {
                 Ok(())
             }
 
-            (Type::Result { .. }, Type::Result { .. }) => unify_result_types(type_b, &type_a),
+            (Type::Result { .. }, Type::Result { .. }) => {
+                log_trace!(self.logger, "attempting to unify `Result<T, E>` types …");
+                unify_result_types(type_b, &type_a)
+            }
 
             (Type::UserDefined(type_path_a), Type::UserDefined(type_path_b)) => {
                 if type_path_a != type_path_b {
@@ -1606,7 +1609,7 @@ impl SemanticAnalyser {
                 Ok(())
             }
 
-            _ => self.unify_types(symbol_table, concrete_type, generic_type),
+            _ => self.check_type(symbol_table, concrete_type, generic_type),
         }
     }
 
@@ -1636,6 +1639,11 @@ impl SemanticAnalyser {
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
+        log_trace!(
+            self.logger,
+            "substituting generic `{generic_name}` with concrete type `{concrete_type}`"
+        );
+
         let scope_stack = &self.scope_stack;
 
         // iterate through the scope stack and substitute generics in all types.
@@ -1653,6 +1661,12 @@ impl SemanticAnalyser {
         generic_name: &Identifier,
         concrete_type: &Type,
     ) {
+        log_trace!(
+            self.logger,
+            "substituting generic `{generic_name}` with concrete type `{concrete_type}` in symbol `{}`",
+            symbol.type_path()
+        );
+
         // apply substitution to each symbol within the current scope by delegating to specific
         // substitution functions
         match symbol {

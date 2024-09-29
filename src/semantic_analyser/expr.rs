@@ -521,7 +521,7 @@ pub(crate) fn analyse_expr(
                 HashMap::new()
             };
 
-            analyser.unify_types(&mut symbol_table, &value_type, &mut assignee_type)?;
+            analyser.check_type(&mut symbol_table, &value_type, &mut assignee_type)?;
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
@@ -650,7 +650,7 @@ pub(crate) fn analyse_expr(
                 HashMap::new()
             };
 
-            analyser.unify_types(&mut symbol_table, &return_type, &mut expression_type)?;
+            analyser.check_type(&mut symbol_table, &return_type, &mut expression_type)?;
 
             let function_ptr = FunctionPtr {
                 params_opt,
@@ -680,7 +680,7 @@ pub(crate) fn analyse_expr(
                             HashMap::new()
                         };
 
-                        analyser.unify_types(
+                        analyser.check_type(
                             &mut symbol_table,
                             &element_type,
                             &mut first_element_type,
@@ -781,7 +781,7 @@ pub(crate) fn analyse_expr(
                                             HashMap::new()
                                         };
 
-                                    analyser.unify_types(
+                                    analyser.check_type(
                                         &mut symbol_table,
                                         &*def_field.field_type,
                                         obj_field_type,
@@ -873,7 +873,7 @@ pub(crate) fn analyse_expr(
                                         HashMap::new()
                                     };
 
-                                analyser.unify_types(
+                                analyser.check_type(
                                     &mut symbol_table,
                                     &field_type,
                                     &mut elem_type,
@@ -921,9 +921,9 @@ pub(crate) fn analyse_expr(
                             HashMap::new()
                         };
 
-                        analyser.unify_types(&mut symbol_table, &key_type, &mut pair_key_type)?;
+                        analyser.check_type(&mut symbol_table, &key_type, &mut pair_key_type)?;
 
-                        analyser.unify_types(
+                        analyser.check_type(
                             &mut symbol_table,
                             &value_type,
                             &mut pair_value_type,
@@ -1091,9 +1091,9 @@ pub(crate) fn analyse_expr(
                     };
 
                     if patt_type == Type::inferred_type("_") {
-                        analyser.unify_types(&mut symbol_table, &arm_patt_type, &mut patt_type)?;
+                        analyser.check_type(&mut symbol_table, &arm_patt_type, &mut patt_type)?;
                     } else {
-                        analyser.unify_types(&mut symbol_table, &patt_type, &mut arm_patt_type)?;
+                        analyser.check_type(&mut symbol_table, &patt_type, &mut arm_patt_type)?;
                     }
 
                     if arm_patt_type != patt_type {
@@ -1111,7 +1111,7 @@ pub(crate) fn analyse_expr(
                     let mut arm_expr_type =
                         analyse_expr(analyser, &arm.arm_expression.clone(), root)?;
 
-                    analyser.unify_types(&mut symbol_table, &expr_type, &mut arm_expr_type)?;
+                    analyser.check_type(&mut symbol_table, &expr_type, &mut arm_expr_type)?;
 
                     if arm_expr_type != expr_type {
                         return Err(SemanticErrorKind::TypeMismatchMatchExpr {

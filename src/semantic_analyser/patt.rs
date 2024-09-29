@@ -257,7 +257,7 @@ pub(crate) fn analyse_patt(
                                             HashMap::new()
                                         };
 
-                                    analyser.unify_types(
+                                    analyser.check_type(
                                         &mut symbol_table,
                                         &*def_field.field_type,
                                         patt_field_type,
@@ -346,7 +346,7 @@ pub(crate) fn analyse_patt(
                                         HashMap::new()
                                     };
 
-                                analyser.unify_types(
+                                analyser.check_type(
                                     &mut symbol_table,
                                     &*field_type,
                                     &mut elem_type,
