@@ -2150,8 +2150,8 @@ fn resolve_type_path(ty: &Type) -> Option<TypePath> {
     }
 }
 
-fn unify_inferred_type(inferred_type: &mut Type, concrete_type: Type) {
-    if *inferred_type
+fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {
+    if *ty
         == Type::InferredType(InferredType {
             name: Identifier::from("_"),
         })
@@ -2161,7 +2161,7 @@ fn unify_inferred_type(inferred_type: &mut Type, concrete_type: Type) {
                 name: Identifier::from("_"),
             })
         {
-            *inferred_type = concrete_type;
+            *ty = concrete_type;
         }
     }
 }
@@ -2170,12 +2170,12 @@ fn unify_inferred_type(inferred_type: &mut Type, concrete_type: Type) {
 /// and a context type. This function is used to ensure that the `Ok` and `Err` variants of
 /// an inferred `Result` type match the expected types defined in the context.
 fn unify_result_types(
-    inferred_type: &mut Type,
+    ty: &mut Type,
     context_type: &Type,
 ) -> Result<(), SemanticErrorKind> {
-    let inferred_type_clone = inferred_type.clone();
+    let inferred_type_clone = ty.clone();
 
-    match (inferred_type, context_type) {
+    match (ty, context_type) {
         (
             Type::Result {
                 ok_type: inf_ok,
@@ -2232,10 +2232,10 @@ fn unify_result_types(
     }
 }
 
-fn unify_self_type(inferred_type: &mut Type, object_type: Type) {
-    if *inferred_type == Type::SelfType(SelfType) {
+fn unify_self_type(ty: &mut Type, object_type: Type) {
+    if *ty == Type::SelfType(SelfType) {
         if object_type != Type::SelfType(SelfType) {
-            *inferred_type = object_type;
+            *ty = object_type;
         }
     }
 }
