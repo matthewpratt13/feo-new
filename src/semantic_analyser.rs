@@ -1200,7 +1200,10 @@ impl SemanticAnalyser {
                 found: Type::SelfType(SelfType),
             }),
 
-            (Type::UserDefined(_), Type::SelfType(_)) => resolve_self_type(type_b, type_a),
+            (Type::UserDefined(_), Type::SelfType(_)) => {
+                unify_self_type(type_b, type_a.clone());
+                Ok(())
+            }
 
             (ty, Type::SelfType(_)) => Err(SemanticErrorKind::UnexpectedType {
                 expected: "user-defined type".to_string(),
@@ -1209,7 +1212,8 @@ impl SemanticAnalyser {
 
             // if one is a concrete or generic type and the other is inferred, resolve the inference
             (concrete_or_generic, Type::InferredType(_)) => {
-                resolve_inferred_type(type_b, concrete_or_generic)
+                unify_inferred_type(type_b, concrete_or_generic);
+                Ok(())
             }
 
             (
@@ -1804,7 +1808,10 @@ impl SemanticAnalyser {
                     }
                 }
             }
-            // TODO: self type (handle in trait / implementation contexts)
+            Type::SelfType(_) => {
+                unify_self_type(ty, concrete_type.clone());
+            }
+            Type::InferredType { .. } => unify_inferred_type(ty, concrete_type.clone()),
             Type::Vec { element_type } => {
                 self.substitute_in_type(element_type, symbol_table, generic_name, concrete_type);
             }
@@ -2131,45 +2138,8 @@ impl SemanticAnalyser {
         let error = CompilerError::new(error_kind, span.start(), &span.input());
 
         self.logger.error(&error.to_string());
-
         self.errors.push(error);
     }
-
-    fn current_module_scope_path(&self) -> Option<TypePath> {
-        let mut current_module_scope: Vec<TypePath> = Vec::new();
-
-        for scope in self.scope_stack.iter() {
-            match &scope.scope_kind {
-                ScopeKind::LocalBlock => (),
-                ScopeKind::MatchExpr => (),
-                ScopeKind::ForInLoop => (),
-                ScopeKind::Function(_) => (),
-                ScopeKind::Module(m) => current_module_scope.push(m.clone()),
-                ScopeKind::ProgramRoot => (),
-                ScopeKind::Public => (),
-            }
-        }
-
-        current_module_scope.last().cloned()
-    }
-}
-
-fn resolve_inferred_type(inferred: &mut Type, concrete: Type) -> Result<(), SemanticErrorKind> {
-    if *inferred
-        == Type::InferredType(InferredType {
-            name: Identifier::from("_"),
-        })
-    {
-        if concrete
-            != Type::InferredType(InferredType {
-                name: Identifier::from("_"),
-            })
-        {
-            *inferred = concrete;
-        }
-    }
-
-    Ok(())
 }
 
 /// Helper function to resolve `Type` to `TypePath`.
@@ -2177,6 +2147,22 @@ fn resolve_type_path(ty: &Type) -> Option<TypePath> {
     match ty {
         Type::UserDefined(type_path) => Some(type_path.clone()),
         _ => None,
+    }
+}
+
+fn unify_inferred_type(inferred_type: &mut Type, concrete_type: Type) {
+    if *inferred_type
+        == Type::InferredType(InferredType {
+            name: Identifier::from("_"),
+        })
+    {
+        if concrete_type
+            != Type::InferredType(InferredType {
+                name: Identifier::from("_"),
+            })
+        {
+            *inferred_type = concrete_type;
+        }
     }
 }
 
@@ -2246,14 +2232,10 @@ fn unify_result_types(
     }
 }
 
-fn resolve_self_type(inferred: &mut Type, object_type: &Type) -> Result<(), SemanticErrorKind> {
-    let object_type_clone = object_type.clone();
-
-    if *inferred == Type::SelfType(SelfType) {
-        if *object_type != Type::SelfType(SelfType) {
-            *inferred = object_type_clone;
+fn unify_self_type(inferred_type: &mut Type, object_type: Type) {
+    if *inferred_type == Type::SelfType(SelfType) {
+        if object_type != Type::SelfType(SelfType) {
+            *inferred_type = object_type;
         }
     }
-
-    Ok(())
 }
