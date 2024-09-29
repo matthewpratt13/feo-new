@@ -151,11 +151,6 @@ impl SemanticAnalyser {
     fn lookup(&mut self, path: &TypePath) -> Option<&Symbol> {
         for scope in self.scope_stack.iter().rev() {
             if let Some(symbol) = scope.symbols.get(path) {
-                // log_debug!(self.logger, &format!(
-                //     "found symbol `{symbol}` in scope `{:?}` at path `{path}`",
-                //     scope.scope_kind
-                // ));
-
                 log_debug!(
                     self.logger,
                     "found symbol `{}` in scope `{:?}` at path `{}`",
