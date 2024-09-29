@@ -9,6 +9,7 @@ use crate::{
         OuterAttr, TraitImplDef, TraitImplItem, Type, TypePath, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
+    log_warn,
     token::{Token, TokenType},
 };
 
@@ -26,7 +27,7 @@ impl ParseDefItem for InherentImplDef {
             parser.next_token();
             Ok(Keyword::Impl)
         } else {
-            parser.log_unexpected_token(&TokenType::Impl.to_string());
+            parser.emit_unexpected_token(&TokenType::Impl.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -39,13 +40,13 @@ impl ParseDefItem for InherentImplDef {
                 TypePath::parse(parser, token)
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_missing_token("implementing object type path");
+                parser.emit_unexpected_eoi();
+                parser.warn_missing_token("implementing object type path");
                 Err(ErrorsEmitted)
             }
 
             _ => {
-                parser.log_unexpected_token("implementing object type path");
+                parser.emit_unexpected_token("implementing object type path");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }
@@ -54,16 +55,14 @@ impl ParseDefItem for InherentImplDef {
         let generic_params_opt = match (generic_declaration_opt, parse_generic_params(parser)?) {
             (None, None) => None,
             (None, Some(ga)) => {
-                parser.log_error(ParserErrorKind::UndeclaredGenericParams {
+                parser.emit_error(ParserErrorKind::UndeclaredGenericParams {
                     found: format!("{:?}", ga.params),
                 });
 
                 return Err(ErrorsEmitted);
             }
             (Some(ga), None) => {
-                parser
-                    .logger
-                    .warn(&format!("unused generics declared: {:?}", ga.params));
+                log_warn!(parser.logger, "unused generics declared: {:?}", ga.params);
                 None
             }
             (Some(_), Some(ga)) => Some(ga),
@@ -108,7 +107,7 @@ impl ParseDefItem for TraitImplDef {
             parser.next_token();
             Ok(Keyword::Impl)
         } else {
-            parser.log_unexpected_token(&TokenType::Impl.to_string());
+            parser.emit_unexpected_token(&TokenType::Impl.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -119,13 +118,13 @@ impl ParseDefItem for TraitImplDef {
         let implemented_trait_path = match &token {
             Some(Token::Identifier { .. }) => TypePath::parse(parser, token),
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_missing_token("implemented trait path");
+                parser.emit_unexpected_eoi();
+                parser.warn_missing_token("implemented trait path");
                 Err(ErrorsEmitted)
             }
 
             _ => {
-                parser.log_unexpected_token("implemented trait path");
+                parser.emit_unexpected_token("implemented trait path");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }
@@ -135,16 +134,14 @@ impl ParseDefItem for TraitImplDef {
             match (generic_declaration_opt, parse_generic_params(parser)?) {
                 (None, None) => None,
                 (None, Some(ga)) => {
-                    parser.log_error(ParserErrorKind::UndeclaredGenericParams {
+                    parser.emit_error(ParserErrorKind::UndeclaredGenericParams {
                         found: format!("{:?}", ga.params),
                     });
 
                     return Err(ErrorsEmitted);
                 }
                 (Some(ga), None) => {
-                    parser
-                        .logger
-                        .warn(&format!("unused generics declared: {:?}", ga.params));
+                    log_warn!(parser.logger, "unused generics declared: {:?}", ga.params);
                     None
                 }
                 (Some(_), Some(ga)) => Some(ga),
@@ -157,13 +154,13 @@ impl ParseDefItem for TraitImplDef {
         let implementing_type = match parser.current_token() {
             Some(Token::Identifier { .. } | Token::SelfType { .. }) => Type::parse(parser),
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_missing_token("implementing type");
+                parser.emit_unexpected_eoi();
+                parser.warn_missing_token("implementing type");
                 Err(ErrorsEmitted)
             }
 
             _ => {
-                parser.log_unexpected_token("implementing type");
+                parser.emit_unexpected_token("implementing type");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }
@@ -216,7 +213,7 @@ impl ParseAssociatedItem for InherentImplItem {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
 
                 if constant_decl.value_opt.is_none() {
-                    parser.logger.warn("assigned value cannot be `None`");
+                    log_warn!(parser.logger, "assigned value cannot be `None`");
                     Err(ErrorsEmitted)
                 } else {
                     Ok(InherentImplItem::ConstantDecl(constant_decl))
@@ -226,7 +223,7 @@ impl ParseAssociatedItem for InherentImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.log_missing("item", "function implementation");
+                    parser.emit_missing_node("item", "function implementation");
                     parser.next_token();
                     Err(ErrorsEmitted)
                 } else {
@@ -234,7 +231,7 @@ impl ParseAssociatedItem for InherentImplItem {
                 }
             }
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "{} or {}",
                     TokenType::Const,
                     TokenType::Func
@@ -256,7 +253,7 @@ impl ParseAssociatedItem for TraitImplItem {
                 let constant_decl = ConstantDecl::parse(parser, attributes_opt, visibility)?;
 
                 if constant_decl.value_opt.is_none() {
-                    parser.logger.warn("assigned value cannot be `None`");
+                    log_warn!(parser.logger, "assigned value cannot be `None`");
                     Err(ErrorsEmitted)
                 } else {
                     Ok(TraitImplItem::ConstantDecl(constant_decl))
@@ -269,7 +266,7 @@ impl ParseAssociatedItem for TraitImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.log_missing("item", "trait implementation associated item");
+                    parser.emit_missing_node("item", "trait implementation associated item");
                     parser.next_token();
                     Err(ErrorsEmitted)
                 } else {
@@ -277,7 +274,7 @@ impl ParseAssociatedItem for TraitImplItem {
                 }
             }
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "{}, {} or {}",
                     TokenType::Const,
                     TokenType::Alias,

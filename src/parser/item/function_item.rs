@@ -24,7 +24,7 @@ impl ParseDefItem for FunctionItem {
             parser.next_token();
             Ok(Keyword::Func)
         } else {
-            parser.log_unexpected_token(&TokenType::Func.to_string());
+            parser.emit_unexpected_token(&TokenType::Func.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -50,7 +50,7 @@ impl ParseDefItem for FunctionItem {
                 last_token = token.cloned();
                 Ok(Some(Box::new(Type::parse(parser)?)))
             } else {
-                parser.log_missing("type", "function return type");
+                parser.emit_missing_node("type", "function return type");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }
@@ -71,8 +71,8 @@ impl ParseDefItem for FunctionItem {
                 }
                 Some(Token::EOF) | None => {
                     let position = parser.current_position();
-                    parser.log_unexpected_eoi();
-                    parser.log_unmatched_delimiter(&Delimiter::LBrace { position });
+                    parser.emit_unexpected_eoi();
+                    parser.warn_unmatched_delimiter(&Delimiter::LBrace { position });
                     Err(ErrorsEmitted)
                 }
                 _ => Ok(Some(BlockExpr::parse(parser)?)),
@@ -148,13 +148,13 @@ impl FunctionOrMethodParam {
 
                 let param_type = match parser.current_token() {
                     Some(Token::Comma { .. } | Token::RParen { .. }) => {
-                        parser.log_missing("type", "function parameter type");
+                        parser.emit_missing_node("type", "function parameter type");
                         parser.next_token();
                         Err(ErrorsEmitted)
                     }
                     Some(Token::EOF) | None => {
-                        parser.log_unexpected_eoi();
-                        parser.log_missing("type", "function parameter type");
+                        parser.emit_unexpected_eoi();
+                        parser.emit_missing_node("type", "function parameter type");
                         Err(ErrorsEmitted)
                     }
                     _ => Type::parse(parser),
@@ -169,7 +169,7 @@ impl FunctionOrMethodParam {
             }
 
             _ => {
-                parser.log_unexpected_token("function or method parameter (identifier or `self`)");
+                parser.emit_unexpected_token("function or method parameter (identifier or `self`)");
                 Err(ErrorsEmitted)
             }
         }

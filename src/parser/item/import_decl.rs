@@ -23,7 +23,7 @@ impl ParseDeclItem for ImportDecl {
             parser.next_token();
             Ok(Keyword::Import)
         } else {
-            parser.log_unexpected_token(&TokenType::Import.to_string());
+            parser.emit_unexpected_token(&TokenType::Import.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -104,7 +104,7 @@ fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
         if let Some(t) = collection::get_collection(parser, parse_import_tree, &open_brace)? {
             Ok(t)
         } else {
-            parser.log_missing("path component", "import declaration path import tree");
+            parser.emit_missing_node("path component", "import declaration path import tree");
             parser.next_token();
             Err(ErrorsEmitted)
         }?;

@@ -47,7 +47,7 @@ fn parse_tuple_elements(parser: &mut Parser) -> Result<TupleElements, ErrorsEmit
             elements.push(element);
             parser.next_token();
         } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
-            parser.log_unexpected_token(&format!("{} or {}", TokenType::Comma, TokenType::RParen));
+            parser.emit_unexpected_token(&format!("{} or {}", TokenType::Comma, TokenType::RParen));
         } else if matches!(parser.current_token(), Some(Token::RParen { .. })) {
             final_element_opt = Some(Box::new(element));
             break;
@@ -65,7 +65,7 @@ impl ParseOperatorExpr for TupleIndexExpr {
         let left_expr_span = &left_expr.span();
 
         let tuple: AssigneeExpr = left_expr.try_into().map_err(|e| {
-            parser.log_error(e);
+            parser.emit_error(e);
             ErrorsEmitted
         })?;
 
@@ -75,11 +75,11 @@ impl ParseOperatorExpr for TupleIndexExpr {
                 Ok(value)
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
+                parser.emit_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("tuple index (unsigned decimal integer)");
+                parser.emit_unexpected_token("tuple index (unsigned decimal integer)");
                 Err(ErrorsEmitted)
             }
         }?;

@@ -27,7 +27,7 @@ impl ParseDefItem for TraitDef {
             parser.next_token();
             Ok(Keyword::Trait)
         } else {
-            parser.log_unexpected_token(&TokenType::Trait.to_string());
+            parser.emit_unexpected_token(&TokenType::Trait.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -89,7 +89,7 @@ impl ParseAssociatedItem for TraitDefItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_some() {
-                    parser.log_error(ParserErrorKind::ExtraTokens {
+                    parser.emit_error(ParserErrorKind::ExtraTokens {
                         token: parser.current_token().cloned(),
                         msg: "Functions in trait definitions cannot have bodies".to_string(),
                     });
@@ -99,7 +99,7 @@ impl ParseAssociatedItem for TraitDefItem {
                 }
             }
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "{}, {} or {}",
                     TokenType::Const,
                     TokenType::Alias,

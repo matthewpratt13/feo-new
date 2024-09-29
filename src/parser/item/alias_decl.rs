@@ -20,7 +20,7 @@ impl ParseDeclItem for AliasDecl {
             parser.next_token();
             Ok(Keyword::Alias)
         } else {
-            parser.log_unexpected_token(&TokenType::Alias.to_string());
+            parser.emit_unexpected_token(&TokenType::Alias.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -32,7 +32,7 @@ impl ParseDeclItem for AliasDecl {
             if parser.current_token().is_some() {
                 Ok(Some(Type::parse(parser)?))
             } else {
-                parser.log_missing("type", "original type");
+                parser.emit_missing_node("type", "original type");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }

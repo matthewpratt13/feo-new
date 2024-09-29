@@ -22,6 +22,7 @@ use crate::{
         Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
+    log_debug, log_error, log_info, log_trace, log_warn,
     logger::{LogLevel, Logger},
     parser::{ty::get_type_paths, Program},
     span::{Span, Spanned},
@@ -62,10 +63,11 @@ impl SemanticAnalyser {
         let mut lib_registry: HashMap<Identifier, Vec<Module>> = HashMap::new();
 
         if let Some(code) = external_code {
-            logger.debug(&format!(
+            log_debug!(
+                logger,
                 "external code detected – importing code from {:?}",
                 code.keys()
-            ));
+            );
 
             for (name, modules) in code {
                 for module in modules.iter() {
@@ -87,7 +89,7 @@ impl SemanticAnalyser {
             symbols,
         };
 
-        logger.trace("entering public scope …");
+        log_trace!(logger, "entering public scope …");
 
         SemanticAnalyser {
             scope_stack: vec![public_scope],
@@ -100,8 +102,7 @@ impl SemanticAnalyser {
 
     /// Push a new scope onto the scope stack and log the action.
     fn enter_scope(&mut self, scope_kind: ScopeKind) {
-        self.logger
-            .debug(&format!("entering new scope: `{scope_kind:?}` …"));
+        log_debug!(self.logger, "entering new scope: `{scope_kind:?}` …");
 
         self.scope_stack.push(Scope {
             scope_kind,
@@ -112,8 +113,7 @@ impl SemanticAnalyser {
     /// Pop the top scope from the scope stack and log the action.
     fn exit_scope(&mut self) -> Option<Scope> {
         if let Some(exited_scope) = self.scope_stack.pop() {
-            self.logger
-                .debug(&format!("exited scope: `{:?}`", exited_scope.scope_kind));
+            log_debug!(self.logger, "exited scope: `{:?}`", exited_scope.scope_kind);
 
             Some(exited_scope)
         } else {
@@ -124,10 +124,11 @@ impl SemanticAnalyser {
     /// Insert a symbol into the current scope's symbol table.
     fn insert(&mut self, path: TypePath, symbol: Symbol) -> Result<(), SemanticErrorKind> {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
-            self.logger.debug(&format!(
+            log_debug!(
+                self.logger,
                 "inserting symbol `{symbol}` into scope `{:?}` at path `{path}` …",
                 curr_scope.scope_kind
-            ));
+            );
 
             curr_scope.symbols.insert(path.clone(), symbol.clone());
 
@@ -150,19 +151,28 @@ impl SemanticAnalyser {
     fn lookup(&mut self, path: &TypePath) -> Option<&Symbol> {
         for scope in self.scope_stack.iter().rev() {
             if let Some(symbol) = scope.symbols.get(path) {
-                self.logger.debug(&format!(
-                    "found symbol `{symbol}` in scope `{:?}` at path `{path}`",
-                    scope.scope_kind
-                ));
+                // log_debug!(self.logger, &format!(
+                //     "found symbol `{symbol}` in scope `{:?}` at path `{path}`",
+                //     scope.scope_kind
+                // ));
+
+                log_debug!(
+                    self.logger,
+                    "found symbol `{}` in scope `{:?}` at path `{}`",
+                    symbol,
+                    scope.scope_kind,
+                    path
+                );
 
                 return Some(symbol);
             } else {
                 for (sym_path, symbol) in scope.symbols.iter() {
                     if path.type_name == sym_path.type_name {
-                        self.logger.debug(&format!(
+                        log_debug!(
+                            self.logger,
                             "found symbol `{symbol}` in scope `{:?}` at path `{path}`",
                             scope.scope_kind
-                        ));
+                        );
 
                         return Some(&symbol);
                     }
@@ -170,8 +180,7 @@ impl SemanticAnalyser {
             }
         }
 
-        self.logger
-            .warn(&format!("path `{path:?}` not found in current scope"));
+        log_warn!(self.logger, "path `{path:?}` not found in current scope");
 
         None
     }
@@ -182,7 +191,7 @@ impl SemanticAnalyser {
         &mut self,
         program: &Program,
     ) -> Result<(), Vec<CompilerError<SemanticErrorKind>>> {
-        self.logger.debug(&format!("starting semantic analysis …"));
+        log_debug!(self.logger, "starting semantic analysis …");
 
         self.enter_scope(ScopeKind::ProgramRoot);
 
@@ -198,8 +207,10 @@ impl SemanticAnalyser {
             return Err(self.errors.clone());
         }
 
-        self.logger
-            .info("semantic analysis complete, no errors detected");
+        log_info!(
+            self.logger,
+            "semantic analysis complete, no errors detected"
+        );
 
         Ok(())
     }
@@ -219,8 +230,7 @@ impl SemanticAnalyser {
     ) -> Result<(), SemanticErrorKind> {
         match statement {
             Statement::Let(ls) => {
-                self.logger
-                    .trace(&format!("analysing let statement: `{statement}`"));
+                log_trace!(self.logger, "analysing let statement: `{statement}`");
 
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors
@@ -315,8 +325,7 @@ impl SemanticAnalyser {
 
             Statement::Item(item) => match item {
                 Item::ImportDecl(id) => {
-                    self.logger
-                        .trace(&format!("analysing import declaration: `{statement}`"));
+                    log_trace!(self.logger, "analysing import declaration: `{statement}`");
 
                     match self.analyse_import(id, &root.type_name) {
                         Ok(_) => (),
@@ -325,8 +334,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::AliasDecl(ad) => {
-                    self.logger
-                        .trace(&format!("analysing alias declaration: `{statement}`"));
+                    log_trace!(self.logger, "analysing alias declaration: `{statement}`");
 
                     let alias_path = root.join(ad.alias_name.to_type_path());
 
@@ -342,8 +350,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::ConstantDecl(cd) => {
-                    self.logger
-                        .trace(&format!("analysing constant declaration: `{statement}`"));
+                    log_trace!(self.logger, "analysing constant declaration: `{statement}`");
 
                     let value_type = match &cd.value_opt {
                         Some(val) => {
@@ -386,9 +393,10 @@ impl SemanticAnalyser {
                 }
 
                 Item::StaticVarDecl(s) => {
-                    self.logger.trace(&format!(
+                    log_trace!(
+                        self.logger,
                         "analysing static variable declaration: `{statement}`"
-                    ));
+                    );
 
                     let mut assignee_type = match &s.assignee_opt {
                         Some(a_expr) => {
@@ -431,8 +439,7 @@ impl SemanticAnalyser {
 
                     let module_path = root.join(m.module_name.to_type_path());
 
-                    self.logger
-                        .trace(&format!("analysing module item: `{module_path}` …"));
+                    log_trace!(self.logger, "analysing module item: `{module_path}` …");
 
                     let scope_kind = ScopeKind::Module(module_path.clone());
 
@@ -465,8 +472,7 @@ impl SemanticAnalyser {
                     }
 
                     if let Some(curr_scope) = self.scope_stack.pop() {
-                        self.logger
-                            .trace(&format!("exiting scope: `{:?}`", curr_scope.scope_kind));
+                        log_trace!(self.logger, "exiting scope: `{:?}`", curr_scope.scope_kind);
 
                         module_scope = curr_scope;
                     }
@@ -480,15 +486,17 @@ impl SemanticAnalyser {
                         },
                     )?;
 
-                    self.logger.trace(&format!(
+                    log_trace!(
+                        self.logger,
                         "inserting symbols into module at path: `{module_path}` …",
-                    ));
+                    );
 
                     if let Some(modules) = self.lib_registry.get_mut(&Identifier::from("lib")) {
-                        self.logger.trace(&format!(
+                        log_trace!(
+                            self.logger,
                             "inserting module `{}` into library registry under local library …",
                             m.module_name
-                        ));
+                        );
 
                         let module = Module {
                             name: m.module_name.clone(),
@@ -503,8 +511,10 @@ impl SemanticAnalyser {
                     let trait_name_path = t.trait_name.to_type_path();
                     let trait_def_path = root.join(trait_name_path.clone());
 
-                    self.logger
-                        .trace(&format!("analysing trait definition: `{trait_def_path}` …",));
+                    log_trace!(
+                        self.logger,
+                        "analysing trait definition: `{trait_def_path}` …"
+                    );
 
                     self.insert(
                         trait_def_path.clone(),
@@ -564,8 +574,10 @@ impl SemanticAnalyser {
                     let enum_name_path = e.enum_name.to_type_path();
                     let enum_def_path = root.join(enum_name_path.clone());
 
-                    self.logger
-                        .trace(&format!("analysing enum definition: `{enum_def_path}` …"));
+                    log_trace!(
+                        self.logger,
+                        "analysing enum definition: `{enum_def_path}` …"
+                    );
 
                     self.insert(
                         enum_def_path.clone(),
@@ -648,9 +660,10 @@ impl SemanticAnalyser {
                     let struct_name_path = s.struct_name.to_type_path();
                     let struct_def_path = root.join(struct_name_path.clone());
 
-                    self.logger.trace(&format!(
+                    log_trace!(
+                        self.logger,
                         "analysing struct definition: `{struct_def_path}` …"
-                    ));
+                    );
 
                     self.insert(
                         struct_def_path,
@@ -667,9 +680,10 @@ impl SemanticAnalyser {
                     let struct_name_path = ts.struct_name.to_type_path();
                     let tuple_struct_path = root.join(struct_name_path.clone());
 
-                    self.logger.trace(&format!(
+                    log_trace!(
+                        self.logger,
                         "analysing tuple struct definition: `{tuple_struct_path}` …"
-                    ));
+                    );
 
                     self.insert(
                         tuple_struct_path,
@@ -685,9 +699,10 @@ impl SemanticAnalyser {
                 Item::InherentImplDef(iid) => {
                     let type_path = root.join(iid.nominal_type.clone());
 
-                    self.logger.trace(&format!(
+                    log_trace!(
+                        self.logger,
                         "analysing inherent implementation for type: `{type_path}` …",
-                    ));
+                    );
 
                     if let Some(items) = &iid.associated_items_opt {
                         // self.enter_scope(ScopeKind::Impl(type_path.to_string()));
@@ -738,10 +753,12 @@ impl SemanticAnalyser {
                         }
                     };
 
-                    self.logger.trace(&format!(
+                    log_trace!(
+                        self.logger,
                         "analysing trait `{}` implementation for type `{}` …",
-                        t.implemented_trait_path, t.implementing_type
-                    ));
+                        t.implemented_trait_path,
+                        t.implementing_type
+                    );
 
                     self.add_trait_implementation(trait_impl_path.clone(), t.clone());
 
@@ -789,13 +806,14 @@ impl SemanticAnalyser {
                     let function_name_path = f.function_name.to_type_path();
                     let function_item_path = root.join(function_name_path.clone());
 
-                    self.logger.trace(&format!(
+                    log_trace!(
+                        self.logger,
                         "analysing function item: `{function_item_path}({:?}) -> {}`",
                         f.params_opt.clone().unwrap_or(Vec::new()),
                         f.return_type_opt
                             .clone()
                             .unwrap_or(Box::new(Type::UnitType(UnitType)))
-                    ));
+                    );
 
                     self.insert(
                         function_item_path,
@@ -817,8 +835,7 @@ impl SemanticAnalyser {
             },
 
             Statement::Expression(expr) => {
-                self.logger
-                    .trace(&format!("analysing expression statement: `{statement}`"));
+                log_trace!(self.logger, "analysing expression statement: `{statement}`");
 
                 match analyse_expr(self, expr, &root) {
                     Ok(_) => (),
@@ -944,8 +961,7 @@ impl SemanticAnalyser {
                 path_vec.pop(); // remove associated type name
             }
 
-            self.logger
-                .trace(&format!("analysing body of function `{full_path}()` …"));
+            log_trace!(self.logger, "analysing body of function `{full_path}()` …");
 
             analyse_expr(
                 self,
@@ -971,12 +987,13 @@ impl SemanticAnalyser {
             self.unify_types(&mut symbol_table, &return_type, &mut function_type)?;
         }
 
-        self.logger.trace(&format!(
+        log_trace!(
+            self.logger,
             "analysed function: `{full_path}() -> {}`",
             f.return_type_opt
                 .clone()
                 .unwrap_or(Box::new(Type::UnitType(UnitType)))
-        ));
+        );
 
         self.exit_scope();
 
@@ -1008,9 +1025,10 @@ impl SemanticAnalyser {
 
             // bring external libraries into scope
             if let Some(modules) = self.lib_registry.get(&import_root).cloned() {
-                self.logger.debug(&format!(
+                log_debug!(
+                    self.logger,
                     "detected library `{import_root:?}` in library registry"
-                ));
+                );
 
                 for module in modules.iter() {
                     for (item_path, symbol) in module.table.iter() {
@@ -1176,9 +1194,10 @@ impl SemanticAnalyser {
         let type_a_clone = type_a.clone();
         let type_b_clone = type_b.clone();
 
-        self.logger.trace(&format!(
+        log_trace!(
+            self.logger,
             "unifying types `{type_a_clone}` and `{type_b_clone}`"
-        ));
+        );
 
         match (type_a_clone, type_b_clone) {
             // if both types are the same, they are already unified
@@ -2129,7 +2148,7 @@ impl SemanticAnalyser {
     fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {
         let error = CompilerError::new(error_kind, span.start(), &span.input());
 
-        self.logger.error(&error.to_string());
+        log_error!(self.logger, "{error}");
         self.errors.push(error);
     }
 }

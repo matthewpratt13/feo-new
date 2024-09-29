@@ -13,7 +13,7 @@ impl ParseOperatorExpr for UnwrapExpr {
         let left_expr_span = &left_expr.span();
 
         let value_expr = Box::new(ValueExpr::try_from(left_expr).map_err(|e| {
-            parser.log_error(e);
+            parser.emit_error(e);
             ErrorsEmitted
         })?);
 
@@ -33,12 +33,13 @@ impl ParseOperatorExpr for UnwrapExpr {
                 Ok(Expression::Unwrap(expr))
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_missing_token(&format!("unwrap operator ({})", TokenType::QuestionMark));
+                parser.emit_unexpected_eoi();
+                parser
+                    .warn_missing_token(&format!("unwrap operator ({})", TokenType::QuestionMark));
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "unwrap operator ({})",
                     TokenType::QuestionMark
                 ));

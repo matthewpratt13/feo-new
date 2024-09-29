@@ -13,7 +13,7 @@ impl ParseOperatorExpr for MethodCallExpr {
         let left_expr_span = &left_expr.span();
 
         let receiver: AssigneeExpr = left_expr.try_into().map_err(|e| {
-            parser.log_error(e);
+            parser.emit_error(e);
             ErrorsEmitted
         })?;
 
@@ -40,12 +40,12 @@ impl ParseOperatorExpr for MethodCallExpr {
                 Ok(Expression::MethodCall(expr))
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_unmatched_delimiter(&open_paren);
+                parser.emit_unexpected_eoi();
+                parser.warn_unmatched_delimiter(&open_paren);
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token(&TokenType::RParen.to_string());
+                parser.emit_unexpected_token(&TokenType::RParen.to_string());
                 Err(ErrorsEmitted)
             }
         }

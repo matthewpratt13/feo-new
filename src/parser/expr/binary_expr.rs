@@ -18,7 +18,7 @@ impl ParseOperatorExpr for BinaryExpr {
         let left_expr_span = &left_expr.span();
 
         let lhs: ValueExpr = left_expr.try_into().map_err(|e| {
-            parser.log_error(e);
+            parser.emit_error(e);
             ErrorsEmitted
         })?;
 
@@ -40,7 +40,7 @@ impl ParseOperatorExpr for BinaryExpr {
             TokenType::DblAsterisk => Ok(BinaryOp::Exponentiation),
             _ => {
                 parser
-                    .log_unexpected_token(&format!("binary arithmetic ({}, {}, {}, {}, {} or {}), logical ({}, {}) or bitwise ({}, {}, {}, {}, {}) operator", TokenType::Plus, TokenType::Minus, TokenType::Asterisk, TokenType::Slash, TokenType::Percent, TokenType::DblAsterisk, TokenType::DblAmpersand, TokenType::DblPipe, TokenType::Ampersand, TokenType::Pipe, TokenType::Caret, TokenType::DblLessThan, TokenType::DblGreaterThan));
+                    .emit_unexpected_token(&format!("binary arithmetic ({}, {}, {}, {}, {} or {}), logical ({}, {}) or bitwise ({}, {}, {}, {}, {}) operator", TokenType::Plus, TokenType::Minus, TokenType::Asterisk, TokenType::Slash, TokenType::Percent, TokenType::DblAsterisk, TokenType::DblAmpersand, TokenType::DblPipe, TokenType::Ampersand, TokenType::Pipe, TokenType::Caret, TokenType::DblLessThan, TokenType::DblGreaterThan));
 
                 Err(ErrorsEmitted)
             }
@@ -82,7 +82,7 @@ impl ParseOperatorExpr for ComparisonExpr {
         let left_expr_span = &left_expr.span();
 
         let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {
-            parser.log_error(e);
+            parser.emit_error(e);
             ErrorsEmitted
         })?;
 
@@ -96,7 +96,7 @@ impl ParseOperatorExpr for ComparisonExpr {
             TokenType::LessThanEquals => Ok(ComparisonOp::LessEqual),
             TokenType::GreaterThanEquals => Ok(ComparisonOp::GreaterEqual),
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "binary comparison operator ({}, {}, {}, {}, {} or {}",
                     TokenType::LessThan,
                     TokenType::GreaterThan,

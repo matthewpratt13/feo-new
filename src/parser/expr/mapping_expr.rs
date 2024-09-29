@@ -18,7 +18,7 @@ impl ParseConstructExpr for MappingExpr {
                 Ok(Delimiter::LBrace { position })
             }
             _ => {
-                parser.log_unexpected_token(&TokenType::LBrace.to_string());
+                parser.emit_unexpected_token(&TokenType::LBrace.to_string());
                 Err(ErrorsEmitted)
             }
         }?;
@@ -46,13 +46,13 @@ fn parse_mapping_pair(parser: &mut Parser) -> Result<MappingPair, ErrorsEmitted>
 
     let value = match parser.current_token() {
         Some(Token::Comma { .. } | Token::RBrace { .. }) => {
-            parser.log_missing("expr", "mapping value");
+            parser.emit_missing_node("expr", "mapping value");
             parser.next_token();
             return Err(ErrorsEmitted);
         }
         Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
-            parser.log_missing("expr", "mapping value");
+            parser.emit_unexpected_eoi();
+            parser.emit_missing_node("expr", "mapping value");
             return Err(ErrorsEmitted);
         }
         _ => parser.parse_expression(Precedence::Lowest),

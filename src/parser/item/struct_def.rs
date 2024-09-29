@@ -23,7 +23,7 @@ impl ParseDefItem for StructDef {
             parser.next_token();
             Ok(Keyword::Struct)
         } else {
-            parser.log_unexpected_token(&TokenType::Struct.to_string());
+            parser.emit_unexpected_token(&TokenType::Struct.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -72,7 +72,7 @@ impl ParseDefItem for TupleStructDef {
             parser.next_token();
             Ok(Keyword::Struct)
         } else {
-            parser.log_unexpected_token(&TokenType::Struct.to_string());
+            parser.emit_unexpected_token(&TokenType::Struct.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -124,17 +124,17 @@ impl StructDefField {
 
         let field_type = match parser.current_token() {
             Some(Token::Comma { .. }) => {
-                parser.log_missing("type", "struct field type");
+                parser.emit_missing_node("type", "struct field type");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }
             Some(Token::RBrace { .. }) => {
-                parser.log_missing("type", "struct field type");
+                parser.emit_missing_node("type", "struct field type");
                 Err(ErrorsEmitted)
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_missing("type", "struct field type");
+                parser.emit_unexpected_eoi();
+                parser.emit_missing_node("type", "struct field type");
                 Err(ErrorsEmitted)
             }
             _ => Type::parse(parser),
@@ -156,17 +156,17 @@ fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefFie
 
     let field_type = match parser.current_token() {
         Some(Token::Comma { .. } | Token::RParen { .. }) => {
-            parser.log_missing("type", "struct field type");
+            parser.emit_missing_node("type", "struct field type");
             parser.next_token();
             Err(ErrorsEmitted)
         }
         Some(Token::Semicolon { .. }) => {
-            parser.log_missing("type", "struct field type");
+            parser.emit_missing_node("type", "struct field type");
             Err(ErrorsEmitted)
         }
         Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
-            parser.log_missing("type", "struct field type");
+            parser.emit_unexpected_eoi();
+            parser.emit_missing_node("type", "struct field type");
             Err(ErrorsEmitted)
         }
         _ => Type::parse(parser),

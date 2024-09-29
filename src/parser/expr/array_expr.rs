@@ -18,7 +18,7 @@ impl ParseConstructExpr for ArrayExpr {
                 Ok(Delimiter::LBracket { position })
             }
             _ => {
-                parser.log_unexpected_token(&TokenType::LBracket.to_string());
+                parser.emit_unexpected_token(&TokenType::LBracket.to_string());
                 Err(ErrorsEmitted)
             }
         }?;

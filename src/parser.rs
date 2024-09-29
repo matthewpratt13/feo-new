@@ -102,6 +102,7 @@ use crate::{
         UnaryExpr, UnderscoreExpr, UnwrapExpr, ValueExpr, WhileExpr, WildcardPatt,
     },
     error::{CompilerError, ErrorsEmitted, ParserErrorKind},
+    log_debug, log_error, log_info, log_trace, log_warn,
     logger::{LogLevel, Logger},
     span::{Position, Span},
     token::{Token, TokenStream, TokenType},
@@ -161,7 +162,7 @@ impl Parser {
 
     /// Define and initialize token precedence levels.
     fn init_precedences(&mut self, tokens: &[Token]) {
-        self.logger.trace("initializing precedence levels …");
+        log_trace!(self.logger, "initializing precedence levels …");
 
         for t in tokens.to_vec() {
             match &t.token_type() {
@@ -224,7 +225,7 @@ impl Parser {
     /// struct instances.
     fn set_context(&mut self, context: ParserContext) {
         self.context = context;
-        self.logger.debug("set parser context: `{context}`");
+        log_debug!(self.logger, "set parser context: `{context:?}`");
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -236,7 +237,7 @@ impl Parser {
 
         // clear log messages, then log status info
         self.logger.clear_messages();
-        self.logger.debug("starting to parse tokens…");
+        log_debug!(self.logger, "starting to parse tokens …");
 
         while self.current < self.stream.tokens().len() {
             if self.current_token() == Some(&Token::EOF) {
@@ -246,14 +247,13 @@ impl Parser {
             let statement = self.parse_statement()?;
 
             // log status info
-            self.logger
-                .debug(&format!("parsed statement: `{:?}`", &statement));
+            log_debug!(self.logger, "parsed statement: `{statement:?}`");
 
             statements.push(statement);
         }
 
         // log status info
-        self.logger.info("reached end of file");
+        log_info!(self.logger, "reached end of file");
 
         Ok(Program { statements })
     }
@@ -271,17 +271,17 @@ impl Parser {
     /// the next expression in the parse tree.
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ErrorsEmitted> {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.debug(&format!(
-            "entering `parse_expression()` with precedence: `{:?}` …",
-            &precedence
-        ));
+        log_debug!(
+            self.logger,
+            "entering `parse_expression()` with precedence: `{precedence:?}` …",
+        );
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
         let mut left_expr = self.parse_prefix()?; // start with prefix expression
 
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.debug("exited `parse_prefix()`");
+        log_trace!(self.logger, "exited `parse_prefix()`");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -294,7 +294,7 @@ impl Parser {
         }
 
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.debug("exiting `parse_expression()` …");
+        log_debug!(self.logger, "exiting `parse_expression()` …");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -306,7 +306,7 @@ impl Parser {
     /// and literals).
     fn parse_primary(&mut self) -> Result<Expression, ErrorsEmitted> {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.debug("entering `parse_primary()`…");
+        log_trace!(self.logger, "entering `parse_primary()` …");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -408,7 +408,7 @@ impl Parser {
             }
             _ => {
                 // log the error and advance the parser, then return `Err(ErrorsEmitted)`
-                self.log_unexpected_token("literal, identifier or grouped expression");
+                self.emit_unexpected_token("literal, identifier or grouped expression");
                 Err(ErrorsEmitted)
             }
         }
@@ -420,7 +420,7 @@ impl Parser {
     /// surrounding tokens.
     fn parse_prefix(&mut self) -> Result<Expression, ErrorsEmitted> {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.debug("entering `parse_prefix()` …");
+        log_trace!(self.logger, "entering `parse_prefix()` …");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -568,7 +568,7 @@ impl Parser {
                     let left = self.parse_prefix()?;
                     BinaryExpr::parse(self, left)
                 } else {
-                    Err(self.log_error(ParserErrorKind::InvalidTokenContext { token }))
+                    Err(self.emit_error(ParserErrorKind::InvalidTokenContext { token }))
                 }
             }
 
@@ -582,7 +582,7 @@ impl Parser {
                     let left = self.parse_prefix()?;
                     BinaryExpr::parse(self, left)
                 } else {
-                    Err(self.log_error(ParserErrorKind::InvalidTokenContext { token }))
+                    Err(self.emit_error(ParserErrorKind::InvalidTokenContext { token }))
                 }
             }
 
@@ -660,13 +660,13 @@ impl Parser {
 
             Some(Token::EOF) | None => {
                 // log the error, then return `Err(ErrorsEmitted)`
-                self.log_unexpected_eoi();
+                self.emit_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 
             _ => {
                 // log the error and advance the parser, then return `Err(ErrorsEmitted)`
-                self.log_error(ParserErrorKind::InvalidTokenContext { token });
+                self.emit_error(ParserErrorKind::InvalidTokenContext { token });
                 self.next_token();
                 Err(ErrorsEmitted)
             }
@@ -682,7 +682,7 @@ impl Parser {
     ) -> Result<Option<fn(&mut Self, Expression) -> Result<Expression, ErrorsEmitted>>, ErrorsEmitted>
     {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.debug("entering `parse_infix()`…");
+        log_trace!(self.logger, "entering `parse_infix()` …");
         self.log_current_token(true);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -697,7 +697,7 @@ impl Parser {
                 } else if self.is_field_access() {
                     self.set_context(ParserContext::FieldAccess);
                 } else {
-                    self.log_error(ParserErrorKind::InvalidTokenContext { token });
+                    self.emit_error(ParserErrorKind::InvalidTokenContext { token });
                     self.set_context(ParserContext::Default)
                 }
 
@@ -705,7 +705,7 @@ impl Parser {
 
                 match self.current_token() {
                     Some(Token::EOF) | None => {
-                        self.log_unexpected_eoi();
+                        self.emit_unexpected_eoi();
                         Err(ErrorsEmitted)
                     }
 
@@ -719,7 +719,7 @@ impl Parser {
                     }
 
                     _ => {
-                        self.log_unexpected_token(
+                        self.emit_unexpected_token(
                             "identifier or tuple index (unsigned decimal integer)",
                         );
                         Err(ErrorsEmitted)
@@ -823,14 +823,14 @@ impl Parser {
 
             Some(Token::EOF) | None => {
                 ////////////////////////////////////////////////////////////////////////////////
-                self.logger.warn("no infix parsing function found");
+                log_warn!(self.logger, "no infix parsing function found");
                 ////////////////////////////////////////////////////////////////////////////////
 
                 Ok(None)
             }
 
             _ => {
-                self.log_error(ParserErrorKind::InvalidTokenContext { token });
+                self.emit_error(ParserErrorKind::InvalidTokenContext { token });
                 self.next_token();
 
                 ////////////////////////////////////////////////////////////////////////////////
@@ -844,7 +844,7 @@ impl Parser {
 
     /// Parse an expression and attempt to convert it to a value expression.
     fn parse_value_expr(&mut self, precedence: Precedence) -> Result<ValueExpr, ErrorsEmitted> {
-        ValueExpr::try_from(self.parse_expression(precedence)?).map_err(|e| self.log_error(e))
+        ValueExpr::try_from(self.parse_expression(precedence)?).map_err(|e| self.emit_error(e))
     }
 
     /// Parse an expression and attempt to convert it to an assignee expression.
@@ -852,7 +852,7 @@ impl Parser {
         &mut self,
         precedence: Precedence,
     ) -> Result<AssigneeExpr, ErrorsEmitted> {
-        AssigneeExpr::try_from(self.parse_expression(precedence)?).map_err(|e| self.log_error(e))
+        AssigneeExpr::try_from(self.parse_expression(precedence)?).map_err(|e| self.emit_error(e))
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -862,7 +862,7 @@ impl Parser {
     /// Parse a statement (i.e., let statement, item declaration / definition or expression).
     fn parse_statement(&mut self) -> Result<Statement, Vec<CompilerError<ParserErrorKind>>> {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.debug("entering `parse_statement()`…");
+        log_debug!(self.logger, "entering `parse_statement()` …");
         self.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -937,7 +937,7 @@ impl Parser {
                     Some(Token::RBrace { .. } | Token::EOF) | None => (),
 
                     _ => {
-                        self.log_unexpected_token(&format!(
+                        self.emit_unexpected_token(&format!(
                             "{} or {}",
                             TokenType::RBrace,
                             TokenType::Semicolon
@@ -958,7 +958,7 @@ impl Parser {
     /// Parse a `Pattern` – used in match expressions, function definitions and elsewhere.
     fn parse_pattern(&mut self) -> Result<Pattern, ErrorsEmitted> {
         ////////////////////////////////////////////////////////////////////////////////
-        self.logger.debug("entering `parse_pattern()`…");
+        log_debug!(self.logger, "entering `parse_pattern()` …");
         self.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 
@@ -982,7 +982,7 @@ impl Parser {
                     if self.is_range() {
                         Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                     } else {
-                        Err(self.log_error(ParserErrorKind::InvalidTokenContext {
+                        Err(self.emit_error(ParserErrorKind::InvalidTokenContext {
                             token: self.peek_ahead_by(1).cloned(),
                         }))
                     }
@@ -1008,7 +1008,7 @@ impl Parser {
                     if self.is_range() {
                         Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                     } else {
-                        Err(self.log_error(ParserErrorKind::InvalidTokenContext {
+                        Err(self.emit_error(ParserErrorKind::InvalidTokenContext {
                             token: self.current_token().cloned(),
                         }))
                     }
@@ -1034,7 +1034,7 @@ impl Parser {
                     if self.is_range() {
                         Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                     } else {
-                        Err(self.log_error(ParserErrorKind::InvalidTokenContext {
+                        Err(self.emit_error(ParserErrorKind::InvalidTokenContext {
                             token: self.peek_ahead_by(1).cloned(),
                         }))
                     }
@@ -1060,7 +1060,7 @@ impl Parser {
                     if self.is_range() {
                         Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                     } else {
-                        Err(self.log_error(ParserErrorKind::InvalidTokenContext {
+                        Err(self.emit_error(ParserErrorKind::InvalidTokenContext {
                             token: self.peek_ahead_by(1).cloned(),
                         }))
                     }
@@ -1126,7 +1126,7 @@ impl Parser {
                     if self.is_range() {
                         Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                     } else {
-                        Err(self.log_error(ParserErrorKind::InvalidTokenContext {
+                        Err(self.emit_error(ParserErrorKind::InvalidTokenContext {
                             token: self.peek_ahead_by(1).cloned(),
                         }))
                     }
@@ -1233,7 +1233,7 @@ impl Parser {
                             if self.is_range() {
                                 Ok(Pattern::RangePatt(RangePatt::parse_from(self, patt)?))
                             } else {
-                                Err(self.log_error(ParserErrorKind::InvalidTokenContext {
+                                Err(self.emit_error(ParserErrorKind::InvalidTokenContext {
                                     token: self.peek_ahead_by(1).cloned(),
                                 }))
                             }
@@ -1396,13 +1396,13 @@ impl Parser {
 
             Some(Token::EOF) | None => {
                 // log the error, then return `Err(ErrorsEmitted)`
-                self.log_unexpected_eoi();
+                self.emit_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 
             _ => {
                 // log the error and advance the parser, then return `Err(ErrorsEmitted)`
-                self.log_error(ParserErrorKind::InvalidTokenContext { token });
+                self.emit_error(ParserErrorKind::InvalidTokenContext { token });
                 self.next_token();
 
                 Err(ErrorsEmitted)
@@ -1424,7 +1424,7 @@ impl Parser {
                 Box::new(first_pattern),
             )?))
         } else {
-            self.log_error(ParserErrorKind::InvalidTokenContext { token });
+            self.emit_error(ParserErrorKind::InvalidTokenContext { token });
             self.next_token();
 
             Err(ErrorsEmitted)
@@ -1450,11 +1450,11 @@ impl Parser {
             }
 
             ////////////////////////////////////////////////////////////////////////////////
-            self.logger.trace("consumed token");
+            log_trace!(self.logger, "consumed token");
             ////////////////////////////////////////////////////////////////////////////////
         } else {
             // log warning
-            self.logger.warn("reached end of tokens");
+            log_warn!(self.logger, "reached end of tokens");
         }
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -1501,12 +1501,12 @@ impl Parser {
                 Ok(())
             }
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_missing_token(&expected.to_string());
+                self.emit_unexpected_eoi();
+                self.warn_missing_token(&expected.to_string());
                 Err(ErrorsEmitted)
             }
             Some(_) => {
-                self.log_unexpected_token(&expected.to_string());
+                self.emit_unexpected_token(&expected.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1519,11 +1519,11 @@ impl Parser {
                 Ok(Identifier::from(&name))
             }
             Some(Token::EOF) | None => {
-                self.log_missing("identifier", iden_type);
+                self.emit_missing_node("identifier", iden_type);
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token("identifier");
+                self.emit_unexpected_token("identifier");
                 Err(ErrorsEmitted)
             }
         }
@@ -1538,12 +1538,12 @@ impl Parser {
                 Ok(Delimiter::LParen { position })
             }
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_missing_token(&TokenType::LParen.to_string());
+                self.emit_unexpected_eoi();
+                self.warn_missing_token(&TokenType::LParen.to_string());
                 Err(ErrorsEmitted)
             }
             Some(_) => {
-                self.log_unexpected_token(&TokenType::LParen.to_string());
+                self.emit_unexpected_token(&TokenType::LParen.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1558,12 +1558,12 @@ impl Parser {
                 Ok(Delimiter::LBrace { position })
             }
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_missing_token(&TokenType::LBrace.to_string());
+                self.emit_unexpected_eoi();
+                self.warn_missing_token(&TokenType::LBrace.to_string());
                 Err(ErrorsEmitted)
             }
             Some(_) => {
-                self.log_unexpected_token(&TokenType::LBrace.to_string());
+                self.emit_unexpected_token(&TokenType::LBrace.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1578,12 +1578,12 @@ impl Parser {
                 Ok(Delimiter::LBracket { position })
             }
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_missing_token(&TokenType::LBracket.to_string());
+                self.emit_unexpected_eoi();
+                self.warn_missing_token(&TokenType::LBracket.to_string());
                 Err(ErrorsEmitted)
             }
             Some(_) => {
-                self.log_unexpected_token(&TokenType::LBracket.to_string());
+                self.emit_unexpected_token(&TokenType::LBracket.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1593,12 +1593,12 @@ impl Parser {
         match self.current_token() {
             Some(Token::LBrace { .. }) => Ok(BlockExpr::parse(self)?),
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_missing_token(&TokenType::LBrace.to_string());
+                self.emit_unexpected_eoi();
+                self.warn_missing_token(&TokenType::LBrace.to_string());
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token(&TokenType::LBrace.to_string());
+                self.emit_unexpected_token(&TokenType::LBrace.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1608,12 +1608,12 @@ impl Parser {
         match self.current_token() {
             Some(Token::LParen { .. }) => Ok(GroupedExpr::parse(self)?),
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_missing_token(&TokenType::LParen.to_string());
+                self.emit_unexpected_eoi();
+                self.warn_missing_token(&TokenType::LParen.to_string());
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token(&TokenType::LParen.to_string());
+                self.emit_unexpected_token(&TokenType::LParen.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1623,12 +1623,12 @@ impl Parser {
         match self.current_token() {
             Some(Token::LParen { .. }) => Ok(GroupedPatt::parse_patt(self)?),
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_missing_token(&TokenType::LParen.to_string());
+                self.emit_unexpected_eoi();
+                self.warn_missing_token(&TokenType::LParen.to_string());
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token(&TokenType::LParen.to_string());
+                self.emit_unexpected_token(&TokenType::LParen.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1643,12 +1643,12 @@ impl Parser {
                 Ok(())
             }
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_unmatched_delimiter(&Delimiter::LParen { position });
+                self.emit_unexpected_eoi();
+                self.warn_unmatched_delimiter(&Delimiter::LParen { position });
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token(&TokenType::RParen.to_string());
+                self.emit_unexpected_token(&TokenType::RParen.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1660,7 +1660,7 @@ impl Parser {
 
     /// Log information about an error that occurred during parsing, by pushing the error
     /// to the `errors` vector and providing information about error kind and position.
-    pub(crate) fn log_error(&mut self, error_kind: ParserErrorKind) -> ErrorsEmitted {
+    pub(crate) fn emit_error(&mut self, error_kind: ParserErrorKind) -> ErrorsEmitted {
         let current = self.current;
         let tokens = self.stream.tokens();
 
@@ -1674,7 +1674,7 @@ impl Parser {
         let error = CompilerError::new(error_kind, pos, &self.stream.span().input());
 
         // log the error as a message
-        self.logger.error(&error.to_string());
+        log_error!(self.logger, "{error}");
 
         // push the error to the `errors` vector
         self.errors.push(error);
@@ -1687,17 +1687,16 @@ impl Parser {
         let token = self.current_token().unwrap();
         let precedence = self.get_precedence(token);
 
-        self.logger.debug(&format!("current token: `{:?}`", token));
+        log_debug!(self.logger, "current token: `{token:?}`");
 
         if log_precedence {
-            self.logger
-                .debug(&format!("current precedence: `{:?}`", precedence));
+            log_debug!(self.logger, "current precedence: `{precedence:?}`");
         }
     }
 
     /// Log error information on encountering an unexpected token by providing the expected token.
-    fn log_unexpected_token(&mut self, expected: &str) {
-        self.log_error(ParserErrorKind::UnexpectedToken {
+    fn emit_unexpected_token(&mut self, expected: &str) {
+        self.emit_error(ParserErrorKind::UnexpectedToken {
             expected: expected.to_string(),
             found: self.current_token().map(|t| t.token_type()).clone(),
         });
@@ -1706,59 +1705,63 @@ impl Parser {
     }
 
     /// Log a warning when an expected token is missing.
-    fn log_missing_token(&mut self, expected: &str) {
-        self.logger
-            .warn(&format!("token not found. Expected {expected}, found none"));
+    fn warn_missing_token(&mut self, expected: &str) {
+        log_warn!(
+            self.logger,
+            "token not found. Expected {expected}, found none"
+        );
     }
 
     /// Log a warning about an unmatched delimiter.
-    fn log_unmatched_delimiter(&mut self, open_delim: &Delimiter) {
-        self.logger.warn(&format!(
+    fn warn_unmatched_delimiter(&mut self, open_delim: &Delimiter) {
+        log_warn!(
+            self.logger,
             "unmatched `{open_delim}` [Ln {}, Col {}]",
             open_delim.position().line,
             open_delim.position().col
-        ));
+        );
     }
 
     /// Log error information when an expected node is missing.
-    fn log_missing(&mut self, missing: &str, expected: &str) {
+    fn emit_missing_node(&mut self, missing: &str, expected: &str) {
         match missing {
             "expr" => {
-                self.log_error(ParserErrorKind::MissingExpression {
+                self.emit_error(ParserErrorKind::MissingExpression {
                     expected: expected.to_string(),
                 });
             }
             "item" => {
-                self.log_error(ParserErrorKind::MissingItem {
+                self.emit_error(ParserErrorKind::MissingItem {
                     expected: expected.to_string(),
                 });
             }
             "type" => {
-                self.log_error(ParserErrorKind::MissingType {
+                self.emit_error(ParserErrorKind::MissingType {
                     expected: expected.to_string(),
                 });
             }
             "patt" => {
-                self.log_error(ParserErrorKind::MissingPattern {
+                self.emit_error(ParserErrorKind::MissingPattern {
                     expected: expected.to_string(),
                 });
             }
             "identifier" => {
-                self.log_error(ParserErrorKind::MissingIdentifier {
+                self.emit_error(ParserErrorKind::MissingIdentifier {
                     expected: expected.to_string(),
                 });
             }
             _ => {
-                self.logger.error(&format!(
+                log_error!(
+                    self.logger,
                     "{missing} not found. Expected {expected}, found none"
-                ));
+                );
             }
         }
     }
 
     /// Log error information when the source code has to an unexpected end.
-    fn log_unexpected_eoi(&mut self) {
-        self.log_error(ParserErrorKind::UnexpectedEndOfInput);
+    fn emit_unexpected_eoi(&mut self) {
+        self.emit_error(ParserErrorKind::UnexpectedEndOfInput);
     }
 
     /// Retrieve a list of any errors that occurred during parsing.
@@ -1900,12 +1903,12 @@ impl Parser {
                 Ok(span)
             }
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_unmatched_delimiter(&Delimiter::LParen { position });
+                self.emit_unexpected_eoi();
+                self.warn_unmatched_delimiter(&Delimiter::LParen { position });
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token(&TokenType::RParen.to_string());
+                self.emit_unexpected_token(&TokenType::RParen.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1921,12 +1924,12 @@ impl Parser {
                 Ok(span)
             }
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_unmatched_delimiter(&Delimiter::LBrace { position });
+                self.emit_unexpected_eoi();
+                self.warn_unmatched_delimiter(&Delimiter::LBrace { position });
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token(&TokenType::RBrace.to_string());
+                self.emit_unexpected_token(&TokenType::RBrace.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1942,12 +1945,12 @@ impl Parser {
                 Ok(span)
             }
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_unmatched_delimiter(&Delimiter::LBracket { position });
+                self.emit_unexpected_eoi();
+                self.warn_unmatched_delimiter(&Delimiter::LBracket { position });
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token(&TokenType::RBrace.to_string());
+                self.emit_unexpected_token(&TokenType::RBrace.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -1961,12 +1964,12 @@ impl Parser {
                 Ok(span)
             }
             Some(Token::EOF) | None => {
-                self.log_unexpected_eoi();
-                self.log_missing_token(&TokenType::Semicolon.to_string());
+                self.emit_unexpected_eoi();
+                self.warn_missing_token(&TokenType::Semicolon.to_string());
                 Err(ErrorsEmitted)
             }
             _ => {
-                self.log_unexpected_token(&TokenType::Semicolon.to_string());
+                self.emit_unexpected_token(&TokenType::Semicolon.to_string());
                 Err(ErrorsEmitted)
             }
         }

@@ -15,14 +15,14 @@ impl ParseControlExpr for MatchExpr {
             parser.next_token();
             Ok(Keyword::Match)
         } else {
-            parser.log_unexpected_token(&TokenType::Match.to_string());
+            parser.emit_unexpected_token(&TokenType::Match.to_string());
             Err(ErrorsEmitted)
         }?;
 
         // notify the parser of the error, but let it try to parse anyway and return its own error
         // i.e., do not `return Err(ErrorsEmitted);`
         if let Some(Token::LBrace { .. } | Token::Semicolon { .. }) = parser.current_token() {
-            parser.log_error(ParserErrorKind::MissingExpression {
+            parser.emit_error(ParserErrorKind::MissingExpression {
                 expected: "scrutinee expression".to_string(),
             });
         }
@@ -48,7 +48,7 @@ impl ParseControlExpr for MatchExpr {
         let final_arm = if let Some(a) = match_arms.pop() {
             Ok(Box::new(a))
         } else {
-            parser.log_missing("patt", "match arm");
+            parser.emit_missing_node("patt", "match arm");
             parser.next_token();
             Err(ErrorsEmitted)
         }?;
@@ -105,12 +105,12 @@ fn parse_match_arm(parser: &mut Parser) -> Result<MatchArm, ErrorsEmitted> {
             }
             Some(Token::RBrace { .. }) => Ok(expr),
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_missing_token(&TokenType::Comma.to_string());
+                parser.emit_unexpected_eoi();
+                parser.warn_missing_token(&TokenType::Comma.to_string());
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token(&TokenType::Comma.to_string());
+                parser.emit_unexpected_token(&TokenType::Comma.to_string());
                 Err(ErrorsEmitted)
             }
         }

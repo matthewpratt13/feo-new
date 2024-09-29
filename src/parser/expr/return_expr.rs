@@ -15,7 +15,7 @@ impl ParseConstructExpr for ReturnExpr {
             parser.next_token();
             Ok(Keyword::Return)
         } else {
-            parser.log_unexpected_token(&TokenType::Return.to_string());
+            parser.emit_unexpected_token(&TokenType::Return.to_string());
             Err(ErrorsEmitted)
         }?;
 

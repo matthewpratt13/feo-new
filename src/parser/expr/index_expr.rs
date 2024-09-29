@@ -13,7 +13,7 @@ impl ParseOperatorExpr for IndexExpr {
         let left_expr_span = &left_expr.span();
 
         let array: AssigneeExpr = left_expr.try_into().map_err(|e| {
-            parser.log_error(e);
+            parser.emit_error(e);
             ErrorsEmitted
         })?;
 
@@ -37,13 +37,13 @@ impl ParseOperatorExpr for IndexExpr {
                 Ok(Expression::Index(expr))
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_unmatched_delimiter(&open_bracket);
+                parser.emit_unexpected_eoi();
+                parser.warn_unmatched_delimiter(&open_bracket);
                 Err(ErrorsEmitted)
             }
 
             _ => {
-                parser.log_unexpected_token(&TokenType::RBracket.to_string());
+                parser.emit_unexpected_token(&TokenType::RBracket.to_string());
                 Err(ErrorsEmitted)
             }
         }

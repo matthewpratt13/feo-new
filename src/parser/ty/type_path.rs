@@ -3,6 +3,7 @@ use super::Parser;
 use crate::{
     ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, SelfType, Type, TypePath},
     error::ErrorsEmitted,
+    log_trace,
     token::{Token, TokenType},
 };
 
@@ -13,7 +14,7 @@ impl TypePath {
         parser: &mut Parser,
         token: Option<Token>,
     ) -> Result<TypePath, ErrorsEmitted> {
-        parser.logger.debug("entering `PathType::parse()`");
+        log_trace!(parser.logger, "entering `PathType::parse()` …");
         parser.log_current_token(false);
 
         let mut path: Vec<Identifier> = Vec::new();
@@ -27,7 +28,7 @@ impl TypePath {
             Some(Token::Lib { .. }) => Ok(PathRoot::Lib),
             Some(Token::Super { .. }) => Ok(PathRoot::Super),
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "path root (identifier, {}, {}, {} or {})",
                     TokenType::Lib,
                     TokenType::Super,
@@ -70,11 +71,11 @@ impl TypePath {
                 }
                 Some(Token::LBrace { .. }) => break,
                 Some(Token::EOF) | None => {
-                    parser.log_unexpected_eoi();
+                    parser.emit_unexpected_eoi();
                     return Err(ErrorsEmitted);
                 }
                 _ => {
-                    parser.log_unexpected_token("identifier");
+                    parser.emit_unexpected_token("identifier");
                     return Err(ErrorsEmitted);
                 }
             }
@@ -95,8 +96,8 @@ impl TypePath {
         };
 
         ////////////////////////////////////////////////////////////////////////////////
-        parser.logger.debug("exiting `PathType::parse()`");
-        parser.logger.debug(&format!("parsed path: {path_type}"));
+        log_trace!(parser.logger, "exiting `PathType::parse()` …");
+        log_trace!(parser.logger, "parsed path: `{path_type}`");
         parser.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////
 

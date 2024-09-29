@@ -7,6 +7,7 @@ use crate::{
         Pattern, Statement, Str, Type, TypePath, UInt, UnaryOp, UnitType,
     },
     error::SemanticErrorKind,
+    log_warn,
     semantic_analyser::symbol_table::Symbol,
     span::Spanned,
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
@@ -968,10 +969,6 @@ pub(crate) fn analyse_expr(
                 let mut cloned_iter = stmts.iter().peekable().clone();
 
                 for stmt in stmts {
-                    analyser
-                        .logger
-                        .trace(&format!("analysing statement: `{stmt}`"));
-
                     cloned_iter.next();
 
                     match stmt {
@@ -982,7 +979,7 @@ pub(crate) fn analyse_expr(
                                 analyse_expr(analyser, expr, root)?;
 
                                 match cloned_iter.peek() {
-                                    Some(_) => analyser.logger.warn("unreachable code"),
+                                    Some(_) => log_warn!(analyser.logger, "unreachable code"),
                                     _ => (),
                                 }
                             }

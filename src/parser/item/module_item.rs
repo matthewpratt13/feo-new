@@ -20,7 +20,7 @@ impl ParseDefItem for ModuleItem {
             parser.next_token();
             Ok(Keyword::Module)
         } else {
-            parser.log_unexpected_token(&TokenType::Module.to_string());
+            parser.emit_unexpected_token(&TokenType::Module.to_string());
             Err(ErrorsEmitted)
         }?;
 

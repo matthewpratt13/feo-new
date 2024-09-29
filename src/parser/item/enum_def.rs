@@ -24,7 +24,7 @@ impl ParseDefItem for EnumDef {
             parser.next_token();
             Ok(Keyword::Enum)
         } else {
-            parser.log_unexpected_token(&TokenType::Enum.to_string());
+            parser.emit_unexpected_token(&TokenType::Enum.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -79,7 +79,7 @@ fn parse_enum_variants(parser: &mut Parser) -> Result<Vec<EnumVariant>, ErrorsEm
             parser.current_token(),
             Some(Token::RBrace { .. } | Token::EOF)
         ) {
-            parser.log_unexpected_token(&format!("{} or {}", TokenType::Comma, TokenType::RBrace));
+            parser.emit_unexpected_token(&format!("{} or {}", TokenType::Comma, TokenType::RBrace));
             return Err(ErrorsEmitted);
         }
     }
@@ -123,7 +123,7 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
     {
         Ok(sdf)
     } else {
-        parser.log_missing("identifier", "struct field");
+        parser.emit_missing_node("identifier", "struct field");
         parser.next_token();
         Err(ErrorsEmitted)
     }?;
@@ -140,7 +140,7 @@ fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTupleStruc
         if let Some(t) = collection::get_collection(parser, Type::parse, &open_paren)? {
             Ok(t)
         } else {
-            parser.log_missing("type", "tuple element type");
+            parser.emit_missing_node("type", "tuple element type");
             parser.next_token();
             Err(ErrorsEmitted)
         }?;

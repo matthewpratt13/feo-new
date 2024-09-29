@@ -17,7 +17,7 @@ impl ParseSimpleExpr for UnaryExpr {
             Some(Token::Minus { .. }) => Ok(UnaryOp::Negate),
             Some(Token::Bang { .. }) => Ok(UnaryOp::Not),
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "unary operator ({} or {})",
                     TokenType::Minus,
                     TokenType::Bang
@@ -59,7 +59,7 @@ impl ParseSimpleExpr for ReferenceExpr {
             Some(Token::Ampersand { .. }) => Ok(ReferenceOp::Borrow),
             Some(Token::AmpersandMut { .. }) => Ok(ReferenceOp::MutableBorrow),
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "reference operator ({} or {})",
                     TokenType::Ampersand,
                     TokenType::AmpersandMut
@@ -100,7 +100,8 @@ impl ParseSimpleExpr for DereferenceExpr {
             parser.next_token();
             Ok(DereferenceOp)
         } else {
-            parser.log_unexpected_token(&format!("dereference operator ({})", TokenType::Asterisk));
+            parser
+                .emit_unexpected_token(&format!("dereference operator ({})", TokenType::Asterisk));
             Err(ErrorsEmitted)
         }?;
 

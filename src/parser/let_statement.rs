@@ -17,7 +17,7 @@ impl ParseStatement for LetStmt {
             parser.next_token();
             Ok(Keyword::Let)
         } else {
-            parser.log_unexpected_token(&TokenType::Let.to_string());
+            parser.emit_unexpected_token(&TokenType::Let.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -38,7 +38,7 @@ impl ParseStatement for LetStmt {
 
                 Ok(Some(value))
             } else {
-                parser.log_missing("expr", "value");
+                parser.emit_missing_node("expr", "value");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }
@@ -65,12 +65,12 @@ impl ParseStatement for LetStmt {
                 Ok(Statement::Let(stmt))
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_missing_token(&TokenType::Semicolon.to_string());
+                parser.emit_unexpected_eoi();
+                parser.warn_missing_token(&TokenType::Semicolon.to_string());
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token(&TokenType::Semicolon.to_string());
+                parser.emit_unexpected_token(&TokenType::Semicolon.to_string());
                 Err(ErrorsEmitted)
             }
         }

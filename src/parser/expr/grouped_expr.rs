@@ -1,6 +1,7 @@
 use crate::{
     ast::{Expression, GroupedExpr, TupleElements, TupleExpr},
     error::ErrorsEmitted,
+    log_debug, log_trace,
     parser::{ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
@@ -9,7 +10,7 @@ use core::fmt;
 
 impl ParseConstructExpr for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {
-        parser.logger.debug("entering `GroupedExpr::parse()`");
+        log_debug!(parser.logger, "entering `GroupedExpr::parse()`");
         parser.log_current_token(false);
 
         let first_token = parser.current_token().cloned();
@@ -41,7 +42,7 @@ impl ParseConstructExpr for GroupedExpr {
 
         let span = parser.get_parenthesized_item_span(first_token.as_ref())?;
 
-        parser.logger.debug("exiting `GroupedExpr::parse()`");
+        log_trace!(parser.logger, "exiting `GroupedExpr::parse()`");
         parser.log_current_token(false);
 
         Ok(GroupedExpr {

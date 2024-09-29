@@ -15,7 +15,7 @@ impl ParseConstructExpr for ResultExpr {
             Some(Token::Ok { .. }) => Ok(Keyword::Ok),
             Some(Token::Err { .. }) => Ok(Keyword::Err),
             _ => {
-                parser.log_unexpected_token(&format!("{} or {}", TokenType::Ok, TokenType::Err));
+                parser.emit_unexpected_token(&format!("{} or {}", TokenType::Ok, TokenType::Err));
                 Err(ErrorsEmitted)
             }
         }?;

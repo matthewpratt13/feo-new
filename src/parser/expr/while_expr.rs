@@ -15,7 +15,7 @@ impl ParseControlExpr for WhileExpr {
             parser.next_token();
             Ok(Keyword::While)
         } else {
-            parser.log_unexpected_token(&TokenType::While.to_string());
+            parser.emit_unexpected_token(&TokenType::While.to_string());
             Err(ErrorsEmitted)
         }?;
 

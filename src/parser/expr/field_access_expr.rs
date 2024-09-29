@@ -13,7 +13,7 @@ impl ParseOperatorExpr for FieldAccessExpr {
         let left_expr_span = &left_expr.span();
 
         let object: AssigneeExpr = left_expr.try_into().map_err(|e| {
-            parser.log_error(e);
+            parser.emit_error(e);
             ErrorsEmitted
         })?;
 
@@ -34,12 +34,12 @@ impl ParseOperatorExpr for FieldAccessExpr {
                 })
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_missing("identifier", "object field");
+                parser.emit_unexpected_eoi();
+                parser.emit_missing_node("identifier", "object field");
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token("object field identifier");
+                parser.emit_unexpected_token("object field identifier");
                 Err(ErrorsEmitted)
             }
         }?;

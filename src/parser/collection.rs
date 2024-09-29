@@ -3,6 +3,7 @@ use super::{item::ParseAssociatedItem, Parser, Precedence};
 use crate::{
     ast::{Delimiter, Expression, OuterAttr, Visibility},
     error::ErrorsEmitted,
+    log_debug, log_trace,
     token::{Token, TokenType},
 };
 
@@ -31,7 +32,7 @@ pub(crate) fn get_collection<T>(
                     parser.current_token(),
                     Some(Token::RParen { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token(&format!(
+                    parser.emit_unexpected_token(&format!(
                         "{} or {}",
                         TokenType::Comma,
                         TokenType::RParen
@@ -55,7 +56,7 @@ pub(crate) fn get_collection<T>(
                     parser.current_token(),
                     Some(Token::RBrace { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token(&format!(
+                    parser.emit_unexpected_token(&format!(
                         "{} or {}",
                         TokenType::Comma,
                         TokenType::RBrace
@@ -81,7 +82,7 @@ pub(crate) fn get_collection<T>(
                     parser.current_token(),
                     Some(Token::Pipe { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token(&format!(
+                    parser.emit_unexpected_token(&format!(
                         "{} or {}",
                         TokenType::Comma,
                         TokenType::Pipe
@@ -107,7 +108,7 @@ pub(crate) fn get_collection<T>(
                     parser.current_token(),
                     Some(Token::GreaterThan { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token(&format!(
+                    parser.emit_unexpected_token(&format!(
                         "{} or {}",
                         TokenType::Comma,
                         TokenType::GreaterThan
@@ -118,7 +119,7 @@ pub(crate) fn get_collection<T>(
         }
 
         _ => {
-            parser.log_unexpected_token("closing delimiter type");
+            parser.emit_unexpected_token("closing delimiter type");
             return Err(ErrorsEmitted);
         }
     }
@@ -139,7 +140,8 @@ pub(crate) fn get_expressions(
 ) -> Result<Option<Vec<Expression>>, ErrorsEmitted> {
     let mut expressions: Vec<Expression> = Vec::new();
 
-    parser.logger.trace("entering `get_expressions()`");
+    log_trace!(parser.logger, "entering `get_expressions()` …");
+
     parser.log_current_token(false);
 
     match open_delimiter {
@@ -157,7 +159,7 @@ pub(crate) fn get_expressions(
                     parser.current_token(),
                     Some(Token::RParen { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token(&format!(
+                    parser.emit_unexpected_token(&format!(
                         "{} or {}",
                         TokenType::Comma,
                         TokenType::RParen
@@ -180,7 +182,7 @@ pub(crate) fn get_expressions(
                     parser.current_token(),
                     Some(Token::RBracket { .. } | Token::EOF)
                 ) {
-                    parser.log_unexpected_token(&format!(
+                    parser.emit_unexpected_token(&format!(
                         "{} or {}",
                         TokenType::Comma,
                         TokenType::RBracket
@@ -191,16 +193,18 @@ pub(crate) fn get_expressions(
         }
 
         _ => {
-            parser.log_unexpected_token("closing delimiter type");
+            parser.emit_unexpected_token("closing delimiter type");
             return Err(ErrorsEmitted);
         }
     }
 
-    parser.logger.trace("exiting `get_expressions()`");
-    parser.logger.debug(&format!(
+    log_trace!(parser.logger, "exiting `get_expressions()` …");
+    log_debug!(
+        parser.logger,
         "expressions.is_empty(): {}",
-        &expressions.is_empty()
-    ));
+        expressions.is_empty()
+    );
+
     parser.log_current_token(false);
 
     match expressions.is_empty() {
@@ -243,7 +247,7 @@ pub(crate) fn get_attributes<T>(
 ) -> Option<Vec<T>> {
     let mut attributes = Vec::new();
 
-    parser.logger.trace("entering `get_attributes()`");
+    log_trace!(parser.logger, "entering `get_attributes()` …");
     parser.log_current_token(false);
 
     while let Some(a) = f(parser) {
@@ -251,11 +255,13 @@ pub(crate) fn get_attributes<T>(
         parser.next_token();
     }
 
-    parser.logger.trace("exiting `get_attributes()`");
-    parser.logger.debug(&format!(
+    log_trace!(parser.logger, "exiting `get_attributes()` …");
+    log_debug!(
+        parser.logger,
         "attributes.is_empty(): {}",
-        &attributes.is_empty()
-    ));
+        attributes.is_empty()
+    );
+
     parser.log_current_token(false);
 
     match attributes.is_empty() {

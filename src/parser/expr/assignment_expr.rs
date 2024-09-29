@@ -16,7 +16,7 @@ impl ParseOperatorExpr for AssignmentExpr {
         let left_expr_span = &left_expr.span();
 
         let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {
-            parser.log_error(e);
+            parser.emit_error(e);
             ErrorsEmitted
         })?;
 
@@ -58,7 +58,7 @@ impl ParseOperatorExpr for CompoundAssignmentExpr {
         let left_expr_span = &left_expr.span();
 
         let lhs: AssigneeExpr = left_expr.try_into().map_err(|e| {
-            parser.log_error(e);
+            parser.emit_error(e);
             ErrorsEmitted
         })?;
 
@@ -71,7 +71,7 @@ impl ParseOperatorExpr for CompoundAssignmentExpr {
             TokenType::SlashEquals => Ok(CompoundAssignmentOp::DivideAssign),
             TokenType::PercentEquals => Ok(CompoundAssignmentOp::ModulusAssign),
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "compound assignment operator ({}, {}, {}, {} or {})",
                     TokenType::PlusEquals,
                     TokenType::MinusEquals,

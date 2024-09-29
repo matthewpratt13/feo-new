@@ -16,7 +16,7 @@ impl RangeExpr {
             Token::DblDot { .. } => Ok(RangeOp::RangeExclusive),
             Token::DotDotEquals { .. } => Ok(RangeOp::RangeInclusive),
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "range operator ({} or {})",
                     TokenType::DblDot,
                     TokenType::DotDotEquals
@@ -36,7 +36,7 @@ impl RangeExpr {
                 range_op,
                 to_expr_opt: {
                     if range_op == RangeOp::RangeInclusive {
-                        parser.log_error(ParserErrorKind::UnexpectedRangeOp {
+                        parser.emit_error(ParserErrorKind::UnexpectedRangeOp {
                             expected: TokenType::DblDot.to_string(),
                             found: format!("`{}`", range_op),
                         });
@@ -73,7 +73,7 @@ impl ParseOperatorExpr for RangeExpr {
         let left_expr_span = &left_expr.span();
 
         let from_assignee_expr: AssigneeExpr = left_expr.try_into().map_err(|e| {
-            parser.log_error(e);
+            parser.emit_error(e);
             ErrorsEmitted
         })?;
 
@@ -83,11 +83,11 @@ impl ParseOperatorExpr for RangeExpr {
             TokenType::DblDot => Ok(RangeOp::RangeExclusive),
             TokenType::DotDotEquals => Ok(RangeOp::RangeInclusive),
             TokenType::EOF => {
-                parser.log_unexpected_eoi();
+                parser.emit_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "range operator ({} or {})",
                     TokenType::DblDot,
                     TokenType::DotDotEquals
@@ -107,7 +107,7 @@ impl ParseOperatorExpr for RangeExpr {
                 from_expr_opt: Some(Box::new(from_assignee_expr)),
                 range_op: {
                     if range_op == RangeOp::RangeInclusive {
-                        parser.log_error(ParserErrorKind::UnexpectedRangeOp {
+                        parser.emit_error(ParserErrorKind::UnexpectedRangeOp {
                             expected: TokenType::DblDot.to_string(),
                             found: format!("`{}`", range_op),
                         });

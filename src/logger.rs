@@ -3,7 +3,7 @@ use core::fmt;
 /// Enum representing different log levels, which control the verbosity of the logs,
 /// from the most to the least verbose.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum LogLevel {
+pub(crate) enum LogLevel {
     Trace,
     Debug,
     Info,
@@ -13,21 +13,21 @@ pub enum LogLevel {
 
 /// Struct that represents a log message with a log level.
 #[derive(Debug, Clone)]
-pub struct LogMsg {
-    level: LogLevel,
-    text: String,
+pub(crate) struct LogMsg {
+    pub(crate) level: LogLevel,
+    pub(crate) text: String,
 }
 
 /// Struct that keeps track of events and errors that occur during some process.
 #[derive(Debug)]
-pub struct Logger {
+pub(crate) struct Logger {
     level: LogLevel,
     messages: Vec<LogMsg>,
 }
 
 impl Logger {
     /// Construct a new `Logger`.
-    pub fn new(level: LogLevel) -> Self {
+    pub(crate) fn new(level: LogLevel) -> Self {
         Logger {
             level,
             messages: Vec::new(),
@@ -39,54 +39,18 @@ impl Logger {
     /// will be pushed to `self.messages`. Or if `self.level` is `LogLevel::Warning`
     /// and the input level is `LogLevel::Error`, only warnings, errors and critical messages
     /// will be pushed.
-    fn log(&mut self, msg: LogMsg) {
+    pub(crate) fn log(&mut self, msg: LogMsg) {
         if self.level <= msg.level {
             self.messages.push(msg.clone());
             println!("{msg}")
         } else {
             self.messages.push(LogMsg { level: msg.level, text: format!("tried to log message and failed. Verbosity level ({}) is lower than the initialized one ({})", msg.level, self.level)});
         }
-
-    }
-
-    pub fn trace(&mut self, msg: &str) {
-        self.log(LogMsg {
-            level: LogLevel::Trace,
-            text: String::from(msg),
-        })
-    }
-
-    pub fn debug(&mut self, msg: &str) {
-        self.log(LogMsg {
-            level: LogLevel::Debug,
-            text: String::from(msg),
-        })
-    }
-
-    pub fn info(&mut self, msg: &str) {
-        self.log(LogMsg {
-            level: LogLevel::Info,
-            text: String::from(msg),
-        })
-    }
-
-    pub fn warn(&mut self, msg: &str) {
-        self.log(LogMsg {
-            level: LogLevel::Warning,
-            text: String::from(msg),
-        })
-    }
-
-    pub fn error(&mut self, msg: &str) {
-        self.log(LogMsg {
-            level: LogLevel::Error,
-            text: String::from(msg),
-        })
     }
 
     /// Retrieve the log messages.
     #[allow(dead_code)]
-    pub fn messages(&self) -> Vec<String> {
+    pub(crate) fn messages(&self) -> Vec<String> {
         self.messages
             .iter()
             .map(|m| m.to_string())
@@ -95,8 +59,8 @@ impl Logger {
     }
 
     /// Clear all log messages.
-    pub fn clear_messages(&mut self) {
-        self.info("clearing log messages …");
+    pub(crate) fn clear_messages(&mut self) {
+        crate::log_info!(self, "clearing log messages …");
         self.messages.clear()
     }
 }
@@ -116,5 +80,55 @@ impl fmt::Display for LogLevel {
 impl fmt::Display for LogMsg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[{}] {}", self.level, self.text)
+    }
+}
+
+#[macro_export]
+macro_rules! log_trace {
+    ($logger:expr, $($arg:tt)*) => {
+        $logger.log(crate::logger::LogMsg {
+            level: crate::logger::LogLevel::Trace,
+            text: format!($($arg)*),
+        })
+    }
+}
+
+#[macro_export]
+macro_rules! log_debug {
+    ($logger:expr, $($arg:tt)*) => {
+        $logger.log(crate::logger::LogMsg {
+            level: crate::logger::LogLevel::Debug,
+            text: format!($($arg)*),
+        })
+    }
+}
+
+#[macro_export]
+macro_rules! log_info {
+    ($logger:expr, $($arg:tt)*) => {
+        $logger.log(crate::logger::LogMsg {
+            level: crate::logger::LogLevel::Info,
+            text: format!($($arg)*),
+        })
+    }
+}
+
+#[macro_export]
+macro_rules! log_warn {
+    ($logger:expr, $($arg:tt)*) => {
+        $logger.log(crate::logger::LogMsg {
+            level: crate::logger::LogLevel::Warning,
+            text: format!($($arg)*),
+        })
+    }
+}
+
+#[macro_export]
+macro_rules! log_error {
+    ($logger:expr, $($arg:tt)*) => {
+        $logger.log(crate::logger::LogMsg {
+            level: crate::logger::LogLevel::Error,
+            text: format!($($arg)*),
+        })
     }
 }

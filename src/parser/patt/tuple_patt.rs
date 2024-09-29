@@ -33,7 +33,7 @@ fn parse_tuple_patt_elements(parser: &mut Parser) -> Result<TuplePattElements, E
             elements.push(element);
             parser.next_token();
         } else if !matches!(parser.current_token(), Some(Token::RParen { .. })) {
-            parser.log_unexpected_token(&format!("{} or {}", TokenType::Comma, TokenType::RParen));
+            parser.emit_unexpected_token(&format!("{} or {}", TokenType::Comma, TokenType::RParen));
         } else if matches!(parser.current_token(), Some(Token::RParen { .. })) {
             final_element_opt = Some(Box::new(element));
             break;

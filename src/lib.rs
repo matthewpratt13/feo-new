@@ -6,7 +6,7 @@ mod ast;
 mod error;
 mod keccak;
 mod lexer;
-mod logger;
+pub mod logger;
 mod parser;
 mod semantic_analyser;
 mod span;

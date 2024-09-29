@@ -11,7 +11,7 @@ impl ParsePattern for ReferencePatt {
             Some(Token::Ampersand { .. }) => Ok(ReferenceOp::Borrow),
             Some(Token::AmpersandMut { .. }) => Ok(ReferenceOp::MutableBorrow),
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "reference operator ({} or {})",
                     TokenType::Ampersand,
                     TokenType::AmpersandMut

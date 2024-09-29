@@ -63,12 +63,12 @@ impl ParseOperatorExpr for TupleStructExpr {
                 }))
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_unmatched_delimiter(&open_paren);
+                parser.emit_unexpected_eoi();
+                parser.warn_unmatched_delimiter(&open_paren);
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token(&TokenType::RParen.to_string());
+                parser.emit_unexpected_token(&TokenType::RParen.to_string());
                 Err(ErrorsEmitted)
             }
         }
@@ -93,13 +93,13 @@ fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted>
 
     let field_value = match parser.current_token() {
         Some(Token::Comma { .. } | Token::RBrace { .. }) => {
-            parser.log_missing("expr", "struct field value");
+            parser.emit_missing_node("expr", "struct field value");
             parser.next_token();
             Err(ErrorsEmitted)
         }
         Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
-            parser.log_missing("expr", "struct field value");
+            parser.emit_unexpected_eoi();
+            parser.emit_missing_node("expr", "struct field value");
             Err(ErrorsEmitted)
         }
         _ => parser.parse_expression(Precedence::Lowest),

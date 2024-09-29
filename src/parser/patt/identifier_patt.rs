@@ -1,13 +1,14 @@
 use crate::{
     ast::{IdentifierPatt, Keyword},
     error::ErrorsEmitted,
+    log_trace,
     parser::{ParsePattern, Parser},
     token::Token,
 };
 
 impl ParsePattern for IdentifierPatt {
     fn parse_patt(parser: &mut Parser) -> Result<IdentifierPatt, ErrorsEmitted> {
-        parser.logger.trace("entering `IdentifierPatt:parse()`");
+        log_trace!(parser.logger, "entering `IdentifierPatt:parse()`");
         parser.log_current_token(false);
 
         let kw_ref_opt = if let Some(Token::Ref { .. }) = parser.current_token() {
@@ -26,7 +27,7 @@ impl ParsePattern for IdentifierPatt {
 
         let name = parser.expect_identifier("identifier name")?;
 
-        parser.logger.trace("exiting `IdentifierPatt::parse()`");
+        log_trace!(parser.logger, "exiting `IdentifierPatt::parse()`");
         parser.log_current_token(false);
 
         Ok(IdentifierPatt {

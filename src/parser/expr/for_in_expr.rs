@@ -15,18 +15,18 @@ impl ParseControlExpr for ForInExpr {
             parser.next_token();
             Ok(Keyword::For)
         } else {
-            parser.log_unexpected_token(&TokenType::For.to_string());
+            parser.emit_unexpected_token(&TokenType::For.to_string());
             Err(ErrorsEmitted)
         }?;
 
         let pattern = match parser.current_token() {
             Some(Token::In { .. }) => {
-                parser.log_missing("patt", "iterator element");
+                parser.emit_missing_node("patt", "iterator element");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
+                parser.emit_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 
@@ -45,7 +45,7 @@ impl ParseControlExpr for ForInExpr {
                     Ok(Box::new(Expression::Literal(l)))
                 }
                 _ => {
-                    parser.log_unexpected_token("numeric value");
+                    parser.emit_unexpected_token("numeric value");
                     Err(ErrorsEmitted)
                 }
             },
@@ -71,7 +71,7 @@ impl ParseControlExpr for ForInExpr {
             Expression::Block(b) => Ok(Box::new(Expression::Block(b))),
 
             _ => {
-                parser.log_error(ParserErrorKind::UnexpectedExpression {
+                parser.emit_error(ParserErrorKind::UnexpectedExpression {
                     expected: "iterable expression".to_string(),
                     found: format!("{}", &expression),
                 });

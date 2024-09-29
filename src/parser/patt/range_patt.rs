@@ -16,11 +16,11 @@ impl RangePatt {
             Some(Token::DblDot { .. }) => Ok(RangeOp::RangeExclusive),
             Some(Token::DotDotEquals { .. }) => Ok(RangeOp::RangeInclusive),
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
+                parser.emit_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "range operator ({} or {})",
                     TokenType::DblDot,
                     TokenType::DotDotEquals
@@ -52,7 +52,7 @@ impl RangePatt {
                 parser.next_token();
 
                 if range_op != RangeOp::RangeExclusive {
-                    parser.log_error(ParserErrorKind::UnexpectedRangeOp {
+                    parser.emit_error(ParserErrorKind::UnexpectedRangeOp {
                         expected: TokenType::DblDot.to_string(),
                         found: format!("`{}`", range_op),
                     });
@@ -63,7 +63,7 @@ impl RangePatt {
             }
 
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "numeric, {} or {} literal, identifier, {} or guard statement",
                     TokenType::ByteType,
                     TokenType::CharType,
@@ -85,7 +85,7 @@ impl RangePatt {
         let range_op = match parser.current_token() {
             Some(Token::DotDotEquals { .. }) => Ok(RangeOp::RangeInclusive),
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "inclusive range operator ({})",
                     TokenType::DotDotEquals
                 ));
@@ -109,12 +109,12 @@ impl RangePatt {
             }
 
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
+                parser.emit_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "numeric, {} or {} literal, or identifier",
                     TokenType::ByteType,
                     TokenType::CharType

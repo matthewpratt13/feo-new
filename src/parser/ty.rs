@@ -10,6 +10,7 @@ use crate::{
         UnitType,
     },
     error::ErrorsEmitted,
+    log_trace,
     span::Position,
     token::{Token, TokenType},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
@@ -20,7 +21,7 @@ use core::fmt;
 impl Type {
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
-        parser.logger.debug("entering `Type::parse()`");
+        log_trace!(parser.logger, "entering `Type::parse()` …");
         parser.log_current_token(false);
 
         let token = parser.next_token();
@@ -78,12 +79,12 @@ impl Type {
                         })
                     }
                     Some(Token::EOF) | None => {
-                        parser.log_unexpected_eoi();
-                        parser.log_missing_token(&TokenType::LessThan.to_string());
+                        parser.emit_unexpected_eoi();
+                        parser.warn_missing_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                     _ => {
-                        parser.log_unexpected_token(&TokenType::LessThan.to_string());
+                        parser.emit_unexpected_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                 }
@@ -108,12 +109,12 @@ impl Type {
                         })
                     }
                     Some(Token::EOF) | None => {
-                        parser.log_unexpected_eoi();
-                        parser.log_missing_token(&TokenType::LessThan.to_string());
+                        parser.emit_unexpected_eoi();
+                        parser.warn_missing_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                     _ => {
-                        parser.log_unexpected_token(&TokenType::LessThan.to_string());
+                        parser.emit_unexpected_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                 }
@@ -134,12 +135,12 @@ impl Type {
                     }
 
                     Some(Token::EOF) | None => {
-                        parser.log_unexpected_eoi();
-                        parser.log_missing_token(&TokenType::LessThan.to_string());
+                        parser.emit_unexpected_eoi();
+                        parser.warn_missing_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                     _ => {
-                        parser.log_unexpected_token(&TokenType::LessThan.to_string());
+                        parser.emit_unexpected_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                 }
@@ -160,12 +161,12 @@ impl Type {
                         Ok(Type::Result { ok_type, err_type })
                     }
                     Some(Token::EOF) | None => {
-                        parser.log_unexpected_eoi();
-                        parser.log_missing_token(&TokenType::LessThan.to_string());
+                        parser.emit_unexpected_eoi();
+                        parser.warn_missing_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                     _ => {
-                        parser.log_unexpected_token(&TokenType::LessThan.to_string());
+                        parser.emit_unexpected_token(&TokenType::LessThan.to_string());
                         Err(ErrorsEmitted)
                     }
                 }
@@ -223,12 +224,12 @@ impl Type {
             },
 
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
+                parser.emit_unexpected_eoi();
                 Err(ErrorsEmitted)
             }
 
             _ => {
-                parser.log_unexpected_token("type annotation");
+                parser.emit_unexpected_token("type annotation");
                 Err(ErrorsEmitted)
             }
         }
@@ -409,7 +410,7 @@ fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         if parser.current_token().is_some() {
             Ok(Some(Box::new(Type::parse(parser)?)))
         } else {
-            parser.log_missing("type", "function return type");
+            parser.emit_missing_node("type", "function return type");
             parser.next_token();
             Err(ErrorsEmitted)
         }
@@ -439,11 +440,11 @@ fn parse_array_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
     let num_elements = match parser.next_token() {
         Some(Token::UIntLiteral { value, .. }) => Ok(value),
         Some(Token::EOF) | None => {
-            parser.log_unexpected_eoi();
+            parser.emit_unexpected_eoi();
             Err(ErrorsEmitted)
         }
         _ => {
-            parser.log_unexpected_token("array length (unsigned integer)");
+            parser.emit_unexpected_token("array length (unsigned integer)");
             Err(ErrorsEmitted)
         }
     }?;
@@ -469,7 +470,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
             parser.next_token();
             Ok(t)
         } else {
-            parser.log_missing("type", "tuple element type");
+            parser.emit_missing_node("type", "tuple element type");
             parser.next_token();
             Err(ErrorsEmitted)
         }?;

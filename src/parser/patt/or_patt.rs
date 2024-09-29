@@ -17,7 +17,7 @@ impl OrPatt {
                 Delimiter::Pipe { position }
             }
             _ => {
-                parser.log_unexpected_token(&format!("pipe operator ({})", TokenType::Pipe));
+                parser.emit_unexpected_token(&format!("pipe operator ({})", TokenType::Pipe));
                 return Err(ErrorsEmitted);
             }
         };
@@ -31,7 +31,7 @@ impl OrPatt {
                 if let Some(patts) = subsequent_patterns_opt {
                     patts
                 } else {
-                    parser.log_missing("patt", "additional patterns");
+                    parser.emit_missing_node("patt", "additional patterns");
                     parser.next_token();
                     return Err(ErrorsEmitted);
                 }

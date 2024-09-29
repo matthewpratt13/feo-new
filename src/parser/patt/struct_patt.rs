@@ -16,7 +16,7 @@ impl ParsePattern for StructPatt {
             }
             Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
             _ => {
-                parser.log_unexpected_token(&format!("identifier or {}", TokenType::SelfType));
+                parser.emit_unexpected_token(&format!("identifier or {}", TokenType::SelfType));
                 Err(ErrorsEmitted)
             }
         }?;
@@ -63,7 +63,7 @@ impl ParsePattern for TupleStructPatt {
             }
             Some(Token::SelfType { .. }) => Ok(PathRoot::SelfType(SelfType)),
             _ => {
-                parser.log_unexpected_token(&format!("identifier or {}", TokenType::SelfType));
+                parser.emit_unexpected_token(&format!("identifier or {}", TokenType::SelfType));
                 Err(ErrorsEmitted)
             }
         }?;
@@ -104,7 +104,7 @@ fn parse_tuple_struct_patterns(parser: &mut Parser) -> Result<Option<Vec<Pattern
             parser.current_token(),
             Some(Token::RParen { .. } | Token::EOF)
         ) {
-            parser.log_unexpected_token(&format!("{} or {}", TokenType::Comma, TokenType::RParen));
+            parser.emit_unexpected_token(&format!("{} or {}", TokenType::Comma, TokenType::RParen));
             return Err(ErrorsEmitted);
         }
     }

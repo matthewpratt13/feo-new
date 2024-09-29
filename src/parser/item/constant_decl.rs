@@ -21,7 +21,7 @@ impl ParseDeclItem for ConstantDecl {
             parser.next_token();
             Ok(Keyword::Const)
         } else {
-            parser.log_unexpected_token(&TokenType::Const.to_string());
+            parser.emit_unexpected_token(&TokenType::Const.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -31,12 +31,12 @@ impl ParseDeclItem for ConstantDecl {
 
         let constant_type = match parser.current_token() {
             Some(Token::Semicolon { .. }) => {
-                parser.log_missing("type", "constant type");
+                parser.emit_missing_node("type", "constant type");
                 Err(ErrorsEmitted)
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_missing("type", "constant type");
+                parser.emit_unexpected_eoi();
+                parser.emit_missing_node("type", "constant type");
                 Err(ErrorsEmitted)
             }
             _ => Type::parse(parser),
@@ -48,13 +48,13 @@ impl ParseDeclItem for ConstantDecl {
             if parser.current_token().is_some() {
                 let expression = parser.parse_expression(Precedence::Lowest)?;
                 let value_expr = ValueExpr::try_from(expression).map_err(|e| {
-                    parser.log_error(e);
+                    parser.emit_error(e);
                     ErrorsEmitted
                 })?;
 
                 Ok(Some(value_expr))
             } else {
-                parser.log_missing("expr", "constant value");
+                parser.emit_missing_node("expr", "constant value");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }

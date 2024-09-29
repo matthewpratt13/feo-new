@@ -1,6 +1,7 @@
 use crate::{
     ast::{Expression, Identifier, PathExpr, PathRoot, SelfType},
     error::ErrorsEmitted,
+    log_trace,
     parser::{ParseSimpleExpr, Parser},
     span::Spanned,
     token::{Token, TokenType},
@@ -10,7 +11,7 @@ use core::fmt;
 
 impl ParseSimpleExpr for PathExpr {
     fn parse(parser: &mut Parser) -> Result<PathExpr, ErrorsEmitted> {
-        parser.logger.trace("entering `PathExpr::parse()`");
+        log_trace!(parser.logger, "entering `PathExpr::parse()`");
         parser.log_current_token(false);
 
         let mut tree: Vec<Identifier> = Vec::new();
@@ -26,7 +27,7 @@ impl ParseSimpleExpr for PathExpr {
             Some(Token::Lib { .. }) => Ok(PathRoot::Lib),
             Some(Token::Super { .. }) => Ok(PathRoot::Super),
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "path root (identifier, {}, {}, {} or {})",
                     TokenType::Lib,
                     TokenType::Super,
@@ -49,11 +50,11 @@ impl ParseSimpleExpr for PathExpr {
                 }
                 Some(Token::LBrace { .. }) => break,
                 Some(Token::EOF) | None => {
-                    parser.log_unexpected_eoi();
+                    parser.emit_unexpected_eoi();
                     return Err(ErrorsEmitted);
                 }
                 _ => {
-                    parser.log_unexpected_token("identifier");
+                    parser.emit_unexpected_token("identifier");
                     return Err(ErrorsEmitted);
                 }
             }
@@ -63,7 +64,7 @@ impl ParseSimpleExpr for PathExpr {
 
         let span = parser.get_span(&first_token.unwrap().span(), &last_token.unwrap().span());
 
-        parser.logger.trace("exiting `PathExpr::parse()`");
+        log_trace!(parser.logger, "exiting `PathExpr::parse()`");
         parser.log_current_token(false);
 
         Ok(PathExpr {

@@ -13,7 +13,7 @@ impl ParseOperatorExpr for TypeCastExpr {
         let left_expr_span = &left_expr.span();
 
         let value_expr = left_expr.try_into().map_err(|e| {
-            parser.log_error(e);
+            parser.emit_error(e);
             ErrorsEmitted
         })?;
 
@@ -21,14 +21,14 @@ impl ParseOperatorExpr for TypeCastExpr {
             parser.next_token();
             Ok(TypeCastOp)
         } else {
-            parser.log_unexpected_token(&format!("type cast operator ({})", TokenType::As));
+            parser.emit_unexpected_token(&format!("type cast operator ({})", TokenType::As));
             Err(ErrorsEmitted)
         }?;
 
         let new_type = match parser.current_token() {
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_missing("type", "cast type");
+                parser.emit_unexpected_eoi();
+                parser.emit_missing_node("type", "cast type");
                 Err(ErrorsEmitted)
             }
             Some(
@@ -54,7 +54,7 @@ impl ParseOperatorExpr for TypeCastExpr {
                 | Token::CharType { .. },
             ) => Ok(Type::parse(parser)?),
             _ => {
-                parser.log_unexpected_token("numeric, text or hash cast type");
+                parser.emit_unexpected_token("numeric, text or hash cast type");
                 Err(ErrorsEmitted)
             }
         }?;

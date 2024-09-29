@@ -1,6 +1,7 @@
 use crate::{
     ast::{BlockExpr, InnerAttr, Statement},
     error::ErrorsEmitted,
+    log_debug, log_error, log_trace,
     parser::{collection, ParseConstructExpr, Parser},
     token::Token,
 };
@@ -9,7 +10,7 @@ use core::fmt;
 
 impl ParseConstructExpr for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
-        parser.logger.debug("entering `BlockExpr::parse()`");
+        log_trace!(parser.logger, "entering `BlockExpr::parse()`");
         parser.log_current_token(false);
 
         let first_token = parser.current_token().cloned();
@@ -22,7 +23,7 @@ impl ParseConstructExpr for BlockExpr {
 
         let span = parser.get_braced_item_span(first_token.as_ref())?;
 
-        parser.logger.debug("exiting `BlockExpr::parse()`");
+        log_trace!(parser.logger, "exiting `BlockExpr::parse()`");
         parser.log_current_token(false);
 
         Ok(BlockExpr {
@@ -45,7 +46,7 @@ impl fmt::Debug for BlockExpr {
 fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, ErrorsEmitted> {
     let mut statements: Vec<Statement> = Vec::new();
 
-    parser.logger.trace("entering `parse_statements()`");
+    log_trace!(parser.logger, "entering `parse_statements()`");
     parser.log_current_token(false);
 
     while !matches!(
@@ -54,7 +55,7 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
     ) {
         let statement = parser.parse_statement().map_err(|errors| {
             for err in errors {
-                parser.logger.error(&err.to_string());
+                log_error!(parser.logger, "{err}");
             }
 
             ErrorsEmitted
@@ -63,11 +64,12 @@ fn parse_statements(parser: &mut Parser) -> Result<Option<Vec<Statement>>, Error
         statements.push(statement);
     }
 
-    parser.logger.trace("exiting `parse_statements()`");
-    parser.logger.debug(&format!(
+    log_trace!(parser.logger, "exiting `parse_statements()`");
+    log_debug!(
+        parser.logger,
         "statements.is_empty(): {}",
         &statements.is_empty()
-    ));
+    );
     parser.log_current_token(false);
 
     match statements.is_empty() {

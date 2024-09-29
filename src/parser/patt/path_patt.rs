@@ -1,6 +1,7 @@
 use crate::{
     ast::{Identifier, PathPatt, PathRoot, SelfType},
     error::ErrorsEmitted,
+    log_trace,
     parser::{ParsePattern, Parser},
     token::{Token, TokenType},
 };
@@ -9,7 +10,7 @@ use core::fmt;
 
 impl ParsePattern for PathPatt {
     fn parse_patt(parser: &mut Parser) -> Result<PathPatt, ErrorsEmitted> {
-        parser.logger.trace("entering `PathPatt::parse()`");
+        log_trace!(parser.logger, "entering `PathPatt::parse()`");
         parser.log_current_token(false);
 
         let mut tree: Vec<Identifier> = Vec::new();
@@ -23,7 +24,7 @@ impl ParsePattern for PathPatt {
             Some(Token::Lib { .. }) => Ok(PathRoot::Lib),
             Some(Token::Super { .. }) => Ok(PathRoot::Super),
             _ => {
-                parser.log_unexpected_token(&format!(
+                parser.emit_unexpected_token(&format!(
                     "path root (identifier, {}, {}, {} or {})",
                     TokenType::Lib,
                     TokenType::Super,
@@ -47,7 +48,7 @@ impl ParsePattern for PathPatt {
             }
         }
 
-        parser.logger.trace("exiting `PathPatt::parse()`");
+        log_trace!(parser.logger, "exiting `PathPatt::parse()`");
         parser.log_current_token(false);
 
         Ok(PathPatt {

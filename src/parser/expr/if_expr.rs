@@ -15,7 +15,7 @@ impl ParseControlExpr for IfExpr {
             parser.next_token();
             Ok(Keyword::If)
         } else {
-            parser.log_unexpected_token(&TokenType::If.to_string());
+            parser.emit_unexpected_token(&TokenType::If.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -81,12 +81,16 @@ fn parse_else_blocks(
                 break;
             }
             Some(Token::EOF) | None => {
-                parser.log_unexpected_eoi();
-                parser.log_missing_token(&format!("{} or {}", TokenType::If, TokenType::LBrace));
+                parser.emit_unexpected_eoi();
+                parser.warn_missing_token(&format!("{} or {}", TokenType::If, TokenType::LBrace));
                 return Err(ErrorsEmitted);
             }
             _ => {
-                parser.log_unexpected_token(&format!("{} or {}", TokenType::If, TokenType::LBrace));
+                parser.emit_unexpected_token(&format!(
+                    "{} or {}",
+                    TokenType::If,
+                    TokenType::LBrace
+                ));
                 return Err(ErrorsEmitted);
             }
         }

@@ -1,4 +1,4 @@
-use crate::{lexer::Lexer, logger::LogLevel, parser::Parser};
+use crate::{lexer::Lexer, log_debug, logger::LogLevel, parser::Parser};
 
 /// Utility function that generates a `Parser` instance given some input string (used in testing).
 #[allow(dead_code)]
@@ -14,7 +14,7 @@ pub fn get_parser(input: &str, log_level: LogLevel, print_tokens: bool) -> Parse
     let mut parser = Parser::new(stream, log_level);
 
     // log test parser status
-    parser.logger.debug("instantiated parser");
+    log_debug!(parser.logger, "instantiated parser");
 
     parser
 }

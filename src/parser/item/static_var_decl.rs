@@ -21,7 +21,7 @@ impl ParseDeclItem for StaticVarDecl {
             parser.next_token();
             Ok(Keyword::Static)
         } else {
-            parser.log_unexpected_token(&TokenType::Static.to_string());
+            parser.emit_unexpected_token(&TokenType::Static.to_string());
             Err(ErrorsEmitted)
         }?;
 
@@ -44,13 +44,13 @@ impl ParseDeclItem for StaticVarDecl {
             if parser.current_token().is_some() {
                 let expression = parser.parse_expression(Precedence::Lowest)?;
                 let assignee_expr = AssigneeExpr::try_from(expression).map_err(|e| {
-                    parser.log_error(e);
+                    parser.emit_error(e);
                     ErrorsEmitted
                 })?;
 
                 Ok(Some(Box::new(assignee_expr)))
             } else {
-                parser.log_missing("expr", "assignee");
+                parser.emit_missing_node("expr", "assignee");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }

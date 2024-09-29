@@ -1,13 +1,14 @@
 use crate::{
     ast::{GroupedPatt, Pattern, TuplePatt, TuplePattElements},
     error::ErrorsEmitted,
+    log_trace,
     parser::{ParsePattern, Parser},
     token::Token,
 };
 
 impl ParsePattern for GroupedPatt {
     fn parse_patt(parser: &mut Parser) -> Result<GroupedPatt, ErrorsEmitted> {
-        parser.logger.debug("entering `GroupedPatt::parse()`");
+        log_trace!(parser.logger, "entering `GroupedPatt::parse()`");
         parser.log_current_token(false);
 
         parser.expect_open_paren()?;
@@ -29,7 +30,7 @@ impl ParsePattern for GroupedPatt {
 
         let _ = parser.get_parenthesized_item_span(None)?;
 
-        parser.logger.debug("exiting `GroupedPatt:parse()`");
+        log_trace!(parser.logger, "exiting `GroupedPatt:parse()`");
         parser.log_current_token(false);
 
         Ok(GroupedPatt { inner_pattern })
