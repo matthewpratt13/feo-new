@@ -1192,7 +1192,7 @@ impl SemanticAnalyser {
     ) -> Result<(), SemanticErrorKind> {
         log_trace!(
             self.logger,
-            "checking compatibility between types `{expected_type}` and `{matched_type} …"
+            "checking compatibility between types `{expected_type}` and `{matched_type}` …"
         );
 
         match (expected_type.clone(), matched_type.clone()) {
@@ -1209,7 +1209,6 @@ impl SemanticAnalyser {
 
             (Type::UserDefined(_), Type::SelfType(_)) => {
                 log_trace!(self.logger, "attempting to unify `Self` type …");
-
                 unify_self_type(matched_type, expected_type.clone());
                 Ok(())
             }
@@ -1222,7 +1221,6 @@ impl SemanticAnalyser {
             // if one is a concrete or generic type and the other is inferred, resolve the inference
             (concrete_or_generic, Type::InferredType(_)) => {
                 log_trace!(self.logger, "attempting to unify inferred type …");
-
                 unify_inferred_type(matched_type, concrete_or_generic);
                 Ok(())
             }
