@@ -1,6 +1,6 @@
 use super::{
-    AssigneeExpr, Expression, Identifier, IdentifierPatt, InferredType, Item, Keyword, NoneExpr,
-    Statement, Type, UnitType, ValueExpr,
+    AssigneeExpr, Expression, IdentifierPatt, Item, Keyword, NoneExpr, Statement, Type, UnitType,
+    ValueExpr,
 };
 
 use crate::span::{Span, Spanned};
@@ -39,9 +39,7 @@ impl fmt::Display for Statement {
                 l.assignee.name,
                 l.type_ann_opt
                     .clone()
-                    .unwrap_or(Type::InferredType(InferredType {
-                        name: Identifier::from("")
-                    }))
+                    .unwrap_or(Type::inferred_type("_"))
                     .clone(),
                 l.value_opt.unwrap_or(Expression::NoneExpr(NoneExpr {
                     kw_none: Keyword::None,

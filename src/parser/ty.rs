@@ -233,6 +233,12 @@ impl Type {
             }
         }
     }
+
+    pub(crate) fn inferred_type(name_str: &str) -> Type {
+        Type::InferredType(InferredType {
+            name: Identifier::from(name_str),
+        })
+    }
 }
 
 impl fmt::Display for Type {

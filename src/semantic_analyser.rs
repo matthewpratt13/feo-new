@@ -16,10 +16,10 @@ use crate::{
     ast::{
         AliasDecl, ConstantDecl, EnumDef, EnumVariantStruct, EnumVariantTupleStruct,
         EnumVariantType, Expression, FunctionItem, FunctionOrMethodParam, FunctionParam,
-        Identifier, ImportDecl, InferredType, InherentImplDef, InherentImplItem, Item, Keyword,
-        ModuleItem, SelfType, Statement, StaticVarDecl, StructDef, StructDefField, TraitDef,
-        TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type,
-        TypePath, UnitType, Visibility,
+        Identifier, ImportDecl, InherentImplDef, InherentImplItem, Item, Keyword, ModuleItem,
+        SelfType, Statement, StaticVarDecl, StructDef, StructDefField, TraitDef, TraitDefItem,
+        TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type, TypePath, UnitType,
+        Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     logger::{LogLevel, Logger},
@@ -362,11 +362,7 @@ impl SemanticAnalyser {
                     self.unify_types(
                         &mut symbol_table,
                         &cd.constant_type,
-                        &mut value_type
-                            .clone()
-                            .unwrap_or(Type::InferredType(InferredType {
-                                name: Identifier::from("_"),
-                            })),
+                        &mut value_type.clone().unwrap_or(Type::inferred_type("_")),
                     )?;
 
                     if value_type.clone().is_some_and(|t| t != *cd.constant_type) {
@@ -384,9 +380,7 @@ impl SemanticAnalyser {
                             path: constant_path,
                             visibility: cd.visibility.clone(),
                             constant_name: cd.constant_name.clone(),
-                            constant_type: value_type.unwrap_or(Type::InferredType(InferredType {
-                                name: Identifier::from("_"),
-                            })),
+                            constant_type: value_type.unwrap_or(Type::inferred_type("_")),
                         },
                     )?;
                 }
@@ -401,9 +395,7 @@ impl SemanticAnalyser {
                             let assignee = wrap_into_expression(*a_expr.clone());
                             analyse_expr(self, &assignee, &root)?
                         }
-                        _ => Type::InferredType(InferredType {
-                            name: Identifier::from("_"),
-                        }),
+                        _ => Type::inferred_type("_"),
                     };
 
                     let mut symbol_table = if let Some(scope) = self.scope_stack.last() {
@@ -2151,16 +2143,8 @@ fn resolve_type_path(ty: &Type) -> Option<TypePath> {
 }
 
 fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {
-    if *ty
-        == Type::InferredType(InferredType {
-            name: Identifier::from("_"),
-        })
-    {
-        if concrete_type
-            != Type::InferredType(InferredType {
-                name: Identifier::from("_"),
-            })
-        {
+    if *ty == Type::inferred_type("_") {
+        if concrete_type != Type::inferred_type("_") {
             *ty = concrete_type;
         }
     }
@@ -2169,10 +2153,7 @@ fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {
 /// Attempt to unify the types of two `Result` types, specifically between an inferred type
 /// and a context type. This function is used to ensure that the `Ok` and `Err` variants of
 /// an inferred `Result` type match the expected types defined in the context.
-fn unify_result_types(
-    ty: &mut Type,
-    context_type: &Type,
-) -> Result<(), SemanticErrorKind> {
+fn unify_result_types(ty: &mut Type, context_type: &Type) -> Result<(), SemanticErrorKind> {
     let inferred_type_clone = ty.clone();
 
     match (ty, context_type) {
@@ -2186,18 +2167,9 @@ fn unify_result_types(
                 err_type: ctx_err,
             },
         ) => {
-            if **inf_ok
-                == Type::InferredType(InferredType {
-                    name: Identifier::from("_"),
-                })
-            {
+            if **inf_ok == Type::inferred_type("_") {
                 *inf_ok = ctx_ok.clone();
-            } else if **ctx_ok
-                != Type::InferredType(InferredType {
-                    name: Identifier::from("_"),
-                })
-                && **inf_ok != **ctx_ok
-            {
+            } else if **ctx_ok != Type::inferred_type("_") && **inf_ok != **ctx_ok {
                 return Err(SemanticErrorKind::TypeMismatchResultExpr {
                     variant: Keyword::Ok,
                     expected: *ctx_ok.clone(),
@@ -2205,18 +2177,9 @@ fn unify_result_types(
                 });
             }
 
-            if **inf_err
-                == Type::InferredType(InferredType {
-                    name: Identifier::from("_"),
-                })
-            {
+            if **inf_err == Type::inferred_type("_") {
                 *inf_err = ctx_err.clone();
-            } else if **ctx_err
-                != Type::InferredType(InferredType {
-                    name: Identifier::from("_"),
-                })
-                && **inf_err != **ctx_err
-            {
+            } else if **ctx_err != Type::inferred_type("_") && **inf_err != **ctx_err {
                 return Err(SemanticErrorKind::TypeMismatchResultExpr {
                     variant: Keyword::Err,
                     expected: *ctx_err.clone(),
@@ -2234,7 +2197,7 @@ fn unify_result_types(
 
 fn unify_self_type(ty: &mut Type, object_type: Type) {
     if *ty == Type::SelfType(SelfType) {
-        if object_type != Type::SelfType(SelfType) {
+        if object_type != Type::SelfType(SelfType) && object_type != Type::inferred_type("_") {
             *ty = object_type;
         }
     }

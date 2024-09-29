@@ -2,8 +2,8 @@ use super::{symbol_table::Symbol, SemanticAnalyser};
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Identifier, InferredType, Int, Keyword,
-        LiteralPatt, Pattern, Str, Type, TypePath, UInt, UnitType,
+        BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Identifier, Int, Keyword, LiteralPatt,
+        Pattern, Str, Type, TypePath, UInt, UnitType,
     },
     error::SemanticErrorKind,
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
@@ -378,13 +378,9 @@ pub(crate) fn analyse_patt(
             }
         }
 
-        Pattern::WildcardPatt(_) => Ok(Type::InferredType(InferredType {
-            name: Identifier::from("_"),
-        })),
+        Pattern::WildcardPatt(_) => Ok(Type::inferred_type("_")),
 
-        Pattern::RestPatt(_) => Ok(Type::InferredType(InferredType {
-            name: Identifier::from(".."),
-        })),
+        Pattern::RestPatt(_) => Ok(Type::inferred_type("..")),
 
         Pattern::OrPatt(o) => {
             let first_patt_type = analyse_patt(analyser, &o.first_pattern.clone())?;
@@ -427,14 +423,10 @@ pub(crate) fn analyse_patt(
             match r.kw_ok_or_err {
                 Keyword::Ok => Ok(Type::Result {
                     ok_type: Box::new(ty),
-                    err_type: Box::new(Type::InferredType(InferredType {
-                        name: Identifier::from("_"),
-                    })),
+                    err_type: Box::new(Type::inferred_type("_")),
                 }),
                 Keyword::Err => Ok(Type::Result {
-                    ok_type: Box::new(Type::InferredType(InferredType {
-                        name: Identifier::from("_"),
-                    })),
+                    ok_type: Box::new(Type::inferred_type("_")),
                     err_type: Box::new(ty),
                 }),
                 keyword => Err(SemanticErrorKind::UnexpectedKeyword {

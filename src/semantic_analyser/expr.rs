@@ -3,8 +3,8 @@ use super::{patt::analyse_patt, symbol_table::ScopeKind, SemanticAnalyser};
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionOrMethodParam,
-        FunctionParam, FunctionPtr, Hash, Identifier, InferredType, Int, Keyword, Literal,
-        PathExpr, PathRoot, Pattern, Statement, Str, Type, TypePath, UInt, UnaryOp, UnitType,
+        FunctionParam, FunctionPtr, Hash, Identifier, Int, Keyword, Literal, PathExpr, PathRoot,
+        Pattern, Statement, Str, Type, TypePath, UInt, UnaryOp, UnitType,
     },
     error::SemanticErrorKind,
     semantic_analyser::symbol_table::Symbol,
@@ -254,9 +254,7 @@ pub(crate) fn analyse_expr(
                             found: format!("`{sym}`"),
                         }),
                     },
-                    None => Err(SemanticErrorKind::UndefinedType {
-                        name: tp.type_name,
-                    }),
+                    None => Err(SemanticErrorKind::UndefinedType { name: tp.type_name }),
                 },
                 _ => Err(SemanticErrorKind::UnexpectedType {
                     expected: "tuple or tuple struct".to_string(),
@@ -596,9 +594,7 @@ pub(crate) fn analyse_expr(
 
         Expression::Continue(_) => Ok(Type::UnitType(UnitType)),
 
-        Expression::Underscore(_) => Ok(Type::InferredType(InferredType {
-            name: Identifier::from("_"),
-        })),
+        Expression::Underscore(_) => Ok(Type::inferred_type("_")),
 
         Expression::Closure(c) => {
             let params_opt = match &c.closure_params {
@@ -606,13 +602,10 @@ pub(crate) fn analyse_expr(
                     let mut function_params: Vec<FunctionOrMethodParam> = Vec::new();
 
                     for param in params {
-                        let param_type =
-                            param
-                                .type_ann_opt
-                                .clone()
-                                .unwrap_or(Box::new(Type::InferredType(InferredType {
-                                    name: Identifier::from("_"),
-                                })));
+                        let param_type = param
+                            .type_ann_opt
+                            .clone()
+                            .unwrap_or(Box::new(Type::inferred_type("_")));
 
                         let function_param = FunctionParam {
                             param_name: param.param_name.clone(),
@@ -638,14 +631,7 @@ pub(crate) fn analyse_expr(
 
             if expression_type != return_type {
                 if let Type::Result { ok_type, err_type } = expression_type.clone() {
-                    if *ok_type
-                        == Type::InferredType(InferredType {
-                            name: Identifier::from("_"),
-                        })
-                        || *err_type
-                            == Type::InferredType(InferredType {
-                                name: Identifier::from("_"),
-                            })
+                    if *ok_type == Type::inferred_type("_") || *err_type == Type::inferred_type("_")
                     {
                         ()
                     } else {
@@ -1107,11 +1093,7 @@ pub(crate) fn analyse_expr(
                         HashMap::new()
                     };
 
-                    if patt_type
-                        == Type::InferredType(InferredType {
-                            name: Identifier::from("_"),
-                        })
-                    {
+                    if patt_type == Type::inferred_type("_") {
                         analyser.unify_types(&mut symbol_table, &arm_patt_type, &mut patt_type)?;
                     } else {
                         analyser.unify_types(&mut symbol_table, &patt_type, &mut arm_patt_type)?;
@@ -1238,14 +1220,10 @@ pub(crate) fn analyse_expr(
             match r.kw_ok_or_err {
                 Keyword::Ok => Ok(Type::Result {
                     ok_type: Box::new(ty),
-                    err_type: Box::new(Type::InferredType(InferredType {
-                        name: Identifier::from("_"),
-                    })),
+                    err_type: Box::new(Type::inferred_type("_")),
                 }),
                 Keyword::Err => Ok(Type::Result {
-                    ok_type: Box::new(Type::InferredType(InferredType {
-                        name: Identifier::from("_"),
-                    })),
+                    ok_type: Box::new(Type::inferred_type("_")),
                     err_type: Box::new(ty),
                 }),
                 keyword => Err(SemanticErrorKind::UnexpectedKeyword {
