@@ -33,13 +33,13 @@ use std::collections::HashMap;
 use expr::{analyse_expr, wrap_into_expression};
 use symbol_table::{Module, Scope, ScopeKind, Symbol, SymbolTable};
 
-/// Mapping from a `TypePath`` (representing a concrete type) to a vector of `TraitImplDef`
+/// Mapping from a `TypePath` (representing a concrete type) to a `Vec<TraitImplDef>`
 /// (representing implemented traits)
 type TypeTable = HashMap<TypePath, Vec<TraitImplDef>>;
 
 /// Struct responsible for performing semantic analysis on the abstract syntax tree (AST)
-/// of the program. It manages the scopes, symbol tables, and errors encountered during
-/// the analysis phase.
+/// of the program. It manages the scopes, symbol tables and errors encountered during
+/// the analysis phase. It also keeps track of implemented trait for a given type.
 #[allow(dead_code)]
 struct SemanticAnalyser {
     scope_stack: Vec<Scope>,
