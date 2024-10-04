@@ -77,10 +77,6 @@ impl SemanticAnalyser {
                 }
 
                 lib_registry.insert(name, modules);
-
-                // TODO: if the symbol is a trait implementation, also update the `TypeTable` to add
-                // TODO: trait implementations for a given implementing type (replace the current
-                // TODO: empty `HashMap`)
             }
         }
 
