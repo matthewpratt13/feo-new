@@ -126,7 +126,7 @@ impl SemanticAnalyser {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             log_debug!(
                 self.logger,
-                "inserting symbol `{symbol}` into scope `{:?}` at path `{path}` …",
+                "inserting symbol `{symbol}` into scope `{:?}` at path `{path:?}` …",
                 curr_scope.scope_kind
             );
 
@@ -153,10 +153,9 @@ impl SemanticAnalyser {
             if let Some(symbol) = scope.symbols.get(path) {
                 log_debug!(
                     self.logger,
-                    "found symbol `{}` in scope `{:?}` at path `{}`",
+                    "found symbol `{}` in scope `{:?}` at path `{path:?}`",
                     symbol,
-                    scope.scope_kind,
-                    path
+                    scope.scope_kind
                 );
 
                 return Some(symbol);
@@ -165,7 +164,7 @@ impl SemanticAnalyser {
                     if path.type_name == sym_path.type_name {
                         log_debug!(
                             self.logger,
-                            "found symbol `{symbol}` in scope `{:?}` at path `{path}`",
+                            "found symbol `{symbol}` in scope `{:?}` at path `{path:?}`",
                             scope.scope_kind
                         );
 
@@ -175,7 +174,7 @@ impl SemanticAnalyser {
             }
         }
 
-        log_warn!(self.logger, "path `{path}` not found in current scope");
+        log_warn!(self.logger, "path `{path:?}` not found in current scope");
 
         None
     }
@@ -1187,7 +1186,7 @@ impl SemanticAnalyser {
     ) -> Result<(), SemanticErrorKind> {
         log_trace!(
             self.logger,
-            "checking compatibility between types `{expected_type}` and `{matched_type}` …"
+            "checking compatibility between types `{matched_type}` and expected type `{expected_type}` …"
         );
 
         match (expected_type.clone(), matched_type.clone()) {
@@ -1203,7 +1202,10 @@ impl SemanticAnalyser {
             }),
 
             (Type::UserDefined(_), Type::SelfType(_)) => {
-                log_trace!(self.logger, "attempting to unify `Self` type …");
+                log_trace!(
+                    self.logger,
+                    "attempting to unify `Self` type with expected type `{expected_type}` …"
+                );
                 unify_self_type(matched_type, expected_type.clone());
                 Ok(())
             }
@@ -1215,7 +1217,7 @@ impl SemanticAnalyser {
 
             // if one is a concrete or generic type and the other is inferred, resolve the inference
             (concrete_or_generic, Type::InferredType(_)) => {
-                log_trace!(self.logger, "attempting to unify inferred type …");
+                log_trace!(self.logger, "attempting to unify inferred type with expected type `{concrete_or_generic}` …");
                 unify_inferred_type(matched_type, concrete_or_generic);
                 Ok(())
             }
@@ -1286,6 +1288,33 @@ impl SemanticAnalyser {
                 }
 
                 Ok(())
+            }
+
+            (
+                Type::I32(_)
+                | Type::I64(_)
+                | Type::U8(_)
+                | Type::U16(_)
+                | Type::U32(_)
+                | Type::U64(_)
+                | Type::U256(_)
+                | Type::U512(_)
+                | Type::F32(_)
+                | Type::F64(_),
+                Type::I32(_)
+                | Type::I64(_)
+                | Type::U8(_)
+                | Type::U16(_)
+                | Type::U32(_)
+                | Type::U64(_)
+                | Type::U256(_)
+                | Type::U512(_)
+                | Type::F32(_)
+                | Type::F64(_),
+            ) => {
+                log_trace!(self.logger, "attempting to unify numeric type `{matched_type}` with expected type `{expected_type}` …");
+
+                unify_numeric_types(expected_type, matched_type)
             }
 
             (
@@ -1848,7 +1877,7 @@ impl SemanticAnalyser {
                 self.substitute_in_type(err_type, symbol_table, generic_name, concrete_type);
             }
 
-            _ => ()
+            _ => (),
         }
     }
 
@@ -2202,6 +2231,117 @@ fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {
         if concrete_type != Type::inferred_type("_") {
             *ty = concrete_type;
         }
+    }
+}
+
+fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), SemanticErrorKind> {
+    match (lhs_type, rhs_type.clone()) {
+        (Type::I32(_), Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
+            *rhs_type = lhs_type.clone();
+            Ok(())
+        }
+
+        (Type::I32(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+            expected: "`i32` or unsigned integer".to_string(),
+            found: ty,
+        }),
+
+        (
+            Type::I64(_),
+            Type::I32(_) | Type::I64(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
+        ) => {
+            *rhs_type = lhs_type.clone();
+            Ok(())
+        }
+
+        (Type::I64(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+            expected: "integer or unsigned integer".to_string(),
+            found: ty,
+        }),
+
+        (Type::U8(_), Type::U8(_)) => {
+            *rhs_type = lhs_type.clone();
+            Ok(())
+        }
+
+        (Type::U8(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+            expected: "`u8`".to_string(),
+            found: ty,
+        }),
+
+        (Type::U16(_), Type::U8(_) | Type::U16(_)) => {
+            *rhs_type = lhs_type.clone();
+            Ok(())
+        }
+
+        (Type::U16(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+            expected: "`u16` or `u8`".to_string(),
+            found: ty,
+        }),
+
+        (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
+            *rhs_type = lhs_type.clone();
+            Ok(())
+        }
+
+        (Type::U32(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+            expected: "`u32` or smaller unsigned integer".to_string(),
+            found: ty,
+        }),
+
+        (Type::U64(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
+            *rhs_type = lhs_type.clone();
+            Ok(())
+        }
+
+        (Type::U64(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+            expected: "`u64` or smaller unsigned integer".to_string(),
+            found: ty,
+        }),
+
+        (Type::U256(_), Type::U256(_)) => {
+            *rhs_type = lhs_type.clone();
+            Ok(())
+        }
+        (Type::U256(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+            expected: "`u256`".to_string(),
+            found: ty,
+        }),
+
+        (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
+            *rhs_type = lhs_type.clone();
+            Ok(())
+        }
+
+        (Type::U512(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+            expected: "`u512` or `u256`".to_string(),
+            found: ty,
+        }),
+
+        (Type::F32(_), Type::F32(_)) => {
+            *rhs_type = lhs_type.clone();
+            Ok(())
+        }
+
+        (Type::F32(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+            expected: "`f32`".to_string(),
+            found: ty,
+        }),
+
+        (Type::F64(_), Type::F32(_) | Type::F64(_)) => {
+            *rhs_type = lhs_type.clone();
+            Ok(())
+        }
+
+        (Type::F64(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+            expected: "`f64` or `f32`".to_string(),
+            found: ty,
+        }),
+
+        (_, ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+            expected: "numeric values with matching types".to_string(),
+            found: ty,
+        }),
     }
 }
 

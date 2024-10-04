@@ -406,17 +406,33 @@ pub(crate) fn analyse_expr(
         Expression::Binary(b) => {
             let lhs_type = analyse_expr(analyser, &wrap_into_expression(*b.lhs.clone()), root)?;
 
-            let rhs_type = analyse_expr(analyser, &wrap_into_expression(*b.rhs.clone()), root)?;
+            let mut rhs_type = analyse_expr(analyser, &wrap_into_expression(*b.rhs.clone()), root)?;
 
-            resolve_binary(&lhs_type, &rhs_type)
+            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
+                scope.symbols.to_owned()
+            } else {
+                HashMap::new()
+            };
+
+            analyser.check_types(&mut symbol_table, &lhs_type, &mut rhs_type)?;
+
+            Ok(rhs_type)
         }
 
         Expression::Comparison(c) => {
             let lhs_type = analyse_expr(analyser, &wrap_into_expression(c.lhs.clone()), root)?;
 
-            let rhs_type = analyse_expr(analyser, &wrap_into_expression(c.rhs.clone()), root)?;
+            let mut rhs_type = analyse_expr(analyser, &wrap_into_expression(c.rhs.clone()), root)?;
 
-            resolve_binary(&lhs_type, &rhs_type)
+            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
+                scope.symbols.to_owned()
+            } else {
+                HashMap::new()
+            };
+
+            analyser.check_types(&mut symbol_table, &lhs_type, &mut rhs_type)?;
+
+            Ok(rhs_type)
         }
 
         Expression::Grouped(g) => analyse_expr(analyser, &g.inner_expression, root),
@@ -511,9 +527,10 @@ pub(crate) fn analyse_expr(
 
         Expression::Assignment(a) => {
             let assignee = wrap_into_expression(a.lhs.clone());
-            let mut assignee_type = analyse_expr(analyser, &assignee, root)?;
+            let assignee_type = analyse_expr(analyser, &assignee, root)?;
 
-            let value_type = analyse_expr(analyser, &wrap_into_expression(a.rhs.clone()), root)?;
+            let mut value_type =
+                analyse_expr(analyser, &wrap_into_expression(a.rhs.clone()), root)?;
 
             let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
                 scope.symbols.to_owned()
@@ -521,24 +538,24 @@ pub(crate) fn analyse_expr(
                 HashMap::new()
             };
 
-            analyser.check_types(&mut symbol_table, &value_type, &mut assignee_type)?;
+            analyser.check_types(&mut symbol_table, &assignee_type, &mut value_type)?;
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
             let assignee_path = TypePath::from(assignee_as_path_expr);
 
             match analyser.lookup(&assignee_path).cloned() {
-                Some(Symbol::Variable { var_type, .. }) => match var_type == assignee_type {
-                    true => {
-                        analyse_expr(analyser, &wrap_into_expression(a.rhs.clone()), root)?;
-                        Ok(var_type)
+                Some(Symbol::Variable { var_type, .. }) => {
+                    if var_type == value_type {
+                        Ok(value_type)
+                    } else {
+                        Err(SemanticErrorKind::TypeMismatchVariable {
+                            var_id: assignee_path.type_name,
+                            expected: format!("`{assignee_type}`"),
+                            found: var_type,
+                        })
                     }
-                    false => Err(SemanticErrorKind::TypeMismatchVariable {
-                        var_id: assignee_path.type_name,
-                        expected: format!("`{assignee_type}`"),
-                        found: var_type,
-                    }),
-                },
+                }
                 Some(Symbol::Constant { constant_name, .. }) => {
                     Err(SemanticErrorKind::ConstantReassignment {
                         name: constant_name,
@@ -559,14 +576,33 @@ pub(crate) fn analyse_expr(
             let assignee = wrap_into_expression(ca.lhs.clone());
             let assignee_type = analyse_expr(analyser, &assignee, root)?;
 
-            let value_type = analyse_expr(analyser, &wrap_into_expression(ca.rhs.clone()), root)?;
+            let mut value_type =
+                analyse_expr(analyser, &wrap_into_expression(ca.rhs.clone()), root)?;
+
+            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
+                scope.symbols.to_owned()
+            } else {
+                HashMap::new()
+            };
+
+            analyser.check_types(&mut symbol_table, &assignee_type, &mut value_type)?;
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
             let assignee_path = TypePath::from(assignee_as_path_expr);
 
-            match analyser.lookup(&assignee_path) {
-                Some(Symbol::Variable { .. }) => resolve_binary(&assignee_type, &value_type),
+            match analyser.lookup(&assignee_path).cloned() {
+                Some(Symbol::Variable { var_type, .. }) => {
+                    if var_type == value_type {
+                        Ok(value_type)
+                    } else {
+                        Err(SemanticErrorKind::TypeMismatchVariable {
+                            var_id: assignee_path.type_name,
+                            expected: format!("`{assignee_type}`"),
+                            found: var_type,
+                        })
+                    }
+                }
 
                 Some(Symbol::Constant { constant_name, .. }) => {
                     Err(SemanticErrorKind::ConstantReassignment {
@@ -1232,95 +1268,95 @@ pub(crate) fn analyse_expr(
     }
 }
 
-fn resolve_binary(lhs_type: &Type, rhs_type: &Type) -> Result<Type, SemanticErrorKind> {
-    match (lhs_type, rhs_type) {
-        (Type::I32(_), Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
-            Ok(Type::I32(Int::I32(i32::default())))
-        }
+// fn resolve_binary(lhs_type: &Type, rhs_type: &Type) -> Result<Type, SemanticErrorKind> {
+//     match (lhs_type, rhs_type) {
+//         (Type::I32(_), Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
+//             Ok(Type::I32(Int::I32(i32::default())))
+//         }
 
-        (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-            expected: "`i32` or unsigned integer".to_string(),
-            found: t.clone(),
-        }),
+//         (Type::I32(_), t) => Err(SemanticErrorKind::TypeMismatchNumeric {
+//             expected: "`i32` or unsigned integer".to_string(),
+//             found: t.clone(),
+//         }),
 
-        (
-            Type::I64(_),
-            Type::I32(_) | Type::I64(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
-        ) => Ok(Type::I64(Int::I64(i64::default()))),
+//         (
+//             Type::I64(_),
+//             Type::I32(_) | Type::I64(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
+//         ) => Ok(Type::I64(Int::I64(i64::default()))),
 
-        (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-            expected: "integer or unsigned integer".to_string(),
-            found: t.clone(),
-        }),
+//         (Type::I64(_), t) => Err(SemanticErrorKind::TypeMismatchNumeric {
+//             expected: "integer or unsigned integer".to_string(),
+//             found: t.clone(),
+//         }),
 
-        (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
+//         (Type::U8(_), Type::U8(_)) => Ok(Type::U8(UInt::U8(u8::default()))),
 
-        (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-            expected: "`u8`".to_string(),
-            found: t.clone(),
-        }),
+//         (Type::U8(_), t) => Err(SemanticErrorKind::TypeMismatchNumeric {
+//             expected: "`u8`".to_string(),
+//             found: t.clone(),
+//         }),
 
-        (Type::U16(_), Type::U8(_) | Type::U16(_)) => Ok(Type::U16(UInt::U16(u16::default()))),
+//         (Type::U16(_), Type::U8(_) | Type::U16(_)) => Ok(Type::U16(UInt::U16(u16::default()))),
 
-        (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-            expected: "`u16` or `u8`".to_string(),
-            found: t.clone(),
-        }),
+//         (Type::U16(_), t) => Err(SemanticErrorKind::TypeMismatchNumeric {
+//             expected: "`u16` or `u8`".to_string(),
+//             found: t.clone(),
+//         }),
 
-        (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
-            Ok(Type::U32(UInt::U32(u32::default())))
-        }
+//         (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
+//             Ok(Type::U32(UInt::U32(u32::default())))
+//         }
 
-        (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-            expected: "`u32` or smaller unsigned integer".to_string(),
-            found: t.clone(),
-        }),
+//         (Type::U32(_), t) => Err(SemanticErrorKind::TypeMismatchNumeric {
+//             expected: "`u32` or smaller unsigned integer".to_string(),
+//             found: t.clone(),
+//         }),
 
-        (Type::U64(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
-            Ok(Type::U64(UInt::U64(u64::default())))
-        }
+//         (Type::U64(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
+//             Ok(Type::U64(UInt::U64(u64::default())))
+//         }
 
-        (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-            expected: "`u64` or smaller unsigned integer".to_string(),
-            found: t.clone(),
-        }),
+//         (Type::U64(_), t) => Err(SemanticErrorKind::TypeMismatchNumeric {
+//             expected: "`u64` or smaller unsigned integer".to_string(),
+//             found: t.clone(),
+//         }),
 
-        (Type::U256(_), Type::U256(_)) => Ok(Type::U256(BigUInt::U256(U256::default()))),
+//         (Type::U256(_), Type::U256(_)) => Ok(Type::U256(BigUInt::U256(U256::default()))),
 
-        (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-            expected: "`u256`".to_string(),
-            found: t.clone(),
-        }),
+//         (Type::U256(_), t) => Err(SemanticErrorKind::TypeMismatchNumeric {
+//             expected: "`u256`".to_string(),
+//             found: t.clone(),
+//         }),
 
-        (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
-            Ok(Type::U512(BigUInt::U512(U512::default())))
-        }
+//         (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
+//             Ok(Type::U512(BigUInt::U512(U512::default())))
+//         }
 
-        (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-            expected: "`u512` or `u256`".to_string(),
-            found: t.clone(),
-        }),
+//         (Type::U512(_), t) => Err(SemanticErrorKind::TypeMismatchNumeric {
+//             expected: "`u512` or `u256`".to_string(),
+//             found: t.clone(),
+//         }),
 
-        (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
+//         (Type::F32(_), Type::F32(_)) => Ok(Type::F32(Float::F32(F32::default()))),
 
-        (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-            expected: "`f32`".to_string(),
-            found: t.clone(),
-        }),
+//         (Type::F32(_), t) => Err(SemanticErrorKind::TypeMismatchNumeric {
+//             expected: "`f32`".to_string(),
+//             found: t.clone(),
+//         }),
 
-        (Type::F64(_), Type::F32(_) | Type::F64(_)) => Ok(Type::F64(Float::F64(F64::default()))),
+//         (Type::F64(_), Type::F32(_) | Type::F64(_)) => Ok(Type::F64(Float::F64(F64::default()))),
 
-        (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-            expected: "`f64` or `f32`".to_string(),
-            found: t.clone(),
-        }),
+//         (Type::F64(_), t) => Err(SemanticErrorKind::TypeMismatchNumeric {
+//             expected: "`f64` or `f32`".to_string(),
+//             found: t.clone(),
+//         }),
 
-        (_, t) => Err(SemanticErrorKind::TypeMismatchBinaryExpr {
-            expected: "numeric values with matching types".to_string(),
-            found: t.clone(),
-        }),
-    }
-}
+//         (_, t) => Err(SemanticErrorKind::TypeMismatchNumeric {
+//             expected: "numeric values with matching types".to_string(),
+//             found: t.clone(),
+//         }),
+//     }
+// }
 
 pub(crate) fn wrap_into_expression<T>(value: T) -> Expression
 where

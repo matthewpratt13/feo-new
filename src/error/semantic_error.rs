@@ -94,7 +94,7 @@ pub enum SemanticErrorKind {
         found: Type,
     },
 
-    TypeMismatchBinaryExpr {
+    TypeMismatchNumeric {
         expected: String,
         found: Type,
     },
@@ -324,10 +324,7 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "array element types do not match. Expected {expected}, found `{found}`"
             ),
-            SemanticErrorKind::TypeMismatchBinaryExpr { expected, found } => write!(
-                f,
-                "invalid operation: type mismatch in binary expression. Expected {expected}, found `{found}`"
-            ),
+          
             SemanticErrorKind::TypeMismatchDeclaredType {actual_type, declared_type } => write!(
                 f,
                 "declared type `{declared_type}` does not match value's type: `{actual_type}`"
@@ -341,6 +338,10 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::TypeMismatchMatchExpr { loc, expected, found } => write!(
                 f,
                 "{loc} types do not match in match expression. Expected `{expected}`, found `{found}`"
+            ),
+            SemanticErrorKind::TypeMismatchNumeric { expected, found } => write!(
+                f,
+                "invalid operation: numeric types do not match. Expected {expected}, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchOrPatt { expected, found } => write!(
                 f,
