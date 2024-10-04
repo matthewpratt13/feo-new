@@ -140,7 +140,7 @@ pub(crate) fn analyse_expr(
                     if Type::UserDefined(path.clone()) == receiver_type {
                         let method_path = path.join(mc.method_name.to_type_path());
 
-                        analyser.analyse_call_or_method_call_expr(method_path, mc.args_opt.clone())
+                        analyse_call_or_method_call_expr(analyser, method_path, mc.args_opt.clone())
                     } else {
                         Err(SemanticErrorKind::TypeMismatchVariable {
                             var_id: receiver_path.type_name,
@@ -199,7 +199,8 @@ pub(crate) fn analyse_expr(
         Expression::Call(c) => {
             let callee = wrap_into_expression(c.callee.clone());
 
-            analyser.analyse_call_or_method_call_expr(
+            analyse_call_or_method_call_expr(
+                analyser,
                 TypePath::from(PathExpr::from(callee)),
                 c.args_opt.clone(),
             )
@@ -1265,6 +1266,121 @@ pub(crate) fn analyse_expr(
                 }),
             }
         }
+    }
+}
+
+/// Analyse a function or method call expression by resolving the provided path, validating
+/// arguments and determining the return type.
+fn analyse_call_or_method_call_expr(
+    analyser: &mut SemanticAnalyser,
+    path: TypePath,
+    args_opt: Option<Vec<Expression>>,
+) -> Result<Type, SemanticErrorKind> {
+    match analyser.lookup(&path).cloned() {
+        Some(Symbol::Function { function, .. }) => {
+            let func_params = function.params_opt.clone();
+            let func_def_return_type = function.return_type_opt.clone();
+
+            match (&args_opt, &func_params) {
+                (None, None) => match func_def_return_type {
+                    Some(ty) => Ok(*ty),
+                    _ => Ok(Type::UnitType(UnitType)),
+                },
+                (None, Some(params)) => {
+                    let mut self_counter: usize = 0;
+                    let mut func_param_counter: usize = 0;
+
+                    for param in params {
+                        if let Type::SelfType(_) = param.param_type() {
+                            self_counter += 1;
+                        } else {
+                            func_param_counter += 1;
+                        }
+                    }
+
+                    if self_counter > 1 {
+                        return Err(SemanticErrorKind::MethodParamCountError);
+                    }
+
+                    if self_counter != params.len() {
+                        return Err(SemanticErrorKind::FuncArgCountMismatch {
+                            function_path: path.to_identifier(),
+                            expected: self_counter,
+                            found: self_counter + func_param_counter,
+                        });
+                    }
+
+                    match func_def_return_type {
+                        Some(ty) => Ok(*ty),
+                        _ => Ok(Type::UnitType(UnitType)),
+                    }
+                }
+                (Some(args), None) => Err(SemanticErrorKind::FuncArgCountMismatch {
+                    function_path: path.to_identifier(),
+                    expected: 0,
+                    found: args.len(),
+                }),
+                (Some(args), Some(params)) => {
+                    let mut self_counter: usize = 0;
+
+                    for param in params {
+                        if let Type::SelfType(_) = param.param_type() {
+                            self_counter += 1;
+                        }
+                    }
+
+                    if self_counter > 1 {
+                        return Err(SemanticErrorKind::MethodParamCountError);
+                    }
+
+                    let num_func_params = params.len() - self_counter;
+
+                    if args.len() != num_func_params {
+                        return Err(SemanticErrorKind::FuncArgCountMismatch {
+                            function_path: path.to_identifier(),
+                            expected: params.len(),
+                            found: args.len(),
+                        });
+                    }
+
+                    for (arg, param) in args.iter().zip(params) {
+                        let mut arg_type = analyse_expr(analyser, &arg, &path)?;
+
+                        let param_type = param.param_type();
+
+                        let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
+                            scope.symbols.to_owned()
+                        } else {
+                            HashMap::new()
+                        };
+
+                        analyser.check_types(&mut symbol_table, &param_type, &mut arg_type)?;
+
+                        if arg_type != param_type {
+                            return Err(SemanticErrorKind::TypeMismatchArg {
+                                arg_id: function.function_name.clone(),
+                                expected: param_type,
+                                found: arg_type,
+                            });
+                        }
+                    }
+
+                    match func_def_return_type {
+                        Some(ty) => Ok(*ty),
+                        None => Ok(Type::UnitType(UnitType)),
+                    }
+                }
+            }
+        }
+
+        None => Err(SemanticErrorKind::UndefinedFunc {
+            name: path.type_name,
+        }),
+        Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
+            name: path.type_name,
+            expected: "function".to_string(),
+            found: format!("`{sym}`"),
+        }),
     }
 }
 
