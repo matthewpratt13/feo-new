@@ -16,10 +16,10 @@ use crate::{
     ast::{
         AliasDecl, ConstantDecl, EnumDef, EnumVariantKind, EnumVariantStruct,
         EnumVariantTupleStruct, Expression, FunctionItem, FunctionOrMethodParam, FunctionParam,
-        Identifier, ImportDecl, InherentImplDef, InherentImplItem, Item, Keyword, ModuleItem,
-        SelfType, Statement, StaticVarDecl, StructDef, StructDefField, TraitDef, TraitDefItem,
-        TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type, TypePath, UnitType,
-        Visibility,
+        GenericParam, Identifier, ImportDecl, InherentImplDef, InherentImplItem, Item, Keyword,
+        ModuleItem, SelfType, Statement, StaticVarDecl, StructDef, StructDefField, TraitDef,
+        TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type,
+        TypePath, UnitType, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     log_debug, log_error, log_info, log_trace, log_warn,
@@ -299,10 +299,13 @@ impl SemanticAnalyser {
                             var_type: value_type,
                         },
                     },
-                    Type::Generic { name, bound_opt } => Symbol::Variable {
+                    Type::Generic(GenericParam {
+                        name,
+                        type_bound_opt,
+                    }) => Symbol::Variable {
                         name: name.clone(),
                         var_type: Type::UserDefined(
-                            bound_opt
+                            type_bound_opt
                                 .clone()
                                 .unwrap_or(TypePath::from(Identifier::from("_"))),
                         ),
@@ -874,14 +877,17 @@ impl SemanticAnalyser {
                     generic_param.name.to_type_path(),
                     Symbol::Variable {
                         name: generic_param.name.clone(),
-                        var_type: Type::Generic {
-                            name: generic_param.name.clone(),
-                            bound_opt: generic_param.type_bound_opt.clone(),
-                        },
+                        var_type: generic_param.to_type(),
                     },
                 )?;
             }
         }
+
+        let mut symbol_table = if let Some(scope) = self.scope_stack.last() {
+            scope.symbols.to_owned()
+        } else {
+            HashMap::new()
+        };
 
         if let Some(params) = &f.params_opt {
             let param_types: Vec<Type> = params.iter().map(|p| p.param_type()).collect();
@@ -896,14 +902,16 @@ impl SemanticAnalyser {
                 let param_path = param.param_name().to_type_path();
 
                 match param_type {
-                    Type::Generic { name, .. } => match self.lookup(&name.to_type_path()) {
-                        Some(_) => (),
-                        None => {
-                            return Err(SemanticErrorKind::UndeclaredGenericParams {
-                                found: format!("`{name}`"),
-                            })
+                    Type::Generic(GenericParam { name, .. }) => {
+                        match self.lookup(&name.to_type_path()) {
+                            Some(_) => (),
+                            None => {
+                                return Err(SemanticErrorKind::UndeclaredGenericParams {
+                                    found: format!("`{name}`"),
+                                })
+                            }
                         }
-                    },
+                    }
 
                     Type::FunctionPtr(fp) => {
                         self.insert(
@@ -968,12 +976,6 @@ impl SemanticAnalyser {
 
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
-            let mut symbol_table = if let Some(scope) = self.scope_stack.last() {
-                scope.symbols.to_owned()
-            } else {
-                HashMap::new()
-            };
-
             self.check_types(&mut symbol_table, &return_type, &mut function_type)?;
         }
 
@@ -1219,14 +1221,14 @@ impl SemanticAnalyser {
             }
 
             (
-                Type::Generic {
+                Type::Generic(GenericParam {
                     name: name_a,
-                    bound_opt: bound_a,
-                },
-                Type::Generic {
+                    type_bound_opt: bound_a,
+                }),
+                Type::Generic(GenericParam {
                     name: name_b,
-                    bound_opt: bound_b,
-                },
+                    type_bound_opt: bound_b,
+                }),
             ) => {
                 if name_a == name_b {
                     match (bound_a, bound_b) {
@@ -1263,10 +1265,19 @@ impl SemanticAnalyser {
             }
 
             // TODO: custom error
-            (Type::Generic { name, bound_opt }, _) => {
+            (
+                Type::Generic(GenericParam {
+                    name,
+                    type_bound_opt,
+                }),
+                _,
+            ) => {
                 return Err(SemanticErrorKind::UnexpectedType {
                     expected: "non-generic type".to_string(),
-                    found: Type::Generic { name, bound_opt },
+                    found: Type::Generic(GenericParam {
+                        name,
+                        type_bound_opt,
+                    }),
                 });
             }
 
@@ -1607,9 +1618,12 @@ impl SemanticAnalyser {
         concrete_type: &Type,
     ) -> Result<(), SemanticErrorKind> {
         match generic_type {
-            Type::Generic { name, bound_opt } => {
+            Type::Generic(GenericParam {
+                name,
+                type_bound_opt,
+            }) => {
                 // check if the concrete type satisfies the bounds of the generic type
-                if let Some(bound_path) = bound_opt {
+                if let Some(bound_path) = type_bound_opt {
                     let bound_trait = self.lookup_trait(&bound_path)?;
 
                     // check if the concrete type implements the required trait
@@ -1742,7 +1756,7 @@ impl SemanticAnalyser {
         // perform substitution for types
         // if we encounter a generic type param, replace it with the concrete type
         match ty {
-            Type::Generic { name, .. } if name == generic_name => {
+            Type::Generic(GenericParam { name, .. }) if name == generic_name => {
                 *ty = concrete_type.clone();
             }
             Type::GroupedType(inner_type) => {

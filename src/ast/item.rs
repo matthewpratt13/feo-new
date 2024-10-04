@@ -57,6 +57,12 @@ pub(crate) struct GenericParam {
     pub(crate) type_bound_opt: Option<TypePath>,
 }
 
+impl GenericParam {
+    pub(crate) fn to_type(&self) -> Type {
+        Type::Generic(self.clone())
+    }
+}
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct GenericParams {
     pub(crate) params: Vec<GenericParam>,

@@ -1113,8 +1113,5 @@ pub(crate) enum Type {
         err_type: Box<Type>,
     },
 
-    Generic {
-        name: Identifier,
-        bound_opt: Option<TypePath>,
-    },
+    Generic(GenericParam),
 }

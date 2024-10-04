@@ -6,8 +6,8 @@ use super::{collection, item::parse_generic_param, Parser};
 use crate::{
     ast::{
         BigUInt, Bool, Byte, Bytes, Char, Delimiter, Float, FunctionOrMethodParam, FunctionPtr,
-        Hash, Identifier, InferredType, Int, ReferenceOp, SelfType, Str, Type, TypePath, UInt,
-        UnitType,
+        GenericParam, Hash, Identifier, InferredType, Int, ReferenceOp, SelfType, Str, Type,
+        TypePath, UInt, UnitType,
     },
     error::ErrorsEmitted,
     log_trace,
@@ -189,10 +189,10 @@ impl Type {
                     {
                         let generic_param = parse_generic_param(parser)?;
 
-                        Ok(Type::Generic {
+                        Ok(Type::Generic(GenericParam {
                             name: generic_param.name,
-                            bound_opt: generic_param.type_bound_opt,
-                        })
+                            type_bound_opt: generic_param.type_bound_opt,
+                        }))
                     } else {
                         let path = TypePath::parse(parser, token)?;
                         Ok(Type::UserDefined(path))
@@ -291,10 +291,10 @@ impl fmt::Display for Type {
             Type::Result { ok_type, err_type } => {
                 write!(f, "Result<{}, {}>", *ok_type, *err_type)
             }
-            Type::Generic {
+            Type::Generic(GenericParam {
                 name,
-                bound_opt: bounds_opt,
-            } => write!(
+                type_bound_opt: bounds_opt,
+            }) => write!(
                 f,
                 "{}: {}",
                 name,
@@ -375,10 +375,13 @@ impl fmt::Debug for Type {
                 .field("ok_type", ok_type)
                 .field("err_type", err_type)
                 .finish(),
-            Self::Generic { name, bound_opt } => f
+            Self::Generic(GenericParam {
+                name,
+                type_bound_opt,
+            }) => f
                 .debug_struct("Generic")
                 .field("name", name)
-                .field("bound_opt", bound_opt)
+                .field("type_bound_opt", type_bound_opt)
                 .finish(),
         }
     }
