@@ -21,11 +21,7 @@ pub(crate) fn analyse_patt(
 ) -> Result<Type, SemanticErrorKind> {
     match pattern {
         Pattern::IdentifierPatt(i) => match analyser.lookup(&i.name.to_type_path()) {
-            Some(Symbol::Variable { var_type, .. }) => {
-                // TODO: if an element is a generic type, resolve it,
-                // TODO: including checking if it implements its bound trait (where applicable)
-                Ok(var_type.clone())
-            }
+            Some(Symbol::Variable { var_type, .. }) => Ok(var_type.clone()),
             Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                 name: i.name.clone(),
                 expected: "variable".to_string(),
@@ -193,9 +189,6 @@ pub(crate) fn analyse_patt(
 
             for patt in t.tuple_patt_elements.elements.iter() {
                 let ty = analyse_patt(analyser, patt)?;
-
-                // TODO: if an element is a generic type, resolve it,
-                // TODO: including checking if it implements its bound trait (where applicable)
 
                 element_types.push(ty)
             }
@@ -402,9 +395,6 @@ pub(crate) fn analyse_patt(
         Pattern::SomePatt(s) => {
             let ty = analyse_patt(analyser, &s.pattern.clone().inner_pattern)?;
 
-            // TODO: if the inner type is a generic type, resolve it,
-            // TODO: including checking if it implements its bound trait (where applicable)
-
             Ok(Type::Option {
                 inner_type: Box::new(ty),
             })
@@ -416,9 +406,6 @@ pub(crate) fn analyse_patt(
 
         Pattern::ResultPatt(r) => {
             let ty = analyse_patt(analyser, &r.pattern.clone().inner_pattern)?;
-
-            // TODO: if any of the inner types is a generic type, resolve it,
-            // TODO: including checking if it implements its bound trait (where applicable)
 
             match r.kw_ok_or_err {
                 Keyword::Ok => Ok(Type::Result {

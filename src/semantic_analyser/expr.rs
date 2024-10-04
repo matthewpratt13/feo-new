@@ -754,8 +754,6 @@ pub(crate) fn analyse_expr(
 
             for elem in t.tuple_elements.elements.iter() {
                 let ty = analyse_expr(analyser, elem, root)?;
-                // TODO: if an element is a generic type, resolve it,
-                // TODO: including checking if it implements its bound trait (where applicable)
 
                 element_types.push(ty)
             }
@@ -1227,9 +1225,6 @@ pub(crate) fn analyse_expr(
                 ty
             };
 
-            // TODO: if an inner type is a generic type, resolve it,
-            // TODO: including checking if it implements its bound trait (where applicable)
-
             Ok(Type::Option {
                 inner_type: Box::new(ty),
             })
@@ -1247,9 +1242,6 @@ pub(crate) fn analyse_expr(
             } else {
                 ty
             };
-
-            // TODO: if any of the inner types is a generic type, resolve it,
-            // TODO: including checking if it implements its bound trait (where applicable)
 
             match r.kw_ok_or_err {
                 Keyword::Ok => Ok(Type::Result {
