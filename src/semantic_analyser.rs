@@ -175,7 +175,7 @@ impl SemanticAnalyser {
             }
         }
 
-        log_warn!(self.logger, "path `{path:?}` not found in current scope");
+        log_warn!(self.logger, "path `{path}` not found in current scope");
 
         None
     }
@@ -1848,7 +1848,7 @@ impl SemanticAnalyser {
                 self.substitute_in_type(err_type, symbol_table, generic_name, concrete_type);
             }
 
-            _ => {}
+            _ => ()
         }
     }
 
@@ -2116,13 +2116,22 @@ impl SemanticAnalyser {
     }
 
     /// Checks if a given type satisfies a specific trait bound.
-    fn type_satisfies_bound(&self, concrete_type: &Type, bound_trait: &TraitDef) -> bool {
+    fn type_satisfies_bound(&mut self, concrete_type: &Type, bound_trait: &TraitDef) -> bool {
+        // check if the trait is in the library registry
+        if !self.registry_contains_trait(bound_trait) {
+            log_warn!(
+                self.logger,
+                "trait `{}` not found in library registry",
+                bound_trait.trait_name
+            );
+        }
+
         // retrieve all the trait implementations for the concrete type from the type table
         let trait_implementations = self.get_trait_implementations(concrete_type);
 
-        // check if any of the implementations match the required trait
+        // check if any of the implementations match the required trait (may not be any)
         for trait_impl in trait_implementations {
-            if trait_matches(trait_impl, bound_trait) {
+            if trait_impl.implemented_trait_path.type_name == bound_trait.trait_name {
                 return true;
             }
         }
@@ -2131,20 +2140,22 @@ impl SemanticAnalyser {
         false
     }
 
-    fn get_trait_implementations(&self, concrete_type: &Type) -> &[TraitImplDef] {
+    fn get_trait_implementations(&mut self, concrete_type: &Type) -> &[TraitImplDef] {
         // convert concrete type to its `TypePath` representation
         if let Some(type_path) = self.resolve_type_path_in_scope(concrete_type) {
             // look up the trait implementations in the type table
             if let Some(trait_impls) = self.type_table.get(&type_path) {
                 return trait_impls;
             }
+        } else {
+            log_warn!(self.logger, "type `{concrete_type}` not found in scope");
         }
 
-        // if no implementations are found, return an empty vector
+        // if no implementations are found, return an empty array
         &[]
     }
 
-    /// Helper function to resolve `Type` to `TypePath` if it exists in the symbol table.
+    /// Helper function to resolve `Type` to `TypePath` if it exists in a symbol table in scope.
     fn resolve_type_path_in_scope(&self, ty: &Type) -> Option<TypePath> {
         match ty {
             Type::UserDefined(type_path) => {
@@ -2160,19 +2171,30 @@ impl SemanticAnalyser {
         }
     }
 
+    fn registry_contains_trait(&self, expected_trait: &TraitDef) -> bool {
+        for lib in self.lib_registry.values() {
+            for module in lib.iter() {
+                for symbol in module.table.values() {
+                    if let Symbol::Trait { path, trait_def } = symbol {
+                        if path.type_name == expected_trait.trait_name
+                            && trait_def == expected_trait
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
     fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {
         let error = CompilerError::new(error_kind, span.start(), &span.input());
 
         log_error!(self.logger, "{error}");
         self.errors.push(error);
     }
-}
-
-/// Check if the trait implementation matches the required trait.
-fn trait_matches(trait_impl: &TraitImplDef, bound_trait: &TraitDef) -> bool {
-    // TODO: check the path and the associated generic parameters
-    // TODO: compare full paths and resolve them properly.
-    trait_impl.implemented_trait_path.type_name == bound_trait.trait_name
 }
 
 fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {
