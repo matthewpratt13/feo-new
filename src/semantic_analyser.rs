@@ -2117,13 +2117,12 @@ impl SemanticAnalyser {
 
     /// Checks if a given type satisfies a specific trait bound.
     fn type_satisfies_bound(&self, concrete_type: &Type, bound_trait: &TraitDef) -> bool {
-        // retrieve all the trait implementations for the concrete type from the symbol table
-        // or registry
+        // retrieve all the trait implementations for the concrete type from the type table
         let trait_implementations = self.get_trait_implementations(concrete_type);
 
         // check if any of the implementations match the required trait
-        for trait_impl in trait_implementations.iter() {
-            if self.trait_matches(trait_impl, bound_trait) {
+        for trait_impl in trait_implementations {
+            if trait_matches(trait_impl, bound_trait) {
                 return true;
             }
         }
@@ -2132,24 +2131,33 @@ impl SemanticAnalyser {
         false
     }
 
-    fn get_trait_implementations(&self, concrete_type: &Type) -> Vec<TraitImplDef> {
+    fn get_trait_implementations(&self, concrete_type: &Type) -> &[TraitImplDef] {
         // convert concrete type to its `TypePath` representation
-        if let Some(type_path) = resolve_type_path(concrete_type) {
+        if let Some(type_path) = self.resolve_type_path_in_scope(concrete_type) {
             // look up the trait implementations in the type table
             if let Some(trait_impls) = self.type_table.get(&type_path) {
-                return trait_impls.clone();
+                return trait_impls;
             }
         }
 
         // if no implementations are found, return an empty vector
-        Vec::new()
+        &[]
     }
 
-    /// Check if the trait implementation matches the required trait.
-    fn trait_matches(&self, trait_impl: &TraitImplDef, bound_trait: &TraitDef) -> bool {
-        // TODO: check the path and the associated generic parameters
-        // TODO: compare full paths and resolve them properly.
-        trait_impl.implemented_trait_path.type_name == bound_trait.trait_name
+    /// Helper function to resolve `Type` to `TypePath` if it exists in the symbol table.
+    fn resolve_type_path_in_scope(&self, ty: &Type) -> Option<TypePath> {
+        match ty {
+            Type::UserDefined(type_path) => {
+                for scope in self.scope_stack.iter().rev() {
+                    if scope.symbols.contains_key(type_path) {
+                        return Some(type_path.clone());
+                    }
+                }
+
+                None
+            }
+            _ => None,
+        }
     }
 
     fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {
@@ -2160,12 +2168,11 @@ impl SemanticAnalyser {
     }
 }
 
-/// Helper function to resolve `Type` to `TypePath`.
-fn resolve_type_path(ty: &Type) -> Option<TypePath> {
-    match ty {
-        Type::UserDefined(type_path) => Some(type_path.clone()),
-        _ => None,
-    }
+/// Check if the trait implementation matches the required trait.
+fn trait_matches(trait_impl: &TraitImplDef, bound_trait: &TraitDef) -> bool {
+    // TODO: check the path and the associated generic parameters
+    // TODO: compare full paths and resolve them properly.
+    trait_impl.implemented_trait_path.type_name == bound_trait.trait_name
 }
 
 fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {
