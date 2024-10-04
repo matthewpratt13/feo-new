@@ -14,8 +14,8 @@ mod tests;
 
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, EnumDef, EnumVariantStruct, EnumVariantTupleStruct,
-        EnumVariantType, Expression, FunctionItem, FunctionOrMethodParam, FunctionParam,
+        AliasDecl, ConstantDecl, EnumDef, EnumVariantKind, EnumVariantStruct,
+        EnumVariantTupleStruct, Expression, FunctionItem, FunctionOrMethodParam, FunctionParam,
         Identifier, ImportDecl, InherentImplDef, InherentImplItem, Item, Keyword, ModuleItem,
         SelfType, Statement, StaticVarDecl, StructDef, StructDefField, TraitDef, TraitDefItem,
         TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type, TypePath, UnitType,
@@ -584,7 +584,7 @@ impl SemanticAnalyser {
 
                         if let Some(variant_type) = variant.variant_type_opt {
                             match variant_type {
-                                EnumVariantType::Struct(s) => {
+                                EnumVariantKind::Struct(s) => {
                                     self.insert(
                                         variant_path.clone(),
                                         Symbol::Struct {
@@ -601,7 +601,7 @@ impl SemanticAnalyser {
                                         },
                                     )?;
                                 }
-                                EnumVariantType::TupleStruct(t) => {
+                                EnumVariantKind::TupleStruct(t) => {
                                     self.insert(
                                         variant_path.clone(),
                                         Symbol::TupleStruct {
@@ -1915,7 +1915,7 @@ impl SemanticAnalyser {
         for variant in enum_def.variants.iter_mut() {
             if let Some(ty) = variant.variant_type_opt.as_mut() {
                 match ty {
-                    EnumVariantType::Struct(EnumVariantStruct { struct_fields }) => {
+                    EnumVariantKind::Struct(EnumVariantStruct { struct_fields }) => {
                         for StructDefField { field_type, .. } in struct_fields {
                             self.substitute_in_type(
                                 field_type,
@@ -1925,7 +1925,7 @@ impl SemanticAnalyser {
                             );
                         }
                     }
-                    EnumVariantType::TupleStruct(EnumVariantTupleStruct { element_types }, ..) => {
+                    EnumVariantKind::TupleStruct(EnumVariantTupleStruct { element_types }, ..) => {
                         for ty in element_types {
                             self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
                         }

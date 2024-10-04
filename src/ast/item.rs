@@ -15,7 +15,7 @@ use core::fmt;
 ///////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum EnumVariantType {
+pub(crate) enum EnumVariantKind {
     Struct(EnumVariantStruct),
     TupleStruct(EnumVariantTupleStruct),
 }
@@ -104,7 +104,7 @@ pub(crate) struct EnumVariant {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
     pub(crate) variant_name: Identifier,
-    pub(crate) variant_type_opt: Option<EnumVariantType>,
+    pub(crate) variant_type_opt: Option<EnumVariantKind>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

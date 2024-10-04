@@ -2,7 +2,7 @@ use super::{parse_generic_params, ParseDefItem};
 
 use crate::{
     ast::{
-        EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTupleStruct, EnumVariantType, Keyword,
+        EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTupleStruct, EnumVariantKind, Keyword,
         OuterAttr, StructDefField, Type, Visibility,
     },
     error::ErrorsEmitted,
@@ -98,11 +98,11 @@ fn parse_enum_variant(
     let variant_type_opt = match parser.current_token() {
         Some(Token::LBrace { .. }) => {
             let variant_struct = parse_enum_variant_struct(parser)?;
-            Some(EnumVariantType::Struct(variant_struct))
+            Some(EnumVariantKind::Struct(variant_struct))
         }
         Some(Token::LParen { .. }) => {
             let variant_tuple = parse_enum_variant_tuple(parser)?;
-            Some(EnumVariantType::TupleStruct(variant_tuple))
+            Some(EnumVariantKind::TupleStruct(variant_tuple))
         }
         _ => None,
     };
