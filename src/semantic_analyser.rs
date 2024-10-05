@@ -133,7 +133,7 @@ impl SemanticAnalyser {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             log_debug!(
                 self.logger,
-                "inserting symbol `{symbol}` into scope `{}` at path `{path:?}` …",
+                "inserting symbol `{symbol}` into scope `{}` at path `{path}` …",
                 curr_scope.scope_kind
             );
 
@@ -573,21 +573,42 @@ impl SemanticAnalyser {
                         },
                     )?;
 
+                    // let scope_kind = ScopeKind::Impl(trait_def_path.clone());
+
+                    // let mut symbols: HashMap<TypePath, Symbol> = HashMap::new();
+
+                    // self.enter_scope(scope_kind);
+
                     if let Some(items) = &t.trait_items_opt {
-                        // self.enter_scope(ScopeKind::TraitDef(trait_def_path));
+                        // let mut trait_symbol = if let Some(s) = self.lookup(&trait_def_path) {
+                        //     s.to_owned()
+                        // } else {
+                        //     return Err(SemanticErrorKind::MissingItem {
+                        //         expected: "trait symbol".to_string(),
+                        //     });
+                        // };
 
                         for i in items.iter() {
+                            // let item =
+
                             match i {
                                 TraitDefItem::AliasDecl(ad) => {
                                     self.analyse_stmt(
                                         &Statement::Item(Item::AliasDecl(ad.clone())),
                                         trait_def_path.clone(),
                                     )?;
+
+                                    // TraitImplItem::AliasDecl(ad.clone())
                                 }
-                                TraitDefItem::ConstantDecl(cd) => self.analyse_stmt(
-                                    &Statement::Item(Item::ConstantDecl(cd.clone())),
-                                    trait_def_path.clone(),
-                                )?,
+                                TraitDefItem::ConstantDecl(cd) => {
+                                    self.analyse_stmt(
+                                        &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                        trait_def_path.clone(),
+                                    )?;
+
+                                    // TraitImplItem::ConstantDecl(cd.clone())
+                                }
+
                                 TraitDefItem::FunctionItem(fi) => {
                                     let function_name_path = fi.function_name.to_type_path();
 
@@ -602,6 +623,14 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
+                                    // symbols.insert(
+                                    //     function_def_path,
+                                    //     Symbol::Function {
+                                    //         path: function_name_path,
+                                    //         function: fi.clone(),
+                                    //     },
+                                    // );
+
                                     match self.analyse_function_def(
                                         fi,
                                         &trait_def_path,
@@ -611,10 +640,25 @@ impl SemanticAnalyser {
                                         Ok(_) => (),
                                         Err(err) => self.log_error(err, &t.span),
                                     }
+
+                                    // TraitImplItem::FunctionItem(fi.clone())
                                 }
-                            }
+                            };
+
+                            // trait_symbol.add_associated_items(None, Some(item))?;
                         }
                     }
+
+                    // self.exit_scope();
+
+                    // log_trace!(
+                    //     self.logger,
+                    //     "inserting symbols into implementation for type: `{trait_def_path}` …",
+                    // );
+
+                    // for (path, symbol) in symbols {
+                    //     self.insert(path, symbol)?;
+                    // }
                 }
 
                 Item::EnumDef(e) => {
@@ -861,9 +905,16 @@ impl SemanticAnalyser {
 
                     self.add_trait_implementation(trait_impl_path.clone(), t.clone());
 
-                    if let Some(items) = &t.associated_items_opt {
-                        // self.enter_scope(ScopeKind::TraitImpl(trait_impl_path.to_string()));
+                    let scope_kind = ScopeKind::TraitImpl {
+                        implemented_trait_path: t.implemented_trait_path.clone(),
+                        implementing_type_path: implementing_type_path.clone(),
+                    };
 
+                    let mut symbols: HashMap<TypePath, Symbol> = HashMap::new();
+
+                    self.enter_scope(scope_kind);
+
+                    if let Some(items) = &t.associated_items_opt {
                         let mut object_symbol =
                             if let Some(s) = self.lookup(&implementing_type_path) {
                                 s.to_owned()
@@ -887,13 +938,13 @@ impl SemanticAnalyser {
                                     let function_impl_path =
                                         trait_impl_path.join(fi.function_name.to_type_path());
 
-                                    self.insert(
+                                    symbols.insert(
                                         function_impl_path.clone(),
                                         Symbol::Function {
                                             path: function_impl_path,
                                             function: fi.clone(),
                                         },
-                                    )?;
+                                    );
 
                                     match self.analyse_function_def(
                                         fi,
@@ -907,10 +958,19 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            println!("object symbol: {:?}", object_symbol);
-
                             object_symbol.add_associated_items(None, Some(i.clone()))?;
                         }
+                    }
+
+                    self.exit_scope();
+
+                    log_trace!(
+                        self.logger,
+                        "inserting symbols into `{}` implementation for type `{implementing_type_path}` …", t.implemented_trait_path
+                    );
+
+                    for (path, symbol) in symbols {
+                        self.insert(path, symbol)?;
                     }
                 }
 
@@ -1149,16 +1209,19 @@ impl SemanticAnalyser {
                             Symbol::Struct {
                                 path,
                                 associated_items_inherent,
+                                associated_items_trait,
                                 ..
                             }
                             | Symbol::TupleStruct {
                                 path,
                                 associated_items_inherent,
+                                associated_items_trait,
                                 ..
                             }
                             | Symbol::Enum {
                                 path,
                                 associated_items_inherent,
+                                associated_items_trait,
                                 ..
                             } => {
                                 self.insert(item_path.clone(), symbol.clone())?;
@@ -1183,45 +1246,80 @@ impl SemanticAnalyser {
                                         )?,
                                     }
                                 }
-                            }
 
-                            Symbol::Trait { trait_def, .. } => {
-                                if let Some(items) = &trait_def.trait_items_opt {
-                                    for item in items {
-                                        match item {
-                                            TraitDefItem::AliasDecl(ad) => self.insert(
-                                                item_path.clone(),
-                                                Symbol::Alias {
-                                                    path: item_path.clone(),
-                                                    visibility: ad.visibility.clone(),
-                                                    alias_name: ad.alias_name.clone(),
-                                                    original_type_opt: ad.original_type_opt.clone(),
+                                for item in associated_items_trait {
+                                    match item {
+                                        TraitImplItem::AliasDecl(ad) => self.insert(
+                                            path.join(ad.alias_name.to_type_path()),
+                                            Symbol::Alias {
+                                                path: path.join(ad.alias_name.to_type_path()),
+                                                visibility: ad.visibility.clone(),
+                                                alias_name: ad.alias_name.clone(),
+                                                original_type_opt: ad.original_type_opt.clone(),
+                                            },
+                                        )?,
+                                        TraitImplItem::ConstantDecl(cd) => self.insert(
+                                            path.join(cd.constant_name.to_type_path()),
+                                            Symbol::Constant {
+                                                path: path.join(cd.constant_name.to_type_path()),
+                                                visibility: cd.visibility.clone(),
+                                                constant_name: cd.constant_name.clone(),
+                                                constant_type: *cd.constant_type.clone(),
+                                            },
+                                        )?,
+                                        TraitImplItem::FunctionItem(fi) => self.insert(
+                                            path.join(fi.function_name.to_type_path()),
+                                            Symbol::Function {
+                                                path: {
+                                                    path.join(fi.function_name.to_type_path())
                                                 },
-                                            )?,
-                                            TraitDefItem::ConstantDecl(cd) => self.insert(
-                                                item_path.clone(),
-                                                Symbol::Constant {
-                                                    path: item_path.clone(),
-                                                    visibility: cd.visibility.clone(),
-                                                    constant_name: cd.constant_name.clone(),
-                                                    constant_type: *cd.constant_type.clone(),
-                                                },
-                                            )?,
-                                            TraitDefItem::FunctionItem(fi) => self.insert(
-                                                item_path.clone(),
-                                                Symbol::Function {
-                                                    path: {
-                                                        item_path
-                                                            .join(fi.function_name.to_type_path())
-                                                    },
-                                                    function: fi.clone(),
-                                                },
-                                            )?,
-                                        }
+                                                function: fi.clone(),
+                                            },
+                                        )?,
                                     }
                                 }
                             }
 
+                            // Symbol::Trait { trait_def, .. } => {
+                            //     self.insert(item_path.clone(), symbol.clone())?;
+
+                            //     if let Some(items) = &trait_def.trait_items_opt {
+                            //         for item in items {
+                            //             match item {
+                            //                 TraitDefItem::AliasDecl(ad) => self.insert(
+                            //                     item_path.join(ad.alias_name.to_type_path()),
+                            //                     Symbol::Alias {
+                            //                         path: item_path
+                            //                             .join(ad.alias_name.to_type_path()),
+                            //                         visibility: ad.visibility.clone(),
+                            //                         alias_name: ad.alias_name.clone(),
+                            //                         original_type_opt: ad.original_type_opt.clone(),
+                            //                     },
+                            //                 )?,
+                            //                 TraitDefItem::ConstantDecl(cd) => self.insert(
+                            //                     item_path.join(cd.constant_name.to_type_path()),
+                            //                     Symbol::Constant {
+                            //                         path: item_path
+                            //                             .join(cd.constant_name.to_type_path()),
+                            //                         visibility: cd.visibility.clone(),
+                            //                         constant_name: cd.constant_name.clone(),
+                            //                         constant_type: *cd.constant_type.clone(),
+                            //                     },
+                            //                 )?,
+                            //                 TraitDefItem::FunctionItem(fi) => self.insert(
+                            //                     item_path.join(fi.function_name.to_type_path()),
+                            //                     Symbol::Function {
+                            //                         path: {
+                            //                             item_path
+                            //                                 .join(fi.function_name.to_type_path())
+                            //                         },
+                            //                         function: fi.clone(),
+                            //                     },
+                            //                 )?,
+                            //             }
+                            //         }
+                            //     }
+                            // }
                             Symbol::Module { symbols, .. } => {
                                 for (path, sym) in symbols {
                                     if !table.contains_key(&path) {

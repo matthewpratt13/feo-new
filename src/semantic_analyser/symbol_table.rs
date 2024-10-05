@@ -19,7 +19,10 @@ pub(crate) enum ScopeKind {
     MatchExpr,
     ForInLoop,
     Function(TypePath),
-    // TraitImpl(TypePath),
+    TraitImpl {
+        implemented_trait_path: TypePath,
+        implementing_type_path: TypePath,
+    },
     Impl(TypePath),
     // TraitDef(TypePath),
     Module(TypePath),
@@ -36,7 +39,18 @@ impl fmt::Display for ScopeKind {
             ScopeKind::Function(type_path) => {
                 write!(f, "Function(\"{}\")", type_path.to_identifier())
             }
+            ScopeKind::TraitImpl {
+                implemented_trait_path,
+                implementing_type_path,
+            } => write!(
+                f,
+                "TraitImpl(\"{} for {}\")",
+                implemented_trait_path.to_identifier(),
+                implementing_type_path.to_identifier()
+            ),
+
             ScopeKind::Impl(type_path) => write!(f, "Impl(\"{}\")", type_path.to_identifier()),
+            // ScopeKind::TraitDef(type_path) => write!(f, "TraitDef(\"{}\")", type_path.to_identifier()),
             ScopeKind::Module(type_path) => write!(f, "Module(\"{}\")", type_path.to_identifier()),
             ScopeKind::ProgramRoot => write!(f, "ProgramRoot"),
             ScopeKind::Public => write!(f, "Public"),
