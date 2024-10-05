@@ -639,7 +639,8 @@ impl SemanticAnalyser {
                         Symbol::Enum {
                             path: enum_name_path.clone(),
                             enum_def: e.clone(),
-                            associated_items: Vec::new(),
+                            associated_items_inherent: Vec::new(),
+                            associated_items_trait: Vec::new(),
                         },
                     )?;
 
@@ -662,7 +663,8 @@ impl SemanticAnalyser {
                                                 fields_opt: Some(s.struct_fields),
                                                 span: Span::default(),
                                             },
-                                            associated_items: Vec::new(),
+                                            associated_items_inherent: Vec::new(),
+                                            associated_items_trait: Vec::new(),
                                         },
                                     )?;
                                 }
@@ -695,7 +697,8 @@ impl SemanticAnalyser {
                                                 },
                                                 span: Span::default(),
                                             },
-                                            associated_items: Vec::new(),
+                                            associated_items_inherent: Vec::new(),
+                                            associated_items_trait: Vec::new(),
                                         },
                                     )?;
                                 }
@@ -734,7 +737,8 @@ impl SemanticAnalyser {
                         Symbol::Struct {
                             path: struct_name_path,
                             struct_def: s.clone(),
-                            associated_items: Vec::new(),
+                            associated_items_inherent: Vec::new(),
+                            associated_items_trait: Vec::new(),
                         },
                     )?;
                 }
@@ -761,7 +765,8 @@ impl SemanticAnalyser {
                         Symbol::TupleStruct {
                             path: struct_name_path,
                             tuple_struct_def: ts.clone(),
-                            associated_items: Vec::new(),
+                            associated_items_inherent: Vec::new(),
+                            associated_items_trait: Vec::new(),
                         },
                     )?;
                 }
@@ -816,7 +821,7 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            object_symbol.add_associated_items(items.clone())?;
+                            object_symbol.add_associated_items(Some(i.clone()), None)?;
                         }
                     }
 
@@ -833,10 +838,8 @@ impl SemanticAnalyser {
                 }
 
                 Item::TraitImplDef(t) => {
-                    let trait_impl_path = match &t.implementing_type {
-                        Type::UserDefined(tp) => root
-                            .join(tp.clone())
-                            .join(t.implemented_trait_path.type_name.to_type_path()),
+                    let implementing_type_path = match &t.implementing_type {
+                        Type::UserDefined(tp) => root.join(tp.clone()),
 
                         ty => {
                             return Err(SemanticErrorKind::UnexpectedType {
@@ -845,6 +848,9 @@ impl SemanticAnalyser {
                             })
                         }
                     };
+
+                    let trait_impl_path = implementing_type_path
+                        .join(t.implemented_trait_path.type_name.to_type_path());
 
                     log_trace!(
                         self.logger,
@@ -857,6 +863,15 @@ impl SemanticAnalyser {
 
                     if let Some(items) = &t.associated_items_opt {
                         // self.enter_scope(ScopeKind::TraitImpl(trait_impl_path.to_string()));
+
+                        let mut object_symbol =
+                            if let Some(s) = self.lookup(&implementing_type_path) {
+                                s.to_owned()
+                            } else {
+                                return Err(SemanticErrorKind::MissingItem {
+                                    expected: "struct or enum symbol".to_string(),
+                                });
+                            };
 
                         for i in items.iter() {
                             match i {
@@ -891,6 +906,10 @@ impl SemanticAnalyser {
                                     }
                                 }
                             }
+
+                            println!("object symbol: {:?}", object_symbol);
+
+                            object_symbol.add_associated_items(None, Some(i.clone()))?;
                         }
                     }
                 }
@@ -1126,44 +1145,94 @@ impl SemanticAnalyser {
             if let Some(library) = self.lib_registry.get(&import_root).cloned() {
                 for Module { table, .. } in library.iter() {
                     for (item_path, symbol) in table {
-                        println!("item path: {item_path}");
+                        match symbol {
+                            Symbol::Struct {
+                                path,
+                                associated_items_inherent,
+                                ..
+                            }
+                            | Symbol::TupleStruct {
+                                path,
+                                associated_items_inherent,
+                                ..
+                            }
+                            | Symbol::Enum {
+                                path,
+                                associated_items_inherent,
+                                ..
+                            } => {
+                                self.insert(item_path.clone(), symbol.clone())?;
 
-                        if let Some(scope) = self.scope_stack.last().cloned() {
-                            if let Symbol::Module { symbols, .. } = symbol {
+                                for item in associated_items_inherent {
+                                    match item {
+                                        InherentImplItem::ConstantDecl(cd) => self.insert(
+                                            path.join(cd.constant_name.to_type_path()),
+                                            Symbol::Constant {
+                                                path: path.join(cd.constant_name.to_type_path()),
+                                                visibility: cd.visibility.clone(),
+                                                constant_name: cd.constant_name.clone(),
+                                                constant_type: *cd.constant_type.clone(),
+                                            },
+                                        )?,
+                                        InherentImplItem::FunctionItem(fi) => self.insert(
+                                            path.join(fi.function_name.to_type_path()),
+                                            Symbol::Function {
+                                                path: path.join(fi.function_name.to_type_path()),
+                                                function: fi.clone(),
+                                            },
+                                        )?,
+                                    }
+                                }
+                            }
+
+                            Symbol::Trait { trait_def, .. } => {
+                                if let Some(items) = &trait_def.trait_items_opt {
+                                    for item in items {
+                                        match item {
+                                            TraitDefItem::AliasDecl(ad) => self.insert(
+                                                item_path.clone(),
+                                                Symbol::Alias {
+                                                    path: item_path.clone(),
+                                                    visibility: ad.visibility.clone(),
+                                                    alias_name: ad.alias_name.clone(),
+                                                    original_type_opt: ad.original_type_opt.clone(),
+                                                },
+                                            )?,
+                                            TraitDefItem::ConstantDecl(cd) => self.insert(
+                                                item_path.clone(),
+                                                Symbol::Constant {
+                                                    path: item_path.clone(),
+                                                    visibility: cd.visibility.clone(),
+                                                    constant_name: cd.constant_name.clone(),
+                                                    constant_type: *cd.constant_type.clone(),
+                                                },
+                                            )?,
+                                            TraitDefItem::FunctionItem(fi) => self.insert(
+                                                item_path.clone(),
+                                                Symbol::Function {
+                                                    path: {
+                                                        item_path
+                                                            .join(fi.function_name.to_type_path())
+                                                    },
+                                                    function: fi.clone(),
+                                                },
+                                            )?,
+                                        }
+                                    }
+                                }
+                            }
+
+                            Symbol::Module { symbols, .. } => {
                                 for (path, sym) in symbols {
-                                    if !scope.symbols.contains_key(&path)
-                                        && !scope
-                                            .symbols
-                                            .contains_key(&path.type_name.to_type_path())
-                                    {
+                                    if !table.contains_key(&path) {
                                         self.insert(path.clone(), sym.clone())?;
                                     }
                                 }
-                            } else {
-                                // if !scope.symbols.contains_key(&item_path)
-                                //     && !scope
-                                //         .symbols
-                                //         .contains_key(&item_path.type_name.to_type_path())
-                                // {
-                                //     self.insert(item_path.clone(), symbol.clone())?;
-                                // }
+                            }
 
-                                if import_path == item_path {
-                                    if !scope.symbols.contains_key(&item_path)
-                                        && !scope
-                                            .symbols
-                                            .contains_key(&item_path.type_name.to_type_path())
-                                    {
-                                        self.insert(item_path.clone(), symbol.clone())?;
-                                    }
-                                } else if import_path.type_name == item_path.type_name {
-                                    if !scope.symbols.contains_key(&item_path)
-                                        && !scope
-                                            .symbols
-                                            .contains_key(&item_path.type_name.to_type_path())
-                                    {
-                                        self.insert(item_path.clone(), symbol.clone())?;
-                                    }
+                            _ => {
+                                if !table.contains_key(&import_path) {
+                                    self.insert(item_path.clone(), symbol.clone())?;
                                 }
                             }
                         }

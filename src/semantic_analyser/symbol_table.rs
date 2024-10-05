@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         EnumDef, FunctionItem, Identifier, InherentImplItem, ModuleItem, StructDef, TraitDef,
-        TupleStructDef, Type, TypePath, UnitType, Visibility,
+        TraitImplItem, TupleStructDef, Type, TypePath, UnitType, Visibility,
     },
     error::SemanticErrorKind,
 };
@@ -54,17 +54,20 @@ pub(crate) enum Symbol {
     Struct {
         path: TypePath,
         struct_def: StructDef,
-        associated_items: Vec<InherentImplItem>,
+        associated_items_inherent: Vec<InherentImplItem>,
+        associated_items_trait: Vec<TraitImplItem>,
     },
     TupleStruct {
         path: TypePath,
         tuple_struct_def: TupleStructDef,
-        associated_items: Vec<InherentImplItem>,
+        associated_items_inherent: Vec<InherentImplItem>,
+        associated_items_trait: Vec<TraitImplItem>,
     },
     Enum {
         path: TypePath,
         enum_def: EnumDef,
-        associated_items: Vec<InherentImplItem>,
+        associated_items_inherent: Vec<InherentImplItem>,
+        associated_items_trait: Vec<TraitImplItem>,
     },
     Trait {
         path: TypePath,
@@ -96,18 +99,35 @@ pub(crate) enum Symbol {
 impl Symbol {
     pub(crate) fn add_associated_items(
         &mut self,
-        mut items: Vec<InherentImplItem>,
+        inherent_item: Option<InherentImplItem>,
+        trait_item: Option<TraitImplItem>,
     ) -> Result<(), SemanticErrorKind> {
         match self {
             Symbol::Struct {
-                associated_items, ..
+                associated_items_inherent,
+                associated_items_trait,
+                ..
             }
             | Symbol::TupleStruct {
-                associated_items, ..
+                associated_items_inherent,
+                associated_items_trait,
+                ..
             }
             | Symbol::Enum {
-                associated_items, ..
-            } => Ok(associated_items.append(&mut items)),
+                associated_items_inherent,
+                associated_items_trait,
+                ..
+            } => {
+                if let Some(item) = inherent_item {
+                    associated_items_inherent.push(item);
+                }
+
+                if let Some(item) = trait_item {
+                    associated_items_trait.push(item);
+                }
+
+                Ok(())
+            }
 
             sym => Err(SemanticErrorKind::UnexpectedSymbol {
                 name: sym.type_path().to_identifier(),
