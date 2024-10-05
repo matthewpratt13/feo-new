@@ -126,7 +126,7 @@ fn analyse_enum_variants() -> Result<(), ()> {
         }
     "#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
@@ -344,7 +344,7 @@ fn analyse_import_decl() -> Result<(), ()> {
     }
     "#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, Some(external_code))?;
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, Some(external_code))?;
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),

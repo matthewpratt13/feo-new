@@ -139,13 +139,13 @@ impl SemanticAnalyser {
 
             curr_scope.symbols.insert(path.clone(), symbol.clone());
 
-            if let Some(modules) = self.lib_registry.get_mut(&Identifier::from("lib")) {
-                for module in modules.iter_mut() {
-                    if module.name == path.type_name {
-                        module.table.insert(path.clone(), symbol.clone());
-                    }
-                }
-            }
+            // if let Some(modules) = self.lib_registry.get_mut(&Identifier::from("lib")) {
+            //     for module in modules.iter_mut() {
+            //         if module.name == path.type_name {
+            //             module.table.insert(path.clone(), symbol.clone());
+            //         }
+            //     }
+            // }
 
             Ok(())
         } else {
@@ -502,7 +502,18 @@ impl SemanticAnalyser {
                     }
 
                     if let Some(curr_scope) = self.scope_stack.pop() {
-                        log_trace!(self.logger, "exiting scope: `{}` …", curr_scope.scope_kind);
+                        log_debug!(self.logger, "exited scope: `{}` …", curr_scope.scope_kind);
+                        log_trace!(
+                            self.logger,
+                            "current_scope: `{}`",
+                            self.scope_stack
+                                .last()
+                                .unwrap_or(&Scope {
+                                    scope_kind: ScopeKind::Public,
+                                    symbols: HashMap::new()
+                                })
+                                .scope_kind
+                        );
 
                         module_scope = curr_scope;
                     }
@@ -1084,37 +1095,32 @@ impl SemanticAnalyser {
                 };
 
             // bring external libraries into scope
-            if let Some(modules) = self.lib_registry.get(&import_root).cloned() {
+            if let Some(lib) = self.lib_registry.get(&import_root).cloned() {
                 log_debug!(
                     self.logger,
-                    "detected library `{import_root}` in library registry"
+                    "found library `{import_root}` in library registry"
                 );
 
-                for module in modules.iter() {
-                    for (item_path, symbol) in module.table.iter() {
+                for Module { table, .. } in lib.iter() {
+                    for (item_path, symbol) in table {
                         if let Some(scope) = self.scope_stack.last().cloned() {
                             if let Symbol::Module { symbols, .. } = symbol {
                                 for (path, sym) in symbols {
-                                    if !scope.symbols.contains_key(&import_path) {
-                                        self.insert(path.clone(), sym.clone())?;
-                                    } else if !scope
-                                        .symbols
-                                        .contains_key(&import_path.type_name.to_type_path())
+                                    if !scope.symbols.contains_key(&path)
+                                        && !scope
+                                            .symbols
+                                            .contains_key(&path.type_name.to_type_path())
                                     {
-                                        self.insert(path.type_name.to_type_path(), symbol.clone())?;
+                                        self.insert(path.clone(), sym.clone())?;
                                     }
                                 }
                             } else {
-                                if !scope.symbols.contains_key(&import_path) {
-                                    self.insert(item_path.clone(), symbol.clone())?;
-                                } else if !scope
-                                    .symbols
-                                    .contains_key(&import_path.type_name.to_type_path())
+                                if !scope.symbols.contains_key(&item_path)
+                                    && !scope
+                                        .symbols
+                                        .contains_key(&item_path.type_name.to_type_path())
                                 {
-                                    self.insert(
-                                        item_path.type_name.to_type_path(),
-                                        symbol.clone(),
-                                    )?;
+                                    self.insert(item_path.clone(), symbol.clone())?;
                                 }
                             }
                         }
