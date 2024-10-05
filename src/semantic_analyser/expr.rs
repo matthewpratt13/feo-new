@@ -7,7 +7,7 @@ use crate::{
         Pattern, Statement, Str, Type, TypePath, UInt, UnaryOp, UnitType,
     },
     error::SemanticErrorKind,
-    log_warn,
+    log_trace, log_warn,
     semantic_analyser::symbol_table::Symbol,
     span::Spanned,
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
@@ -1001,9 +1001,17 @@ pub(crate) fn analyse_expr(
             Some(stmts) => {
                 analyser.enter_scope(ScopeKind::LocalBlock);
 
+                log_trace!(analyser.logger, "analysing block expression …");
+
                 let mut cloned_iter = stmts.iter().peekable().clone();
 
-                for stmt in stmts {
+                for (i, stmt) in stmts.iter().enumerate() {
+                    if i == stmts.len() - 1 {
+                        break;
+                    }
+
+                    println!("analysing statement {} of {}", i + 1, stmts.len());
+
                     cloned_iter.next();
 
                     match stmt {
@@ -1025,7 +1033,14 @@ pub(crate) fn analyse_expr(
                         },
                         statement => analyser.analyse_stmt(statement, root.clone())?,
                     }
+
+                    println!("finished analysing statement {} of {}", i + 1, stmts.len());
                 }
+
+                log_trace!(
+                    analyser.logger,
+                    "analysing final statement in block expression …"
+                );
 
                 let ty = match stmts.last() {
                     Some(stmt) => match stmt {
@@ -1034,6 +1049,8 @@ pub(crate) fn analyse_expr(
                     },
                     _ => Ok(Type::UnitType(UnitType)),
                 };
+
+                println!("finished analysing block expression with type: `{ty:?}`");
 
                 analyser.exit_scope();
 
@@ -1046,13 +1063,21 @@ pub(crate) fn analyse_expr(
         Expression::If(i) => {
             analyse_expr(analyser, &Expression::Grouped(*i.condition.clone()), root)?;
 
+            println!("analysing if expression …");
+
             let if_block_type =
                 analyse_expr(analyser, &Expression::Block(*i.if_block.clone()), root)?;
+
+            println!("finished analysing `if` block with type: `{if_block_type}`");
 
             let else_if_blocks_type = match &i.else_if_blocks_opt {
                 Some(blocks) => match blocks.first() {
                     Some(_) => {
+                        println!("detected {} `else-if` block(s) …", blocks.len());
+
                         for block in blocks.iter() {
+                            println!("analysing `else-if` block …");
+
                             let block_type =
                                 analyse_expr(analyser, &Expression::If(*block.clone()), root)?;
 
@@ -1062,6 +1087,10 @@ pub(crate) fn analyse_expr(
                                     found: block_type,
                                 });
                             }
+
+                            println!(
+                                "finished analysing `else-if` block with type: `{block_type}`"
+                            );
                         }
 
                         if_block_type.clone()
@@ -1090,6 +1119,8 @@ pub(crate) fn analyse_expr(
                 });
             }
 
+            println!("finished analysing if expression");
+
             Ok(if_block_type)
         }
 
@@ -1099,16 +1130,19 @@ pub(crate) fn analyse_expr(
             let scrutinee_type =
                 analyse_expr(analyser, &wrap_into_expression(m.scrutinee.clone()), root)?;
 
-            let mut patt_type = analyse_patt(analyser, &m.final_arm.matched_pattern.clone())?;
+            println!("analysing match expression with scrutinee type: `{scrutinee_type}` …");
 
-            if patt_type != scrutinee_type {
-                if let Type::InferredType(_) = patt_type {
+            let mut matched_patt_type =
+                analyse_patt(analyser, &m.final_arm.matched_pattern.clone())?;
+
+            if matched_patt_type != scrutinee_type {
+                if let Type::InferredType(_) = matched_patt_type {
                     ()
                 } else {
                     return Err(SemanticErrorKind::TypeMismatchMatchExpr {
                         loc: "scrutinee and matched pattern".to_string(),
                         expected: scrutinee_type,
-                        found: patt_type,
+                        found: matched_patt_type,
                     });
                 }
             }
@@ -1125,19 +1159,27 @@ pub(crate) fn analyse_expr(
                         HashMap::new()
                     };
 
-                    if patt_type == Type::inferred_type("_") {
-                        analyser.check_types(&mut symbol_table, &arm_patt_type, &mut patt_type)?;
+                    if matched_patt_type == Type::inferred_type("_") {
+                        analyser.check_types(
+                            &mut symbol_table,
+                            &arm_patt_type,
+                            &mut matched_patt_type,
+                        )?;
                     } else {
-                        analyser.check_types(&mut symbol_table, &patt_type, &mut arm_patt_type)?;
+                        analyser.check_types(
+                            &mut symbol_table,
+                            &matched_patt_type,
+                            &mut arm_patt_type,
+                        )?;
                     }
 
-                    if arm_patt_type != patt_type {
-                        if let Type::InferredType(_) = patt_type {
+                    if arm_patt_type != matched_patt_type {
+                        if let Type::InferredType(_) = matched_patt_type {
                             ()
                         } else {
                             return Err(SemanticErrorKind::TypeMismatchMatchExpr {
                                 loc: "matched pattern".to_string(),
-                                expected: patt_type,
+                                expected: matched_patt_type,
                                 found: arm_patt_type,
                             });
                         }
@@ -1157,6 +1199,8 @@ pub(crate) fn analyse_expr(
                     }
                 }
             }
+
+            println!("finished analysing match expression with type: `{expr_type}`");
 
             analyser.exit_scope();
 
@@ -1191,6 +1235,8 @@ pub(crate) fn analyse_expr(
                 }
             };
 
+            println!("analysing for loop with iterator type `{iter_type}` and element type `{element_type}` …");
+
             if let Pattern::IdentifierPatt(id) = *fi.pattern.clone() {
                 analyser.insert(
                     id.name.to_type_path(),
@@ -1201,9 +1247,13 @@ pub(crate) fn analyse_expr(
                 )?;
             }
 
+            println!("for loop pattern: `{}`", fi.pattern);
+
             analyse_patt(analyser, &fi.pattern.clone())?;
 
             analyse_expr(analyser, &Expression::Block(fi.block.clone()), root)?;
+
+            println!("finished analysing for loop");
 
             analyser.exit_scope();
 
@@ -1211,8 +1261,16 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::While(w) => {
+            println!(
+                "analysing while loop with condition `{}` …",
+                Expression::Grouped(*w.condition.clone())
+            );
+
             analyse_expr(analyser, &Expression::Grouped(*w.condition.clone()), root)?;
             analyse_expr(analyser, &Expression::Block(w.block.clone()), root)?;
+
+            println!("finished analysing while loop");
+
             Ok(Type::UnitType(UnitType))
         }
 

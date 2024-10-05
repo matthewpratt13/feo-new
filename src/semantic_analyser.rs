@@ -98,7 +98,7 @@ impl SemanticAnalyser {
 
     /// Push a new scope onto the scope stack and log the action.
     fn enter_scope(&mut self, scope_kind: ScopeKind) {
-        log_debug!(self.logger, "entering new scope: `{scope_kind:?}` …");
+        log_debug!(self.logger, "entering new scope: `{scope_kind}` …");
 
         self.scope_stack.push(Scope {
             scope_kind,
@@ -109,7 +109,18 @@ impl SemanticAnalyser {
     /// Pop the top scope from the scope stack and log the action.
     fn exit_scope(&mut self) -> Option<Scope> {
         if let Some(exited_scope) = self.scope_stack.pop() {
-            log_debug!(self.logger, "exited scope: `{:?}`", exited_scope.scope_kind);
+            log_debug!(self.logger, "exited scope: `{}`", exited_scope.scope_kind);
+            log_trace!(
+                self.logger,
+                "current_scope: `{}`",
+                self.scope_stack
+                    .last()
+                    .unwrap_or(&Scope {
+                        scope_kind: ScopeKind::Public,
+                        symbols: HashMap::new()
+                    })
+                    .scope_kind
+            );
 
             Some(exited_scope)
         } else {
@@ -122,7 +133,7 @@ impl SemanticAnalyser {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             log_debug!(
                 self.logger,
-                "inserting symbol `{symbol}` into scope `{:?}` at path `{path:?}` …",
+                "inserting symbol `{symbol}` into scope `{}` at path `{path:?}` …",
                 curr_scope.scope_kind
             );
 
@@ -149,7 +160,7 @@ impl SemanticAnalyser {
             if let Some(symbol) = scope.symbols.get(path) {
                 log_debug!(
                     self.logger,
-                    "found symbol `{}` in scope `{:?}` at path `{path:?}`",
+                    "found symbol `{}` in scope `{}` at path `{path}`",
                     symbol,
                     scope.scope_kind
                 );
@@ -160,7 +171,7 @@ impl SemanticAnalyser {
                     if path.type_name == sym_path.type_name {
                         log_debug!(
                             self.logger,
-                            "found symbol `{symbol}` in scope `{:?}` at path `{path:?}`",
+                            "found symbol `{symbol}` in scope `{}` at path `{path}`",
                             scope.scope_kind
                         );
 
@@ -192,6 +203,8 @@ impl SemanticAnalyser {
             self.analyse_stmt(stmt, TypePath::from(Identifier::from("")))
                 .map_err(|_| self.errors.clone())?
         }
+
+        self.exit_scope();
 
         if !self.errors.is_empty() {
             return Err(self.errors.clone());
@@ -465,7 +478,7 @@ impl SemanticAnalyser {
                     }
 
                     if let Some(curr_scope) = self.scope_stack.pop() {
-                        log_trace!(self.logger, "exiting scope: `{:?}`", curr_scope.scope_kind);
+                        log_trace!(self.logger, "exiting scope: `{}` …", curr_scope.scope_kind);
 
                         module_scope = curr_scope;
                     }
@@ -964,6 +977,8 @@ impl SemanticAnalyser {
             }
         };
 
+        println!("finished analysing function body");
+
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
             self.check_types(&mut symbol_table, &return_type, &mut function_type)?;
@@ -1008,7 +1023,7 @@ impl SemanticAnalyser {
             if let Some(modules) = self.lib_registry.get(&import_root).cloned() {
                 log_debug!(
                     self.logger,
-                    "detected library `{import_root:?}` in library registry"
+                    "detected library `{import_root}` in library registry"
                 );
 
                 for module in modules.iter() {
@@ -1548,7 +1563,7 @@ impl SemanticAnalyser {
     ) {
         log_trace!(
             self.logger,
-            "substituting generic `{generic_name}` with concrete type `{concrete_type}`"
+            "substituting generic `{generic_name}` with concrete type `{concrete_type}` …"
         );
 
         let scope_stack = &self.scope_stack;
@@ -1570,7 +1585,7 @@ impl SemanticAnalyser {
     ) {
         log_trace!(
             self.logger,
-            "substituting generic `{generic_name}` with concrete type `{concrete_type}` in symbol `{}`",
+            "substituting generic `{generic_name}` with concrete type `{concrete_type}` in symbol `{}` …",
             symbol.type_path()
         );
 

@@ -25,6 +25,20 @@ pub(crate) enum ScopeKind {
     Public,
 }
 
+impl fmt::Display for ScopeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ScopeKind::LocalBlock => write!(f, "LocalBlock"),
+            ScopeKind::MatchExpr => write!(f, "MatchExpr"),
+            ScopeKind::ForInLoop => write!(f, "ForInLoop"),
+            ScopeKind::Function(type_path) => write!(f, "Function(\"{}\")", type_path.to_identifier()),
+            ScopeKind::Module(type_path) => write!(f, "Module(\"{}\")", type_path.to_identifier()),
+            ScopeKind::ProgramRoot => write!(f, "ProgramRoot"),
+            ScopeKind::Public => write!(f, "Public"),
+        }
+    }
+}
+
 /// Enum representing different types of symbols that can be encountered during semantic analysis.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Symbol {
