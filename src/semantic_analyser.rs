@@ -344,6 +344,14 @@ impl SemanticAnalyser {
 
                     let alias_path = root.join(ad.alias_name.to_type_path());
 
+                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
+                        if *scope_kind == ScopeKind::ProgramRoot {
+                            self.enter_scope(ScopeKind::Module(
+                                Identifier::from("lib").to_type_path(),
+                            ))
+                        }
+                    }
+
                     self.insert(
                         alias_path.clone(),
                         Symbol::Alias {
@@ -387,6 +395,14 @@ impl SemanticAnalyser {
 
                     let constant_path = root.join(cd.constant_name.to_type_path());
 
+                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
+                        if *scope_kind == ScopeKind::ProgramRoot {
+                            self.enter_scope(ScopeKind::Module(
+                                Identifier::from("lib").to_type_path(),
+                            ))
+                        }
+                    }
+
                     self.insert(
                         constant_path.clone(),
                         Symbol::Constant {
@@ -428,6 +444,14 @@ impl SemanticAnalyser {
                     }
 
                     let static_var_path = root.join(s.var_name.to_type_path());
+
+                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
+                        if *scope_kind == ScopeKind::ProgramRoot {
+                            self.enter_scope(ScopeKind::Module(
+                                Identifier::from("lib").to_type_path(),
+                            ))
+                        }
+                    }
 
                     self.insert(
                         static_var_path,
@@ -522,6 +546,14 @@ impl SemanticAnalyser {
                         "analysing trait definition: `{trait_def_path}` …"
                     );
 
+                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
+                        if *scope_kind == ScopeKind::ProgramRoot {
+                            self.enter_scope(ScopeKind::Module(
+                                Identifier::from("lib").to_type_path(),
+                            ))
+                        }
+                    }
+
                     self.insert(
                         trait_def_path.clone(),
                         Symbol::Trait {
@@ -531,7 +563,7 @@ impl SemanticAnalyser {
                     )?;
 
                     if let Some(items) = &t.trait_items_opt {
-                        // self.enter_scope(ScopeKind::TraitDef(trait_def_path.to_string()));
+                        // self.enter_scope(ScopeKind::TraitDef(trait_def_path));
 
                         for i in items.iter() {
                             match i {
@@ -583,10 +615,18 @@ impl SemanticAnalyser {
                         "analysing enum definition: `{enum_def_path}` …"
                     );
 
+                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
+                        if *scope_kind == ScopeKind::ProgramRoot {
+                            self.enter_scope(ScopeKind::Module(
+                                Identifier::from("lib").to_type_path(),
+                            ))
+                        }
+                    }
+
                     self.insert(
                         enum_def_path.clone(),
                         Symbol::Enum {
-                            path: enum_name_path,
+                            path: enum_name_path.clone(),
                             enum_def: e.clone(),
                         },
                     )?;
@@ -667,6 +707,14 @@ impl SemanticAnalyser {
                         "analysing struct definition: `{struct_def_path}` …"
                     );
 
+                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
+                        if *scope_kind == ScopeKind::ProgramRoot {
+                            self.enter_scope(ScopeKind::Module(
+                                Identifier::from("lib").to_type_path(),
+                            ))
+                        }
+                    }
+
                     self.insert(
                         struct_def_path,
                         Symbol::Struct {
@@ -684,6 +732,14 @@ impl SemanticAnalyser {
                         self.logger,
                         "analysing tuple struct definition: `{tuple_struct_path}` …"
                     );
+
+                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
+                        if *scope_kind == ScopeKind::ProgramRoot {
+                            self.enter_scope(ScopeKind::Module(
+                                Identifier::from("lib").to_type_path(),
+                            ))
+                        }
+                    }
 
                     self.insert(
                         tuple_struct_path,
@@ -812,6 +868,14 @@ impl SemanticAnalyser {
                             .clone()
                             .unwrap_or(Box::new(Type::UnitType(UnitType)))
                     );
+
+                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
+                        if *scope_kind == ScopeKind::ProgramRoot {
+                            self.enter_scope(ScopeKind::Module(
+                                Identifier::from("lib").to_type_path(),
+                            ))
+                        }
+                    }
 
                     self.insert(
                         function_item_path,
