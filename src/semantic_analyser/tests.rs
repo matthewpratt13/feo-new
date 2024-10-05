@@ -418,7 +418,7 @@ fn analyse_method_call() -> Result<(), ()> {
         return;
     }"#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)
         .expect("unable to set up semantic analyser");
 
     match analyser.analyse_program(&program) {
@@ -457,7 +457,7 @@ fn analyse_struct() -> Result<(), ()> {
         foo.c - (1_000 as u256)
     }"#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)?;
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),

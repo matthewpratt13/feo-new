@@ -200,7 +200,9 @@ pub(crate) fn analyse_patt(
             let type_path = TypePath::from(s.struct_path.clone());
 
             match analyser.lookup(&type_path).cloned() {
-                Some(Symbol::Struct { struct_def, path }) => {
+                Some(Symbol::Struct {
+                    struct_def, path, ..
+                }) => {
                     let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
                     let def_fields_opt = struct_def.fields_opt;
@@ -299,6 +301,7 @@ pub(crate) fn analyse_patt(
                 Some(Symbol::TupleStruct {
                     tuple_struct_def,
                     path,
+                    ..
                 }) => {
                     let elements_opt = ts.struct_elements_opt.clone();
                     let fields_opt = tuple_struct_def.fields_opt;

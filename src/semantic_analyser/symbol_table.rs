@@ -1,6 +1,9 @@
-use crate::ast::{
-    EnumDef, FunctionItem, Identifier, ModuleItem, StructDef, TraitDef, TupleStructDef, Type,
-    TypePath, UnitType, Visibility,
+use crate::{
+    ast::{
+        EnumDef, FunctionItem, Identifier, InherentImplItem, ModuleItem, StructDef, TraitDef,
+        TupleStructDef, Type, TypePath, UnitType, Visibility,
+    },
+    error::SemanticErrorKind,
 };
 
 use core::fmt;
@@ -17,7 +20,7 @@ pub(crate) enum ScopeKind {
     ForInLoop,
     Function(TypePath),
     // TraitImpl(TypePath),
-    // Impl(TypePath),
+    Impl(TypePath),
     // TraitDef(TypePath),
     Module(TypePath),
     ProgramRoot,
@@ -33,6 +36,7 @@ impl fmt::Display for ScopeKind {
             ScopeKind::Function(type_path) => {
                 write!(f, "Function(\"{}\")", type_path.to_identifier())
             }
+            ScopeKind::Impl(type_path) => write!(f, "Impl(\"{}\")", type_path.to_identifier()),
             ScopeKind::Module(type_path) => write!(f, "Module(\"{}\")", type_path.to_identifier()),
             ScopeKind::ProgramRoot => write!(f, "ProgramRoot"),
             ScopeKind::Public => write!(f, "Public"),
@@ -50,14 +54,17 @@ pub(crate) enum Symbol {
     Struct {
         path: TypePath,
         struct_def: StructDef,
+        associated_items: Vec<InherentImplItem>,
     },
     TupleStruct {
         path: TypePath,
         tuple_struct_def: TupleStructDef,
+        associated_items: Vec<InherentImplItem>,
     },
     Enum {
         path: TypePath,
         enum_def: EnumDef,
+        associated_items: Vec<InherentImplItem>,
     },
     Trait {
         path: TypePath,
@@ -87,6 +94,29 @@ pub(crate) enum Symbol {
 }
 
 impl Symbol {
+    pub(crate) fn add_associated_items(
+        &mut self,
+        mut items: Vec<InherentImplItem>,
+    ) -> Result<(), SemanticErrorKind> {
+        match self {
+            Symbol::Struct {
+                associated_items, ..
+            }
+            | Symbol::TupleStruct {
+                associated_items, ..
+            }
+            | Symbol::Enum {
+                associated_items, ..
+            } => Ok(associated_items.append(&mut items)),
+
+            sym => Err(SemanticErrorKind::UnexpectedSymbol {
+                name: sym.type_path().to_identifier(),
+                expected: "struct or enum".to_string(),
+                found: format!("`{}`", sym.symbol_type()),
+            }),
+        }
+    }
+
     pub(crate) fn symbol_type(&self) -> Type {
         match self.clone() {
             Symbol::Variable { var_type, .. } => var_type,

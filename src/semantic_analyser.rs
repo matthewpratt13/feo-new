@@ -639,6 +639,7 @@ impl SemanticAnalyser {
                         Symbol::Enum {
                             path: enum_name_path.clone(),
                             enum_def: e.clone(),
+                            associated_items: Vec::new(),
                         },
                     )?;
 
@@ -661,6 +662,7 @@ impl SemanticAnalyser {
                                                 fields_opt: Some(s.struct_fields),
                                                 span: Span::default(),
                                             },
+                                            associated_items: Vec::new(),
                                         },
                                     )?;
                                 }
@@ -693,6 +695,7 @@ impl SemanticAnalyser {
                                                 },
                                                 span: Span::default(),
                                             },
+                                            associated_items: Vec::new(),
                                         },
                                     )?;
                                 }
@@ -731,6 +734,7 @@ impl SemanticAnalyser {
                         Symbol::Struct {
                             path: struct_name_path,
                             struct_def: s.clone(),
+                            associated_items: Vec::new(),
                         },
                     )?;
                 }
@@ -757,6 +761,7 @@ impl SemanticAnalyser {
                         Symbol::TupleStruct {
                             path: struct_name_path,
                             tuple_struct_def: ts.clone(),
+                            associated_items: Vec::new(),
                         },
                     )?;
                 }
@@ -769,8 +774,20 @@ impl SemanticAnalyser {
                         "analysing inherent implementation for type: `{type_path}` …",
                     );
 
+                    let scope_kind = ScopeKind::Impl(type_path.clone());
+
+                    let mut symbols: HashMap<TypePath, Symbol> = HashMap::new();
+
+                    self.enter_scope(scope_kind);
+
                     if let Some(items) = &iid.associated_items_opt {
-                        // self.enter_scope(ScopeKind::Impl(type_path.to_string()));
+                        let mut object_symbol = if let Some(s) = self.lookup(&type_path) {
+                            s.to_owned()
+                        } else {
+                            return Err(SemanticErrorKind::MissingItem {
+                                expected: "struct or enum symbol".to_string(),
+                            });
+                        };
 
                         for i in items.iter() {
                             match i {
@@ -784,13 +801,13 @@ impl SemanticAnalyser {
                                     let function_def_path =
                                         type_path.join(function_name_path.clone());
 
-                                    self.insert(
+                                    symbols.insert(
                                         function_def_path.clone(),
                                         Symbol::Function {
                                             path: function_name_path,
                                             function: fi.clone(),
                                         },
-                                    )?;
+                                    );
 
                                     match self.analyse_function_def(fi, &type_path, true, false) {
                                         Ok(_) => (),
@@ -798,9 +815,20 @@ impl SemanticAnalyser {
                                     }
                                 }
                             }
-                        }
 
-                        // self.exit_scope();
+                            object_symbol.add_associated_items(items.clone())?;
+                        }
+                    }
+
+                    self.exit_scope();
+
+                    log_trace!(
+                        self.logger,
+                        "inserting symbols into implementation for type: `{type_path}` …",
+                    );
+
+                    for (path, symbol) in symbols {
+                        self.insert(path, symbol)?;
                     }
                 }
 
@@ -1098,6 +1126,8 @@ impl SemanticAnalyser {
             if let Some(library) = self.lib_registry.get(&import_root).cloned() {
                 for Module { table, .. } in library.iter() {
                     for (item_path, symbol) in table {
+                        println!("item path: {item_path}");
+
                         if let Some(scope) = self.scope_stack.last().cloned() {
                             if let Symbol::Module { symbols, .. } = symbol {
                                 for (path, sym) in symbols {
