@@ -17,9 +17,9 @@ use crate::{
         AliasDecl, ConstantDecl, EnumDef, EnumVariantKind, EnumVariantStruct,
         EnumVariantTupleStruct, Expression, FunctionItem, FunctionOrMethodParam, FunctionParam,
         GenericParam, Identifier, ImportDecl, InherentImplDef, InherentImplItem, Item, Keyword,
-        ModuleItem, SelfType, Statement, StaticVarDecl, StructDef, StructDefField, TraitDef,
-        TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type,
-        TypePath, UnitType, Visibility,
+        ModuleItem, Statement, StaticVarDecl, StructDef, StructDefField, TraitDef, TraitDefItem,
+        TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type, TypePath, UnitType,
+        Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     log_debug, log_error, log_info, log_trace, log_warn,
@@ -1078,7 +1078,7 @@ impl SemanticAnalyser {
             let param_types: Vec<Type> = params.iter().map(|p| p.param_type()).collect();
 
             for (param, mut param_type) in params.iter().zip(param_types) {
-                if param_type == Type::SelfType(SelfType) {
+                if param_type == Type::self_type() {
                     if is_associated_func {
                         param_type = Type::UserDefined(function_root.clone());
                     }
@@ -1373,7 +1373,7 @@ impl SemanticAnalyser {
             // TODO: custom error
             (Type::SelfType(_), _) => Err(SemanticErrorKind::UnexpectedType {
                 expected: "non-`Self` type".to_string(),
-                found: Type::SelfType(SelfType),
+                found: Type::self_type(),
             }),
 
             (Type::UserDefined(_), Type::SelfType(_)) => {
@@ -2578,8 +2578,8 @@ fn unify_result_types(ty: &mut Type, context_type: &Type) -> Result<(), Semantic
 }
 
 fn unify_self_type(ty: &mut Type, object_type: Type) {
-    if *ty == Type::SelfType(SelfType) {
-        if object_type != Type::SelfType(SelfType) && object_type != Type::inferred_type("_") {
+    if *ty == Type::self_type() {
+        if object_type != Type::self_type() && object_type != Type::inferred_type("_") {
             *ty = object_type;
         }
     }

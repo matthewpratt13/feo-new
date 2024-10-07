@@ -37,7 +37,7 @@ impl FunctionOrMethodParam {
     pub(crate) fn param_type(&self) -> Type {
         match self {
             FunctionOrMethodParam::FunctionParam(f) => *f.param_type.clone(),
-            FunctionOrMethodParam::MethodParam(_) => Type::SelfType(SelfType),
+            FunctionOrMethodParam::MethodParam(_) => Type::self_type(),
         }
     }
 }

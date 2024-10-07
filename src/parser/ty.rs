@@ -220,7 +220,7 @@ impl Type {
                     let path = TypePath::parse(parser, token)?;
                     Ok(Type::UserDefined(path))
                 }
-                _ => Ok(Type::SelfType(SelfType)),
+                _ => Ok(Type::self_type()),
             },
 
             Some(Token::EOF) | None => {
@@ -239,6 +239,10 @@ impl Type {
         Type::InferredType(InferredType {
             name: Identifier::from(name_str),
         })
+    }
+
+    pub(crate) const fn self_type() -> Type {
+        Type::SelfType(SelfType)
     }
 
     pub(crate) const fn unit_type() -> Type {
