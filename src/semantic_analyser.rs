@@ -71,14 +71,14 @@ impl SemanticAnalyser {
                 code.keys()
             );
 
-            for (name, lib) in code {
-                for module in lib.iter() {
+            for (lib_name, lib_contents) in code {
+                for module in lib_contents.iter() {
                     for (path, sym) in module.table.iter() {
                         symbols.insert(path.clone(), sym.clone());
                     }
                 }
 
-                lib_registry.insert(name, lib);
+                lib_registry.insert(lib_name, lib_contents);
             }
         }
 
