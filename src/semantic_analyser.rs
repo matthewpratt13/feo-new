@@ -251,13 +251,11 @@ impl SemanticAnalyser {
                     _ => value_type.clone(),
                 };
 
-                let mut symbol_table = if let Some(scope) = self.scope_stack.last() {
-                    scope.symbols.to_owned()
-                } else {
-                    HashMap::new()
-                };
-
-                self.check_types(&mut symbol_table, &declared_type, &mut value_type)?;
+                self.check_types(
+                    &mut self.current_symbol_table(),
+                    &declared_type,
+                    &mut value_type,
+                )?;
 
                 // check that the value matches the type annotation
                 if &value_type != &declared_type {
@@ -346,13 +344,10 @@ impl SemanticAnalyser {
 
                     let alias_path = root.join(ad.alias_name.to_type_path());
 
-                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
-                        if *scope_kind == ScopeKind::ProgramRoot {
-                            self.enter_scope(ScopeKind::Module(
-                                Identifier::from("lib").to_type_path(),
-                            ))
-                        }
-                    }
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
 
                     self.insert(
                         alias_path.clone(),
@@ -376,14 +371,8 @@ impl SemanticAnalyser {
                         _ => None,
                     };
 
-                    let mut symbol_table = if let Some(scope) = self.scope_stack.last() {
-                        scope.symbols.to_owned()
-                    } else {
-                        HashMap::new()
-                    };
-
                     self.check_types(
-                        &mut symbol_table,
+                        &mut self.current_symbol_table(),
                         &cd.constant_type,
                         &mut value_type.clone().unwrap_or(Type::inferred_type("_")),
                     )?;
@@ -397,13 +386,10 @@ impl SemanticAnalyser {
 
                     let constant_path = root.join(cd.constant_name.to_type_path());
 
-                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
-                        if *scope_kind == ScopeKind::ProgramRoot {
-                            self.enter_scope(ScopeKind::Module(
-                                Identifier::from("lib").to_type_path(),
-                            ))
-                        }
-                    }
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
 
                     self.insert(
                         constant_path.clone(),
@@ -430,13 +416,11 @@ impl SemanticAnalyser {
                         _ => Type::inferred_type("_"),
                     };
 
-                    let mut symbol_table = if let Some(scope) = self.scope_stack.last() {
-                        scope.symbols.to_owned()
-                    } else {
-                        HashMap::new()
-                    };
-
-                    self.check_types(&mut symbol_table, &s.var_type, &mut assignee_type)?;
+                    self.check_types(
+                        &mut self.current_symbol_table(),
+                        &s.var_type,
+                        &mut assignee_type,
+                    )?;
 
                     if &assignee_type != &s.var_type {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
@@ -447,13 +431,10 @@ impl SemanticAnalyser {
 
                     let static_var_path = root.join(s.var_name.to_type_path());
 
-                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
-                        if *scope_kind == ScopeKind::ProgramRoot {
-                            self.enter_scope(ScopeKind::Module(
-                                Identifier::from("lib").to_type_path(),
-                            ))
-                        }
-                    }
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
 
                     self.insert(
                         static_var_path,
@@ -534,7 +515,8 @@ impl SemanticAnalyser {
                         "inserting symbols into module at path: `{module_path}` …",
                     );
 
-                    if let Some(lib_contents) = self.lib_registry.get_mut(&Identifier::from("lib")) {
+                    if let Some(lib_contents) = self.lib_registry.get_mut(&Identifier::from("lib"))
+                    {
                         log_trace!(
                             self.logger,
                             "inserting module `{}` into library registry under local library …",
@@ -559,13 +541,10 @@ impl SemanticAnalyser {
                         "analysing trait definition: `{trait_def_path}` …"
                     );
 
-                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
-                        if *scope_kind == ScopeKind::ProgramRoot {
-                            self.enter_scope(ScopeKind::Module(
-                                Identifier::from("lib").to_type_path(),
-                            ))
-                        }
-                    }
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
 
                     self.insert(
                         trait_def_path.clone(),
@@ -672,13 +651,10 @@ impl SemanticAnalyser {
                         "analysing enum definition: `{enum_def_path}` …"
                     );
 
-                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
-                        if *scope_kind == ScopeKind::ProgramRoot {
-                            self.enter_scope(ScopeKind::Module(
-                                Identifier::from("lib").to_type_path(),
-                            ))
-                        }
-                    }
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
 
                     self.insert(
                         enum_def_path.clone(),
@@ -770,13 +746,10 @@ impl SemanticAnalyser {
                         "analysing struct definition: `{struct_def_path}` …"
                     );
 
-                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
-                        if *scope_kind == ScopeKind::ProgramRoot {
-                            self.enter_scope(ScopeKind::Module(
-                                Identifier::from("lib").to_type_path(),
-                            ))
-                        }
-                    }
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
 
                     self.insert(
                         struct_def_path,
@@ -798,13 +771,10 @@ impl SemanticAnalyser {
                         "analysing tuple struct definition: `{tuple_struct_path}` …"
                     );
 
-                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
-                        if *scope_kind == ScopeKind::ProgramRoot {
-                            self.enter_scope(ScopeKind::Module(
-                                Identifier::from("lib").to_type_path(),
-                            ))
-                        }
-                    }
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
 
                     self.insert(
                         tuple_struct_path,
@@ -989,13 +959,10 @@ impl SemanticAnalyser {
                             .unwrap_or(Box::new(Type::UNIT_TYPE))
                     );
 
-                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
-                        if *scope_kind == ScopeKind::ProgramRoot {
-                            self.enter_scope(ScopeKind::Module(
-                                Identifier::from("lib").to_type_path(),
-                            ))
-                        }
-                    }
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
 
                     self.insert(
                         function_item_path,
@@ -1069,12 +1036,6 @@ impl SemanticAnalyser {
                 )?;
             }
         }
-
-        let mut symbol_table = if let Some(scope) = self.scope_stack.last() {
-            scope.symbols.to_owned()
-        } else {
-            HashMap::new()
-        };
 
         if let Some(params) = &f.params_opt {
             let param_types: Vec<Type> = params.iter().map(|p| p.param_type()).collect();
@@ -1171,7 +1132,11 @@ impl SemanticAnalyser {
 
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
-            self.check_types(&mut symbol_table, &return_type, &mut function_type)?;
+            self.check_types(
+                &mut self.current_symbol_table(),
+                &return_type,
+                &mut function_type,
+            )?;
         }
 
         println!(
@@ -1351,6 +1316,14 @@ impl SemanticAnalyser {
         }
 
         Ok(())
+    }
+
+    fn try_update_current_scope(&mut self, expected: &ScopeKind, new_scope: ScopeKind) {
+        if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
+            if scope_kind == expected {
+                self.enter_scope(new_scope)
+            }
+        }
     }
 
     /// Check if two types match. Returns `Ok` if they are compatible or can be unified, or
@@ -2371,6 +2344,14 @@ impl SemanticAnalyser {
 
         // if no implementations are found, return an empty array
         &[]
+    }
+
+    fn current_symbol_table(&self) -> SymbolTable {
+        if let Some(scope) = self.scope_stack.last() {
+            scope.symbols.to_owned()
+        } else {
+            HashMap::new()
+        }
     }
 
     /// Helper function to resolve `Type` to `TypePath` if it exists in a symbol table in scope.

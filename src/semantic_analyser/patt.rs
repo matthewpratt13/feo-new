@@ -249,15 +249,8 @@ pub(crate) fn analyse_patt(
                         for def_field in def_fields {
                             match field_map.get_mut(&def_field.field_name) {
                                 Some(patt_field_type) => {
-                                    let mut symbol_table =
-                                        if let Some(scope) = analyser.scope_stack.last() {
-                                            scope.symbols.to_owned()
-                                        } else {
-                                            HashMap::new()
-                                        };
-
                                     analyser.check_types(
-                                        &mut symbol_table,
+                                        &mut analyser.current_symbol_table(),
                                         &*def_field.field_type,
                                         patt_field_type,
                                     )?;
@@ -339,15 +332,8 @@ pub(crate) fn analyse_patt(
                                 let mut elem_type = analyse_patt(analyser, &elem)?;
                                 // let elem_type_clone = elem_type.clone();
 
-                                let mut symbol_table =
-                                    if let Some(scope) = analyser.scope_stack.last() {
-                                        scope.symbols.to_owned()
-                                    } else {
-                                        HashMap::new()
-                                    };
-
                                 analyser.check_types(
-                                    &mut symbol_table,
+                                    &mut analyser.current_symbol_table(),
                                     &*field_type,
                                     &mut elem_type,
                                 )?;

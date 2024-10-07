@@ -400,13 +400,11 @@ pub(crate) fn analyse_expr(
 
             let mut rhs_type = analyse_expr(analyser, &b.rhs.to_expression(), root)?;
 
-            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                scope.symbols.to_owned()
-            } else {
-                HashMap::new()
-            };
-
-            analyser.check_types(&mut symbol_table, &lhs_type, &mut rhs_type)?;
+            analyser.check_types(
+                &mut analyser.current_symbol_table(),
+                &lhs_type,
+                &mut rhs_type,
+            )?;
 
             Ok(rhs_type)
         }
@@ -416,13 +414,11 @@ pub(crate) fn analyse_expr(
 
             let mut rhs_type = analyse_expr(analyser, &c.rhs.to_expression(), root)?;
 
-            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                scope.symbols.to_owned()
-            } else {
-                HashMap::new()
-            };
-
-            analyser.check_types(&mut symbol_table, &lhs_type, &mut rhs_type)?;
+            analyser.check_types(
+                &mut analyser.current_symbol_table(),
+                &lhs_type,
+                &mut rhs_type,
+            )?;
 
             Ok(rhs_type)
         }
@@ -523,13 +519,11 @@ pub(crate) fn analyse_expr(
 
             let mut value_type = analyse_expr(analyser, &a.rhs.to_expression(), root)?;
 
-            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                scope.symbols.to_owned()
-            } else {
-                HashMap::new()
-            };
-
-            analyser.check_types(&mut symbol_table, &assignee_type, &mut value_type)?;
+            analyser.check_types(
+                &mut analyser.current_symbol_table(),
+                &assignee_type,
+                &mut value_type,
+            )?;
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
@@ -569,13 +563,11 @@ pub(crate) fn analyse_expr(
 
             let mut value_type = analyse_expr(analyser, &ca.rhs.to_expression(), root)?;
 
-            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                scope.symbols.to_owned()
-            } else {
-                HashMap::new()
-            };
-
-            analyser.check_types(&mut symbol_table, &assignee_type, &mut value_type)?;
+            analyser.check_types(
+                &mut analyser.current_symbol_table(),
+                &assignee_type,
+                &mut value_type,
+            )?;
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
@@ -670,13 +662,11 @@ pub(crate) fn analyse_expr(
                 }
             }
 
-            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                scope.symbols.to_owned()
-            } else {
-                HashMap::new()
-            };
-
-            analyser.check_types(&mut symbol_table, &return_type, &mut expression_type)?;
+            analyser.check_types(
+                &mut analyser.current_symbol_table(),
+                &return_type,
+                &mut expression_type,
+            )?;
 
             let function_ptr = FunctionPtr {
                 params_opt,
@@ -700,14 +690,8 @@ pub(crate) fn analyse_expr(
 
                         element_count += 1;
 
-                        let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                            scope.symbols.to_owned()
-                        } else {
-                            HashMap::new()
-                        };
-
                         analyser.check_types(
-                            &mut symbol_table,
+                            &mut analyser.current_symbol_table(),
                             &element_type,
                             &mut first_element_type,
                         )?;
@@ -800,15 +784,8 @@ pub(crate) fn analyse_expr(
                         for def_field in def_fields.iter() {
                             match field_map.get_mut(&def_field.field_name) {
                                 Some(obj_field_type) => {
-                                    let mut symbol_table =
-                                        if let Some(scope) = analyser.scope_stack.last() {
-                                            scope.symbols.to_owned()
-                                        } else {
-                                            HashMap::new()
-                                        };
-
                                     analyser.check_types(
-                                        &mut symbol_table,
+                                        &mut analyser.current_symbol_table(),
                                         &*def_field.field_type,
                                         obj_field_type,
                                     )?;
@@ -893,15 +870,8 @@ pub(crate) fn analyse_expr(
                                     &Identifier::from("").to_type_path(),
                                 )?;
 
-                                let mut symbol_table =
-                                    if let Some(scope) = analyser.scope_stack.last() {
-                                        scope.symbols.to_owned()
-                                    } else {
-                                        HashMap::new()
-                                    };
-
                                 analyser.check_types(
-                                    &mut symbol_table,
+                                    &mut analyser.current_symbol_table(),
                                     &field_type,
                                     &mut elem_type,
                                 )?;
@@ -942,16 +912,14 @@ pub(crate) fn analyse_expr(
                         let mut pair_key_type = analyse_patt(analyser, &pair.k.clone())?;
                         let mut pair_value_type = analyse_expr(analyser, &pair.v.clone(), root)?;
 
-                        let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                            scope.symbols.to_owned()
-                        } else {
-                            HashMap::new()
-                        };
-
-                        analyser.check_types(&mut symbol_table, &key_type, &mut pair_key_type)?;
+                        analyser.check_types(
+                            &mut analyser.current_symbol_table(),
+                            &key_type,
+                            &mut pair_key_type,
+                        )?;
 
                         analyser.check_types(
-                            &mut symbol_table,
+                            &mut analyser.current_symbol_table(),
                             &value_type,
                             &mut pair_value_type,
                         )?;
@@ -1144,21 +1112,15 @@ pub(crate) fn analyse_expr(
                 for arm in arms.iter() {
                     let mut arm_patt_type = analyse_patt(analyser, &arm.matched_pattern)?;
 
-                    let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                        scope.symbols.to_owned()
-                    } else {
-                        HashMap::new()
-                    };
-
                     if matched_patt_type == Type::inferred_type("_") {
                         analyser.check_types(
-                            &mut symbol_table,
+                            &mut analyser.current_symbol_table(),
                             &arm_patt_type,
                             &mut matched_patt_type,
                         )?;
                     } else {
                         analyser.check_types(
-                            &mut symbol_table,
+                            &mut analyser.current_symbol_table(),
                             &matched_patt_type,
                             &mut arm_patt_type,
                         )?;
@@ -1179,7 +1141,11 @@ pub(crate) fn analyse_expr(
                     let mut arm_expr_type =
                         analyse_expr(analyser, &arm.arm_expression.clone(), root)?;
 
-                    analyser.check_types(&mut symbol_table, &expr_type, &mut arm_expr_type)?;
+                    analyser.check_types(
+                        &mut analyser.current_symbol_table(),
+                        &expr_type,
+                        &mut arm_expr_type,
+                    )?;
 
                     if arm_expr_type != expr_type {
                         return Err(SemanticErrorKind::TypeMismatchMatchExpr {
@@ -1389,13 +1355,11 @@ fn analyse_call_or_method_call_expr(
 
                         let param_type = param.param_type();
 
-                        let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                            scope.symbols.to_owned()
-                        } else {
-                            HashMap::new()
-                        };
-
-                        analyser.check_types(&mut symbol_table, &param_type, &mut arg_type)?;
+                        analyser.check_types(
+                            &mut analyser.current_symbol_table(),
+                            &param_type,
+                            &mut arg_type,
+                        )?;
 
                         if arg_type != param_type {
                             return Err(SemanticErrorKind::TypeMismatchArg {
