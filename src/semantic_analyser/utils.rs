@@ -1,6 +1,6 @@
-use core::fmt;
-
 use crate::ast::Expression;
+
+use core::fmt;
 
 pub(crate) trait FormatString
 where
