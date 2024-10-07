@@ -1,4 +1,8 @@
-use super::{symbol_table::Symbol, utils::FormatString, SemanticAnalyser};
+use super::{
+    symbol_table::Symbol,
+    utils::{FormatString, ToIdentifier},
+    SemanticAnalyser,
+};
 
 use crate::{
     ast::{

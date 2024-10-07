@@ -274,7 +274,7 @@ fn analyse_import_decl() -> Result<(), ()> {
     };
 
     let external_func_path = TypePath {
-        associated_type_path_prefix_opt: Some(vec![external_mod_path.clone().into()]),
+        associated_type_path_prefix_opt: Some(vec![external_mod_path.to_identifier()]),
         type_name: external_func.function_name.clone(),
     };
 

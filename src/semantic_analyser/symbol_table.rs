@@ -4,6 +4,7 @@ use crate::{
         TraitImplItem, TupleStructDef, Type, TypePath, Visibility,
     },
     error::SemanticErrorKind,
+    semantic_analyser::utils::ToIdentifier,
 };
 
 use core::fmt;
@@ -172,7 +173,7 @@ impl Symbol {
 
     pub(crate) fn type_path(&self) -> TypePath {
         match self.clone() {
-            Symbol::Variable { name, .. } => TypePath::from(name.clone()),
+            Symbol::Variable { name, .. } => name.to_type_path(),
             Symbol::Struct { path, .. }
             | Symbol::TupleStruct { path, .. }
             | Symbol::Enum { path, .. }

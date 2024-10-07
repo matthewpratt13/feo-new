@@ -33,7 +33,7 @@ use std::collections::HashMap;
 
 use expr::analyse_expr;
 use symbol_table::{Module, Scope, ScopeKind, Symbol, SymbolTable};
-use utils::{ToExpression, FormatString};
+use utils::{FormatString, ToExpression, ToIdentifier};
 
 /// Mapping from a `TypePath` (representing a concrete type) to a `Vec<TraitImplDef>`
 /// (representing implemented traits)
@@ -202,7 +202,7 @@ impl SemanticAnalyser {
             .insert(Identifier::from("lib"), Vec::new());
 
         for stmt in &program.statements {
-            self.analyse_stmt(stmt, TypePath::from(Identifier::from("")))
+            self.analyse_stmt(stmt, Identifier::from("").to_type_path())
                 .map_err(|_| self.errors.clone())?
         }
 
@@ -322,7 +322,7 @@ impl SemanticAnalyser {
                         var_type: Type::UserDefined(
                             type_bound_opt
                                 .clone()
-                                .unwrap_or(TypePath::from(Identifier::from("_"))),
+                                .unwrap_or(Identifier::from("_").to_type_path()),
                         ),
                     },
                 };
@@ -1437,8 +1437,8 @@ impl SemanticAnalyser {
                     Ok(())
                 } else {
                     Err(SemanticErrorKind::TypeMismatchUnification {
-                        expected: Identifier::from(&expected_type.to_string()),
-                        found: Identifier::from(&matched_type.to_string()),
+                        expected: expected_type.to_identifier(),
+                        found: matched_type.to_identifier(),
                     })
                 }
             }
@@ -1588,11 +1588,11 @@ impl SemanticAnalyser {
                                 }
                                 (
                                     FunctionOrMethodParam::FunctionParam(param_a),
-                                    FunctionOrMethodParam::MethodParam(param_b),
+                                    FunctionOrMethodParam::MethodParam(_),
                                 ) => {
                                     return Err(SemanticErrorKind::UnexpectedParam {
                                         expected: param_a.param_type.to_backtick_string(),
-                                        found: Identifier::from(&param_b.kw_self.to_string()),
+                                        found: Type::SELF_TYPE.to_identifier(),
                                     })
                                 }
                                 (
@@ -1601,7 +1601,7 @@ impl SemanticAnalyser {
                                 ) => {
                                     return Err(SemanticErrorKind::UnexpectedParam {
                                         expected: param_a.to_backtick_string(),
-                                        found: Identifier::from(&param_b.param_type.to_string()),
+                                        found: param_b.param_type.to_identifier(),
                                     })
                                 }
                                 (
@@ -1784,8 +1784,8 @@ impl SemanticAnalyser {
             }
 
             _ => Err(SemanticErrorKind::TypeMismatchUnification {
-                expected: Identifier::from(&expected_type.to_string()),
-                found: Identifier::from(&matched_type.to_string()),
+                expected: expected_type.to_identifier(),
+                found: matched_type.to_identifier(),
             }),
         }
     }

@@ -1,4 +1,4 @@
-use crate::ast::Expression;
+use crate::ast::{Expression, Identifier};
 
 use core::fmt;
 
@@ -18,5 +18,14 @@ pub(crate) trait ToExpression {
         Expression: From<Self>,
     {
         Expression::from(self.clone())
+    }
+}
+
+pub(crate) trait ToIdentifier
+where
+    Self: fmt::Display,
+{
+    fn to_identifier(&self) -> Identifier {
+        Identifier::from(&self.to_string())
     }
 }

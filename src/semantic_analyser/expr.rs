@@ -1,7 +1,7 @@
 use super::{
     patt::analyse_patt,
     symbol_table::ScopeKind,
-    utils::{FormatString, ToExpression},
+    utils::{FormatString, ToExpression, ToIdentifier},
     SemanticAnalyser,
 };
 
@@ -35,8 +35,8 @@ pub(crate) fn analyse_expr(
                     if let Some(id) = segments.pop() {
                         let root = match &p.path_root {
                             PathRoot::Identifier(id) => id.to_type_path(),
-                            PathRoot::SelfKeyword => TypePath::from(Identifier::from("self")),
-                            PathRoot::SelfType(_) => TypePath::from(Identifier::from("Self")),
+                            PathRoot::SelfKeyword => Identifier::from("self").to_type_path(),
+                            PathRoot::SelfType(_) => Identifier::from("Self").to_type_path(),
 
                             path_root => {
                                 return Err(SemanticErrorKind::InvalidVariableIdentifier {
@@ -181,7 +181,7 @@ pub(crate) fn analyse_expr(
                     Some(fields) => match fields.iter().find(|f| f.field_name == fa.field_name) {
                         Some(sdf) => Ok(*sdf.field_type.clone()),
                         _ => Err(SemanticErrorKind::UndefinedField {
-                            struct_path: Identifier::from(object_path),
+                            struct_path: object_path.to_identifier(),
                             field_name: fa.field_name.clone(),
                         }),
                     },
@@ -189,11 +189,11 @@ pub(crate) fn analyse_expr(
                 },
 
                 None => Err(SemanticErrorKind::UndefinedType {
-                    name: Identifier::from(&object_type.to_string()),
+                    name: object_type.to_identifier(),
                 }),
 
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                    name: Identifier::from(&object_type.to_string()),
+                    name: object_type.to_identifier(),
                     expected: "struct".to_string(),
                     found: sym.to_backtick_string(),
                 }),
@@ -776,7 +776,7 @@ pub(crate) fn analyse_expr(
                     if let Some(def_fields) = def_fields_opt {
                         if field_map.len() > def_fields.len() {
                             return Err(SemanticErrorKind::StructArgCountMismatch {
-                                struct_path: Identifier::from(type_path),
+                                struct_path: type_path.to_identifier(),
                                 expected: def_fields.len(),
                                 found: field_map.len(),
                             });
@@ -865,20 +865,20 @@ pub(crate) fn analyse_expr(
                         (None, None) => Ok(Type::UNIT_TYPE),
 
                         (None, Some(fields)) => Err(SemanticErrorKind::StructArgCountMismatch {
-                            struct_path: Identifier::from(type_path),
+                            struct_path: type_path.to_identifier(),
                             expected: fields.len(),
                             found: 0,
                         }),
 
                         (Some(elements), None) => Err(SemanticErrorKind::StructArgCountMismatch {
-                            struct_path: Identifier::from(type_path),
+                            struct_path: type_path.to_identifier(),
                             expected: 0,
                             found: elements.len(),
                         }),
                         (Some(elements), Some(fields)) => {
                             if elements.len() != fields.len() {
                                 return Err(SemanticErrorKind::StructArgCountMismatch {
-                                    struct_path: Identifier::from(type_path),
+                                    struct_path: type_path.to_identifier(),
                                     expected: fields.len(),
                                     found: elements.len(),
                                 });
@@ -890,7 +890,7 @@ pub(crate) fn analyse_expr(
                                 let mut elem_type = analyse_expr(
                                     analyser,
                                     &elem,
-                                    &TypePath::from(Identifier::from("")),
+                                    &Identifier::from("").to_type_path(),
                                 )?;
 
                                 let mut symbol_table =

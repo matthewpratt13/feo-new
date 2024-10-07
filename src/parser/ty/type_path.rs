@@ -4,7 +4,7 @@ use crate::{
     ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, SelfType, Type, TypePath},
     error::ErrorsEmitted,
     log_trace,
-    semantic_analyser::utils::FormatString,
+    semantic_analyser::utils::{FormatString, ToIdentifier},
     token::{Token, TokenType},
 };
 
@@ -171,13 +171,11 @@ impl TypePath {
             }
         }
     }
-
-    pub(crate) fn to_identifier(&self) -> Identifier {
-        self.clone().into()
-    }
 }
 
 impl FormatString for TypePath {}
+
+impl ToIdentifier for TypePath {}
 
 impl From<PathExpr> for TypePath {
     fn from(value: PathExpr) -> Self {
@@ -270,7 +268,7 @@ impl From<Type> for TypePath {
     fn from(value: Type) -> Self {
         match value {
             Type::UserDefined(p) => p,
-            t => TypePath::from(Identifier::from(&t.to_string())),
+            t => t.to_identifier().to_type_path(),
         }
     }
 }

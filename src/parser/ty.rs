@@ -11,7 +11,7 @@ use crate::{
     },
     error::ErrorsEmitted,
     log_trace,
-    semantic_analyser::utils::FormatString,
+    semantic_analyser::utils::{FormatString, ToIdentifier},
     span::Position,
     token::{Token, TokenType},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
@@ -247,6 +247,8 @@ impl Type {
 }
 
 impl FormatString for Type {}
+
+impl ToIdentifier for Type {}
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

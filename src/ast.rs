@@ -114,12 +114,6 @@ impl Identifier {
 
 impl FormatString for Identifier {}
 
-impl From<TypePath> for Identifier {
-    fn from(value: TypePath) -> Self {
-        Identifier::from(&value.to_string())
-    }
-}
-
 impl From<&str> for Identifier {
     fn from(value: &str) -> Self {
         Identifier(value.to_string())
