@@ -71,14 +71,14 @@ impl SemanticAnalyser {
                 code.keys()
             );
 
-            for (name, modules) in code {
-                for module in modules.iter() {
+            for (name, lib) in code {
+                for module in lib.iter() {
                     for (path, sym) in module.table.iter() {
                         symbols.insert(path.clone(), sym.clone());
                     }
                 }
 
-                lib_registry.insert(name, modules);
+                lib_registry.insert(name, lib);
             }
         }
 
@@ -534,7 +534,7 @@ impl SemanticAnalyser {
                         "inserting symbols into module at path: `{module_path}` …",
                     );
 
-                    if let Some(modules) = self.lib_registry.get_mut(&Identifier::from("lib")) {
+                    if let Some(lib_contents) = self.lib_registry.get_mut(&Identifier::from("lib")) {
                         log_trace!(
                             self.logger,
                             "inserting module `{}` into library registry under local library …",
@@ -546,7 +546,7 @@ impl SemanticAnalyser {
                             table: module_scope.symbols,
                         };
 
-                        modules.push(module);
+                        lib_contents.push(module);
                     }
                 }
 
@@ -1211,8 +1211,8 @@ impl SemanticAnalyser {
                 };
 
             // bring external libraries into scope
-            if let Some(library) = self.lib_registry.get(&import_root).cloned() {
-                for Module { table, .. } in library.iter() {
+            if let Some(lib_contents) = self.lib_registry.get(&import_root).cloned() {
+                for Module { table, .. } in lib_contents.iter() {
                     for (item_path, symbol) in table {
                         match symbol {
                             Symbol::Struct {
