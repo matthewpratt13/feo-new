@@ -89,7 +89,7 @@ pub(crate) fn analyse_patt(
         Pattern::GroupedPatt(g) => analyse_patt(analyser, &g.inner_pattern),
 
         Pattern::RangePatt(r) => match (&r.from_pattern_opt, &r.to_pattern_opt) {
-            (None, None) => Ok(Type::unit_type()),
+            (None, None) => Ok(Type::UNIT_TYPE()),
             (None, Some(to)) => {
                 let to_type = analyse_patt(analyser, &to.clone())?;
 
@@ -307,7 +307,7 @@ pub(crate) fn analyse_patt(
                     let fields_opt = tuple_struct_def.fields_opt;
 
                     match (elements_opt, fields_opt) {
-                        (None, None) => Ok(Type::unit_type()),
+                        (None, None) => Ok(Type::UNIT_TYPE()),
 
                         (None, Some(fields)) => Err(SemanticErrorKind::StructArgCountMismatch {
                             struct_path: type_path.to_identifier(),
@@ -404,7 +404,7 @@ pub(crate) fn analyse_patt(
         }
 
         Pattern::NonePatt(_) => Ok(Type::Option {
-            inner_type: Box::new(Type::unit_type()),
+            inner_type: Box::new(Type::UNIT_TYPE()),
         }),
 
         Pattern::ResultPatt(r) => {

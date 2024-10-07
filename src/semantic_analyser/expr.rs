@@ -181,7 +181,7 @@ pub(crate) fn analyse_expr(
                             field_name: fa.field_name.clone(),
                         }),
                     },
-                    _ => Ok(Type::unit_type()),
+                    _ => Ok(Type::UNIT_TYPE()),
                 },
 
                 None => Err(SemanticErrorKind::UndefinedType {
@@ -439,7 +439,7 @@ pub(crate) fn analyse_expr(
         Expression::Grouped(g) => analyse_expr(analyser, &g.inner_expression, root),
 
         Expression::Range(r) => match (&r.from_expr_opt, &r.to_expr_opt) {
-            (None, None) => Ok(Type::unit_type()),
+            (None, None) => Ok(Type::UNIT_TYPE()),
             (None, Some(to)) => {
                 let to_type = analyse_expr(analyser, &wrap_into_expression(*to.clone()), root)?;
 
@@ -625,12 +625,12 @@ pub(crate) fn analyse_expr(
 
         Expression::Return(r) => match &r.expression_opt {
             Some(expr) => analyse_expr(analyser, &expr.clone(), root),
-            _ => Ok(Type::unit_type()),
+            _ => Ok(Type::UNIT_TYPE()),
         },
 
-        Expression::Break(_) => Ok(Type::unit_type()),
+        Expression::Break(_) => Ok(Type::UNIT_TYPE()),
 
-        Expression::Continue(_) => Ok(Type::unit_type()),
+        Expression::Continue(_) => Ok(Type::UNIT_TYPE()),
 
         Expression::Underscore(_) => Ok(Type::inferred_type("_")),
 
@@ -660,7 +660,7 @@ pub(crate) fn analyse_expr(
 
             let return_type = match &c.return_type_opt {
                 Some(ty) => Ok(*ty.clone()),
-                _ => Ok(Type::unit_type()),
+                _ => Ok(Type::UNIT_TYPE()),
             }?;
 
             let return_type_clone = return_type.clone();
@@ -737,7 +737,7 @@ pub(crate) fn analyse_expr(
                     })
                 }
                 _ => {
-                    let element_type = Type::unit_type();
+                    let element_type = Type::UNIT_TYPE();
                     let array = Type::Array {
                         element_type: Box::new(element_type),
                         num_elements: UInt::U64(0u64),
@@ -746,7 +746,7 @@ pub(crate) fn analyse_expr(
                     Ok(array)
                 }
             },
-            _ => Ok(Type::unit_type()),
+            _ => Ok(Type::UNIT_TYPE()),
         },
 
         Expression::Tuple(t) => {
@@ -873,7 +873,7 @@ pub(crate) fn analyse_expr(
                     let fields_opt = tuple_struct_def.fields_opt;
 
                     match (&elements_opt, &fields_opt) {
-                        (None, None) => Ok(Type::unit_type()),
+                        (None, None) => Ok(Type::UNIT_TYPE()),
 
                         (None, Some(fields)) => Err(SemanticErrorKind::StructArgCountMismatch {
                             struct_path: Identifier::from(type_path),
@@ -988,8 +988,8 @@ pub(crate) fn analyse_expr(
                     })
                 }
                 _ => {
-                    let key_type = Box::new(Type::unit_type());
-                    let value_type = Box::new(Type::unit_type());
+                    let key_type = Box::new(Type::UNIT_TYPE());
+                    let value_type = Box::new(Type::UNIT_TYPE());
 
                     Ok(Type::Mapping {
                         key_type,
@@ -997,7 +997,7 @@ pub(crate) fn analyse_expr(
                     })
                 }
             },
-            _ => Ok(Type::unit_type()),
+            _ => Ok(Type::UNIT_TYPE()),
         },
 
         Expression::Block(b) => match &b.statements_opt {
@@ -1048,9 +1048,9 @@ pub(crate) fn analyse_expr(
                 let ty = match stmts.last() {
                     Some(stmt) => match stmt {
                         Statement::Expression(expr) => analyse_expr(analyser, expr, root),
-                        _ => Ok(Type::unit_type()),
+                        _ => Ok(Type::UNIT_TYPE()),
                     },
-                    _ => Ok(Type::unit_type()),
+                    _ => Ok(Type::UNIT_TYPE()),
                 };
 
                 println!("finished analysing block expression with type: `{ty:?}`");
@@ -1060,7 +1060,7 @@ pub(crate) fn analyse_expr(
                 ty
             }
 
-            _ => Ok(Type::unit_type()),
+            _ => Ok(Type::UNIT_TYPE()),
         },
 
         Expression::If(i) => {
@@ -1098,14 +1098,14 @@ pub(crate) fn analyse_expr(
 
                         if_block_type.clone()
                     }
-                    _ => Type::unit_type(),
+                    _ => Type::UNIT_TYPE(),
                 },
-                _ => Type::unit_type(),
+                _ => Type::UNIT_TYPE(),
             };
 
             let trailing_else_block_type = match &i.trailing_else_block_opt {
                 Some(block) => analyse_expr(analyser, &Expression::Block(block.clone()), root)?,
-                _ => Type::unit_type(),
+                _ => Type::UNIT_TYPE(),
             };
 
             if i.else_if_blocks_opt.is_some() && else_if_blocks_type != if_block_type {
@@ -1260,7 +1260,7 @@ pub(crate) fn analyse_expr(
 
             analyser.exit_scope();
 
-            Ok(Type::unit_type())
+            Ok(Type::UNIT_TYPE())
         }
 
         Expression::While(w) => {
@@ -1274,14 +1274,14 @@ pub(crate) fn analyse_expr(
 
             println!("finished analysing while loop");
 
-            Ok(Type::unit_type())
+            Ok(Type::UNIT_TYPE())
         }
 
         Expression::SomeExpr(s) => {
             let ty = analyse_expr(analyser, &s.expression.clone().inner_expression, root)?;
 
             let ty = if ty == Type::Tuple(Vec::new()) {
-                Type::unit_type()
+                Type::UNIT_TYPE()
             } else {
                 ty
             };
@@ -1292,14 +1292,14 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::NoneExpr(_) => Ok(Type::Option {
-            inner_type: Box::new(Type::unit_type()),
+            inner_type: Box::new(Type::UNIT_TYPE()),
         }),
 
         Expression::ResultExpr(r) => {
             let ty = analyse_expr(analyser, &r.expression.clone().inner_expression, root)?;
 
             let ty = if ty == Type::Tuple(Vec::new()) {
-                Type::unit_type()
+                Type::UNIT_TYPE()
             } else {
                 ty
             };
@@ -1337,7 +1337,7 @@ fn analyse_call_or_method_call_expr(
             match (&args_opt, &func_params) {
                 (None, None) => match func_def_return_type {
                     Some(ty) => Ok(*ty),
-                    _ => Ok(Type::unit_type()),
+                    _ => Ok(Type::UNIT_TYPE()),
                 },
                 (None, Some(params)) => {
                     let mut self_counter: usize = 0;
@@ -1365,7 +1365,7 @@ fn analyse_call_or_method_call_expr(
 
                     match func_def_return_type {
                         Some(ty) => Ok(*ty),
-                        _ => Ok(Type::unit_type()),
+                        _ => Ok(Type::UNIT_TYPE()),
                     }
                 }
                 (Some(args), None) => Err(SemanticErrorKind::FuncArgCountMismatch {
@@ -1420,7 +1420,7 @@ fn analyse_call_or_method_call_expr(
 
                     match func_def_return_type {
                         Some(ty) => Ok(*ty),
-                        None => Ok(Type::unit_type()),
+                        None => Ok(Type::UNIT_TYPE()),
                     }
                 }
             }

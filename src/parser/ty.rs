@@ -220,7 +220,7 @@ impl Type {
                     let path = TypePath::parse(parser, token)?;
                     Ok(Type::UserDefined(path))
                 }
-                _ => Ok(Type::self_type()),
+                _ => Ok(Type::SELF_TYPE()),
             },
 
             Some(Token::EOF) | None => {
@@ -241,11 +241,13 @@ impl Type {
         })
     }
 
-    pub(crate) const fn self_type() -> Type {
+    #[allow(non_snake_case)]
+    pub(crate) const fn SELF_TYPE() -> Type {
         Type::SelfType(SelfType)
     }
 
-    pub(crate) const fn unit_type() -> Type {
+    #[allow(non_snake_case)]
+    pub(crate) const fn UNIT_TYPE() -> Type {
         Type::UnitType(UnitType)
     }
 }
@@ -475,7 +477,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
 
     if let Some(Token::RParen { .. }) = parser.current_token() {
         parser.next_token();
-        Ok(Type::unit_type())
+        Ok(Type::UNIT_TYPE())
     } else if let Some(Token::Comma { .. }) = parser.peek_ahead_by(1) {
         let types = if let Some(t) = collection::get_collection(parser, Type::parse, &open_paren)? {
             parser.next_token();

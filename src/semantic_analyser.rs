@@ -240,7 +240,7 @@ impl SemanticAnalyser {
                 let mut value_type = if let Some(val) = &ls.value_opt {
                     analyse_expr(self, val, &root)?
                 } else {
-                    Type::unit_type()
+                    Type::UNIT_TYPE()
                 };
 
                 // get the type annotation if there is one, otherwise assume the value's type
@@ -984,7 +984,7 @@ impl SemanticAnalyser {
                         f.params_opt.clone().unwrap_or(Vec::new()),
                         f.return_type_opt
                             .clone()
-                            .unwrap_or(Box::new(Type::unit_type()))
+                            .unwrap_or(Box::new(Type::UNIT_TYPE()))
                     );
 
                     if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
@@ -1078,7 +1078,7 @@ impl SemanticAnalyser {
             let param_types: Vec<Type> = params.iter().map(|p| p.param_type()).collect();
 
             for (param, mut param_type) in params.iter().zip(param_types) {
-                if param_type == Type::self_type() {
+                if param_type == Type::SELF_TYPE() {
                     if is_associated_func {
                         param_type = Type::UserDefined(function_root.clone());
                     }
@@ -1149,7 +1149,7 @@ impl SemanticAnalyser {
                 f.params_opt.clone().unwrap_or(Vec::new()),
                 f.return_type_opt
                     .clone()
-                    .unwrap_or(Box::new(Type::unit_type()))
+                    .unwrap_or(Box::new(Type::UNIT_TYPE()))
             );
 
             analyse_expr(
@@ -1161,7 +1161,7 @@ impl SemanticAnalyser {
             if let Some(ty) = &f.return_type_opt {
                 *ty.clone()
             } else {
-                Type::unit_type()
+                Type::UNIT_TYPE()
             }
         };
 
@@ -1177,7 +1177,7 @@ impl SemanticAnalyser {
             f.params_opt.clone().unwrap_or(Vec::new()),
             f.return_type_opt
                 .clone()
-                .unwrap_or(Box::new(Type::unit_type()))
+                .unwrap_or(Box::new(Type::UNIT_TYPE()))
         );
 
         self.exit_scope();
@@ -1373,7 +1373,7 @@ impl SemanticAnalyser {
             // TODO: custom error
             (Type::SelfType(_), _) => Err(SemanticErrorKind::UnexpectedType {
                 expected: "non-`Self` type".to_string(),
-                found: Type::self_type(),
+                found: Type::SELF_TYPE(),
             }),
 
             (Type::UserDefined(_), Type::SelfType(_)) => {
@@ -2578,8 +2578,8 @@ fn unify_result_types(ty: &mut Type, context_type: &Type) -> Result<(), Semantic
 }
 
 fn unify_self_type(ty: &mut Type, object_type: Type) {
-    if *ty == Type::self_type() {
-        if object_type != Type::self_type() && object_type != Type::inferred_type("_") {
+    if *ty == Type::SELF_TYPE() {
+        if object_type != Type::SELF_TYPE() && object_type != Type::inferred_type("_") {
             *ty = object_type;
         }
     }
