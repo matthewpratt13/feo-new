@@ -139,7 +139,7 @@ impl SemanticAnalyser {
                 curr_scope.scope_kind
             );
 
-            curr_scope.symbols.insert(path.clone(), symbol.clone());
+            curr_scope.symbols.insert(path, symbol);
 
             // if let Some(modules) = self.lib_registry.get_mut(&Identifier::from("lib")) {
             //     for module in modules.iter_mut() {
