@@ -19,6 +19,9 @@ use crate::{
 use core::fmt;
 
 impl Type {
+    pub(crate) const UNIT_TYPE: Type = Type::UnitType(UnitType);
+    pub(crate) const SELF_TYPE: Type = Type::SelfType(SelfType);
+
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         log_trace!(parser.logger, "entering `Type::parse()` …");
@@ -220,7 +223,7 @@ impl Type {
                     let path = TypePath::parse(parser, token)?;
                     Ok(Type::UserDefined(path))
                 }
-                _ => Ok(Type::SELF_TYPE()),
+                _ => Ok(Type::SELF_TYPE),
             },
 
             Some(Token::EOF) | None => {
@@ -239,16 +242,6 @@ impl Type {
         Type::InferredType(InferredType {
             name: Identifier::from(name_str),
         })
-    }
-
-    #[allow(non_snake_case)]
-    pub(crate) const fn SELF_TYPE() -> Type {
-        Type::SelfType(SelfType)
-    }
-
-    #[allow(non_snake_case)]
-    pub(crate) const fn UNIT_TYPE() -> Type {
-        Type::UnitType(UnitType)
     }
 }
 
@@ -477,7 +470,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
 
     if let Some(Token::RParen { .. }) = parser.current_token() {
         parser.next_token();
-        Ok(Type::UNIT_TYPE())
+        Ok(Type::UNIT_TYPE)
     } else if let Some(Token::Comma { .. }) = parser.peek_ahead_by(1) {
         let types = if let Some(t) = collection::get_collection(parser, Type::parse, &open_paren)? {
             parser.next_token();

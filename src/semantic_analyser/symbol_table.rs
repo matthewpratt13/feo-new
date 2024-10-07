@@ -162,9 +162,9 @@ impl Symbol {
             Symbol::Constant { constant_type, .. } => constant_type,
             Symbol::Function { function, .. } => match function.return_type_opt {
                 Some(t) => *t,
-                None => Type::UNIT_TYPE(),
+                None => Type::UNIT_TYPE,
             },
-            Symbol::Module { .. } => Type::UNIT_TYPE(),
+            Symbol::Module { .. } => Type::UNIT_TYPE,
         }
     }
 
