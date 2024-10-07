@@ -72,9 +72,9 @@ impl SemanticAnalyser {
             );
 
             for (lib_name, lib_contents) in code {
-                for module in lib_contents.iter() {
-                    for (path, sym) in module.table.iter() {
-                        symbols.insert(path.clone(), sym.clone());
+                for module in lib_contents.clone() {
+                    for (path, sym) in module.table {
+                        symbols.insert(path, sym);
                     }
                 }
 
@@ -203,13 +203,13 @@ impl SemanticAnalyser {
 
         for stmt in &program.statements {
             self.analyse_stmt(stmt, Identifier::from("").to_type_path())
-                .map_err(|_| self.errors.clone())?
+                .map_err(|_| self.errors.to_vec())?
         }
 
         self.exit_scope();
 
         if !self.errors.is_empty() {
-            return Err(self.errors.clone());
+            return Err(self.errors.to_vec());
         }
 
         log_info!(
