@@ -9,6 +9,8 @@ use crate::{
 use core::fmt;
 use std::collections::HashMap;
 
+use super::utils::FormatString;
+
 /// Type alias representing a symbol table that maps `TypePath` to `Symbol`.
 pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
 
@@ -146,7 +148,7 @@ impl Symbol {
             sym => Err(SemanticErrorKind::UnexpectedSymbol {
                 name: sym.type_path().to_identifier(),
                 expected: "struct or enum".to_string(),
-                found: format!("`{}`", sym.symbol_type()),
+                found: sym.symbol_type().to_backtick_string(),
             }),
         }
     }
@@ -182,6 +184,8 @@ impl Symbol {
         }
     }
 }
+
+impl FormatString for Symbol {}
 
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

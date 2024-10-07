@@ -20,6 +20,7 @@ pub(crate) use types::*;
 
 use crate::{
     error::ParserErrorKind,
+    semantic_analyser::utils::FormatString,
     span::{Position, Span, Spanned},
 };
 
@@ -110,6 +111,8 @@ impl Identifier {
         self.clone().into()
     }
 }
+
+impl FormatString for Identifier {}
 
 impl From<TypePath> for Identifier {
     fn from(value: TypePath) -> Self {
@@ -485,6 +488,8 @@ pub(crate) enum Expression {
     ResultExpr(ResultExpr),
 }
 
+impl FormatString for Expression {}
+
 impl From<ValueExpr> for Expression {
     fn from(value: ValueExpr) -> Self {
         match value {
@@ -737,7 +742,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::ResultExpr(r) => Ok(ValueExpr::ResultExpr(r)),
             _ => Err(ParserErrorKind::UnexpectedExpression {
                 expected: "value expression".to_string(),
-                found: format!("`{value}`"),
+                found: value.to_backtick_string(),
             }),
         }
     }
@@ -956,7 +961,7 @@ impl TryFrom<Expression> for AssigneeExpr {
 
             _ => Err(ParserErrorKind::UnexpectedExpression {
                 expected: "assignee expression".to_string(),
-                found: format!("{value}"),
+                found: value.to_backtick_string(),
             }),
         }
     }

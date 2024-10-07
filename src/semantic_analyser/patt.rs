@@ -1,4 +1,4 @@
-use super::{symbol_table::Symbol, SemanticAnalyser};
+use super::{symbol_table::Symbol, utils::FormatString, SemanticAnalyser};
 
 use crate::{
     ast::{
@@ -25,7 +25,7 @@ pub(crate) fn analyse_patt(
             Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                 name: i.name.clone(),
                 expected: "variable".to_string(),
-                found: format!("`{sym}`"),
+                found: sym.to_backtick_string(),
             }),
             _ => Err(SemanticErrorKind::UndefinedVariable {
                 name: i.name.clone(),
@@ -289,7 +289,7 @@ pub(crate) fn analyse_patt(
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: type_path.type_name,
                     expected: "struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }
@@ -369,7 +369,7 @@ pub(crate) fn analyse_patt(
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: type_path.type_name,
                     expected: "struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }

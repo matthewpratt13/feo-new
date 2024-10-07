@@ -4,6 +4,7 @@ use crate::{
     ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, SelfType, Type, TypePath},
     error::ErrorsEmitted,
     log_trace,
+    semantic_analyser::utils::FormatString,
     token::{Token, TokenType},
 };
 
@@ -175,6 +176,8 @@ impl TypePath {
         self.clone().into()
     }
 }
+
+impl FormatString for TypePath {}
 
 impl From<PathExpr> for TypePath {
     fn from(value: PathExpr) -> Self {

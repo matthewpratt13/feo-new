@@ -11,6 +11,7 @@ mod symbol_table;
 
 #[cfg(test)]
 mod tests;
+pub(crate) mod utils;
 
 use crate::{
     ast::{
@@ -32,6 +33,7 @@ use std::collections::HashMap;
 
 use expr::{analyse_expr, wrap_into_expression};
 use symbol_table::{Module, Scope, ScopeKind, Symbol, SymbolTable};
+use utils::FormatString;
 
 /// Mapping from a `TypePath` (representing a concrete type) to a `Vec<TraitImplDef>`
 /// (representing implemented traits)
@@ -1092,7 +1094,7 @@ impl SemanticAnalyser {
                             Some(_) => (),
                             None => {
                                 return Err(SemanticErrorKind::UndeclaredGenericParams {
-                                    found: format!("`{name}`"),
+                                    found: name.to_backtick_string(),
                                 })
                             }
                         }
@@ -1466,7 +1468,7 @@ impl SemanticAnalyser {
                 if *grouped != matched {
                     return Err(SemanticErrorKind::TypeMismatchInnerType {
                         context: "grouped".to_string(),
-                        expected: format!("`{grouped}`"),
+                        expected: grouped.to_backtick_string(),
                         found: matched,
                     });
                 }
@@ -1513,7 +1515,7 @@ impl SemanticAnalyser {
             ) => {
                 if elem_type_a != elem_type_b {
                     return Err(SemanticErrorKind::TypeMismatchArrayElems {
-                        expected: format!("`{elem_type_a}`"),
+                        expected: elem_type_a.to_backtick_string(),
                         found: *elem_type_b,
                     });
                 }
@@ -1589,7 +1591,7 @@ impl SemanticAnalyser {
                                     FunctionOrMethodParam::MethodParam(param_b),
                                 ) => {
                                     return Err(SemanticErrorKind::UnexpectedParam {
-                                        expected: format!("`{}`", param_a.param_type),
+                                        expected: param_a.param_type.to_backtick_string(),
                                         found: Identifier::from(&param_b.kw_self.to_string()),
                                     })
                                 }
@@ -1598,8 +1600,8 @@ impl SemanticAnalyser {
                                     FunctionOrMethodParam::FunctionParam(param_b),
                                 ) => {
                                     return Err(SemanticErrorKind::UnexpectedParam {
-                                        expected: format!("`{}`", param_a.kw_self),
-                                        found: Identifier::from(&format!("{}", param_b.param_type)),
+                                        expected: param_a.to_backtick_string(),
+                                        found: Identifier::from(&param_b.param_type.to_string()),
                                     })
                                 }
                                 (
@@ -1613,16 +1615,16 @@ impl SemanticAnalyser {
                                         (None, None) => (),
                                         (None, Some(_)) | (Some(_), None) => {
                                             return Err(SemanticErrorKind::TypeMismatchSelfParam {
-                                                expected: format!("`{self_param_a}`"),
-                                                found: format!("`{self_param_b}`"),
+                                                expected: self_param_a.to_backtick_string(),
+                                                found: self_param_b.to_backtick_string(),
                                             });
                                         }
                                         (Some(ref_op_a), Some(ref_op_b)) => {
                                             if ref_op_a != ref_op_b {
                                                 return Err(
                                                     SemanticErrorKind::TypeMismatchSelfParam {
-                                                        expected: format!("`{self_param_a}`"),
-                                                        found: format!("`{self_param_b}`"),
+                                                        expected: self_param_a.to_backtick_string(),
+                                                        found: self_param_b.to_backtick_string(),
                                                     },
                                                 );
                                             }
@@ -1711,7 +1713,7 @@ impl SemanticAnalyser {
             ) => {
                 if elem_type_a != elem_type_b {
                     return Err(SemanticErrorKind::TypeMismatchArrayElems {
-                        expected: format!("`{elem_type_a}`"),
+                        expected: elem_type_a.to_backtick_string(),
                         found: *elem_type_b,
                     });
                 }
@@ -1757,7 +1759,7 @@ impl SemanticAnalyser {
                 if inner_type_a != inner_type_b {
                     return Err(SemanticErrorKind::TypeMismatchInnerType {
                         context: "`Some` variant in `Option<T>`".to_string(),
-                        expected: format!("`{inner_type_a}`"),
+                        expected: inner_type_a.to_backtick_string(),
                         found: *inner_type_b,
                     });
                 }

@@ -1,4 +1,4 @@
-use super::{patt::analyse_patt, symbol_table::ScopeKind, SemanticAnalyser};
+use super::{patt::analyse_patt, symbol_table::ScopeKind, utils::FormatString, SemanticAnalyser};
 
 use crate::{
     ast::{
@@ -144,7 +144,7 @@ pub(crate) fn analyse_expr(
                     } else {
                         Err(SemanticErrorKind::TypeMismatchVariable {
                             var_id: receiver_path.type_name,
-                            expected: format!("`{path}`"),
+                            expected: path.to_backtick_string(),
                             found: receiver_type,
                         })
                     }
@@ -157,7 +157,7 @@ pub(crate) fn analyse_expr(
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: receiver_path.type_name,
                     expected: "struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }
@@ -191,7 +191,7 @@ pub(crate) fn analyse_expr(
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: Identifier::from(&object_type.to_string()),
                     expected: "struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }
@@ -253,7 +253,7 @@ pub(crate) fn analyse_expr(
                         _ => Err(SemanticErrorKind::UnexpectedSymbol {
                             name: tp.type_name,
                             expected: "tuple struct".to_string(),
-                            found: format!("`{sym}`"),
+                            found: sym.to_backtick_string(),
                         }),
                     },
                     None => Err(SemanticErrorKind::UndefinedType { name: tp.type_name }),
@@ -552,7 +552,7 @@ pub(crate) fn analyse_expr(
                     } else {
                         Err(SemanticErrorKind::TypeMismatchVariable {
                             var_id: assignee_path.type_name,
-                            expected: format!("`{assignee_type}`"),
+                            expected: assignee_type.to_backtick_string(),
                             found: var_type,
                         })
                     }
@@ -564,8 +564,8 @@ pub(crate) fn analyse_expr(
                 }
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: assignee_path.type_name,
-                    expected: format!("`{assignee_type}`"),
-                    found: format!("`{sym}`"),
+                    expected: assignee_type.to_backtick_string(),
+                    found: sym.to_backtick_string(),
                 }),
                 _ => Err(SemanticErrorKind::UndefinedVariable {
                     name: assignee_path.type_name,
@@ -599,7 +599,7 @@ pub(crate) fn analyse_expr(
                     } else {
                         Err(SemanticErrorKind::TypeMismatchVariable {
                             var_id: assignee_path.type_name,
-                            expected: format!("`{assignee_type}`"),
+                            expected: assignee_type.to_backtick_string(),
                             found: var_type,
                         })
                     }
@@ -613,8 +613,8 @@ pub(crate) fn analyse_expr(
 
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: assignee_path.type_name,
-                    expected: format!("`{assignee_type}`"),
-                    found: format!("`{sym}`"),
+                    expected: assignee_type.to_backtick_string(),
+                    found: sym.to_backtick_string(),
                 }),
 
                 _ => Err(SemanticErrorKind::UndefinedVariable {
@@ -725,7 +725,7 @@ pub(crate) fn analyse_expr(
 
                         if element_type != first_element_type {
                             return Err(SemanticErrorKind::TypeMismatchArrayElems {
-                                expected: format!("`{first_element_type}`"),
+                                expected: first_element_type.to_backtick_string(),
                                 found: element_type,
                             });
                         }
@@ -855,7 +855,7 @@ pub(crate) fn analyse_expr(
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: type_path.type_name,
                     expected: "struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }
@@ -920,7 +920,7 @@ pub(crate) fn analyse_expr(
                                 if elem_type != field_type {
                                     return Err(SemanticErrorKind::TypeMismatchVariable {
                                         var_id: tuple_struct_def.struct_name,
-                                        expected: format!("`{field_type}`"),
+                                        expected: field_type.to_backtick_string(),
                                         found: elem_type,
                                     });
                                 }
@@ -938,7 +938,7 @@ pub(crate) fn analyse_expr(
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: type_path.type_name,
                     expected: "tuple struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }
@@ -1432,7 +1432,7 @@ fn analyse_call_or_method_call_expr(
         Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
             name: path.type_name,
             expected: "function".to_string(),
-            found: format!("`{sym}`"),
+            found: sym.to_backtick_string(),
         }),
     }
 }

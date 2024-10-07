@@ -5,6 +5,7 @@ use super::{
 
 use crate::{
     parser::ty::get_type_paths,
+    semantic_analyser::utils::FormatString,
     span::{Span, Spanned},
 };
 
@@ -193,6 +194,16 @@ pub(crate) struct PubLibVis {
 pub(crate) struct SelfParam {
     pub(crate) reference_op_opt: Option<ReferenceOp>,
     pub(crate) kw_self: Keyword,
+}
+
+impl FormatString for SelfParam {
+    fn to_backtick_string(&self) -> String {
+        format!(
+            "`{}{}`",
+            self.reference_op_opt.unwrap_or_default(),
+            self.kw_self
+        )
+    }
 }
 
 impl fmt::Display for SelfParam {
