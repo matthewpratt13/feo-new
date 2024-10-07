@@ -1144,7 +1144,13 @@ impl SemanticAnalyser {
                 path_vec.pop(); // remove associated type name
             }
 
-            println!("analysing body of function `{full_path}()` …");
+            println!(
+                "analysing body of function `{full_path}({:?}) -> {}`",
+                f.params_opt.clone().unwrap_or(Vec::new()),
+                f.return_type_opt
+                    .clone()
+                    .unwrap_or(Box::new(Type::UnitType(UnitType)))
+            );
 
             analyse_expr(
                 self,
@@ -1167,7 +1173,8 @@ impl SemanticAnalyser {
         }
 
         println!(
-            "analysed function: `{full_path}() -> {}`",
+            "analysed function: `{full_path}({:?}) -> {}`",
+            f.params_opt.clone().unwrap_or(Vec::new()),
             f.return_type_opt
                 .clone()
                 .unwrap_or(Box::new(Type::UnitType(UnitType)))

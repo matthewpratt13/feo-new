@@ -1013,7 +1013,7 @@ pub(crate) fn analyse_expr(
                         break;
                     }
 
-                    println!("analysing statement {} of {}", i + 1, stmts.len());
+                    println!("analysing statement {} of {} …", i + 1, stmts.len());
 
                     cloned_iter.next();
 
