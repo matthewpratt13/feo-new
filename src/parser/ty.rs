@@ -240,6 +240,10 @@ impl Type {
             name: Identifier::from(name_str),
         })
     }
+
+    pub(crate) const fn unit_type() -> Type {
+        Type::UnitType(UnitType)
+    }
 }
 
 impl fmt::Display for Type {
@@ -467,7 +471,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
 
     if let Some(Token::RParen { .. }) = parser.current_token() {
         parser.next_token();
-        Ok(Type::UnitType(UnitType))
+        Ok(Type::unit_type())
     } else if let Some(Token::Comma { .. }) = parser.peek_ahead_by(1) {
         let types = if let Some(t) = collection::get_collection(parser, Type::parse, &open_paren)? {
             parser.next_token();

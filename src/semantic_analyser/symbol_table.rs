@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         EnumDef, FunctionItem, Identifier, InherentImplItem, ModuleItem, StructDef, TraitDef,
-        TraitImplItem, TupleStructDef, Type, TypePath, UnitType, Visibility,
+        TraitImplItem, TupleStructDef, Type, TypePath, Visibility,
     },
     error::SemanticErrorKind,
 };
@@ -162,9 +162,9 @@ impl Symbol {
             Symbol::Constant { constant_type, .. } => constant_type,
             Symbol::Function { function, .. } => match function.return_type_opt {
                 Some(t) => *t,
-                None => Type::UnitType(UnitType),
+                None => Type::unit_type(),
             },
-            Symbol::Module { .. } => Type::UnitType(UnitType),
+            Symbol::Module { .. } => Type::unit_type(),
         }
     }
 

@@ -240,7 +240,7 @@ impl SemanticAnalyser {
                 let mut value_type = if let Some(val) = &ls.value_opt {
                     analyse_expr(self, val, &root)?
                 } else {
-                    Type::UnitType(UnitType)
+                    Type::unit_type()
                 };
 
                 // get the type annotation if there is one, otherwise assume the value's type
@@ -984,7 +984,7 @@ impl SemanticAnalyser {
                         f.params_opt.clone().unwrap_or(Vec::new()),
                         f.return_type_opt
                             .clone()
-                            .unwrap_or(Box::new(Type::UnitType(UnitType)))
+                            .unwrap_or(Box::new(Type::unit_type()))
                     );
 
                     if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
@@ -1149,7 +1149,7 @@ impl SemanticAnalyser {
                 f.params_opt.clone().unwrap_or(Vec::new()),
                 f.return_type_opt
                     .clone()
-                    .unwrap_or(Box::new(Type::UnitType(UnitType)))
+                    .unwrap_or(Box::new(Type::unit_type()))
             );
 
             analyse_expr(
@@ -1161,7 +1161,7 @@ impl SemanticAnalyser {
             if let Some(ty) = &f.return_type_opt {
                 *ty.clone()
             } else {
-                Type::UnitType(UnitType)
+                Type::unit_type()
             }
         };
 
@@ -1177,7 +1177,7 @@ impl SemanticAnalyser {
             f.params_opt.clone().unwrap_or(Vec::new()),
             f.return_type_opt
                 .clone()
-                .unwrap_or(Box::new(Type::UnitType(UnitType)))
+                .unwrap_or(Box::new(Type::unit_type()))
         );
 
         self.exit_scope();
