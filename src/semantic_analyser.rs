@@ -46,9 +46,9 @@ type TypeTable = HashMap<TypePath, Vec<TraitImplDef>>;
 struct SemanticAnalyser {
     scope_stack: Vec<Scope>,
     lib_registry: HashMap<Identifier, Vec<Module>>,
+    type_table: TypeTable,
     errors: Vec<CompilerError<SemanticErrorKind>>,
     logger: Logger,
-    type_table: TypeTable,
 }
 
 #[allow(dead_code)]
