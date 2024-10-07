@@ -31,9 +31,9 @@ use crate::{
 
 use std::collections::HashMap;
 
-use expr::{analyse_expr, wrap_into_expression};
+use expr::analyse_expr;
 use symbol_table::{Module, Scope, ScopeKind, Symbol, SymbolTable};
-use utils::FormatString;
+use utils::{ToExpression, FormatString};
 
 /// Mapping from a `TypePath` (representing a concrete type) to a `Vec<TraitImplDef>`
 /// (representing implemented traits)
@@ -370,7 +370,7 @@ impl SemanticAnalyser {
 
                     let value_type = match &cd.value_opt {
                         Some(val) => {
-                            let value = wrap_into_expression(val.clone());
+                            let value = val.to_expression();
                             Some(analyse_expr(self, &value, &root)?)
                         }
                         _ => None,
@@ -424,7 +424,7 @@ impl SemanticAnalyser {
 
                     let mut assignee_type = match &s.assignee_opt {
                         Some(a_expr) => {
-                            let assignee = wrap_into_expression(*a_expr.clone());
+                            let assignee = a_expr.to_expression();
                             analyse_expr(self, &assignee, &root)?
                         }
                         _ => Type::inferred_type("_"),

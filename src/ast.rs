@@ -20,7 +20,7 @@ pub(crate) use types::*;
 
 use crate::{
     error::ParserErrorKind,
-    semantic_analyser::utils::FormatString,
+    semantic_analyser::utils::{FormatString, ToExpression},
     span::{Position, Span, Spanned},
 };
 
@@ -527,6 +527,8 @@ impl From<ValueExpr> for Expression {
     }
 }
 
+impl ToExpression for AssigneeExpr {}
+
 impl From<AssigneeExpr> for Expression {
     fn from(value: AssigneeExpr) -> Self {
         match value {
@@ -665,6 +667,8 @@ pub(crate) enum ValueExpr {
     NoneExpr(NoneExpr),
     ResultExpr(ResultExpr),
 }
+
+impl ToExpression for ValueExpr {}
 
 impl Spanned for ValueExpr {
     fn span(&self) -> Span {

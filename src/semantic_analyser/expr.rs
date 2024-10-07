@@ -1,4 +1,9 @@
-use super::{patt::analyse_patt, symbol_table::ScopeKind, utils::FormatString, SemanticAnalyser};
+use super::{
+    patt::analyse_patt,
+    symbol_table::ScopeKind,
+    utils::{FormatString, ToExpression},
+    SemanticAnalyser,
+};
 
 use crate::{
     ast::{
@@ -13,7 +18,6 @@ use crate::{
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
-use core::fmt;
 use std::collections::HashMap;
 
 // TODO: alphabetize match arms
@@ -120,7 +124,7 @@ pub(crate) fn analyse_expr(
         },
 
         Expression::MethodCall(mc) => {
-            let receiver = wrap_into_expression(*mc.receiver.clone());
+            let receiver = mc.receiver.to_expression();
             let receiver_type = analyse_expr(analyser, &receiver, root)?;
 
             // convert receiver expression to path expression (i.e., check if receiver
@@ -163,7 +167,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::FieldAccess(fa) => {
-            let object = wrap_into_expression(*fa.object.clone());
+            let object = fa.object.to_expression();
 
             // convert object to path expression (i.e., check if object
             // is a valid path)
@@ -196,20 +200,16 @@ pub(crate) fn analyse_expr(
             }
         }
 
-        Expression::Call(c) => {
-            let callee = wrap_into_expression(c.callee.clone());
-
-            analyse_call_or_method_call_expr(
-                analyser,
-                TypePath::from(PathExpr::from(callee)),
-                c.args_opt.clone(),
-            )
-        }
+        Expression::Call(c) => analyse_call_or_method_call_expr(
+            analyser,
+            TypePath::from(PathExpr::from(c.callee.to_expression())),
+            c.args_opt.clone(),
+        ),
 
         Expression::Index(i) => {
-            let array_type = analyse_expr(analyser, &wrap_into_expression(*i.array.clone()), root)?;
+            let array_type = analyse_expr(analyser, &i.array.to_expression(), root)?;
 
-            let index_type = analyse_expr(analyser, &wrap_into_expression(*i.index.clone()), root)?;
+            let index_type = analyse_expr(analyser, &i.index.to_expression(), root)?;
 
             match &index_type {
                 Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) => (),
@@ -232,8 +232,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::TupleIndex(ti) => {
-            let tuple_type =
-                analyse_expr(analyser, &wrap_into_expression(*ti.tuple.clone()), root)?;
+            let tuple_type = analyse_expr(analyser, &ti.tuple.to_expression(), root)?;
 
             match tuple_type {
                 Type::Tuple(elem_types) => {
@@ -265,13 +264,10 @@ pub(crate) fn analyse_expr(
             }
         }
 
-        Expression::Unwrap(u) => {
-            analyse_expr(analyser, &wrap_into_expression(*u.value_expr.clone()), root)
-        }
+        Expression::Unwrap(u) => analyse_expr(analyser, &u.value_expr.to_expression(), root),
 
         Expression::Unary(u) => {
-            let expr_type =
-                analyse_expr(analyser, &wrap_into_expression(*u.value_expr.clone()), root)?;
+            let expr_type = analyse_expr(analyser, &u.value_expr.to_expression(), root)?;
 
             match u.unary_op {
                 UnaryOp::Negate => match &expr_type {
@@ -311,11 +307,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::Dereference(d) => {
-            match analyse_expr(
-                analyser,
-                &wrap_into_expression(d.assignee_expr.clone()),
-                root,
-            ) {
+            match analyse_expr(analyser, &d.assignee_expr.to_expression(), root) {
                 Ok(Type::Reference { inner_type, .. }) => Ok(*inner_type),
                 Ok(ty) => Ok(ty),
                 Err(e) => Err(e),
@@ -323,8 +315,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::TypeCast(tc) => {
-            let value_type =
-                analyse_expr(analyser, &wrap_into_expression(*tc.value.clone()), root)?;
+            let value_type = analyse_expr(analyser, &tc.value.to_expression(), root)?;
 
             let new_type = *tc.new_type.clone();
 
@@ -405,9 +396,9 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::Binary(b) => {
-            let lhs_type = analyse_expr(analyser, &wrap_into_expression(*b.lhs.clone()), root)?;
+            let lhs_type = analyse_expr(analyser, &b.lhs.to_expression(), root)?;
 
-            let mut rhs_type = analyse_expr(analyser, &wrap_into_expression(*b.rhs.clone()), root)?;
+            let mut rhs_type = analyse_expr(analyser, &b.rhs.to_expression(), root)?;
 
             let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
                 scope.symbols.to_owned()
@@ -421,9 +412,9 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::Comparison(c) => {
-            let lhs_type = analyse_expr(analyser, &wrap_into_expression(c.lhs.clone()), root)?;
+            let lhs_type = analyse_expr(analyser, &c.lhs.to_expression(), root)?;
 
-            let mut rhs_type = analyse_expr(analyser, &wrap_into_expression(c.rhs.clone()), root)?;
+            let mut rhs_type = analyse_expr(analyser, &c.rhs.to_expression(), root)?;
 
             let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
                 scope.symbols.to_owned()
@@ -441,7 +432,7 @@ pub(crate) fn analyse_expr(
         Expression::Range(r) => match (&r.from_expr_opt, &r.to_expr_opt) {
             (None, None) => Ok(Type::UNIT_TYPE),
             (None, Some(to)) => {
-                let to_type = analyse_expr(analyser, &wrap_into_expression(*to.clone()), root)?;
+                let to_type = analyse_expr(analyser, &to.to_expression(), root)?;
 
                 match to_type {
                     Type::I32(_)
@@ -459,7 +450,7 @@ pub(crate) fn analyse_expr(
                 }
             }
             (Some(from), None) => {
-                let from_type = analyse_expr(analyser, &wrap_into_expression(*from.clone()), root)?;
+                let from_type = analyse_expr(analyser, &from.to_expression(), root)?;
 
                 match &from_type {
                     Type::I32(_)
@@ -477,7 +468,7 @@ pub(crate) fn analyse_expr(
                 }
             }
             (Some(from), Some(to)) => {
-                let from_type = analyse_expr(analyser, &wrap_into_expression(*from.clone()), root)?;
+                let from_type = analyse_expr(analyser, &from.to_expression(), root)?;
 
                 match &from_type {
                     Type::I32(_)
@@ -496,7 +487,7 @@ pub(crate) fn analyse_expr(
                     }
                 }
 
-                let to_type = analyse_expr(analyser, &wrap_into_expression(*to.clone()), root)?;
+                let to_type = analyse_expr(analyser, &to.to_expression(), root)?;
 
                 match &to_type {
                     Type::I32(_)
@@ -527,11 +518,10 @@ pub(crate) fn analyse_expr(
         },
 
         Expression::Assignment(a) => {
-            let assignee = wrap_into_expression(a.lhs.clone());
+            let assignee = a.lhs.to_expression();
             let assignee_type = analyse_expr(analyser, &assignee, root)?;
 
-            let mut value_type =
-                analyse_expr(analyser, &wrap_into_expression(a.rhs.clone()), root)?;
+            let mut value_type = analyse_expr(analyser, &a.rhs.to_expression(), root)?;
 
             let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
                 scope.symbols.to_owned()
@@ -574,11 +564,10 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::CompoundAssignment(ca) => {
-            let assignee = wrap_into_expression(ca.lhs.clone());
+            let assignee = ca.lhs.to_expression();
             let assignee_type = analyse_expr(analyser, &assignee, root)?;
 
-            let mut value_type =
-                analyse_expr(analyser, &wrap_into_expression(ca.rhs.clone()), root)?;
+            let mut value_type = analyse_expr(analyser, &ca.rhs.to_expression(), root)?;
 
             let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
                 scope.symbols.to_owned()
@@ -1130,8 +1119,7 @@ pub(crate) fn analyse_expr(
         Expression::Match(m) => {
             analyser.enter_scope(ScopeKind::MatchExpr);
 
-            let scrutinee_type =
-                analyse_expr(analyser, &wrap_into_expression(m.scrutinee.clone()), root)?;
+            let scrutinee_type = analyse_expr(analyser, &m.scrutinee.to_expression(), root)?;
 
             println!("analysing match expression with scrutinee type: `{scrutinee_type}` …");
 
@@ -1435,12 +1423,4 @@ fn analyse_call_or_method_call_expr(
             found: sym.to_backtick_string(),
         }),
     }
-}
-
-pub(crate) fn wrap_into_expression<T>(value: T) -> Expression
-where
-    T: Clone + fmt::Debug + TryFrom<Expression>,
-    Expression: From<T>,
-{
-    Expression::from(value.clone())
 }
