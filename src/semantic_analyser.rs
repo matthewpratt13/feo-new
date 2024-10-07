@@ -2390,8 +2390,8 @@ impl SemanticAnalyser {
     }
 
     fn registry_contains_trait(&self, expected_trait: &TraitDef) -> bool {
-        for lib in self.lib_registry.values() {
-            for module in lib.iter() {
+        for lib_contents in self.lib_registry.values() {
+            for module in lib_contents.iter() {
                 for symbol in module.table.values() {
                     if let Symbol::Trait { path, trait_def } = symbol {
                         if path.type_name == expected_trait.trait_name
