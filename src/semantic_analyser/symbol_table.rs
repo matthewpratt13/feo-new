@@ -40,7 +40,7 @@ impl fmt::Display for ScopeKind {
             ScopeKind::MatchExpr => write!(f, "MatchExpr"),
             ScopeKind::ForInLoop => write!(f, "ForInLoop"),
             ScopeKind::Function(type_path) => {
-                write!(f, "Function(\"{}\")", type_path.to_identifier())
+                write!(f, "Function(\"{}\")", type_path)
             }
             ScopeKind::TraitImpl {
                 implemented_trait_path,
@@ -48,13 +48,12 @@ impl fmt::Display for ScopeKind {
             } => write!(
                 f,
                 "TraitImpl(\"{} for {}\")",
-                implemented_trait_path.to_identifier(),
-                implementing_type_path.to_identifier()
+                implemented_trait_path, implementing_type_path
             ),
 
-            ScopeKind::Impl(type_path) => write!(f, "Impl(\"{}\")", type_path.to_identifier()),
-            // ScopeKind::TraitDef(type_path) => write!(f, "TraitDef(\"{}\")", type_path.to_identifier()),
-            ScopeKind::Module(type_path) => write!(f, "Module(\"{}\")", type_path.to_identifier()),
+            ScopeKind::Impl(type_path) => write!(f, "Impl(\"{}\")", type_path),
+            // ScopeKind::TraitDef(type_path) => write!(f, "TraitDef(\"{}\")", type_path),
+            ScopeKind::Module(type_path) => write!(f, "Module(\"{}\")", type_path),
             ScopeKind::ProgramRoot => write!(f, "ProgramRoot"),
             ScopeKind::Public => write!(f, "Public"),
         }

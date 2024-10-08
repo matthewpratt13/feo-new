@@ -58,10 +58,7 @@ impl SemanticAnalyser {
     /// Construct a new `SemanticAnalyser` instance. Initialize the logger, external symbols
     /// and module registry. Add any external code (e.g., library functions) to the global scope
     /// if provided.
-    pub(crate) fn new(
-        log_level: LogLevel,
-        external_code: Option<LibRegistry>,
-    ) -> Self {
+    pub(crate) fn new(log_level: LogLevel, external_code: Option<LibRegistry>) -> Self {
         let mut logger = Logger::new(log_level);
         let mut symbols: SymbolTable = HashMap::new();
         let mut lib_registry: LibRegistry = HashMap::new();
@@ -952,10 +949,11 @@ impl SemanticAnalyser {
                     let function_name_path = f.function_name.to_type_path();
                     let function_item_path = root.join(function_name_path.clone());
 
+                    let param_strings = format_function_params(f);
+
                     log_trace!(
                         self.logger,
-                        "analysing function item: `{function_item_path}({:?}) -> {}`",
-                        f.params_opt.clone().unwrap_or(Vec::new()),
+                        "analysing function item: `{function_item_path}({param_strings:?}) -> {}` …",
                         f.return_type_opt
                             .clone()
                             .unwrap_or(Box::new(Type::UNIT_TYPE))
@@ -1101,6 +1099,8 @@ impl SemanticAnalyser {
             }
         }
 
+        let param_strings = format_function_params(f);
+
         let mut function_type = if let Some(block) = &f.block_opt {
             // split path into a vector to remove the last element (if needed), then convert back
             let mut path_vec = Vec::<Identifier>::from(path.clone());
@@ -1110,8 +1110,7 @@ impl SemanticAnalyser {
             }
 
             println!(
-                "analysing body of function `{full_path}({:?}) -> {}`",
-                f.params_opt.clone().unwrap_or(Vec::new()),
+                "analysing body of function: `{full_path}({param_strings:?}) -> {}` …",
                 f.return_type_opt
                     .clone()
                     .unwrap_or(Box::new(Type::UNIT_TYPE))
@@ -1142,8 +1141,7 @@ impl SemanticAnalyser {
         }
 
         println!(
-            "analysed function: `{full_path}({:?}) -> {}`",
-            f.params_opt.clone().unwrap_or(Vec::new()),
+            "analysed function: `{full_path}({param_strings:?}) -> {}`",
             f.return_type_opt
                 .clone()
                 .unwrap_or(Box::new(Type::UNIT_TYPE))
@@ -1320,10 +1318,10 @@ impl SemanticAnalyser {
         Ok(())
     }
 
-    fn try_update_current_scope(&mut self, expected: &ScopeKind, new_scope: ScopeKind) {
+    fn try_update_current_scope(&mut self, expected: &ScopeKind, new_scope_kind: ScopeKind) {
         if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
             if scope_kind == expected {
-                self.enter_scope(new_scope)
+                self.enter_scope(new_scope_kind)
             }
         }
     }
@@ -2396,6 +2394,25 @@ impl SemanticAnalyser {
         log_error!(self.logger, "{error}");
         self.errors.push(error);
     }
+}
+
+fn format_function_params(f: &FunctionItem) -> Vec<String> {
+    let mut param_strings: Vec<String> = Vec::new();
+
+    if let Some(params) = &f.params_opt {
+        for param in params {
+            match param {
+                FunctionOrMethodParam::FunctionParam(function_param) => {
+                    param_strings.push(function_param.to_string());
+                }
+                FunctionOrMethodParam::MethodParam(self_param) => {
+                    param_strings.push(self_param.to_string())
+                }
+            }
+        }
+    }
+
+    param_strings
 }
 
 fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {

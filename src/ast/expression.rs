@@ -20,6 +20,23 @@ pub(crate) enum ClosureParams {
     None,                    // `||`
 }
 
+impl fmt::Display for ClosureParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ClosureParams::Some(params) => {
+                let mut param_strings: Vec<String> = Vec::new();
+
+                for param in params {
+                    param_strings.push(param.to_string());
+                }
+
+                write!(f, "{param_strings:?}")
+            }
+            ClosureParams::None => write!(f, ""),
+        }
+    }
+}
+
 /// Enum representing the different path root options.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum PathRoot {
@@ -47,6 +64,19 @@ impl fmt::Display for PathRoot {
 pub(crate) struct ClosureParam {
     pub(crate) param_name: IdentifierPatt,
     pub(crate) type_ann_opt: Option<Box<Type>>,
+}
+
+impl fmt::Display for ClosureParam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}: {}",
+            self.param_name,
+            self.type_ann_opt
+                .clone()
+                .unwrap_or(Box::new(Type::inferred_type("_")))
+        )
+    }
 }
 
 /// Struct representing a key-value pair in a mapping.
@@ -154,6 +184,20 @@ pub struct BlockExpr {
     pub(crate) attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) statements_opt: Option<Vec<Statement>>,
     pub(crate) span: Span,
+}
+
+impl fmt::Display for BlockExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut statement_strings: Vec<String> = Vec::new();
+
+        if let Some(stmts) = &self.statements_opt {
+            for stmt in stmts {
+                statement_strings.push(stmt.to_string())
+            }
+        }
+
+        write!(f, "{statement_strings:?}")
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -487,7 +531,7 @@ impl fmt::Display for Expression {
             Expression::Underscore(_) => write!(f, "_"),
             Expression::Closure(clo) => write!(
                 f,
-                "({:?}) -> {} {}",
+                "({}) -> {} {}",
                 clo.closure_params,
                 clo.return_type_opt
                     .clone()
@@ -509,7 +553,7 @@ impl fmt::Display for Expression {
             }
             Expression::Mapping(map) => write!(f, "{{ {:?} }}", map.pairs_opt),
             Expression::Block(blk) => {
-                write!(f, "{{ {:?} }}", blk)
+                write!(f, "{{ {} }}", blk)
             }
             Expression::If(ifex) => write!(
                 f,

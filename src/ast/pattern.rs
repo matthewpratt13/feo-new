@@ -59,11 +59,17 @@ pub struct IdentifierPatt {
 
 impl fmt::Display for IdentifierPatt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:?} {:?} {}",
-            self.kw_ref_opt, self.kw_mut_opt, self.name
-        )
+        let mut prefix = String::new();
+
+        if self.kw_ref_opt.is_some() {
+            prefix.push_str("ref ")
+        }
+
+        if self.kw_mut_opt.is_some() {
+            prefix.push_str("mut ");
+        }
+
+        write!(f, "{prefix}{}", self.name)
     }
 }
 

@@ -44,7 +44,7 @@ fn analyse_closure() -> Result<(), ()> {
     "#;
 
     let (mut analyser, program) =
-        setup(input, LogLevel::Debug, false, false, None).expect("error setting during test setup");
+        setup(input, LogLevel::Trace, false, false, None).expect("error setting during test setup");
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),

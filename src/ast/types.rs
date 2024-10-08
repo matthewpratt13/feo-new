@@ -335,13 +335,23 @@ pub struct FunctionPtr {
 
 impl fmt::Display for FunctionPtr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut param_strings: Vec<String> = Vec::new();
+
+        match &self.params_opt {
+            Some(params) => {
+                for param in params {
+                    param_strings.push(param.to_string());
+                }
+            }
+            None => todo!(),
+        }
+
         write!(
             f,
-            "func({:?}) [-> {:?}]",
-            self.params_opt.clone().unwrap_or(Vec::new()),
+            "func({param_strings:?}) -> {}",
             self.return_type_opt
                 .clone()
-                .unwrap_or(Box::new(Type::UnitType(UnitType)))
+                .unwrap_or(Box::new(Type::UNIT_TYPE))
         )
     }
 }
