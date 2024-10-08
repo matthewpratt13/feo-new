@@ -11,6 +11,7 @@ mod symbol_table;
 
 #[cfg(test)]
 mod tests;
+
 pub(crate) mod utils;
 
 use crate::{

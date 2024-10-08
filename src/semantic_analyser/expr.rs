@@ -1087,12 +1087,8 @@ pub(crate) fn analyse_expr(
 
             let scrutinee_type = analyse_expr(analyser, &m.scrutinee.to_expression(), root)?;
 
-            println!(
-                "analysing match expression: {}",
-                Expression::Match(m.clone())
-            );
-
             println!("analysing match expression with scrutinee type: `{scrutinee_type}` …");
+
             let mut matched_patt_type =
                 analyse_patt(analyser, &m.final_arm.matched_pattern.clone())?;
 
@@ -1169,8 +1165,6 @@ pub(crate) fn analyse_expr(
         Expression::ForIn(fi) => {
             analyser.enter_scope(ScopeKind::ForInLoop);
 
-            println!("analysing for-in loop: {}", Expression::ForIn(fi.clone()));
-
             let iter_type = analyse_expr(analyser, &fi.iterator.clone(), root)?;
 
             let element_type = match iter_type.clone() {
@@ -1196,7 +1190,7 @@ pub(crate) fn analyse_expr(
                 }
             };
 
-            println!("analysing for loop with iterator type `{iter_type}` and element type `{element_type}` …");
+            println!("analysing for-in loop with iterator type `{iter_type}` and element type `{element_type}` …");
 
             if let Pattern::IdentifierPatt(id) = *fi.pattern.clone() {
                 analyser.insert(
@@ -1208,13 +1202,13 @@ pub(crate) fn analyse_expr(
                 )?;
             }
 
-            println!("for loop pattern: `{}`", fi.pattern);
+            println!("for-in loop pattern: `{}`", fi.pattern);
 
             analyse_patt(analyser, &fi.pattern.clone())?;
 
             analyse_expr(analyser, &Expression::Block(fi.block.clone()), root)?;
 
-            println!("finished analysing for loop");
+            println!("finished analysing for-in loop");
 
             analyser.exit_scope();
 
