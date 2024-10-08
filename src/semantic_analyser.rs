@@ -35,6 +35,8 @@ use expr::analyse_expr;
 use symbol_table::{Module, Scope, ScopeKind, Symbol, SymbolTable};
 use utils::{FormatString, ToExpression, ToIdentifier};
 
+type LibRegistry = HashMap<Identifier, Vec<Module>>;
+
 /// Mapping from a `TypePath` (representing a concrete type) to a `Vec<TraitImplDef>`
 /// (representing implemented traits)
 type TypeTable = HashMap<TypePath, Vec<TraitImplDef>>;
@@ -45,7 +47,7 @@ type TypeTable = HashMap<TypePath, Vec<TraitImplDef>>;
 #[allow(dead_code)]
 struct SemanticAnalyser {
     scope_stack: Vec<Scope>,
-    lib_registry: HashMap<Identifier, Vec<Module>>,
+    lib_registry: LibRegistry,
     type_table: TypeTable,
     errors: Vec<CompilerError<SemanticErrorKind>>,
     logger: Logger,
@@ -58,11 +60,11 @@ impl SemanticAnalyser {
     /// if provided.
     pub(crate) fn new(
         log_level: LogLevel,
-        external_code: Option<HashMap<Identifier, Vec<Module>>>,
+        external_code: Option<LibRegistry>,
     ) -> Self {
         let mut logger = Logger::new(log_level);
         let mut symbols: SymbolTable = HashMap::new();
-        let mut lib_registry: HashMap<Identifier, Vec<Module>> = HashMap::new();
+        let mut lib_registry: LibRegistry = HashMap::new();
 
         if let Some(code) = external_code {
             log_debug!(
@@ -797,7 +799,7 @@ impl SemanticAnalyser {
 
                     let scope_kind = ScopeKind::Impl(type_path.clone());
 
-                    let mut symbols: HashMap<TypePath, Symbol> = HashMap::new();
+                    let mut symbols: SymbolTable = HashMap::new();
 
                     self.enter_scope(scope_kind);
 
@@ -882,7 +884,7 @@ impl SemanticAnalyser {
                         implementing_type_path: implementing_type_path.clone(),
                     };
 
-                    let mut symbols: HashMap<TypePath, Symbol> = HashMap::new();
+                    let mut symbols: SymbolTable = HashMap::new();
 
                     self.enter_scope(scope_kind);
 
