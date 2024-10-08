@@ -5,7 +5,10 @@ use super::{
     UInt, UnaryOp, UnitType, UnwrapOp, ValueExpr, U512,
 };
 
-use crate::span::{Span, Spanned};
+use crate::{
+    semantic_analyser::utils::{FormatParams, FormatStatements},
+    span::{Span, Spanned},
+};
 
 use core::fmt;
 
@@ -20,20 +23,26 @@ pub(crate) enum ClosureParams {
     None,                    // `||`
 }
 
-impl fmt::Display for ClosureParams {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl FormatParams for ClosureParams {
+    fn param_strings(&self) -> Vec<String> {
+        let mut param_strings: Vec<String> = Vec::new();
+
         match self {
             ClosureParams::Some(params) => {
-                let mut param_strings: Vec<String> = Vec::new();
-
                 for param in params {
                     param_strings.push(param.to_string());
                 }
-
-                write!(f, "{param_strings:?}")
             }
-            ClosureParams::None => write!(f, ""),
+            ClosureParams::None => (),
         }
+
+        param_strings
+    }
+}
+
+impl fmt::Display for ClosureParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.param_strings())
     }
 }
 
@@ -96,19 +105,13 @@ pub(crate) struct MatchArm {
 
 impl fmt::Display for MatchArm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} => {} {},",
-            self.matched_pattern,
-            {
-                if let Some(e) = &self.guard_opt {
-                    format!("{}", *e)
-                } else {
-                    "".to_string()
-                }
-            },
-            self.arm_expression
-        )
+        let matched_pattern = if let Some(e) = &self.guard_opt {
+            format!("{} if {}", self.matched_pattern, *e)
+        } else {
+            format!("{}", self.matched_pattern)
+        };
+
+        write!(f, "{} => {},", matched_pattern, self.arm_expression)
     }
 }
 
@@ -186,8 +189,8 @@ pub struct BlockExpr {
     pub(crate) span: Span,
 }
 
-impl fmt::Display for BlockExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl FormatStatements for BlockExpr {
+    fn statement_strings(&self) -> Vec<String> {
         let mut statement_strings: Vec<String> = Vec::new();
 
         if let Some(stmts) = &self.statements_opt {
@@ -196,7 +199,7 @@ impl fmt::Display for BlockExpr {
             }
         }
 
-        write!(f, "{statement_strings:?}")
+        statement_strings
     }
 }
 
@@ -283,6 +286,35 @@ pub struct IfExpr {
     pub(crate) span: Span,
 }
 
+impl fmt::Display for IfExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buf = String::new();
+
+        buf.push_str("if");
+
+        buf.push_str(&format!(
+            " {}",
+            Expression::Grouped(*self.condition.clone())
+        ));
+
+        buf.push_str(&format!(" {}", Expression::Block(*self.if_block.clone())));
+
+        if let Some(blocks) = &self.else_if_blocks_opt {
+            for block in blocks {
+                buf.push_str(" else");
+                buf.push_str(&format!(" {}", block));
+            }
+        }
+
+        if let Some(block) = &self.trailing_else_block_opt {
+            buf.push_str(" else");
+            buf.push_str(&format!(" {}", Expression::Block(block.clone())));
+        }
+
+        write!(f, "{buf}")
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct IndexExpr {
     pub(crate) array: Box<AssigneeExpr>,
@@ -303,6 +335,26 @@ pub struct MatchExpr {
     pub(crate) match_arms_opt: Option<Vec<MatchArm>>,
     pub(crate) final_arm: Box<MatchArm>, // default case
     pub(crate) span: Span,
+}
+
+impl fmt::Display for MatchExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buf = String::new();
+
+        buf.push_str("match");
+
+        buf.push_str(&format!(" {} {{", self.scrutinee));
+
+        if let Some(arms) = &self.match_arms_opt {
+            for arm in arms {
+                buf.push_str(&format!(" {arm}"));
+            }
+        }
+
+        buf.push_str(&format!(" {} }}", self.final_arm));
+
+        write!(f, "{buf}")
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -553,41 +605,43 @@ impl fmt::Display for Expression {
             }
             Expression::Mapping(map) => write!(f, "{{ {:?} }}", map.pairs_opt),
             Expression::Block(blk) => {
-                write!(f, "{{ {} }}", blk)
+                write!(f, "{{ {:?} }}", blk.statement_strings())
             }
-            Expression::If(ifex) => write!(
-                f,
-                "if {} {}{}{}",
-                Expression::Grouped(*ifex.condition),
-                Expression::Block(*ifex.if_block),
-                {
-                    if let Some(e) = ifex.else_if_blocks_opt {
-                        format!(" else {:?}", e)
-                    } else {
-                        "".to_string()
-                    }
-                },
-                {
-                    if let Some(e) = ifex.trailing_else_block_opt {
-                        format!(" else {:?}", e)
-                    } else {
-                        "".to_string()
-                    }
-                }
-            ),
-            Expression::Match(mat) => write!(
-                f,
-                "match {} {{ {}, {} }}",
-                mat.scrutinee,
-                {
-                    if let Some(m) = mat.match_arms_opt {
-                        format!("{:?}", m)
-                    } else {
-                        "".to_string()
-                    }
-                },
-                *mat.final_arm
-            ),
+            // Expression::If(ifex) => write!(
+            //     f,
+            //     "if {} {}{}{}",
+            //     Expression::Grouped(*ifex.condition),
+            //     Expression::Block(*ifex.if_block),
+            //     {
+            //         if let Some(e) = ifex.else_if_blocks_opt {
+            //             format!(" else {:?}", e)
+            //         } else {
+            //             "".to_string()
+            //         }
+            //     },
+            //     {
+            //         if let Some(e) = ifex.trailing_else_block_opt {
+            //             format!(" else {}", Expression::Block(e))
+            //         } else {
+            //             "".to_string()
+            //         }
+            //     }
+            // ),
+            Expression::If(ifex) => write!(f, "{ifex}"),
+            // Expression::Match(mat) => write!(
+            //     f,
+            //     "match {} {{ {}, {} }}",
+            //     mat.scrutinee,
+            //     {
+            //         if let Some(m) = mat.match_arms_opt {
+            //             format!("{:?}", m)
+            //         } else {
+            //             "".to_string()
+            //         }
+            //     },
+            //     *mat.final_arm
+            // ),
+            Expression::Match(mat) => write!(f, "{mat}"),
             Expression::ForIn(fi) => write!(
                 f,
                 "for {} in {} {}",

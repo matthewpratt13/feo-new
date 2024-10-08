@@ -20,7 +20,7 @@ pub(crate) use types::*;
 
 use crate::{
     error::ParserErrorKind,
-    semantic_analyser::utils::{FormatString, ToExpression},
+    semantic_analyser::utils::{FormatObject, ToExpression},
     span::{Position, Span, Spanned},
 };
 
@@ -112,7 +112,7 @@ impl Identifier {
     }
 }
 
-impl FormatString for Identifier {}
+impl FormatObject for Identifier {}
 
 impl From<&str> for Identifier {
     fn from(value: &str) -> Self {
@@ -482,7 +482,7 @@ pub(crate) enum Expression {
     ResultExpr(ResultExpr),
 }
 
-impl FormatString for Expression {}
+impl FormatObject for Expression {}
 
 impl From<ValueExpr> for Expression {
     fn from(value: ValueExpr) -> Self {
@@ -860,14 +860,21 @@ impl TryFrom<Expression> for AssigneeExpr {
             Expression::Index(i) => Ok(AssigneeExpr::IndexExpr(i)),
             Expression::TupleIndex(ti) => Ok(AssigneeExpr::TupleIndexExpr(ti)),
             Expression::Reference(r) => Ok(AssigneeExpr::ReferenceExpr(r)),
+            // `ReferenceExpr` is a placeholder `AssigneeExpr` where there is no equivalent
             Expression::Binary(b) => Ok(AssigneeExpr::ReferenceExpr(ReferenceExpr {
-                reference_op: ReferenceOp::Borrow,
-                expression: Box::new(Expression::Binary(b.clone())),
+                reference_op: ReferenceOp::default(),
+                expression: Box::new(Expression::Grouped(GroupedExpr {
+                    inner_expression: Box::new(Expression::Binary(b.clone())),
+                    span: b.span.clone(),
+                })),
                 span: b.span,
             })),
             Expression::Comparison(c) => Ok(AssigneeExpr::ReferenceExpr(ReferenceExpr {
-                reference_op: ReferenceOp::Borrow,
-                expression: Box::new(Expression::Comparison(c.clone())),
+                reference_op: ReferenceOp::default(),
+                expression: Box::new(Expression::Grouped(GroupedExpr {
+                    inner_expression: Box::new(Expression::Comparison(c.clone())),
+                    span: c.span.clone(),
+                })),
                 span: c.span,
             })),
             Expression::Grouped(g) => {

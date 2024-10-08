@@ -79,7 +79,7 @@ fn analyse_control_flow() -> Result<(), ()> {
                 match x {
                     ..=0 => false,
                     1..9 => false,
-                    _ if (x + 1) == 10 => false,
+                    _ if x + 1 == 10 => false,
                     10 => false,
                     _ => true,
                 } 
@@ -97,7 +97,7 @@ fn analyse_control_flow() -> Result<(), ()> {
         }
     "#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)?;
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),

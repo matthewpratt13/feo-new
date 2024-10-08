@@ -1,6 +1,6 @@
 use super::{
     symbol_table::Symbol,
-    utils::{FormatString, ToIdentifier},
+    utils::{FormatObject, ToIdentifier},
     SemanticAnalyser,
 };
 

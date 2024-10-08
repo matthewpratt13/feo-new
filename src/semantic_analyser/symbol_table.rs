@@ -10,7 +10,7 @@ use crate::{
 use core::fmt;
 use std::collections::HashMap;
 
-use super::utils::FormatString;
+use super::utils::FormatObject;
 
 /// Type alias representing a symbol table that maps `TypePath` to `Symbol`.
 pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
@@ -185,7 +185,7 @@ impl Symbol {
     }
 }
 
-impl FormatString for Symbol {}
+impl FormatObject for Symbol {}
 
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

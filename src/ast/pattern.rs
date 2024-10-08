@@ -389,7 +389,7 @@ impl fmt::Display for Pattern {
                     ts.struct_elements_opt.unwrap_or(Vec::new())
                 )
             }
-            Pattern::WildcardPatt(_) => write!(f, "*"),
+            Pattern::WildcardPatt(_) => write!(f, "_"),
             Pattern::RestPatt(_) => write!(f, ".."),
             Pattern::OrPatt(o) => {
                 let mut patterns: Vec<String> = Vec::new();

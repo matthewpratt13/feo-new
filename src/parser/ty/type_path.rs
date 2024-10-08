@@ -4,7 +4,7 @@ use crate::{
     ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, SelfType, Type, TypePath},
     error::ErrorsEmitted,
     log_trace,
-    semantic_analyser::utils::{FormatString, ToIdentifier},
+    semantic_analyser::utils::{FormatObject, ToIdentifier},
     token::{Token, TokenType},
 };
 
@@ -173,7 +173,7 @@ impl TypePath {
     }
 }
 
-impl FormatString for TypePath {}
+impl FormatObject for TypePath {}
 
 impl ToIdentifier for TypePath {}
 

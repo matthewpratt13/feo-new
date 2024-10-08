@@ -5,7 +5,7 @@ use super::{
 
 use crate::{
     parser::ty::get_type_paths,
-    semantic_analyser::utils::FormatString,
+    semantic_analyser::utils::{FormatObject, FormatParams},
     span::{Span, Spanned},
 };
 
@@ -196,7 +196,7 @@ pub(crate) struct SelfParam {
     pub(crate) kw_self: Keyword,
 }
 
-impl FormatString for SelfParam {
+impl FormatObject for SelfParam {
     fn to_backtick_string(&self) -> String {
         format!(
             "`{}{}`",
@@ -286,6 +286,27 @@ pub struct FunctionItem {
     pub(crate) return_type_opt: Option<Box<Type>>,
     pub(crate) block_opt: Option<BlockExpr>,
     pub(crate) span: Span,
+}
+
+impl FormatParams for FunctionItem {
+    fn param_strings(&self) -> Vec<String> {
+        let mut param_strings: Vec<String> = Vec::new();
+
+        if let Some(params) = &self.params_opt {
+            for param in params {
+                match param {
+                    FunctionOrMethodParam::FunctionParam(function_param) => {
+                        param_strings.push(function_param.to_string());
+                    }
+                    FunctionOrMethodParam::MethodParam(self_param) => {
+                        param_strings.push(self_param.to_string())
+                    }
+                }
+            }
+        }
+
+        param_strings
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]

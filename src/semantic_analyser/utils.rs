@@ -2,13 +2,21 @@ use crate::ast::{Expression, Identifier};
 
 use core::fmt;
 
-pub(crate) trait FormatString
+pub(crate) trait FormatObject
 where
     Self: fmt::Display,
 {
     fn to_backtick_string(&self) -> String {
         format!("`{}`", self)
     }
+}
+
+pub(crate) trait FormatParams {
+    fn param_strings(&self) -> Vec<String>;
+}
+
+pub(crate) trait FormatStatements {
+    fn statement_strings(&self) -> Vec<String>;
 }
 
 pub(crate) trait ToExpression {

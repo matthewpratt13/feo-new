@@ -33,7 +33,7 @@ use std::collections::HashMap;
 
 use expr::analyse_expr;
 use symbol_table::{Module, Scope, ScopeKind, Symbol, SymbolTable};
-use utils::{FormatString, ToExpression, ToIdentifier};
+use utils::{FormatObject, FormatParams, ToExpression, ToIdentifier};
 
 type LibRegistry = HashMap<Identifier, Vec<Module>>;
 
@@ -949,11 +949,10 @@ impl SemanticAnalyser {
                     let function_name_path = f.function_name.to_type_path();
                     let function_item_path = root.join(function_name_path.clone());
 
-                    let param_strings = format_function_params(f);
-
                     log_trace!(
                         self.logger,
-                        "analysing function item: `{function_item_path}({param_strings:?}) -> {}` …",
+                        "analysing function item: `{function_item_path}({:?}) -> {}` …",
+                        f.param_strings(),
                         f.return_type_opt
                             .clone()
                             .unwrap_or(Box::new(Type::UNIT_TYPE))
@@ -1099,8 +1098,6 @@ impl SemanticAnalyser {
             }
         }
 
-        let param_strings = format_function_params(f);
-
         let mut function_type = if let Some(block) = &f.block_opt {
             // split path into a vector to remove the last element (if needed), then convert back
             let mut path_vec = Vec::<Identifier>::from(path.clone());
@@ -1110,7 +1107,8 @@ impl SemanticAnalyser {
             }
 
             println!(
-                "analysing body of function: `{full_path}({param_strings:?}) -> {}` …",
+                "analysing body of function: `{full_path}({:?}) -> {}` …",
+                f.param_strings(),
                 f.return_type_opt
                     .clone()
                     .unwrap_or(Box::new(Type::UNIT_TYPE))
@@ -1141,7 +1139,8 @@ impl SemanticAnalyser {
         }
 
         println!(
-            "analysed function: `{full_path}({param_strings:?}) -> {}`",
+            "analysed function: `{full_path}({:?}) -> {}`",
+            f.param_strings(),
             f.return_type_opt
                 .clone()
                 .unwrap_or(Box::new(Type::UNIT_TYPE))
@@ -2396,24 +2395,24 @@ impl SemanticAnalyser {
     }
 }
 
-fn format_function_params(f: &FunctionItem) -> Vec<String> {
-    let mut param_strings: Vec<String> = Vec::new();
+// fn format_function_params(f: &FunctionItem) -> Vec<String> {
+//     let mut param_strings: Vec<String> = Vec::new();
 
-    if let Some(params) = &f.params_opt {
-        for param in params {
-            match param {
-                FunctionOrMethodParam::FunctionParam(function_param) => {
-                    param_strings.push(function_param.to_string());
-                }
-                FunctionOrMethodParam::MethodParam(self_param) => {
-                    param_strings.push(self_param.to_string())
-                }
-            }
-        }
-    }
+//     if let Some(params) = &f.params_opt {
+//         for param in params {
+//             match param {
+//                 FunctionOrMethodParam::FunctionParam(function_param) => {
+//                     param_strings.push(function_param.to_string());
+//                 }
+//                 FunctionOrMethodParam::MethodParam(self_param) => {
+//                     param_strings.push(self_param.to_string())
+//                 }
+//             }
+//         }
+//     }
 
-    param_strings
-}
+//     param_strings
+// }
 
 fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {
     if *ty == Type::inferred_type("_") {

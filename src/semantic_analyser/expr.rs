@@ -1,7 +1,7 @@
 use super::{
     patt::analyse_patt,
     symbol_table::ScopeKind,
-    utils::{FormatString, ToExpression, ToIdentifier},
+    utils::{FormatObject, ToExpression, ToIdentifier},
     SemanticAnalyser,
 };
 
@@ -1023,8 +1023,6 @@ pub(crate) fn analyse_expr(
         Expression::If(i) => {
             analyse_expr(analyser, &Expression::Grouped(*i.condition.clone()), root)?;
 
-            println!("analysing if expression …");
-
             let if_block_type =
                 analyse_expr(analyser, &Expression::Block(*i.if_block.clone()), root)?;
 
@@ -1089,8 +1087,12 @@ pub(crate) fn analyse_expr(
 
             let scrutinee_type = analyse_expr(analyser, &m.scrutinee.to_expression(), root)?;
 
-            println!("analysing match expression with scrutinee type: `{scrutinee_type}` …");
+            println!(
+                "analysing match expression: {}",
+                Expression::Match(m.clone())
+            );
 
+            println!("analysing match expression with scrutinee type: `{scrutinee_type}` …");
             let mut matched_patt_type =
                 analyse_patt(analyser, &m.final_arm.matched_pattern.clone())?;
 
@@ -1166,6 +1168,8 @@ pub(crate) fn analyse_expr(
 
         Expression::ForIn(fi) => {
             analyser.enter_scope(ScopeKind::ForInLoop);
+
+            println!("analysing for-in loop: {}", Expression::ForIn(fi.clone()));
 
             let iter_type = analyse_expr(analyser, &fi.iterator.clone(), root)?;
 
