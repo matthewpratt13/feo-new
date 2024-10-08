@@ -44,17 +44,16 @@ fn analyse_closure() -> Result<(), ()> {
     "#;
 
     let (mut analyser, program) =
-        setup(input, LogLevel::Trace, false, false, None).expect("error setting during test setup");
+        setup(input, LogLevel::Debug, false, false, None).expect("error setting during test setup");
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
 #[test]
-#[should_panic]
-fn analyse_constant_reassign() {
+fn analyse_constant_reassign() -> Result<(), ()> {
     let input = r#"
     #[storage]
     const ADDRESS: h160 = $0x12345_12345_12345_12345_12345_12345_12345_12345;
@@ -64,8 +63,16 @@ fn analyse_constant_reassign() {
         .expect("unable to set up semantic analyser");
 
     match analyser.analyse_program(&program) {
-        Ok(_) => (),
-        Err(_) => panic!("{:#?}", analyser.logger.messages()),
+        Ok(_) => Err(println!("expected `SemanticErrorKind::ConstantReassignment` error, but test was successful")),
+        Err(errs) => match errs.last() {
+            Some(err) => match err.error_kind() {
+                SemanticErrorKind::ConstantReassignment { .. } => Ok(println!("test failed correctly with error: {err:#?}")),
+
+                err => Err(println!("test failed with unexpected error. Expected `SemanticErrorKind::ConstantReassignment` error, found `{err}`"))
+            },
+
+            _ => Err(println!("test failed, but no errors detected. Expected `SemanticErrorKind::ConstantReassignment` error, found none"))
+        },
     }
 }
 
@@ -101,7 +108,7 @@ fn analyse_control_flow() -> Result<(), ()> {
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -130,7 +137,7 @@ fn analyse_enum_variants() -> Result<(), ()> {
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -238,7 +245,7 @@ fn analyse_impl() -> Result<(), ()> {
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -348,7 +355,7 @@ fn analyse_import_decl() -> Result<(), ()> {
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -366,7 +373,7 @@ fn analyse_let_stmt() -> Result<(), ()> {
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -423,7 +430,7 @@ fn analyse_method_call() -> Result<(), ()> {
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -461,7 +468,7 @@ fn analyse_struct() -> Result<(), ()> {
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -484,6 +491,6 @@ fn analyse_trait_def() -> Result<(), ()> {
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }

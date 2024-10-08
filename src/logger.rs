@@ -43,19 +43,9 @@ impl Logger {
         if self.level <= msg.level {
             self.messages.push(msg.clone());
             println!("{msg}")
-        } else {
-            self.messages.push(LogMsg { level: msg.level, text: format!("tried to log message and failed. Verbosity level ({}) is lower than the initialized one ({})", msg.level, self.level)});
+            // } else {
+            //     self.messages.push(LogMsg { level: msg.level, text: format!("tried to log message and failed. Verbosity level ({}) is lower than the initialized one ({})", msg.level, self.level)});
         }
-    }
-
-    /// Retrieve the log messages.
-    #[allow(dead_code)]
-    pub(crate) fn messages(&self) -> Vec<String> {
-        self.messages
-            .iter()
-            .map(|m| m.to_string())
-            .collect::<Vec<_>>()
-            .clone()
     }
 
     /// Clear all log messages.

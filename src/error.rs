@@ -31,6 +31,11 @@ where
             position: Position::new(pos, source),
         }
     }
+
+    #[allow(dead_code)]
+    pub(crate) fn error_kind(&self) -> T {
+        self.error_kind.clone()
+    }
 }
 
 impl<T> fmt::Display for CompilerError<T>

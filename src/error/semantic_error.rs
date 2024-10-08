@@ -11,7 +11,7 @@ pub enum SemanticErrorKind {
     },
 
     ConstantReassignment {
-        name: Identifier,
+        constant_name: Identifier,
     },
 
     FuncArgCountMismatch {
@@ -265,7 +265,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ArrayLengthMismatch { expected, found } => {
                 write!(f, "array length mismatch. Expected {expected} elements, found {found}")
             }
-            SemanticErrorKind::ConstantReassignment { name } => {
+            SemanticErrorKind::ConstantReassignment { constant_name: name } => {
                 write!(f, "cannot reassign constant `{name}`")
             }
             SemanticErrorKind::FuncArgCountMismatch { function_path,  expected, found } => {

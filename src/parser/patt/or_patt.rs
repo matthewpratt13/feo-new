@@ -54,11 +54,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let pattern = parser.parse_pattern();
-
-        match pattern {
+        match parser.parse_pattern() {
             Ok(p) => Ok(println!("{:#?}", p)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 }

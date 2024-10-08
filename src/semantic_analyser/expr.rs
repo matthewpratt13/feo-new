@@ -542,9 +542,7 @@ pub(crate) fn analyse_expr(
                     }
                 }
                 Some(Symbol::Constant { constant_name, .. }) => {
-                    Err(SemanticErrorKind::ConstantReassignment {
-                        name: constant_name,
-                    })
+                    Err(SemanticErrorKind::ConstantReassignment { constant_name })
                 }
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: assignee_path.type_name,
@@ -588,7 +586,7 @@ pub(crate) fn analyse_expr(
 
                 Some(Symbol::Constant { constant_name, .. }) => {
                     Err(SemanticErrorKind::ConstantReassignment {
-                        name: constant_name.clone(),
+                        constant_name: constant_name.clone(),
                     })
                 }
 
