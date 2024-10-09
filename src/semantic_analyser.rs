@@ -162,8 +162,7 @@ impl SemanticAnalyser {
             if let Some(symbol) = scope.symbols.get(path) {
                 log_debug!(
                     self.logger,
-                    "found symbol `{}` in scope `{}` at path `{path}`",
-                    symbol,
+                    "found symbol `{symbol}` in scope `{}` at path `{path:?}`",
                     scope.scope_kind
                 );
 

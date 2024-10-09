@@ -120,7 +120,7 @@ fn analyse_enum_variants() -> Result<(), ()> {
             TupleStructError(str),
             StructError {
                 expected: str,
-                found:  str
+                found:  str         
             }
         }
 
@@ -133,7 +133,7 @@ fn analyse_enum_variants() -> Result<(), ()> {
         }
     "#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, true, None)?;
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
@@ -151,21 +151,18 @@ fn analyse_impl() -> Result<(), ()> {
             const CONTRACT_ADDRESS: h160;
             const CREATOR_ADDRESS: h160;
     
-            pub func address() -> h160;
-            pub func balance(&self) -> u256;
-            pub func msg_sender() -> h160;
-            pub func creator_address() -> h160;
+            func address() -> h160;
+            func balance(&self) -> u256;
+            func msg_sender() -> h160;
+            func creator_address() -> h160;
         }
 
         trait ERC20 {
             #![interface]
 
             func approve(&self, spender: h160, amount: u256) -> Result<(), ()>;
-
             func transfer(&mut self, from: h160, to: h160, amount: u256) -> Result<(), ()>;
-
             func mint(&mut self, to: h160, amount: u256) -> Result<(), ()>;
-
             func burn(&mut self, from: h160, amount: u256) -> Result<(), ()>;
         }
     }
