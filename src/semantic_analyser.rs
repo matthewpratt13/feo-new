@@ -1471,7 +1471,7 @@ impl SemanticAnalyser {
                 | Type::F32(_)
                 | Type::F64(_),
             ) => {
-                log_trace!(self.logger, "attempting to unify numeric type `{matched_type}` with expected type `{expected_type}` …");
+                // log_trace!(self.logger, "attempting to unify numeric type `{matched_type}` with expected type `{expected_type}` …");
 
                 unify_numeric_types(expected_type, matched_type)
             }
@@ -2426,7 +2426,7 @@ fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {
 fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), SemanticErrorKind> {
     match (lhs_type, rhs_type.clone()) {
         (Type::I32(_), Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
-            *rhs_type = lhs_type.clone();
+            // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
@@ -2439,7 +2439,7 @@ fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), Seman
             Type::I64(_),
             Type::I32(_) | Type::I64(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
         ) => {
-            *rhs_type = lhs_type.clone();
+            // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
@@ -2449,7 +2449,7 @@ fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), Seman
         }),
 
         (Type::U8(_), Type::U8(_)) => {
-            *rhs_type = lhs_type.clone();
+            // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
@@ -2459,7 +2459,7 @@ fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), Seman
         }),
 
         (Type::U16(_), Type::U8(_) | Type::U16(_)) => {
-            *rhs_type = lhs_type.clone();
+            // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
@@ -2469,7 +2469,7 @@ fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), Seman
         }),
 
         (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
-            *rhs_type = lhs_type.clone();
+            // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
@@ -2479,7 +2479,7 @@ fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), Seman
         }),
 
         (Type::U64(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
-            *rhs_type = lhs_type.clone();
+            // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
@@ -2489,7 +2489,7 @@ fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), Seman
         }),
 
         (Type::U256(_), Type::U256(_)) => {
-            *rhs_type = lhs_type.clone();
+            // *rhs_type = lhs_type.clone();
             Ok(())
         }
         (Type::U256(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
@@ -2498,7 +2498,7 @@ fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), Seman
         }),
 
         (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
-            *rhs_type = lhs_type.clone();
+            // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
@@ -2508,7 +2508,7 @@ fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), Seman
         }),
 
         (Type::F32(_), Type::F32(_)) => {
-            *rhs_type = lhs_type.clone();
+            // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
@@ -2518,7 +2518,7 @@ fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), Seman
         }),
 
         (Type::F64(_), Type::F32(_) | Type::F64(_)) => {
-            *rhs_type = lhs_type.clone();
+            // *rhs_type = lhs_type.clone();
             Ok(())
         }
 

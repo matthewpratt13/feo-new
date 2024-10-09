@@ -1111,7 +1111,7 @@ pub(crate) fn analyse_expr(
                     if matched_patt_type == Type::inferred_type("_") {
                         analyser.check_types(
                             &mut analyser.current_symbol_table(),
-                            &arm_patt_type,
+                            &scrutinee_type,
                             &mut matched_patt_type,
                         )?;
                     } else {
@@ -1122,17 +1122,17 @@ pub(crate) fn analyse_expr(
                         )?;
                     }
 
-                    if arm_patt_type != matched_patt_type {
-                        if let Type::InferredType(_) = matched_patt_type {
-                            ()
-                        } else {
-                            return Err(SemanticErrorKind::TypeMismatchMatchExpr {
-                                loc: "matched pattern".to_string(),
-                                expected: matched_patt_type,
-                                found: arm_patt_type,
-                            });
-                        }
-                    }
+                    // if arm_patt_type != matched_patt_type {
+                    //     if let Type::InferredType(_) = matched_patt_type {
+                    //         ()
+                    //     } else {
+                    //         return Err(SemanticErrorKind::TypeMismatchMatchExpr {
+                    //             loc: "matched pattern".to_string(),
+                    //             expected: matched_patt_type,
+                    //             found: arm_patt_type,
+                    //         });
+                    //     }
+                    // }
 
                     let mut arm_expr_type =
                         analyse_expr(analyser, &arm.arm_expression.clone(), root)?;
