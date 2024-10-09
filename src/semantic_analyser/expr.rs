@@ -1090,17 +1090,19 @@ pub(crate) fn analyse_expr(
             let mut matched_patt_type =
                 analyse_patt(analyser, &m.final_arm.matched_pattern.clone())?;
 
-            if matched_patt_type != scrutinee_type {
-                if let Type::InferredType(_) = matched_patt_type {
-                    ()
-                } else {
-                    return Err(SemanticErrorKind::TypeMismatchMatchExpr {
-                        loc: "scrutinee and matched pattern".to_string(),
-                        expected: scrutinee_type,
-                        found: matched_patt_type,
-                    });
-                }
-            }
+            // Q: what if `matched_patt_type` is a `u64` and `scrutinee_type` is an `i64`?
+            // A: we shouldn't throw an error as they are compatible; hence this code is wrong
+            // if matched_patt_type != scrutinee_type {
+            //     if let Type::InferredType(_) = matched_patt_type {
+            //         ()
+            //     } else {
+            //         return Err(SemanticErrorKind::TypeMismatchMatchExpr {
+            //             loc: "scrutinee and matched pattern".to_string(),
+            //             expected: scrutinee_type,
+            //             found: matched_patt_type,
+            //         });
+            //     }
+            // }
 
             let expr_type = analyse_expr(analyser, &m.final_arm.arm_expression.clone(), root)?;
 
@@ -1122,6 +1124,8 @@ pub(crate) fn analyse_expr(
                         )?;
                     }
 
+                    // Q: what if `arm_patt_type` is a `u64` and `matched_patt_type` is an `i64`?
+                    // A: we shouldn't throw an error as they are compatible; hence this code is wrong
                     // if arm_patt_type != matched_patt_type {
                     //     if let Type::InferredType(_) = matched_patt_type {
                     //         ()
