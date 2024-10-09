@@ -421,6 +421,20 @@ pub struct StructExpr {
     pub(crate) span: Span,
 }
 
+impl FormatParams for StructExpr {
+    fn param_strings(&self) -> Vec<String> {
+        let mut field_strings: Vec<String> = Vec::new();
+
+        if let Some(fields) = &self.struct_fields_opt {
+            for field in fields {
+                field_strings.push(format!("{}: {}", field.field_name, field.field_value))
+            }
+        }
+
+        field_strings
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct TupleExpr {
     pub(crate) tuple_elements: TupleElements,
@@ -439,6 +453,20 @@ pub struct TupleStructExpr {
     pub(crate) struct_path: PathExpr,
     pub(crate) struct_elements_opt: Option<Vec<Expression>>,
     pub(crate) span: Span,
+}
+
+impl FormatParams for TupleStructExpr {
+    fn param_strings(&self) -> Vec<String> {
+        let mut element_strings: Vec<String> = Vec::new();
+
+        if let Some(elems) = &self.struct_elements_opt {
+            for elem in elems {
+                element_strings.push(elem.to_string());
+            }
+        }
+
+        element_strings
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -593,15 +621,10 @@ impl fmt::Display for Expression {
             Expression::Array(arr) => write!(f, "[ {:?} ]", arr.elements_opt.unwrap_or(Vec::new())),
             Expression::Tuple(tup) => write!(f, "( {} )", tup.tuple_elements),
             Expression::Struct(strc) => {
-                write!(
-                    f,
-                    "{} {{ {:?} }}",
-                    strc.struct_path,
-                    strc.struct_fields_opt.unwrap_or(Vec::new())
-                )
+                write!(f, "{} {{ {:?} }}", strc.struct_path, strc.param_strings())
             }
             Expression::TupleStruct(tstrc) => {
-                write!(f, "{}({:?})", tstrc.struct_path, tstrc.struct_elements_opt)
+                write!(f, "{}({:?})", tstrc.struct_path, tstrc.param_strings())
             }
             Expression::Mapping(map) => write!(f, "{{ {:?} }}", map.pairs_opt),
             Expression::Block(blk) => {
