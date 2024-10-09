@@ -668,71 +668,13 @@ impl SemanticAnalyser {
                     for variant in e.variants.clone() {
                         let variant_path = enum_def_path.join(variant.variant_name.to_type_path());
 
-                        if let Some(variant_type) = variant.variant_type_opt {
-                            match variant_type {
-                                EnumVariantKind::Struct(s) => {
-                                    self.insert(
-                                        variant_path.clone(),
-                                        Symbol::Struct {
-                                            path: variant_path,
-                                            struct_def: StructDef {
-                                                attributes_opt: None,
-                                                visibility: Visibility::Private,
-                                                kw_struct: Keyword::Anonymous,
-                                                struct_name: variant.variant_name,
-                                                generic_params_opt: None,
-                                                fields_opt: Some(s.struct_fields),
-                                                span: Span::default(),
-                                            },
-                                            associated_items_inherent: Vec::new(),
-                                            associated_items_trait: Vec::new(),
-                                        },
-                                    )?;
-                                }
-                                EnumVariantKind::TupleStruct(t) => {
-                                    self.insert(
-                                        variant_path.clone(),
-                                        Symbol::TupleStruct {
-                                            path: variant_path.clone(),
-                                            tuple_struct_def: TupleStructDef {
-                                                attributes_opt: None,
-                                                visibility: Visibility::Private,
-                                                kw_struct: Keyword::Anonymous,
-                                                struct_name: variant_path.to_identifier(),
-                                                generic_params_opt: None,
-                                                fields_opt: {
-                                                    let mut elements: Vec<TupleStructDefField> =
-                                                        Vec::new();
-
-                                                    for elem_type in t.element_types {
-                                                        let elem = TupleStructDefField {
-                                                            attributes_opt: None,
-                                                            visibility: Visibility::Private,
-                                                            field_type: Box::new(elem_type),
-                                                        };
-
-                                                        elements.push(elem);
-                                                    }
-
-                                                    Some(elements)
-                                                },
-                                                span: Span::default(),
-                                            },
-                                            associated_items_inherent: Vec::new(),
-                                            associated_items_trait: Vec::new(),
-                                        },
-                                    )?;
-                                }
-                            }
-                        } else {
-                            self.insert(
-                                variant_path.clone(),
-                                Symbol::Variable {
-                                    name: variant_path.to_identifier(),
-                                    var_type: Type::UserDefined(variant_path),
-                                },
-                            )?;
-                        }
+                        self.insert(
+                            variant_path.clone(),
+                            Symbol::Variable {
+                                name: variant_path.to_identifier(),
+                                var_type: Type::UserDefined(variant_path),
+                            },
+                        )?;
                     }
                 }
 

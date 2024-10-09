@@ -812,6 +812,8 @@ pub(crate) fn analyse_expr(
                     Ok(Type::UserDefined(path))
                 }
 
+                Some(Symbol::Variable { var_type, .. }) => Ok(var_type),
+
                 None => Err(SemanticErrorKind::UndefinedStruct {
                     name: type_path.type_name,
                 }),
@@ -887,6 +889,8 @@ pub(crate) fn analyse_expr(
                         }
                     }
                 }
+
+                Some(Symbol::Variable { var_type, .. }) => Ok(var_type),
 
                 None => Err(SemanticErrorKind::UndefinedStruct {
                     name: type_path.type_name,
