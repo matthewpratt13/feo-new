@@ -54,7 +54,7 @@ impl Type {
             Some(Token::H512Type { .. }) => Ok(Type::H512(Hash::H512(H512::default()))),
             Some(Token::StrType { .. }) => Ok(Type::Str(Str::from(String::default().as_str()))),
             Some(Token::CharType { .. }) => Ok(Type::Char(Char::from(char::default()))),
-            Some(Token::BoolType { .. }) => Ok(Type::Bool(Bool::from(bool::default()))),
+            Some(Token::BoolType { .. }) => Ok(Type::Bool),
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
             Some(Token::Func { .. }) => parse_function_ptr_type(parser),
@@ -276,7 +276,7 @@ impl fmt::Display for Type {
             Type::H512(_) => write!(f, "h512"),
             Type::Str(_) => write!(f, "str"),
             Type::Char(_) => write!(f, "char"),
-            Type::Bool(_) => write!(f, "bool"),
+            Type::Bool => write!(f, "bool"),
             Type::UnitType(_) => write!(f, "()"),
             Type::GroupedType(g) => write!(f, "({})", *g),
             Type::Array {
@@ -340,7 +340,7 @@ impl fmt::Debug for Type {
             Self::H512(_) => f.debug_tuple("H512").finish(),
             Self::Str(_) => f.debug_tuple("Str").finish(),
             Self::Char(_) => f.debug_tuple("Char").finish(),
-            Self::Bool(_) => f.debug_tuple("Bool").finish(),
+            Self::Bool => write!(f, "bool"),
             Self::UnitType(_) => f.debug_tuple("UnitType").finish(),
             Self::GroupedType(arg0) => f.debug_tuple("GroupedType").field(arg0).finish(),
             Self::Array {

@@ -1075,7 +1075,7 @@ pub(crate) enum Type {
     H512(Hash),
     Str(Str),
     Char(Char),
-    Bool(Bool),
+    Bool,
 
     UnitType(UnitType), // ()
 

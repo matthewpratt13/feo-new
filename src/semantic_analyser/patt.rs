@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Identifier, Int, Keyword, LiteralPatt,
-        Pattern, Str, Type, TypePath, UInt,
+        BigUInt, Byte, Bytes, Char, Float, Hash, Identifier, Int, Keyword, LiteralPatt, Pattern,
+        Str, Type, TypePath, UInt,
     },
     error::SemanticErrorKind,
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
@@ -78,7 +78,7 @@ pub(crate) fn analyse_patt(
             },
             LiteralPatt::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
             LiteralPatt::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
-            LiteralPatt::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
+            LiteralPatt::Bool { .. } => Ok(Type::Bool),
         },
 
         Pattern::ReferencePatt(r) => Ok(Type::Reference {

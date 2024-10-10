@@ -289,7 +289,7 @@ impl SemanticAnalyser {
                     | Type::H512(_)
                     | Type::Str(_)
                     | Type::Char(_)
-                    | Type::Bool(_)
+                    | Type::Bool
                     | Type::UnitType(_)
                     | Type::GroupedType(_)
                     | Type::Array { .. }

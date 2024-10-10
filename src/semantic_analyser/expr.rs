@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionOrMethodParam,
+        BigUInt, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionOrMethodParam,
         FunctionParam, FunctionPtr, Hash, Identifier, Int, Keyword, Literal, PathExpr, PathRoot,
         Pattern, Statement, Str, Type, TypePath, UInt, UnaryOp,
     },
@@ -118,7 +118,7 @@ pub(crate) fn analyse_expr(
             },
             Literal::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
             Literal::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
-            Literal::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
+            Literal::Bool { .. } => Ok(Type::Bool),
         },
 
         Expression::MethodCall(mc) => {
@@ -285,7 +285,7 @@ pub(crate) fn analyse_expr(
                     }),
                 },
                 UnaryOp::Not => match &expr_type {
-                    Type::Bool(_) => Ok(expr_type),
+                    Type::Bool => Ok(expr_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "boolean".to_string(),
                         found: expr_type,
@@ -810,6 +810,9 @@ pub(crate) fn analyse_expr(
                     Ok(Type::UserDefined(path))
                 }
 
+                // TODO: investigate enum struct variants
+                Some(Symbol::Variable { var_type, .. }) => Ok(var_type),
+
                 None => Err(SemanticErrorKind::UndefinedStruct {
                     name: type_path.type_name,
                 }),
@@ -886,6 +889,7 @@ pub(crate) fn analyse_expr(
                     }
                 }
 
+                // TODO: investigate enum tuple struct variants
                 Some(Symbol::Variable { var_type, .. }) => Ok(var_type),
 
                 None => Err(SemanticErrorKind::UndefinedStruct {
