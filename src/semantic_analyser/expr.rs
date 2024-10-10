@@ -2,15 +2,14 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BigUInt, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionOrMethodParam,
-        FunctionParam, FunctionPtr, Hash, Identifier, Int, Keyword, Literal, PathExpr, PathRoot,
-        Pattern, Statement, Str, Type, TypePath, UInt, UnaryOp,
+        BigUInt, Bytes, ClosureParams, Expression, Float, FunctionOrMethodParam, FunctionParam,
+        FunctionPtr, Hash, Identifier, Int, Keyword, Literal, PathExpr, PathRoot, Pattern,
+        Statement, Type, TypePath, UInt, UnaryOp,
     },
     error::SemanticErrorKind,
     log_trace, log_warn,
     semantic_analyser::symbol_table::Symbol,
     span::Spanned,
-    B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
 use super::{
@@ -86,38 +85,38 @@ pub(crate) fn analyse_expr(
 
         Expression::Literal(l) => match l {
             Literal::Int { value, .. } => match value {
-                Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
-                Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
+                Int::I32(_) => Ok(Type::I32),
+                Int::I64(_) => Ok(Type::I64),
             },
             Literal::UInt { value, .. } => match value {
-                UInt::U8(_) => Ok(Type::U8(UInt::U8(u8::default()))),
-                UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
-                UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
-                UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
+                UInt::U8(_) => Ok(Type::U8),
+                UInt::U16(_) => Ok(Type::U16),
+                UInt::U32(_) => Ok(Type::U32),
+                UInt::U64(_) => Ok(Type::U64),
             },
             Literal::BigUInt { value, .. } => match value {
-                BigUInt::U256(_) => Ok(Type::U256(BigUInt::U256(U256::default()))),
-                BigUInt::U512(_) => Ok(Type::U512(BigUInt::U512(U512::default()))),
+                BigUInt::U256(_) => Ok(Type::U256),
+                BigUInt::U512(_) => Ok(Type::U512),
             },
             Literal::Float { value, .. } => match value {
-                Float::F32(_) => Ok(Type::F32(Float::F32(F32::default()))),
-                Float::F64(_) => Ok(Type::F64(Float::F64(F64::default()))),
+                Float::F32(_) => Ok(Type::F32),
+                Float::F64(_) => Ok(Type::F64),
             },
-            Literal::Byte { .. } => Ok(Type::Byte(Byte::from(u8::default()))),
+            Literal::Byte { .. } => Ok(Type::Byte),
             Literal::Bytes { value, .. } => match value {
-                Bytes::B2(_) => Ok(Type::B2(Bytes::B2(B2::default()))),
-                Bytes::B4(_) => Ok(Type::B4(Bytes::B4(B4::default()))),
-                Bytes::B8(_) => Ok(Type::B8(Bytes::B8(B8::default()))),
-                Bytes::B16(_) => Ok(Type::B16(Bytes::B16(B16::default()))),
-                Bytes::B32(_) => Ok(Type::B32(Bytes::B32(B32::default()))),
+                Bytes::B2(_) => Ok(Type::B2),
+                Bytes::B4(_) => Ok(Type::B4),
+                Bytes::B8(_) => Ok(Type::B8),
+                Bytes::B16(_) => Ok(Type::B16),
+                Bytes::B32(_) => Ok(Type::B32),
             },
             Literal::Hash { value, .. } => match value {
-                Hash::H160(_) => Ok(Type::H160(Hash::H160(H160::default()))),
-                Hash::H256(_) => Ok(Type::H256(Hash::H256(H256::default()))),
-                Hash::H512(_) => Ok(Type::H512(Hash::H512(H512::default()))),
+                Hash::H160(_) => Ok(Type::H160),
+                Hash::H256(_) => Ok(Type::H256),
+                Hash::H512(_) => Ok(Type::H512),
             },
-            Literal::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
-            Literal::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
+            Literal::Str { .. } => Ok(Type::Str),
+            Literal::Char { .. } => Ok(Type::Char),
             Literal::Bool { .. } => Ok(Type::Bool),
         },
 
@@ -210,7 +209,7 @@ pub(crate) fn analyse_expr(
             let index_type = analyse_expr(analyser, &i.index.to_expression(), root)?;
 
             match &index_type {
-                Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) => (),
+                Type::U8 | Type::U16 | Type::U32 | Type::U64 => (),
 
                 _ => {
                     return Err(SemanticErrorKind::UnexpectedType {
@@ -269,16 +268,16 @@ pub(crate) fn analyse_expr(
 
             match u.unary_op {
                 UnaryOp::Negate => match &expr_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::F32(_)
-                    | Type::F64(_) => Ok(expr_type),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64 => Ok(expr_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "numeric value".to_string(),
                         found: expr_type,
@@ -319,73 +318,68 @@ pub(crate) fn analyse_expr(
 
             match (&value_type, &new_type) {
                 (
-                    Type::I32(_) | Type::I64(_),
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::F32(_)
-                    | Type::F64(_),
+                    Type::I32 | Type::I64,
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64,
                 )
                 | (
-                    Type::U8(_) | Type::Byte(_),
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::F32(_)
-                    | Type::F64(_)
-                    | Type::Byte(_)
-                    | Type::Char(_),
+                    Type::U8 | Type::Byte,
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64
+                    | Type::Byte
+                    | Type::Char,
                 )
                 | (
-                    Type::U16(_) | Type::U32(_),
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::F32(_)
-                    | Type::F64(_)
-                    | Type::Char(_),
+                    Type::U16 | Type::U32,
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64
+                    | Type::Char,
                 )
                 | (
-                    Type::U64(_),
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::F32(_)
-                    | Type::F64(_),
+                    Type::U64,
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64,
                 )
-                | (Type::U256(_) | Type::U512(_), Type::U256(_) | Type::U512(_))
-                | (Type::F32(_) | Type::F64(_), Type::F32(_) | Type::F64(_))
+                | (Type::U256 | Type::U512, Type::U256 | Type::U512)
+                | (Type::F32 | Type::F64, Type::F32 | Type::F64)
                 | (
-                    Type::B2(_) | Type::B4(_) | Type::B16(_) | Type::B32(_),
-                    Type::B2(_) | Type::B4(_) | Type::B16(_) | Type::B32(_),
+                    Type::B2 | Type::B4 | Type::B16 | Type::B32,
+                    Type::B2 | Type::B4 | Type::B16 | Type::B32,
                 )
-                | (
-                    Type::H160(_) | Type::H256(_) | Type::H512(_),
-                    Type::H160(_) | Type::H256(_) | Type::H512(_),
-                )
-                | (Type::Char(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
-                    Ok(new_type)
-                }
+                | (Type::H160 | Type::H256 | Type::H512, Type::H160 | Type::H256 | Type::H512)
+                | (Type::Char, Type::U8 | Type::U16 | Type::U32 | Type::U64) => Ok(new_type),
                 (t, u) => Err(SemanticErrorKind::TypeCastError {
                     from: t.clone(),
                     to: u.clone(),
@@ -429,14 +423,14 @@ pub(crate) fn analyse_expr(
                 let to_type = analyse_expr(analyser, &to.to_expression(), root)?;
 
                 match to_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_) => Ok(to_type),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512 => Ok(to_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "numeric type".to_string(),
                         found: to_type,
@@ -447,14 +441,14 @@ pub(crate) fn analyse_expr(
                 let from_type = analyse_expr(analyser, &from.to_expression(), root)?;
 
                 match &from_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_) => Ok(from_type),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512 => Ok(from_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "numeric type".to_string(),
                         found: from_type,
@@ -465,14 +459,14 @@ pub(crate) fn analyse_expr(
                 let from_type = analyse_expr(analyser, &from.to_expression(), root)?;
 
                 match &from_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_) => (),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512 => (),
                     _ => {
                         return Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type".to_string(),
@@ -484,14 +478,14 @@ pub(crate) fn analyse_expr(
                 let to_type = analyse_expr(analyser, &to.to_expression(), root)?;
 
                 match &to_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_) => (),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512 => (),
                     _ => {
                         return Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type".to_string(),

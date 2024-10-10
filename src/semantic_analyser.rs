@@ -268,27 +268,27 @@ impl SemanticAnalyser {
                 let assignee_path = ls.assignee.name.to_type_path();
 
                 let symbol = match &value_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::F32(_)
-                    | Type::F64(_)
-                    | Type::Byte(_)
-                    | Type::B2(_)
-                    | Type::B4(_)
-                    | Type::B8(_)
-                    | Type::B16(_)
-                    | Type::B32(_)
-                    | Type::H160(_)
-                    | Type::H256(_)
-                    | Type::H512(_)
-                    | Type::Str(_)
-                    | Type::Char(_)
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64
+                    | Type::Byte
+                    | Type::B2
+                    | Type::B4
+                    | Type::B8
+                    | Type::B16
+                    | Type::B32
+                    | Type::H160
+                    | Type::H256
+                    | Type::H512
+                    | Type::Str
+                    | Type::Char
                     | Type::Bool
                     | Type::UnitType(_)
                     | Type::GroupedType(_)
@@ -1392,26 +1392,26 @@ impl SemanticAnalyser {
             }
 
             (
-                Type::I32(_)
-                | Type::I64(_)
-                | Type::U8(_)
-                | Type::U16(_)
-                | Type::U32(_)
-                | Type::U64(_)
-                | Type::U256(_)
-                | Type::U512(_)
-                | Type::F32(_)
-                | Type::F64(_),
-                Type::I32(_)
-                | Type::I64(_)
-                | Type::U8(_)
-                | Type::U16(_)
-                | Type::U32(_)
-                | Type::U64(_)
-                | Type::U256(_)
-                | Type::U512(_)
-                | Type::F32(_)
-                | Type::F64(_),
+                Type::I32
+                | Type::I64
+                | Type::U8
+                | Type::U16
+                | Type::U32
+                | Type::U64
+                | Type::U256
+                | Type::U512
+                | Type::F32
+                | Type::F64,
+                Type::I32
+                | Type::I64
+                | Type::U8
+                | Type::U16
+                | Type::U32
+                | Type::U64
+                | Type::U256
+                | Type::U512
+                | Type::F32
+                | Type::F64,
             ) => {
                 // log_trace!(self.logger, "attempting to unify numeric type `{matched_type}` with expected type `{expected_type}` …");
 
@@ -2367,104 +2367,101 @@ fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {
 
 fn unify_numeric_types(lhs_type: &Type, rhs_type: &mut Type) -> Result<(), SemanticErrorKind> {
     match (lhs_type, rhs_type.clone()) {
-        (Type::I32(_), Type::I32(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
+        (Type::I32, Type::I32 | Type::U8 | Type::U16 | Type::U32 | Type::U64) => {
             // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
-        (Type::I32(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+        (Type::I32, ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
             expected: "`i32` or unsigned integer".to_string(),
             found: ty,
         }),
 
-        (
-            Type::I64(_),
-            Type::I32(_) | Type::I64(_) | Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_),
-        ) => {
+        (Type::I64, Type::I32 | Type::I64 | Type::U8 | Type::U16 | Type::U32 | Type::U64) => {
             // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
-        (Type::I64(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+        (Type::I64, ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
             expected: "integer or unsigned integer".to_string(),
             found: ty,
         }),
 
-        (Type::U8(_), Type::U8(_)) => {
+        (Type::U8, Type::U8) => {
             // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
-        (Type::U8(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+        (Type::U8, ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
             expected: "`u8`".to_string(),
             found: ty,
         }),
 
-        (Type::U16(_), Type::U8(_) | Type::U16(_)) => {
+        (Type::U16, Type::U8 | Type::U16) => {
             // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
-        (Type::U16(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+        (Type::U16, ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
             expected: "`u16` or `u8`".to_string(),
             found: ty,
         }),
 
-        (Type::U32(_), Type::U8(_) | Type::U16(_) | Type::U32(_)) => {
+        (Type::U32, Type::U8 | Type::U16 | Type::U32) => {
             // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
-        (Type::U32(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+        (Type::U32, ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
             expected: "`u32` or smaller unsigned integer".to_string(),
             found: ty,
         }),
 
-        (Type::U64(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
+        (Type::U64, Type::U8 | Type::U16 | Type::U32 | Type::U64) => {
             // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
-        (Type::U64(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+        (Type::U64, ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
             expected: "`u64` or smaller unsigned integer".to_string(),
             found: ty,
         }),
 
-        (Type::U256(_), Type::U256(_)) => {
+        (Type::U256, Type::U256) => {
             // *rhs_type = lhs_type.clone();
             Ok(())
         }
-        (Type::U256(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+        (Type::U256, ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
             expected: "`u256`".to_string(),
             found: ty,
         }),
 
-        (Type::U512(_), Type::U256(_) | Type::U512(_)) => {
+        (Type::U512, Type::U256 | Type::U512) => {
             // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
-        (Type::U512(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+        (Type::U512, ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
             expected: "`u512` or `u256`".to_string(),
             found: ty,
         }),
 
-        (Type::F32(_), Type::F32(_)) => {
+        (Type::F32, Type::F32) => {
             // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
-        (Type::F32(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+        (Type::F32, ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
             expected: "`f32`".to_string(),
             found: ty,
         }),
 
-        (Type::F64(_), Type::F32(_) | Type::F64(_)) => {
+        (Type::F64, Type::F32 | Type::F64) => {
             // *rhs_type = lhs_type.clone();
             Ok(())
         }
 
-        (Type::F64(_), ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
+        (Type::F64, ty) => Err(SemanticErrorKind::TypeMismatchNumeric {
             expected: "`f64` or `f32`".to_string(),
             found: ty,
         }),
