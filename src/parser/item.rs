@@ -9,10 +9,6 @@ mod static_var_decl;
 mod struct_def;
 mod trait_def;
 
-pub(crate) use super::parse::{ParseAssociatedItem, ParseDeclItem, ParseDefItem};
-
-use super::{collection, ParseStatement, Parser};
-
 use crate::{
     ast::{
         AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionItem, GenericParam, GenericParams,
@@ -22,9 +18,12 @@ use crate::{
     },
     error::{ErrorsEmitted, ParserErrorKind},
     log_trace,
+    parser::get_attributes,
     span::Span,
     token::{Token, TokenType},
 };
+
+use super::{get_collection, ParseDeclItem, ParseDefItem, ParseStatement, Parser};
 
 impl Item {
     pub(crate) fn parse(
@@ -122,7 +121,7 @@ impl ParseStatement for Item {
 
         parser.log_current_token(false);
 
-        let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
+        let attributes_opt = get_attributes(parser, OuterAttr::outer_attr);
 
         let visibility = Visibility::visibility(parser)?;
 
@@ -222,13 +221,12 @@ pub(crate) fn parse_generic_params(
 
         parser.next_token();
 
-        let generics =
-            collection::get_collection(parser, parse_generic_param, &left_angle_bracket)?
-                .ok_or_else(|| {
-                    parser.emit_missing_node("ty", "generic params");
-                    parser.next_token();
-                    ErrorsEmitted
-                })?;
+        let generics = get_collection(parser, parse_generic_param, &left_angle_bracket)?
+            .ok_or_else(|| {
+                parser.emit_missing_node("ty", "generic params");
+                parser.next_token();
+                ErrorsEmitted
+            })?;
 
         parser.expect_token(TokenType::GreaterThan)?;
 

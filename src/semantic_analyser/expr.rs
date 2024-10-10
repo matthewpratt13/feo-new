@@ -1,9 +1,4 @@
-use super::{
-    patt::analyse_patt,
-    symbol_table::ScopeKind,
-    utils::{FormatObject, ToExpression, ToIdentifier},
-    SemanticAnalyser,
-};
+use std::collections::HashMap;
 
 use crate::{
     ast::{
@@ -18,7 +13,10 @@ use crate::{
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
-use std::collections::HashMap;
+use super::{
+    patt::analyse_patt, symbol_table::ScopeKind, FormatObject, SemanticAnalyser, ToExpression,
+    ToIdentifier,
+};
 
 // TODO: alphabetize match arms
 
@@ -888,7 +886,7 @@ pub(crate) fn analyse_expr(
                     }
                 }
 
-                Some(Symbol::Variable {  var_type, .. }) => Ok(var_type),
+                Some(Symbol::Variable { var_type, .. }) => Ok(var_type),
 
                 None => Err(SemanticErrorKind::UndefinedStruct {
                     name: type_path.type_name,

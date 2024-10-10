@@ -1,15 +1,15 @@
+use core::fmt;
+
+use crate::{
+    parser::get_type_paths,
+    semantic_analyser::{FormatObject, FormatParams},
+    span::{Span, Spanned},
+};
+
 use super::{
     AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,
     PathWildcard, ReferenceOp, SelfType, Type, TypePath, ValueExpr,
 };
-
-use crate::{
-    parser::ty::get_type_paths,
-    semantic_analyser::utils::{FormatObject, FormatParams},
-    span::{Span, Spanned},
-};
-
-use core::fmt;
 
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES

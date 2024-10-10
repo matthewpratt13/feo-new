@@ -1,4 +1,4 @@
-use super::{collection, parse_generic_params, ParseDefItem, Parser};
+use core::fmt;
 
 use crate::{
     ast::{
@@ -6,10 +6,11 @@ use crate::{
         Visibility,
     },
     error::ErrorsEmitted,
+    parser::{get_attributes, get_collection, ParseDefItem, Parser},
     token::{Token, TokenType},
 };
 
-use core::fmt;
+use super::parse_generic_params;
 
 impl ParseDefItem for StructDef {
     fn parse(
@@ -33,7 +34,7 @@ impl ParseDefItem for StructDef {
 
         let open_brace = parser.expect_open_brace()?;
 
-        let fields_opt = collection::get_collection(parser, StructDefField::parse, &open_brace)?;
+        let fields_opt = get_collection(parser, StructDefField::parse, &open_brace)?;
 
         let span = parser.get_braced_item_span(first_token.as_ref())?;
 
@@ -83,7 +84,7 @@ impl ParseDefItem for TupleStructDef {
         let open_paren = parser.expect_open_paren()?;
 
         let tuple_struct_fields_opt =
-            collection::get_collection(parser, parse_tuple_struct_def_field, &open_paren)?;
+            get_collection(parser, parse_tuple_struct_def_field, &open_paren)?;
 
         parser.expect_closing_paren()?;
 
@@ -114,7 +115,7 @@ impl fmt::Debug for TupleStructDef {
 
 impl StructDefField {
     pub(crate) fn parse(parser: &mut Parser) -> Result<StructDefField, ErrorsEmitted> {
-        let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
+        let attributes_opt = get_attributes(parser, OuterAttr::outer_attr);
 
         let visibility = Visibility::visibility(parser)?;
 
@@ -150,7 +151,7 @@ impl StructDefField {
 }
 
 fn parse_tuple_struct_def_field(parser: &mut Parser) -> Result<TupleStructDefField, ErrorsEmitted> {
-    let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
+    let attributes_opt = get_attributes(parser, OuterAttr::outer_attr);
 
     let visibility = Visibility::visibility(parser)?;
 

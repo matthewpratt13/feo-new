@@ -4,7 +4,7 @@ use crate::{
         TupleStructPatt,
     },
     error::ErrorsEmitted,
-    parser::{collection, ParsePattern, Parser},
+    parser::{get_collection, ParsePattern, Parser},
     token::{Token, TokenType},
 };
 
@@ -30,8 +30,7 @@ impl ParsePattern for StructPatt {
 
         let open_brace = parser.expect_open_brace()?;
 
-        let struct_fields_opt =
-            collection::get_collection(parser, parse_struct_patt_field, &open_brace)?;
+        let struct_fields_opt = get_collection(parser, parse_struct_patt_field, &open_brace)?;
 
         let _ = parser.get_braced_item_span(None)?;
 

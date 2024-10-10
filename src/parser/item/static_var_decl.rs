@@ -1,13 +1,11 @@
-use super::{ParseDeclItem, Parser};
+use core::fmt;
 
 use crate::{
     ast::{AssigneeExpr, Keyword, OuterAttr, StaticVarDecl, Type, Visibility},
     error::ErrorsEmitted,
-    parser::Precedence,
+    parser::{ParseDeclItem, Parser, Precedence},
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseDeclItem for StaticVarDecl {
     fn parse(

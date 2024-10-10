@@ -1,14 +1,13 @@
-use super::Parser;
+use core::fmt;
 
 use crate::{
     ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, SelfType, Type, TypePath},
     error::ErrorsEmitted,
     log_trace,
-    semantic_analyser::utils::{FormatObject, ToIdentifier},
+    parser::Parser,
+    semantic_analyser::{FormatObject, ToIdentifier},
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl TypePath {
     pub(crate) fn parse(

@@ -69,25 +69,16 @@
 mod attribute;
 mod collection;
 mod expr;
-
 mod item;
-
 mod let_statement;
-
 mod parse;
-pub(crate) use parse::{
-    ParseConstructExpr, ParseControlExpr, ParseOperatorExpr, ParsePattern, ParseSimpleExpr,
-    ParseStatement,
-};
-
 mod patt;
-
 mod precedence;
-pub(crate) use precedence::Precedence;
-
 pub(crate) mod test_utils;
-pub(crate) mod ty;
+mod ty;
 mod visibility;
+
+use std::collections::HashMap;
 
 use crate::{
     ast::{
@@ -108,7 +99,11 @@ use crate::{
     token::{Token, TokenStream, TokenType},
 };
 
-use std::collections::HashMap;
+pub(crate) use self::collection::*;
+pub(crate) use self::item::parse_generic_param;
+pub(crate) use self::parse::*;
+pub(crate) use self::precedence::Precedence;
+pub(crate) use self::ty::get_type_paths;
 
 /// Enum representing the different parsing contexts in which tokens can be interpreted.
 /// This context can influence the precedence of specific tokens according to their role

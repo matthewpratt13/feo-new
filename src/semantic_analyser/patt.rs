@@ -1,8 +1,4 @@
-use super::{
-    symbol_table::Symbol,
-    utils::{FormatObject, ToIdentifier},
-    SemanticAnalyser,
-};
+use std::collections::HashMap;
 
 use crate::{
     ast::{
@@ -13,7 +9,7 @@ use crate::{
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
-use std::collections::HashMap;
+use super::{symbol_table::Symbol, FormatObject, SemanticAnalyser, ToIdentifier};
 
 // TODO: alphabetize match arms
 

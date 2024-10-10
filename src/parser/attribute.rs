@@ -1,11 +1,11 @@
-use super::Parser;
+use core::fmt;
 
 use crate::{
     ast::{InnerAttr, OuterAttr},
     token::Token,
 };
 
-use core::fmt;
+use super::Parser;
 
 impl InnerAttr {
     pub(crate) fn inner_attr(parser: &Parser) -> Option<InnerAttr> {

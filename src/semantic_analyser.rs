@@ -12,7 +12,9 @@ mod symbol_table;
 #[cfg(test)]
 mod tests;
 
-pub(crate) mod utils;
+mod utils;
+
+use std::collections::HashMap;
 
 use crate::{
     ast::{
@@ -26,15 +28,14 @@ use crate::{
     error::{CompilerError, SemanticErrorKind},
     log_debug, log_error, log_info, log_trace, log_warn,
     logger::{LogLevel, Logger},
-    parser::{ty::get_type_paths, Program},
+    parser::{get_type_paths, Program},
     span::{Span, Spanned},
 };
 
-use std::collections::HashMap;
+pub(crate) use self::utils::*;
 
-use expr::analyse_expr;
-use symbol_table::{Module, Scope, ScopeKind, Symbol, SymbolTable};
-use utils::{FormatObject, FormatParams, ToExpression, ToIdentifier};
+use self::expr::analyse_expr;
+use self::symbol_table::{Module, Scope, ScopeKind, Symbol, SymbolTable};
 
 type LibRegistry = HashMap<Identifier, Vec<Module>>;
 

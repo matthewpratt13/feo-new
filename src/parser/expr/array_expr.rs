@@ -1,11 +1,11 @@
+use core::fmt;
+
 use crate::{
     ast::{ArrayExpr, Delimiter},
     error::ErrorsEmitted,
-    parser::{collection, ParseConstructExpr, Parser, Precedence},
+    parser::{get_expressions, ParseConstructExpr, Parser, Precedence},
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseConstructExpr for ArrayExpr {
     fn parse(parser: &mut Parser) -> Result<ArrayExpr, ErrorsEmitted> {
@@ -23,7 +23,7 @@ impl ParseConstructExpr for ArrayExpr {
             }
         }?;
 
-        let elements_opt = collection::get_expressions(parser, Precedence::Lowest, &open_bracket)?;
+        let elements_opt = get_expressions(parser, Precedence::Lowest, &open_bracket)?;
 
         let span = parser.get_array_span(first_token.as_ref())?;
 

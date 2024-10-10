@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{AssigneeExpr, Expression, FieldAccessExpr, Identifier},
     error::ErrorsEmitted,
@@ -5,8 +7,6 @@ use crate::{
     span::Spanned,
     token::Token,
 };
-
-use core::fmt;
 
 impl ParseOperatorExpr for FieldAccessExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {

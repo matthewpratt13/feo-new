@@ -1,6 +1,6 @@
-use crate::ast::{Expression, Identifier};
-
 use core::fmt;
+
+use crate::ast::{Expression, Identifier};
 
 pub(crate) trait FormatObject
 where

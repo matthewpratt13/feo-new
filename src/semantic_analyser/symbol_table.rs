@@ -1,4 +1,5 @@
-use super::utils::FormatObject;
+use core::fmt;
+use std::collections::HashMap;
 
 use crate::{
     ast::{
@@ -9,8 +10,7 @@ use crate::{
     semantic_analyser::utils::ToIdentifier,
 };
 
-use core::fmt;
-use std::collections::HashMap;
+use super::FormatObject;
 
 /// Type alias representing a symbol table that maps `TypePath` to `Symbol`.
 pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;

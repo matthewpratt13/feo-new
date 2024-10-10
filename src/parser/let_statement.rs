@@ -1,4 +1,4 @@
-use super::{ParsePattern, ParseStatement, Parser, Precedence};
+use core::fmt;
 
 use crate::{
     ast::{IdentifierPatt, Keyword, LetStmt, Statement, Type},
@@ -7,7 +7,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use core::fmt;
+use super::{ParsePattern, ParseStatement, Parser, Precedence};
 
 impl ParseStatement for LetStmt {
     fn parse_statement(parser: &mut Parser) -> Result<Statement, ErrorsEmitted> {

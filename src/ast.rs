@@ -4,27 +4,24 @@
 //! within those nodes. The primary nodes are `Expression`, `Item` and `Statement`.
 
 mod expression;
-pub(crate) use expression::*;
-
 mod item;
-pub(crate) use item::*;
-
 mod pattern;
-pub(crate) use pattern::*;
-
 mod statement;
-pub(crate) use statement::*;
-
 mod types;
-pub(crate) use types::*;
+
+use core::fmt;
 
 use crate::{
     error::ParserErrorKind,
-    semantic_analyser::utils::{FormatObject, ToExpression},
+    semantic_analyser::{FormatObject, ToExpression},
     span::{Position, Span, Spanned},
 };
 
-use core::fmt;
+pub(crate) use self::expression::*;
+pub(crate) use self::item::*;
+pub(crate) use self::pattern::*;
+pub(crate) use self::statement::*;
+pub(crate) use self::types::*;
 
 ///////////////////////////////////////////////////////////////////////////
 // LITERAL

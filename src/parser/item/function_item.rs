@@ -1,4 +1,4 @@
-use super::{collection, parse_generic_params, ParseDefItem, Parser};
+use core::fmt;
 
 use crate::{
     ast::{
@@ -6,11 +6,11 @@ use crate::{
         Keyword, OuterAttr, ReferenceOp, SelfParam, Type, Visibility,
     },
     error::ErrorsEmitted,
-    parser::{ParseConstructExpr, ParsePattern},
+    parser::{get_collection, ParseConstructExpr, ParseDefItem, ParsePattern, Parser},
     token::{Token, TokenType},
 };
 
-use core::fmt;
+use super::parse_generic_params;
 
 impl ParseDefItem for FunctionItem {
     fn parse(
@@ -34,8 +34,7 @@ impl ParseDefItem for FunctionItem {
 
         let open_paren = parser.expect_open_paren()?;
 
-        let params_opt =
-            collection::get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
+        let params_opt = get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
 
         parser.expect_closing_paren()?;
 

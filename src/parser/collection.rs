@@ -1,11 +1,11 @@
-use super::{item::ParseAssociatedItem, Parser, Precedence};
-
 use crate::{
     ast::{Delimiter, Expression, OuterAttr, Visibility},
     error::ErrorsEmitted,
     log_debug, log_trace,
     token::{Token, TokenType},
 };
+
+use super::{ParseAssociatedItem, Parser, Precedence};
 
 /// Helper function that collects a generic element into a vector based on the input function.
 /// Takes in a `Delimiter` (for reusability) to distinguish the outer limits of the collection.

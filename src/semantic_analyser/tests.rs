@@ -1,10 +1,10 @@
-use super::*;
-
 use crate::{
     ast::{Identifier, ModuleItem, TypePath, Visibility},
     logger::LogLevel,
     parser::{self, Program},
 };
+
+use super::*;
 
 fn setup(
     input: &str,

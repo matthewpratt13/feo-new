@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{
         AssigneeExpr, BinaryExpr, BinaryOp, ComparisonExpr, ComparisonOp, Expression, ValueExpr,
@@ -7,8 +9,6 @@ use crate::{
     span::Spanned,
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseOperatorExpr for BinaryExpr {
     /// Parse a binary operation (e.g., arithmetic, logical and comparison expressions).

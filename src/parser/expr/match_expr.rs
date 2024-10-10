@@ -1,11 +1,11 @@
+use core::fmt;
+
 use crate::{
     ast::{BlockExpr, Expression, Keyword, MatchArm, MatchExpr},
     error::{ErrorsEmitted, ParserErrorKind},
     parser::{ParseConstructExpr, ParseControlExpr, Parser, Precedence},
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseControlExpr for MatchExpr {
     fn parse(parser: &mut Parser) -> Result<MatchExpr, ErrorsEmitted> {

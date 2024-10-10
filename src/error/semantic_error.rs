@@ -1,7 +1,7 @@
-use crate::ast::{Identifier, Keyword, ReferenceOp, Type};
-
 use core::fmt;
 use std::error::Error;
+
+use crate::ast::{Identifier, Keyword, ReferenceOp, Type};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {

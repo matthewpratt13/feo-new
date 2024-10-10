@@ -1,7 +1,6 @@
 mod type_path;
-pub(crate) use type_path::get_type_paths;
 
-use super::{collection, item::parse_generic_param, Parser};
+use core::fmt;
 
 use crate::{
     ast::{
@@ -11,13 +10,16 @@ use crate::{
     },
     error::ErrorsEmitted,
     log_trace,
-    semantic_analyser::utils::{FormatObject, ToIdentifier},
+    parser::parse_generic_param,
+    semantic_analyser::{FormatObject, ToIdentifier},
     span::Position,
     token::{Token, TokenType},
     B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
-use core::fmt;
+pub(crate) use self::type_path::get_type_paths;
+
+use super::{get_collection, Parser};
 
 impl Type {
     pub(crate) const UNIT_TYPE: Type = Type::UnitType(UnitType);
@@ -406,8 +408,7 @@ fn parse_function_ptr_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         params.push(param);
     }
 
-    let subsequent_params =
-        collection::get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
+    let subsequent_params = get_collection(parser, FunctionOrMethodParam::parse, &open_paren)?;
 
     if subsequent_params.is_some() {
         params.append(&mut subsequent_params.unwrap())
@@ -477,7 +478,7 @@ fn parse_tuple_type(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
         parser.next_token();
         Ok(Type::UNIT_TYPE)
     } else if let Some(Token::Comma { .. }) = parser.peek_ahead_by(1) {
-        let types = if let Some(t) = collection::get_collection(parser, Type::parse, &open_paren)? {
+        let types = if let Some(t) = get_collection(parser, Type::parse, &open_paren)? {
             parser.next_token();
             Ok(t)
         } else {
