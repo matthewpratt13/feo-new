@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 fixed-hash = "0.8"
 hex = "0.4"
-ordered-float = { version = "4.2", default-features = false }
+ordered-float = { version = "4.3", default-features = false }
 tiny-keccak = { version = "2.0", features = ["sha3"] }
 uint = "0.10"

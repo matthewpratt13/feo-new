@@ -85,7 +85,7 @@ impl SemanticAnalyser {
 
         let public_scope = Scope {
             scope_kind: ScopeKind::Public,
-            symbols,
+            symbols, 
         };
 
         log_trace!(logger, "entering public scope …");
