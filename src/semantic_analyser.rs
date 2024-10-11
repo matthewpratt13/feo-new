@@ -220,7 +220,6 @@ impl SemanticAnalyser {
         Ok(())
     }
 
-    // TODO: alphabetize match arms
     // TODO: add custom errors to specify context when unifying types
     // TODO: (e.g., function args / struct fields)
 
@@ -234,115 +233,16 @@ impl SemanticAnalyser {
         root: TypePath,
     ) -> Result<(), SemanticErrorKind> {
         match statement {
-            Statement::Let(ls) => {
-                log_trace!(self.logger, "analysing let statement: `{statement}`");
+            Statement::Expression(expr) => {
+                log_trace!(self.logger, "analysing expression statement: `{statement}`");
 
-                // variables declared must have a type and are assigned the unit type if not;
-                // this prevents uninitialized variable errors
-                let mut value_type = if let Some(val) = &ls.value_opt {
-                    analyse_expr(self, val, &root)?
-                } else {
-                    Type::UNIT_TYPE
-                };
-
-                // get the type annotation if there is one, otherwise assume the value's type
-                let declared_type = match &ls.type_ann_opt {
-                    Some(ty) => ty.clone(),
-                    _ => value_type.clone(),
-                };
-
-                self.check_types(
-                    &mut self.current_symbol_table(),
-                    &declared_type,
-                    &mut value_type,
-                )?;
-
-                // check that the value matches the type annotation
-                if &value_type != &declared_type {
-                    return Err(SemanticErrorKind::TypeMismatchDeclaredType {
-                        actual_type: value_type,
-                        declared_type,
-                    });
+                match analyse_expr(self, expr, &root) {
+                    Ok(_) => (),
+                    Err(e) => self.log_error(e, &expr.span()),
                 }
-
-                let assignee_path = ls.assignee.name.to_type_path();
-
-                let symbol = match &value_type {
-                    Type::I32
-                    | Type::I64
-                    | Type::U8
-                    | Type::U16
-                    | Type::U32
-                    | Type::U64
-                    | Type::U256
-                    | Type::U512
-                    | Type::F32
-                    | Type::F64
-                    | Type::Byte
-                    | Type::B2
-                    | Type::B4
-                    | Type::B8
-                    | Type::B16
-                    | Type::B32
-                    | Type::H160
-                    | Type::H256
-                    | Type::H512
-                    | Type::Str
-                    | Type::Char
-                    | Type::Bool
-                    | Type::UnitType(_)
-                    | Type::GroupedType(_)
-                    | Type::Array { .. }
-                    | Type::Tuple(_)
-                    | Type::FunctionPtr(_)
-                    | Type::Reference { .. }
-                    | Type::SelfType(_)
-                    | Type::InferredType(_)
-                    | Type::Vec { .. }
-                    | Type::Mapping { .. }
-                    | Type::Option { .. }
-                    | Type::Result { .. } => Symbol::Variable {
-                        name: ls.assignee.name.clone(),
-                        var_type: value_type,
-                    },
-                    Type::UserDefined(tp) => match self.lookup(&tp) {
-                        Some(Symbol::Enum { path, .. }) => Symbol::Variable {
-                            name: ls.assignee.name.clone(),
-                            var_type: Type::UserDefined(path.clone()),
-                        },
-                        Some(sym) => sym.clone(),
-                        _ => Symbol::Variable {
-                            name: ls.assignee.name.clone(),
-                            var_type: value_type,
-                        },
-                    },
-                    Type::Generic(GenericParam {
-                        name,
-                        type_bound_opt,
-                    }) => Symbol::Variable {
-                        name: name.clone(),
-                        var_type: Type::UserDefined(
-                            type_bound_opt
-                                .clone()
-                                .unwrap_or(Identifier::from("_").to_type_path()),
-                        ),
-                    },
-                };
-
-                // add the variable to the symbol table
-                self.insert(assignee_path, symbol)?;
             }
 
             Statement::Item(item) => match item {
-                Item::ImportDecl(id) => {
-                    log_trace!(self.logger, "analysing import declaration: `{statement}`");
-
-                    match self.analyse_import(id, &root.type_name) {
-                        Ok(_) => (),
-                        Err(err) => self.log_error(err, &id.span),
-                    }
-                }
-
                 Item::AliasDecl(ad) => {
                     log_trace!(self.logger, "analysing alias declaration: `{statement}`");
 
@@ -406,34 +306,14 @@ impl SemanticAnalyser {
                     )?;
                 }
 
-                Item::StaticVarDecl(s) => {
+                Item::EnumDef(e) => {
+                    let enum_name_path = e.enum_name.to_type_path();
+                    let enum_def_path = root.join(enum_name_path.clone());
+
                     log_trace!(
                         self.logger,
-                        "analysing static variable declaration: `{statement}`"
+                        "analysing enum definition: `{enum_def_path}` …"
                     );
-
-                    let mut assignee_type = match &s.assignee_opt {
-                        Some(a_expr) => {
-                            let assignee = a_expr.to_expression();
-                            analyse_expr(self, &assignee, &root)?
-                        }
-                        _ => Type::inferred_type("_"),
-                    };
-
-                    self.check_types(
-                        &mut self.current_symbol_table(),
-                        &s.var_type,
-                        &mut assignee_type,
-                    )?;
-
-                    if &assignee_type != &s.var_type {
-                        return Err(SemanticErrorKind::TypeMismatchDeclaredType {
-                            declared_type: s.var_type.clone(),
-                            actual_type: assignee_type,
-                        });
-                    }
-
-                    let static_var_path = root.join(s.var_name.to_type_path());
 
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
@@ -441,12 +321,133 @@ impl SemanticAnalyser {
                     );
 
                     self.insert(
-                        static_var_path,
-                        Symbol::Variable {
-                            name: s.var_name.clone(),
-                            var_type: s.var_type.clone(),
+                        enum_def_path.clone(),
+                        Symbol::Enum {
+                            path: enum_name_path.clone(),
+                            enum_def: e.clone(),
+                            associated_items_inherent: Vec::new(),
+                            associated_items_trait: Vec::new(),
                         },
                     )?;
+
+                    for variant in e.variants.iter() {
+                        self.insert(
+                            variant.variant_path.clone(),
+                            Symbol::Variable {
+                                name: variant.variant_path.to_identifier(),
+                                var_type: Type::UserDefined(variant.variant_path.clone()),
+                            },
+                        )?;
+                    }
+                }
+
+                Item::FunctionItem(f) => {
+                    let function_name_path = f.function_name.to_type_path();
+                    let function_item_path = root.join(function_name_path.clone());
+
+                    log_trace!(
+                        self.logger,
+                        "analysing function item: `{function_item_path}({:?}) -> {}` …",
+                        f.param_strings(),
+                        f.return_type_opt
+                            .clone()
+                            .unwrap_or(Box::new(Type::UNIT_TYPE))
+                    );
+
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
+
+                    self.insert(
+                        function_item_path,
+                        Symbol::Function {
+                            path: function_name_path,
+                            function: f.clone(),
+                        },
+                    )?;
+
+                    match self.analyse_function_def(f, &root, false, false) {
+                        Ok(_) => (),
+                        Err(err) => {
+                            self.log_error(err, &f.span);
+                        }
+                    }
+                }
+
+                Item::ImportDecl(id) => {
+                    log_trace!(self.logger, "analysing import declaration: `{statement}`");
+
+                    match self.analyse_import(id, &root.type_name) {
+                        Ok(_) => (),
+                        Err(err) => self.log_error(err, &id.span),
+                    }
+                }
+
+                Item::InherentImplDef(iid) => {
+                    let type_path = root.join(iid.nominal_type.clone());
+
+                    log_trace!(
+                        self.logger,
+                        "analysing inherent implementation for type: `{type_path}` …",
+                    );
+
+                    let scope_kind = ScopeKind::Impl(type_path.clone());
+
+                    let mut symbols: SymbolTable = HashMap::new();
+
+                    self.enter_scope(scope_kind);
+
+                    if let Some(items) = &iid.associated_items_opt {
+                        let mut object_symbol = if let Some(s) = self.lookup(&type_path) {
+                            s.to_owned()
+                        } else {
+                            return Err(SemanticErrorKind::MissingItem {
+                                expected: "struct or enum symbol".to_string(),
+                            });
+                        };
+
+                        for i in items.iter() {
+                            match i {
+                                InherentImplItem::ConstantDecl(cd) => self.analyse_stmt(
+                                    &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                    type_path.clone(),
+                                )?,
+                                InherentImplItem::FunctionItem(fi) => {
+                                    let function_name_path = fi.function_name.to_type_path();
+
+                                    let function_def_path =
+                                        type_path.join(function_name_path.clone());
+
+                                    symbols.insert(
+                                        function_def_path.clone(),
+                                        Symbol::Function {
+                                            path: function_name_path,
+                                            function: fi.clone(),
+                                        },
+                                    );
+
+                                    match self.analyse_function_def(fi, &type_path, true, false) {
+                                        Ok(_) => (),
+                                        Err(err) => self.log_error(err, &iid.span),
+                                    }
+                                }
+                            }
+
+                            object_symbol.add_associated_items(Some(i.clone()), None)?;
+                        }
+                    }
+
+                    self.exit_scope();
+
+                    log_trace!(
+                        self.logger,
+                        "inserting symbols into implementation for type: `{type_path}` …",
+                    );
+
+                    for (path, symbol) in symbols {
+                        self.insert(path, symbol)?;
+                    }
                 }
 
                 Item::ModuleItem(m) => {
@@ -534,6 +535,74 @@ impl SemanticAnalyser {
 
                         lib_contents.push(module);
                     }
+                }
+
+                Item::StaticVarDecl(s) => {
+                    log_trace!(
+                        self.logger,
+                        "analysing static variable declaration: `{statement}`"
+                    );
+
+                    let mut assignee_type = match &s.assignee_opt {
+                        Some(a_expr) => {
+                            let assignee = a_expr.to_expression();
+                            analyse_expr(self, &assignee, &root)?
+                        }
+                        _ => Type::inferred_type("_"),
+                    };
+
+                    self.check_types(
+                        &mut self.current_symbol_table(),
+                        &s.var_type,
+                        &mut assignee_type,
+                    )?;
+
+                    if &assignee_type != &s.var_type {
+                        return Err(SemanticErrorKind::TypeMismatchDeclaredType {
+                            declared_type: s.var_type.clone(),
+                            actual_type: assignee_type,
+                        });
+                    }
+
+                    let static_var_path = root.join(s.var_name.to_type_path());
+
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
+
+                    self.insert(
+                        static_var_path,
+                        Symbol::Variable {
+                            name: s.var_name.clone(),
+                            var_type: s.var_type.clone(),
+                        },
+                    )?;
+                }
+
+                Item::StructDef(s) => {
+                    let struct_name_path = s.struct_name.to_type_path();
+                    let struct_def_path = root.join(struct_name_path.clone());
+
+                    log_trace!(
+                        self.logger,
+                        "analysing struct definition: `{struct_def_path}` …"
+                    );
+
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
+
+                    self.insert(
+                        struct_def_path,
+                        Symbol::Struct {
+                            path: struct_name_path,
+                            struct_def: s.clone(),
+                            associated_items_inherent: Vec::new(),
+                            associated_items_trait: Vec::new(),
+                        },
+                    )?;
                 }
 
                 Item::TraitDef(t) => {
@@ -646,157 +715,6 @@ impl SemanticAnalyser {
                     // }
                 }
 
-                Item::EnumDef(e) => {
-                    let enum_name_path = e.enum_name.to_type_path();
-                    let enum_def_path = root.join(enum_name_path.clone());
-
-                    log_trace!(
-                        self.logger,
-                        "analysing enum definition: `{enum_def_path}` …"
-                    );
-
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
-
-                    self.insert(
-                        enum_def_path.clone(),
-                        Symbol::Enum {
-                            path: enum_name_path.clone(),
-                            enum_def: e.clone(),
-                            associated_items_inherent: Vec::new(),
-                            associated_items_trait: Vec::new(),
-                        },
-                    )?;
-
-                    for variant in e.variants.iter() {
-                        self.insert(
-                            variant.variant_path.clone(),
-                            Symbol::Variable {
-                                name: variant.variant_path.to_identifier(),
-                                var_type: Type::UserDefined(variant.variant_path.clone()),
-                            },
-                        )?;
-                    }
-                }
-
-                Item::StructDef(s) => {
-                    let struct_name_path = s.struct_name.to_type_path();
-                    let struct_def_path = root.join(struct_name_path.clone());
-
-                    log_trace!(
-                        self.logger,
-                        "analysing struct definition: `{struct_def_path}` …"
-                    );
-
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
-
-                    self.insert(
-                        struct_def_path,
-                        Symbol::Struct {
-                            path: struct_name_path,
-                            struct_def: s.clone(),
-                            associated_items_inherent: Vec::new(),
-                            associated_items_trait: Vec::new(),
-                        },
-                    )?;
-                }
-
-                Item::TupleStructDef(ts) => {
-                    let struct_name_path = ts.struct_name.to_type_path();
-                    let tuple_struct_path = root.join(struct_name_path.clone());
-
-                    log_trace!(
-                        self.logger,
-                        "analysing tuple struct definition: `{tuple_struct_path}` …"
-                    );
-
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
-
-                    self.insert(
-                        tuple_struct_path,
-                        Symbol::TupleStruct {
-                            path: struct_name_path,
-                            tuple_struct_def: ts.clone(),
-                            associated_items_inherent: Vec::new(),
-                            associated_items_trait: Vec::new(),
-                        },
-                    )?;
-                }
-
-                Item::InherentImplDef(iid) => {
-                    let type_path = root.join(iid.nominal_type.clone());
-
-                    log_trace!(
-                        self.logger,
-                        "analysing inherent implementation for type: `{type_path}` …",
-                    );
-
-                    let scope_kind = ScopeKind::Impl(type_path.clone());
-
-                    let mut symbols: SymbolTable = HashMap::new();
-
-                    self.enter_scope(scope_kind);
-
-                    if let Some(items) = &iid.associated_items_opt {
-                        let mut object_symbol = if let Some(s) = self.lookup(&type_path) {
-                            s.to_owned()
-                        } else {
-                            return Err(SemanticErrorKind::MissingItem {
-                                expected: "struct or enum symbol".to_string(),
-                            });
-                        };
-
-                        for i in items.iter() {
-                            match i {
-                                InherentImplItem::ConstantDecl(cd) => self.analyse_stmt(
-                                    &Statement::Item(Item::ConstantDecl(cd.clone())),
-                                    type_path.clone(),
-                                )?,
-                                InherentImplItem::FunctionItem(fi) => {
-                                    let function_name_path = fi.function_name.to_type_path();
-
-                                    let function_def_path =
-                                        type_path.join(function_name_path.clone());
-
-                                    symbols.insert(
-                                        function_def_path.clone(),
-                                        Symbol::Function {
-                                            path: function_name_path,
-                                            function: fi.clone(),
-                                        },
-                                    );
-
-                                    match self.analyse_function_def(fi, &type_path, true, false) {
-                                        Ok(_) => (),
-                                        Err(err) => self.log_error(err, &iid.span),
-                                    }
-                                }
-                            }
-
-                            object_symbol.add_associated_items(Some(i.clone()), None)?;
-                        }
-                    }
-
-                    self.exit_scope();
-
-                    log_trace!(
-                        self.logger,
-                        "inserting symbols into implementation for type: `{type_path}` …",
-                    );
-
-                    for (path, symbol) in symbols {
-                        self.insert(path, symbol)?;
-                    }
-                }
-
                 Item::TraitImplDef(t) => {
                     let implementing_type_path = match &t.implementing_type {
                         Type::UserDefined(tp) => root.join(tp.clone()),
@@ -890,17 +808,13 @@ impl SemanticAnalyser {
                     }
                 }
 
-                Item::FunctionItem(f) => {
-                    let function_name_path = f.function_name.to_type_path();
-                    let function_item_path = root.join(function_name_path.clone());
+                Item::TupleStructDef(ts) => {
+                    let struct_name_path = ts.struct_name.to_type_path();
+                    let tuple_struct_path = root.join(struct_name_path.clone());
 
                     log_trace!(
                         self.logger,
-                        "analysing function item: `{function_item_path}({:?}) -> {}` …",
-                        f.param_strings(),
-                        f.return_type_opt
-                            .clone()
-                            .unwrap_or(Box::new(Type::UNIT_TYPE))
+                        "analysing tuple struct definition: `{tuple_struct_path}` …"
                     );
 
                     self.try_update_current_scope(
@@ -909,29 +823,114 @@ impl SemanticAnalyser {
                     );
 
                     self.insert(
-                        function_item_path,
-                        Symbol::Function {
-                            path: function_name_path,
-                            function: f.clone(),
+                        tuple_struct_path,
+                        Symbol::TupleStruct {
+                            path: struct_name_path,
+                            tuple_struct_def: ts.clone(),
+                            associated_items_inherent: Vec::new(),
+                            associated_items_trait: Vec::new(),
                         },
                     )?;
-
-                    match self.analyse_function_def(f, &root, false, false) {
-                        Ok(_) => (),
-                        Err(err) => {
-                            self.log_error(err, &f.span);
-                        }
-                    }
                 }
             },
 
-            Statement::Expression(expr) => {
-                log_trace!(self.logger, "analysing expression statement: `{statement}`");
+            Statement::Let(ls) => {
+                log_trace!(self.logger, "analysing let statement: `{statement}`");
 
-                match analyse_expr(self, expr, &root) {
-                    Ok(_) => (),
-                    Err(e) => self.log_error(e, &expr.span()),
+                // variables declared must have a type and are assigned the unit type if not;
+                // this prevents uninitialized variable errors
+                let mut value_type = if let Some(val) = &ls.value_opt {
+                    analyse_expr(self, val, &root)?
+                } else {
+                    Type::UNIT_TYPE
+                };
+
+                // get the type annotation if there is one, otherwise assume the value's type
+                let declared_type = match &ls.type_ann_opt {
+                    Some(ty) => ty.clone(),
+                    _ => value_type.clone(),
+                };
+
+                self.check_types(
+                    &mut self.current_symbol_table(),
+                    &declared_type,
+                    &mut value_type,
+                )?;
+
+                // check that the value matches the type annotation
+                if &value_type != &declared_type {
+                    return Err(SemanticErrorKind::TypeMismatchDeclaredType {
+                        actual_type: value_type,
+                        declared_type,
+                    });
                 }
+
+                let assignee_path = ls.assignee.name.to_type_path();
+
+                let symbol = match &value_type {
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64
+                    | Type::Byte
+                    | Type::B2
+                    | Type::B4
+                    | Type::B8
+                    | Type::B16
+                    | Type::B32
+                    | Type::H160
+                    | Type::H256
+                    | Type::H512
+                    | Type::Str
+                    | Type::Char
+                    | Type::Bool
+                    | Type::UnitType(_)
+                    | Type::GroupedType(_)
+                    | Type::Array { .. }
+                    | Type::Tuple(_)
+                    | Type::FunctionPtr(_)
+                    | Type::Reference { .. }
+                    | Type::SelfType(_)
+                    | Type::InferredType(_)
+                    | Type::Vec { .. }
+                    | Type::Mapping { .. }
+                    | Type::Option { .. }
+                    | Type::Result { .. } => Symbol::Variable {
+                        name: ls.assignee.name.clone(),
+                        var_type: value_type,
+                    },
+                    Type::UserDefined(tp) => match self.lookup(&tp) {
+                        Some(Symbol::Enum { path, .. }) => Symbol::Variable {
+                            name: ls.assignee.name.clone(),
+                            var_type: Type::UserDefined(path.clone()),
+                        },
+                        Some(sym) => sym.clone(),
+                        _ => Symbol::Variable {
+                            name: ls.assignee.name.clone(),
+                            var_type: value_type,
+                        },
+                    },
+                    Type::Generic(GenericParam {
+                        name,
+                        type_bound_opt,
+                    }) => Symbol::Variable {
+                        name: name.clone(),
+                        var_type: Type::UserDefined(
+                            type_bound_opt
+                                .clone()
+                                .unwrap_or(Identifier::from("_").to_type_path()),
+                        ),
+                    },
+                };
+
+                // add the variable to the symbol table
+                self.insert(assignee_path, symbol)?;
             }
         }
 
