@@ -2335,25 +2335,6 @@ impl SemanticAnalyser {
     }
 }
 
-// fn format_function_params(f: &FunctionItem) -> Vec<String> {
-//     let mut param_strings: Vec<String> = Vec::new();
-
-//     if let Some(params) = &f.params_opt {
-//         for param in params {
-//             match param {
-//                 FunctionOrMethodParam::FunctionParam(function_param) => {
-//                     param_strings.push(function_param.to_string());
-//                 }
-//                 FunctionOrMethodParam::MethodParam(self_param) => {
-//                     param_strings.push(self_param.to_string())
-//                 }
-//             }
-//         }
-//     }
-
-//     param_strings
-// }
-
 fn unify_inferred_type(ty: &mut Type, concrete_type: Type) {
     if *ty == Type::inferred_type("_") {
         if concrete_type != Type::inferred_type("_") {
