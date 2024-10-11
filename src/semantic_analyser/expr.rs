@@ -78,25 +78,11 @@ pub(crate) fn analyse_expr(
                 match &symbol {
                     Symbol::Variable { name, var_type } => {
                         if let Type::UserDefined(_) = var_type {
-                            let path_segments = name
-                                .to_string()
-                                .split("::")
-                                .collect::<Vec<_>>()
-                                .into_iter()
-                                .map(|s| Identifier::from(s))
-                                .collect::<Vec<_>>();
+                            let mut variable_type_path = name.to_type_path();
 
-                            let variable_type_path = TypePath::from(path_segments);
+                            let associated_type_path = &mut variable_type_path.strip_suffix();
 
-                            let associated_type_path = if let Some(ids) =
-                                variable_type_path.associated_type_path_prefix_opt
-                            {
-                                TypePath::from(ids)
-                            } else {
-                                return Ok(symbol.symbol_type());
-                            };
-
-                            if let Some(sym) = analyser.lookup(&associated_type_path) {
+                            if let Some(sym) = analyser.lookup(associated_type_path) {
                                 match sym {
                                     Symbol::Enum {
                                         path: enum_path, ..
@@ -844,25 +830,11 @@ pub(crate) fn analyse_expr(
                 }
 
                 Some(Symbol::Variable { name, .. }) => {
-                    let path_segments = name
-                        .to_string()
-                        .split("::")
-                        .collect::<Vec<_>>()
-                        .into_iter()
-                        .map(|seg| Identifier::from(seg))
-                        .collect::<Vec<_>>();
+                    let mut variable_type_path = name.to_type_path();
 
-                    let variable_type_path = TypePath::from(path_segments);
+                    let associated_type_path = &mut variable_type_path.strip_suffix();
 
-                    let associated_type_path = if let Some(ids) =
-                        variable_type_path.associated_type_path_prefix_opt.clone()
-                    {
-                        TypePath::from(ids)
-                    } else {
-                        variable_type_path.clone()
-                    };
-
-                    match analyser.lookup(&associated_type_path).cloned() {
+                    match analyser.lookup(associated_type_path).cloned() {
                         Some(Symbol::Enum { path, enum_def, .. }) => {
                             for variant in enum_def.variants.iter() {
                                 if variant.variant_path == variable_type_path {
@@ -1039,25 +1011,11 @@ pub(crate) fn analyse_expr(
                 }
 
                 Some(Symbol::Variable { name, .. }) => {
-                    let path_segments = name
-                        .to_string()
-                        .split("::")
-                        .collect::<Vec<_>>()
-                        .into_iter()
-                        .map(|seg| Identifier::from(seg))
-                        .collect::<Vec<_>>();
+                    let mut variable_type_path = name.to_type_path();
 
-                    let variable_type_path = TypePath::from(path_segments);
+                    let associated_type_path = &mut variable_type_path.strip_suffix();
 
-                    let associated_type_path = if let Some(ids) =
-                        variable_type_path.associated_type_path_prefix_opt.clone()
-                    {
-                        TypePath::from(ids)
-                    } else {
-                        variable_type_path.clone()
-                    };
-
-                    match analyser.lookup(&associated_type_path).cloned() {
+                    match analyser.lookup(associated_type_path).cloned() {
                         Some(Symbol::Enum { path, enum_def, .. }) => {
                             for variant in enum_def.variants.iter() {
                                 if variant.variant_path == variable_type_path {

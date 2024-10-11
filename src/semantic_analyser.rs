@@ -954,11 +954,7 @@ impl SemanticAnalyser {
         // * trait implementation (e.g., `lib::some_module::SomeObject::SomeTrait`)
 
         let function_root = if is_trait_impl {
-            if let Some(prefix) = &path.associated_type_path_prefix_opt {
-                TypePath::from(prefix.clone())
-            } else {
-                path.clone()
-            }
+            path.clone().strip_suffix()
         } else {
             path.clone()
         };

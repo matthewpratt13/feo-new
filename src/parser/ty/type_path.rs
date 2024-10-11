@@ -170,6 +170,14 @@ impl TypePath {
             }
         }
     }
+
+    pub(crate) fn strip_suffix(&mut self) -> TypePath {
+        if let Some(ids) = &self.associated_type_path_prefix_opt {
+            TypePath::from(ids.clone())
+        } else {
+            self.to_owned()
+        }
+    }
 }
 
 impl FormatObject for TypePath {}
@@ -274,10 +282,15 @@ impl From<Type> for TypePath {
 
 impl From<Identifier> for TypePath {
     fn from(value: Identifier) -> Self {
-        TypePath {
-            associated_type_path_prefix_opt: None,
-            type_name: value,
-        }
+        let path_segments = value
+            .to_string()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|seg| Identifier::from(seg))
+            .collect::<Vec<_>>();
+
+        TypePath::from(path_segments)
     }
 }
 
