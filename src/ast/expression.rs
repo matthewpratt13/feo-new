@@ -630,40 +630,7 @@ impl fmt::Display for Expression {
             Expression::Block(blk) => {
                 write!(f, "{{ {:?} }}", blk.statement_strings())
             }
-            // Expression::If(ifex) => write!(
-            //     f,
-            //     "if {} {}{}{}",
-            //     Expression::Grouped(*ifex.condition),
-            //     Expression::Block(*ifex.if_block),
-            //     {
-            //         if let Some(e) = ifex.else_if_blocks_opt {
-            //             format!(" else {:?}", e)
-            //         } else {
-            //             "".to_string()
-            //         }
-            //     },
-            //     {
-            //         if let Some(e) = ifex.trailing_else_block_opt {
-            //             format!(" else {}", Expression::Block(e))
-            //         } else {
-            //             "".to_string()
-            //         }
-            //     }
-            // ),
             Expression::If(ifex) => write!(f, "{ifex}"),
-            // Expression::Match(mat) => write!(
-            //     f,
-            //     "match {} {{ {}, {} }}",
-            //     mat.scrutinee,
-            //     {
-            //         if let Some(m) = mat.match_arms_opt {
-            //             format!("{:?}", m)
-            //         } else {
-            //             "".to_string()
-            //         }
-            //     },
-            //     *mat.final_arm
-            // ),
             Expression::Match(mat) => write!(f, "{mat}"),
             Expression::ForIn(fi) => write!(
                 f,
