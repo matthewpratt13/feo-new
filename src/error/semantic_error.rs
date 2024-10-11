@@ -26,6 +26,10 @@ pub enum SemanticErrorKind {
 
     MethodParamCountError,
 
+    MissingItem {
+        expected: String,
+    },
+
     MissingReturnType {
         expected: Type,
     },
@@ -34,10 +38,6 @@ pub enum SemanticErrorKind {
         expected: String,
     },
 
-    MissingItem {
-        expected: String,
-    },
-    
     ModuleErrors {
         name: Identifier,
     },
@@ -280,13 +280,13 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::MethodParamCountError => {
                 write!(f, "too many `self` parameters")
             }
+            SemanticErrorKind::MissingItem { expected } => {
+                write!(f, "item not found. Expected {expected}, found none")
+            }
             SemanticErrorKind::MissingReturnType { expected } => write!(f, "return type not found. Expected `{expected}`, found none"),
 
             SemanticErrorKind::MissingStructField { expected } => {
                 write!(f, "struct field not found. Expected {expected}, found none")
-            }
-            SemanticErrorKind::MissingItem { expected } => {
-                write!(f, "item not found. Expected {expected}, found none")
             }
             SemanticErrorKind::ModuleErrors { name } => {
                 write!(f, "detected errors in module `{name}`")
