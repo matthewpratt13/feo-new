@@ -17,6 +17,7 @@ use super::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum EnumVariantKind {
+    Standard,
     Struct(EnumVariantStruct),
     TupleStruct(EnumVariantTupleStruct),
 }
@@ -110,8 +111,8 @@ pub(crate) struct EnumVariantTupleStruct {
 pub(crate) struct EnumVariant {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
-    pub(crate) variant_name: Identifier,
-    pub(crate) variant_type_opt: Option<EnumVariantKind>,
+    pub(crate) variant_path: TypePath,
+    pub(crate) variant_kind: EnumVariantKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

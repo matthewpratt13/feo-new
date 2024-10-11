@@ -667,13 +667,11 @@ impl SemanticAnalyser {
                     )?;
 
                     for variant in e.variants.clone() {
-                        let variant_path = enum_def_path.join(variant.variant_name.to_type_path());
-
                         self.insert(
-                            variant_path.clone(),
+                            variant.variant_path.clone(),
                             Symbol::Variable {
-                                name: variant_path.to_identifier(),
-                                var_type: Type::UserDefined(variant_path),
+                                name: variant.variant_path.to_identifier(),
+                                var_type: Type::UserDefined(variant.variant_path.clone()),
                             },
                         )?;
                     }
@@ -2021,24 +2019,23 @@ impl SemanticAnalyser {
         concrete_type: &Type,
     ) {
         for variant in enum_def.variants.iter_mut() {
-            if let Some(ty) = variant.variant_type_opt.as_mut() {
-                match ty {
-                    EnumVariantKind::Struct(EnumVariantStruct { struct_fields }) => {
-                        for StructDefField { field_type, .. } in struct_fields {
-                            self.substitute_in_type(
-                                field_type,
-                                symbol_table,
-                                generic_name,
-                                concrete_type,
-                            );
-                        }
-                    }
-                    EnumVariantKind::TupleStruct(EnumVariantTupleStruct { element_types }, ..) => {
-                        for ty in element_types {
-                            self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
-                        }
+            match variant.variant_kind.clone() {
+                EnumVariantKind::Struct(EnumVariantStruct { mut struct_fields }) => {
+                    for StructDefField { field_type, .. } in struct_fields.iter_mut() {
+                        self.substitute_in_type(
+                            field_type,
+                            symbol_table,
+                            generic_name,
+                            concrete_type,
+                        );
                     }
                 }
+                EnumVariantKind::TupleStruct(EnumVariantTupleStruct { mut element_types }, ..) => {
+                    for ty in element_types.iter_mut() {
+                        self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
+                    }
+                }
+                _ => (),
             }
         }
     }
