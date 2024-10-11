@@ -235,7 +235,7 @@ pub(crate) fn analyse_patt(
                         for (name, _) in field_map.iter() {
                             if !field_names.contains(name) {
                                 return Err(SemanticErrorKind::UnexpectedStructField {
-                                    field_name: struct_def.struct_name,
+                                    struct_name: struct_def.struct_name,
                                     found: name.clone(),
                                 });
                             }

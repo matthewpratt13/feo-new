@@ -240,7 +240,7 @@ pub enum SemanticErrorKind {
     },
 
     UnexpectedStructField {
-        field_name: Identifier,
+        struct_name: Identifier,
         found: Identifier,
     },
 
@@ -422,7 +422,7 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::UnexpectedReturnType { found } => write!(f, "unexpected return type. Did not expected a return type, but found `{found}`"),
 
-            SemanticErrorKind::UnexpectedStructField { field_name: name, found } => write!(f, "unexpected field in struct `{name}`: `{found}`"),
+            SemanticErrorKind::UnexpectedStructField { struct_name: name, found } => write!(f, "unexpected field in struct `{name}`: `{found}`"),
 
             SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found {found}"),
 

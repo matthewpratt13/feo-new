@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BigUInt, Bytes, ClosureParams, Expression, Float, FunctionOrMethodParam, FunctionParam,
-        FunctionPtr, Hash, Identifier, Int, Keyword, Literal, PathExpr, PathRoot, Pattern,
-        Statement, Type, TypePath, UInt, UnaryOp,
+        BigUInt, Bytes, ClosureParams, EnumVariantKind, Expression, Float, FunctionOrMethodParam,
+        FunctionParam, FunctionPtr, Hash, Identifier, Int, Keyword, Literal, PathExpr, PathRoot,
+        Pattern, Statement, Type, TypePath, UInt, UnaryOp,
     },
     error::SemanticErrorKind,
     log_trace, log_warn,
@@ -74,8 +74,47 @@ pub(crate) fn analyse_expr(
                 },
             };
 
-            if let Some(sym) = analyser.lookup(&path) {
-                Ok(sym.symbol_type())
+            if let Some(symbol) = analyser.lookup(&path).cloned() {
+                match &symbol {
+                    Symbol::Variable { name, var_type } => {
+                        if let Type::UserDefined(_) = var_type {
+                            let path_segments = name
+                                .to_string()
+                                .split("::")
+                                .collect::<Vec<_>>()
+                                .into_iter()
+                                .map(|s| Identifier::from(s))
+                                .collect::<Vec<_>>();
+
+                            let variable_type_path = TypePath::from(path_segments);
+
+                            let associated_type_path = if let Some(ids) =
+                                variable_type_path.associated_type_path_prefix_opt
+                            {
+                                TypePath::from(ids)
+                            } else {
+                                return Ok(symbol.symbol_type());
+                            };
+
+                            if let Some(sym) = analyser.lookup(&associated_type_path) {
+                                match sym {
+                                    Symbol::Enum {
+                                        path: enum_path, ..
+                                    } => Ok(Type::UserDefined(enum_path.clone())),
+
+                                    _ => Ok(symbol.symbol_type()),
+                                }
+                            } else {
+                                Err(SemanticErrorKind::UndefinedType {
+                                    name: associated_type_path.to_identifier(),
+                                })
+                            }
+                        } else {
+                            Ok(symbol.symbol_type())
+                        }
+                    }
+                    _ => Ok(symbol.symbol_type()),
+                }
             } else {
                 Err(SemanticErrorKind::UndefinedVariable {
                     name: path.type_name,
@@ -726,29 +765,29 @@ pub(crate) fn analyse_expr(
 
         Expression::Struct(s) => {
             let type_path = root.join(TypePath::from(s.struct_path.clone()));
+            let obj_fields_opt = s.struct_fields_opt.clone();
+
+            let hash_map = HashMap::new();
+            let mut field_map: HashMap<Identifier, Type> = hash_map;
+
+            if let Some(obj_fields) = obj_fields_opt {
+                for obj_field in obj_fields.iter() {
+                    let field_name = obj_field.field_name.clone();
+                    let field_value = *obj_field.field_value.clone();
+                    let field_type = analyse_expr(analyser, &field_value, root)?;
+
+                    field_map.insert(field_name, field_type);
+                }
+            }
 
             match analyser.lookup(&type_path).cloned() {
                 Some(Symbol::Struct {
                     struct_def, path, ..
                 }) => {
-                    let hash_map = HashMap::new();
-                    let mut field_map: HashMap<Identifier, Type> = hash_map;
-
                     let def_fields_opt = struct_def.fields_opt;
-                    let obj_fields_opt = s.struct_fields_opt.clone();
-
-                    if let Some(obj_fields) = obj_fields_opt {
-                        for obj_field in obj_fields.iter() {
-                            let field_name = obj_field.field_name.clone();
-                            let field_value = *obj_field.field_value.clone();
-                            let field_type = analyse_expr(analyser, &field_value, root)?;
-
-                            field_map.insert(field_name, field_type);
-                        }
-                    }
 
                     if let Some(def_fields) = def_fields_opt {
-                        if field_map.len() > def_fields.len() {
+                        if field_map.len() != def_fields.len() {
                             return Err(SemanticErrorKind::StructArgCountMismatch {
                                 struct_path: type_path.to_identifier(),
                                 expected: def_fields.len(),
@@ -765,7 +804,7 @@ pub(crate) fn analyse_expr(
                         for (name, _) in field_map.iter() {
                             if !field_names.contains(name) {
                                 return Err(SemanticErrorKind::UnexpectedStructField {
-                                    field_name: struct_def.struct_name,
+                                    struct_name: struct_def.struct_name,
                                     found: name.clone(),
                                 });
                             }
@@ -804,8 +843,124 @@ pub(crate) fn analyse_expr(
                     Ok(Type::UserDefined(path))
                 }
 
-                // TODO: investigate enum struct variants
-                Some(Symbol::Variable { var_type, .. }) => Ok(var_type),
+                Some(Symbol::Variable { name, .. }) => {
+                    let path_segments = name
+                        .to_string()
+                        .split("::")
+                        .collect::<Vec<_>>()
+                        .into_iter()
+                        .map(|seg| Identifier::from(seg))
+                        .collect::<Vec<_>>();
+
+                    let variable_type_path = TypePath::from(path_segments);
+
+                    let associated_type_path = if let Some(ids) =
+                        variable_type_path.associated_type_path_prefix_opt.clone()
+                    {
+                        TypePath::from(ids)
+                    } else {
+                        variable_type_path.clone()
+                    };
+
+                    match analyser.lookup(&associated_type_path).cloned() {
+                        Some(Symbol::Enum { path, enum_def, .. }) => {
+                            for variant in enum_def.variants.iter() {
+                                if variant.variant_path == variable_type_path {
+                                    match &variant.variant_kind {
+                                        EnumVariantKind::Struct(struct_variant) => {
+                                            if field_map.len() != struct_variant.struct_fields.len()
+                                            {
+                                                return Err(
+                                                    SemanticErrorKind::StructArgCountMismatch {
+                                                        struct_path: variant
+                                                            .variant_path
+                                                            .to_identifier(),
+                                                        expected: struct_variant
+                                                            .struct_fields
+                                                            .len(),
+                                                        found: field_map.len(),
+                                                    },
+                                                );
+                                            }
+
+                                            let field_names = struct_variant
+                                                .struct_fields
+                                                .iter()
+                                                .cloned()
+                                                .map(|sdf| sdf.field_name)
+                                                .collect::<Vec<_>>();
+
+                                            for (name, _) in field_map.iter() {
+                                                if !field_names.contains(name) {
+                                                    return Err(
+                                                        SemanticErrorKind::UnexpectedStructField {
+                                                            struct_name: variant
+                                                                .variant_path
+                                                                .to_identifier(),
+                                                            found: name.clone(),
+                                                        },
+                                                    );
+                                                }
+                                            }
+
+                                            for def_field in struct_variant.struct_fields.iter() {
+                                                match field_map.get_mut(&def_field.field_name) {
+                                                    Some(obj_field_type) => {
+                                                        analyser.check_types(
+                                                            &mut analyser.current_symbol_table(),
+                                                            &*def_field.field_type,
+                                                            &mut *obj_field_type,
+                                                        )?;
+                                                    }
+
+                                                    None => {
+                                                        return Err(
+                                                            SemanticErrorKind::MissingStructField {
+                                                                expected: format!(
+                                                                    "`{}: {}`",
+                                                                    &def_field.field_name,
+                                                                    *def_field.field_type
+                                                                ),
+                                                            },
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        EnumVariantKind::Standard => {
+                                            return Err(SemanticErrorKind::UnexpectedSymbol {
+                                                name,
+                                                expected: "struct enum variant".to_string(),
+                                                found: "standard enum variant".to_string(),
+                                            })
+                                        }
+
+                                        EnumVariantKind::TupleStruct(_) => {
+                                            return Err(SemanticErrorKind::UnexpectedSymbol {
+                                                name,
+                                                expected: "struct enum variant".to_string(),
+                                                found: "tuple struct enum variant".to_string(),
+                                            })
+                                        }
+                                    }
+                                }
+                            }
+
+                            Ok(Type::UserDefined(path.clone()))
+                        }
+
+                        Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
+                            name: type_path.type_name,
+                            expected: "struct".to_string(),
+                            found: sym.to_backtick_string(),
+                        }),
+
+                        _ => Err(SemanticErrorKind::MissingItem {
+                            expected: "associated enum".to_string(),
+                        }),
+                    }
+                }
 
                 None => Err(SemanticErrorKind::UndefinedStruct {
                     name: type_path.type_name,
@@ -821,6 +976,7 @@ pub(crate) fn analyse_expr(
 
         Expression::TupleStruct(ts) => {
             let type_path = root.join(TypePath::from(ts.struct_path.clone()));
+            let elements_opt = ts.struct_elements_opt.clone();
 
             match analyser.lookup(&type_path).cloned() {
                 Some(Symbol::TupleStruct {
@@ -828,7 +984,6 @@ pub(crate) fn analyse_expr(
                     path,
                     ..
                 }) => {
-                    let elements_opt = ts.struct_elements_opt.clone();
                     let fields_opt = tuple_struct_def.fields_opt;
 
                     match (&elements_opt, &fields_opt) {
@@ -883,8 +1038,107 @@ pub(crate) fn analyse_expr(
                     }
                 }
 
-                // TODO: investigate enum tuple struct variants
-                Some(Symbol::Variable { var_type, .. }) => Ok(var_type),
+                Some(Symbol::Variable { name, .. }) => {
+                    let path_segments = name
+                        .to_string()
+                        .split("::")
+                        .collect::<Vec<_>>()
+                        .into_iter()
+                        .map(|seg| Identifier::from(seg))
+                        .collect::<Vec<_>>();
+
+                    let variable_type_path = TypePath::from(path_segments);
+
+                    let associated_type_path = if let Some(ids) =
+                        variable_type_path.associated_type_path_prefix_opt.clone()
+                    {
+                        TypePath::from(ids)
+                    } else {
+                        variable_type_path.clone()
+                    };
+
+                    match analyser.lookup(&associated_type_path).cloned() {
+                        Some(Symbol::Enum { path, enum_def, .. }) => {
+                            for variant in enum_def.variants.iter() {
+                                if variant.variant_path == variable_type_path {
+                                    match &variant.variant_kind {
+                                        EnumVariantKind::TupleStruct(tuple_struct_variant) => {
+                                            if let Some(elems) = elements_opt.clone() {
+                                                if elems.len()
+                                                    != tuple_struct_variant.element_types.len()
+                                                {
+                                                    return Err(
+                                                        SemanticErrorKind::StructArgCountMismatch {
+                                                            struct_path: name,
+                                                            expected: tuple_struct_variant
+                                                                .element_types
+                                                                .len(),
+                                                            found: elems.len(),
+                                                        },
+                                                    );
+                                                }
+
+                                                for (elem, ty) in elems
+                                                    .iter()
+                                                    .zip(tuple_struct_variant.element_types.clone())
+                                                {
+                                                    let mut elem_type = analyse_expr(
+                                                        analyser,
+                                                        &elem,
+                                                        &Identifier::from("").to_type_path(),
+                                                    )?;
+
+                                                    analyser.check_types(
+                                                        &mut analyser.current_symbol_table(),
+                                                        &ty,
+                                                        &mut elem_type,
+                                                    )?;
+
+                                                    if elem_type != ty {
+                                                        return Err(SemanticErrorKind::TypeMismatchVariable {
+                                                            var_id: name,
+                                                            expected: ty.to_backtick_string(),
+                                                            found: elem_type,
+                                                        });
+                                                    }
+                                                }
+                                            } else {
+                                                return Err(
+                                                    SemanticErrorKind::StructArgCountMismatch {
+                                                        struct_path: name,
+                                                        expected: tuple_struct_variant
+                                                            .element_types
+                                                            .len(),
+                                                        found: 0,
+                                                    },
+                                                );
+                                            }
+                                        }
+
+                                        EnumVariantKind::Standard => {
+                                            return Err(SemanticErrorKind::UnexpectedSymbol {
+                                                name,
+                                                expected: "tuple struct enum variant".to_string(),
+                                                found: "standard enum variant".to_string(),
+                                            })
+                                        }
+
+                                        EnumVariantKind::Struct(_) => {
+                                            return Err(SemanticErrorKind::UnexpectedSymbol {
+                                                name,
+                                                expected: "tuple struct enum variant".to_string(),
+                                                found: "struct enum variant".to_string(),
+                                            })
+                                        }
+                                    }
+                                }
+                            }
+
+                            Ok(Type::UserDefined(path))
+                        }
+                        _ => todo!(),
+                    }
+                }
 
                 None => Err(SemanticErrorKind::UndefinedStruct {
                     name: type_path.type_name,

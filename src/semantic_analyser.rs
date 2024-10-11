@@ -306,6 +306,10 @@ impl SemanticAnalyser {
                         var_type: value_type,
                     },
                     Type::UserDefined(tp) => match self.lookup(&tp) {
+                        Some(Symbol::Enum { path, .. }) => Symbol::Variable {
+                            name: ls.assignee.name.clone(),
+                            var_type: Type::UserDefined(path.clone()),
+                        },
                         Some(sym) => sym.clone(),
                         _ => Symbol::Variable {
                             name: ls.assignee.name.clone(),
@@ -666,7 +670,7 @@ impl SemanticAnalyser {
                         },
                     )?;
 
-                    for variant in e.variants.clone() {
+                    for variant in e.variants.iter() {
                         self.insert(
                             variant.variant_path.clone(),
                             Symbol::Variable {
