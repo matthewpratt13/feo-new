@@ -10,8 +10,6 @@ use crate::{
 
 use super::{symbol_table::Symbol, FormatObject, SemanticAnalyser, ToIdentifier};
 
-// TODO: alphabetize match arms
-
 /// Analyse a pattern in the context of semantic analysis, returning the inferred type of
 /// the pattern or an appropriate semantic error.
 pub(crate) fn analyse_patt(
@@ -19,6 +17,8 @@ pub(crate) fn analyse_patt(
     pattern: &Pattern,
 ) -> Result<Type, SemanticErrorKind> {
     match pattern {
+        Pattern::GroupedPatt(g) => analyse_patt(analyser, &g.inner_pattern),
+
         Pattern::IdentifierPatt(i) => match analyser.lookup(&i.name.to_type_path()) {
             Some(Symbol::Variable { var_type, .. }) => Ok(var_type.clone()),
             Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
@@ -30,18 +30,6 @@ pub(crate) fn analyse_patt(
                 name: i.name.clone(),
             }),
         },
-
-        Pattern::PathPatt(p) => {
-            let path = TypePath::from(p.clone());
-
-            if let Some(sym) = analyser.lookup(&path) {
-                Ok(sym.symbol_type())
-            } else {
-                Err(SemanticErrorKind::UndefinedVariable {
-                    name: path.type_name,
-                })
-            }
-        }
 
         Pattern::LiteralPatt(l) => match l {
             LiteralPatt::Int { value } => match value {
@@ -80,12 +68,38 @@ pub(crate) fn analyse_patt(
             LiteralPatt::Bool { .. } => Ok(Type::Bool),
         },
 
-        Pattern::ReferencePatt(r) => Ok(Type::Reference {
-            reference_op: r.reference_op,
-            inner_type: Box::new(analyse_patt(analyser, &r.pattern)?),
+        Pattern::NonePatt(_) => Ok(Type::Option {
+            inner_type: Box::new(Type::UNIT_TYPE),
         }),
 
-        Pattern::GroupedPatt(g) => analyse_patt(analyser, &g.inner_pattern),
+        Pattern::OrPatt(o) => {
+            let first_patt_type = analyse_patt(analyser, &o.first_pattern.clone())?;
+
+            for patt in o.subsequent_patterns.iter() {
+                let subsequent_patt_type = analyse_patt(analyser, patt)?;
+
+                if subsequent_patt_type != first_patt_type {
+                    return Err(SemanticErrorKind::TypeMismatchOrPatt {
+                        expected: first_patt_type,
+                        found: subsequent_patt_type,
+                    });
+                }
+            }
+
+            Ok(first_patt_type)
+        }
+
+        Pattern::PathPatt(p) => {
+            let path = TypePath::from(p.clone());
+
+            if let Some(sym) = analyser.lookup(&path) {
+                Ok(sym.symbol_type())
+            } else {
+                Err(SemanticErrorKind::UndefinedVariable {
+                    name: path.type_name,
+                })
+            }
+        }
 
         Pattern::RangePatt(r) => match (&r.from_pattern_opt, &r.to_pattern_opt) {
             (None, None) => Ok(Type::UNIT_TYPE),
@@ -183,16 +197,38 @@ pub(crate) fn analyse_patt(
             }
         },
 
-        Pattern::TuplePatt(t) => {
-            let mut element_types: Vec<Type> = Vec::new();
+        Pattern::ReferencePatt(r) => Ok(Type::Reference {
+            reference_op: r.reference_op,
+            inner_type: Box::new(analyse_patt(analyser, &r.pattern)?),
+        }),
 
-            for patt in t.tuple_patt_elements.elements.iter() {
-                let ty = analyse_patt(analyser, patt)?;
+        Pattern::RestPatt(_) => Ok(Type::inferred_type("..")),
 
-                element_types.push(ty)
+        Pattern::ResultPatt(r) => {
+            let ty = analyse_patt(analyser, &r.pattern.clone().inner_pattern)?;
+
+            match r.kw_ok_or_err {
+                Keyword::Ok => Ok(Type::Result {
+                    ok_type: Box::new(ty),
+                    err_type: Box::new(Type::inferred_type("_")),
+                }),
+                Keyword::Err => Ok(Type::Result {
+                    ok_type: Box::new(Type::inferred_type("_")),
+                    err_type: Box::new(ty),
+                }),
+                keyword => Err(SemanticErrorKind::UnexpectedKeyword {
+                    expected: "`Ok` or `Err`".to_string(),
+                    found: keyword,
+                }),
             }
+        }
 
-            Ok(Type::Tuple(element_types))
+        Pattern::SomePatt(s) => {
+            let ty = analyse_patt(analyser, &s.pattern.clone().inner_pattern)?;
+
+            Ok(Type::Option {
+                inner_type: Box::new(ty),
+            })
         }
 
         Pattern::StructPatt(s) => {
@@ -359,56 +395,18 @@ pub(crate) fn analyse_patt(
             }
         }
 
+        Pattern::TuplePatt(t) => {
+            let mut element_types: Vec<Type> = Vec::new();
+
+            for patt in t.tuple_patt_elements.elements.iter() {
+                let ty = analyse_patt(analyser, patt)?;
+
+                element_types.push(ty)
+            }
+
+            Ok(Type::Tuple(element_types))
+        }
+
         Pattern::WildcardPatt(_) => Ok(Type::inferred_type("_")),
-
-        Pattern::RestPatt(_) => Ok(Type::inferred_type("..")),
-
-        Pattern::OrPatt(o) => {
-            let first_patt_type = analyse_patt(analyser, &o.first_pattern.clone())?;
-
-            for patt in o.subsequent_patterns.iter() {
-                let subsequent_patt_type = analyse_patt(analyser, patt)?;
-
-                if subsequent_patt_type != first_patt_type {
-                    return Err(SemanticErrorKind::TypeMismatchOrPatt {
-                        expected: first_patt_type,
-                        found: subsequent_patt_type,
-                    });
-                }
-            }
-
-            Ok(first_patt_type)
-        }
-
-        Pattern::SomePatt(s) => {
-            let ty = analyse_patt(analyser, &s.pattern.clone().inner_pattern)?;
-
-            Ok(Type::Option {
-                inner_type: Box::new(ty),
-            })
-        }
-
-        Pattern::NonePatt(_) => Ok(Type::Option {
-            inner_type: Box::new(Type::UNIT_TYPE),
-        }),
-
-        Pattern::ResultPatt(r) => {
-            let ty = analyse_patt(analyser, &r.pattern.clone().inner_pattern)?;
-
-            match r.kw_ok_or_err {
-                Keyword::Ok => Ok(Type::Result {
-                    ok_type: Box::new(ty),
-                    err_type: Box::new(Type::inferred_type("_")),
-                }),
-                Keyword::Err => Ok(Type::Result {
-                    ok_type: Box::new(Type::inferred_type("_")),
-                    err_type: Box::new(ty),
-                }),
-                keyword => Err(SemanticErrorKind::UnexpectedKeyword {
-                    expected: "`Ok` or `Err`".to_string(),
-                    found: keyword,
-                }),
-            }
-        }
     }
 }
