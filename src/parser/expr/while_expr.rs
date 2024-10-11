@@ -1,11 +1,11 @@
+use core::fmt;
+
 use crate::{
     ast::{Keyword, WhileExpr},
     error::ErrorsEmitted,
     parser::{ParseControlExpr, Parser},
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseControlExpr for WhileExpr {
     fn parse(parser: &mut Parser) -> Result<WhileExpr, ErrorsEmitted> {

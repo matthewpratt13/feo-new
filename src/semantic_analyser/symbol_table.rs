@@ -1,28 +1,63 @@
-use crate::ast::{
-    EnumDef, FunctionItem, Identifier, ModuleItem, StructDef, TraitDef, TupleStructDef, Type,
-    TypePath, UnitType, Visibility,
-};
-
 use core::fmt;
 use std::collections::HashMap;
+
+use crate::{
+    ast::{
+        EnumDef, FunctionItem, Identifier, InherentImplItem, ModuleItem, StructDef, TraitDef,
+        TraitImplItem, TupleStructDef, Type, TypePath, Visibility,
+    },
+    error::SemanticErrorKind,
+    semantic_analyser::utils::ToIdentifier,
+};
+
+use super::FormatObject;
 
 /// Type alias representing a symbol table that maps `TypePath` to `Symbol`.
 pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
 
 /// Enumeration of the different kinds of scopes that can be encountered during semantic analysis.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub(crate) enum ScopeKind {
     LocalBlock,
     MatchExpr,
     ForInLoop,
     Function(TypePath),
-    // TraitImpl(String),
-    // Impl(String),
-    // TraitDef(String),
+    TraitImpl {
+        implemented_trait_path: TypePath,
+        implementing_type_path: TypePath,
+    },
+    Impl(TypePath),
+    // TraitDef(TypePath),
     Module(TypePath),
-    // RootModule(String),
     ProgramRoot,
     Public,
+}
+
+impl fmt::Display for ScopeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ScopeKind::LocalBlock => write!(f, "LocalBlock"),
+            ScopeKind::MatchExpr => write!(f, "MatchExpr"),
+            ScopeKind::ForInLoop => write!(f, "ForInLoop"),
+            ScopeKind::Function(type_path) => {
+                write!(f, "Function(\"{}\")", type_path)
+            }
+            ScopeKind::TraitImpl {
+                implemented_trait_path,
+                implementing_type_path,
+            } => write!(
+                f,
+                "TraitImpl(\"{} for {}\")",
+                implemented_trait_path, implementing_type_path
+            ),
+
+            ScopeKind::Impl(type_path) => write!(f, "Impl(\"{}\")", type_path),
+            // ScopeKind::TraitDef(type_path) => write!(f, "TraitDef(\"{}\")", type_path),
+            ScopeKind::Module(type_path) => write!(f, "Module(\"{}\")", type_path),
+            ScopeKind::ProgramRoot => write!(f, "ProgramRoot"),
+            ScopeKind::Public => write!(f, "Public"),
+        }
+    }
 }
 
 /// Enum representing different types of symbols that can be encountered during semantic analysis.
@@ -35,14 +70,20 @@ pub(crate) enum Symbol {
     Struct {
         path: TypePath,
         struct_def: StructDef,
+        associated_items_inherent: Vec<InherentImplItem>,
+        associated_items_trait: Vec<TraitImplItem>,
     },
     TupleStruct {
         path: TypePath,
         tuple_struct_def: TupleStructDef,
+        associated_items_inherent: Vec<InherentImplItem>,
+        associated_items_trait: Vec<TraitImplItem>,
     },
     Enum {
         path: TypePath,
         enum_def: EnumDef,
+        associated_items_inherent: Vec<InherentImplItem>,
+        associated_items_trait: Vec<TraitImplItem>,
     },
     Trait {
         path: TypePath,
@@ -72,6 +113,46 @@ pub(crate) enum Symbol {
 }
 
 impl Symbol {
+    pub(crate) fn add_associated_items(
+        &mut self,
+        inherent_item: Option<InherentImplItem>,
+        trait_item: Option<TraitImplItem>,
+    ) -> Result<(), SemanticErrorKind> {
+        match self {
+            Symbol::Struct {
+                associated_items_inherent,
+                associated_items_trait,
+                ..
+            }
+            | Symbol::TupleStruct {
+                associated_items_inherent,
+                associated_items_trait,
+                ..
+            }
+            | Symbol::Enum {
+                associated_items_inherent,
+                associated_items_trait,
+                ..
+            } => {
+                if let Some(item) = inherent_item {
+                    associated_items_inherent.push(item);
+                }
+
+                if let Some(item) = trait_item {
+                    associated_items_trait.push(item);
+                }
+
+                Ok(())
+            }
+
+            sym => Err(SemanticErrorKind::UnexpectedSymbol {
+                name: sym.type_path().to_identifier(),
+                expected: "struct or enum".to_string(),
+                found: sym.symbol_type().to_backtick_string(),
+            }),
+        }
+    }
+
     pub(crate) fn symbol_type(&self) -> Type {
         match self.clone() {
             Symbol::Variable { var_type, .. } => var_type,
@@ -83,15 +164,15 @@ impl Symbol {
             Symbol::Constant { constant_type, .. } => constant_type,
             Symbol::Function { function, .. } => match function.return_type_opt {
                 Some(t) => *t,
-                None => Type::UnitType(UnitType),
+                None => Type::UNIT_TYPE,
             },
-            Symbol::Module { .. } => Type::UnitType(UnitType),
+            Symbol::Module { .. } => Type::UNIT_TYPE,
         }
     }
 
     pub(crate) fn type_path(&self) -> TypePath {
         match self.clone() {
-            Symbol::Variable { name, .. } => TypePath::from(name.clone()),
+            Symbol::Variable { name, .. } => name.to_type_path(),
             Symbol::Struct { path, .. }
             | Symbol::TupleStruct { path, .. }
             | Symbol::Enum { path, .. }
@@ -103,6 +184,8 @@ impl Symbol {
         }
     }
 }
+
+impl FormatObject for Symbol {}
 
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

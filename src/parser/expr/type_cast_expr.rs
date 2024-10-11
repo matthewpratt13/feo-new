@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Expression, Type, TypeCastExpr, TypeCastOp},
     error::ErrorsEmitted,
@@ -5,8 +7,6 @@ use crate::{
     span::Spanned,
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseOperatorExpr for TypeCastExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
@@ -86,6 +86,7 @@ impl fmt::Debug for TypeCastExpr {
 #[cfg(test)]
 mod tests {
     use crate::{
+        error::ParserErrorKind,
         logger::LogLevel,
         parser::{test_utils, Precedence},
     };
@@ -104,16 +105,22 @@ mod tests {
         }
     }
 
-    #[should_panic]
     #[test]
-    fn parse_type_cast_expr_identifier() {
+    fn parse_type_cast_expr_identifier() -> Result<(), ()> {
         let input = r#"x as foo"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        parser.parse_expression(Precedence::Lowest).expect(&format!(
-            "unable to parse input. Log output: {:#?}",
-            parser.logger.messages()
-        ));
+        match parser.parse_expression(Precedence::Lowest) {
+            Ok(_) => Err(println!("expected `ParserErrorKind::UnexpectedToken` error, but test was successful")),
+            Err(_) => match parser.errors.last() {
+                Some(err) => match err.error_kind() {
+                   ParserErrorKind::UnexpectedToken { .. } => Ok(println!("test failed correctly with error: {err:#?}")),
+
+                   err => Err(println!("test failed with unexpected error. Expected `ParserErrorKind::UnexpectedToken` error, found `{err}`"))
+                },
+                _ => Err(println!("test failed, but no errors detected. Expected `ParserErrorKind::UnexpectedToken` error, found none"))
+            },
+        }
     }
 }

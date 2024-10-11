@@ -1,12 +1,12 @@
+use core::fmt;
+
 use crate::{
     ast::{BlockExpr, InnerAttr, Statement},
     error::ErrorsEmitted,
     log_debug, log_error, log_trace,
-    parser::{collection, ParseConstructExpr, Parser},
+    parser::{get_attributes, ParseConstructExpr, Parser},
     token::Token,
 };
-
-use core::fmt;
 
 impl ParseConstructExpr for BlockExpr {
     fn parse(parser: &mut Parser) -> Result<BlockExpr, ErrorsEmitted> {
@@ -15,7 +15,7 @@ impl ParseConstructExpr for BlockExpr {
 
         let first_token = parser.current_token().cloned();
 
-        let attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
+        let attributes_opt = get_attributes(parser, InnerAttr::inner_attr);
 
         parser.expect_open_brace()?;
 

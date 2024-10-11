@@ -1,13 +1,16 @@
+use core::fmt;
+
+use crate::{
+    semantic_analyser::{FormatParams, FormatStatements},
+    span::{Span, Spanned},
+};
+
 use super::{
     AssigneeExpr, AssignmentOp, BigUInt, BinaryOp, ComparisonOp, CompoundAssignmentOp,
     DereferenceOp, Expression, Identifier, IdentifierPatt, InnerAttr, Int, Keyword, Literal,
     OuterAttr, Pattern, RangeOp, ReferenceOp, SelfType, Statement, Type, TypeCastOp, TypePath,
     UInt, UnaryOp, UnitType, UnwrapOp, ValueExpr, U512,
 };
-
-use crate::span::{Span, Spanned};
-
-use core::fmt;
 
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES
@@ -18,6 +21,29 @@ use core::fmt;
 pub(crate) enum ClosureParams {
     Some(Vec<ClosureParam>), // `| <param>: <Type>, .. |`
     None,                    // `||`
+}
+
+impl FormatParams for ClosureParams {
+    fn param_strings(&self) -> Vec<String> {
+        let mut param_strings: Vec<String> = Vec::new();
+
+        match self {
+            ClosureParams::Some(params) => {
+                for param in params {
+                    param_strings.push(param.to_string());
+                }
+            }
+            ClosureParams::None => (),
+        }
+
+        param_strings
+    }
+}
+
+impl fmt::Display for ClosureParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.param_strings())
+    }
 }
 
 /// Enum representing the different path root options.
@@ -49,6 +75,19 @@ pub(crate) struct ClosureParam {
     pub(crate) type_ann_opt: Option<Box<Type>>,
 }
 
+impl fmt::Display for ClosureParam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}: {}",
+            self.param_name,
+            self.type_ann_opt
+                .clone()
+                .unwrap_or(Box::new(Type::inferred_type("_")))
+        )
+    }
+}
+
 /// Struct representing a key-value pair in a mapping.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct MappingPair {
@@ -66,19 +105,13 @@ pub(crate) struct MatchArm {
 
 impl fmt::Display for MatchArm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} => {} {},",
-            self.matched_pattern,
-            {
-                if let Some(e) = &self.guard_opt {
-                    format!("{}", *e)
-                } else {
-                    "".to_string()
-                }
-            },
-            self.arm_expression
-        )
+        let matched_pattern = if let Some(e) = &self.guard_opt {
+            format!("{} if {}", self.matched_pattern, *e)
+        } else {
+            format!("{}", self.matched_pattern)
+        };
+
+        write!(f, "{} => {},", matched_pattern, self.arm_expression)
     }
 }
 
@@ -154,6 +187,20 @@ pub struct BlockExpr {
     pub(crate) attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) statements_opt: Option<Vec<Statement>>,
     pub(crate) span: Span,
+}
+
+impl FormatStatements for BlockExpr {
+    fn statement_strings(&self) -> Vec<String> {
+        let mut statement_strings: Vec<String> = Vec::new();
+
+        if let Some(stmts) = &self.statements_opt {
+            for stmt in stmts {
+                statement_strings.push(stmt.to_string())
+            }
+        }
+
+        statement_strings
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -239,6 +286,35 @@ pub struct IfExpr {
     pub(crate) span: Span,
 }
 
+impl fmt::Display for IfExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buf = String::new();
+
+        buf.push_str("if");
+
+        buf.push_str(&format!(
+            " {}",
+            Expression::Grouped(*self.condition.clone())
+        ));
+
+        buf.push_str(&format!(" {}", Expression::Block(*self.if_block.clone())));
+
+        if let Some(blocks) = &self.else_if_blocks_opt {
+            for block in blocks {
+                buf.push_str(" else");
+                buf.push_str(&format!(" {}", block));
+            }
+        }
+
+        if let Some(block) = &self.trailing_else_block_opt {
+            buf.push_str(" else");
+            buf.push_str(&format!(" {}", Expression::Block(block.clone())));
+        }
+
+        write!(f, "{buf}")
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct IndexExpr {
     pub(crate) array: Box<AssigneeExpr>,
@@ -259,6 +335,26 @@ pub struct MatchExpr {
     pub(crate) match_arms_opt: Option<Vec<MatchArm>>,
     pub(crate) final_arm: Box<MatchArm>, // default case
     pub(crate) span: Span,
+}
+
+impl fmt::Display for MatchExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buf = String::new();
+
+        buf.push_str("match");
+
+        buf.push_str(&format!(" {} {{", self.scrutinee));
+
+        if let Some(arms) = &self.match_arms_opt {
+            for arm in arms {
+                buf.push_str(&format!(" {arm}"));
+            }
+        }
+
+        buf.push_str(&format!(" {} }}", self.final_arm));
+
+        write!(f, "{buf}")
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -325,6 +421,20 @@ pub struct StructExpr {
     pub(crate) span: Span,
 }
 
+impl FormatParams for StructExpr {
+    fn param_strings(&self) -> Vec<String> {
+        let mut field_strings: Vec<String> = Vec::new();
+
+        if let Some(fields) = &self.struct_fields_opt {
+            for field in fields {
+                field_strings.push(format!("{}: {}", field.field_name, field.field_value))
+            }
+        }
+
+        field_strings
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct TupleExpr {
     pub(crate) tuple_elements: TupleElements,
@@ -343,6 +453,20 @@ pub struct TupleStructExpr {
     pub(crate) struct_path: PathExpr,
     pub(crate) struct_elements_opt: Option<Vec<Expression>>,
     pub(crate) span: Span,
+}
+
+impl FormatParams for TupleStructExpr {
+    fn param_strings(&self) -> Vec<String> {
+        let mut element_strings: Vec<String> = Vec::new();
+
+        if let Some(elems) = &self.struct_elements_opt {
+            for elem in elems {
+                element_strings.push(elem.to_string());
+            }
+        }
+
+        element_strings
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -487,7 +611,7 @@ impl fmt::Display for Expression {
             Expression::Underscore(_) => write!(f, "_"),
             Expression::Closure(clo) => write!(
                 f,
-                "({:?}) -> {} {}",
+                "({}) -> {} {}",
                 clo.closure_params,
                 clo.return_type_opt
                     .clone()
@@ -497,53 +621,50 @@ impl fmt::Display for Expression {
             Expression::Array(arr) => write!(f, "[ {:?} ]", arr.elements_opt.unwrap_or(Vec::new())),
             Expression::Tuple(tup) => write!(f, "( {} )", tup.tuple_elements),
             Expression::Struct(strc) => {
-                write!(
-                    f,
-                    "{} {{ {:?} }}",
-                    strc.struct_path,
-                    strc.struct_fields_opt.unwrap_or(Vec::new())
-                )
+                write!(f, "{} {{ {:?} }}", strc.struct_path, strc.param_strings())
             }
             Expression::TupleStruct(tstrc) => {
-                write!(f, "{}({:?})", tstrc.struct_path, tstrc.struct_elements_opt)
+                write!(f, "{}({:?})", tstrc.struct_path, tstrc.param_strings())
             }
             Expression::Mapping(map) => write!(f, "{{ {:?} }}", map.pairs_opt),
             Expression::Block(blk) => {
-                write!(f, "{{ {:?} }}", blk)
+                write!(f, "{{ {:?} }}", blk.statement_strings())
             }
-            Expression::If(ifex) => write!(
-                f,
-                "if {} {}{}{}",
-                Expression::Grouped(*ifex.condition),
-                Expression::Block(*ifex.if_block),
-                {
-                    if let Some(e) = ifex.else_if_blocks_opt {
-                        format!(" else {:?}", e)
-                    } else {
-                        "".to_string()
-                    }
-                },
-                {
-                    if let Some(e) = ifex.trailing_else_block_opt {
-                        format!(" else {:?}", e)
-                    } else {
-                        "".to_string()
-                    }
-                }
-            ),
-            Expression::Match(mat) => write!(
-                f,
-                "match {} {{ {}, {} }}",
-                mat.scrutinee,
-                {
-                    if let Some(m) = mat.match_arms_opt {
-                        format!("{:?}", m)
-                    } else {
-                        "".to_string()
-                    }
-                },
-                *mat.final_arm
-            ),
+            // Expression::If(ifex) => write!(
+            //     f,
+            //     "if {} {}{}{}",
+            //     Expression::Grouped(*ifex.condition),
+            //     Expression::Block(*ifex.if_block),
+            //     {
+            //         if let Some(e) = ifex.else_if_blocks_opt {
+            //             format!(" else {:?}", e)
+            //         } else {
+            //             "".to_string()
+            //         }
+            //     },
+            //     {
+            //         if let Some(e) = ifex.trailing_else_block_opt {
+            //             format!(" else {}", Expression::Block(e))
+            //         } else {
+            //             "".to_string()
+            //         }
+            //     }
+            // ),
+            Expression::If(ifex) => write!(f, "{ifex}"),
+            // Expression::Match(mat) => write!(
+            //     f,
+            //     "match {} {{ {}, {} }}",
+            //     mat.scrutinee,
+            //     {
+            //         if let Some(m) = mat.match_arms_opt {
+            //             format!("{:?}", m)
+            //         } else {
+            //             "".to_string()
+            //         }
+            //     },
+            //     *mat.final_arm
+            // ),
+            Expression::Match(mat) => write!(f, "{mat}"),
             Expression::ForIn(fi) => write!(
                 f,
                 "for {} in {} {}",

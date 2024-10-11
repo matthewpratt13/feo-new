@@ -1,12 +1,11 @@
-use super::{collection, ParseDefItem, Parser};
+use core::fmt;
 
 use crate::{
     ast::{InnerAttr, Item, Keyword, ModuleItem, OuterAttr, Visibility},
     error::ErrorsEmitted,
+    parser::{get_attributes, ParseDefItem, Parser},
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseDefItem for ModuleItem {
     fn parse(
@@ -59,7 +58,7 @@ impl fmt::Debug for ModuleItem {
 fn parse_items(
     parser: &mut Parser,
 ) -> Result<(Option<Vec<InnerAttr>>, Option<Vec<Item>>), ErrorsEmitted> {
-    let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
+    let inner_attributes_opt = get_attributes(parser, InnerAttr::inner_attr);
 
     let mut items: Vec<Item> = Vec::new();
 
@@ -67,7 +66,7 @@ fn parse_items(
         parser.current_token(),
         Some(Token::RBrace { .. } | Token::EOF)
     ) {
-        let attributes_opt = collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
+        let attributes_opt = get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
 
         let item_visibility = Visibility::visibility(parser)?;
 

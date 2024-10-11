@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Expression, GroupedExpr, TupleElements, TupleExpr},
     error::ErrorsEmitted,
@@ -5,8 +7,6 @@ use crate::{
     parser::{ParseConstructExpr, Parser, Precedence},
     token::Token,
 };
-
-use core::fmt;
 
 impl ParseConstructExpr for GroupedExpr {
     fn parse(parser: &mut Parser) -> Result<GroupedExpr, ErrorsEmitted> {

@@ -1,14 +1,15 @@
+use core::fmt;
+
+use crate::{
+    parser::get_type_paths,
+    semantic_analyser::{FormatObject, FormatParams},
+    span::{Span, Spanned},
+};
+
 use super::{
     AssigneeExpr, BlockExpr, Identifier, IdentifierPatt, InnerAttr, Item, Keyword, OuterAttr,
     PathWildcard, ReferenceOp, SelfType, Type, TypePath, ValueExpr,
 };
-
-use crate::{
-    parser::ty::get_type_paths,
-    span::{Span, Spanned},
-};
-
-use core::fmt;
 
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES
@@ -16,6 +17,7 @@ use core::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum EnumVariantKind {
+    Standard,
     Struct(EnumVariantStruct),
     TupleStruct(EnumVariantTupleStruct),
 }
@@ -37,7 +39,7 @@ impl FunctionOrMethodParam {
     pub(crate) fn param_type(&self) -> Type {
         match self {
             FunctionOrMethodParam::FunctionParam(f) => *f.param_type.clone(),
-            FunctionOrMethodParam::MethodParam(_) => Type::SelfType(SelfType),
+            FunctionOrMethodParam::MethodParam(_) => Type::SELF_TYPE,
         }
     }
 }
@@ -109,8 +111,8 @@ pub(crate) struct EnumVariantTupleStruct {
 pub(crate) struct EnumVariant {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
-    pub(crate) variant_name: Identifier,
-    pub(crate) variant_type_opt: Option<EnumVariantKind>,
+    pub(crate) variant_path: TypePath,
+    pub(crate) variant_kind: EnumVariantKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -195,6 +197,16 @@ pub(crate) struct SelfParam {
     pub(crate) kw_self: Keyword,
 }
 
+impl FormatObject for SelfParam {
+    fn to_backtick_string(&self) -> String {
+        format!(
+            "`{}{}`",
+            self.reference_op_opt.unwrap_or_default(),
+            self.kw_self
+        )
+    }
+}
+
 impl fmt::Display for SelfParam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -275,6 +287,27 @@ pub struct FunctionItem {
     pub(crate) return_type_opt: Option<Box<Type>>,
     pub(crate) block_opt: Option<BlockExpr>,
     pub(crate) span: Span,
+}
+
+impl FormatParams for FunctionItem {
+    fn param_strings(&self) -> Vec<String> {
+        let mut param_strings: Vec<String> = Vec::new();
+
+        if let Some(params) = &self.params_opt {
+            for param in params {
+                match param {
+                    FunctionOrMethodParam::FunctionParam(function_param) => {
+                        param_strings.push(function_param.to_string());
+                    }
+                    FunctionOrMethodParam::MethodParam(self_param) => {
+                        param_strings.push(self_param.to_string())
+                    }
+                }
+            }
+        }
+
+        param_strings
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]

@@ -1,11 +1,11 @@
+use core::fmt;
+
+use crate::span::{Span, Spanned};
+
 use super::{
     AssigneeExpr, Expression, IdentifierPatt, Item, Keyword, NoneExpr, Statement, Type, UnitType,
     ValueExpr,
 };
-
-use crate::span::{Span, Spanned};
-
-use core::fmt;
 
 ///////////////////////////////////////////////////////////////////////////
 // AST NODE STRUCTURES

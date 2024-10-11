@@ -1,16 +1,15 @@
 mod lex_error;
-pub(crate) use lex_error::LexErrorKind;
-
 mod parser_error;
-pub(crate) use parser_error::ParserErrorKind;
-
 mod semantic_error;
-pub(crate) use semantic_error::SemanticErrorKind;
-
-use crate::span::Position;
 
 use core::fmt;
 use std::error::Error;
+
+use crate::span::Position;
+
+pub(crate) use self::lex_error::LexErrorKind;
+pub(crate) use self::parser_error::ParserErrorKind;
+pub(crate) use self::semantic_error::SemanticErrorKind;
 
 /// Generic error struct that encapsulates custom error kinds and provides the precise location
 /// of the error in the source code.
@@ -30,6 +29,11 @@ where
             error_kind,
             position: Position::new(pos, source),
         }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn error_kind(&self) -> T {
+        self.error_kind.clone()
     }
 }
 

@@ -1,14 +1,15 @@
+use core::fmt;
+
 use crate::{
     ast::{Expression, OuterAttr, PathExpr, StructExpr, StructField, TupleStructExpr},
     error::ErrorsEmitted,
     parser::{
-        collection, ParseConstructExpr, ParseOperatorExpr, ParseSimpleExpr, Parser, Precedence,
+        get_attributes, get_collection, get_expressions, ParseConstructExpr, ParseOperatorExpr,
+        ParseSimpleExpr, Parser, Precedence,
     },
     span::Spanned,
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseConstructExpr for StructExpr {
     fn parse(parser: &mut Parser) -> Result<StructExpr, ErrorsEmitted> {
@@ -18,8 +19,7 @@ impl ParseConstructExpr for StructExpr {
 
         let open_brace = parser.expect_open_brace()?;
 
-        let struct_fields_opt =
-            collection::get_collection(parser, parse_struct_field, &open_brace)?;
+        let struct_fields_opt = get_collection(parser, parse_struct_field, &open_brace)?;
 
         let span = parser.get_braced_item_span(first_token.as_ref())?;
 
@@ -46,8 +46,7 @@ impl ParseOperatorExpr for TupleStructExpr {
 
         let open_paren = parser.expect_open_paren()?;
 
-        let struct_elements_opt =
-            collection::get_expressions(parser, Precedence::Lowest, &open_paren)?;
+        let struct_elements_opt = get_expressions(parser, Precedence::Lowest, &open_paren)?;
 
         let last_token = parser.current_token();
 
@@ -85,7 +84,7 @@ impl fmt::Debug for TupleStructExpr {
 }
 
 fn parse_struct_field(parser: &mut Parser) -> Result<StructField, ErrorsEmitted> {
-    let attributes_opt = collection::get_attributes(parser, OuterAttr::outer_attr);
+    let attributes_opt = get_attributes(parser, OuterAttr::outer_attr);
 
     let field_name = parser.expect_identifier("struct field name")?;
 

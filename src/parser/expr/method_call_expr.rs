@@ -1,12 +1,12 @@
+use core::fmt;
+
 use crate::{
     ast::{AssigneeExpr, Expression, MethodCallExpr},
     error::ErrorsEmitted,
-    parser::{collection, ParseOperatorExpr, Parser, Precedence},
+    parser::{get_expressions, ParseOperatorExpr, Parser, Precedence},
     span::Spanned,
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseOperatorExpr for MethodCallExpr {
     fn parse(parser: &mut Parser, left_expr: Expression) -> Result<Expression, ErrorsEmitted> {
@@ -21,7 +21,7 @@ impl ParseOperatorExpr for MethodCallExpr {
 
         let open_paren = parser.expect_open_paren()?;
 
-        let args_opt = collection::get_expressions(parser, Precedence::Lowest, &open_paren)?;
+        let args_opt = get_expressions(parser, Precedence::Lowest, &open_paren)?;
 
         let last_token = parser.current_token();
 

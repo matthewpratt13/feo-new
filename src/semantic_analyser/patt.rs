@@ -1,15 +1,14 @@
-use super::{symbol_table::Symbol, SemanticAnalyser};
+use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, Float, Hash, Identifier, Int, Keyword, LiteralPatt,
-        Pattern, Str, Type, TypePath, UInt, UnitType,
+        BigUInt, Bytes, Float, Hash, Identifier, Int, Keyword, LiteralPatt, Pattern, Type,
+        TypePath, UInt,
     },
     error::SemanticErrorKind,
-    B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
-use std::collections::HashMap;
+use super::{symbol_table::Symbol, FormatObject, SemanticAnalyser, ToIdentifier};
 
 // TODO: alphabetize match arms
 
@@ -25,7 +24,7 @@ pub(crate) fn analyse_patt(
             Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                 name: i.name.clone(),
                 expected: "variable".to_string(),
-                found: format!("`{sym}`"),
+                found: sym.to_backtick_string(),
             }),
             _ => Err(SemanticErrorKind::UndefinedVariable {
                 name: i.name.clone(),
@@ -46,39 +45,39 @@ pub(crate) fn analyse_patt(
 
         Pattern::LiteralPatt(l) => match l {
             LiteralPatt::Int { value } => match value {
-                Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
-                Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
+                Int::I32(_) => Ok(Type::I32),
+                Int::I64(_) => Ok(Type::I64),
             },
             LiteralPatt::UInt { value } => match value {
-                UInt::U8(_) => Ok(Type::U8(UInt::U8(u8::default()))),
-                UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
-                UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
-                UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
+                UInt::U8(_) => Ok(Type::U8),
+                UInt::U16(_) => Ok(Type::U16),
+                UInt::U32(_) => Ok(Type::U32),
+                UInt::U64(_) => Ok(Type::U64),
             },
             LiteralPatt::BigUInt { value } => match value {
-                BigUInt::U256(_) => Ok(Type::U256(BigUInt::U256(U256::default()))),
-                BigUInt::U512(_) => Ok(Type::U512(BigUInt::U512(U512::default()))),
+                BigUInt::U256(_) => Ok(Type::U256),
+                BigUInt::U512(_) => Ok(Type::U512),
             },
             LiteralPatt::Float { value } => match value {
-                Float::F32(_) => Ok(Type::F32(Float::F32(F32::default()))),
-                Float::F64(_) => Ok(Type::F64(Float::F64(F64::default()))),
+                Float::F32(_) => Ok(Type::F32),
+                Float::F64(_) => Ok(Type::F64),
             },
-            LiteralPatt::Byte { .. } => Ok(Type::Byte(Byte::from(u8::default()))),
+            LiteralPatt::Byte { .. } => Ok(Type::Byte),
             LiteralPatt::Bytes { value } => match value {
-                Bytes::B2(_) => Ok(Type::B2(Bytes::B2(B2::default()))),
-                Bytes::B4(_) => Ok(Type::B4(Bytes::B4(B4::default()))),
-                Bytes::B8(_) => Ok(Type::B8(Bytes::B8(B8::default()))),
-                Bytes::B16(_) => Ok(Type::B16(Bytes::B16(B16::default()))),
-                Bytes::B32(_) => Ok(Type::B32(Bytes::B32(B32::default()))),
+                Bytes::B2(_) => Ok(Type::B2),
+                Bytes::B4(_) => Ok(Type::B4),
+                Bytes::B8(_) => Ok(Type::B8),
+                Bytes::B16(_) => Ok(Type::B16),
+                Bytes::B32(_) => Ok(Type::B32),
             },
             LiteralPatt::Hash { value } => match value {
-                Hash::H160(_) => Ok(Type::H160(Hash::H160(H160::default()))),
-                Hash::H256(_) => Ok(Type::H256(Hash::H256(H256::default()))),
-                Hash::H512(_) => Ok(Type::H512(Hash::H512(H512::default()))),
+                Hash::H160(_) => Ok(Type::H160),
+                Hash::H256(_) => Ok(Type::H256),
+                Hash::H512(_) => Ok(Type::H512),
             },
-            LiteralPatt::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
-            LiteralPatt::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
-            LiteralPatt::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
+            LiteralPatt::Str { .. } => Ok(Type::Str),
+            LiteralPatt::Char { .. } => Ok(Type::Char),
+            LiteralPatt::Bool { .. } => Ok(Type::Bool),
         },
 
         Pattern::ReferencePatt(r) => Ok(Type::Reference {
@@ -89,21 +88,21 @@ pub(crate) fn analyse_patt(
         Pattern::GroupedPatt(g) => analyse_patt(analyser, &g.inner_pattern),
 
         Pattern::RangePatt(r) => match (&r.from_pattern_opt, &r.to_pattern_opt) {
-            (None, None) => Ok(Type::UnitType(UnitType)),
+            (None, None) => Ok(Type::UNIT_TYPE),
             (None, Some(to)) => {
                 let to_type = analyse_patt(analyser, &to.clone())?;
 
                 match to_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::Byte(_)
-                    | Type::Char(_) => Ok(to_type),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::Byte
+                    | Type::Char => Ok(to_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "numeric type, `byte` or `char`".to_string(),
                         found: to_type,
@@ -114,16 +113,16 @@ pub(crate) fn analyse_patt(
                 let from_type = analyse_patt(analyser, &from.clone())?;
 
                 match from_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::Byte(_)
-                    | Type::Char(_) => Ok(from_type),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::Byte
+                    | Type::Char => Ok(from_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "numeric type, `byte` or `char`".to_string(),
                         found: from_type,
@@ -134,16 +133,16 @@ pub(crate) fn analyse_patt(
                 let from_type = analyse_patt(analyser, &from.clone())?;
 
                 match from_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::Byte(_)
-                    | Type::Char(_) => (),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::Byte
+                    | Type::Char => (),
                     _ => {
                         return Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type, `byte` or `char`".to_string(),
@@ -155,16 +154,16 @@ pub(crate) fn analyse_patt(
                 let to_type = analyse_patt(analyser, &to.clone())?;
 
                 match to_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::Byte(_)
-                    | Type::Char(_) => (),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::Byte
+                    | Type::Char => (),
                     _ => {
                         return Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type, `byte` or `char`".to_string(),
@@ -200,7 +199,9 @@ pub(crate) fn analyse_patt(
             let type_path = TypePath::from(s.struct_path.clone());
 
             match analyser.lookup(&type_path).cloned() {
-                Some(Symbol::Struct { struct_def, path }) => {
+                Some(Symbol::Struct {
+                    struct_def, path, ..
+                }) => {
                     let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
                     let def_fields_opt = struct_def.fields_opt;
@@ -234,7 +235,7 @@ pub(crate) fn analyse_patt(
                         for (name, _) in field_map.iter() {
                             if !field_names.contains(name) {
                                 return Err(SemanticErrorKind::UnexpectedStructField {
-                                    field_name: struct_def.struct_name,
+                                    struct_name: struct_def.struct_name,
                                     found: name.clone(),
                                 });
                             }
@@ -243,15 +244,8 @@ pub(crate) fn analyse_patt(
                         for def_field in def_fields {
                             match field_map.get_mut(&def_field.field_name) {
                                 Some(patt_field_type) => {
-                                    let mut symbol_table =
-                                        if let Some(scope) = analyser.scope_stack.last() {
-                                            scope.symbols.to_owned()
-                                        } else {
-                                            HashMap::new()
-                                        };
-
                                     analyser.check_types(
-                                        &mut symbol_table,
+                                        &mut analyser.current_symbol_table(),
                                         &*def_field.field_type,
                                         patt_field_type,
                                     )?;
@@ -287,7 +281,7 @@ pub(crate) fn analyse_patt(
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: type_path.type_name,
                     expected: "struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }
@@ -299,12 +293,13 @@ pub(crate) fn analyse_patt(
                 Some(Symbol::TupleStruct {
                     tuple_struct_def,
                     path,
+                    ..
                 }) => {
                     let elements_opt = ts.struct_elements_opt.clone();
                     let fields_opt = tuple_struct_def.fields_opt;
 
                     match (elements_opt, fields_opt) {
-                        (None, None) => Ok(Type::UnitType(UnitType)),
+                        (None, None) => Ok(Type::UNIT_TYPE),
 
                         (None, Some(fields)) => Err(SemanticErrorKind::StructArgCountMismatch {
                             struct_path: type_path.to_identifier(),
@@ -332,15 +327,8 @@ pub(crate) fn analyse_patt(
                                 let mut elem_type = analyse_patt(analyser, &elem)?;
                                 // let elem_type_clone = elem_type.clone();
 
-                                let mut symbol_table =
-                                    if let Some(scope) = analyser.scope_stack.last() {
-                                        scope.symbols.to_owned()
-                                    } else {
-                                        HashMap::new()
-                                    };
-
                                 analyser.check_types(
-                                    &mut symbol_table,
+                                    &mut analyser.current_symbol_table(),
                                     &*field_type,
                                     &mut elem_type,
                                 )?;
@@ -366,7 +354,7 @@ pub(crate) fn analyse_patt(
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: type_path.type_name,
                     expected: "struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }
@@ -401,7 +389,7 @@ pub(crate) fn analyse_patt(
         }
 
         Pattern::NonePatt(_) => Ok(Type::Option {
-            inner_type: Box::new(Type::UnitType(UnitType)),
+            inner_type: Box::new(Type::UNIT_TYPE),
         }),
 
         Pattern::ResultPatt(r) => {

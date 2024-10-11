@@ -1,11 +1,11 @@
+use core::fmt;
+
+use crate::error::ParserErrorKind;
+
 use super::{
     BigUInt, Bool, Byte, Bytes, Char, Expression, Float, Hash, Identifier, Int, Keyword, Literal,
     PathRoot, Pattern, RangeOp, ReferenceOp, Str, TypePath, UInt, U512,
 };
-
-use crate::error::ParserErrorKind;
-
-use core::fmt;
 
 ///////////////////////////////////////////////////////////////////////////
 // HELPER TYPES
@@ -59,11 +59,17 @@ pub struct IdentifierPatt {
 
 impl fmt::Display for IdentifierPatt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:?} {:?} {}",
-            self.kw_ref_opt, self.kw_mut_opt, self.name
-        )
+        let mut prefix = String::new();
+
+        if self.kw_ref_opt.is_some() {
+            prefix.push_str("ref ")
+        }
+
+        if self.kw_mut_opt.is_some() {
+            prefix.push_str("mut ");
+        }
+
+        write!(f, "{prefix}{}", self.name)
     }
 }
 
@@ -383,7 +389,7 @@ impl fmt::Display for Pattern {
                     ts.struct_elements_opt.unwrap_or(Vec::new())
                 )
             }
-            Pattern::WildcardPatt(_) => write!(f, "*"),
+            Pattern::WildcardPatt(_) => write!(f, "_"),
             Pattern::RestPatt(_) => write!(f, ".."),
             Pattern::OrPatt(o) => {
                 let mut patterns: Vec<String> = Vec::new();

@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Expression, Identifier, PathExpr, PathRoot, SelfType},
     error::ErrorsEmitted,
@@ -6,8 +8,6 @@ use crate::{
     span::Spanned,
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseSimpleExpr for PathExpr {
     fn parse(parser: &mut Parser) -> Result<PathExpr, ErrorsEmitted> {

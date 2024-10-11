@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{AssigneeExpr, Expression, RangeExpr, RangeOp},
     error::{ErrorsEmitted, ParserErrorKind},
@@ -5,8 +7,6 @@ use crate::{
     span::Spanned,
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl RangeExpr {
     pub(crate) fn parse_prefix(parser: &mut Parser) -> Result<RangeExpr, ErrorsEmitted> {

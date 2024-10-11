@@ -1,4 +1,4 @@
-use super::{collection, ParseDeclItem, Parser};
+use core::fmt;
 
 use crate::{
     ast::{
@@ -6,10 +6,9 @@ use crate::{
         TypePath, Visibility,
     },
     error::ErrorsEmitted,
+    parser::{get_collection, ParseDeclItem, Parser},
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseDeclItem for ImportDecl {
     fn parse(
@@ -100,14 +99,13 @@ fn parse_path_segment(parser: &mut Parser) -> Result<PathSegment, ErrorsEmitted>
 fn parse_path_subset(parser: &mut Parser) -> Result<PathSubset, ErrorsEmitted> {
     let open_brace = parser.expect_open_brace()?;
 
-    let nested_trees =
-        if let Some(t) = collection::get_collection(parser, parse_import_tree, &open_brace)? {
-            Ok(t)
-        } else {
-            parser.emit_missing_node("path component", "import declaration path import tree");
-            parser.next_token();
-            Err(ErrorsEmitted)
-        }?;
+    let nested_trees = if let Some(t) = get_collection(parser, parse_import_tree, &open_brace)? {
+        Ok(t)
+    } else {
+        parser.emit_missing_node("path component", "import declaration path import tree");
+        parser.next_token();
+        Err(ErrorsEmitted)
+    }?;
 
     let _ = parser.get_braced_item_span(None)?;
 

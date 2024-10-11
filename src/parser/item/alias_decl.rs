@@ -1,12 +1,11 @@
-use super::{ParseDeclItem, Parser};
+use core::fmt;
 
 use crate::{
     ast::{AliasDecl, Keyword, OuterAttr, Type, Visibility},
     error::ErrorsEmitted,
+    parser::{ParseDeclItem, Parser},
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseDeclItem for AliasDecl {
     fn parse(

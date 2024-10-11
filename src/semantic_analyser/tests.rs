@@ -1,10 +1,10 @@
-use super::*;
-
 use crate::{
     ast::{Identifier, ModuleItem, TypePath, Visibility},
     logger::LogLevel,
     parser::{self, Program},
 };
+
+use super::*;
 
 fn setup(
     input: &str,
@@ -48,13 +48,12 @@ fn analyse_closure() -> Result<(), ()> {
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
 #[test]
-#[should_panic]
-fn analyse_constant_reassign() {
+fn analyse_constant_reassign() -> Result<(), ()> {
     let input = r#"
     #[storage]
     const ADDRESS: h160 = $0x12345_12345_12345_12345_12345_12345_12345_12345;
@@ -64,8 +63,16 @@ fn analyse_constant_reassign() {
         .expect("unable to set up semantic analyser");
 
     match analyser.analyse_program(&program) {
-        Ok(_) => (),
-        Err(_) => panic!("{:#?}", analyser.logger.messages()),
+        Ok(_) => Err(println!("expected `SemanticErrorKind::ConstantReassignment` error, but test was successful")),
+        Err(errs) => match errs.last() {
+            Some(err) => match err.error_kind() {
+                SemanticErrorKind::ConstantReassignment { .. } => Ok(println!("test failed correctly with error: {err:#?}")),
+
+                err => Err(println!("test failed with unexpected error. Expected `SemanticErrorKind::ConstantReassignment` error, found `{err}`"))
+            },
+
+            _ => Err(println!("test failed, but no errors detected. Expected `SemanticErrorKind::ConstantReassignment` error, found none"))
+        },
     }
 }
 
@@ -79,7 +86,7 @@ fn analyse_control_flow() -> Result<(), ()> {
                 match x {
                     ..=0 => false,
                     1..9 => false,
-                    _ if (x + 1) == 10 => false,
+                    _ if x + 1 == 10 => false,
                     10 => false,
                     _ => true,
                 } 
@@ -97,11 +104,11 @@ fn analyse_control_flow() -> Result<(), ()> {
         }
     "#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)?;
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -113,7 +120,7 @@ fn analyse_enum_variants() -> Result<(), ()> {
             TupleStructError(str),
             StructError {
                 expected: str,
-                found:  str
+                found:  str         
             }
         }
 
@@ -126,11 +133,11 @@ fn analyse_enum_variants() -> Result<(), ()> {
         }
     "#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, true, None)?;
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -144,21 +151,18 @@ fn analyse_impl() -> Result<(), ()> {
             const CONTRACT_ADDRESS: h160;
             const CREATOR_ADDRESS: h160;
     
-            pub func address() -> h160;
-            pub func balance(&self) -> u256;
-            pub func msg_sender() -> h160;
-            pub func creator_address() -> h160;
+            func address() -> h160;
+            func balance(&self) -> u256;
+            func msg_sender() -> h160;
+            func creator_address() -> h160;
         }
 
         trait ERC20 {
             #![interface]
 
             func approve(&self, spender: h160, amount: u256) -> Result<(), ()>;
-
             func transfer(&mut self, from: h160, to: h160, amount: u256) -> Result<(), ()>;
-
             func mint(&mut self, to: h160, amount: u256) -> Result<(), ()>;
-
             func burn(&mut self, from: h160, amount: u256) -> Result<(), ()>;
         }
     }
@@ -234,11 +238,11 @@ fn analyse_impl() -> Result<(), ()> {
         }
     }"#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)?;
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -274,7 +278,7 @@ fn analyse_import_decl() -> Result<(), ()> {
     };
 
     let external_func_path = TypePath {
-        associated_type_path_prefix_opt: Some(vec![external_mod_path.clone().into()]),
+        associated_type_path_prefix_opt: Some(vec![external_mod_path.to_identifier()]),
         type_name: external_func.function_name.clone(),
     };
 
@@ -344,11 +348,11 @@ fn analyse_import_decl() -> Result<(), ()> {
     }
     "#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, Some(external_code))?;
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, Some(external_code))?;
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -366,7 +370,7 @@ fn analyse_let_stmt() -> Result<(), ()> {
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -418,12 +422,12 @@ fn analyse_method_call() -> Result<(), ()> {
         return;
     }"#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)
         .expect("unable to set up semantic analyser");
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -457,11 +461,11 @@ fn analyse_struct() -> Result<(), ()> {
         foo.c - (1_000 as u256)
     }"#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)?;
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }
 
@@ -484,6 +488,6 @@ fn analyse_trait_def() -> Result<(), ()> {
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
-        Err(e) => Err(println!("{:#?}", e)),
+        Err(e) => Err(println!("{e:#?}")),
     }
 }

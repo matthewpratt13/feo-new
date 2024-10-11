@@ -4,26 +4,24 @@
 //! within those nodes. The primary nodes are `Expression`, `Item` and `Statement`.
 
 mod expression;
-pub(crate) use expression::*;
-
 mod item;
-pub(crate) use item::*;
-
 mod pattern;
-pub(crate) use pattern::*;
-
 mod statement;
-pub(crate) use statement::*;
-
 mod types;
-pub(crate) use types::*;
+
+use core::fmt;
 
 use crate::{
     error::ParserErrorKind,
+    semantic_analyser::{FormatObject, ToExpression},
     span::{Position, Span, Spanned},
 };
 
-use core::fmt;
+pub(crate) use self::expression::*;
+pub(crate) use self::item::*;
+pub(crate) use self::pattern::*;
+pub(crate) use self::statement::*;
+pub(crate) use self::types::*;
 
 ///////////////////////////////////////////////////////////////////////////
 // LITERAL
@@ -111,11 +109,7 @@ impl Identifier {
     }
 }
 
-impl From<TypePath> for Identifier {
-    fn from(value: TypePath) -> Self {
-        Identifier::from(&value.to_string())
-    }
-}
+impl FormatObject for Identifier {}
 
 impl From<&str> for Identifier {
     fn from(value: &str) -> Self {
@@ -485,6 +479,8 @@ pub(crate) enum Expression {
     ResultExpr(ResultExpr),
 }
 
+impl FormatObject for Expression {}
+
 impl From<ValueExpr> for Expression {
     fn from(value: ValueExpr) -> Self {
         match value {
@@ -521,6 +517,8 @@ impl From<ValueExpr> for Expression {
         }
     }
 }
+
+impl ToExpression for AssigneeExpr {}
 
 impl From<AssigneeExpr> for Expression {
     fn from(value: AssigneeExpr) -> Self {
@@ -661,6 +659,8 @@ pub(crate) enum ValueExpr {
     ResultExpr(ResultExpr),
 }
 
+impl ToExpression for ValueExpr {}
+
 impl Spanned for ValueExpr {
     fn span(&self) -> Span {
         match self.clone() {
@@ -737,7 +737,7 @@ impl TryFrom<Expression> for ValueExpr {
             Expression::ResultExpr(r) => Ok(ValueExpr::ResultExpr(r)),
             _ => Err(ParserErrorKind::UnexpectedExpression {
                 expected: "value expression".to_string(),
-                found: format!("`{value}`"),
+                found: value.to_backtick_string(),
             }),
         }
     }
@@ -857,14 +857,21 @@ impl TryFrom<Expression> for AssigneeExpr {
             Expression::Index(i) => Ok(AssigneeExpr::IndexExpr(i)),
             Expression::TupleIndex(ti) => Ok(AssigneeExpr::TupleIndexExpr(ti)),
             Expression::Reference(r) => Ok(AssigneeExpr::ReferenceExpr(r)),
+            // `ReferenceExpr` is a placeholder `AssigneeExpr` where there is no equivalent
             Expression::Binary(b) => Ok(AssigneeExpr::ReferenceExpr(ReferenceExpr {
-                reference_op: ReferenceOp::Borrow,
-                expression: Box::new(Expression::Binary(b.clone())),
+                reference_op: ReferenceOp::default(),
+                expression: Box::new(Expression::Grouped(GroupedExpr {
+                    inner_expression: Box::new(Expression::Binary(b.clone())),
+                    span: b.span.clone(),
+                })),
                 span: b.span,
             })),
             Expression::Comparison(c) => Ok(AssigneeExpr::ReferenceExpr(ReferenceExpr {
-                reference_op: ReferenceOp::Borrow,
-                expression: Box::new(Expression::Comparison(c.clone())),
+                reference_op: ReferenceOp::default(),
+                expression: Box::new(Expression::Grouped(GroupedExpr {
+                    inner_expression: Box::new(Expression::Comparison(c.clone())),
+                    span: c.span.clone(),
+                })),
                 span: c.span,
             })),
             Expression::Grouped(g) => {
@@ -956,7 +963,7 @@ impl TryFrom<Expression> for AssigneeExpr {
 
             _ => Err(ParserErrorKind::UnexpectedExpression {
                 expected: "assignee expression".to_string(),
-                found: format!("{value}"),
+                found: value.to_backtick_string(),
             }),
         }
     }
@@ -1047,28 +1054,28 @@ pub(crate) enum Item {
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) enum Type {
     // primitives
-    I32(Int),
-    I64(Int),
-    U8(UInt),
-    U16(UInt),
-    U32(UInt),
-    U64(UInt),
-    U256(BigUInt),
-    U512(BigUInt),
-    F32(Float),
-    F64(Float),
-    Byte(Byte),
-    B2(Bytes),
-    B4(Bytes),
-    B8(Bytes),
-    B16(Bytes),
-    B32(Bytes),
-    H160(Hash),
-    H256(Hash),
-    H512(Hash),
-    Str(Str),
-    Char(Char),
-    Bool(Bool),
+    I32,
+    I64,
+    U8,
+    U16,
+    U32,
+    U64,
+    U256,
+    U512,
+    F32,
+    F64,
+    Byte,
+    B2,
+    B4,
+    B8,
+    B16,
+    B32,
+    H160,
+    H256,
+    H512,
+    Str,
+    Char,
+    Bool,
 
     UnitType(UnitType), // ()
 

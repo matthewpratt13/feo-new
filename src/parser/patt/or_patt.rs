@@ -1,7 +1,7 @@
 use crate::{
     ast::{Delimiter, OrPatt, Pattern},
     error::ErrorsEmitted,
-    parser::{collection, Parser},
+    parser::{get_collection, Parser},
     token::{Token, TokenType},
 };
 
@@ -22,8 +22,7 @@ impl OrPatt {
             }
         };
 
-        let subsequent_patterns_opt =
-            collection::get_collection(parser, parse_pattern, &first_pipe)?;
+        let subsequent_patterns_opt = get_collection(parser, parse_pattern, &first_pipe)?;
 
         Ok(OrPatt {
             first_pattern,
@@ -54,11 +53,9 @@ mod tests {
 
         let mut parser = test_utils::get_parser(input, LogLevel::Debug, false);
 
-        let pattern = parser.parse_pattern();
-
-        match pattern {
+        match parser.parse_pattern() {
             Ok(p) => Ok(println!("{:#?}", p)),
-            Err(_) => Err(println!("{:#?}", parser.logger.messages())),
+            Err(_) => Err(println!("{:#?}", parser.errors)),
         }
     }
 }

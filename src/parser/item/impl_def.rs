@@ -1,7 +1,4 @@
-use super::{
-    collection, parse_generic_params, parse_where_clause, ParseAssociatedItem, ParseDeclItem,
-    ParseDefItem, Parser,
-};
+use core::fmt;
 
 use crate::{
     ast::{
@@ -10,10 +7,11 @@ use crate::{
     },
     error::{ErrorsEmitted, ParserErrorKind},
     log_warn,
+    parser::{get_associated_items, ParseAssociatedItem, ParseDeclItem, ParseDefItem, Parser},
     token::{Token, TokenType},
 };
 
-use core::fmt;
+use super::{parse_generic_params, parse_where_clause};
 
 impl ParseDefItem for InherentImplDef {
     fn parse(
@@ -70,7 +68,7 @@ impl ParseDefItem for InherentImplDef {
 
         parser.expect_open_brace()?;
 
-        let associated_items_opt = collection::get_associated_items::<InherentImplItem>(parser)?;
+        let associated_items_opt = get_associated_items::<InherentImplItem>(parser)?;
 
         let span = parser.get_braced_item_span(first_token.as_ref())?;
 
@@ -172,7 +170,7 @@ impl ParseDefItem for TraitImplDef {
 
         parser.expect_open_brace()?;
 
-        let associated_items_opt = collection::get_associated_items::<TraitImplItem>(parser)?;
+        let associated_items_opt = get_associated_items::<TraitImplItem>(parser)?;
 
         let span = parser.get_braced_item_span(first_token.as_ref())?;
 

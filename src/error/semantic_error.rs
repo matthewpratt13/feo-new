@@ -1,7 +1,7 @@
-use crate::ast::{Identifier, Keyword, ReferenceOp, Type};
-
 use core::fmt;
 use std::error::Error;
+
+use crate::ast::{Identifier, Keyword, ReferenceOp, Type};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {
@@ -11,7 +11,7 @@ pub enum SemanticErrorKind {
     },
 
     ConstantReassignment {
-        name: Identifier,
+        constant_name: Identifier,
     },
 
     FuncArgCountMismatch {
@@ -34,9 +34,10 @@ pub enum SemanticErrorKind {
         expected: String,
     },
 
-    // MissingValue {
-    //     expected: String,
-    // },
+    MissingItem {
+        expected: String,
+    },
+    
     ModuleErrors {
         name: Identifier,
     },
@@ -239,7 +240,7 @@ pub enum SemanticErrorKind {
     },
 
     UnexpectedStructField {
-        field_name: Identifier,
+        struct_name: Identifier,
         found: Identifier,
     },
 
@@ -264,7 +265,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ArrayLengthMismatch { expected, found } => {
                 write!(f, "array length mismatch. Expected {expected} elements, found {found}")
             }
-            SemanticErrorKind::ConstantReassignment { name } => {
+            SemanticErrorKind::ConstantReassignment { constant_name: name } => {
                 write!(f, "cannot reassign constant `{name}`")
             }
             SemanticErrorKind::FuncArgCountMismatch { function_path,  expected, found } => {
@@ -284,9 +285,9 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::MissingStructField { expected } => {
                 write!(f, "struct field not found. Expected {expected}, found none")
             }
-            // SemanticErrorKind::MissingValue { expected } => {
-            //     write!(f, "value not found. Expected {expected}, found none")
-            // }
+            SemanticErrorKind::MissingItem { expected } => {
+                write!(f, "item not found. Expected {expected}, found none")
+            }
             SemanticErrorKind::ModuleErrors { name } => {
                 write!(f, "detected errors in module `{name}`")
             }
@@ -421,7 +422,7 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::UnexpectedReturnType { found } => write!(f, "unexpected return type. Did not expected a return type, but found `{found}`"),
 
-            SemanticErrorKind::UnexpectedStructField { field_name: name, found } => write!(f, "unexpected field in struct `{name}`: `{found}`"),
+            SemanticErrorKind::UnexpectedStructField { struct_name: name, found } => write!(f, "unexpected field in struct `{name}`: `{found}`"),
 
             SemanticErrorKind::UnexpectedSymbol { name, expected, found } => write!(f, "unexpected symbol for `{name}`. Expected {expected}, found {found}"),
 

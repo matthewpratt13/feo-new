@@ -1,11 +1,11 @@
+use core::fmt;
+
 use crate::{
     ast::{Delimiter, MappingExpr, MappingPair},
     error::ErrorsEmitted,
-    parser::{collection, ParseConstructExpr, Parser, Precedence},
+    parser::{get_collection, ParseConstructExpr, Parser, Precedence},
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseConstructExpr for MappingExpr {
     fn parse(parser: &mut Parser) -> Result<MappingExpr, ErrorsEmitted> {
@@ -23,7 +23,7 @@ impl ParseConstructExpr for MappingExpr {
             }
         }?;
 
-        let pairs_opt = collection::get_collection(parser, parse_mapping_pair, &open_brace)?;
+        let pairs_opt = get_collection(parser, parse_mapping_pair, &open_brace)?;
 
         let span = parser.get_braced_item_span(first_token.as_ref())?;
 

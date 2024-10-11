@@ -1,13 +1,13 @@
-use super::Parser;
+use core::fmt;
 
 use crate::{
     ast::{Identifier, PathExpr, PathPatt, PathRoot, PathSegment, SelfType, Type, TypePath},
     error::ErrorsEmitted,
     log_trace,
+    parser::Parser,
+    semantic_analyser::{FormatObject, ToIdentifier},
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl TypePath {
     pub(crate) fn parse(
@@ -104,6 +104,14 @@ impl TypePath {
         Ok(path_type)
     }
 
+    pub(crate) fn strip_suffix(&mut self) -> TypePath {
+        if let Some(ids) = &self.associated_type_path_prefix_opt {
+            TypePath::from(ids.clone())
+        } else {
+            self.to_owned()
+        }
+    }
+
     pub(crate) fn join(&self, item_path: TypePath) -> TypePath {
         if let Some(prefix) = &self.associated_type_path_prefix_opt {
             let mut path = prefix.to_vec();
@@ -170,11 +178,11 @@ impl TypePath {
             }
         }
     }
-
-    pub(crate) fn to_identifier(&self) -> Identifier {
-        self.clone().into()
-    }
 }
+
+impl FormatObject for TypePath {}
+
+impl ToIdentifier for TypePath {}
 
 impl From<PathExpr> for TypePath {
     fn from(value: PathExpr) -> Self {
@@ -267,17 +275,22 @@ impl From<Type> for TypePath {
     fn from(value: Type) -> Self {
         match value {
             Type::UserDefined(p) => p,
-            t => TypePath::from(Identifier::from(&t.to_string())),
+            t => t.to_identifier().to_type_path(),
         }
     }
 }
 
 impl From<Identifier> for TypePath {
     fn from(value: Identifier) -> Self {
-        TypePath {
-            associated_type_path_prefix_opt: None,
-            type_name: value,
-        }
+        let path_segments = value
+            .to_string()
+            .split("::")
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|seg| Identifier::from(seg))
+            .collect::<Vec<_>>();
+
+        TypePath::from(path_segments)
     }
 }
 

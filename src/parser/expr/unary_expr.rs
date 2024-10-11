@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{DereferenceExpr, DereferenceOp, ReferenceExpr, ReferenceOp, UnaryExpr, UnaryOp},
     error::ErrorsEmitted,
@@ -5,8 +7,6 @@ use crate::{
     span::Spanned,
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 /// Parse a unary operation, specifically NOT (`!`) and negate (`-`), based on the input operator.
 impl ParseSimpleExpr for UnaryExpr {

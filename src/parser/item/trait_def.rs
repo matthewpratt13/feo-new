@@ -1,7 +1,4 @@
-use super::{
-    collection, parse_generic_params, parse_where_clause, ParseAssociatedItem, ParseDeclItem,
-    ParseDefItem,
-};
+use core::fmt;
 
 use crate::{
     ast::{
@@ -9,11 +6,14 @@ use crate::{
         TraitDefItem, Visibility,
     },
     error::{ErrorsEmitted, ParserErrorKind},
-    parser::Parser,
+    parser::{
+        get_associated_items, get_attributes, ParseAssociatedItem, ParseDeclItem, ParseDefItem,
+        Parser,
+    },
     token::{Token, TokenType},
 };
 
-use core::fmt;
+use super::{parse_generic_params, parse_where_clause};
 
 impl ParseDefItem for TraitDef {
     fn parse(
@@ -39,9 +39,9 @@ impl ParseDefItem for TraitDef {
 
         parser.expect_open_brace()?;
 
-        let inner_attributes_opt = collection::get_attributes(parser, InnerAttr::inner_attr);
+        let inner_attributes_opt = get_attributes(parser, InnerAttr::inner_attr);
 
-        let trait_items_opt = collection::get_associated_items::<TraitDefItem>(parser)?;
+        let trait_items_opt = get_associated_items::<TraitDefItem>(parser)?;
 
         let span = parser.get_braced_item_span(first_token.as_ref())?;
 

@@ -1,7 +1,7 @@
-use crate::token::{Token, TokenType};
-
 use core::{char::DecodeUtf16Error, fmt};
 use std::error::Error;
+
+use crate::token::{Token, TokenType};
 
 /// Enum representing the different types of parsing errors.
 /// Used in conjunction with `CompilerError` to keep track of errors encountered

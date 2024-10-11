@@ -1,16 +1,16 @@
-use super::{parse_generic_params, ParseDefItem};
+use core::fmt;
 
 use crate::{
     ast::{
-        EnumDef, EnumVariant, EnumVariantStruct, EnumVariantTupleStruct, EnumVariantKind, Keyword,
-        OuterAttr, StructDefField, Type, Visibility,
+        EnumDef, EnumVariant, EnumVariantKind, EnumVariantStruct, EnumVariantTupleStruct,
+        Identifier, Keyword, OuterAttr, StructDefField, Type, TypePath, Visibility,
     },
     error::ErrorsEmitted,
-    parser::{collection, Parser},
+    parser::{get_attributes, get_collection, ParseDefItem, Parser},
     token::{Token, TokenType},
 };
 
-use core::fmt;
+use super::parse_generic_params;
 
 impl ParseDefItem for EnumDef {
     fn parse(
@@ -34,7 +34,7 @@ impl ParseDefItem for EnumDef {
 
         parser.expect_open_brace()?;
 
-        let variants = parse_enum_variants(parser)?;
+        let variants = parse_enum_variants(parser, enum_name.clone())?;
 
         let span = parser.get_braced_item_span(first_token.as_ref())?;
 
@@ -61,16 +61,19 @@ impl fmt::Debug for EnumDef {
     }
 }
 
-fn parse_enum_variants(parser: &mut Parser) -> Result<Vec<EnumVariant>, ErrorsEmitted> {
+fn parse_enum_variants(
+    parser: &mut Parser,
+    enum_name: Identifier,
+) -> Result<Vec<EnumVariant>, ErrorsEmitted> {
     let mut variants: Vec<EnumVariant> = Vec::new();
 
     while !matches!(
         parser.current_token(),
         Some(Token::RBrace { .. } | Token::EOF)
     ) {
-        let attributes_opt = collection::get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
+        let attributes_opt = get_attributes::<OuterAttr>(parser, OuterAttr::outer_attr);
 
-        let variant = parse_enum_variant(parser, attributes_opt)?;
+        let variant = parse_enum_variant(parser, attributes_opt, enum_name.clone())?;
         variants.push(variant);
 
         if let Some(Token::Comma { .. }) = parser.current_token() {
@@ -90,43 +93,45 @@ fn parse_enum_variants(parser: &mut Parser) -> Result<Vec<EnumVariant>, ErrorsEm
 fn parse_enum_variant(
     parser: &mut Parser,
     attributes_opt: Option<Vec<OuterAttr>>,
+    enum_name: Identifier,
 ) -> Result<EnumVariant, ErrorsEmitted> {
     let visibility = Visibility::visibility(parser)?;
 
     let variant_name = parser.expect_identifier("enum variant name")?;
 
-    let variant_type_opt = match parser.current_token() {
+    let variant_path = TypePath::from(vec![enum_name, variant_name.clone()]);
+
+    let variant_kind = match parser.current_token() {
         Some(Token::LBrace { .. }) => {
             let variant_struct = parse_enum_variant_struct(parser)?;
-            Some(EnumVariantKind::Struct(variant_struct))
+            EnumVariantKind::Struct(variant_struct)
         }
         Some(Token::LParen { .. }) => {
             let variant_tuple = parse_enum_variant_tuple(parser)?;
-            Some(EnumVariantKind::TupleStruct(variant_tuple))
+            EnumVariantKind::TupleStruct(variant_tuple)
         }
-        _ => None,
+        _ => EnumVariantKind::Standard,
     };
 
     Ok(EnumVariant {
+        variant_path,
         attributes_opt,
         visibility,
-        variant_name,
-        variant_type_opt,
+        variant_kind,
     })
 }
 
 fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, ErrorsEmitted> {
     let open_brace = parser.expect_open_brace()?;
 
-    let struct_fields = if let Some(sdf) =
-        collection::get_collection(parser, StructDefField::parse, &open_brace)?
-    {
-        Ok(sdf)
-    } else {
-        parser.emit_missing_node("identifier", "struct field");
-        parser.next_token();
-        Err(ErrorsEmitted)
-    }?;
+    let struct_fields =
+        if let Some(sdf) = get_collection(parser, StructDefField::parse, &open_brace)? {
+            Ok(sdf)
+        } else {
+            parser.emit_missing_node("identifier", "struct field");
+            parser.next_token();
+            Err(ErrorsEmitted)
+        }?;
 
     let _ = parser.get_braced_item_span(None);
 
@@ -136,14 +141,13 @@ fn parse_enum_variant_struct(parser: &mut Parser) -> Result<EnumVariantStruct, E
 fn parse_enum_variant_tuple(parser: &mut Parser) -> Result<EnumVariantTupleStruct, ErrorsEmitted> {
     let open_paren = parser.expect_open_paren()?;
 
-    let element_types =
-        if let Some(t) = collection::get_collection(parser, Type::parse, &open_paren)? {
-            Ok(t)
-        } else {
-            parser.emit_missing_node("type", "tuple element type");
-            parser.next_token();
-            Err(ErrorsEmitted)
-        }?;
+    let element_types = if let Some(t) = get_collection(parser, Type::parse, &open_paren)? {
+        Ok(t)
+    } else {
+        parser.emit_missing_node("type", "tuple element type");
+        parser.next_token();
+        Err(ErrorsEmitted)
+    }?;
 
     let _ = parser.get_parenthesized_item_span(None);
 

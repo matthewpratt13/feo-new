@@ -1,7 +1,3 @@
-use fixed_hash::{construct_fixed_hash, impl_fixed_hash_conversions};
-use ordered_float::OrderedFloat;
-use uint::construct_uint;
-
 mod ast;
 mod error;
 mod keccak;
@@ -11,6 +7,10 @@ mod parser;
 mod semantic_analyser;
 mod span;
 mod token;
+
+use fixed_hash::{construct_fixed_hash, impl_fixed_hash_conversions};
+use ordered_float::OrderedFloat;
+use uint::construct_uint;
 
 pub type F32 = OrderedFloat<f32>;
 pub type F64 = OrderedFloat<f64>;

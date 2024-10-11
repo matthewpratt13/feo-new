@@ -1,15 +1,15 @@
+use core::fmt;
+
 use crate::{
     ast::{
         BlockExpr, ClosureExpr, ClosureParam, ClosureParams, Delimiter, Expression, IdentifierPatt,
         Type,
     },
     error::ErrorsEmitted,
-    parser::{collection, ParseConstructExpr, ParsePattern, Parser, Precedence},
+    parser::{get_collection, ParseConstructExpr, ParsePattern, Parser, Precedence},
     span::Spanned,
     token::{Token, TokenType},
 };
-
-use core::fmt;
 
 impl ParseConstructExpr for ClosureExpr {
     fn parse(parser: &mut Parser) -> Result<ClosureExpr, ErrorsEmitted> {
@@ -21,7 +21,7 @@ impl ParseConstructExpr for ClosureExpr {
                 let open_pipe = Delimiter::Pipe { position };
                 parser.next_token();
 
-                let vec_opt = collection::get_collection(parser, parse_closure_param, &open_pipe)?;
+                let vec_opt = get_collection(parser, parse_closure_param, &open_pipe)?;
 
                 match parser.current_token() {
                     Some(Token::Pipe { .. }) => {

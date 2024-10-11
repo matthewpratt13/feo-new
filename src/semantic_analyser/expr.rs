@@ -1,20 +1,21 @@
-use super::{patt::analyse_patt, symbol_table::ScopeKind, SemanticAnalyser};
+use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BigUInt, Bool, Byte, Bytes, Char, ClosureParams, Expression, Float, FunctionOrMethodParam,
+        BigUInt, Bytes, ClosureParams, EnumVariantKind, Expression, Float, FunctionOrMethodParam,
         FunctionParam, FunctionPtr, Hash, Identifier, Int, Keyword, Literal, PathExpr, PathRoot,
-        Pattern, Statement, Str, Type, TypePath, UInt, UnaryOp, UnitType,
+        Pattern, Statement, Type, TypePath, UInt, UnaryOp,
     },
     error::SemanticErrorKind,
-    log_warn,
+    log_trace, log_warn,
     semantic_analyser::symbol_table::Symbol,
     span::Spanned,
-    B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512,
 };
 
-use core::fmt;
-use std::collections::HashMap;
+use super::{
+    patt::analyse_patt, symbol_table::ScopeKind, FormatObject, SemanticAnalyser, ToExpression,
+    ToIdentifier,
+};
 
 // TODO: alphabetize match arms
 
@@ -31,8 +32,8 @@ pub(crate) fn analyse_expr(
                     if let Some(id) = segments.pop() {
                         let root = match &p.path_root {
                             PathRoot::Identifier(id) => id.to_type_path(),
-                            PathRoot::SelfKeyword => TypePath::from(Identifier::from("self")),
-                            PathRoot::SelfType(_) => TypePath::from(Identifier::from("Self")),
+                            PathRoot::SelfKeyword => Identifier::from("self").to_type_path(),
+                            PathRoot::SelfType(_) => Identifier::from("Self").to_type_path(),
 
                             path_root => {
                                 return Err(SemanticErrorKind::InvalidVariableIdentifier {
@@ -73,8 +74,33 @@ pub(crate) fn analyse_expr(
                 },
             };
 
-            if let Some(sym) = analyser.lookup(&path) {
-                Ok(sym.symbol_type())
+            if let Some(symbol) = analyser.lookup(&path).cloned() {
+                match &symbol {
+                    Symbol::Variable { name, var_type } => {
+                        if let Type::UserDefined(_) = var_type {
+                            let mut variable_type_path = name.to_type_path();
+
+                            let associated_type_path = &mut variable_type_path.strip_suffix();
+
+                            if let Some(sym) = analyser.lookup(associated_type_path) {
+                                match sym {
+                                    Symbol::Enum {
+                                        path: enum_path, ..
+                                    } => Ok(Type::UserDefined(enum_path.clone())),
+
+                                    _ => Ok(symbol.symbol_type()),
+                                }
+                            } else {
+                                Err(SemanticErrorKind::UndefinedType {
+                                    name: associated_type_path.to_identifier(),
+                                })
+                            }
+                        } else {
+                            Ok(symbol.symbol_type())
+                        }
+                    }
+                    _ => Ok(symbol.symbol_type()),
+                }
             } else {
                 Err(SemanticErrorKind::UndefinedVariable {
                     name: path.type_name,
@@ -84,43 +110,43 @@ pub(crate) fn analyse_expr(
 
         Expression::Literal(l) => match l {
             Literal::Int { value, .. } => match value {
-                Int::I32(_) => Ok(Type::I32(Int::I32(i32::default()))),
-                Int::I64(_) => Ok(Type::I64(Int::I64(i64::default()))),
+                Int::I32(_) => Ok(Type::I32),
+                Int::I64(_) => Ok(Type::I64),
             },
             Literal::UInt { value, .. } => match value {
-                UInt::U8(_) => Ok(Type::U8(UInt::U8(u8::default()))),
-                UInt::U16(_) => Ok(Type::U16(UInt::U16(u16::default()))),
-                UInt::U32(_) => Ok(Type::U32(UInt::U32(u32::default()))),
-                UInt::U64(_) => Ok(Type::U64(UInt::U64(u64::default()))),
+                UInt::U8(_) => Ok(Type::U8),
+                UInt::U16(_) => Ok(Type::U16),
+                UInt::U32(_) => Ok(Type::U32),
+                UInt::U64(_) => Ok(Type::U64),
             },
             Literal::BigUInt { value, .. } => match value {
-                BigUInt::U256(_) => Ok(Type::U256(BigUInt::U256(U256::default()))),
-                BigUInt::U512(_) => Ok(Type::U512(BigUInt::U512(U512::default()))),
+                BigUInt::U256(_) => Ok(Type::U256),
+                BigUInt::U512(_) => Ok(Type::U512),
             },
             Literal::Float { value, .. } => match value {
-                Float::F32(_) => Ok(Type::F32(Float::F32(F32::default()))),
-                Float::F64(_) => Ok(Type::F64(Float::F64(F64::default()))),
+                Float::F32(_) => Ok(Type::F32),
+                Float::F64(_) => Ok(Type::F64),
             },
-            Literal::Byte { .. } => Ok(Type::Byte(Byte::from(u8::default()))),
+            Literal::Byte { .. } => Ok(Type::Byte),
             Literal::Bytes { value, .. } => match value {
-                Bytes::B2(_) => Ok(Type::B2(Bytes::B2(B2::default()))),
-                Bytes::B4(_) => Ok(Type::B4(Bytes::B4(B4::default()))),
-                Bytes::B8(_) => Ok(Type::B8(Bytes::B8(B8::default()))),
-                Bytes::B16(_) => Ok(Type::B16(Bytes::B16(B16::default()))),
-                Bytes::B32(_) => Ok(Type::B32(Bytes::B32(B32::default()))),
+                Bytes::B2(_) => Ok(Type::B2),
+                Bytes::B4(_) => Ok(Type::B4),
+                Bytes::B8(_) => Ok(Type::B8),
+                Bytes::B16(_) => Ok(Type::B16),
+                Bytes::B32(_) => Ok(Type::B32),
             },
             Literal::Hash { value, .. } => match value {
-                Hash::H160(_) => Ok(Type::H160(Hash::H160(H160::default()))),
-                Hash::H256(_) => Ok(Type::H256(Hash::H256(H256::default()))),
-                Hash::H512(_) => Ok(Type::H512(Hash::H512(H512::default()))),
+                Hash::H160(_) => Ok(Type::H160),
+                Hash::H256(_) => Ok(Type::H256),
+                Hash::H512(_) => Ok(Type::H512),
             },
-            Literal::Str { .. } => Ok(Type::Str(Str::from(String::default().as_str()))),
-            Literal::Char { .. } => Ok(Type::Char(Char::from(char::default()))),
-            Literal::Bool { .. } => Ok(Type::Bool(Bool::from(bool::default()))),
+            Literal::Str { .. } => Ok(Type::Str),
+            Literal::Char { .. } => Ok(Type::Char),
+            Literal::Bool { .. } => Ok(Type::Bool),
         },
 
         Expression::MethodCall(mc) => {
-            let receiver = wrap_into_expression(*mc.receiver.clone());
+            let receiver = mc.receiver.to_expression();
             let receiver_type = analyse_expr(analyser, &receiver, root)?;
 
             // convert receiver expression to path expression (i.e., check if receiver
@@ -144,7 +170,7 @@ pub(crate) fn analyse_expr(
                     } else {
                         Err(SemanticErrorKind::TypeMismatchVariable {
                             var_id: receiver_path.type_name,
-                            expected: format!("`{path}`"),
+                            expected: path.to_backtick_string(),
                             found: receiver_type,
                         })
                     }
@@ -157,13 +183,13 @@ pub(crate) fn analyse_expr(
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: receiver_path.type_name,
                     expected: "struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }
 
         Expression::FieldAccess(fa) => {
-            let object = wrap_into_expression(*fa.object.clone());
+            let object = fa.object.to_expression();
 
             // convert object to path expression (i.e., check if object
             // is a valid path)
@@ -177,42 +203,38 @@ pub(crate) fn analyse_expr(
                     Some(fields) => match fields.iter().find(|f| f.field_name == fa.field_name) {
                         Some(sdf) => Ok(*sdf.field_type.clone()),
                         _ => Err(SemanticErrorKind::UndefinedField {
-                            struct_path: Identifier::from(object_path),
+                            struct_path: object_path.to_identifier(),
                             field_name: fa.field_name.clone(),
                         }),
                     },
-                    _ => Ok(Type::UnitType(UnitType)),
+                    _ => Ok(Type::UNIT_TYPE),
                 },
 
                 None => Err(SemanticErrorKind::UndefinedType {
-                    name: Identifier::from(&object_type.to_string()),
+                    name: object_type.to_identifier(),
                 }),
 
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                    name: Identifier::from(&object_type.to_string()),
+                    name: object_type.to_identifier(),
                     expected: "struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }
 
-        Expression::Call(c) => {
-            let callee = wrap_into_expression(c.callee.clone());
-
-            analyse_call_or_method_call_expr(
-                analyser,
-                TypePath::from(PathExpr::from(callee)),
-                c.args_opt.clone(),
-            )
-        }
+        Expression::Call(c) => analyse_call_or_method_call_expr(
+            analyser,
+            TypePath::from(PathExpr::from(c.callee.to_expression())),
+            c.args_opt.clone(),
+        ),
 
         Expression::Index(i) => {
-            let array_type = analyse_expr(analyser, &wrap_into_expression(*i.array.clone()), root)?;
+            let array_type = analyse_expr(analyser, &i.array.to_expression(), root)?;
 
-            let index_type = analyse_expr(analyser, &wrap_into_expression(*i.index.clone()), root)?;
+            let index_type = analyse_expr(analyser, &i.index.to_expression(), root)?;
 
             match &index_type {
-                Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_) => (),
+                Type::U8 | Type::U16 | Type::U32 | Type::U64 => (),
 
                 _ => {
                     return Err(SemanticErrorKind::UnexpectedType {
@@ -232,8 +254,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::TupleIndex(ti) => {
-            let tuple_type =
-                analyse_expr(analyser, &wrap_into_expression(*ti.tuple.clone()), root)?;
+            let tuple_type = analyse_expr(analyser, &ti.tuple.to_expression(), root)?;
 
             match tuple_type {
                 Type::Tuple(elem_types) => {
@@ -253,7 +274,7 @@ pub(crate) fn analyse_expr(
                         _ => Err(SemanticErrorKind::UnexpectedSymbol {
                             name: tp.type_name,
                             expected: "tuple struct".to_string(),
-                            found: format!("`{sym}`"),
+                            found: sym.to_backtick_string(),
                         }),
                     },
                     None => Err(SemanticErrorKind::UndefinedType { name: tp.type_name }),
@@ -265,33 +286,30 @@ pub(crate) fn analyse_expr(
             }
         }
 
-        Expression::Unwrap(u) => {
-            analyse_expr(analyser, &wrap_into_expression(*u.value_expr.clone()), root)
-        }
+        Expression::Unwrap(u) => analyse_expr(analyser, &u.value_expr.to_expression(), root),
 
         Expression::Unary(u) => {
-            let expr_type =
-                analyse_expr(analyser, &wrap_into_expression(*u.value_expr.clone()), root)?;
+            let expr_type = analyse_expr(analyser, &u.value_expr.to_expression(), root)?;
 
             match u.unary_op {
                 UnaryOp::Negate => match &expr_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::F32(_)
-                    | Type::F64(_) => Ok(expr_type),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64 => Ok(expr_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "numeric value".to_string(),
                         found: expr_type,
                     }),
                 },
                 UnaryOp::Not => match &expr_type {
-                    Type::Bool(_) => Ok(expr_type),
+                    Type::Bool => Ok(expr_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "boolean".to_string(),
                         found: expr_type,
@@ -311,11 +329,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::Dereference(d) => {
-            match analyse_expr(
-                analyser,
-                &wrap_into_expression(d.assignee_expr.clone()),
-                root,
-            ) {
+            match analyse_expr(analyser, &d.assignee_expr.to_expression(), root) {
                 Ok(Type::Reference { inner_type, .. }) => Ok(*inner_type),
                 Ok(ty) => Ok(ty),
                 Err(e) => Err(e),
@@ -323,80 +337,74 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::TypeCast(tc) => {
-            let value_type =
-                analyse_expr(analyser, &wrap_into_expression(*tc.value.clone()), root)?;
+            let value_type = analyse_expr(analyser, &tc.value.to_expression(), root)?;
 
             let new_type = *tc.new_type.clone();
 
             match (&value_type, &new_type) {
                 (
-                    Type::I32(_) | Type::I64(_),
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::F32(_)
-                    | Type::F64(_),
+                    Type::I32 | Type::I64,
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64,
                 )
                 | (
-                    Type::U8(_) | Type::Byte(_),
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::F32(_)
-                    | Type::F64(_)
-                    | Type::Byte(_)
-                    | Type::Char(_),
+                    Type::U8 | Type::Byte,
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64
+                    | Type::Byte
+                    | Type::Char,
                 )
                 | (
-                    Type::U16(_) | Type::U32(_),
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::F32(_)
-                    | Type::F64(_)
-                    | Type::Char(_),
+                    Type::U16 | Type::U32,
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64
+                    | Type::Char,
                 )
                 | (
-                    Type::U64(_),
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_)
-                    | Type::F32(_)
-                    | Type::F64(_),
+                    Type::U64,
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512
+                    | Type::F32
+                    | Type::F64,
                 )
-                | (Type::U256(_) | Type::U512(_), Type::U256(_) | Type::U512(_))
-                | (Type::F32(_) | Type::F64(_), Type::F32(_) | Type::F64(_))
+                | (Type::U256 | Type::U512, Type::U256 | Type::U512)
+                | (Type::F32 | Type::F64, Type::F32 | Type::F64)
                 | (
-                    Type::B2(_) | Type::B4(_) | Type::B16(_) | Type::B32(_),
-                    Type::B2(_) | Type::B4(_) | Type::B16(_) | Type::B32(_),
+                    Type::B2 | Type::B4 | Type::B16 | Type::B32,
+                    Type::B2 | Type::B4 | Type::B16 | Type::B32,
                 )
-                | (
-                    Type::H160(_) | Type::H256(_) | Type::H512(_),
-                    Type::H160(_) | Type::H256(_) | Type::H512(_),
-                )
-                | (Type::Char(_), Type::U8(_) | Type::U16(_) | Type::U32(_) | Type::U64(_)) => {
-                    Ok(new_type)
-                }
+                | (Type::H160 | Type::H256 | Type::H512, Type::H160 | Type::H256 | Type::H512)
+                | (Type::Char, Type::U8 | Type::U16 | Type::U32 | Type::U64) => Ok(new_type),
                 (t, u) => Err(SemanticErrorKind::TypeCastError {
                     from: t.clone(),
                     to: u.clone(),
@@ -405,33 +413,29 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::Binary(b) => {
-            let lhs_type = analyse_expr(analyser, &wrap_into_expression(*b.lhs.clone()), root)?;
+            let lhs_type = analyse_expr(analyser, &b.lhs.to_expression(), root)?;
 
-            let mut rhs_type = analyse_expr(analyser, &wrap_into_expression(*b.rhs.clone()), root)?;
+            let mut rhs_type = analyse_expr(analyser, &b.rhs.to_expression(), root)?;
 
-            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                scope.symbols.to_owned()
-            } else {
-                HashMap::new()
-            };
-
-            analyser.check_types(&mut symbol_table, &lhs_type, &mut rhs_type)?;
+            analyser.check_types(
+                &mut analyser.current_symbol_table(),
+                &lhs_type,
+                &mut rhs_type,
+            )?;
 
             Ok(rhs_type)
         }
 
         Expression::Comparison(c) => {
-            let lhs_type = analyse_expr(analyser, &wrap_into_expression(c.lhs.clone()), root)?;
+            let lhs_type = analyse_expr(analyser, &c.lhs.to_expression(), root)?;
 
-            let mut rhs_type = analyse_expr(analyser, &wrap_into_expression(c.rhs.clone()), root)?;
+            let mut rhs_type = analyse_expr(analyser, &c.rhs.to_expression(), root)?;
 
-            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                scope.symbols.to_owned()
-            } else {
-                HashMap::new()
-            };
-
-            analyser.check_types(&mut symbol_table, &lhs_type, &mut rhs_type)?;
+            analyser.check_types(
+                &mut analyser.current_symbol_table(),
+                &lhs_type,
+                &mut rhs_type,
+            )?;
 
             Ok(rhs_type)
         }
@@ -439,19 +443,19 @@ pub(crate) fn analyse_expr(
         Expression::Grouped(g) => analyse_expr(analyser, &g.inner_expression, root),
 
         Expression::Range(r) => match (&r.from_expr_opt, &r.to_expr_opt) {
-            (None, None) => Ok(Type::UnitType(UnitType)),
+            (None, None) => Ok(Type::UNIT_TYPE),
             (None, Some(to)) => {
-                let to_type = analyse_expr(analyser, &wrap_into_expression(*to.clone()), root)?;
+                let to_type = analyse_expr(analyser, &to.to_expression(), root)?;
 
                 match to_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_) => Ok(to_type),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512 => Ok(to_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "numeric type".to_string(),
                         found: to_type,
@@ -459,17 +463,17 @@ pub(crate) fn analyse_expr(
                 }
             }
             (Some(from), None) => {
-                let from_type = analyse_expr(analyser, &wrap_into_expression(*from.clone()), root)?;
+                let from_type = analyse_expr(analyser, &from.to_expression(), root)?;
 
                 match &from_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_) => Ok(from_type),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512 => Ok(from_type),
                     _ => Err(SemanticErrorKind::UnexpectedType {
                         expected: "numeric type".to_string(),
                         found: from_type,
@@ -477,17 +481,17 @@ pub(crate) fn analyse_expr(
                 }
             }
             (Some(from), Some(to)) => {
-                let from_type = analyse_expr(analyser, &wrap_into_expression(*from.clone()), root)?;
+                let from_type = analyse_expr(analyser, &from.to_expression(), root)?;
 
                 match &from_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_) => (),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512 => (),
                     _ => {
                         return Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type".to_string(),
@@ -496,17 +500,17 @@ pub(crate) fn analyse_expr(
                     }
                 }
 
-                let to_type = analyse_expr(analyser, &wrap_into_expression(*to.clone()), root)?;
+                let to_type = analyse_expr(analyser, &to.to_expression(), root)?;
 
                 match &to_type {
-                    Type::I32(_)
-                    | Type::I64(_)
-                    | Type::U8(_)
-                    | Type::U16(_)
-                    | Type::U32(_)
-                    | Type::U64(_)
-                    | Type::U256(_)
-                    | Type::U512(_) => (),
+                    Type::I32
+                    | Type::I64
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U256
+                    | Type::U512 => (),
                     _ => {
                         return Err(SemanticErrorKind::UnexpectedType {
                             expected: "numeric type".to_string(),
@@ -527,19 +531,16 @@ pub(crate) fn analyse_expr(
         },
 
         Expression::Assignment(a) => {
-            let assignee = wrap_into_expression(a.lhs.clone());
+            let assignee = a.lhs.to_expression();
             let assignee_type = analyse_expr(analyser, &assignee, root)?;
 
-            let mut value_type =
-                analyse_expr(analyser, &wrap_into_expression(a.rhs.clone()), root)?;
+            let mut value_type = analyse_expr(analyser, &a.rhs.to_expression(), root)?;
 
-            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                scope.symbols.to_owned()
-            } else {
-                HashMap::new()
-            };
-
-            analyser.check_types(&mut symbol_table, &assignee_type, &mut value_type)?;
+            analyser.check_types(
+                &mut analyser.current_symbol_table(),
+                &assignee_type,
+                &mut value_type,
+            )?;
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
@@ -552,20 +553,18 @@ pub(crate) fn analyse_expr(
                     } else {
                         Err(SemanticErrorKind::TypeMismatchVariable {
                             var_id: assignee_path.type_name,
-                            expected: format!("`{assignee_type}`"),
+                            expected: assignee_type.to_backtick_string(),
                             found: var_type,
                         })
                     }
                 }
                 Some(Symbol::Constant { constant_name, .. }) => {
-                    Err(SemanticErrorKind::ConstantReassignment {
-                        name: constant_name,
-                    })
+                    Err(SemanticErrorKind::ConstantReassignment { constant_name })
                 }
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: assignee_path.type_name,
-                    expected: format!("`{assignee_type}`"),
-                    found: format!("`{sym}`"),
+                    expected: assignee_type.to_backtick_string(),
+                    found: sym.to_backtick_string(),
                 }),
                 _ => Err(SemanticErrorKind::UndefinedVariable {
                     name: assignee_path.type_name,
@@ -574,19 +573,16 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::CompoundAssignment(ca) => {
-            let assignee = wrap_into_expression(ca.lhs.clone());
+            let assignee = ca.lhs.to_expression();
             let assignee_type = analyse_expr(analyser, &assignee, root)?;
 
-            let mut value_type =
-                analyse_expr(analyser, &wrap_into_expression(ca.rhs.clone()), root)?;
+            let mut value_type = analyse_expr(analyser, &ca.rhs.to_expression(), root)?;
 
-            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                scope.symbols.to_owned()
-            } else {
-                HashMap::new()
-            };
-
-            analyser.check_types(&mut symbol_table, &assignee_type, &mut value_type)?;
+            analyser.check_types(
+                &mut analyser.current_symbol_table(),
+                &assignee_type,
+                &mut value_type,
+            )?;
 
             let assignee_as_path_expr = PathExpr::from(assignee);
 
@@ -599,7 +595,7 @@ pub(crate) fn analyse_expr(
                     } else {
                         Err(SemanticErrorKind::TypeMismatchVariable {
                             var_id: assignee_path.type_name,
-                            expected: format!("`{assignee_type}`"),
+                            expected: assignee_type.to_backtick_string(),
                             found: var_type,
                         })
                     }
@@ -607,14 +603,14 @@ pub(crate) fn analyse_expr(
 
                 Some(Symbol::Constant { constant_name, .. }) => {
                     Err(SemanticErrorKind::ConstantReassignment {
-                        name: constant_name.clone(),
+                        constant_name: constant_name.clone(),
                     })
                 }
 
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: assignee_path.type_name,
-                    expected: format!("`{assignee_type}`"),
-                    found: format!("`{sym}`"),
+                    expected: assignee_type.to_backtick_string(),
+                    found: sym.to_backtick_string(),
                 }),
 
                 _ => Err(SemanticErrorKind::UndefinedVariable {
@@ -625,12 +621,12 @@ pub(crate) fn analyse_expr(
 
         Expression::Return(r) => match &r.expression_opt {
             Some(expr) => analyse_expr(analyser, &expr.clone(), root),
-            _ => Ok(Type::UnitType(UnitType)),
+            _ => Ok(Type::UNIT_TYPE),
         },
 
-        Expression::Break(_) => Ok(Type::UnitType(UnitType)),
+        Expression::Break(_) => Ok(Type::UNIT_TYPE),
 
-        Expression::Continue(_) => Ok(Type::UnitType(UnitType)),
+        Expression::Continue(_) => Ok(Type::UNIT_TYPE),
 
         Expression::Underscore(_) => Ok(Type::inferred_type("_")),
 
@@ -660,7 +656,7 @@ pub(crate) fn analyse_expr(
 
             let return_type = match &c.return_type_opt {
                 Some(ty) => Ok(*ty.clone()),
-                _ => Ok(Type::UnitType(UnitType)),
+                _ => Ok(Type::UNIT_TYPE),
             }?;
 
             let return_type_clone = return_type.clone();
@@ -681,13 +677,11 @@ pub(crate) fn analyse_expr(
                 }
             }
 
-            let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                scope.symbols.to_owned()
-            } else {
-                HashMap::new()
-            };
-
-            analyser.check_types(&mut symbol_table, &return_type, &mut expression_type)?;
+            analyser.check_types(
+                &mut analyser.current_symbol_table(),
+                &return_type,
+                &mut expression_type,
+            )?;
 
             let function_ptr = FunctionPtr {
                 params_opt,
@@ -711,21 +705,15 @@ pub(crate) fn analyse_expr(
 
                         element_count += 1;
 
-                        let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                            scope.symbols.to_owned()
-                        } else {
-                            HashMap::new()
-                        };
-
                         analyser.check_types(
-                            &mut symbol_table,
+                            &mut analyser.current_symbol_table(),
                             &element_type,
                             &mut first_element_type,
                         )?;
 
                         if element_type != first_element_type {
                             return Err(SemanticErrorKind::TypeMismatchArrayElems {
-                                expected: format!("`{first_element_type}`"),
+                                expected: first_element_type.to_backtick_string(),
                                 found: element_type,
                             });
                         }
@@ -737,7 +725,7 @@ pub(crate) fn analyse_expr(
                     })
                 }
                 _ => {
-                    let element_type = Type::UnitType(UnitType);
+                    let element_type = Type::UNIT_TYPE;
                     let array = Type::Array {
                         element_type: Box::new(element_type),
                         num_elements: UInt::U64(0u64),
@@ -746,7 +734,7 @@ pub(crate) fn analyse_expr(
                     Ok(array)
                 }
             },
-            _ => Ok(Type::UnitType(UnitType)),
+            _ => Ok(Type::UNIT_TYPE),
         },
 
         Expression::Tuple(t) => {
@@ -763,29 +751,31 @@ pub(crate) fn analyse_expr(
 
         Expression::Struct(s) => {
             let type_path = root.join(TypePath::from(s.struct_path.clone()));
+            let obj_fields_opt = s.struct_fields_opt.clone();
+
+            let hash_map = HashMap::new();
+            let mut field_map: HashMap<Identifier, Type> = hash_map;
+
+            if let Some(obj_fields) = obj_fields_opt {
+                for obj_field in obj_fields.iter() {
+                    let field_name = obj_field.field_name.clone();
+                    let field_value = *obj_field.field_value.clone();
+                    let field_type = analyse_expr(analyser, &field_value, root)?;
+
+                    field_map.insert(field_name, field_type);
+                }
+            }
 
             match analyser.lookup(&type_path).cloned() {
-                Some(Symbol::Struct { struct_def, path }) => {
-                    let hash_map = HashMap::new();
-                    let mut field_map: HashMap<Identifier, Type> = hash_map;
-
+                Some(Symbol::Struct {
+                    struct_def, path, ..
+                }) => {
                     let def_fields_opt = struct_def.fields_opt;
-                    let obj_fields_opt = s.struct_fields_opt.clone();
-
-                    if let Some(obj_fields) = obj_fields_opt {
-                        for obj_field in obj_fields.iter() {
-                            let field_name = obj_field.field_name.clone();
-                            let field_value = *obj_field.field_value.clone();
-                            let field_type = analyse_expr(analyser, &field_value, root)?;
-
-                            field_map.insert(field_name, field_type);
-                        }
-                    }
 
                     if let Some(def_fields) = def_fields_opt {
-                        if field_map.len() > def_fields.len() {
+                        if field_map.len() != def_fields.len() {
                             return Err(SemanticErrorKind::StructArgCountMismatch {
-                                struct_path: Identifier::from(type_path),
+                                struct_path: type_path.to_identifier(),
                                 expected: def_fields.len(),
                                 found: field_map.len(),
                             });
@@ -800,7 +790,7 @@ pub(crate) fn analyse_expr(
                         for (name, _) in field_map.iter() {
                             if !field_names.contains(name) {
                                 return Err(SemanticErrorKind::UnexpectedStructField {
-                                    field_name: struct_def.struct_name,
+                                    struct_name: struct_def.struct_name,
                                     found: name.clone(),
                                 });
                             }
@@ -809,15 +799,8 @@ pub(crate) fn analyse_expr(
                         for def_field in def_fields.iter() {
                             match field_map.get_mut(&def_field.field_name) {
                                 Some(obj_field_type) => {
-                                    let mut symbol_table =
-                                        if let Some(scope) = analyser.scope_stack.last() {
-                                            scope.symbols.to_owned()
-                                        } else {
-                                            HashMap::new()
-                                        };
-
                                     analyser.check_types(
-                                        &mut symbol_table,
+                                        &mut analyser.current_symbol_table(),
                                         &*def_field.field_type,
                                         obj_field_type,
                                     )?;
@@ -846,6 +829,111 @@ pub(crate) fn analyse_expr(
                     Ok(Type::UserDefined(path))
                 }
 
+                Some(Symbol::Variable { name, .. }) => {
+                    let mut variable_type_path = name.to_type_path();
+
+                    let associated_type_path = &mut variable_type_path.strip_suffix();
+
+                    match analyser.lookup(associated_type_path).cloned() {
+                        Some(Symbol::Enum { path, enum_def, .. }) => {
+                            for variant in enum_def.variants.iter() {
+                                if variant.variant_path == variable_type_path {
+                                    match &variant.variant_kind {
+                                        EnumVariantKind::Struct(struct_variant) => {
+                                            if field_map.len() != struct_variant.struct_fields.len()
+                                            {
+                                                return Err(
+                                                    SemanticErrorKind::StructArgCountMismatch {
+                                                        struct_path: variant
+                                                            .variant_path
+                                                            .to_identifier(),
+                                                        expected: struct_variant
+                                                            .struct_fields
+                                                            .len(),
+                                                        found: field_map.len(),
+                                                    },
+                                                );
+                                            }
+
+                                            let field_names = struct_variant
+                                                .struct_fields
+                                                .iter()
+                                                .cloned()
+                                                .map(|sdf| sdf.field_name)
+                                                .collect::<Vec<_>>();
+
+                                            for (name, _) in field_map.iter() {
+                                                if !field_names.contains(name) {
+                                                    return Err(
+                                                        SemanticErrorKind::UnexpectedStructField {
+                                                            struct_name: variant
+                                                                .variant_path
+                                                                .to_identifier(),
+                                                            found: name.clone(),
+                                                        },
+                                                    );
+                                                }
+                                            }
+
+                                            for def_field in struct_variant.struct_fields.iter() {
+                                                match field_map.get_mut(&def_field.field_name) {
+                                                    Some(obj_field_type) => {
+                                                        analyser.check_types(
+                                                            &mut analyser.current_symbol_table(),
+                                                            &*def_field.field_type,
+                                                            &mut *obj_field_type,
+                                                        )?;
+                                                    }
+
+                                                    None => {
+                                                        return Err(
+                                                            SemanticErrorKind::MissingStructField {
+                                                                expected: format!(
+                                                                    "`{}: {}`",
+                                                                    &def_field.field_name,
+                                                                    *def_field.field_type
+                                                                ),
+                                                            },
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        EnumVariantKind::Standard => {
+                                            return Err(SemanticErrorKind::UnexpectedSymbol {
+                                                name,
+                                                expected: "struct enum variant".to_string(),
+                                                found: "standard enum variant".to_string(),
+                                            })
+                                        }
+
+                                        EnumVariantKind::TupleStruct(_) => {
+                                            return Err(SemanticErrorKind::UnexpectedSymbol {
+                                                name,
+                                                expected: "struct enum variant".to_string(),
+                                                found: "tuple struct enum variant".to_string(),
+                                            })
+                                        }
+                                    }
+                                }
+                            }
+
+                            Ok(Type::UserDefined(path.clone()))
+                        }
+
+                        Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
+                            name: type_path.type_name,
+                            expected: "struct".to_string(),
+                            found: sym.to_backtick_string(),
+                        }),
+
+                        _ => Err(SemanticErrorKind::MissingItem {
+                            expected: "associated enum".to_string(),
+                        }),
+                    }
+                }
+
                 None => Err(SemanticErrorKind::UndefinedStruct {
                     name: type_path.type_name,
                 }),
@@ -853,40 +941,41 @@ pub(crate) fn analyse_expr(
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: type_path.type_name,
                     expected: "struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }
 
         Expression::TupleStruct(ts) => {
             let type_path = root.join(TypePath::from(ts.struct_path.clone()));
+            let elements_opt = ts.struct_elements_opt.clone();
 
             match analyser.lookup(&type_path).cloned() {
                 Some(Symbol::TupleStruct {
                     tuple_struct_def,
                     path,
+                    ..
                 }) => {
-                    let elements_opt = ts.struct_elements_opt.clone();
                     let fields_opt = tuple_struct_def.fields_opt;
 
                     match (&elements_opt, &fields_opt) {
-                        (None, None) => Ok(Type::UnitType(UnitType)),
+                        (None, None) => Ok(Type::UNIT_TYPE),
 
                         (None, Some(fields)) => Err(SemanticErrorKind::StructArgCountMismatch {
-                            struct_path: Identifier::from(type_path),
+                            struct_path: type_path.to_identifier(),
                             expected: fields.len(),
                             found: 0,
                         }),
 
                         (Some(elements), None) => Err(SemanticErrorKind::StructArgCountMismatch {
-                            struct_path: Identifier::from(type_path),
+                            struct_path: type_path.to_identifier(),
                             expected: 0,
                             found: elements.len(),
                         }),
                         (Some(elements), Some(fields)) => {
                             if elements.len() != fields.len() {
                                 return Err(SemanticErrorKind::StructArgCountMismatch {
-                                    struct_path: Identifier::from(type_path),
+                                    struct_path: type_path.to_identifier(),
                                     expected: fields.len(),
                                     found: elements.len(),
                                 });
@@ -898,18 +987,11 @@ pub(crate) fn analyse_expr(
                                 let mut elem_type = analyse_expr(
                                     analyser,
                                     &elem,
-                                    &TypePath::from(Identifier::from("")),
+                                    &Identifier::from("").to_type_path(),
                                 )?;
 
-                                let mut symbol_table =
-                                    if let Some(scope) = analyser.scope_stack.last() {
-                                        scope.symbols.to_owned()
-                                    } else {
-                                        HashMap::new()
-                                    };
-
                                 analyser.check_types(
-                                    &mut symbol_table,
+                                    &mut analyser.current_symbol_table(),
                                     &field_type,
                                     &mut elem_type,
                                 )?;
@@ -917,7 +999,7 @@ pub(crate) fn analyse_expr(
                                 if elem_type != field_type {
                                     return Err(SemanticErrorKind::TypeMismatchVariable {
                                         var_id: tuple_struct_def.struct_name,
-                                        expected: format!("`{field_type}`"),
+                                        expected: field_type.to_backtick_string(),
                                         found: elem_type,
                                     });
                                 }
@@ -928,6 +1010,94 @@ pub(crate) fn analyse_expr(
                     }
                 }
 
+                Some(Symbol::Variable { name, .. }) => {
+                    let mut variable_type_path = name.to_type_path();
+
+                    let associated_type_path = &mut variable_type_path.strip_suffix();
+
+                    match analyser.lookup(associated_type_path).cloned() {
+                        Some(Symbol::Enum { path, enum_def, .. }) => {
+                            for variant in enum_def.variants.iter() {
+                                if variant.variant_path == variable_type_path {
+                                    match &variant.variant_kind {
+                                        EnumVariantKind::TupleStruct(tuple_struct_variant) => {
+                                            if let Some(elems) = elements_opt.clone() {
+                                                if elems.len()
+                                                    != tuple_struct_variant.element_types.len()
+                                                {
+                                                    return Err(
+                                                        SemanticErrorKind::StructArgCountMismatch {
+                                                            struct_path: name,
+                                                            expected: tuple_struct_variant
+                                                                .element_types
+                                                                .len(),
+                                                            found: elems.len(),
+                                                        },
+                                                    );
+                                                }
+
+                                                for (elem, ty) in elems
+                                                    .iter()
+                                                    .zip(tuple_struct_variant.element_types.clone())
+                                                {
+                                                    let mut elem_type = analyse_expr(
+                                                        analyser,
+                                                        &elem,
+                                                        &Identifier::from("").to_type_path(),
+                                                    )?;
+
+                                                    analyser.check_types(
+                                                        &mut analyser.current_symbol_table(),
+                                                        &ty,
+                                                        &mut elem_type,
+                                                    )?;
+
+                                                    if elem_type != ty {
+                                                        return Err(SemanticErrorKind::TypeMismatchVariable {
+                                                            var_id: name,
+                                                            expected: ty.to_backtick_string(),
+                                                            found: elem_type,
+                                                        });
+                                                    }
+                                                }
+                                            } else {
+                                                return Err(
+                                                    SemanticErrorKind::StructArgCountMismatch {
+                                                        struct_path: name,
+                                                        expected: tuple_struct_variant
+                                                            .element_types
+                                                            .len(),
+                                                        found: 0,
+                                                    },
+                                                );
+                                            }
+                                        }
+
+                                        EnumVariantKind::Standard => {
+                                            return Err(SemanticErrorKind::UnexpectedSymbol {
+                                                name,
+                                                expected: "tuple struct enum variant".to_string(),
+                                                found: "standard enum variant".to_string(),
+                                            })
+                                        }
+
+                                        EnumVariantKind::Struct(_) => {
+                                            return Err(SemanticErrorKind::UnexpectedSymbol {
+                                                name,
+                                                expected: "tuple struct enum variant".to_string(),
+                                                found: "struct enum variant".to_string(),
+                                            })
+                                        }
+                                    }
+                                }
+                            }
+
+                            Ok(Type::UserDefined(path))
+                        }
+                        _ => todo!(),
+                    }
+                }
+
                 None => Err(SemanticErrorKind::UndefinedStruct {
                     name: type_path.type_name,
                 }),
@@ -935,7 +1105,7 @@ pub(crate) fn analyse_expr(
                 Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                     name: type_path.type_name,
                     expected: "tuple struct".to_string(),
-                    found: format!("`{sym}`"),
+                    found: sym.to_backtick_string(),
                 }),
             }
         }
@@ -950,16 +1120,14 @@ pub(crate) fn analyse_expr(
                         let mut pair_key_type = analyse_patt(analyser, &pair.k.clone())?;
                         let mut pair_value_type = analyse_expr(analyser, &pair.v.clone(), root)?;
 
-                        let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                            scope.symbols.to_owned()
-                        } else {
-                            HashMap::new()
-                        };
-
-                        analyser.check_types(&mut symbol_table, &key_type, &mut pair_key_type)?;
+                        analyser.check_types(
+                            &mut analyser.current_symbol_table(),
+                            &key_type,
+                            &mut pair_key_type,
+                        )?;
 
                         analyser.check_types(
-                            &mut symbol_table,
+                            &mut analyser.current_symbol_table(),
                             &value_type,
                             &mut pair_value_type,
                         )?;
@@ -985,8 +1153,8 @@ pub(crate) fn analyse_expr(
                     })
                 }
                 _ => {
-                    let key_type = Box::new(Type::UnitType(UnitType));
-                    let value_type = Box::new(Type::UnitType(UnitType));
+                    let key_type = Box::new(Type::UNIT_TYPE);
+                    let value_type = Box::new(Type::UNIT_TYPE);
 
                     Ok(Type::Mapping {
                         key_type,
@@ -994,16 +1162,24 @@ pub(crate) fn analyse_expr(
                     })
                 }
             },
-            _ => Ok(Type::UnitType(UnitType)),
+            _ => Ok(Type::UNIT_TYPE),
         },
 
         Expression::Block(b) => match &b.statements_opt {
             Some(stmts) => {
                 analyser.enter_scope(ScopeKind::LocalBlock);
 
+                log_trace!(analyser.logger, "analysing block expression …");
+
                 let mut cloned_iter = stmts.iter().peekable().clone();
 
-                for stmt in stmts {
+                for (i, stmt) in stmts.iter().enumerate() {
+                    if i == stmts.len() - 1 {
+                        break;
+                    }
+
+                    println!("analysing statement {} of {} …", i + 1, stmts.len());
+
                     cloned_iter.next();
 
                     match stmt {
@@ -1025,22 +1201,31 @@ pub(crate) fn analyse_expr(
                         },
                         statement => analyser.analyse_stmt(statement, root.clone())?,
                     }
+
+                    println!("finished analysing statement {} of {}", i + 1, stmts.len());
                 }
+
+                log_trace!(
+                    analyser.logger,
+                    "analysing final statement in block expression …"
+                );
 
                 let ty = match stmts.last() {
                     Some(stmt) => match stmt {
                         Statement::Expression(expr) => analyse_expr(analyser, expr, root),
-                        _ => Ok(Type::UnitType(UnitType)),
+                        _ => Ok(Type::UNIT_TYPE),
                     },
-                    _ => Ok(Type::UnitType(UnitType)),
+                    _ => Ok(Type::UNIT_TYPE),
                 };
+
+                println!("finished analysing block expression with type: `{ty:?}`");
 
                 analyser.exit_scope();
 
                 ty
             }
 
-            _ => Ok(Type::UnitType(UnitType)),
+            _ => Ok(Type::UNIT_TYPE),
         },
 
         Expression::If(i) => {
@@ -1049,10 +1234,16 @@ pub(crate) fn analyse_expr(
             let if_block_type =
                 analyse_expr(analyser, &Expression::Block(*i.if_block.clone()), root)?;
 
+            println!("finished analysing `if` block with type: `{if_block_type}`");
+
             let else_if_blocks_type = match &i.else_if_blocks_opt {
                 Some(blocks) => match blocks.first() {
                     Some(_) => {
+                        println!("detected {} `else-if` block(s) …", blocks.len());
+
                         for block in blocks.iter() {
+                            println!("analysing `else-if` block …");
+
                             let block_type =
                                 analyse_expr(analyser, &Expression::If(*block.clone()), root)?;
 
@@ -1062,18 +1253,22 @@ pub(crate) fn analyse_expr(
                                     found: block_type,
                                 });
                             }
+
+                            println!(
+                                "finished analysing `else-if` block with type: `{block_type}`"
+                            );
                         }
 
                         if_block_type.clone()
                     }
-                    _ => Type::UnitType(UnitType),
+                    _ => Type::UNIT_TYPE,
                 },
-                _ => Type::UnitType(UnitType),
+                _ => Type::UNIT_TYPE,
             };
 
             let trailing_else_block_type = match &i.trailing_else_block_opt {
                 Some(block) => analyse_expr(analyser, &Expression::Block(block.clone()), root)?,
-                _ => Type::UnitType(UnitType),
+                _ => Type::UNIT_TYPE,
             };
 
             if i.else_if_blocks_opt.is_some() && else_if_blocks_type != if_block_type {
@@ -1090,28 +1285,34 @@ pub(crate) fn analyse_expr(
                 });
             }
 
+            println!("finished analysing if expression");
+
             Ok(if_block_type)
         }
 
         Expression::Match(m) => {
             analyser.enter_scope(ScopeKind::MatchExpr);
 
-            let scrutinee_type =
-                analyse_expr(analyser, &wrap_into_expression(m.scrutinee.clone()), root)?;
+            let scrutinee_type = analyse_expr(analyser, &m.scrutinee.to_expression(), root)?;
 
-            let mut patt_type = analyse_patt(analyser, &m.final_arm.matched_pattern.clone())?;
+            println!("analysing match expression with scrutinee type: `{scrutinee_type}` …");
 
-            if patt_type != scrutinee_type {
-                if let Type::InferredType(_) = patt_type {
-                    ()
-                } else {
-                    return Err(SemanticErrorKind::TypeMismatchMatchExpr {
-                        loc: "scrutinee and matched pattern".to_string(),
-                        expected: scrutinee_type,
-                        found: patt_type,
-                    });
-                }
-            }
+            let mut matched_patt_type =
+                analyse_patt(analyser, &m.final_arm.matched_pattern.clone())?;
+
+            // Q: what if `matched_patt_type` is a `u64` and `scrutinee_type` is an `i64`?
+            // A: we shouldn't throw an error as they are compatible; hence this code is wrong
+            // if matched_patt_type != scrutinee_type {
+            //     if let Type::InferredType(_) = matched_patt_type {
+            //         ()
+            //     } else {
+            //         return Err(SemanticErrorKind::TypeMismatchMatchExpr {
+            //             loc: "scrutinee and matched pattern".to_string(),
+            //             expected: scrutinee_type,
+            //             found: matched_patt_type,
+            //         });
+            //     }
+            // }
 
             let expr_type = analyse_expr(analyser, &m.final_arm.arm_expression.clone(), root)?;
 
@@ -1119,34 +1320,42 @@ pub(crate) fn analyse_expr(
                 for arm in arms.iter() {
                     let mut arm_patt_type = analyse_patt(analyser, &arm.matched_pattern)?;
 
-                    let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                        scope.symbols.to_owned()
+                    if matched_patt_type == Type::inferred_type("_") {
+                        analyser.check_types(
+                            &mut analyser.current_symbol_table(),
+                            &scrutinee_type,
+                            &mut matched_patt_type,
+                        )?;
                     } else {
-                        HashMap::new()
-                    };
-
-                    if patt_type == Type::inferred_type("_") {
-                        analyser.check_types(&mut symbol_table, &arm_patt_type, &mut patt_type)?;
-                    } else {
-                        analyser.check_types(&mut symbol_table, &patt_type, &mut arm_patt_type)?;
+                        analyser.check_types(
+                            &mut analyser.current_symbol_table(),
+                            &matched_patt_type,
+                            &mut arm_patt_type,
+                        )?;
                     }
 
-                    if arm_patt_type != patt_type {
-                        if let Type::InferredType(_) = patt_type {
-                            ()
-                        } else {
-                            return Err(SemanticErrorKind::TypeMismatchMatchExpr {
-                                loc: "matched pattern".to_string(),
-                                expected: patt_type,
-                                found: arm_patt_type,
-                            });
-                        }
-                    }
+                    // Q: what if `arm_patt_type` is a `u64` and `matched_patt_type` is an `i64`?
+                    // A: we shouldn't throw an error as they are compatible; hence this code is wrong
+                    // if arm_patt_type != matched_patt_type {
+                    //     if let Type::InferredType(_) = matched_patt_type {
+                    //         ()
+                    //     } else {
+                    //         return Err(SemanticErrorKind::TypeMismatchMatchExpr {
+                    //             loc: "matched pattern".to_string(),
+                    //             expected: matched_patt_type,
+                    //             found: arm_patt_type,
+                    //         });
+                    //     }
+                    // }
 
                     let mut arm_expr_type =
                         analyse_expr(analyser, &arm.arm_expression.clone(), root)?;
 
-                    analyser.check_types(&mut symbol_table, &expr_type, &mut arm_expr_type)?;
+                    analyser.check_types(
+                        &mut analyser.current_symbol_table(),
+                        &expr_type,
+                        &mut arm_expr_type,
+                    )?;
 
                     if arm_expr_type != expr_type {
                         return Err(SemanticErrorKind::TypeMismatchMatchExpr {
@@ -1157,6 +1366,8 @@ pub(crate) fn analyse_expr(
                     }
                 }
             }
+
+            println!("finished analysing match expression with type: `{expr_type}`");
 
             analyser.exit_scope();
 
@@ -1191,6 +1402,8 @@ pub(crate) fn analyse_expr(
                 }
             };
 
+            println!("analysing for-in loop with iterator type `{iter_type}` and element type `{element_type}` …");
+
             if let Pattern::IdentifierPatt(id) = *fi.pattern.clone() {
                 analyser.insert(
                     id.name.to_type_path(),
@@ -1201,26 +1414,38 @@ pub(crate) fn analyse_expr(
                 )?;
             }
 
+            println!("for-in loop pattern: `{}`", fi.pattern);
+
             analyse_patt(analyser, &fi.pattern.clone())?;
 
             analyse_expr(analyser, &Expression::Block(fi.block.clone()), root)?;
 
+            println!("finished analysing for-in loop");
+
             analyser.exit_scope();
 
-            Ok(Type::UnitType(UnitType))
+            Ok(Type::UNIT_TYPE)
         }
 
         Expression::While(w) => {
+            println!(
+                "analysing while loop with condition `{}` …",
+                Expression::Grouped(*w.condition.clone())
+            );
+
             analyse_expr(analyser, &Expression::Grouped(*w.condition.clone()), root)?;
             analyse_expr(analyser, &Expression::Block(w.block.clone()), root)?;
-            Ok(Type::UnitType(UnitType))
+
+            println!("finished analysing while loop");
+
+            Ok(Type::UNIT_TYPE)
         }
 
         Expression::SomeExpr(s) => {
             let ty = analyse_expr(analyser, &s.expression.clone().inner_expression, root)?;
 
             let ty = if ty == Type::Tuple(Vec::new()) {
-                Type::UnitType(UnitType)
+                Type::UNIT_TYPE
             } else {
                 ty
             };
@@ -1231,14 +1456,14 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::NoneExpr(_) => Ok(Type::Option {
-            inner_type: Box::new(Type::UnitType(UnitType)),
+            inner_type: Box::new(Type::UNIT_TYPE),
         }),
 
         Expression::ResultExpr(r) => {
             let ty = analyse_expr(analyser, &r.expression.clone().inner_expression, root)?;
 
             let ty = if ty == Type::Tuple(Vec::new()) {
-                Type::UnitType(UnitType)
+                Type::UNIT_TYPE
             } else {
                 ty
             };
@@ -1276,7 +1501,7 @@ fn analyse_call_or_method_call_expr(
             match (&args_opt, &func_params) {
                 (None, None) => match func_def_return_type {
                     Some(ty) => Ok(*ty),
-                    _ => Ok(Type::UnitType(UnitType)),
+                    _ => Ok(Type::UNIT_TYPE),
                 },
                 (None, Some(params)) => {
                     let mut self_counter: usize = 0;
@@ -1304,7 +1529,7 @@ fn analyse_call_or_method_call_expr(
 
                     match func_def_return_type {
                         Some(ty) => Ok(*ty),
-                        _ => Ok(Type::UnitType(UnitType)),
+                        _ => Ok(Type::UNIT_TYPE),
                     }
                 }
                 (Some(args), None) => Err(SemanticErrorKind::FuncArgCountMismatch {
@@ -1340,13 +1565,11 @@ fn analyse_call_or_method_call_expr(
 
                         let param_type = param.param_type();
 
-                        let mut symbol_table = if let Some(scope) = analyser.scope_stack.last() {
-                            scope.symbols.to_owned()
-                        } else {
-                            HashMap::new()
-                        };
-
-                        analyser.check_types(&mut symbol_table, &param_type, &mut arg_type)?;
+                        analyser.check_types(
+                            &mut analyser.current_symbol_table(),
+                            &param_type,
+                            &mut arg_type,
+                        )?;
 
                         if arg_type != param_type {
                             return Err(SemanticErrorKind::TypeMismatchArg {
@@ -1359,7 +1582,7 @@ fn analyse_call_or_method_call_expr(
 
                     match func_def_return_type {
                         Some(ty) => Ok(*ty),
-                        None => Ok(Type::UnitType(UnitType)),
+                        None => Ok(Type::UNIT_TYPE),
                     }
                 }
             }
@@ -1371,15 +1594,7 @@ fn analyse_call_or_method_call_expr(
         Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
             name: path.type_name,
             expected: "function".to_string(),
-            found: format!("`{sym}`"),
+            found: sym.to_backtick_string(),
         }),
     }
-}
-
-pub(crate) fn wrap_into_expression<T>(value: T) -> Expression
-where
-    T: Clone + fmt::Debug + TryFrom<Expression>,
-    Expression: From<T>,
-{
-    Expression::from(value.clone())
 }

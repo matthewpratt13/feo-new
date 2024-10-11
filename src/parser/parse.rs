@@ -1,9 +1,9 @@
-use super::Parser;
-
 use crate::{
     ast::{Expression, OuterAttr, Statement, Visibility},
     error::ErrorsEmitted,
 };
+
+use super::Parser;
 
 ///////////////////////////////////////////////////////////////////////////
 // EXPRESSION INTERFACES

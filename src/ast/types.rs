@@ -1,10 +1,10 @@
-use super::{FunctionOrMethodParam, Identifier, Type};
+use core::fmt;
+
+pub(crate) use crate::{B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512};
 
 use crate::error::ParserErrorKind;
 
-pub use crate::{B16, B2, B32, B4, B8, F32, F64, H160, H256, H512, U256, U512};
-
-use core::fmt;
+use super::{FunctionOrMethodParam, Identifier, Type};
 
 /// Wrappers for the different signed integer types.
 #[allow(dead_code)]
@@ -335,13 +335,23 @@ pub struct FunctionPtr {
 
 impl fmt::Display for FunctionPtr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut param_strings: Vec<String> = Vec::new();
+
+        match &self.params_opt {
+            Some(params) => {
+                for param in params {
+                    param_strings.push(param.to_string());
+                }
+            }
+            None => todo!(),
+        }
+
         write!(
             f,
-            "func({:?}) [-> {:?}]",
-            self.params_opt.clone().unwrap_or(Vec::new()),
+            "func({param_strings:?}) -> {}",
             self.return_type_opt
                 .clone()
-                .unwrap_or(Box::new(Type::UnitType(UnitType)))
+                .unwrap_or(Box::new(Type::UNIT_TYPE))
         )
     }
 }
@@ -369,7 +379,7 @@ impl fmt::Display for SelfType {
 }
 
 /// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub struct TypePath {
     pub(crate) associated_type_path_prefix_opt: Option<Vec<Identifier>>,
     pub(crate) type_name: Identifier,
