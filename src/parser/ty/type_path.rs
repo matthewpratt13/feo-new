@@ -104,6 +104,14 @@ impl TypePath {
         Ok(path_type)
     }
 
+    pub(crate) fn strip_suffix(&mut self) -> TypePath {
+        if let Some(ids) = &self.associated_type_path_prefix_opt {
+            TypePath::from(ids.clone())
+        } else {
+            self.to_owned()
+        }
+    }
+
     pub(crate) fn join(&self, item_path: TypePath) -> TypePath {
         if let Some(prefix) = &self.associated_type_path_prefix_opt {
             let mut path = prefix.to_vec();
@@ -168,14 +176,6 @@ impl TypePath {
                     type_name,
                 }
             }
-        }
-    }
-
-    pub(crate) fn strip_suffix(&mut self) -> TypePath {
-        if let Some(ids) = &self.associated_type_path_prefix_opt {
-            TypePath::from(ids.clone())
-        } else {
-            self.to_owned()
         }
     }
 }
