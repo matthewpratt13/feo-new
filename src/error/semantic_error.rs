@@ -25,17 +25,21 @@ pub enum SemanticErrorKind {
     },
 
     MethodParamCountError,
-
+    
     MissingItem {
         expected: String,
     },
-
+    
     MissingReturnType {
         expected: Type,
     },
-
+    
     MissingStructField {
         expected: String,
+    },
+
+    MissingTraitFunctionImpl {
+        func_name: Identifier,
     },
 
     ModuleErrors {
@@ -287,6 +291,9 @@ impl fmt::Display for SemanticErrorKind {
 
             SemanticErrorKind::MissingStructField { expected } => {
                 write!(f, "struct field not found. Expected {expected}, found none")
+            }
+            SemanticErrorKind::MissingTraitFunctionImpl { func_name } => {
+                write!(f, "implementation not found for trait function: `{func_name}`")
             }
             SemanticErrorKind::ModuleErrors { name } => {
                 write!(f, "detected errors in module `{name}`")

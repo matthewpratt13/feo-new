@@ -5,7 +5,7 @@ use crate::{
         AliasDecl, ConstantDecl, FunctionItem, InnerAttr, Keyword, OuterAttr, TraitDef,
         TraitDefItem, Visibility,
     },
-    error::{ErrorsEmitted, ParserErrorKind},
+    error::ErrorsEmitted,
     parser::{
         get_associated_items, get_attributes, ParseAssociatedItem, ParseDeclItem, ParseDefItem,
         Parser,
@@ -88,15 +88,7 @@ impl ParseAssociatedItem for TraitDefItem {
             }
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
-                if function_def.block_opt.is_some() {
-                    parser.emit_error(ParserErrorKind::ExtraTokens {
-                        token: parser.current_token().cloned(),
-                        msg: "Functions in trait definitions cannot have bodies".to_string(),
-                    });
-                    Err(ErrorsEmitted)
-                } else {
-                    Ok(TraitDefItem::FunctionItem(function_def))
-                }
+                Ok(TraitDefItem::FunctionItem(function_def))
             }
             _ => {
                 parser.emit_unexpected_token(&format!(
@@ -124,10 +116,13 @@ mod tests {
             #[storage]
             pub const OWNER: h160 = 0x12345123451234512345;
             pub alias NewType;
-
+        
             #[modifier]
-            func only_owner(&mut self, caller: h160) {}
-            func transfer(&mut self, to: h160, amount: u256) -> Error {}
+            func only_owner(&mut self, caller: h160) -> h160 {
+                OWNER
+            }
+
+            func transfer(&mut self, to: h160, amount: u256) -> Error;  
             #[view]
             func sender(&self) -> h160 {}
         }"#;

@@ -85,7 +85,7 @@ impl SemanticAnalyser {
 
         let public_scope = Scope {
             scope_kind: ScopeKind::Public,
-            symbols, 
+            symbols,
         };
 
         log_trace!(logger, "entering public scope …");
@@ -669,6 +669,12 @@ impl SemanticAnalyser {
                                     let function_def_path =
                                         trait_def_path.join(function_name_path.clone());
 
+                                    if fi.block_opt.clone().is_some_and(|block| {
+                                        block.statements_opt.is_some_and(|stmts| !stmts.is_empty())
+                                    }) {
+                                        log_trace!(self.logger, "found default implementation for trait function: `{function_def_path}`")
+                                    }
+
                                     self.insert(
                                         function_def_path,
                                         Symbol::Function {
@@ -771,6 +777,68 @@ impl SemanticAnalyser {
                                 TraitImplItem::FunctionItem(fi) => {
                                     let function_impl_path =
                                         trait_impl_path.join(fi.function_name.to_type_path());
+
+                                    if !fi.block_opt.is_some() {
+                                        match self.lookup(&t.implemented_trait_path) {
+                                            Some(Symbol::Trait {
+                                                trait_def:
+                                                    TraitDef {
+                                                        trait_items_opt, ..
+                                                    },
+                                                ..
+                                            }) => {
+                                                if let Some(items) = trait_items_opt {
+                                                    for item in items {
+                                                        if let TraitDefItem::FunctionItem(
+                                                            function_item,
+                                                        ) = item
+                                                        {
+                                                            if fi.function_name
+                                                                == function_item.function_name
+                                                            {
+                                                                if function_item.block_opt.is_some()
+                                                                {
+                                                                    symbols.insert(
+                                                                        function_impl_path.clone(),
+                                                                        Symbol::Function {
+                                                                            path:
+                                                                                function_impl_path,
+                                                                            function: function_item
+                                                                                .clone(),
+                                                                        },
+                                                                    );
+
+                                                                    object_symbol
+                                                                        .add_associated_items(
+                                                                            None,
+                                                                            Some(TraitImplItem::FunctionItem(function_item.clone())),
+                                                                        )?;
+
+                                                                    return Ok(());
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                return Err(SemanticErrorKind::MissingTraitFunctionImpl { func_name: fi.clone().function_name });
+                                            }
+
+                                            Some(sym) => {
+                                                return Err(SemanticErrorKind::UnexpectedSymbol {
+                                                    name: t.implemented_trait_path.to_identifier(),
+                                                    expected: "trait".to_string(),
+                                                    found: sym.to_backtick_string(),
+                                                })
+                                            }
+
+                                            None => {
+                                                return Err(SemanticErrorKind::MissingItem {
+                                                    expected: "trait".to_string(),
+                                                })
+                                            }
+                                        }
+                                    }
 
                                     symbols.insert(
                                         function_impl_path.clone(),

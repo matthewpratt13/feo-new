@@ -26,11 +26,6 @@ pub enum ParserErrorKind {
         found: String,
     },
 
-    ExtraTokens {
-        token: Option<Token>,
-        msg: String,
-    },
-
     UnexpectedExpression {
         expected: String,
         found: String,
@@ -95,13 +90,6 @@ impl fmt::Display for ParserErrorKind {
                 write!(
                     f,
                     "invalid type parameter. Expected {expected}, found {found}"
-                )
-            }
-            ParserErrorKind::ExtraTokens { token, msg } => {
-                write!(
-                    f,
-                    "syntax error. Detected extra tokens: `{:?}`. {msg}",
-                    token
                 )
             }
             ParserErrorKind::UnexpectedExpression { expected, found } => {
