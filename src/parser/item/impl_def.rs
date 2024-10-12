@@ -263,7 +263,13 @@ impl ParseAssociatedItem for TraitImplItem {
             }
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
-                Ok(TraitImplItem::FunctionItem(function_def))
+                if function_def.block_opt.is_none() {
+                    parser.emit_missing_node("item", "trait implementation associated item");
+                    parser.next_token();
+                    Err(ErrorsEmitted)
+                } else {
+                    Ok(TraitImplItem::FunctionItem(function_def))
+                }
             }
             _ => {
                 parser.emit_unexpected_token(&format!(
