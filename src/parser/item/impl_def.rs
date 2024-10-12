@@ -221,7 +221,7 @@ impl ParseAssociatedItem for InherentImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.emit_missing_node("item", "function implementation");
+                    parser.emit_missing_node("expr", "function body");
                     parser.next_token();
                     Err(ErrorsEmitted)
                 } else {
@@ -264,7 +264,7 @@ impl ParseAssociatedItem for TraitImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.emit_missing_node("item", "trait function implementation");
+                    parser.emit_missing_node("expr", "function body");
                     parser.next_token();
                     Err(ErrorsEmitted)
                 } else {
