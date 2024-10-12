@@ -244,7 +244,7 @@ impl SemanticAnalyser {
 
             Statement::Item(item) => match item {
                 Item::AliasDecl(ad) => {
-                    log_trace!(self.logger, "analysing alias declaration: `{statement}`");
+                    // log_trace!(self.logger, "analysing alias declaration: `{statement}`");
 
                     let alias_path = root.join(ad.alias_name.to_type_path());
 
@@ -310,10 +310,10 @@ impl SemanticAnalyser {
                     let enum_name_path = e.enum_name.to_type_path();
                     let enum_def_path = root.join(enum_name_path.clone());
 
-                    log_trace!(
-                        self.logger,
-                        "analysing enum definition: `{enum_def_path}` …"
-                    );
+                    // log_trace!(
+                    //     self.logger,
+                    //     "analysing enum definition: `{enum_def_path}` …"
+                    // );
 
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
@@ -345,6 +345,19 @@ impl SemanticAnalyser {
                     let function_name_path = f.function_name.to_type_path();
                     let function_item_path = root.join(function_name_path.clone());
 
+                    self.try_update_current_scope(
+                        &ScopeKind::ProgramRoot,
+                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
+                    );
+
+                    self.insert(
+                        function_item_path.clone(),
+                        Symbol::Function {
+                            path: function_name_path,
+                            function: f.clone(),
+                        },
+                    )?;
+
                     log_trace!(
                         self.logger,
                         "analysing function item: `{function_item_path}({:?}) -> {}` …",
@@ -353,19 +366,6 @@ impl SemanticAnalyser {
                             .clone()
                             .unwrap_or(Box::new(Type::UNIT_TYPE))
                     );
-
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
-
-                    self.insert(
-                        function_item_path,
-                        Symbol::Function {
-                            path: function_name_path,
-                            function: f.clone(),
-                        },
-                    )?;
 
                     match self.analyse_function_def(f, &root, false, false) {
                         Ok(_) => (),
@@ -584,10 +584,10 @@ impl SemanticAnalyser {
                     let struct_name_path = s.struct_name.to_type_path();
                     let struct_def_path = root.join(struct_name_path.clone());
 
-                    log_trace!(
-                        self.logger,
-                        "analysing struct definition: `{struct_def_path}` …"
-                    );
+                    // log_trace!(
+                    //     self.logger,
+                    //     "analysing struct definition: `{struct_def_path}` …"
+                    // );
 
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
@@ -609,11 +609,6 @@ impl SemanticAnalyser {
                     let trait_name_path = t.trait_name.to_type_path();
                     let trait_def_path = root.join(trait_name_path.clone());
 
-                    log_trace!(
-                        self.logger,
-                        "analysing trait definition: `{trait_def_path}` …"
-                    );
-
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
                         ScopeKind::Module(Identifier::from("lib").to_type_path()),
@@ -626,6 +621,11 @@ impl SemanticAnalyser {
                             trait_def: t.clone(),
                         },
                     )?;
+
+                    log_trace!(
+                        self.logger,
+                        "analysing trait definition: `{trait_def_path}` …"
+                    );
 
                     // let scope_kind = ScopeKind::Impl(trait_def_path.clone());
 
@@ -777,10 +777,10 @@ impl SemanticAnalyser {
                     let struct_name_path = ts.struct_name.to_type_path();
                     let tuple_struct_path = root.join(struct_name_path.clone());
 
-                    log_trace!(
-                        self.logger,
-                        "analysing tuple struct definition: `{tuple_struct_path}` …"
-                    );
+                    // log_trace!(
+                    //     self.logger,
+                    //     "analysing tuple struct definition: `{tuple_struct_path}` …"
+                    // );
 
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
