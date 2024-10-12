@@ -39,12 +39,12 @@ impl ParseDefItem for InherentImplDef {
             }
             Some(Token::EOF) | None => {
                 parser.emit_unexpected_eoi();
-                parser.warn_missing_token("implementing object type path");
+                parser.warn_missing_token("implementing type path");
                 Err(ErrorsEmitted)
             }
 
             _ => {
-                parser.emit_unexpected_token("implementing object type path");
+                parser.emit_unexpected_token("implementing type path");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }
