@@ -201,7 +201,7 @@ impl FormatObject for SelfParam {
     fn to_backtick_string(&self) -> String {
         format!(
             "`{}{}`",
-            self.reference_op_opt.unwrap_or_default(),
+            self.reference_op_opt.unwrap_or(ReferenceOp::Owned),
             self.kw_self
         )
     }

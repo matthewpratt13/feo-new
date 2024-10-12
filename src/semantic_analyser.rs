@@ -214,7 +214,7 @@ impl SemanticAnalyser {
 
         log_info!(
             self.logger,
-            "semantic analysis complete, no errors detected"
+            "semantic analysis successful, no errors detected"
         );
 
         Ok(())
@@ -358,23 +358,12 @@ impl SemanticAnalyser {
                         },
                     )?;
 
-                    log_trace!(
-                        self.logger,
-                        "analysing function item: `{function_item_path}({:?}) -> {}` …",
-                        f.param_strings(),
-                        f.return_type_opt
-                            .clone()
-                            .unwrap_or(Box::new(Type::UNIT_TYPE))
-                    );
-
                     match self.analyse_function_def(f, &root, false, false) {
                         Ok(_) => (),
                         Err(err) => {
                             self.log_error(err, &f.span);
                         }
                     }
-
-                    log_trace!(self.logger, "function analysis successful");
                 }
 
                 Item::ImportDecl(id) => {
@@ -385,7 +374,7 @@ impl SemanticAnalyser {
                         Err(err) => self.log_error(err, &id.span),
                     }
 
-                    log_trace!(self.logger, "import analysis successful");
+                    log_trace!(self.logger, "import declaration analysis complete");
                 }
 
                 Item::InherentImplDef(iid) => {
@@ -407,7 +396,7 @@ impl SemanticAnalyser {
                             s.to_owned()
                         } else {
                             return Err(SemanticErrorKind::MissingItem {
-                                expected: "struct or enum symbol".to_string(),
+                                expected: "struct or enum".to_string(),
                             });
                         };
 
@@ -493,8 +482,10 @@ impl SemanticAnalyser {
                         });
                     }
 
+                    log_trace!(self.logger, "module analysis complete");
+
                     if let Some(curr_scope) = self.scope_stack.pop() {
-                        log_debug!(self.logger, "exited scope: `{}` …", curr_scope.scope_kind);
+                        log_debug!(self.logger, "exited scope: `{}`", curr_scope.scope_kind);
                         log_trace!(
                             self.logger,
                             "current_scope: `{}`",
@@ -523,7 +514,7 @@ impl SemanticAnalyser {
                     {
                         log_trace!(
                             self.logger,
-                            "inserting module `{}` into library registry under local library …",
+                            "inserting module `{}` into library registry under library `lib` …",
                             m.module_name
                         );
 
@@ -693,7 +684,7 @@ impl SemanticAnalyser {
                                     match self.analyse_function_def(
                                         fi,
                                         &trait_def_path,
-                                        true,
+                                        false,
                                         false,
                                     ) {
                                         Ok(_) => (),
@@ -737,7 +728,7 @@ impl SemanticAnalyser {
 
                     log_trace!(
                         self.logger,
-                        "analysing trait `{}` implementation for type `{}` …",
+                        "analysing implementation of trait `{}` for type `{}` …",
                         t.implemented_trait_path,
                         t.implementing_type
                     );
@@ -756,16 +747,18 @@ impl SemanticAnalyser {
                     self.analyse_trait_impl_items(
                         t,
                         &implementing_type_path,
-                        trait_impl_path,
+                        trait_impl_path.clone(),
                         &mut function_symbols,
                     )?;
 
-                    self.exit_scope();
-
                     log_trace!(
                         self.logger,
-                        "inserting symbols into `{}` implementation for type `{implementing_type_path}` …", t.implemented_trait_path
+                        "implementation of trait `{}` for type `{}` complete",
+                        t.implemented_trait_path,
+                        t.implementing_type
                     );
+
+                    self.exit_scope();
 
                     for (path, symbol) in function_symbols {
                         self.insert(path, symbol)?;
@@ -925,6 +918,15 @@ impl SemanticAnalyser {
         // append the function name to the root
         let full_path = function_root.join(f.function_name.to_type_path());
 
+        log_trace!(
+            self.logger,
+            "analysing function item: `{full_path}({:?}) -> {}` …",
+            f.param_strings(),
+            f.return_type_opt
+                .clone()
+                .unwrap_or(Box::new(Type::UNIT_TYPE))
+        );
+
         self.enter_scope(ScopeKind::Function(full_path.clone()));
 
         // register generic parameters in the local scope
@@ -985,6 +987,46 @@ impl SemanticAnalyser {
                     }
 
                     Type::UserDefined(tp) => match self.lookup(&tp).cloned() {
+                        // Some(Symbol::Trait {
+                        //     trait_def:
+                        //         TraitDef {
+                        //             trait_items_opt, ..
+                        //         },
+                        //     ..
+                        // }) => match trait_items_opt {
+                        //     Some(items) => {
+                        //         for item in items {
+                        //             match item {
+                        //                 TraitDefItem::AliasDecl(ad) => self.insert(
+                        //                     param_path.clone(),
+                        //                     Symbol::Alias {
+                        //                         path: param_path.clone(),
+                        //                         visibility: ad.visibility,
+                        //                         original_type_opt: ad.original_type_opt,
+                        //                         alias_name: ad.alias_name,
+                        //                     },
+                        //                 )?,
+                        //                 TraitDefItem::ConstantDecl(cd) => self.insert(
+                        //                     param_path.clone(),
+                        //                     Symbol::Constant {
+                        //                         path: param_path.clone(),
+                        //                         visibility: cd.visibility,
+                        //                         constant_name: cd.constant_name,
+                        //                         constant_type: *cd.constant_type,
+                        //                     },
+                        //                 )?,
+                        //                 TraitDefItem::FunctionItem(fi) => self.insert(
+                        //                     param_path.clone(),
+                        //                     Symbol::Function {
+                        //                         path: param_path.clone(),
+                        //                         function: fi,
+                        //                     },
+                        //                 )?,
+                        //             }
+                        //         }
+                        //     }
+                        //     None => todo!(),
+                        // },
                         Some(sym) => self.insert(param_path, sym.clone())?,
                         None => {
                             return Err(SemanticErrorKind::UndefinedType { name: tp.type_name });
@@ -1031,6 +1073,15 @@ impl SemanticAnalyser {
                 &mut function_type,
             )?;
         }
+
+        log_trace!(
+            self.logger,
+            "analysis of function `{full_path}({:?}) -> {}` complete",
+            f.param_strings(),
+            f.return_type_opt
+                .clone()
+                .unwrap_or(Box::new(Type::UNIT_TYPE))
+        );
 
         self.exit_scope();
 
@@ -1256,7 +1307,7 @@ impl SemanticAnalyser {
                                                             )
                                                         },
                                                     ) {
-                                                        log_trace!(self.logger, "switching to default function implementation in trait definition: `{}`", t.implemented_trait_path);
+                                                        log_trace!(self.logger, "switching to default function implementation in trait definition: `{}` …", t.implemented_trait_path);
 
                                                         function_symbols.insert(
                                                             function_impl_path.clone(),
