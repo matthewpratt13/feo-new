@@ -754,7 +754,7 @@ impl SemanticAnalyser {
 
                     self.enter_scope(scope_kind);
 
-                    if let Some(items) = &t.associated_items_opt {
+                    if let Some(impl_items) = &t.associated_items_opt {
                         let mut object_symbol =
                             if let Some(s) = self.lookup(&implementing_type_path) {
                                 s.to_owned()
@@ -764,7 +764,7 @@ impl SemanticAnalyser {
                                 });
                             };
 
-                        for i in items.iter() {
+                        for i in impl_items.iter() {
                             match i {
                                 TraitImplItem::AliasDecl(ad) => self.analyse_stmt(
                                     &Statement::Item(Item::AliasDecl(ad.clone())),
@@ -778,8 +778,10 @@ impl SemanticAnalyser {
                                     let function_impl_path =
                                         trait_impl_path.join(fi.function_name.to_type_path());
 
-                                    if !fi.block_opt.is_some() {
-                                        match self.lookup(&t.implemented_trait_path) {
+                                    if !fi.clone().block_opt.is_some_and(|block| {
+                                        block.statements_opt.is_some_and(|stmts| !stmts.is_empty())
+                                    }) {
+                                        match self.lookup(&t.implemented_trait_path).cloned() {
                                             Some(Symbol::Trait {
                                                 trait_def:
                                                     TraitDef {
@@ -787,8 +789,8 @@ impl SemanticAnalyser {
                                                     },
                                                 ..
                                             }) => {
-                                                if let Some(items) = trait_items_opt {
-                                                    for item in items {
+                                                if let Some(def_items) = trait_items_opt {
+                                                    for item in def_items {
                                                         if let TraitDefItem::FunctionItem(
                                                             function_item,
                                                         ) = item
@@ -796,7 +798,16 @@ impl SemanticAnalyser {
                                                             if fi.function_name
                                                                 == function_item.function_name
                                                             {
-                                                                if function_item.block_opt.is_some()
+                                                                if function_item
+                                                                    .clone()
+                                                                    .block_opt
+                                                                    .is_some_and(|block| {
+                                                                        block
+                                                                            .statements_opt
+                                                                            .is_some_and(|stmts| {
+                                                                                !stmts.is_empty()
+                                                                            })
+                                                                    })
                                                                 {
                                                                     symbols.insert(
                                                                         function_impl_path.clone(),
@@ -808,10 +819,22 @@ impl SemanticAnalyser {
                                                                         },
                                                                     );
 
+                                                                    match self.analyse_function_def(
+                                                                        &function_item,
+                                                                        &trait_impl_path,
+                                                                        true,
+                                                                        true,
+                                                                    ) {
+                                                                        Ok(_) => (),
+                                                                        Err(err) => self.log_error(
+                                                                            err, &t.span,
+                                                                        ),
+                                                                    }
+
                                                                     object_symbol
                                                                         .add_associated_items(
                                                                             None,
-                                                                            Some(TraitImplItem::FunctionItem(function_item.clone())),
+                                                                            Some(TraitImplItem::FunctionItem(function_item)),
                                                                         )?;
 
                                                                     return Ok(());
@@ -820,8 +843,12 @@ impl SemanticAnalyser {
                                                         }
                                                     }
                                                 }
-                                                
-                                                return Err(SemanticErrorKind::MissingTraitFunctionImpl { func_name: fi.clone().function_name });
+
+                                                return Err(
+                                                    SemanticErrorKind::MissingTraitFunctionImpl {
+                                                        func_name: fi.clone().function_name,
+                                                    },
+                                                );
                                             }
 
                                             Some(sym) => {
