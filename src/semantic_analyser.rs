@@ -163,7 +163,7 @@ impl SemanticAnalyser {
             if let Some(symbol) = scope.symbols.get(path) {
                 log_debug!(
                     self.logger,
-                    "found symbol `{symbol}` in scope `{}` at path `{path:?}`",
+                    "found symbol `{symbol}` in scope `{}` at path `{path}`",
                     scope.scope_kind
                 );
 
@@ -373,6 +373,8 @@ impl SemanticAnalyser {
                             self.log_error(err, &f.span);
                         }
                     }
+
+                    log_trace!(self.logger, "function analysis successful");
                 }
 
                 Item::ImportDecl(id) => {
@@ -382,6 +384,8 @@ impl SemanticAnalyser {
                         Ok(_) => (),
                         Err(err) => self.log_error(err, &id.span),
                     }
+
+                    log_trace!(self.logger, "import analysis successful");
                 }
 
                 Item::InherentImplDef(iid) => {
@@ -457,14 +461,14 @@ impl SemanticAnalyser {
 
                     let module_path = root.join(m.module_name.to_type_path());
 
-                    log_trace!(self.logger, "analysing module item: `{module_path}` …");
-
                     let scope_kind = ScopeKind::Module(module_path.clone());
 
                     let mut module_scope = Scope {
                         scope_kind: scope_kind.clone(),
                         symbols: HashMap::new(),
                     };
+
+                    log_trace!(self.logger, "analysing items in module `{module_path}` …");
 
                     self.enter_scope(scope_kind);
 
@@ -514,11 +518,6 @@ impl SemanticAnalyser {
                             symbols: module_scope.symbols.clone(),
                         },
                     )?;
-
-                    log_trace!(
-                        self.logger,
-                        "inserting symbols into module at path: `{module_path}` …",
-                    );
 
                     if let Some(lib_contents) = self.lib_registry.get_mut(&Identifier::from("lib"))
                     {
@@ -1011,14 +1010,6 @@ impl SemanticAnalyser {
                 path_vec.pop(); // remove associated type name
             }
 
-            println!(
-                "analysing body of function: `{full_path}({:?}) -> {}` …",
-                f.param_strings(),
-                f.return_type_opt
-                    .clone()
-                    .unwrap_or(Box::new(Type::UNIT_TYPE))
-            );
-
             analyse_expr(
                 self,
                 &Expression::Block(block.clone()),
@@ -1032,8 +1023,6 @@ impl SemanticAnalyser {
             }
         };
 
-        println!("finished analysing function body");
-
         // check that the function type matches the return type
         if let Some(return_type) = &f.return_type_opt {
             self.check_types(
@@ -1042,14 +1031,6 @@ impl SemanticAnalyser {
                 &mut function_type,
             )?;
         }
-
-        println!(
-            "analysed function: `{full_path}({:?}) -> {}`",
-            f.param_strings(),
-            f.return_type_opt
-                .clone()
-                .unwrap_or(Box::new(Type::UNIT_TYPE))
-        );
 
         self.exit_scope();
 
@@ -1375,15 +1356,17 @@ impl SemanticAnalyser {
 
         match (expected_type.clone(), matched_type.clone()) {
             // if both types are the same, they are already unified
-            _ if expected_type == matched_type => Ok(()),
+            _ if expected_type == matched_type => (),
 
-            (Type::InferredType(_), _) => Err(SemanticErrorKind::UnexpectedInferredType),
+            (Type::InferredType(_), _) => return Err(SemanticErrorKind::UnexpectedInferredType),
 
             // TODO: custom error
-            (Type::SelfType(_), _) => Err(SemanticErrorKind::UnexpectedType {
-                expected: "non-`Self` type".to_string(),
-                found: Type::SELF_TYPE,
-            }),
+            (Type::SelfType(_), _) => {
+                return Err(SemanticErrorKind::UnexpectedType {
+                    expected: "non-`Self` type".to_string(),
+                    found: Type::SELF_TYPE,
+                })
+            }
 
             (Type::UserDefined(_), Type::SelfType(_)) => {
                 log_trace!(
@@ -1391,19 +1374,19 @@ impl SemanticAnalyser {
                     "attempting to unify `Self` type with expected type `{expected_type}` …"
                 );
                 unify_self_type(matched_type, expected_type.clone());
-                Ok(())
             }
 
-            (ty, Type::SelfType(_)) => Err(SemanticErrorKind::UnexpectedType {
-                expected: "user-defined type".to_string(),
-                found: ty,
-            }),
+            (ty, Type::SelfType(_)) => {
+                return Err(SemanticErrorKind::UnexpectedType {
+                    expected: "user-defined type".to_string(),
+                    found: ty,
+                })
+            }
 
             // if one is a concrete or generic type and the other is inferred, resolve the inference
             (concrete_or_generic, Type::InferredType(_)) => {
                 log_trace!(self.logger, "attempting to unify inferred type with expected type `{concrete_or_generic}` …");
                 unify_inferred_type(matched_type, concrete_or_generic);
-                Ok(())
             }
 
             (
@@ -1440,13 +1423,11 @@ impl SemanticAnalyser {
                             }
                         }
                     }
-
-                    Ok(())
                 } else {
-                    Err(SemanticErrorKind::TypeMismatchUnification {
+                    return Err(SemanticErrorKind::TypeMismatchUnification {
                         expected: expected_type.to_identifier(),
                         found: matched_type.to_identifier(),
-                    })
+                    });
                 }
             }
 
@@ -1468,7 +1449,7 @@ impl SemanticAnalyser {
             }
 
             (concrete, Type::Generic { .. }) => {
-                self.unify_generic_with_concrete(symbol_table, matched_type, &concrete)
+                self.unify_generic_with_concrete(symbol_table, matched_type, &concrete)?;
             }
 
             (Type::GroupedType(grouped), matched) => {
@@ -1479,8 +1460,6 @@ impl SemanticAnalyser {
                         found: matched,
                     });
                 }
-
-                Ok(())
             }
 
             (
@@ -1507,7 +1486,7 @@ impl SemanticAnalyser {
             ) => {
                 // log_trace!(self.logger, "attempting to unify numeric type `{matched_type}` with expected type `{expected_type}` …");
 
-                unify_numeric_types(expected_type, matched_type)
+                unify_numeric_types(expected_type, matched_type)?;
             }
 
             (
@@ -1533,8 +1512,6 @@ impl SemanticAnalyser {
                         found: num_elems_b.into(),
                     });
                 }
-
-                Ok(())
             }
 
             (Type::Tuple(elem_types_a), Type::Tuple(elem_types_b)) => {
@@ -1553,8 +1530,6 @@ impl SemanticAnalyser {
                         });
                     }
                 }
-
-                Ok(())
             }
 
             (Type::FunctionPtr(ptr_a), Type::FunctionPtr(ptr_b)) => {
@@ -1678,8 +1653,6 @@ impl SemanticAnalyser {
                         }
                     }
                 }
-
-                Ok(())
             }
 
             (
@@ -1706,8 +1679,6 @@ impl SemanticAnalyser {
                         found: *inner_type_b,
                     });
                 }
-
-                Ok(())
             }
 
             (
@@ -1724,8 +1695,6 @@ impl SemanticAnalyser {
                         found: *elem_type_b,
                     });
                 }
-
-                Ok(())
             }
 
             (
@@ -1751,8 +1720,6 @@ impl SemanticAnalyser {
                         found: *val_type_b,
                     });
                 }
-
-                Ok(())
             }
 
             (
@@ -1770,13 +1737,11 @@ impl SemanticAnalyser {
                         found: *inner_type_b,
                     });
                 }
-
-                Ok(())
             }
 
             (Type::Result { .. }, Type::Result { .. }) => {
                 log_trace!(self.logger, "attempting to unify `Result<T, E>` types …");
-                unify_result_types(matched_type, &expected_type)
+                unify_result_types(matched_type, &expected_type)?;
             }
 
             (Type::UserDefined(type_path_a), Type::UserDefined(type_path_b)) => {
@@ -1786,15 +1751,18 @@ impl SemanticAnalyser {
                         found: type_path_b.to_identifier(),
                     });
                 }
-
-                Ok(())
             }
 
-            _ => Err(SemanticErrorKind::TypeMismatchUnification {
-                expected: expected_type.to_identifier(),
-                found: matched_type.to_identifier(),
-            }),
+            _ => {
+                return Err(SemanticErrorKind::TypeMismatchUnification {
+                    expected: expected_type.to_identifier(),
+                    found: matched_type.to_identifier(),
+                })
+            }
         }
+
+        log_trace!(self.logger, "type check successful");
+        Ok(())
     }
 
     fn unify_generic_with_concrete(

@@ -179,7 +179,7 @@ pub(crate) fn analyse_expr(
                     _ => Ok(Type::UNIT_TYPE),
                 };
 
-                println!("finished analysing block expression with type: `{ty:?}`");
+                log_trace!(analyser.logger, "finished analysing block expression");
 
                 analyser.exit_scope();
 
