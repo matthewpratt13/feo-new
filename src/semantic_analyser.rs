@@ -1190,46 +1190,6 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            // Symbol::Trait { trait_def, .. } => {
-                            //     self.insert(item_path.clone(), symbol.clone())?;
-
-                            //     if let Some(items) = &trait_def.trait_items_opt {
-                            //         for item in items {
-                            //             match item {
-                            //                 TraitDefItem::AliasDecl(ad) => self.insert(
-                            //                     item_path.join(ad.alias_name.to_type_path()),
-                            //                     Symbol::Alias {
-                            //                         path: item_path
-                            //                             .join(ad.alias_name.to_type_path()),
-                            //                         visibility: ad.visibility.clone(),
-                            //                         alias_name: ad.alias_name.clone(),
-                            //                         original_type_opt: ad.original_type_opt.clone(),
-                            //                     },
-                            //                 )?,
-                            //                 TraitDefItem::ConstantDecl(cd) => self.insert(
-                            //                     item_path.join(cd.constant_name.to_type_path()),
-                            //                     Symbol::Constant {
-                            //                         path: item_path
-                            //                             .join(cd.constant_name.to_type_path()),
-                            //                         visibility: cd.visibility.clone(),
-                            //                         constant_name: cd.constant_name.clone(),
-                            //                         constant_type: *cd.constant_type.clone(),
-                            //                     },
-                            //                 )?,
-                            //                 TraitDefItem::FunctionItem(fi) => self.insert(
-                            //                     item_path.join(fi.function_name.to_type_path()),
-                            //                     Symbol::Function {
-                            //                         path: {
-                            //                             item_path
-                            //                                 .join(fi.function_name.to_type_path())
-                            //                         },
-                            //                         function: fi.clone(),
-                            //                     },
-                            //                 )?,
-                            //             }
-                            //         }
-                            //     }
-                            // }
                             Symbol::Module { symbols, .. } => {
                                 for (path, sym) in symbols {
                                     if !table.contains_key(&path) {
@@ -1239,8 +1199,12 @@ impl SemanticAnalyser {
                             }
 
                             _ => {
-                                if !table.contains_key(&import_path) {
-                                    self.insert(item_path.clone(), symbol.clone())?;
+                                if let Some(Scope { symbols, .. }) = self.scope_stack.last() {
+                                    if !symbols.contains_key(&import_path)
+                                        && !symbols.contains_key(&item_path)
+                                    {
+                                        self.insert(item_path.clone(), symbol.clone())?;
+                                    }
                                 }
                             }
                         }
