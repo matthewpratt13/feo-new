@@ -394,7 +394,7 @@ impl SemanticAnalyser {
 
                     let scope_kind = ScopeKind::Impl(type_path.clone());
 
-                    let mut symbols: SymbolTable = HashMap::new();
+                    let mut function_symbols: SymbolTable = HashMap::new();
 
                     self.enter_scope(scope_kind);
 
@@ -419,7 +419,7 @@ impl SemanticAnalyser {
                                     let function_def_path =
                                         type_path.join(function_name_path.clone());
 
-                                    symbols.insert(
+                                    function_symbols.insert(
                                         function_def_path.clone(),
                                         Symbol::Function {
                                             path: function_name_path,
@@ -445,7 +445,7 @@ impl SemanticAnalyser {
                         "inserting symbols into implementation for type: `{type_path}` …",
                     );
 
-                    for (path, symbol) in symbols {
+                    for (path, symbol) in function_symbols {
                         self.insert(path, symbol)?;
                     }
                 }
@@ -750,7 +750,7 @@ impl SemanticAnalyser {
                         implementing_type_path: implementing_type_path.clone(),
                     };
 
-                    let mut symbols: SymbolTable = HashMap::new();
+                    let mut function_symbols: SymbolTable = HashMap::new();
 
                     self.enter_scope(scope_kind);
 
@@ -758,7 +758,7 @@ impl SemanticAnalyser {
                         t,
                         &implementing_type_path,
                         trait_impl_path,
-                        &mut symbols,
+                        &mut function_symbols,
                     )?;
 
                     self.exit_scope();
@@ -768,7 +768,7 @@ impl SemanticAnalyser {
                         "inserting symbols into `{}` implementation for type `{implementing_type_path}` …", t.implemented_trait_path
                     );
 
-                    for (path, symbol) in symbols {
+                    for (path, symbol) in function_symbols {
                         self.insert(path, symbol)?;
                     }
                 }
@@ -1227,7 +1227,7 @@ impl SemanticAnalyser {
         t: &TraitImplDef,
         implementing_type_path: &TypePath,
         trait_impl_path: TypePath,
-        symbols: &mut HashMap<TypePath, Symbol>,
+        function_symbols: &mut HashMap<TypePath, Symbol>,
     ) -> Result<(), SemanticErrorKind> {
         Ok(if let Some(impl_items) = &t.associated_items_opt {
             let mut object_symbol = if let Some(s) = self.lookup(implementing_type_path) {
@@ -1277,7 +1277,7 @@ impl SemanticAnalyser {
                                                     ) {
                                                         log_trace!(self.logger, "switching to default function implementation in trait definition: `{}`", t.implemented_trait_path);
 
-                                                        symbols.insert(
+                                                        function_symbols.insert(
                                                             function_impl_path.clone(),
                                                             Symbol::Function {
                                                                 path: function_impl_path,
@@ -1332,7 +1332,7 @@ impl SemanticAnalyser {
                             }
                         }
 
-                        symbols.insert(
+                        function_symbols.insert(
                             function_impl_path.clone(),
                             Symbol::Function {
                                 path: function_impl_path,
