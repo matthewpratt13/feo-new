@@ -528,8 +528,6 @@ impl From<ValueExpr> for Expression {
     }
 }
 
-impl ToExpression for AssigneeExpr {}
-
 impl From<AssigneeExpr> for Expression {
     fn from(value: AssigneeExpr) -> Self {
         match value {
@@ -827,6 +825,8 @@ pub(crate) enum AssigneeExpr {
         span: Span,
     },
 }
+
+impl ToExpression for AssigneeExpr {}
 
 impl Spanned for AssigneeExpr {
     fn span(&self) -> Span {
