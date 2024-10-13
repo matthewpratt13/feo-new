@@ -1044,7 +1044,7 @@ impl SemanticAnalyser {
             }
         }
 
-        let mut function_type = if let Some(block) = &f.block_opt {
+        if let Some(block) = &f.block_opt {
             // split path into a vector to remove the last element (if needed), then convert back
             let mut path_vec = Vec::<Identifier>::from(path.clone());
 
@@ -1052,26 +1052,20 @@ impl SemanticAnalyser {
                 path_vec.pop(); // remove associated type name
             }
 
-            analyse_expr(
+            let mut function_type = analyse_expr(
                 self,
                 &Expression::Block(block.clone()),
                 &TypePath::from(path_vec),
-            )?
-        } else {
-            if let Some(ty) = &f.return_type_opt {
-                *ty.clone()
-            } else {
-                Type::UNIT_TYPE
-            }
-        };
-
-        // check that the function type matches the return type
-        if let Some(return_type) = &f.return_type_opt {
-            self.check_types(
-                &mut self.current_symbol_table(),
-                &return_type,
-                &mut function_type,
             )?;
+
+            // check that the function type matches the return type
+            if let Some(return_type) = &f.return_type_opt {
+                self.check_types(
+                    &mut self.current_symbol_table(),
+                    &return_type,
+                    &mut function_type,
+                )?;
+            }
         }
 
         log_trace!(
