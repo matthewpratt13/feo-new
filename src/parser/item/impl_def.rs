@@ -39,12 +39,12 @@ impl ParseDefItem for InherentImplDef {
             }
             Some(Token::EOF) | None => {
                 parser.emit_unexpected_eoi();
-                parser.warn_missing_token("implementing object type path");
+                parser.warn_missing_token("implementing type path");
                 Err(ErrorsEmitted)
             }
 
             _ => {
-                parser.emit_unexpected_token("implementing object type path");
+                parser.emit_unexpected_token("implementing type path");
                 parser.next_token();
                 Err(ErrorsEmitted)
             }
@@ -221,7 +221,7 @@ impl ParseAssociatedItem for InherentImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.emit_missing_node("item", "function implementation");
+                    parser.emit_missing_node("expr", "function body");
                     parser.next_token();
                     Err(ErrorsEmitted)
                 } else {
@@ -264,7 +264,7 @@ impl ParseAssociatedItem for TraitImplItem {
             Some(Token::Func { .. }) => {
                 let function_def = FunctionItem::parse(parser, attributes_opt, visibility)?;
                 if function_def.block_opt.is_none() {
-                    parser.emit_missing_node("item", "trait implementation associated item");
+                    parser.emit_missing_node("expr", "function body");
                     parser.next_token();
                     Err(ErrorsEmitted)
                 } else {

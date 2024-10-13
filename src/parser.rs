@@ -148,7 +148,7 @@ impl Parser {
             precedences: HashMap::new(),
             context: ParserContext::Default,
             errors: Vec::new(),
-            logger: Logger::new(log_level),
+            logger: Logger::init(log_level),
         };
 
         parser.init_precedences(stream.tokens());
@@ -231,7 +231,7 @@ impl Parser {
         let mut statements: Vec<Statement> = Vec::new();
 
         // clear log messages, then log status info
-        self.logger.clear_messages();
+        self.logger.clear_all_messages();
         log_debug!(self.logger, "starting to parse tokens …");
 
         while self.current < self.stream.tokens().len() {
