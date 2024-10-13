@@ -61,7 +61,7 @@ impl SemanticAnalyser {
     /// and module registry. Add any external code (e.g., library functions) to the global scope
     /// if provided.
     pub(crate) fn new(log_level: LogLevel, external_code: Option<LibRegistry>) -> Self {
-        let mut logger = Logger::new(log_level);
+        let mut logger = Logger::init(log_level);
         let mut symbols: SymbolTable = HashMap::new();
         let mut lib_registry: LibRegistry = HashMap::new();
 
