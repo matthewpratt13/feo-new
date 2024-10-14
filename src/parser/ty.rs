@@ -56,20 +56,42 @@ impl Type {
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
             Some(Token::Func { .. }) => parse_function_ptr_type(parser),
-            Some(Token::Ampersand { .. }) => {
-                let inner_type = Box::new(Type::parse(parser)?);
-                Ok(Type::Reference {
-                    reference_op: ReferenceOp::Borrow,
-                    inner_type,
-                })
-            }
-            Some(Token::AmpersandMut { .. }) => {
-                let inner_type = Box::new(Type::parse(parser)?);
-                Ok(Type::Reference {
-                    reference_op: ReferenceOp::MutableBorrow,
-                    inner_type,
-                })
-            }
+            Some(Token::Ampersand { .. }) => match parser.peek_ahead_by(1) {
+                Some(Token::SelfType { .. }) => {
+                    parser.next_token();
+                    parser.next_token();
+
+                    Ok(Type::SelfType {
+                        reference_op: ReferenceOp::Borrow,
+                        ty: SelfType,
+                    })
+                }
+                _ => {
+                    let inner_type = Box::new(Type::parse(parser)?);
+                    Ok(Type::Reference {
+                        reference_op: ReferenceOp::Borrow,
+                        inner_type,
+                    })
+                }
+            },
+            Some(Token::AmpersandMut { .. }) => match parser.peek_ahead_by(1) {
+                Some(Token::SelfType { .. }) => {
+                    parser.next_token();
+                    parser.next_token();
+
+                    Ok(Type::SelfType {
+                        reference_op: ReferenceOp::MutableBorrow,
+                        ty: SelfType,
+                    })
+                }
+                _ => {
+                    let inner_type = Box::new(Type::parse(parser)?);
+                    Ok(Type::Reference {
+                        reference_op: ReferenceOp::MutableBorrow,
+                        inner_type,
+                    })
+                }
+            },
             Some(Token::VecType { .. }) => {
                 parser.expect_token(TokenType::LessThan)?;
 
