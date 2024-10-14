@@ -911,11 +911,7 @@ impl SemanticAnalyser {
         // * object implementation (e.g., `lib::some_module::SomeObject`)
         // * trait implementation (e.g., `lib::some_module::SomeObject::SomeTrait`)
 
-        let function_root = if is_trait_impl {
-            path.clone().strip_suffix()
-        } else {
-            path.clone()
-        };
+        let function_root = path.clone();
 
         // append the function name to the root
         let full_path = function_root.join(f.function_name.to_type_path());
@@ -949,13 +945,19 @@ impl SemanticAnalyser {
 
             for (param, mut param_type) in params.iter().zip(param_types) {
                 if let Type::SelfType { reference_op, .. } = param_type {
+                    let inner_type = if is_trait_impl {
+                        Type::UserDefined(function_root.clone().strip_suffix())
+                    } else {
+                        Type::UserDefined(function_root.clone())
+                    };
+
                     if is_associated_func {
                         param_type = match reference_op {
                             ReferenceOp::Borrow | ReferenceOp::MutableBorrow => Type::Reference {
                                 reference_op,
-                                inner_type: Box::new(Type::UserDefined(function_root.clone())),
+                                inner_type: Box::new(inner_type),
                             },
-                            ReferenceOp::Owned => Type::UserDefined(function_root.clone()),
+                            ReferenceOp::Owned => inner_type,
                         };
                     }
                 }
@@ -1255,7 +1257,7 @@ impl SemanticAnalyser {
                                                         match self.analyse_function_def(
                                                             &function_item,
                                                             &trait_impl_path,
-                                                            true,
+                                                            false,
                                                             true,
                                                         ) {
                                                             Ok(_) => (),
