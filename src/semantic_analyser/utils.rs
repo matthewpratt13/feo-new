@@ -15,10 +15,6 @@ pub(crate) trait FormatParams {
     fn param_strings(&self) -> Vec<String>;
 }
 
-pub(crate) trait FormatStatements {
-    fn statement_strings(&self) -> Vec<String>;
-}
-
 pub(crate) trait ToExpression {
     fn to_expression(&self) -> Expression
     where

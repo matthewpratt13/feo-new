@@ -1,7 +1,7 @@
 use core::fmt;
 
 use crate::{
-    semantic_analyser::{FormatParams, FormatStatements},
+    semantic_analyser::FormatParams,
     span::{Span, Spanned},
 };
 
@@ -189,7 +189,7 @@ pub struct BlockExpr {
     pub(crate) span: Span,
 }
 
-impl FormatStatements for BlockExpr {
+impl BlockExpr {
     fn statement_strings(&self) -> Vec<String> {
         let mut statement_strings: Vec<String> = Vec::new();
 
