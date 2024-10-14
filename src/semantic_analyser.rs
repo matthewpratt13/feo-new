@@ -1202,6 +1202,9 @@ impl SemanticAnalyser {
                 });
             };
 
+            // TODO: check that trait items are declared in an existing trait def and are in scope
+            // TODO: check that the items' types are the same as those declared in the trait
+
             for i in impl_items.iter() {
                 match i {
                     TraitImplItem::AliasDecl(ad) => self.analyse_stmt(
