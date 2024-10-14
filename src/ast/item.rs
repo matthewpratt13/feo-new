@@ -2,7 +2,7 @@ use core::fmt;
 
 use crate::{
     parser::get_type_paths,
-    semantic_analyser::{FormatObject, FormatParams},
+    semantic_analyser::{FormatObject, FormatParams, ToIdentifier},
     span::{Span, Spanned},
 };
 
@@ -32,14 +32,26 @@ impl FunctionOrMethodParam {
     pub(crate) fn param_name(&self) -> Identifier {
         match self {
             FunctionOrMethodParam::FunctionParam(f) => f.param_name.name.clone(),
-            FunctionOrMethodParam::MethodParam(_) => Identifier::from("self"),
+            FunctionOrMethodParam::MethodParam(s) => match s.reference_op_opt {
+                Some(ro) => Identifier::from(&format!("{ro}self")),
+                None => Identifier::from("self"),
+            },
         }
     }
 
     pub(crate) fn param_type(&self) -> Type {
         match self {
             FunctionOrMethodParam::FunctionParam(f) => *f.param_type.clone(),
-            FunctionOrMethodParam::MethodParam(_) => Type::SELF_TYPE,
+            FunctionOrMethodParam::MethodParam(s) => match s.reference_op_opt {
+                Some(ro) => Type::SelfType {
+                    reference_op: ro,
+                    ty: SelfType,
+                },
+                None => Type::SelfType {
+                    reference_op: ReferenceOp::Owned,
+                    ty: SelfType,
+                },
+            },
         }
     }
 }
@@ -201,17 +213,19 @@ impl FormatObject for SelfParam {
     fn to_backtick_string(&self) -> String {
         format!(
             "`{}{}`",
-            self.reference_op_opt.unwrap_or(ReferenceOp::Owned),
+            self.reference_op_opt.unwrap_or_default(),
             self.kw_self
         )
     }
 }
 
+impl ToIdentifier for SelfParam {}
+
 impl fmt::Display for SelfParam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{:?}{}",
+            "{}{}",
             self.reference_op_opt.unwrap_or_default(),
             self.kw_self
         )

@@ -136,7 +136,7 @@ impl SemanticAnalyser {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             log_debug!(
                 self.logger,
-                "inserting symbol `{symbol}` into scope `{}` at path `{path}` …",
+                "inserting symbol `{symbol:?}` into scope `{}` at path `{path}` …",
                 curr_scope.scope_kind
             );
 
@@ -853,7 +853,7 @@ impl SemanticAnalyser {
                     | Type::Tuple(_)
                     | Type::FunctionPtr(_)
                     | Type::Reference { .. }
-                    | Type::SelfType(_)
+                    | Type::SelfType { .. }
                     | Type::InferredType(_)
                     | Type::Vec { .. }
                     | Type::Mapping { .. }
@@ -946,11 +946,17 @@ impl SemanticAnalyser {
             let param_types: Vec<Type> = params.iter().map(|p| p.param_type()).collect();
 
             for (param, mut param_type) in params.iter().zip(param_types) {
-                if param_type == Type::SELF_TYPE {
+                if matches!(param_type, Type::SelfType { .. }) {
                     if is_associated_func {
                         param_type = Type::UserDefined(function_root.clone());
                     }
                 }
+
+                // if param_type == Type::SELF_TYPE {
+                //     if is_associated_func {
+                //         param_type = Type::UserDefined(function_root.clone());
+                //     }
+                // }
 
                 let param_path = param.param_name().to_type_path();
 
@@ -1370,14 +1376,14 @@ impl SemanticAnalyser {
             (Type::InferredType(_), _) => return Err(SemanticErrorKind::UnexpectedInferredType),
 
             // TODO: custom error
-            (Type::SelfType(_), _) => {
+            (Type::SelfType { .. }, _) => {
                 return Err(SemanticErrorKind::UnexpectedType {
                     expected: "non-`Self` type".to_string(),
-                    found: Type::SELF_TYPE,
+                    found: expected_type.clone(),
                 })
             }
 
-            (Type::UserDefined(_), Type::SelfType(_)) => {
+            (Type::UserDefined(_), Type::SelfType { .. }) => {
                 log_trace!(
                     self.logger,
                     "attempting to unify `Self` type with expected type `{expected_type}` …"
@@ -1385,7 +1391,7 @@ impl SemanticAnalyser {
                 unify_self_type(matched_type, expected_type.clone());
             }
 
-            (ty, Type::SelfType(_)) => {
+            (ty, Type::SelfType { .. }) => {
                 return Err(SemanticErrorKind::UnexpectedType {
                     expected: "user-defined type".to_string(),
                     found: ty,
@@ -1579,11 +1585,11 @@ impl SemanticAnalyser {
                                 }
                                 (
                                     FunctionOrMethodParam::FunctionParam(param_a),
-                                    FunctionOrMethodParam::MethodParam(_),
+                                    FunctionOrMethodParam::MethodParam(sp),
                                 ) => {
                                     return Err(SemanticErrorKind::UnexpectedParam {
                                         expected: param_a.param_type.to_backtick_string(),
-                                        found: Type::SELF_TYPE.to_identifier(),
+                                        found: sp.to_identifier(),
                                     })
                                 }
                                 (
@@ -2028,7 +2034,7 @@ impl SemanticAnalyser {
                     }
                 }
             }
-            Type::SelfType(_) => {
+            Type::SelfType { .. } => {
                 unify_self_type(ty, concrete_type.clone());
             }
             Type::InferredType { .. } => unify_inferred_type(ty, concrete_type.clone()),
@@ -2568,9 +2574,17 @@ fn unify_result_types(ty: &mut Type, context_type: &Type) -> Result<(), Semantic
 }
 
 fn unify_self_type(ty: &mut Type, object_type: Type) {
-    if *ty == Type::SELF_TYPE {
-        if object_type != Type::SELF_TYPE && object_type != Type::inferred_type("_") {
+    if matches!(ty, Type::SelfType { .. }) {
+        if !matches!(object_type, Type::SelfType { .. })
+            && !matches!(object_type, Type::InferredType(_))
+        {
             *ty = object_type;
         }
     }
+
+    // if *ty == Type::SELF_TYPE {
+    //     if object_type != Type::SELF_TYPE && object_type != Type::inferred_type("_") {
+    //         *ty = object_type;
+    //     }
+    // }
 }

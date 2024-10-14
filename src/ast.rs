@@ -1108,7 +1108,10 @@ pub(crate) enum Type {
         inner_type: Box<Type>,
     },
 
-    SelfType(SelfType),
+    SelfType {
+        reference_op: ReferenceOp,
+        ty: SelfType,
+    },
 
     InferredType(InferredType),
 

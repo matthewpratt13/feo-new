@@ -1506,7 +1506,7 @@ fn analyse_call_or_method_call_expr(
                     let mut func_param_counter: usize = 0;
 
                     for param in params {
-                        if let Type::SelfType(_) = param.param_type() {
+                        if let Type::SelfType { .. } = param.param_type() {
                             self_counter += 1;
                         } else {
                             func_param_counter += 1;
@@ -1539,7 +1539,7 @@ fn analyse_call_or_method_call_expr(
                     let mut self_counter: usize = 0;
 
                     for param in params {
-                        if let Type::SelfType(_) = param.param_type() {
+                        if let Type::SelfType { .. } = param.param_type() {
                             self_counter += 1;
                         }
                     }

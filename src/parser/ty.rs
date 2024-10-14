@@ -21,7 +21,7 @@ use super::{get_collection, Parser};
 
 impl Type {
     pub(crate) const UNIT_TYPE: Type = Type::UnitType(UnitType);
-    pub(crate) const SELF_TYPE: Type = Type::SelfType(SelfType);
+    // pub(crate) const SELF_TYPE: Type = Type::SelfType(SelfType);
 
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
@@ -224,7 +224,7 @@ impl Type {
                     let path = TypePath::parse(parser, token)?;
                     Ok(Type::UserDefined(path))
                 }
-                _ => Ok(Type::SELF_TYPE),
+                _ => Ok(Type::self_type(ReferenceOp::Owned)),
             },
 
             Some(Token::EOF) | None => {
@@ -243,6 +243,13 @@ impl Type {
         Type::InferredType(InferredType {
             name: Identifier::from(name_str),
         })
+    }
+
+    pub(crate) fn self_type(reference_op: ReferenceOp) -> Type {
+        Type::SelfType {
+            reference_op,
+            ty: SelfType,
+        }
     }
 }
 
@@ -288,7 +295,11 @@ impl fmt::Display for Type {
                 reference_op,
                 inner_type,
             } => write!(f, "{}{}", reference_op, *inner_type),
-            Type::SelfType(_) => write!(f, "Self"),
+            Type::SelfType { reference_op, .. } => match reference_op {
+                ReferenceOp::Borrow => write!(f, "&Self"),
+                ReferenceOp::MutableBorrow => write!(f, "&mut Self"),
+                ReferenceOp::Owned => write!(f, "Self"),
+            },
             Type::InferredType(_) => write!(f, "_"),
             Type::Vec { element_type } => write!(f, "Vec<{}>", *element_type),
             Type::Mapping {
@@ -360,7 +371,11 @@ impl fmt::Debug for Type {
                 .field("reference_op", reference_op)
                 .field("inner_type", inner_type)
                 .finish(),
-            Self::SelfType(_) => f.debug_tuple("SelfType").finish(),
+            Self::SelfType { reference_op, ty } => f
+                .debug_struct("SelfType")
+                .field("reference_op", reference_op)
+                .field("ty", ty)
+                .finish(),
             Self::InferredType(arg0) => f.debug_tuple("InferredType").field(arg0).finish(),
             Self::Vec { element_type } => f
                 .debug_struct("Vec")
