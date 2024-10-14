@@ -345,8 +345,6 @@ pub(crate) fn analyse_expr(
             let object_path = TypePath::from(object_as_path_expr);
             let object_type = analyse_expr(analyser, &object, &object_path)?;
 
-            println!("object path: `{object_path}`");
-
             match analyser.lookup(&object_path).cloned() {
                 Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
                     Some(fields) => match fields.iter().find(|f| f.field_name == fa.field_name) {

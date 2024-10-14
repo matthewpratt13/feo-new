@@ -968,10 +968,8 @@ impl SemanticAnalyser {
 
         if let Some(block) = &f.block_opt {
             let root = path.clone().strip_suffix();
-            println!("root: `{root}`");
 
             let mut function_type = analyse_expr(self, &Expression::Block(block.clone()), &root)?;
-
 
             // check that the function type matches the return type
             if let Some(return_type) = &f.return_type_opt {
