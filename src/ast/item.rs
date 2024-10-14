@@ -104,11 +104,31 @@ pub(crate) enum TraitDefItem {
     FunctionItem(FunctionItem),
 }
 
+impl From<TraitImplItem> for TraitDefItem {
+    fn from(value: TraitImplItem) -> Self {
+        match value {
+            TraitImplItem::AliasDecl(ad) => TraitDefItem::AliasDecl(ad),
+            TraitImplItem::ConstantDecl(cd) => TraitDefItem::ConstantDecl(cd),
+            TraitImplItem::FunctionItem(fi) => TraitDefItem::FunctionItem(fi),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TraitImplItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     FunctionItem(FunctionItem),
+}
+
+impl From<TraitDefItem> for TraitImplItem {
+    fn from(value: TraitDefItem) -> Self {
+        match value {
+            TraitDefItem::AliasDecl(ad) => Self::AliasDecl(ad),
+            TraitDefItem::ConstantDecl(cd) => Self::ConstantDecl(cd),
+            TraitDefItem::FunctionItem(fi) => Self::FunctionItem(fi),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
