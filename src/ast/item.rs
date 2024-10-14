@@ -31,11 +31,20 @@ pub(crate) enum FunctionOrMethodParam {
 impl FunctionOrMethodParam {
     pub(crate) fn param_name(&self) -> Identifier {
         match self {
-            FunctionOrMethodParam::FunctionParam(f) => f.param_name.name.clone(),
-            FunctionOrMethodParam::MethodParam(s) => match s.reference_op_opt {
-                Some(ro) => Identifier::from(&format!("{ro}self")),
-                None => Identifier::from("self"),
-            },
+            FunctionOrMethodParam::FunctionParam(f) => {
+                let param_name_string = f.param_name.name.to_string();
+
+                let param_name = if param_name_string.starts_with("&") {
+                    param_name_string.strip_prefix("&").unwrap()
+                } else if param_name_string.starts_with("&mut ") {
+                    param_name_string.strip_prefix("&mut ").unwrap()
+                } else {
+                    param_name_string.as_str()
+                };
+
+                Identifier::from(param_name)
+            }
+            FunctionOrMethodParam::MethodParam(_) => Identifier::from("self"),
         }
     }
 

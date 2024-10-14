@@ -13,7 +13,7 @@ pub(crate) use self::semantic_error::SemanticErrorKind;
 
 /// Generic error struct that encapsulates custom error kinds and provides the precise location
 /// of the error in the source code.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CompilerError<T: Clone + fmt::Debug> {
     error_kind: T,
     position: Position,

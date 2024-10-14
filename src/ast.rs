@@ -387,7 +387,7 @@ impl fmt::Display for RangeOp {
 }
 
 /// Enum representing the different reference operators used in AST nodes (i.e., `&` and `&mut`).
-#[derive(Default, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum ReferenceOp {
     Borrow,        // `&`
     MutableBorrow, // `&mut`
@@ -402,16 +402,6 @@ impl fmt::Display for ReferenceOp {
             ReferenceOp::Borrow => write!(f, "&"),
             ReferenceOp::MutableBorrow => write!(f, "&mut "),
             ReferenceOp::Owned => write!(f, ""),
-        }
-    }
-}
-
-impl fmt::Debug for ReferenceOp {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Borrow => write!(f, "&"),
-            Self::MutableBorrow => write!(f, "&mut "),
-            Self::Owned => write!(f, ""),
         }
     }
 }

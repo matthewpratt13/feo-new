@@ -173,7 +173,13 @@ pub(crate) fn analyse_expr(
 
                 let ty = match stmts.last() {
                     Some(stmt) => match stmt {
-                        Statement::Expression(expr) => analyse_expr(analyser, expr, root),
+                        Statement::Expression(expr) => match analyse_expr(analyser, expr, root) {
+                            Ok(ty) => Ok(ty),
+                            Err(err) => {
+                                analyser.log_error(err.clone(), &expr.span());
+                                Err(err)
+                            }
+                        },
                         _ => Ok(Type::UNIT_TYPE),
                     },
                     _ => Ok(Type::UNIT_TYPE),
@@ -338,6 +344,8 @@ pub(crate) fn analyse_expr(
 
             let object_path = TypePath::from(object_as_path_expr);
             let object_type = analyse_expr(analyser, &object, &object_path)?;
+
+            println!("object path: `{object_path}`");
 
             match analyser.lookup(&object_path).cloned() {
                 Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
