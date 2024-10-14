@@ -104,6 +104,15 @@ impl TypePath {
         Ok(path_type)
     }
 
+    pub(crate) fn strip_prefix(&mut self) -> TypePath {
+        if let Some(ids) = self.associated_type_path_prefix_opt.as_mut() {
+            ids.remove(0);
+            TypePath::from(ids.clone()).join(self.type_name.to_type_path())
+        } else {
+            self.to_owned()
+        }
+    }
+
     pub(crate) fn strip_suffix(&mut self) -> TypePath {
         if let Some(ids) = &self.associated_type_path_prefix_opt {
             TypePath::from(ids.clone())

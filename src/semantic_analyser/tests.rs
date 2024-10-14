@@ -152,7 +152,7 @@ fn analyse_impl() -> Result<(), ()> {
             const CREATOR_ADDRESS: h160;
     
             func address() -> h160;
-            func balance(&self) -> u256;
+            func balance(&self) -> u64;
             func msg_sender() -> h160;
             func creator_address() -> h160;
         }

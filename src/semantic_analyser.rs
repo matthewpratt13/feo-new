@@ -200,14 +200,26 @@ impl SemanticAnalyser {
                 return Some(symbol);
             } else {
                 for (sym_path, symbol) in scope.symbols.iter() {
-                    if path.type_name == sym_path.type_name {
+                    if *path == sym_path.clone().strip_prefix() {
                         log_debug!(
                             self.logger,
                             "found symbol `{symbol}` in scope `{}` at path `{path}`",
                             scope.scope_kind
                         );
 
-                        return Some(&symbol);
+                        return Some(symbol);
+                    }
+
+                    if scope.scope_kind < ScopeKind::ProgramRoot {
+                        if path.to_identifier() == sym_path.type_name {
+                            log_debug!(
+                                self.logger,
+                                "found symbol `{symbol}` in scope `{}` at path `{path}`",
+                                scope.scope_kind
+                            );
+
+                            return Some(symbol);
+                        }
                     }
                 }
             }

@@ -343,7 +343,6 @@ pub(crate) fn analyse_expr(
             let object_as_path_expr = PathExpr::from(object.clone());
 
             let object_path = TypePath::from(object_as_path_expr);
-            let object_type = analyse_expr(analyser, &object, &object_path)?;
 
             match analyser.lookup(&object_path).cloned() {
                 Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
@@ -357,15 +356,23 @@ pub(crate) fn analyse_expr(
                     _ => Ok(Type::UNIT_TYPE),
                 },
 
-                None => Err(SemanticErrorKind::UndefinedType {
-                    name: object_type.to_identifier(),
-                }),
+                None => {
+                    let object_type = analyse_expr(analyser, &object, &object_path)?;
 
-                Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                    name: object_type.to_identifier(),
-                    expected: "struct".to_string(),
-                    found: sym.to_backtick_string(),
-                }),
+                    Err(SemanticErrorKind::UndefinedType {
+                        name: object_type.to_identifier(),
+                    })
+                }
+
+                Some(sym) => {
+                    let object_type = analyse_expr(analyser, &object, &object_path)?;
+
+                    Err(SemanticErrorKind::UnexpectedSymbol {
+                        name: object_type.to_identifier(),
+                        expected: "struct".to_string(),
+                        found: sym.to_backtick_string(),
+                    })
+                }
             }
         }
 
