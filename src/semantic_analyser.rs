@@ -136,7 +136,7 @@ impl SemanticAnalyser {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             log_debug!(
                 self.logger,
-                "inserting symbol `{symbol:?}` into scope `{}` at path `{path}` …",
+                "inserting symbol `{symbol}` into scope `{}` at path `{path}` …",
                 curr_scope.scope_kind
             );
 
@@ -946,12 +946,6 @@ impl SemanticAnalyser {
             let param_types: Vec<Type> = params.iter().map(|p| p.param_type()).collect();
 
             for (param, mut param_type) in params.iter().zip(param_types) {
-                // if matches!(param_type, Type::SelfType { .. }) {
-                //     if is_associated_func {
-                //         param_type = Type::UserDefined(function_root.clone());
-                //     }
-                // }
-
                 if let Type::SelfType { reference_op, .. } = param_type {
                     if is_associated_func {
                         param_type = match reference_op {
@@ -964,117 +958,9 @@ impl SemanticAnalyser {
                     }
                 }
 
-                // if param_type == Type::SELF_TYPE {
-                //     if is_associated_func {
-                //         param_type = Type::UserDefined(function_root.clone());
-                //     }
-                // }
-
                 let param_path = param.param_name().to_type_path();
 
-                println!("param type: `{param_type}`");
-                println!("param path: `{param_path}`");
-
-                match param_type {
-                    Type::Generic(GenericParam { name, .. }) => {
-                        match self.lookup(&name.to_type_path()) {
-                            Some(_) => (),
-                            None => {
-                                return Err(SemanticErrorKind::UndeclaredGenericParams {
-                                    found: name.to_backtick_string(),
-                                })
-                            }
-                        }
-                    }
-
-                    Type::FunctionPtr(fp) => {
-                        self.insert(
-                            param_path.clone(),
-                            Symbol::Function {
-                                path: param_path.clone(),
-                                function: FunctionItem {
-                                    attributes_opt: None,
-                                    visibility: Visibility::Private,
-                                    kw_func: Keyword::Anonymous,
-                                    function_name: Identifier::from(""),
-                                    generic_params_opt: None,
-                                    params_opt: fp.params_opt,
-                                    return_type_opt: fp.return_type_opt,
-                                    block_opt: None,
-                                    span: Span::default(),
-                                },
-                            },
-                        )?;
-                    }
-
-                    Type::UserDefined(tp) => match self.lookup(&tp).cloned() {
-                        Some(sym) => {
-                            self.insert(param_path, sym.clone())?;
-                        }
-                        None => {
-                            return Err(SemanticErrorKind::UndefinedType { name: tp.type_name });
-                        }
-                    },
-
-                    Type::Reference { inner_type, .. } => match *inner_type {
-                        Type::Generic(GenericParam { name, .. }) => {
-                            match self.lookup(&name.to_type_path()) {
-                                Some(_) => (),
-                                None => {
-                                    return Err(SemanticErrorKind::UndeclaredGenericParams {
-                                        found: name.to_backtick_string(),
-                                    })
-                                }
-                            }
-                        }
-
-                        Type::FunctionPtr(fp) => {
-                            self.insert(
-                                param_path.clone(),
-                                Symbol::Function {
-                                    path: param_path.clone(),
-                                    function: FunctionItem {
-                                        attributes_opt: None,
-                                        visibility: Visibility::Private,
-                                        kw_func: Keyword::Anonymous,
-                                        function_name: Identifier::from(""),
-                                        generic_params_opt: None,
-                                        params_opt: fp.params_opt,
-                                        return_type_opt: fp.return_type_opt,
-                                        block_opt: None,
-                                        span: Span::default(),
-                                    },
-                                },
-                            )?;
-                        }
-
-                        Type::UserDefined(ty) => match self.lookup(&ty).cloned() {
-                            Some(sym) => self.insert(param_path, sym)?,
-                            None => {
-                                return Err(SemanticErrorKind::UndefinedType { name: ty.type_name })
-                            }
-                        },
-
-                        ty => {
-                            println!("type: `{ty:?}`");
-                            self.insert(
-                                param_path,
-                                Symbol::Variable {
-                                    name: param.param_name(),
-                                    var_type: ty,
-                                },
-                            )?
-                        }
-                    },
-
-                    ty => self.insert(
-                        param_path,
-                        Symbol::Variable {
-                            name: param.param_name(),
-                            var_type: ty,
-                        },
-                    )?,
-                }
+                self.analyse_function_params(param_type, param_path, param)?;
             }
         }
 
@@ -1114,6 +1000,65 @@ impl SemanticAnalyser {
         self.exit_scope();
 
         Ok(())
+    }
+
+    fn analyse_function_params(
+        &mut self,
+        param_type: Type,
+        param_path: TypePath,
+        param: &FunctionOrMethodParam,
+    ) -> Result<(), SemanticErrorKind> {
+        Ok(match param_type {
+            Type::Generic(GenericParam { name, .. }) => match self.lookup(&name.to_type_path()) {
+                Some(_) => (),
+                None => {
+                    return Err(SemanticErrorKind::UndeclaredGenericParams {
+                        found: name.to_backtick_string(),
+                    })
+                }
+            },
+
+            Type::FunctionPtr(fp) => {
+                self.insert(
+                    param_path.clone(),
+                    Symbol::Function {
+                        path: param_path.clone(),
+                        function: FunctionItem {
+                            attributes_opt: None,
+                            visibility: Visibility::Private,
+                            kw_func: Keyword::Anonymous,
+                            function_name: Identifier::from(""),
+                            generic_params_opt: None,
+                            params_opt: fp.params_opt,
+                            return_type_opt: fp.return_type_opt,
+                            block_opt: None,
+                            span: Span::default(),
+                        },
+                    },
+                )?;
+            }
+
+            Type::UserDefined(tp) => match self.lookup(&tp).cloned() {
+                Some(sym) => {
+                    self.insert(param_path, sym.clone())?;
+                }
+                None => {
+                    return Err(SemanticErrorKind::UndefinedType { name: tp.type_name });
+                }
+            },
+
+            Type::Reference { inner_type, .. } => {
+                self.analyse_function_params(*inner_type, param_path, param)?
+            }
+
+            ty => self.insert(
+                param_path,
+                Symbol::Variable {
+                    name: param.param_name(),
+                    var_type: ty,
+                },
+            )?,
+        })
     }
 
     /// Analyse an import declaration, resolving and inserting symbols from the imported
