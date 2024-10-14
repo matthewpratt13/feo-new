@@ -1008,46 +1008,6 @@ impl SemanticAnalyser {
                     }
 
                     Type::UserDefined(tp) => match self.lookup(&tp).cloned() {
-                        // Some(Symbol::Trait {
-                        //     trait_def:
-                        //         TraitDef {
-                        //             trait_items_opt, ..
-                        //         },
-                        //     ..
-                        // }) => match trait_items_opt {
-                        //     Some(items) => {
-                        //         for item in items {
-                        //             match item {
-                        //                 TraitDefItem::AliasDecl(ad) => self.insert(
-                        //                     param_path.clone(),
-                        //                     Symbol::Alias {
-                        //                         path: param_path.clone(),
-                        //                         visibility: ad.visibility,
-                        //                         original_type_opt: ad.original_type_opt,
-                        //                         alias_name: ad.alias_name,
-                        //                     },
-                        //                 )?,
-                        //                 TraitDefItem::ConstantDecl(cd) => self.insert(
-                        //                     param_path.clone(),
-                        //                     Symbol::Constant {
-                        //                         path: param_path.clone(),
-                        //                         visibility: cd.visibility,
-                        //                         constant_name: cd.constant_name,
-                        //                         constant_type: *cd.constant_type,
-                        //                     },
-                        //                 )?,
-                        //                 TraitDefItem::FunctionItem(fi) => self.insert(
-                        //                     param_path.clone(),
-                        //                     Symbol::Function {
-                        //                         path: param_path.clone(),
-                        //                         function: fi,
-                        //                     },
-                        //                 )?,
-                        //             }
-                        //         }
-                        //     }
-                        //     None => todo!(),
-                        // },
                         Some(sym) => {
                             self.insert(param_path, sym.clone())?;
                         }
