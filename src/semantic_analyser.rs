@@ -156,6 +156,36 @@ impl SemanticAnalyser {
         }
     }
 
+    fn insert_into_module_scope(
+        &mut self,
+        path: TypePath,
+        symbol: Symbol,
+    ) -> Result<(), SemanticErrorKind> {
+        let mut iter = self.scope_stack.clone().into_iter().rev();
+
+        let mut index = 0usize;
+
+        while let Some(next) = iter.next() {
+            index += 1;
+
+            if matches!(next.scope_kind, ScopeKind::Module { .. }) {
+                break;
+            }
+        }
+
+        let scope = self.scope_stack.get_mut(index).unwrap();
+
+        log_debug!(
+            self.logger,
+            "inserting symbol `{symbol}` into scope `{}` at path `{path}` …",
+            scope.scope_kind
+        );
+
+        scope.symbols.insert(path, symbol);
+
+        Ok(())
+    }
+
     /// Look up a symbol by its path in the current scope stack, starting from the innermost scope,
     /// and log the lookup result.
     fn lookup(&mut self, path: &TypePath) -> Option<&Symbol> {
@@ -295,6 +325,20 @@ impl SemanticAnalyser {
                         ScopeKind::Module(Identifier::from("lib").to_type_path()),
                     );
 
+                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
+                        if matches!(scope_kind, ScopeKind::TraitImpl { .. }) {
+                            return self.insert_into_module_scope(
+                                constant_path.clone(),
+                                Symbol::Constant {
+                                    path: constant_path,
+                                    visibility: cd.visibility.clone(),
+                                    constant_name: cd.constant_name.clone(),
+                                    constant_type: value_type.unwrap_or(Type::inferred_type("_")),
+                                },
+                            );
+                        }
+                    }
+
                     self.insert(
                         constant_path.clone(),
                         Symbol::Constant {
@@ -432,11 +476,6 @@ impl SemanticAnalyser {
                     }
 
                     self.exit_scope();
-
-                    log_trace!(
-                        self.logger,
-                        "inserting symbols into implementation for type: `{type_path}` …",
-                    );
 
                     for (path, symbol) in function_symbols {
                         self.insert(path, symbol)?;
@@ -752,13 +791,6 @@ impl SemanticAnalyser {
                         trait_impl_path.clone(),
                         &mut function_symbols,
                     )?;
-
-                    log_trace!(
-                        self.logger,
-                        "implementation of trait `{}` for type `{}` complete",
-                        t.implemented_trait_path,
-                        t.implementing_type
-                    );
 
                     self.exit_scope();
 
