@@ -723,6 +723,8 @@ impl SemanticAnalyser {
                         }
                     };
 
+                    // TODO: check that `t.implemented_trait_path.type_name` exists in scope
+
                     let trait_impl_path = implementing_type_path
                         .join(t.implemented_trait_path.type_name.to_type_path());
 
@@ -965,18 +967,11 @@ impl SemanticAnalyser {
         }
 
         if let Some(block) = &f.block_opt {
-            // split path into a vector to remove the last element (if needed), then convert back
-            let mut path_vec = Vec::<Identifier>::from(path.clone());
+            let root = path.clone().strip_suffix();
+            println!("root: `{root}`");
 
-            if is_associated_func {
-                path_vec.pop(); // remove associated type name
-            }
+            let mut function_type = analyse_expr(self, &Expression::Block(block.clone()), &root)?;
 
-            let mut function_type = analyse_expr(
-                self,
-                &Expression::Block(block.clone()),
-                &TypePath::from(path_vec),
-            )?;
 
             // check that the function type matches the return type
             if let Some(return_type) = &f.return_type_opt {
@@ -1088,6 +1083,8 @@ impl SemanticAnalyser {
             if let Some(lib_contents) = self.lib_registry.get(&import_root).cloned() {
                 for Module { table, .. } in lib_contents.iter() {
                     for (item_path, symbol) in table {
+                        // TODO: check for `item_path` with the same `type_name`
+                        // TODO: (i.e., duplicate types)
                         match symbol {
                             Symbol::Struct {
                                 path,
