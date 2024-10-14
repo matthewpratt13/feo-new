@@ -774,7 +774,11 @@ impl SemanticAnalyser {
                         }
                     };
 
-                    // TODO: check that `t.implemented_trait_path.type_name` exists in scope
+                    self.lookup(&t.implemented_trait_path).ok_or_else(|| {
+                        SemanticErrorKind::UndefinedType {
+                            name: t.implemented_trait_path.to_identifier(),
+                        }
+                    })?;
 
                     let trait_impl_path = implementing_type_path
                         .join(t.implemented_trait_path.type_name.to_type_path());
