@@ -10,7 +10,7 @@ use crate::{
     error::ErrorsEmitted,
     log_trace,
     parser::parse_generic_param,
-    semantic_analyser::{FormatObject, ToIdentifier},
+    semantic_analyser::{FormatItem, ToIdentifier},
     span::Position,
     token::{Token, TokenType},
 };
@@ -275,7 +275,7 @@ impl Type {
     }
 }
 
-impl FormatObject for Type {}
+impl FormatItem for Type {}
 
 impl ToIdentifier for Type {}
 

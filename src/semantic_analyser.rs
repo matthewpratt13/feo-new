@@ -1403,28 +1403,54 @@ impl SemanticAnalyser {
         match (trait_impl_item, trait_def_item) {
             (TraitImplItem::AliasDecl(ad_impl), TraitDefItem::AliasDecl(ad_def)) => {
                 if ad_impl.alias_name == ad_def.alias_name {
+                    if ad_impl.attributes_opt != ad_def.attributes_opt {
+                        return Err(SemanticErrorKind::AttributesMismatch {
+                            item_name: ad_impl.alias_name.clone(),
+                            expected: format!("{:?}", ad_def.attributes_opt),
+                            found: format!("{:?}", ad_impl.attributes_opt),
+                        });
+                    }
+
+                    if ad_impl.visibility != ad_def.visibility {
+                        return Err(SemanticErrorKind::VisibilityMismatch {
+                            item_name: ad_impl.alias_name.clone(),
+                            expected: ad_def.visibility.to_backtick_string(),
+                            found: ad_impl.visibility.to_backtick_string(),
+                        });
+                    }
+
                     Ok(true)
                 } else {
                     Ok(false)
                 }
             }
+
             (TraitImplItem::AliasDecl(_), _) => Ok(false),
 
             (TraitImplItem::ConstantDecl(cd_impl), TraitDefItem::ConstantDecl(cd_def)) => {
                 if cd_impl.constant_name == cd_def.constant_name {
                     if cd_impl.attributes_opt != cd_def.attributes_opt {
-                        // return error: attributes mismatch
-                        todo!()
+                        return Err(SemanticErrorKind::AttributesMismatch {
+                            item_name: cd_impl.constant_name.clone(),
+                            expected: format!("{:?}", cd_def.attributes_opt),
+                            found: format!("{:?}", cd_impl.attributes_opt),
+                        });
                     }
 
                     if cd_impl.visibility != cd_def.visibility {
-                        // return error: visibility mismatch
-                        todo!()
+                        return Err(SemanticErrorKind::VisibilityMismatch {
+                            item_name: cd_impl.constant_name.clone(),
+                            expected: cd_def.visibility.to_backtick_string(),
+                            found: cd_impl.visibility.to_backtick_string(),
+                        });
                     }
 
                     if cd_impl.constant_type != cd_def.constant_type {
-                        // return error: type mismatch
-                        todo!()
+                        return Err(SemanticErrorKind::TypeMismatchConst {
+                            constant_name: cd_impl.constant_name.clone(),
+                            expected: *cd_def.constant_type.clone(),
+                            found: *cd_impl.constant_type.clone(),
+                        });
                     }
 
                     Ok(true)
@@ -1486,18 +1512,27 @@ impl SemanticAnalyser {
                                         FunctionOrMethodParam::FunctionParam(func_param_def),
                                     ) => {
                                         if func_param_impl.param_type != func_param_def.param_type {
-                                            // return error: param mismatch
-                                            todo!()
+                                            return Err(SemanticErrorKind::TypeMismatchParam {
+                                                function_name: fi_impl.function_name.clone(),
+                                                expected: *func_param_def.param_type.clone(),
+                                                found: *func_param_impl.param_type.clone(),
+                                            });
                                         }
                                     }
                                     (
                                         FunctionOrMethodParam::FunctionParam(_),
                                         FunctionOrMethodParam::MethodParam(_),
-                                    ) => todo!(), // return error: expected method param
-                                    (
+                                    )
+                                    | (
                                         FunctionOrMethodParam::MethodParam(_),
                                         FunctionOrMethodParam::FunctionParam(_),
-                                    ) => todo!(), // return error: expected function param
+                                    ) => {
+                                        return Err(SemanticErrorKind::TypeMismatchParam {
+                                            function_name: fi_impl.function_name.clone(),
+                                            expected: def_param.param_type(),
+                                            found: impl_param.param_type(),
+                                        })
+                                    }
                                     (
                                         FunctionOrMethodParam::MethodParam(self_param_impl),
                                         FunctionOrMethodParam::MethodParam(self_param_def),
@@ -1505,8 +1540,10 @@ impl SemanticAnalyser {
                                         if self_param_impl.reference_op_opt
                                             != self_param_def.reference_op_opt
                                         {
-                                            // return error: reference mismatch
-                                            todo!()
+                                            return Err(SemanticErrorKind::TypeMismatchSelfParam {
+                                                expected: self_param_def.to_backtick_string(),
+                                                found: self_param_impl.to_backtick_string(),
+                                            });
                                         }
                                     }
                                 }
@@ -1523,8 +1560,16 @@ impl SemanticAnalyser {
                     }
 
                     if fi_impl.return_type_opt != fi_def.return_type_opt {
-                        // return error: return type mismatch
-                        todo!()
+                        return Err(SemanticErrorKind::TypeMismatchReturnType {
+                            expected: *fi_def
+                                .return_type_opt
+                                .clone()
+                                .unwrap_or(Box::new(Type::UNIT_TYPE)),
+                            found: *fi_impl
+                                .return_type_opt
+                                .clone()
+                                .unwrap_or(Box::new(Type::UNIT_TYPE)),
+                        });
                     }
 
                     Ok(true)
@@ -1769,6 +1814,7 @@ impl SemanticAnalyser {
                                 ) => {
                                     if *func_param_a != func_param_b {
                                         return Err(SemanticErrorKind::TypeMismatchParam {
+                                            function_name: Identifier::from(""),
                                             expected: *func_param_a.param_type.clone(),
                                             found: *func_param_b.param_type,
                                         });

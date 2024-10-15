@@ -10,7 +10,7 @@ use crate::{
     semantic_analyser::utils::ToIdentifier,
 };
 
-use super::FormatObject;
+use super::FormatItem;
 
 /// Type alias representing a symbol table that maps `TypePath` to `Symbol`.
 pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
@@ -185,7 +185,7 @@ impl Symbol {
     }
 }
 
-impl FormatObject for Symbol {}
+impl FormatItem for Symbol {}
 
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

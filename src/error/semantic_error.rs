@@ -85,6 +85,12 @@ pub enum SemanticErrorKind {
         found: usize,
     },
 
+    TypeMismatchConst {
+        constant_name: Identifier,
+        expected: Type,
+        found: Type,
+    },
+
     TypeBoundCountMismatch {
         expected: usize,
         found: usize,
@@ -150,6 +156,7 @@ pub enum SemanticErrorKind {
     },
 
     TypeMismatchParam {
+        function_name: Identifier,
         expected: Type,
         found: Type,
     },
@@ -355,7 +362,7 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "array element types do not match. Expected {expected}, found `{found}`"
             ),
-          
+            SemanticErrorKind::TypeMismatchConst { constant_name, expected, found } => write!(f, "type mismatch between constant declarations for constant: `{constant_name}`. Expected `{expected}`, found `{found}`"),
             SemanticErrorKind::TypeMismatchDeclaredType {actual_type, declared_type } => write!(
                 f,
                 "declared type `{declared_type}` does not match value's type: `{actual_type}`"
@@ -378,7 +385,7 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "pattern types do not match. Expected `{expected}`, found `{found}`"
             ),
-            SemanticErrorKind::TypeMismatchParam { expected, found } => write!(f, "function parameters do not match. Expected `{expected}`, found `{found}`"),
+            SemanticErrorKind::TypeMismatchParam { function_name, expected, found } => write!(f, "parameter mismatch for function: `{function_name}`. Expected `{expected}`, found `{found}`"),
 
             SemanticErrorKind::TypeMismatchResultExpr { variant, expected, found } => write!(
                 f,
@@ -462,6 +469,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::VisibilityMismatch { item_name, expected, found } => write!(f, "item visibilities do not match for item `{item_name}`. Expected {expected}, found {found}"),
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
+           
 
         }
     }

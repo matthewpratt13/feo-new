@@ -5,7 +5,7 @@ use crate::{
     error::ErrorsEmitted,
     log_trace,
     parser::Parser,
-    semantic_analyser::{FormatObject, ToIdentifier},
+    semantic_analyser::{FormatItem, ToIdentifier},
     token::{Token, TokenType},
 };
 
@@ -189,7 +189,7 @@ impl TypePath {
     }
 }
 
-impl FormatObject for TypePath {}
+impl FormatItem for TypePath {}
 
 impl ToIdentifier for TypePath {}
 

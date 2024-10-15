@@ -1,7 +1,10 @@
 use core::fmt;
 
 use crate::{
-    ast::{Keyword, PubLibVis, Visibility}, error::ErrorsEmitted, semantic_analyser::FormatObject, token::{Token, TokenType}
+    ast::{Keyword, PubLibVis, Visibility},
+    error::ErrorsEmitted,
+    semantic_analyser::FormatItem,
+    token::{Token, TokenType},
 };
 
 use super::Parser;
@@ -37,7 +40,7 @@ impl Visibility {
     }
 }
 
-impl FormatObject for Visibility {}
+impl FormatItem for Visibility {}
 
 impl fmt::Display for Visibility {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

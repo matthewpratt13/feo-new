@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{
-    patt::analyse_patt, symbol_table::ScopeKind, FormatObject, SemanticAnalyser, ToExpression,
+    patt::analyse_patt, symbol_table::ScopeKind, FormatItem, SemanticAnalyser, ToExpression,
     ToIdentifier,
 };
 

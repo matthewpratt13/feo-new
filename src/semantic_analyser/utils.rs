@@ -2,7 +2,7 @@ use core::fmt;
 
 use crate::ast::{Expression, Identifier};
 
-pub(crate) trait FormatObject
+pub(crate) trait FormatItem
 where
     Self: fmt::Display,
 {

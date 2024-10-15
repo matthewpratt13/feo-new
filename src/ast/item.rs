@@ -2,7 +2,7 @@ use core::fmt;
 
 use crate::{
     parser::get_type_paths,
-    semantic_analyser::{FormatObject, FormatParams, ToIdentifier},
+    semantic_analyser::{FormatItem, FormatParams, ToIdentifier},
     span::{Span, Spanned},
 };
 
@@ -238,7 +238,7 @@ pub(crate) struct SelfParam {
     pub(crate) kw_self: Keyword,
 }
 
-impl FormatObject for SelfParam {
+impl FormatItem for SelfParam {
     fn to_backtick_string(&self) -> String {
         format!(
             "`{}{}`",

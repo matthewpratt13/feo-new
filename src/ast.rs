@@ -13,7 +13,7 @@ use core::fmt;
 
 use crate::{
     error::ParserErrorKind,
-    semantic_analyser::{FormatObject, ToExpression},
+    semantic_analyser::{FormatItem, ToExpression},
     span::{Position, Span, Spanned},
 };
 
@@ -109,7 +109,7 @@ impl Identifier {
     }
 }
 
-impl FormatObject for Identifier {}
+impl FormatItem for Identifier {}
 
 impl From<&str> for Identifier {
     fn from(value: &str) -> Self {
@@ -479,7 +479,7 @@ pub(crate) enum Expression {
     ResultExpr(ResultExpr),
 }
 
-impl FormatObject for Expression {}
+impl FormatItem for Expression {}
 
 impl From<ValueExpr> for Expression {
     fn from(value: ValueExpr) -> Self {
