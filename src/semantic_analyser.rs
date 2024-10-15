@@ -1144,8 +1144,6 @@ impl SemanticAnalyser {
             if let Some(lib_contents) = self.lib_registry.get(&import_root).cloned() {
                 for Module { table, .. } in lib_contents.iter() {
                     for (item_path, symbol) in table {
-                        // TODO: check for `item_path` with the same `type_name`
-                        // TODO: (i.e., duplicate types)
                         match symbol {
                             Symbol::Struct {
                                 path,
@@ -1165,6 +1163,24 @@ impl SemanticAnalyser {
                                 associated_items_trait,
                                 ..
                             } => {
+                                for scope in self.scope_stack.iter().rev() {
+                                    for type_path in scope.symbols.keys() {
+                                        match scope.scope_kind {
+                                            ScopeKind::Module { .. }
+                                            | ScopeKind::ProgramRoot
+                                            | ScopeKind::Public => (),
+                                            _ => {
+                                                if type_path.type_name == path.type_name {
+                                                    return Err(SemanticErrorKind::ImportClash {
+                                                        type_name: path.type_name.clone(),
+                                                        module_name: type_path.type_name.clone(),
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
                                 self.insert(item_path.clone(), symbol.clone())?;
 
                                 for item in associated_items_inherent {

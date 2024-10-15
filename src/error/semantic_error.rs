@@ -32,6 +32,11 @@ pub enum SemanticErrorKind {
         found: usize
     },
 
+    ImportClash {
+        type_name: Identifier,
+        module_name: Identifier
+    },
+
     InvalidVariableIdentifier {
         name: Identifier,
     },
@@ -313,6 +318,9 @@ impl fmt::Display for SemanticErrorKind {
                 )
             }
             SemanticErrorKind::GenericParamsCountMismatch { item_name, expected, found } => write!(f, "unexpected number of generic parameters in item `{item_name}`. Expected {expected} generic parameters, found {found}"),
+
+            SemanticErrorKind::ImportClash { type_name, module_name } => write!(f, "duplicate type names detected for type: `{type_name}` in module `{module_name}`"),
+
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }
@@ -474,6 +482,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::VisibilityMismatch { item_name, expected, found } => write!(f, "item visibilities do not match for item `{item_name}`. Expected {expected}, found {found}"),
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
+        
     
            
 
