@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{
-    patt::analyse_patt, symbol_table::ScopeKind, FormatObject, SemanticAnalyser, ToExpression,
+    patt::analyse_patt, symbol_table::ScopeKind, FormatItem, SemanticAnalyser, ToExpression,
     ToIdentifier,
 };
 
@@ -173,7 +173,13 @@ pub(crate) fn analyse_expr(
 
                 let ty = match stmts.last() {
                     Some(stmt) => match stmt {
-                        Statement::Expression(expr) => analyse_expr(analyser, expr, root),
+                        Statement::Expression(expr) => match analyse_expr(analyser, expr, root) {
+                            Ok(ty) => Ok(ty),
+                            Err(err) => {
+                                analyser.log_error(err.clone(), &expr.span());
+                                Err(err)
+                            }
+                        },
                         _ => Ok(Type::UNIT_TYPE),
                     },
                     _ => Ok(Type::UNIT_TYPE),
@@ -337,7 +343,6 @@ pub(crate) fn analyse_expr(
             let object_as_path_expr = PathExpr::from(object.clone());
 
             let object_path = TypePath::from(object_as_path_expr);
-            let object_type = analyse_expr(analyser, &object, &object_path)?;
 
             match analyser.lookup(&object_path).cloned() {
                 Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
@@ -351,15 +356,23 @@ pub(crate) fn analyse_expr(
                     _ => Ok(Type::UNIT_TYPE),
                 },
 
-                None => Err(SemanticErrorKind::UndefinedType {
-                    name: object_type.to_identifier(),
-                }),
+                None => {
+                    let object_type = analyse_expr(analyser, &object, &object_path)?;
 
-                Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
-                    name: object_type.to_identifier(),
-                    expected: "struct".to_string(),
-                    found: sym.to_backtick_string(),
-                }),
+                    Err(SemanticErrorKind::UndefinedType {
+                        name: object_type.to_identifier(),
+                    })
+                }
+
+                Some(sym) => {
+                    let object_type = analyse_expr(analyser, &object, &object_path)?;
+
+                    Err(SemanticErrorKind::UnexpectedSymbol {
+                        name: object_type.to_identifier(),
+                        expected: "struct".to_string(),
+                        found: sym.to_backtick_string(),
+                    })
+                }
             }
         }
 
@@ -1506,7 +1519,7 @@ fn analyse_call_or_method_call_expr(
                     let mut func_param_counter: usize = 0;
 
                     for param in params {
-                        if let Type::SelfType(_) = param.param_type() {
+                        if let Type::SelfType { .. } = param.param_type() {
                             self_counter += 1;
                         } else {
                             func_param_counter += 1;
@@ -1539,7 +1552,7 @@ fn analyse_call_or_method_call_expr(
                     let mut self_counter: usize = 0;
 
                     for param in params {
-                        if let Type::SelfType(_) = param.param_type() {
+                        if let Type::SelfType { .. } = param.param_type() {
                             self_counter += 1;
                         }
                     }

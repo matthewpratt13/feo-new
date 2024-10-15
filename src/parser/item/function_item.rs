@@ -118,11 +118,17 @@ impl FunctionOrMethodParam {
         let reference_op_opt = if let Some(Token::Ampersand { .. } | Token::AmpersandMut { .. }) =
             parser.current_token()
         {
-            parser.next_token();
-
             match parser.current_token() {
-                Some(Token::Ampersand { .. }) => Some(ReferenceOp::Borrow),
-                Some(Token::AmpersandMut { .. }) => Some(ReferenceOp::MutableBorrow),
+                Some(Token::Ampersand { .. }) => {
+                    parser.next_token();
+
+                    Some(ReferenceOp::Borrow)
+                }
+                Some(Token::AmpersandMut { .. }) => {
+                    parser.next_token();
+
+                    Some(ReferenceOp::MutableBorrow)
+                }
                 _ => None,
             }
         } else {

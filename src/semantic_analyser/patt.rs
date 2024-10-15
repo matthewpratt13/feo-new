@@ -8,7 +8,7 @@ use crate::{
     error::SemanticErrorKind,
 };
 
-use super::{symbol_table::Symbol, FormatObject, SemanticAnalyser, ToIdentifier};
+use super::{symbol_table::Symbol, FormatItem, SemanticAnalyser, ToIdentifier};
 
 /// Analyse a pattern in the context of semantic analysis, returning the inferred type of
 /// the pattern or an appropriate semantic error.

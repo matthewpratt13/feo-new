@@ -10,7 +10,7 @@ use crate::{
     error::ErrorsEmitted,
     log_trace,
     parser::parse_generic_param,
-    semantic_analyser::{FormatObject, ToIdentifier},
+    semantic_analyser::{FormatItem, ToIdentifier},
     span::Position,
     token::{Token, TokenType},
 };
@@ -21,7 +21,7 @@ use super::{get_collection, Parser};
 
 impl Type {
     pub(crate) const UNIT_TYPE: Type = Type::UnitType(UnitType);
-    pub(crate) const SELF_TYPE: Type = Type::SelfType(SelfType);
+    // pub(crate) const SELF_TYPE: Type = Type::SelfType(SelfType);
 
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
@@ -56,20 +56,42 @@ impl Type {
             Some(Token::LParen { .. }) => parse_tuple_type(parser),
             Some(Token::LBracket { .. }) => parse_array_type(parser),
             Some(Token::Func { .. }) => parse_function_ptr_type(parser),
-            Some(Token::Ampersand { .. }) => {
-                let inner_type = Box::new(Type::parse(parser)?);
-                Ok(Type::Reference {
-                    reference_op: ReferenceOp::Borrow,
-                    inner_type,
-                })
-            }
-            Some(Token::AmpersandMut { .. }) => {
-                let inner_type = Box::new(Type::parse(parser)?);
-                Ok(Type::Reference {
-                    reference_op: ReferenceOp::MutableBorrow,
-                    inner_type,
-                })
-            }
+            Some(Token::Ampersand { .. }) => match parser.peek_ahead_by(1) {
+                Some(Token::SelfType { .. }) => {
+                    parser.next_token();
+                    parser.next_token();
+
+                    Ok(Type::SelfType {
+                        reference_op: ReferenceOp::Borrow,
+                        ty: SelfType,
+                    })
+                }
+                _ => {
+                    let inner_type = Box::new(Type::parse(parser)?);
+                    Ok(Type::Reference {
+                        reference_op: ReferenceOp::Borrow,
+                        inner_type,
+                    })
+                }
+            },
+            Some(Token::AmpersandMut { .. }) => match parser.peek_ahead_by(1) {
+                Some(Token::SelfType { .. }) => {
+                    parser.next_token();
+                    parser.next_token();
+
+                    Ok(Type::SelfType {
+                        reference_op: ReferenceOp::MutableBorrow,
+                        ty: SelfType,
+                    })
+                }
+                _ => {
+                    let inner_type = Box::new(Type::parse(parser)?);
+                    Ok(Type::Reference {
+                        reference_op: ReferenceOp::MutableBorrow,
+                        inner_type,
+                    })
+                }
+            },
             Some(Token::VecType { .. }) => {
                 parser.expect_token(TokenType::LessThan)?;
 
@@ -224,7 +246,7 @@ impl Type {
                     let path = TypePath::parse(parser, token)?;
                     Ok(Type::UserDefined(path))
                 }
-                _ => Ok(Type::SELF_TYPE),
+                _ => Ok(Type::self_type(ReferenceOp::Owned)),
             },
 
             Some(Token::EOF) | None => {
@@ -244,9 +266,16 @@ impl Type {
             name: Identifier::from(name_str),
         })
     }
+
+    pub(crate) fn self_type(reference_op: ReferenceOp) -> Type {
+        Type::SelfType {
+            reference_op,
+            ty: SelfType,
+        }
+    }
 }
 
-impl FormatObject for Type {}
+impl FormatItem for Type {}
 
 impl ToIdentifier for Type {}
 
@@ -288,7 +317,11 @@ impl fmt::Display for Type {
                 reference_op,
                 inner_type,
             } => write!(f, "{}{}", reference_op, *inner_type),
-            Type::SelfType(_) => write!(f, "Self"),
+            Type::SelfType { reference_op, .. } => match reference_op {
+                ReferenceOp::Borrow => write!(f, "&Self"),
+                ReferenceOp::MutableBorrow => write!(f, "&mut Self"),
+                ReferenceOp::Owned => write!(f, "Self"),
+            },
             Type::InferredType(_) => write!(f, "_"),
             Type::Vec { element_type } => write!(f, "Vec<{}>", *element_type),
             Type::Mapping {
@@ -360,7 +393,11 @@ impl fmt::Debug for Type {
                 .field("reference_op", reference_op)
                 .field("inner_type", inner_type)
                 .finish(),
-            Self::SelfType(_) => f.debug_tuple("SelfType").finish(),
+            Self::SelfType { reference_op, ty } => f
+                .debug_struct("SelfType")
+                .field("reference_op", reference_op)
+                .field("ty", ty)
+                .finish(),
             Self::InferredType(arg0) => f.debug_tuple("InferredType").field(arg0).finish(),
             Self::Vec { element_type } => f
                 .debug_struct("Vec")

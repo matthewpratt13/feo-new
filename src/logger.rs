@@ -37,8 +37,12 @@ pub(crate) struct LogMsg {
 impl fmt::Display for LogMsg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.level {
+            LogLevel::Trace => write!(f, "🔈 [{}] {}", self.level, self.text),
+            LogLevel::Debug => write!(f, "🪲 [{}] {}", self.level, self.text),
+            LogLevel::Info => write!(f, "💡 [{}] {}", self.level, self.text),
+            LogLevel::Warning => write!(f, "🚧 [{}] {}", self.level, self.text),
+            LogLevel::Error => write!(f, "❌ [{}] {}", self.level, self.text),
             LogLevel::Off => write!(f, ""),
-            _ => write!(f, "[{}] {}", self.level, self.text),
         }
     }
 }

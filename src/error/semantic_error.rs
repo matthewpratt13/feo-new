@@ -1,13 +1,19 @@
 use core::fmt;
 use std::error::Error;
 
-use crate::ast::{Identifier, Keyword, ReferenceOp, Type};
+use crate::ast::{Identifier, Keyword, ReferenceOp, Type, TypePath};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {
     ArrayLengthMismatch {
         expected: usize,
         found: usize,
+    },
+
+    AttributesMismatch {
+        item_name: Identifier,
+        expected: String,
+        found: String,
     },
 
     ConstantReassignment {
@@ -18,6 +24,17 @@ pub enum SemanticErrorKind {
         function_path: Identifier,
         expected: usize,
         found: usize,
+    },
+
+    GenericParamsCountMismatch {
+        item_name: Identifier,
+        expected: usize,
+        found: usize
+    },
+
+    ImportClash {
+        type_name: Identifier,
+        module_name: Identifier
     },
 
     InvalidVariableIdentifier {
@@ -47,6 +64,7 @@ pub enum SemanticErrorKind {
     },
 
     ParamCountMismatch {
+        function_name: Identifier,
         expected: usize,
         found: usize,
     },
@@ -70,6 +88,12 @@ pub enum SemanticErrorKind {
     TupleLengthMismatch {
         expected: usize,
         found: usize,
+    },
+
+    TypeMismatchConst {
+        constant_name: Identifier,
+        expected: Type,
+        found: Type,
     },
 
     TypeBoundCountMismatch {
@@ -137,6 +161,7 @@ pub enum SemanticErrorKind {
     },
 
     TypeMismatchParam {
+        function_name: Identifier,
         expected: Type,
         found: Type,
     },
@@ -190,6 +215,11 @@ pub enum SemanticErrorKind {
 
     UndeclaredGenericParams {
         found: String,
+    },
+
+    UndeclaredTraitItem {
+        item_name: Identifier,
+        implemented_trait_path: TypePath,
     },
 
     UndefinedField {
@@ -259,6 +289,12 @@ pub enum SemanticErrorKind {
         found: Type,
     },
 
+    VisibilityMismatch {
+        item_name: Identifier,
+        expected: String,
+        found: String,
+    },
+
     #[default]
     UnknownError,
 }
@@ -269,6 +305,9 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ArrayLengthMismatch { expected, found } => {
                 write!(f, "array length mismatch. Expected {expected} elements, found {found}")
             }
+            SemanticErrorKind::AttributesMismatch { item_name, expected, found } => {
+                write!(f, "mismatch between attributes on for `{item_name}`. Expected {expected}, found {found}")
+            }
             SemanticErrorKind::ConstantReassignment { constant_name: name } => {
                 write!(f, "cannot reassign constant `{name}`")
             }
@@ -278,6 +317,10 @@ impl fmt::Display for SemanticErrorKind {
                     "unexpected number of arguments given for function `{function_path}()`. Expected {expected} arguments, found {found}"
                 )
             }
+            SemanticErrorKind::GenericParamsCountMismatch { item_name, expected, found } => write!(f, "unexpected number of generic parameters in item `{item_name}`. Expected {expected} generic parameters, found {found}"),
+
+            SemanticErrorKind::ImportClash { type_name, module_name } => write!(f, "duplicate type names detected for type: `{type_name}` in module `{module_name}`"),
+
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }
@@ -298,10 +341,10 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ModuleErrors { name } => {
                 write!(f, "detected errors in module `{name}`")
             }
-            SemanticErrorKind::ParamCountMismatch {expected, found } => {
+            SemanticErrorKind::ParamCountMismatch {function_name, expected, found } => {
                 write!(
                     f,
-                    "parameter count mismatch. Expected {expected} parameters, found {found}"
+                    "parameter count mismatch for function `{function_name}`. Expected {expected} parameters, found {found}"
                 )
             }
             SemanticErrorKind::RefOperatorMismatch { expected, found } => write!(f, "reference operator mismatch. Expected {expected}, found {found}"),
@@ -332,7 +375,7 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "array element types do not match. Expected {expected}, found `{found}`"
             ),
-          
+            SemanticErrorKind::TypeMismatchConst { constant_name, expected, found } => write!(f, "type mismatch between constant declarations for constant: `{constant_name}`. Expected `{expected}`, found `{found}`"),
             SemanticErrorKind::TypeMismatchDeclaredType {actual_type, declared_type } => write!(
                 f,
                 "declared type `{declared_type}` does not match value's type: `{actual_type}`"
@@ -355,7 +398,7 @@ impl fmt::Display for SemanticErrorKind {
                 f,
                 "pattern types do not match. Expected `{expected}`, found `{found}`"
             ),
-            SemanticErrorKind::TypeMismatchParam { expected, found } => write!(f, "function parameters do not match. Expected `{expected}`, found `{found}`"),
+            SemanticErrorKind::TypeMismatchParam { function_name, expected, found } => write!(f, "parameter mismatch for function: `{function_name}`. Expected `{expected}`, found `{found}`"),
 
             SemanticErrorKind::TypeMismatchResultExpr { variant, expected, found } => write!(
                 f,
@@ -397,10 +440,10 @@ impl fmt::Display for SemanticErrorKind {
                     "type mismatch for `{name}`. Expected {expected}, found `{found}`"
                 )
             }
-
             SemanticErrorKind::UndeclaredGenericParams { found } => {
                 write!(f, "undeclared generic parameter (`{found}`) in function signature. Generic parameters must be declared after `func` keyword (e.g., `func<T>`) in function definition context; or after `impl` keyword in implementation definition context (e.g., `impl<T>`); or after `trait` keyword in trait definition context (e.g., `trait<T>`)")
             }
+            SemanticErrorKind::UndeclaredTraitItem { item_name, implemented_trait_path } => write!(f, "undeclared trait implementation item: `{item_name}`. Item does not exist in trait definition `{implemented_trait_path}`"),
             SemanticErrorKind::UndefinedField { struct_path: struct_name , field_name} => write!(f, "struct `{struct_name}` has no field `{field_name}`"),
 
             SemanticErrorKind::UndefinedFunc { name } => write!(f, "no function `{name}()` in current scope"),
@@ -436,8 +479,13 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UnexpectedType { expected, found } => {
                 write!(f, "unexpected type(s). Expected {expected}, found `{found}`")
             }
+            SemanticErrorKind::VisibilityMismatch { item_name, expected, found } => write!(f, "item visibilities do not match for item `{item_name}`. Expected {expected}, found {found}"),
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
+        
+    
+           
+
         }
     }
 }

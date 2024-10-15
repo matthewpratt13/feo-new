@@ -2,7 +2,7 @@ use core::fmt;
 
 use crate::{
     parser::get_type_paths,
-    semantic_analyser::{FormatObject, FormatParams},
+    semantic_analyser::{FormatItem, FormatParams, ToIdentifier},
     span::{Span, Spanned},
 };
 
@@ -31,7 +31,19 @@ pub(crate) enum FunctionOrMethodParam {
 impl FunctionOrMethodParam {
     pub(crate) fn param_name(&self) -> Identifier {
         match self {
-            FunctionOrMethodParam::FunctionParam(f) => f.param_name.name.clone(),
+            FunctionOrMethodParam::FunctionParam(f) => {
+                let param_name_string = f.param_name.name.to_string();
+
+                let param_name = if param_name_string.starts_with("&") {
+                    param_name_string.strip_prefix("&").unwrap()
+                } else if param_name_string.starts_with("&mut ") {
+                    param_name_string.strip_prefix("&mut ").unwrap()
+                } else {
+                    param_name_string.as_str()
+                };
+
+                Identifier::from(param_name)
+            }
             FunctionOrMethodParam::MethodParam(_) => Identifier::from("self"),
         }
     }
@@ -39,7 +51,16 @@ impl FunctionOrMethodParam {
     pub(crate) fn param_type(&self) -> Type {
         match self {
             FunctionOrMethodParam::FunctionParam(f) => *f.param_type.clone(),
-            FunctionOrMethodParam::MethodParam(_) => Type::SELF_TYPE,
+            FunctionOrMethodParam::MethodParam(s) => match s.reference_op_opt {
+                Some(ro) => Type::SelfType {
+                    reference_op: ro,
+                    ty: SelfType,
+                },
+                None => Type::SelfType {
+                    reference_op: ReferenceOp::Owned,
+                    ty: SelfType,
+                },
+            },
         }
     }
 }
@@ -83,11 +104,61 @@ pub(crate) enum TraitDefItem {
     FunctionItem(FunctionItem),
 }
 
+impl TraitDefItem {
+    pub(crate) fn item_name(&self) -> Identifier {
+        match self.clone() {
+            TraitDefItem::AliasDecl(ad) => ad.alias_name,
+            TraitDefItem::ConstantDecl(cd) => cd.constant_name,
+            TraitDefItem::FunctionItem(fi) => fi.function_name,
+        }
+    }
+}
+
+impl From<TraitImplItem> for TraitDefItem {
+    fn from(value: TraitImplItem) -> Self {
+        match value {
+            TraitImplItem::AliasDecl(ad) => Self::AliasDecl(ad),
+            TraitImplItem::ConstantDecl(cd) => Self::ConstantDecl(cd),
+            TraitImplItem::FunctionItem(fi) => Self::FunctionItem(fi),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TraitImplItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     FunctionItem(FunctionItem),
+}
+
+impl TraitImplItem {
+    pub(crate) fn item_name(&self) -> Identifier {
+        match self.clone() {
+            TraitImplItem::AliasDecl(ad) => ad.alias_name,
+            TraitImplItem::ConstantDecl(cd) => cd.constant_name,
+            TraitImplItem::FunctionItem(fi) => fi.function_name,
+        }
+    }
+}
+
+impl Spanned for TraitImplItem {
+    fn span(&self) -> Span {
+        match self.clone() {
+            TraitImplItem::AliasDecl(ad) => ad.span,
+            TraitImplItem::ConstantDecl(cd) => cd.span,
+            TraitImplItem::FunctionItem(fi) => fi.span,
+        }
+    }
+}
+
+impl From<TraitDefItem> for TraitImplItem {
+    fn from(value: TraitDefItem) -> Self {
+        match value {
+            TraitDefItem::AliasDecl(ad) => Self::AliasDecl(ad),
+            TraitDefItem::ConstantDecl(cd) => Self::ConstantDecl(cd),
+            TraitDefItem::FunctionItem(fi) => Self::FunctionItem(fi),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -197,21 +268,23 @@ pub(crate) struct SelfParam {
     pub(crate) kw_self: Keyword,
 }
 
-impl FormatObject for SelfParam {
+impl FormatItem for SelfParam {
     fn to_backtick_string(&self) -> String {
         format!(
             "`{}{}`",
-            self.reference_op_opt.unwrap_or(ReferenceOp::Owned),
+            self.reference_op_opt.unwrap_or_default(),
             self.kw_self
         )
     }
 }
 
+impl ToIdentifier for SelfParam {}
+
 impl fmt::Display for SelfParam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{:?}{}",
+            "{}{}",
             self.reference_op_opt.unwrap_or_default(),
             self.kw_self
         )

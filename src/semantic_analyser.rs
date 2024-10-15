@@ -21,9 +21,9 @@ use crate::{
         AliasDecl, ConstantDecl, EnumDef, EnumVariantKind, EnumVariantStruct,
         EnumVariantTupleStruct, Expression, FunctionItem, FunctionOrMethodParam, FunctionParam,
         GenericParam, Identifier, ImportDecl, InherentImplDef, InherentImplItem, Item, Keyword,
-        ModuleItem, Statement, StaticVarDecl, StructDef, StructDefField, TraitDef, TraitDefItem,
-        TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type, TypePath, UnitType,
-        Visibility,
+        ModuleItem, ReferenceOp, Statement, StaticVarDecl, StructDef, StructDefField, TraitDef,
+        TraitDefItem, TraitImplDef, TraitImplItem, TupleStructDef, TupleStructDefField, Type,
+        TypePath, UnitType, Visibility,
     },
     error::{CompilerError, SemanticErrorKind},
     log_debug, log_error, log_info, log_trace, log_warn,
@@ -156,6 +156,36 @@ impl SemanticAnalyser {
         }
     }
 
+    fn insert_into_module_scope(
+        &mut self,
+        path: TypePath,
+        symbol: Symbol,
+    ) -> Result<(), SemanticErrorKind> {
+        let mut iter = self.scope_stack.clone().into_iter().rev();
+
+        let mut index = 0usize;
+
+        while let Some(next) = iter.next() {
+            index += 1;
+
+            if matches!(next.scope_kind, ScopeKind::Module { .. }) {
+                break;
+            }
+        }
+
+        let scope = self.scope_stack.get_mut(index).unwrap();
+
+        log_debug!(
+            self.logger,
+            "inserting symbol `{symbol}` into scope `{}` at path `{path}` …",
+            scope.scope_kind
+        );
+
+        scope.symbols.insert(path, symbol);
+
+        Ok(())
+    }
+
     /// Look up a symbol by its path in the current scope stack, starting from the innermost scope,
     /// and log the lookup result.
     fn lookup(&mut self, path: &TypePath) -> Option<&Symbol> {
@@ -170,14 +200,26 @@ impl SemanticAnalyser {
                 return Some(symbol);
             } else {
                 for (sym_path, symbol) in scope.symbols.iter() {
-                    if path.type_name == sym_path.type_name {
+                    if *path == sym_path.clone().strip_prefix() {
                         log_debug!(
                             self.logger,
                             "found symbol `{symbol}` in scope `{}` at path `{path}`",
                             scope.scope_kind
                         );
 
-                        return Some(&symbol);
+                        return Some(symbol);
+                    }
+
+                    if scope.scope_kind < ScopeKind::ProgramRoot {
+                        if path.to_identifier() == sym_path.type_name {
+                            log_debug!(
+                                self.logger,
+                                "found symbol `{symbol}` in scope `{}` at path `{path}`",
+                                scope.scope_kind
+                            );
+
+                            return Some(symbol);
+                        }
                     }
                 }
             }
@@ -294,6 +336,20 @@ impl SemanticAnalyser {
                         &ScopeKind::ProgramRoot,
                         ScopeKind::Module(Identifier::from("lib").to_type_path()),
                     );
+
+                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
+                        if matches!(scope_kind, ScopeKind::TraitImpl { .. }) {
+                            return self.insert_into_module_scope(
+                                constant_path.clone(),
+                                Symbol::Constant {
+                                    path: constant_path,
+                                    visibility: cd.visibility.clone(),
+                                    constant_name: cd.constant_name.clone(),
+                                    constant_type: value_type.unwrap_or(Type::inferred_type("_")),
+                                },
+                            );
+                        }
+                    }
 
                     self.insert(
                         constant_path.clone(),
@@ -432,11 +488,6 @@ impl SemanticAnalyser {
                     }
 
                     self.exit_scope();
-
-                    log_trace!(
-                        self.logger,
-                        "inserting symbols into implementation for type: `{type_path}` …",
-                    );
 
                     for (path, symbol) in function_symbols {
                         self.insert(path, symbol)?;
@@ -723,6 +774,24 @@ impl SemanticAnalyser {
                         }
                     };
 
+                    let trait_def = match self.lookup(&t.implemented_trait_path).cloned() {
+                        Some(Symbol::Trait { trait_def, .. }) => trait_def,
+
+                        Some(sym) => {
+                            return Err(SemanticErrorKind::UnexpectedSymbol {
+                                name: t.implemented_trait_path.to_identifier(),
+                                expected: "trait definition".to_string(),
+                                found: sym.to_backtick_string(),
+                            })
+                        }
+
+                        None => {
+                            return Err(SemanticErrorKind::UndefinedType {
+                                name: t.implemented_trait_path.to_identifier(),
+                            });
+                        }
+                    };
+
                     let trait_impl_path = implementing_type_path
                         .join(t.implemented_trait_path.type_name.to_type_path());
 
@@ -745,18 +814,12 @@ impl SemanticAnalyser {
                     self.enter_scope(scope_kind);
 
                     self.analyse_trait_impl_items(
+                        &trait_def,
                         t,
                         &implementing_type_path,
                         trait_impl_path.clone(),
                         &mut function_symbols,
                     )?;
-
-                    log_trace!(
-                        self.logger,
-                        "implementation of trait `{}` for type `{}` complete",
-                        t.implemented_trait_path,
-                        t.implementing_type
-                    );
 
                     self.exit_scope();
 
@@ -853,7 +916,7 @@ impl SemanticAnalyser {
                     | Type::Tuple(_)
                     | Type::FunctionPtr(_)
                     | Type::Reference { .. }
-                    | Type::SelfType(_)
+                    | Type::SelfType { .. }
                     | Type::InferredType(_)
                     | Type::Vec { .. }
                     | Type::Mapping { .. }
@@ -909,11 +972,7 @@ impl SemanticAnalyser {
         // * object implementation (e.g., `lib::some_module::SomeObject`)
         // * trait implementation (e.g., `lib::some_module::SomeObject::SomeTrait`)
 
-        let function_root = if is_trait_impl {
-            path.clone().strip_suffix()
-        } else {
-            path.clone()
-        };
+        let function_root = path.clone();
 
         // append the function name to the root
         let full_path = function_root.join(f.function_name.to_type_path());
@@ -946,132 +1005,43 @@ impl SemanticAnalyser {
             let param_types: Vec<Type> = params.iter().map(|p| p.param_type()).collect();
 
             for (param, mut param_type) in params.iter().zip(param_types) {
-                if param_type == Type::SELF_TYPE {
+                if let Type::SelfType { reference_op, .. } = param_type {
+                    let inner_type = if is_trait_impl {
+                        Type::UserDefined(function_root.clone().strip_suffix())
+                    } else {
+                        Type::UserDefined(function_root.clone())
+                    };
+
                     if is_associated_func {
-                        param_type = Type::UserDefined(function_root.clone());
+                        param_type = match reference_op {
+                            ReferenceOp::Borrow | ReferenceOp::MutableBorrow => Type::Reference {
+                                reference_op,
+                                inner_type: Box::new(inner_type),
+                            },
+                            ReferenceOp::Owned => inner_type,
+                        };
                     }
                 }
 
                 let param_path = param.param_name().to_type_path();
 
-                match param_type {
-                    Type::Generic(GenericParam { name, .. }) => {
-                        match self.lookup(&name.to_type_path()) {
-                            Some(_) => (),
-                            None => {
-                                return Err(SemanticErrorKind::UndeclaredGenericParams {
-                                    found: name.to_backtick_string(),
-                                })
-                            }
-                        }
-                    }
-
-                    Type::FunctionPtr(fp) => {
-                        self.insert(
-                            param_path.clone(),
-                            Symbol::Function {
-                                path: param_path.clone(),
-                                function: FunctionItem {
-                                    attributes_opt: None,
-                                    visibility: Visibility::Private,
-                                    kw_func: Keyword::Anonymous,
-                                    function_name: Identifier::from(""),
-                                    generic_params_opt: None,
-                                    params_opt: fp.params_opt,
-                                    return_type_opt: fp.return_type_opt,
-                                    block_opt: None,
-                                    span: Span::default(),
-                                },
-                            },
-                        )?;
-                    }
-
-                    Type::UserDefined(tp) => match self.lookup(&tp).cloned() {
-                        // Some(Symbol::Trait {
-                        //     trait_def:
-                        //         TraitDef {
-                        //             trait_items_opt, ..
-                        //         },
-                        //     ..
-                        // }) => match trait_items_opt {
-                        //     Some(items) => {
-                        //         for item in items {
-                        //             match item {
-                        //                 TraitDefItem::AliasDecl(ad) => self.insert(
-                        //                     param_path.clone(),
-                        //                     Symbol::Alias {
-                        //                         path: param_path.clone(),
-                        //                         visibility: ad.visibility,
-                        //                         original_type_opt: ad.original_type_opt,
-                        //                         alias_name: ad.alias_name,
-                        //                     },
-                        //                 )?,
-                        //                 TraitDefItem::ConstantDecl(cd) => self.insert(
-                        //                     param_path.clone(),
-                        //                     Symbol::Constant {
-                        //                         path: param_path.clone(),
-                        //                         visibility: cd.visibility,
-                        //                         constant_name: cd.constant_name,
-                        //                         constant_type: *cd.constant_type,
-                        //                     },
-                        //                 )?,
-                        //                 TraitDefItem::FunctionItem(fi) => self.insert(
-                        //                     param_path.clone(),
-                        //                     Symbol::Function {
-                        //                         path: param_path.clone(),
-                        //                         function: fi,
-                        //                     },
-                        //                 )?,
-                        //             }
-                        //         }
-                        //     }
-                        //     None => todo!(),
-                        // },
-                        Some(sym) => self.insert(param_path, sym.clone())?,
-                        None => {
-                            return Err(SemanticErrorKind::UndefinedType { name: tp.type_name });
-                        }
-                    },
-
-                    ty => self.insert(
-                        param_path,
-                        Symbol::Variable {
-                            name: param.param_name(),
-                            var_type: ty,
-                        },
-                    )?,
-                }
+                self.analyse_function_params(param_type, param_path, param)?;
             }
         }
 
-        let mut function_type = if let Some(block) = &f.block_opt {
-            // split path into a vector to remove the last element (if needed), then convert back
-            let mut path_vec = Vec::<Identifier>::from(path.clone());
+        if let Some(block) = &f.block_opt {
+            let root = path.clone().strip_suffix();
 
-            if is_associated_func {
-                path_vec.pop(); // remove associated type name
+            let mut function_type = analyse_expr(self, &Expression::Block(block.clone()), &root)?;
+
+            // check that the function type matches the return type
+            if let Some(return_type) = &f.return_type_opt {
+                self.check_types(
+                    &mut self.current_symbol_table(),
+                    &return_type,
+                    &mut function_type,
+                )?;
             }
-
-            analyse_expr(
-                self,
-                &Expression::Block(block.clone()),
-                &TypePath::from(path_vec),
-            )?
-        } else {
-            if let Some(ty) = &f.return_type_opt {
-                *ty.clone()
-            } else {
-                Type::UNIT_TYPE
-            }
-        };
-
-        // check that the function type matches the return type
-        if let Some(return_type) = &f.return_type_opt {
-            self.check_types(
-                &mut self.current_symbol_table(),
-                &return_type,
-                &mut function_type,
-            )?;
         }
 
         log_trace!(
@@ -1086,6 +1056,65 @@ impl SemanticAnalyser {
         self.exit_scope();
 
         Ok(())
+    }
+
+    fn analyse_function_params(
+        &mut self,
+        param_type: Type,
+        param_path: TypePath,
+        param: &FunctionOrMethodParam,
+    ) -> Result<(), SemanticErrorKind> {
+        Ok(match param_type {
+            Type::Generic(GenericParam { name, .. }) => match self.lookup(&name.to_type_path()) {
+                Some(_) => (),
+                None => {
+                    return Err(SemanticErrorKind::UndeclaredGenericParams {
+                        found: name.to_backtick_string(),
+                    })
+                }
+            },
+
+            Type::FunctionPtr(fp) => {
+                self.insert(
+                    param_path.clone(),
+                    Symbol::Function {
+                        path: param_path.clone(),
+                        function: FunctionItem {
+                            attributes_opt: None,
+                            visibility: Visibility::Private,
+                            kw_func: Keyword::Anonymous,
+                            function_name: Identifier::from(""),
+                            generic_params_opt: None,
+                            params_opt: fp.params_opt,
+                            return_type_opt: fp.return_type_opt,
+                            block_opt: None,
+                            span: Span::default(),
+                        },
+                    },
+                )?;
+            }
+
+            Type::UserDefined(tp) => match self.lookup(&tp).cloned() {
+                Some(sym) => {
+                    self.insert(param_path, sym.clone())?;
+                }
+                None => {
+                    return Err(SemanticErrorKind::UndefinedType { name: tp.type_name });
+                }
+            },
+
+            Type::Reference { inner_type, .. } => {
+                self.analyse_function_params(*inner_type, param_path, param)?
+            }
+
+            ty => self.insert(
+                param_path,
+                Symbol::Variable {
+                    name: param.param_name(),
+                    var_type: ty,
+                },
+            )?,
+        })
     }
 
     /// Analyse an import declaration, resolving and inserting symbols from the imported
@@ -1134,6 +1163,24 @@ impl SemanticAnalyser {
                                 associated_items_trait,
                                 ..
                             } => {
+                                for scope in self.scope_stack.iter().rev() {
+                                    for type_path in scope.symbols.keys() {
+                                        match scope.scope_kind {
+                                            ScopeKind::Module { .. }
+                                            | ScopeKind::ProgramRoot
+                                            | ScopeKind::Public => (),
+                                            _ => {
+                                                if type_path.type_name == path.type_name {
+                                                    return Err(SemanticErrorKind::ImportClash {
+                                                        type_name: path.type_name.clone(),
+                                                        module_name: type_path.type_name.clone(),
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
                                 self.insert(item_path.clone(), symbol.clone())?;
 
                                 for item in associated_items_inherent {
@@ -1220,132 +1267,367 @@ impl SemanticAnalyser {
 
     fn analyse_trait_impl_items(
         &mut self,
-        t: &TraitImplDef,
+        trait_def: &TraitDef,
+        trait_impl_def: &TraitImplDef,
         implementing_type_path: &TypePath,
         trait_impl_path: TypePath,
         function_symbols: &mut HashMap<TypePath, Symbol>,
     ) -> Result<(), SemanticErrorKind> {
-        Ok(if let Some(impl_items) = &t.associated_items_opt {
-            let mut object_symbol = if let Some(s) = self.lookup(implementing_type_path) {
-                s.to_owned()
-            } else {
-                return Err(SemanticErrorKind::MissingItem {
-                    expected: "struct or enum symbol".to_string(),
-                });
-            };
+        Ok(
+            if let Some(impl_items) = &trait_impl_def.associated_items_opt {
+                let mut object_symbol = if let Some(s) = self.lookup(implementing_type_path) {
+                    s.to_owned()
+                } else {
+                    return Err(SemanticErrorKind::MissingItem {
+                        expected: "struct or enum symbol".to_string(),
+                    });
+                };
 
-            for i in impl_items.iter() {
-                match i {
-                    TraitImplItem::AliasDecl(ad) => self.analyse_stmt(
-                        &Statement::Item(Item::AliasDecl(ad.clone())),
-                        trait_impl_path.clone(),
-                    )?,
-                    TraitImplItem::ConstantDecl(cd) => self.analyse_stmt(
-                        &Statement::Item(Item::ConstantDecl(cd.clone())),
-                        trait_impl_path.clone(),
-                    )?,
-                    TraitImplItem::FunctionItem(fi) => {
-                        let function_impl_path =
-                            trait_impl_path.join(fi.function_name.to_type_path());
+                for impl_item in impl_items.iter() {
+                    if let Some(def_items) = &trait_def.trait_items_opt {
+                        let def_item_names = def_items
+                            .iter()
+                            .map(|item| item.item_name())
+                            .collect::<Vec<_>>();
 
-                        if !fi.clone().block_opt.is_some_and(|block| {
-                            block.statements_opt.is_some_and(|stmts| !stmts.is_empty())
-                        }) {
-                            match self.lookup(&t.implemented_trait_path).cloned() {
-                                Some(Symbol::Trait {
-                                    trait_def:
-                                        TraitDef {
-                                            trait_items_opt, ..
-                                        },
-                                    ..
-                                }) => {
-                                    if let Some(def_items) = trait_items_opt {
-                                        for item in def_items {
-                                            if let TraitDefItem::FunctionItem(function_item) = item
+                        if !def_item_names.contains(&impl_item.item_name()) {
+                            self.log_error(
+                                SemanticErrorKind::UndeclaredTraitItem {
+                                    item_name: impl_item.item_name(),
+                                    implemented_trait_path: trait_impl_def
+                                        .implemented_trait_path
+                                        .clone(),
+                                },
+                                &impl_item.span(),
+                            )
+                        }
+
+                        for def_item in def_items.iter() {
+                            match self.trait_items_match(impl_item, def_item) {
+                                Ok(true) => match impl_item {
+                                    TraitImplItem::AliasDecl(ad) => self.analyse_stmt(
+                                        &Statement::Item(Item::AliasDecl(ad.clone())),
+                                        trait_impl_path.clone(),
+                                    )?,
+                                    TraitImplItem::ConstantDecl(cd) => self.analyse_stmt(
+                                        &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                        trait_impl_path.clone(),
+                                    )?,
+                                    TraitImplItem::FunctionItem(fi) => {
+                                        let function_impl_path =
+                                            trait_impl_path.join(fi.function_name.to_type_path());
+
+                                        if !fi.clone().block_opt.is_some_and(|block| {
+                                            block
+                                                .statements_opt
+                                                .is_some_and(|stmts| !stmts.is_empty())
+                                        }) {
+                                            match self
+                                                .lookup(&trait_impl_def.implemented_trait_path)
+                                                .cloned()
                                             {
-                                                if fi.function_name == function_item.function_name {
-                                                    if function_item.clone().block_opt.is_some_and(
-                                                        |block| {
-                                                            block.statements_opt.is_some_and(
-                                                                |stmts| !stmts.is_empty(),
-                                                            )
+                                                Some(Symbol::Trait {
+                                                    trait_def:
+                                                        TraitDef {
+                                                            trait_items_opt, ..
                                                         },
-                                                    ) {
-                                                        log_trace!(self.logger, "switching to default function implementation in trait definition: `{}` …", t.implemented_trait_path);
+                                                    ..
+                                                }) => {
+                                                    if let Some(def_items) = trait_items_opt {
+                                                        for def_item in def_items {
+                                                            if let TraitDefItem::FunctionItem(
+                                                                function_item,
+                                                            ) = def_item
+                                                            {
+                                                                if fi.function_name
+                                                                    == function_item.function_name
+                                                                {
+                                                                    if function_item
+                                                            .clone()
+                                                            .block_opt
+                                                            .is_some_and(|block| {
+                                                                block.statements_opt.is_some_and(
+                                                                    |stmts| !stmts.is_empty(),
+                                                                )
+                                                            })
+                                                        {
+                                                            log_trace!(self.logger, "switching to default function implementation in trait definition: `{}` …", trait_impl_def.implemented_trait_path);
 
-                                                        function_symbols.insert(
-                                                            function_impl_path.clone(),
-                                                            Symbol::Function {
-                                                                path: function_impl_path,
-                                                                function: function_item.clone(),
-                                                            },
-                                                        );
+                                                            function_symbols.insert(
+                                                                function_impl_path.clone(),
+                                                                Symbol::Function {
+                                                                    path: function_impl_path,
+                                                                    function: function_item.clone(),
+                                                                },
+                                                            );
 
-                                                        match self.analyse_function_def(
-                                                            &function_item,
-                                                            &trait_impl_path,
-                                                            true,
-                                                            true,
-                                                        ) {
-                                                            Ok(_) => (),
-                                                            Err(err) => {
-                                                                self.log_error(err, &t.span)
+                                                            match self.analyse_function_def(
+                                                                &function_item,
+                                                                &trait_impl_path,
+                                                                false,
+                                                                true,
+                                                            ) {
+                                                                Ok(_) => (),
+                                                                Err(err) => self.log_error(
+                                                                    err,
+                                                                    &trait_impl_def.span,
+                                                                ),
+                                                            }
+
+                                                            object_symbol.add_associated_items(
+                                                                None,
+                                                                Some(TraitImplItem::FunctionItem(
+                                                                    function_item,
+                                                                )),
+                                                            )?;
+
+                                                            return Ok(());
+                                                        }
+                                                                }
                                                             }
                                                         }
-
-                                                        object_symbol.add_associated_items(
-                                                            None,
-                                                            Some(TraitImplItem::FunctionItem(
-                                                                function_item,
-                                                            )),
-                                                        )?;
-
-                                                        return Ok(());
                                                     }
+
+                                                    return Err(SemanticErrorKind::MissingTraitFunctionImpl {
+                                            func_name: fi.clone().function_name,
+                                        });
+                                                }
+
+                                                Some(sym) => {
+                                                    return Err(
+                                                        SemanticErrorKind::UnexpectedSymbol {
+                                                            name: trait_impl_def
+                                                                .implemented_trait_path
+                                                                .to_identifier(),
+                                                            expected: "trait".to_string(),
+                                                            found: sym.to_backtick_string(),
+                                                        },
+                                                    )
+                                                }
+
+                                                None => {
+                                                    return Err(SemanticErrorKind::MissingItem {
+                                                        expected: "trait".to_string(),
+                                                    })
                                                 }
                                             }
                                         }
+
+                                        function_symbols.insert(
+                                            function_impl_path.clone(),
+                                            Symbol::Function {
+                                                path: function_impl_path,
+                                                function: fi.clone(),
+                                            },
+                                        );
+
+                                        match self.analyse_function_def(
+                                            fi,
+                                            &trait_impl_path,
+                                            true,
+                                            true,
+                                        ) {
+                                            Ok(_) => (),
+                                            Err(err) => self.log_error(err, &trait_impl_def.span),
+                                        }
                                     }
+                                },
+                                Ok(false) => (),
+                                Err(err) => return Err(err),
+                            }
+                        }
+                    }
 
-                                    return Err(SemanticErrorKind::MissingTraitFunctionImpl {
-                                        func_name: fi.clone().function_name,
-                                    });
-                                }
+                    object_symbol.add_associated_items(None, Some(impl_item.clone()))?;
+                }
+            },
+        )
+    }
 
-                                Some(sym) => {
-                                    return Err(SemanticErrorKind::UnexpectedSymbol {
-                                        name: t.implemented_trait_path.to_identifier(),
-                                        expected: "trait".to_string(),
-                                        found: sym.to_backtick_string(),
-                                    })
-                                }
+    pub(crate) fn trait_items_match(
+        &mut self,
+        trait_impl_item: &TraitImplItem,
+        trait_def_item: &TraitDefItem,
+    ) -> Result<bool, SemanticErrorKind> {
+        match (trait_impl_item, trait_def_item) {
+            (TraitImplItem::AliasDecl(ad_impl), TraitDefItem::AliasDecl(ad_def)) => {
+                if ad_impl.alias_name == ad_def.alias_name {
+                    if ad_impl.attributes_opt != ad_def.attributes_opt {
+                        return Err(SemanticErrorKind::AttributesMismatch {
+                            item_name: ad_impl.alias_name.clone(),
+                            expected: format!("{:?}", ad_def.attributes_opt),
+                            found: format!("{:?}", ad_impl.attributes_opt),
+                        });
+                    }
 
-                                None => {
-                                    return Err(SemanticErrorKind::MissingItem {
-                                        expected: "trait".to_string(),
-                                    })
+                    if ad_impl.visibility != ad_def.visibility {
+                        return Err(SemanticErrorKind::VisibilityMismatch {
+                            item_name: ad_impl.alias_name.clone(),
+                            expected: ad_def.visibility.to_backtick_string(),
+                            found: ad_impl.visibility.to_backtick_string(),
+                        });
+                    }
+
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+
+            (TraitImplItem::AliasDecl(_), _) => Ok(false),
+
+            (TraitImplItem::ConstantDecl(cd_impl), TraitDefItem::ConstantDecl(cd_def)) => {
+                if cd_impl.constant_name == cd_def.constant_name {
+                    if cd_impl.attributes_opt != cd_def.attributes_opt {
+                        return Err(SemanticErrorKind::AttributesMismatch {
+                            item_name: cd_impl.constant_name.clone(),
+                            expected: format!("{:?}", cd_def.attributes_opt),
+                            found: format!("{:?}", cd_impl.attributes_opt),
+                        });
+                    }
+
+                    if cd_impl.visibility != cd_def.visibility {
+                        return Err(SemanticErrorKind::VisibilityMismatch {
+                            item_name: cd_impl.constant_name.clone(),
+                            expected: cd_def.visibility.to_backtick_string(),
+                            found: cd_impl.visibility.to_backtick_string(),
+                        });
+                    }
+
+                    if cd_impl.constant_type != cd_def.constant_type {
+                        return Err(SemanticErrorKind::TypeMismatchConst {
+                            constant_name: cd_impl.constant_name.clone(),
+                            expected: *cd_def.constant_type.clone(),
+                            found: *cd_impl.constant_type.clone(),
+                        });
+                    }
+
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+            (TraitImplItem::ConstantDecl(_), _) => Ok(false),
+            (TraitImplItem::FunctionItem(fi_impl), TraitDefItem::FunctionItem(fi_def)) => {
+                if fi_impl.function_name == fi_def.function_name {
+                    if fi_impl.attributes_opt != fi_def.attributes_opt {
+                        return Err(SemanticErrorKind::AttributesMismatch {
+                            item_name: fi_impl.function_name.clone(),
+                            expected: format!("{:?}", fi_def.attributes_opt),
+                            found: format!("{:?}", fi_impl.attributes_opt),
+                        });
+                    }
+
+                    if fi_impl.visibility != fi_def.visibility {
+                        return Err(SemanticErrorKind::VisibilityMismatch {
+                            item_name: fi_impl.function_name.clone(),
+                            expected: fi_def.visibility.to_backtick_string(),
+                            found: fi_impl.visibility.to_backtick_string(),
+                        });
+                    }
+
+                    if let Some(generics_impl) = &fi_impl.generic_params_opt {
+                        if let Some(generics_def) = &fi_def.generic_params_opt {
+                            if generics_impl.params.len() != generics_def.params.len() {
+                                return Err(SemanticErrorKind::GenericParamsCountMismatch {
+                                    item_name: fi_impl.function_name.clone(),
+                                    expected: generics_def.params.len(),
+                                    found: generics_impl.params.len(),
+                                });
+                            }
+                        } else {
+                            return Err(SemanticErrorKind::GenericParamsCountMismatch {
+                                item_name: fi_impl.function_name.clone(),
+                                expected: 0,
+                                found: generics_impl.params.len(),
+                            });
+                        }
+                    } else {
+                        if let Some(generics_def) = &fi_def.generic_params_opt {
+                            return Err(SemanticErrorKind::GenericParamsCountMismatch {
+                                item_name: fi_impl.function_name.clone(),
+                                expected: generics_def.params.len(),
+                                found: 0,
+                            });
+                        }
+                    }
+
+                    if let Some(params_impl) = &fi_impl.params_opt {
+                        if let Some(params_def) = &fi_def.params_opt {
+                            for (impl_param, def_param) in params_impl.iter().zip(params_def) {
+                                match (impl_param, def_param) {
+                                    (
+                                        FunctionOrMethodParam::FunctionParam(func_param_impl),
+                                        FunctionOrMethodParam::FunctionParam(func_param_def),
+                                    ) => {
+                                        if func_param_impl.param_type != func_param_def.param_type {
+                                            return Err(SemanticErrorKind::TypeMismatchParam {
+                                                function_name: fi_impl.function_name.clone(),
+                                                expected: *func_param_def.param_type.clone(),
+                                                found: *func_param_impl.param_type.clone(),
+                                            });
+                                        }
+                                    }
+                                    (
+                                        FunctionOrMethodParam::FunctionParam(_),
+                                        FunctionOrMethodParam::MethodParam(_),
+                                    )
+                                    | (
+                                        FunctionOrMethodParam::MethodParam(_),
+                                        FunctionOrMethodParam::FunctionParam(_),
+                                    ) => {
+                                        return Err(SemanticErrorKind::TypeMismatchParam {
+                                            function_name: fi_impl.function_name.clone(),
+                                            expected: def_param.param_type(),
+                                            found: impl_param.param_type(),
+                                        })
+                                    }
+                                    (
+                                        FunctionOrMethodParam::MethodParam(self_param_impl),
+                                        FunctionOrMethodParam::MethodParam(self_param_def),
+                                    ) => {
+                                        if self_param_impl.reference_op_opt
+                                            != self_param_def.reference_op_opt
+                                        {
+                                            return Err(SemanticErrorKind::TypeMismatchSelfParam {
+                                                expected: self_param_def.to_backtick_string(),
+                                                found: self_param_impl.to_backtick_string(),
+                                            });
+                                        }
+                                    }
                                 }
                             }
                         }
-
-                        function_symbols.insert(
-                            function_impl_path.clone(),
-                            Symbol::Function {
-                                path: function_impl_path,
-                                function: fi.clone(),
-                            },
-                        );
-
-                        match self.analyse_function_def(fi, &trait_impl_path, true, true) {
-                            Ok(_) => (),
-                            Err(err) => self.log_error(err, &t.span),
+                    } else {
+                        if let Some(params_def) = &fi_def.params_opt {
+                            return Err(SemanticErrorKind::ParamCountMismatch {
+                                function_name: fi_impl.function_name.clone(),
+                                expected: params_def.len(),
+                                found: 0,
+                            });
                         }
                     }
-                }
 
-                object_symbol.add_associated_items(None, Some(i.clone()))?;
+                    if fi_impl.return_type_opt != fi_def.return_type_opt {
+                        return Err(SemanticErrorKind::TypeMismatchReturnType {
+                            expected: *fi_def
+                                .return_type_opt
+                                .clone()
+                                .unwrap_or(Box::new(Type::UNIT_TYPE)),
+                            found: *fi_impl
+                                .return_type_opt
+                                .clone()
+                                .unwrap_or(Box::new(Type::UNIT_TYPE)),
+                        });
+                    }
+
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
             }
-        })
+            (TraitImplItem::FunctionItem(_), _) => Ok(false),
+        }
     }
 
     fn try_update_current_scope(&mut self, expected: &ScopeKind, new_scope_kind: ScopeKind) {
@@ -1376,14 +1658,14 @@ impl SemanticAnalyser {
             (Type::InferredType(_), _) => return Err(SemanticErrorKind::UnexpectedInferredType),
 
             // TODO: custom error
-            (Type::SelfType(_), _) => {
+            (Type::SelfType { .. }, _) => {
                 return Err(SemanticErrorKind::UnexpectedType {
                     expected: "non-`Self` type".to_string(),
-                    found: Type::SELF_TYPE,
+                    found: expected_type.clone(),
                 })
             }
 
-            (Type::UserDefined(_), Type::SelfType(_)) => {
+            (Type::UserDefined(_), Type::SelfType { .. }) => {
                 log_trace!(
                     self.logger,
                     "attempting to unify `Self` type with expected type `{expected_type}` …"
@@ -1391,7 +1673,7 @@ impl SemanticAnalyser {
                 unify_self_type(matched_type, expected_type.clone());
             }
 
-            (ty, Type::SelfType(_)) => {
+            (ty, Type::SelfType { .. }) => {
                 return Err(SemanticErrorKind::UnexpectedType {
                     expected: "user-defined type".to_string(),
                     found: ty,
@@ -1552,12 +1834,14 @@ impl SemanticAnalyser {
                     (None, None) => (),
                     (None, Some(params_b)) => {
                         return Err(SemanticErrorKind::ParamCountMismatch {
+                            function_name: Identifier::from(""),
                             expected: 0,
                             found: params_b.len(),
                         })
                     }
                     (Some(params_a), None) => {
                         return Err(SemanticErrorKind::ParamCountMismatch {
+                            function_name: Identifier::from(""),
                             expected: params_a.len(),
                             found: 0,
                         })
@@ -1565,6 +1849,7 @@ impl SemanticAnalyser {
                     (Some(params_a), Some(params_b)) => {
                         if params_a.len() != params_b.len() {
                             return Err(SemanticErrorKind::ParamCountMismatch {
+                                function_name: Identifier::from(""),
                                 expected: params_a.len(),
                                 found: params_b.len(),
                             });
@@ -1578,6 +1863,7 @@ impl SemanticAnalyser {
                                 ) => {
                                     if *func_param_a != func_param_b {
                                         return Err(SemanticErrorKind::TypeMismatchParam {
+                                            function_name: Identifier::from(""),
                                             expected: *func_param_a.param_type.clone(),
                                             found: *func_param_b.param_type,
                                         });
@@ -1585,11 +1871,11 @@ impl SemanticAnalyser {
                                 }
                                 (
                                     FunctionOrMethodParam::FunctionParam(param_a),
-                                    FunctionOrMethodParam::MethodParam(_),
+                                    FunctionOrMethodParam::MethodParam(sp),
                                 ) => {
                                     return Err(SemanticErrorKind::UnexpectedParam {
                                         expected: param_a.param_type.to_backtick_string(),
-                                        found: Type::SELF_TYPE.to_identifier(),
+                                        found: sp.to_identifier(),
                                     })
                                 }
                                 (
@@ -2034,7 +2320,7 @@ impl SemanticAnalyser {
                     }
                 }
             }
-            Type::SelfType(_) => {
+            Type::SelfType { .. } => {
                 unify_self_type(ty, concrete_type.clone());
             }
             Type::InferredType { .. } => unify_inferred_type(ty, concrete_type.clone()),
@@ -2405,6 +2691,16 @@ impl SemanticAnalyser {
     }
 
     fn log_error(&mut self, error_kind: SemanticErrorKind, span: &Span) {
+        if self
+            .errors
+            .iter()
+            .map(|err| err.error_kind())
+            .collect::<Vec<_>>()
+            .contains(&error_kind)
+        {
+            return;
+        }
+
         let error = CompilerError::new(error_kind, span.start(), &span.input());
 
         log_error!(self.logger, "{error}");
@@ -2574,9 +2870,17 @@ fn unify_result_types(ty: &mut Type, context_type: &Type) -> Result<(), Semantic
 }
 
 fn unify_self_type(ty: &mut Type, object_type: Type) {
-    if *ty == Type::SELF_TYPE {
-        if object_type != Type::SELF_TYPE && object_type != Type::inferred_type("_") {
+    if matches!(ty, Type::SelfType { .. }) {
+        if !matches!(object_type, Type::SelfType { .. })
+            && !matches!(object_type, Type::InferredType(_))
+        {
             *ty = object_type;
         }
     }
+
+    // if *ty == Type::SELF_TYPE {
+    //     if object_type != Type::SELF_TYPE && object_type != Type::inferred_type("_") {
+    //         *ty = object_type;
+    //     }
+    // }
 }

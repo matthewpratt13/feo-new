@@ -2,7 +2,7 @@ use core::fmt;
 
 use crate::ast::{Expression, Identifier};
 
-pub(crate) trait FormatObject
+pub(crate) trait FormatItem
 where
     Self: fmt::Display,
 {
@@ -13,10 +13,6 @@ where
 
 pub(crate) trait FormatParams {
     fn param_strings(&self) -> Vec<String>;
-}
-
-pub(crate) trait FormatStatements {
-    fn statement_strings(&self) -> Vec<String>;
 }
 
 pub(crate) trait ToExpression {

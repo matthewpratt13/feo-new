@@ -3,6 +3,7 @@ use core::fmt;
 use crate::{
     ast::{Keyword, PubLibVis, Visibility},
     error::ErrorsEmitted,
+    semantic_analyser::FormatItem,
     token::{Token, TokenType},
 };
 
@@ -38,6 +39,8 @@ impl Visibility {
         }
     }
 }
+
+impl FormatItem for Visibility {}
 
 impl fmt::Display for Visibility {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

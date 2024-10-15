@@ -296,7 +296,7 @@ pub(crate) fn parse_where_clause(
     }?;
 
     let self_type = match Type::parse(parser)? {
-        Type::SelfType(st) => Ok(st),
+        Type::SelfType { ty, .. } => Ok(ty),
         ty => {
             parser.emit_error(ParserErrorKind::InvalidTypeParameter {
                 expected: TokenType::SelfType.to_string(),
