@@ -104,6 +104,16 @@ pub(crate) enum TraitDefItem {
     FunctionItem(FunctionItem),
 }
 
+impl TraitDefItem {
+    pub(crate) fn item_name(&self) -> Identifier {
+        match self.clone() {
+            TraitDefItem::AliasDecl(ad) => ad.alias_name,
+            TraitDefItem::ConstantDecl(cd) => cd.constant_name,
+            TraitDefItem::FunctionItem(fi) => fi.function_name,
+        }
+    }
+}
+
 impl From<TraitImplItem> for TraitDefItem {
     fn from(value: TraitImplItem) -> Self {
         match value {
@@ -119,6 +129,26 @@ pub(crate) enum TraitImplItem {
     AliasDecl(AliasDecl),
     ConstantDecl(ConstantDecl),
     FunctionItem(FunctionItem),
+}
+
+impl TraitImplItem {
+    pub(crate) fn item_name(&self) -> Identifier {
+        match self.clone() {
+            TraitImplItem::AliasDecl(ad) => ad.alias_name,
+            TraitImplItem::ConstantDecl(cd) => cd.constant_name,
+            TraitImplItem::FunctionItem(fi) => fi.function_name,
+        }
+    }
+}
+
+impl Spanned for TraitImplItem {
+    fn span(&self) -> Span {
+        match self.clone() {
+            TraitImplItem::AliasDecl(ad) => ad.span,
+            TraitImplItem::ConstantDecl(cd) => cd.span,
+            TraitImplItem::FunctionItem(fi) => fi.span,
+        }
+    }
 }
 
 impl From<TraitDefItem> for TraitImplItem {

@@ -202,19 +202,19 @@ fn analyse_impl() -> Result<(), ()> {
             const CONTRACT_ADDRESS: h160 = $0x54321_ABCDE_54321_ABCDE_54321_ABCDE_54321_ABCDE;
             const CREATOR_ADDRESS: h160 = $0x67890_ABCDE_67890_ABCDE_67890_ABCDE_67890_ABCDE;
 
-            pub func address() -> h160 {
+            func address() -> h160 {
                 SomeToken::Contract::CONTRACT_ADDRESS
             }
 
-            pub func balance(&self) -> u64 {
+            func balance(&self) -> u64 {
                 self.total_supply
             }
 
-            pub func msg_sender() -> h160 {
+            func msg_sender() -> h160 {
                SomeToken::Contract::CREATOR_ADDRESS
             }
 
-            pub func creator_address() -> h160 {
+            func creator_address() -> h160 {
                SomeToken::Contract::CREATOR_ADDRESS
             }
         }

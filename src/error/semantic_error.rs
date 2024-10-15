@@ -1,7 +1,7 @@
 use core::fmt;
 use std::error::Error;
 
-use crate::ast::{Identifier, Keyword, ReferenceOp, Type};
+use crate::ast::{Identifier, Keyword, ReferenceOp, Type, TypePath};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {
@@ -210,6 +210,11 @@ pub enum SemanticErrorKind {
 
     UndeclaredGenericParams {
         found: String,
+    },
+
+    UndeclaredTraitItem {
+        item_name: Identifier,
+        implemented_trait_path: TypePath,
     },
 
     UndefinedField {
@@ -427,10 +432,10 @@ impl fmt::Display for SemanticErrorKind {
                     "type mismatch for `{name}`. Expected {expected}, found `{found}`"
                 )
             }
-
             SemanticErrorKind::UndeclaredGenericParams { found } => {
                 write!(f, "undeclared generic parameter (`{found}`) in function signature. Generic parameters must be declared after `func` keyword (e.g., `func<T>`) in function definition context; or after `impl` keyword in implementation definition context (e.g., `impl<T>`); or after `trait` keyword in trait definition context (e.g., `trait<T>`)")
             }
+            SemanticErrorKind::UndeclaredTraitItem { item_name, implemented_trait_path } => write!(f, "undeclared trait implementation item: `{item_name}`. Item does not exist in trait definition `{implemented_trait_path}`"),
             SemanticErrorKind::UndefinedField { struct_path: struct_name , field_name} => write!(f, "struct `{struct_name}` has no field `{field_name}`"),
 
             SemanticErrorKind::UndefinedFunc { name } => write!(f, "no function `{name}()` in current scope"),
@@ -469,6 +474,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::VisibilityMismatch { item_name, expected, found } => write!(f, "item visibilities do not match for item `{item_name}`. Expected {expected}, found {found}"),
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
+    
            
 
         }
