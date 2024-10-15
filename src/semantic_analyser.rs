@@ -1272,8 +1272,8 @@ impl SemanticAnalyser {
                 // TODO: check that there are no "foreign" items in trait implementation
                 // TODO: (i.e., items that have not been declared in the respective trait def)
 
-                for i in impl_items.iter() {
-                    match i {
+                for impl_item in impl_items.iter() {
+                    match impl_item {
                         TraitImplItem::AliasDecl(ad) => self.analyse_stmt(
                             &Statement::Item(Item::AliasDecl(ad.clone())),
                             trait_impl_path.clone(),
@@ -1298,9 +1298,9 @@ impl SemanticAnalyser {
                                         ..
                                     }) => {
                                         if let Some(def_items) = trait_items_opt {
-                                            for item in def_items {
+                                            for def_item in def_items {
                                                 if let TraitDefItem::FunctionItem(function_item) =
-                                                    item
+                                                    def_item
                                                 {
                                                     if fi.function_name
                                                         == function_item.function_name
@@ -1389,10 +1389,151 @@ impl SemanticAnalyser {
                         }
                     }
 
-                    object_symbol.add_associated_items(None, Some(i.clone()))?;
+                    object_symbol.add_associated_items(None, Some(impl_item.clone()))?;
                 }
             },
         )
+    }
+
+    pub(crate) fn trait_items_match(
+        &mut self,
+        trait_impl_item: &TraitImplItem,
+        trait_def_item: &TraitDefItem,
+    ) -> Result<bool, SemanticErrorKind> {
+        match (trait_impl_item, trait_def_item) {
+            (TraitImplItem::AliasDecl(ad_impl), TraitDefItem::AliasDecl(ad_def)) => {
+                if ad_impl.alias_name == ad_def.alias_name {
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+            (TraitImplItem::AliasDecl(_), _) => Ok(false),
+
+            (TraitImplItem::ConstantDecl(cd_impl), TraitDefItem::ConstantDecl(cd_def)) => {
+                if cd_impl.constant_name == cd_def.constant_name {
+                    if cd_impl.attributes_opt != cd_def.attributes_opt {
+                        // return error: attributes mismatch
+                        todo!()
+                    }
+
+                    if cd_impl.visibility != cd_def.visibility {
+                        // return error: visibility mismatch
+                        todo!()
+                    }
+
+                    if cd_impl.constant_type != cd_def.constant_type {
+                        // return error: type mismatch
+                        todo!()
+                    }
+
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+            (TraitImplItem::ConstantDecl(_), _) => Ok(false),
+            (TraitImplItem::FunctionItem(fi_impl), TraitDefItem::FunctionItem(fi_def)) => {
+                if fi_impl.function_name == fi_def.function_name {
+                    if fi_impl.attributes_opt != fi_def.attributes_opt {
+                        return Err(SemanticErrorKind::AttributesMismatch {
+                            item_name: fi_impl.function_name.clone(),
+                            expected: format!("{:?}", fi_def.attributes_opt),
+                            found: format!("{:?}", fi_impl.attributes_opt),
+                        });
+                    }
+
+                    if fi_impl.visibility != fi_def.visibility {
+                        return Err(SemanticErrorKind::VisibilityMismatch {
+                            item_name: fi_impl.function_name.clone(),
+                            expected: fi_def.visibility.to_backtick_string(),
+                            found: fi_impl.visibility.to_backtick_string(),
+                        });
+                    }
+
+                    if let Some(generics_impl) = &fi_impl.generic_params_opt {
+                        if let Some(generics_def) = &fi_def.generic_params_opt {
+                            if generics_impl.params.len() != generics_def.params.len() {
+                                return Err(SemanticErrorKind::GenericParamsCountMismatch {
+                                    item_name: fi_impl.function_name.clone(),
+                                    expected: generics_def.params.len(),
+                                    found: generics_impl.params.len(),
+                                });
+                            }
+                        } else {
+                            return Err(SemanticErrorKind::GenericParamsCountMismatch {
+                                item_name: fi_impl.function_name.clone(),
+                                expected: 0,
+                                found: generics_impl.params.len(),
+                            });
+                        }
+                    } else {
+                        if let Some(generics_def) = &fi_def.generic_params_opt {
+                            return Err(SemanticErrorKind::GenericParamsCountMismatch {
+                                item_name: fi_impl.function_name.clone(),
+                                expected: generics_def.params.len(),
+                                found: 0,
+                            });
+                        }
+                    }
+
+                    if let Some(params_impl) = &fi_impl.params_opt {
+                        if let Some(params_def) = &fi_def.params_opt {
+                            for (impl_param, def_param) in params_impl.iter().zip(params_def) {
+                                match (impl_param, def_param) {
+                                    (
+                                        FunctionOrMethodParam::FunctionParam(func_param_impl),
+                                        FunctionOrMethodParam::FunctionParam(func_param_def),
+                                    ) => {
+                                        if func_param_impl.param_type != func_param_def.param_type {
+                                            // return error: param mismatch
+                                            todo!()
+                                        }
+                                    }
+                                    (
+                                        FunctionOrMethodParam::FunctionParam(_),
+                                        FunctionOrMethodParam::MethodParam(_),
+                                    ) => todo!(), // return error: expected method param
+                                    (
+                                        FunctionOrMethodParam::MethodParam(_),
+                                        FunctionOrMethodParam::FunctionParam(_),
+                                    ) => todo!(), // return error: expected function param
+                                    (
+                                        FunctionOrMethodParam::MethodParam(self_param_impl),
+                                        FunctionOrMethodParam::MethodParam(self_param_def),
+                                    ) => {
+                                        if self_param_impl.reference_op_opt
+                                            != self_param_def.reference_op_opt
+                                        {
+                                            // return error: reference mismatch
+                                            todo!()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        if let Some(params_def) = &fi_def.params_opt {
+                            return Err(SemanticErrorKind::ParamCountMismatch {
+                                function_name: fi_impl.function_name.clone(),
+                                expected: params_def.len(),
+                                found: 0,
+                            });
+                        }
+                    }
+
+                    if fi_impl.return_type_opt != fi_def.return_type_opt {
+                        // return error: return type mismatch
+                        todo!()
+                    }
+
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+            (TraitImplItem::FunctionItem(_), _) => Ok(false),
+        }
     }
 
     fn try_update_current_scope(&mut self, expected: &ScopeKind, new_scope_kind: ScopeKind) {
@@ -1599,12 +1740,14 @@ impl SemanticAnalyser {
                     (None, None) => (),
                     (None, Some(params_b)) => {
                         return Err(SemanticErrorKind::ParamCountMismatch {
+                            function_name: Identifier::from(""),
                             expected: 0,
                             found: params_b.len(),
                         })
                     }
                     (Some(params_a), None) => {
                         return Err(SemanticErrorKind::ParamCountMismatch {
+                            function_name: Identifier::from(""),
                             expected: params_a.len(),
                             found: 0,
                         })
@@ -1612,6 +1755,7 @@ impl SemanticAnalyser {
                     (Some(params_a), Some(params_b)) => {
                         if params_a.len() != params_b.len() {
                             return Err(SemanticErrorKind::ParamCountMismatch {
+                                function_name: Identifier::from(""),
                                 expected: params_a.len(),
                                 found: params_b.len(),
                             });

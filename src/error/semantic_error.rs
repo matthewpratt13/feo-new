@@ -10,6 +10,12 @@ pub enum SemanticErrorKind {
         found: usize,
     },
 
+    AttributesMismatch {
+        item_name: Identifier,
+        expected: String,
+        found: String,
+    },
+
     ConstantReassignment {
         constant_name: Identifier,
     },
@@ -18,6 +24,12 @@ pub enum SemanticErrorKind {
         function_path: Identifier,
         expected: usize,
         found: usize,
+    },
+
+    GenericParamsCountMismatch {
+        item_name: Identifier,
+        expected: usize,
+        found: usize
     },
 
     InvalidVariableIdentifier {
@@ -47,6 +59,7 @@ pub enum SemanticErrorKind {
     },
 
     ParamCountMismatch {
+        function_name: Identifier,
         expected: usize,
         found: usize,
     },
@@ -259,6 +272,12 @@ pub enum SemanticErrorKind {
         found: Type,
     },
 
+    VisibilityMismatch {
+        item_name: Identifier,
+        expected: String,
+        found: String,
+    },
+
     #[default]
     UnknownError,
 }
@@ -269,6 +288,9 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ArrayLengthMismatch { expected, found } => {
                 write!(f, "array length mismatch. Expected {expected} elements, found {found}")
             }
+            SemanticErrorKind::AttributesMismatch { item_name, expected, found } => {
+                write!(f, "mismatch between attributes on for `{item_name}`. Expected {expected}, found {found}")
+            }
             SemanticErrorKind::ConstantReassignment { constant_name: name } => {
                 write!(f, "cannot reassign constant `{name}`")
             }
@@ -278,6 +300,7 @@ impl fmt::Display for SemanticErrorKind {
                     "unexpected number of arguments given for function `{function_path}()`. Expected {expected} arguments, found {found}"
                 )
             }
+            SemanticErrorKind::GenericParamsCountMismatch { item_name, expected, found } => write!(f, "unexpected number of generic parameters in item `{item_name}`. Expected {expected} generic parameters, found {found}"),
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }
@@ -298,10 +321,10 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ModuleErrors { name } => {
                 write!(f, "detected errors in module `{name}`")
             }
-            SemanticErrorKind::ParamCountMismatch {expected, found } => {
+            SemanticErrorKind::ParamCountMismatch {function_name, expected, found } => {
                 write!(
                     f,
-                    "parameter count mismatch. Expected {expected} parameters, found {found}"
+                    "parameter count mismatch for function `{function_name}`. Expected {expected} parameters, found {found}"
                 )
             }
             SemanticErrorKind::RefOperatorMismatch { expected, found } => write!(f, "reference operator mismatch. Expected {expected}, found {found}"),
@@ -436,8 +459,10 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::UnexpectedType { expected, found } => {
                 write!(f, "unexpected type(s). Expected {expected}, found `{found}`")
             }
+            SemanticErrorKind::VisibilityMismatch { item_name, expected, found } => write!(f, "item visibilities do not match for item `{item_name}`. Expected {expected}, found {found}"),
 
             SemanticErrorKind::UnknownError => write!(f, "unknown semantic analysis error"),
+
         }
     }
 }
