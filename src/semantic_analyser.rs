@@ -209,18 +209,6 @@ impl SemanticAnalyser {
 
                         return Some(symbol);
                     }
-
-                    if scope.scope_kind < ScopeKind::ProgramRoot {
-                        if path.to_identifier() == sym_path.type_name {
-                            log_debug!(
-                                self.logger,
-                                "found symbol `{symbol}` in scope `{}` at path `{path}`",
-                                scope.scope_kind
-                            );
-
-                            return Some(symbol);
-                        }
-                    }
                 }
             }
         }
@@ -457,6 +445,8 @@ impl SemanticAnalyser {
                         };
 
                         for i in items.iter() {
+                            println!("inherent impl item: {i:?}",);
+
                             match i {
                                 InherentImplItem::ConstantDecl(cd) => self.analyse_stmt(
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
@@ -1117,6 +1107,8 @@ impl SemanticAnalyser {
         })
     }
 
+    // TODO: test re-export statements (`pub use ...`);
+
     /// Analyse an import declaration, resolving and inserting symbols from the imported
     /// modules into the current scope.
     fn analyse_import(
@@ -1142,9 +1134,20 @@ impl SemanticAnalyser {
 
             // bring external libraries into scope
             if let Some(lib_contents) = self.lib_registry.get(&import_root).cloned() {
-                for Module { table, .. } in lib_contents.iter() {
-                    for (item_path, symbol) in table {
-                        match symbol {
+                for Module { table, .. } in lib_contents {
+                    for (item_path, symbol) in table.iter() {
+                        let item_path =
+                            if let Some(ids) = &item_path.associated_type_path_prefix_opt {
+                                if ids.first().is_some_and(|id| id == &Identifier::from("lib")) {
+                                    item_path.clone().strip_prefix()
+                                } else {
+                                    item_path.clone()
+                                }
+                            } else {
+                                item_path.clone()
+                            };
+
+                        match &symbol {
                             Symbol::Struct {
                                 path,
                                 associated_items_inherent,
@@ -1181,12 +1184,22 @@ impl SemanticAnalyser {
                                     }
                                 }
 
-                                self.insert(item_path.clone(), symbol.clone())?;
+                                if let Some(Scope { symbols, .. }) = self.scope_stack.last() {
+                                    if !symbols.contains_key(&item_path.type_name.to_type_path()) {
+                                        self.insert(
+                                            item_path.type_name.to_type_path(),
+                                            symbol.clone(),
+                                        )?;
+                                    }
+                                }
 
                                 for item in associated_items_inherent {
                                     match item {
                                         InherentImplItem::ConstantDecl(cd) => self.insert(
-                                            path.join(cd.constant_name.to_type_path()),
+                                            item_path
+                                                .type_name
+                                                .to_type_path()
+                                                .join(cd.constant_name.to_type_path()),
                                             Symbol::Constant {
                                                 path: path.join(cd.constant_name.to_type_path()),
                                                 visibility: cd.visibility.clone(),
@@ -1195,7 +1208,10 @@ impl SemanticAnalyser {
                                             },
                                         )?,
                                         InherentImplItem::FunctionItem(fi) => self.insert(
-                                            path.join(fi.function_name.to_type_path()),
+                                            item_path
+                                                .type_name
+                                                .to_type_path()
+                                                .join(fi.function_name.to_type_path()),
                                             Symbol::Function {
                                                 path: path.join(fi.function_name.to_type_path()),
                                                 function: fi.clone(),
@@ -1207,7 +1223,10 @@ impl SemanticAnalyser {
                                 for item in associated_items_trait {
                                     match item {
                                         TraitImplItem::AliasDecl(ad) => self.insert(
-                                            path.join(ad.alias_name.to_type_path()),
+                                            item_path
+                                                .type_name
+                                                .to_type_path()
+                                                .join(ad.alias_name.to_type_path()),
                                             Symbol::Alias {
                                                 path: path.join(ad.alias_name.to_type_path()),
                                                 visibility: ad.visibility.clone(),
@@ -1216,7 +1235,10 @@ impl SemanticAnalyser {
                                             },
                                         )?,
                                         TraitImplItem::ConstantDecl(cd) => self.insert(
-                                            path.join(cd.constant_name.to_type_path()),
+                                            item_path
+                                                .type_name
+                                                .to_type_path()
+                                                .join(cd.constant_name.to_type_path()),
                                             Symbol::Constant {
                                                 path: path.join(cd.constant_name.to_type_path()),
                                                 visibility: cd.visibility.clone(),
@@ -1225,7 +1247,10 @@ impl SemanticAnalyser {
                                             },
                                         )?,
                                         TraitImplItem::FunctionItem(fi) => self.insert(
-                                            path.join(fi.function_name.to_type_path()),
+                                            item_path
+                                                .type_name
+                                                .to_type_path()
+                                                .join(fi.function_name.to_type_path()),
                                             Symbol::Function {
                                                 path: {
                                                     path.join(fi.function_name.to_type_path())
@@ -1240,17 +1265,18 @@ impl SemanticAnalyser {
                             Symbol::Module { symbols, .. } => {
                                 for (path, sym) in symbols {
                                     if !table.contains_key(&path) {
-                                        self.insert(path.clone(), sym.clone())?;
+                                        self.insert(path.type_name.to_type_path(), sym.clone())?;
+                                        // TODO: also import associated items for structs and enums
                                     }
                                 }
                             }
 
                             _ => {
                                 if let Some(Scope { symbols, .. }) = self.scope_stack.last() {
-                                    if !symbols.contains_key(&import_path)
-                                        && !symbols.contains_key(&item_path)
-                                    {
-                                        self.insert(item_path.clone(), symbol.clone())?;
+                                    if !symbols.contains_key(&item_path.clone().strip_prefix()) {
+                                        let item_path = item_path.clone().strip_prefix();
+                                        println!("import item: {item_path}");
+                                        self.insert(item_path, symbol.clone())?;
                                     }
                                 }
                             }
