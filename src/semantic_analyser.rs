@@ -46,7 +46,6 @@ type TypeTable = HashMap<TypePath, Vec<TraitImplDef>>;
 /// Struct responsible for performing semantic analysis on the abstract syntax tree (AST)
 /// of the program. It manages the scopes, symbol tables and errors encountered during
 /// the analysis phase. It also keeps track of implemented trait for a given type.
-#[allow(dead_code)]
 struct SemanticAnalyser {
     scope_stack: Vec<Scope>,
     lib_registry: LibRegistry,
