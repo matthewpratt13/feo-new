@@ -103,7 +103,7 @@ impl SemanticAnalyser {
         log_debug!(self.logger, "entering new scope: `{scope_kind}` …");
 
         self.scope_stack.push(Scope {
-            scope_kind,
+            scope_kind: scope_kind,
             symbols: HashMap::new(),
         });
     }
@@ -975,7 +975,7 @@ impl SemanticAnalyser {
                 .unwrap_or(Box::new(Type::UNIT_TYPE))
         );
 
-        self.enter_scope(ScopeKind::Function(full_path.clone()));
+        self.enter_scope(ScopeKind::FunctionDef(full_path.clone()));
 
         // register generic parameters in the local scope
         if let Some(generic_params) = &f.generic_params_opt {
@@ -1021,6 +1021,8 @@ impl SemanticAnalyser {
         if let Some(block) = &f.block_opt {
             let root = path.clone().strip_suffix();
 
+            // self.enter_scope(ScopeKind::FunctionBody(full_path.clone()));
+
             let mut function_type = analyse_expr(self, &Expression::Block(block.clone()), &root)?;
 
             // check that the function type matches the return type
@@ -1031,6 +1033,8 @@ impl SemanticAnalyser {
                     &mut function_type,
                 )?;
             }
+
+            // self.exit_scope();
         }
 
         log_trace!(

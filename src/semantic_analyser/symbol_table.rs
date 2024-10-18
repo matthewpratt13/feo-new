@@ -21,7 +21,8 @@ pub(crate) enum ScopeKind {
     LocalBlock,
     MatchExpr,
     ForInLoop,
-    Function(TypePath),
+    FunctionBody(TypePath),
+    FunctionDef(TypePath),
     TraitImpl {
         implemented_trait_path: TypePath,
         implementing_type_path: TypePath,
@@ -39,8 +40,11 @@ impl fmt::Display for ScopeKind {
             ScopeKind::LocalBlock => write!(f, "LocalBlock"),
             ScopeKind::MatchExpr => write!(f, "MatchExpr"),
             ScopeKind::ForInLoop => write!(f, "ForInLoop"),
-            ScopeKind::Function(type_path) => {
-                write!(f, "Function(\"{}\")", type_path)
+            ScopeKind::FunctionBody(type_path) => {
+                write!(f, "FunctionBody(\"{}\")", type_path)
+            }   
+            ScopeKind::FunctionDef(type_path) => {
+                write!(f, "FunctionDef(\"{}\")", type_path)
             }
             ScopeKind::TraitImpl {
                 implemented_trait_path,

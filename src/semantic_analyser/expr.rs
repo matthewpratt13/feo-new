@@ -8,7 +8,7 @@ use crate::{
     },
     error::SemanticErrorKind,
     log_trace, log_warn,
-    semantic_analyser::symbol_table::Symbol,
+    semantic_analyser::symbol_table::{Scope, Symbol},
     span::Spanned,
 };
 
@@ -128,9 +128,28 @@ pub(crate) fn analyse_expr(
 
         Expression::Block(b) => match &b.statements_opt {
             Some(stmts) => {
-                analyser.enter_scope(ScopeKind::LocalBlock);
+                match analyser.scope_stack.last() {
+                    Some(
+                        Scope {
+                            scope_kind: ScopeKind::Public,
+                            ..
+                        }
+                        | Scope {
+                            scope_kind: ScopeKind::ProgramRoot,
+                            ..
+                        },
+                    )
+                    | None => todo!(), // TODO: error – block expression out of context
 
-                log_trace!(analyser.logger, "analysing block expression …");
+                    Some(Scope {
+                        scope_kind: ScopeKind::FunctionDef(path),
+                        ..
+                    }) => analyser.enter_scope(ScopeKind::FunctionBody(path.clone())),
+
+                    Some(_) => analyser.enter_scope(ScopeKind::LocalBlock),
+                }
+
+                log_trace!(analyser.logger, "analysing block …");
 
                 let mut cloned_iter = stmts.iter().peekable().clone();
 
@@ -166,10 +185,10 @@ pub(crate) fn analyse_expr(
                     println!("finished analysing statement {} of {}", i + 1, stmts.len());
                 }
 
-                log_trace!(
-                    analyser.logger,
-                    "analysing final statement in block expression …"
-                );
+                // log_trace!(
+                //     analyser.logger,
+                //     "analysing final statement in block …"
+                // );
 
                 let ty = match stmts.last() {
                     Some(stmt) => match stmt {
@@ -185,7 +204,7 @@ pub(crate) fn analyse_expr(
                     _ => Ok(Type::UNIT_TYPE),
                 };
 
-                log_trace!(analyser.logger, "block expression analysis complete");
+                log_trace!(analyser.logger, "block analysis complete");
 
                 analyser.exit_scope();
 
@@ -432,6 +451,8 @@ pub(crate) fn analyse_expr(
         Expression::Grouped(g) => analyse_expr(analyser, &g.inner_expression, root),
 
         Expression::If(i) => {
+            println!("entering `if` expression");
+
             analyse_expr(analyser, &Expression::Grouped(*i.condition.clone()), root)?;
 
             let if_block_type =
