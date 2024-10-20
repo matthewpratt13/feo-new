@@ -1007,7 +1007,7 @@ pub(crate) fn analyse_expr(
                 Some(Symbol::Struct {
                     struct_def, path, ..
                 }) => {
-                    let def_fields_opt = struct_def.fields_opt;
+                    let def_fields_opt = struct_def.fields_opt.clone();
 
                     if let Some(def_fields) = def_fields_opt {
                         if field_map.len() != def_fields.len() {
@@ -1027,7 +1027,7 @@ pub(crate) fn analyse_expr(
                         for (name, _) in field_map.iter() {
                             if !field_names.contains(name) {
                                 return Err(SemanticErrorKind::UnexpectedStructField {
-                                    struct_name: struct_def.struct_name,
+                                    struct_name: struct_def.struct_name.clone(),
                                     found: name.clone(),
                                 });
                             }
@@ -1226,7 +1226,7 @@ pub(crate) fn analyse_expr(
                     path,
                     ..
                 }) => {
-                    let fields_opt = tuple_struct_def.fields_opt;
+                    let fields_opt = tuple_struct_def.fields_opt.clone();
 
                     match (&elements_opt, &fields_opt) {
                         (None, None) => Ok(Type::UNIT_TYPE),
@@ -1268,7 +1268,7 @@ pub(crate) fn analyse_expr(
 
                                 if elem_type != field_type {
                                     return Err(SemanticErrorKind::TypeMismatchVariable {
-                                        var_id: tuple_struct_def.struct_name,
+                                        var_id: tuple_struct_def.struct_name.clone(),
                                         expected: field_type.to_backtick_string(),
                                         found: elem_type,
                                     });

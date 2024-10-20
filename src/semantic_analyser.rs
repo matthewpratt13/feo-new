@@ -631,7 +631,8 @@ impl SemanticAnalyser {
                 }
 
                 Item::StructDef(s) => {
-                    let struct_name_path = s.struct_name.to_type_path();
+                    let struct_def = Rc::new(s.clone());
+                    let struct_name_path = struct_def.struct_name.to_type_path();
                     let struct_def_path = root.clone_append(struct_name_path.clone());
 
                     // log_trace!(
@@ -648,7 +649,7 @@ impl SemanticAnalyser {
                         struct_def_path,
                         Symbol::Struct {
                             path: struct_name_path,
-                            struct_def: s.clone(),
+                            struct_def: struct_def,
                             associated_items_inherent: Vec::new(),
                             associated_items_trait: Vec::new(),
                         },
@@ -843,7 +844,9 @@ impl SemanticAnalyser {
                 }
 
                 Item::TupleStructDef(ts) => {
-                    let struct_name_path = ts.struct_name.to_type_path();
+                    let tuple_struct_def = Rc::new(ts.clone());
+
+                    let struct_name_path = tuple_struct_def.struct_name.to_type_path();
                     let tuple_struct_path = root.clone_append(struct_name_path.clone());
 
                     // log_trace!(
@@ -860,7 +863,7 @@ impl SemanticAnalyser {
                         tuple_struct_path,
                         Symbol::TupleStruct {
                             path: struct_name_path,
-                            tuple_struct_def: ts.clone(),
+                            tuple_struct_def,
                             associated_items_inherent: Vec::new(),
                             associated_items_trait: Vec::new(),
                         },
@@ -2227,13 +2230,18 @@ impl SemanticAnalyser {
                 self.substitute_in_type(var_type, symbol_table, generic_name, concrete_type);
             }
             Symbol::Struct { struct_def, .. } => {
-                self.substitute_in_struct(struct_def, symbol_table, generic_name, concrete_type);
+                self.substitute_in_struct(
+                    Rc::get_mut(struct_def).unwrap(),
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
             }
             Symbol::TupleStruct {
                 tuple_struct_def, ..
             } => {
                 self.substitute_in_tuple_struct(
-                    tuple_struct_def,
+                    Rc::get_mut(tuple_struct_def).unwrap(),
                     symbol_table,
                     generic_name,
                     concrete_type,
@@ -2340,7 +2348,7 @@ impl SemanticAnalyser {
                         ),
                         Symbol::Struct { struct_def, .. } => {
                             self.substitute_in_struct(
-                                struct_def,
+                                Rc::get_mut(struct_def).unwrap(),
                                 symbol_table,
                                 generic_name,
                                 concrete_type,
@@ -2349,7 +2357,7 @@ impl SemanticAnalyser {
                         Symbol::TupleStruct {
                             tuple_struct_def, ..
                         } => self.substitute_in_tuple_struct(
-                            tuple_struct_def,
+                            Rc::get_mut(tuple_struct_def).unwrap(),
                             symbol_table,
                             generic_name,
                             concrete_type,

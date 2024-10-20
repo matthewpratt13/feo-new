@@ -73,13 +73,13 @@ pub(crate) enum Symbol {
     },
     Struct {
         path: TypePath,
-        struct_def: StructDef,
+        struct_def: Rc<StructDef>,
         associated_items_inherent: Vec<InherentImplItem>,
         associated_items_trait: Vec<TraitImplItem>,
     },
     TupleStruct {
         path: TypePath,
-        tuple_struct_def: TupleStructDef,
+        tuple_struct_def: Rc<TupleStructDef>,
         associated_items_inherent: Vec<InherentImplItem>,
         associated_items_trait: Vec<TraitImplItem>,
     },

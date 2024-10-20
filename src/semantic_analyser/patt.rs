@@ -240,7 +240,7 @@ pub(crate) fn analyse_patt(
                 }) => {
                     let mut field_map: HashMap<Identifier, Type> = HashMap::new();
 
-                    let def_fields_opt = struct_def.fields_opt;
+                    let def_fields_opt = struct_def.fields_opt.clone();
                     let patt_fields_opt = s.struct_fields_opt.clone();
 
                     if let Some(patt_fields) = patt_fields_opt {
@@ -271,7 +271,7 @@ pub(crate) fn analyse_patt(
                         for (name, _) in field_map.iter() {
                             if !field_names.contains(name) {
                                 return Err(SemanticErrorKind::UnexpectedStructField {
-                                    struct_name: struct_def.struct_name,
+                                    struct_name: struct_def.struct_name.clone(),
                                     found: name.clone(),
                                 });
                             }
@@ -332,7 +332,7 @@ pub(crate) fn analyse_patt(
                     ..
                 }) => {
                     let elements_opt = ts.struct_elements_opt.clone();
-                    let fields_opt = tuple_struct_def.fields_opt;
+                    let fields_opt = tuple_struct_def.fields_opt.clone();
 
                     match (elements_opt, fields_opt) {
                         (None, None) => Ok(Type::UNIT_TYPE),
