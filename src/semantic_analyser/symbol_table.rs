@@ -42,7 +42,7 @@ impl fmt::Display for ScopeKind {
             ScopeKind::ForInLoop => write!(f, "ForInLoop"),
             ScopeKind::FunctionBody(type_path) => {
                 write!(f, "FunctionBody(\"{}\")", type_path)
-            }   
+            }
             ScopeKind::FunctionDef(type_path) => {
                 write!(f, "FunctionDef(\"{}\")", type_path)
             }
@@ -85,7 +85,7 @@ pub(crate) enum Symbol {
     },
     Enum {
         path: TypePath,
-        enum_def: EnumDef,
+        enum_def: Rc<EnumDef>,
         associated_items_inherent: Vec<InherentImplItem>,
         associated_items_trait: Vec<TraitImplItem>,
     },

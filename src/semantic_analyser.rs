@@ -358,7 +358,9 @@ impl SemanticAnalyser {
                 }
 
                 Item::EnumDef(e) => {
-                    let enum_name_path = e.enum_name.to_type_path();
+                    let enum_def = Rc::new(e.clone());
+
+                    let enum_name_path = enum_def.enum_name.to_type_path();
                     let enum_def_path = root.clone_append(enum_name_path.clone());
 
                     // log_trace!(
@@ -375,7 +377,7 @@ impl SemanticAnalyser {
                         enum_def_path.clone(),
                         Symbol::Enum {
                             path: enum_name_path,
-                            enum_def: e.clone(),
+                            enum_def,
                             associated_items_inherent: Vec::new(),
                             associated_items_trait: Vec::new(),
                         },
@@ -2240,7 +2242,12 @@ impl SemanticAnalyser {
                 );
             }
             Symbol::Enum { enum_def, .. } => {
-                self.substitute_in_enum(enum_def, symbol_table, generic_name, concrete_type);
+                self.substitute_in_enum(
+                    Rc::get_mut(enum_def).unwrap(),
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
             }
             Symbol::Trait { trait_def, .. } => {
                 self.substitute_in_trait(trait_def, symbol_table, generic_name, concrete_type)
@@ -2348,7 +2355,7 @@ impl SemanticAnalyser {
                         ),
                         Symbol::Enum { enum_def, .. } => {
                             self.substitute_in_enum(
-                                enum_def,
+                                Rc::get_mut(enum_def).unwrap(),
                                 symbol_table,
                                 generic_name,
                                 concrete_type,
