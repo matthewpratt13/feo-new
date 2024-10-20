@@ -107,7 +107,7 @@ impl TypePath {
     pub(crate) fn strip_prefix(&mut self) -> TypePath {
         if let Some(ids) = self.associated_type_path_prefix_opt.as_mut() {
             ids.remove(0);
-            TypePath::from(ids.clone()).push(self.type_name.to_type_path())
+            TypePath::from(ids.clone()).clone_append(self.type_name.to_type_path())
         } else {
             self.to_owned()
         }
@@ -121,7 +121,7 @@ impl TypePath {
         }
     }
 
-    pub(crate) fn push(&self, item_path: TypePath) -> TypePath {
+    pub(crate) fn clone_append(&self, item_path: TypePath) -> TypePath {
         if let Some(prefix) = &self.associated_type_path_prefix_opt {
             let mut path = prefix.to_vec();
 
@@ -264,7 +264,7 @@ impl From<PathSegment> for Vec<TypePath> {
                 for t in p_sub.nested_trees {
                     for p_seg in t.path_segments {
                         for p in Vec::<TypePath>::from(p_seg) {
-                            let path = TypePath::from(root.clone()).push(p);
+                            let path = TypePath::from(root.clone()).clone_append(p);
                             paths.push(path)
                         }
                     }
@@ -370,7 +370,7 @@ pub(crate) fn get_type_paths(segments: Vec<PathSegment>) -> Vec<TypePath> {
         if let Some(subset) = seg.subset_opt {
             for tree in subset.nested_trees {
                 for tree_seg in tree.path_segments {
-                    let path = root.push(tree_seg.root);
+                    let path = root.clone_append(tree_seg.root);
                     paths.push(path);
                 }
             }
