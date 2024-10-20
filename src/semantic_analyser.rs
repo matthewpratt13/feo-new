@@ -14,7 +14,7 @@ mod tests;
 
 mod utils;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     ast::{
@@ -275,7 +275,9 @@ impl SemanticAnalyser {
                 Item::AliasDecl(ad) => {
                     // log_trace!(self.logger, "analysing alias declaration: `{statement}`");
 
-                    let alias_path = root.clone_append(ad.alias_name.to_type_path());
+                    let alias_decl = Rc::new(ad);
+
+                    let alias_path = root.clone_append(alias_decl.alias_name.to_type_path());
 
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
@@ -286,17 +288,19 @@ impl SemanticAnalyser {
                         alias_path.clone(),
                         Symbol::Alias {
                             path: alias_path,
-                            visibility: ad.visibility.clone(),
-                            alias_name: ad.alias_name.clone(),
-                            original_type_opt: ad.original_type_opt.clone(),
+                            visibility: alias_decl.visibility,
+                            alias_name: alias_decl.alias_name.clone(),
+                            original_type_opt: alias_decl.original_type_opt.clone(),
                         },
                     )?;
                 }
 
                 Item::ConstantDecl(cd) => {
+                    let constant_decl = Rc::new(cd);
+
                     log_trace!(self.logger, "analysing constant declaration: `{statement}`");
 
-                    let value_type = match &cd.value_opt {
+                    let value_type = match &constant_decl.value_opt {
                         Some(val) => {
                             let value = val.to_expression();
                             Some(analyse_expr(self, &value, &root)?)
@@ -306,18 +310,22 @@ impl SemanticAnalyser {
 
                     self.check_types(
                         &mut self.current_symbol_table(),
-                        &cd.constant_type,
+                        &constant_decl.constant_type.clone(),
                         &mut value_type.clone().unwrap_or(Type::inferred_type("_")),
                     )?;
 
-                    if value_type.clone().is_some_and(|t| t != *cd.constant_type) {
+                    if value_type
+                        .clone()
+                        .is_some_and(|t| t != *constant_decl.constant_type)
+                    {
                         return Err(SemanticErrorKind::TypeMismatchDeclaredType {
-                            declared_type: *cd.constant_type.clone(),
+                            declared_type: *constant_decl.constant_type.clone(),
                             actual_type: value_type.unwrap(),
                         });
                     }
 
-                    let constant_path = root.clone_append(cd.constant_name.to_type_path());
+                    let constant_path =
+                        root.clone_append(constant_decl.constant_name.to_type_path());
 
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
@@ -330,8 +338,8 @@ impl SemanticAnalyser {
                                 constant_path.clone(),
                                 Symbol::Constant {
                                     path: constant_path,
-                                    visibility: cd.visibility.clone(),
-                                    constant_name: cd.constant_name.clone(),
+                                    visibility: constant_decl.visibility,
+                                    constant_name: constant_decl.constant_name.clone(),
                                     constant_type: value_type.unwrap_or(Type::inferred_type("_")),
                                 },
                             );
@@ -342,8 +350,8 @@ impl SemanticAnalyser {
                         constant_path.clone(),
                         Symbol::Constant {
                             path: constant_path,
-                            visibility: cd.visibility.clone(),
-                            constant_name: cd.constant_name.clone(),
+                            visibility: constant_decl.visibility,
+                            constant_name: constant_decl.constant_name.clone(),
                             constant_type: value_type.unwrap_or(Type::inferred_type("_")),
                         },
                     )?;
@@ -366,7 +374,7 @@ impl SemanticAnalyser {
                     self.insert(
                         enum_def_path.clone(),
                         Symbol::Enum {
-                            path: enum_name_path.clone(),
+                            path: enum_name_path,
                             enum_def: e.clone(),
                             associated_items_inherent: Vec::new(),
                             associated_items_trait: Vec::new(),
@@ -384,8 +392,10 @@ impl SemanticAnalyser {
                     }
                 }
 
-                Item::FunctionItem(f) => {
-                    let function_name_path = f.function_name.to_type_path();
+                Item::FunctionItem(fi) => {
+                    let function_item = Rc::new(fi.clone());
+
+                    let function_name_path = function_item.function_name.to_type_path();
                     let function_item_path = root.clone_append(function_name_path.clone());
 
                     self.try_update_current_scope(
@@ -397,14 +407,14 @@ impl SemanticAnalyser {
                         function_item_path.clone(),
                         Symbol::Function {
                             path: function_name_path,
-                            function: f.clone(),
+                            function: function_item.clone(),
                         },
                     )?;
 
-                    match self.analyse_function_def(f, &root, false, false) {
+                    match self.analyse_function_def(&function_item, &root, false, false) {
                         Ok(_) => (),
                         Err(err) => {
-                            self.log_error(err, &f.span);
+                            self.log_error(err, &function_item.span);
                         }
                     }
                 }
@@ -452,7 +462,10 @@ impl SemanticAnalyser {
                                     type_path.clone(),
                                 )?,
                                 InherentImplItem::FunctionItem(fi) => {
-                                    let function_name_path = fi.function_name.to_type_path();
+                                    let function_item = Rc::new(fi.clone());
+
+                                    let function_name_path =
+                                        function_item.function_name.to_type_path();
 
                                     let function_def_path =
                                         type_path.clone_append(function_name_path.clone());
@@ -461,11 +474,16 @@ impl SemanticAnalyser {
                                         function_def_path.clone(),
                                         Symbol::Function {
                                             path: function_name_path,
-                                            function: fi.clone(),
+                                            function: function_item.clone(),
                                         },
                                     );
 
-                                    match self.analyse_function_def(fi, &type_path, true, false) {
+                                    match self.analyse_function_def(
+                                        &function_item,
+                                        &type_path,
+                                        true,
+                                        false,
+                                    ) {
                                         Ok(_) => (),
                                         Err(err) => self.log_error(err, &iid.span),
                                     }
@@ -694,12 +712,15 @@ impl SemanticAnalyser {
                                 }
 
                                 TraitDefItem::FunctionItem(fi) => {
-                                    let function_name_path = fi.function_name.to_type_path();
+                                    let function_item = Rc::new(fi);
+
+                                    let function_name_path =
+                                        function_item.function_name.to_type_path();
 
                                     let function_def_path =
                                         trait_def_path.clone_append(function_name_path.clone());
 
-                                    if fi.block_opt.clone().is_some_and(|block| {
+                                    if function_item.block_opt.clone().is_some_and(|block| {
                                         block.statements_opt.is_some_and(|stmts| !stmts.is_empty())
                                     }) {
                                         log_trace!(self.logger, "found default implementation for trait function: `{function_def_path}`")
@@ -709,7 +730,7 @@ impl SemanticAnalyser {
                                         function_def_path,
                                         Symbol::Function {
                                             path: function_name_path,
-                                            function: fi.clone(),
+                                            function: function_item.clone(),
                                         },
                                     )?;
 
@@ -722,7 +743,7 @@ impl SemanticAnalyser {
                                     // );
 
                                     match self.analyse_function_def(
-                                        &fi,
+                                        &function_item,
                                         &trait_def_path,
                                         false,
                                         false,
@@ -1072,7 +1093,7 @@ impl SemanticAnalyser {
                     param_path.clone(),
                     Symbol::Function {
                         path: param_path.clone(),
-                        function: FunctionItem {
+                        function: Rc::new(FunctionItem {
                             attributes_opt: None,
                             visibility: Visibility::Private,
                             kw_func: Keyword::Anonymous,
@@ -1082,7 +1103,7 @@ impl SemanticAnalyser {
                             return_type_opt: fp.return_type_opt,
                             block_opt: None,
                             span: Span::default(),
-                        },
+                        }),
                     },
                 )?;
             }
@@ -1211,17 +1232,21 @@ impl SemanticAnalyser {
                                                 constant_type: *cd.constant_type.clone(),
                                             },
                                         )?,
-                                        InherentImplItem::FunctionItem(fi) => self.insert(
-                                            item_path
-                                                .type_name
-                                                .to_type_path()
-                                                .clone_append(fi.function_name.to_type_path()),
-                                            Symbol::Function {
-                                                path: path
-                                                    .clone_append(fi.function_name.to_type_path()),
-                                                function: fi.clone(),
-                                            },
-                                        )?,
+                                        InherentImplItem::FunctionItem(fi) => {
+                                            let function_item = Rc::new(fi.clone());
+
+                                            self.insert(
+                                                item_path.type_name.to_type_path().clone_append(
+                                                    function_item.function_name.to_type_path(),
+                                                ),
+                                                Symbol::Function {
+                                                    path: path.clone_append(
+                                                        function_item.function_name.to_type_path(),
+                                                    ),
+                                                    function: function_item,
+                                                },
+                                            )?
+                                        }
                                     }
                                 }
 
@@ -1253,20 +1278,23 @@ impl SemanticAnalyser {
                                                 constant_type: *cd.constant_type.clone(),
                                             },
                                         )?,
-                                        TraitImplItem::FunctionItem(fi) => self.insert(
-                                            item_path
-                                                .type_name
-                                                .to_type_path()
-                                                .clone_append(fi.function_name.to_type_path()),
-                                            Symbol::Function {
-                                                path: {
-                                                    path.clone_append(
-                                                        fi.function_name.to_type_path(),
-                                                    )
+                                        TraitImplItem::FunctionItem(fi) => {
+                                            let function_item = Rc::new(fi.clone());
+
+                                            self.insert(
+                                                item_path.type_name.to_type_path().clone_append(
+                                                    function_item.function_name.to_type_path(),
+                                                ),
+                                                Symbol::Function {
+                                                    path: {
+                                                        path.clone_append(
+                                                            fi.function_name.to_type_path(),
+                                                        )
+                                                    },
+                                                    function: function_item,
                                                 },
-                                                function: fi.clone(),
-                                            },
-                                        )?,
+                                            )?
+                                        }
                                     }
                                 }
                             }
@@ -1349,10 +1377,13 @@ impl SemanticAnalyser {
                                         trait_impl_path.clone(),
                                     )?,
                                     TraitImplItem::FunctionItem(fi) => {
-                                        let function_impl_path = trait_impl_path
-                                            .clone_append(fi.function_name.to_type_path());
+                                        let function_item = Rc::new(fi.clone());
 
-                                        if !fi.clone().block_opt.is_some_and(|block| {
+                                        let function_impl_path = trait_impl_path.clone_append(
+                                            function_item.function_name.to_type_path(),
+                                        );
+
+                                        if !function_item.block_opt.clone().is_some_and(|block| {
                                             block
                                                 .statements_opt
                                                 .is_some_and(|stmts| !stmts.is_empty())
@@ -1371,13 +1402,13 @@ impl SemanticAnalyser {
                                                     if let Some(def_items) = trait_items_opt {
                                                         for def_item in def_items {
                                                             if let TraitDefItem::FunctionItem(
-                                                                function_item,
+                                                                function,
                                                             ) = def_item
                                                             {
-                                                                if fi.function_name
+                                                                if function.function_name
                                                                     == function_item.function_name
                                                                 {
-                                                                    if function_item
+                                                                    if function
                                                             .clone()
                                                             .block_opt
                                                             .is_some_and(|block| {
@@ -1392,12 +1423,12 @@ impl SemanticAnalyser {
                                                                 function_impl_path.clone(),
                                                                 Symbol::Function {
                                                                     path: function_impl_path,
-                                                                    function: function_item.clone(),
+                                                                    function: Rc::new(function.clone()),
                                                                 },
                                                             );
 
                                                             match self.analyse_function_def(
-                                                                &function_item,
+                                                                &function,
                                                                 &trait_impl_path,
                                                                 false,
                                                                 true,
@@ -1412,7 +1443,7 @@ impl SemanticAnalyser {
                                                             object_symbol.add_associated_items(
                                                                 None,
                                                                 Some(TraitImplItem::FunctionItem(
-                                                                    function_item,
+                                                                    function,
                                                                 )),
                                                             )?;
 
@@ -1452,7 +1483,7 @@ impl SemanticAnalyser {
                                             function_impl_path.clone(),
                                             Symbol::Function {
                                                 path: function_impl_path,
-                                                function: fi.clone(),
+                                                function: function_item,
                                             },
                                         );
 
@@ -2228,7 +2259,12 @@ impl SemanticAnalyser {
                 self.substitute_in_type(constant_type, symbol_table, generic_name, concrete_type);
             }
             Symbol::Function { function, .. } => {
-                self.substitute_in_function(function, symbol_table, generic_name, concrete_type);
+                self.substitute_in_function(
+                    Rc::get_mut(function).unwrap(),
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
             }
             Symbol::Module { module, .. } => {
                 self.substitute_in_module(module, symbol_table, generic_name, concrete_type)
@@ -2341,7 +2377,7 @@ impl SemanticAnalyser {
                             concrete_type,
                         ),
                         Symbol::Function { function, .. } => self.substitute_in_function(
-                            function,
+                            Rc::get_mut(function).unwrap(),
                             symbol_table,
                             generic_name,
                             concrete_type,

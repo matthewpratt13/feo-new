@@ -1,5 +1,5 @@
 use core::fmt;
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     ast::{
@@ -107,7 +107,7 @@ pub(crate) enum Symbol {
     },
     Function {
         path: TypePath,
-        function: FunctionItem,
+        function: Rc<FunctionItem>,
     },
     Module {
         path: TypePath,
@@ -166,8 +166,8 @@ impl Symbol {
             Symbol::Trait { path, .. } => Type::UserDefined(path),
             Symbol::Alias { path, .. } => Type::UserDefined(path),
             Symbol::Constant { constant_type, .. } => constant_type,
-            Symbol::Function { function, .. } => match function.return_type_opt {
-                Some(t) => *t,
+            Symbol::Function { function, .. } => match &function.return_type_opt {
+                Some(t) => *t.clone(),
                 None => Type::UNIT_TYPE,
             },
             Symbol::Module { .. } => Type::UNIT_TYPE,

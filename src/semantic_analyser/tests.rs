@@ -287,7 +287,7 @@ fn analyse_import_decl() -> Result<(), ()> {
         external_func_path.clone(),
         Symbol::Function {
             path: external_func_path,
-            function: external_func,
+            function: Rc::new(external_func),
         },
     );
 
