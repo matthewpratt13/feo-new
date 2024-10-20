@@ -656,7 +656,9 @@ impl SemanticAnalyser {
                 }
 
                 Item::TraitDef(t) => {
-                    let trait_name_path = t.trait_name.to_type_path();
+                    let trait_def = Rc::new(t.clone());
+
+                    let trait_name_path = trait_def.trait_name.to_type_path();
                     let trait_def_path = root.clone_append(trait_name_path.clone());
 
                     self.try_update_current_scope(
@@ -668,7 +670,7 @@ impl SemanticAnalyser {
                         trait_def_path.clone(),
                         Symbol::Trait {
                             path: trait_name_path.clone(),
-                            trait_def: t.clone(),
+                            trait_def: trait_def.clone(),
                         },
                     )?;
 
@@ -683,7 +685,7 @@ impl SemanticAnalyser {
 
                     // self.enter_scope(scope_kind);
 
-                    if let Some(items) = &t.trait_items_opt {
+                    if let Some(items) = &trait_def.trait_items_opt {
                         // let mut trait_symbol = if let Some(s) = self.lookup(&trait_def_path) {
                         //     s.to_owned()
                         // } else {
@@ -751,7 +753,7 @@ impl SemanticAnalyser {
                                         false,
                                     ) {
                                         Ok(_) => (),
-                                        Err(err) => self.log_error(err, &t.span),
+                                        Err(err) => self.log_error(err, &trait_def.span),
                                     }
 
                                     // TraitImplItem::FunctionItem(fi.clone())
@@ -1394,14 +1396,10 @@ impl SemanticAnalyser {
                                                 .lookup(&trait_impl_def.implemented_trait_path)
                                                 .cloned()
                                             {
-                                                Some(Symbol::Trait {
-                                                    trait_def:
-                                                        TraitDef {
-                                                            trait_items_opt, ..
-                                                        },
-                                                    ..
-                                                }) => {
-                                                    if let Some(def_items) = trait_items_opt {
+                                                Some(Symbol::Trait { trait_def, .. }) => {
+                                                    if let Some(def_items) =
+                                                        &trait_def.trait_items_opt
+                                                    {
                                                         for def_item in def_items {
                                                             if let TraitDefItem::FunctionItem(
                                                                 function,
@@ -1445,7 +1443,7 @@ impl SemanticAnalyser {
                                                             object_symbol.add_associated_items(
                                                                 None,
                                                                 Some(TraitImplItem::FunctionItem(
-                                                                    function,
+                                                                    function.clone(),
                                                                 )),
                                                             )?;
 
@@ -2178,8 +2176,8 @@ impl SemanticAnalyser {
 
     /// Lookup logic to find the trait definition in the current scope
     fn lookup_trait(&mut self, bound_path: &TypePath) -> Result<TraitDef, SemanticErrorKind> {
-        if let Some(Symbol::Trait { trait_def, .. }) = self.lookup(bound_path) {
-            Ok(trait_def.clone())
+        if let Some(Symbol::Trait { trait_def, .. }) = self.lookup(bound_path).cloned() {
+            Ok(Rc::into_inner(trait_def).unwrap())
         } else {
             Err(SemanticErrorKind::UndefinedSymbol {
                 name: bound_path.type_name.to_string(),
@@ -2249,9 +2247,12 @@ impl SemanticAnalyser {
                     concrete_type,
                 );
             }
-            Symbol::Trait { trait_def, .. } => {
-                self.substitute_in_trait(trait_def, symbol_table, generic_name, concrete_type)
-            }
+            Symbol::Trait { trait_def, .. } => self.substitute_in_trait(
+                Rc::get_mut(trait_def).unwrap(),
+                symbol_table,
+                generic_name,
+                concrete_type,
+            ),
             Symbol::Alias {
                 original_type_opt, ..
             } => {
@@ -2363,7 +2364,7 @@ impl SemanticAnalyser {
                         }
                         Symbol::Trait { trait_def, .. } => {
                             self.substitute_in_trait(
-                                trait_def,
+                                Rc::get_mut(trait_def).unwrap(),
                                 symbol_table,
                                 generic_name,
                                 concrete_type,
@@ -2756,7 +2757,7 @@ impl SemanticAnalyser {
                 for symbol in module.table.values() {
                     if let Symbol::Trait { path, trait_def } = symbol {
                         if path.type_name == expected_trait.trait_name
-                            && trait_def == expected_trait
+                            && &*trait_def.clone() == expected_trait
                         {
                             return true;
                         }

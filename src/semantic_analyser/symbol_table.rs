@@ -91,7 +91,7 @@ pub(crate) enum Symbol {
     },
     Trait {
         path: TypePath,
-        trait_def: TraitDef,
+        trait_def: Rc<TraitDef>,
     },
     Alias {
         path: TypePath,
