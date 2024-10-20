@@ -262,7 +262,7 @@ fn analyse_import_decl() -> Result<(), ()> {
         span: Span::default(),
     };
 
-    let external_mod = ModuleItem {
+    let external_mod = Rc::new(ModuleItem {
         outer_attributes_opt: None,
         visibility: Visibility::Pub,
         kw_module: Keyword::Anonymous,
@@ -270,7 +270,7 @@ fn analyse_import_decl() -> Result<(), ()> {
         inner_attributes_opt: None,
         items_opt: Some(vec![Item::FunctionItem(external_func.clone())]),
         span: Span::default(),
-    };
+    });
 
     let external_mod_path = TypePath {
         associated_type_path_prefix_opt: Some(vec![external_lib_root_id.clone()]),
@@ -302,7 +302,7 @@ fn analyse_import_decl() -> Result<(), ()> {
     );
 
     let module = Module {
-        name: external_mod.module_name,
+        name: external_mod.module_name.clone(),
         table,
     };
 

@@ -111,7 +111,7 @@ pub(crate) enum Symbol {
     },
     Module {
         path: TypePath,
-        module: ModuleItem,
+        module: Rc<ModuleItem>,
         symbols: SymbolTable,
     },
 }

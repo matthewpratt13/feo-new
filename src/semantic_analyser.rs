@@ -506,9 +506,11 @@ impl SemanticAnalyser {
                 Item::ModuleItem(m) => {
                     // TODO: sort out visibility
 
+                    let module_item = Rc::new(m.clone());
+
                     let mut module_errors: Vec<SemanticErrorKind> = Vec::new();
 
-                    let module_path = root.clone_append(m.module_name.to_type_path());
+                    let module_path = root.clone_append(module_item.module_name.to_type_path());
 
                     let scope_kind = ScopeKind::Module(module_path.clone());
 
@@ -521,11 +523,11 @@ impl SemanticAnalyser {
 
                     self.enter_scope(scope_kind);
 
-                    if let Some(items) = &m.items_opt {
+                    if let Some(items) = &module_item.items_opt {
                         for item in items.iter() {
                             match self.analyse_stmt(
                                 &Statement::Item(item.clone()),
-                                m.module_name.to_type_path(),
+                                module_item.module_name.to_type_path(),
                             ) {
                                 Ok(_) => (),
                                 Err(err) => {
@@ -538,7 +540,7 @@ impl SemanticAnalyser {
 
                     if !module_errors.is_empty() {
                         return Err(SemanticErrorKind::ModuleErrors {
-                            name: m.module_name.clone(),
+                            name: module_item.module_name.clone(),
                         });
                     }
 
@@ -565,7 +567,7 @@ impl SemanticAnalyser {
                         module_path.clone(),
                         Symbol::Module {
                             path: module_path,
-                            module: m.clone(),
+                            module: module_item,
                             symbols: module_scope.symbols.clone(),
                         },
                     )?;
@@ -2282,9 +2284,12 @@ impl SemanticAnalyser {
                     concrete_type,
                 );
             }
-            Symbol::Module { module, .. } => {
-                self.substitute_in_module(module, symbol_table, generic_name, concrete_type)
-            }
+            Symbol::Module { module, .. } => self.substitute_in_module(
+                Rc::get_mut(module).unwrap(),
+                symbol_table,
+                generic_name,
+                concrete_type,
+            ),
         }
     }
 
@@ -2399,7 +2404,7 @@ impl SemanticAnalyser {
                             concrete_type,
                         ),
                         Symbol::Module { module, .. } => self.substitute_in_module(
-                            module,
+                            Rc::get_mut(module).unwrap(),
                             symbol_table,
                             generic_name,
                             concrete_type,
