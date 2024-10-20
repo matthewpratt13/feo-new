@@ -734,7 +734,7 @@ pub(crate) fn analyse_expr(
                     | Symbol::Enum { path, .. },
                 ) => {
                     if Type::UserDefined(path.clone()) == receiver_type {
-                        let method_path = path.join(mc.method_name.to_type_path());
+                        let method_path = path.append(mc.method_name.to_type_path());
 
                         analyse_call_or_method_call_expr(analyser, method_path, mc.args_opt.clone())
                     } else {
@@ -778,13 +778,13 @@ pub(crate) fn analyse_expr(
                             }
                         };
 
-                        root.join(TypePath {
+                        root.append(TypePath {
                             associated_type_path_prefix_opt: Some(segments.to_vec()),
                             type_name: id,
                         })
                     } else {
                         match &p.path_root {
-                            PathRoot::Identifier(i) => root.join(i.to_type_path()),
+                            PathRoot::Identifier(i) => root.append(i.to_type_path()),
                             PathRoot::SelfType(_) => root.clone(),
                             PathRoot::SelfKeyword => root.clone(),
 
@@ -987,7 +987,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::Struct(s) => {
-            let type_path = root.join(TypePath::from(s.struct_path.clone()));
+            let type_path = root.append(TypePath::from(s.struct_path.clone()));
             let obj_fields_opt = s.struct_fields_opt.clone();
 
             let hash_map = HashMap::new();
@@ -1217,7 +1217,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::TupleStruct(ts) => {
-            let type_path = root.join(TypePath::from(ts.struct_path.clone()));
+            let type_path = root.append(TypePath::from(ts.struct_path.clone()));
             let elements_opt = ts.struct_elements_opt.clone();
 
             match analyser.lookup(&type_path).cloned() {

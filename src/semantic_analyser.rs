@@ -275,7 +275,7 @@ impl SemanticAnalyser {
                 Item::AliasDecl(ad) => {
                     // log_trace!(self.logger, "analysing alias declaration: `{statement}`");
 
-                    let alias_path = root.join(ad.alias_name.to_type_path());
+                    let alias_path = root.append(ad.alias_name.to_type_path());
 
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
@@ -317,7 +317,7 @@ impl SemanticAnalyser {
                         });
                     }
 
-                    let constant_path = root.join(cd.constant_name.to_type_path());
+                    let constant_path = root.append(cd.constant_name.to_type_path());
 
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
@@ -351,7 +351,7 @@ impl SemanticAnalyser {
 
                 Item::EnumDef(e) => {
                     let enum_name_path = e.enum_name.to_type_path();
-                    let enum_def_path = root.join(enum_name_path.clone());
+                    let enum_def_path = root.append(enum_name_path.clone());
 
                     // log_trace!(
                     //     self.logger,
@@ -386,7 +386,7 @@ impl SemanticAnalyser {
 
                 Item::FunctionItem(f) => {
                     let function_name_path = f.function_name.to_type_path();
-                    let function_item_path = root.join(function_name_path.clone());
+                    let function_item_path = root.append(function_name_path.clone());
 
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
@@ -421,7 +421,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::InherentImplDef(iid) => {
-                    let type_path = root.join(iid.nominal_type.clone());
+                    let type_path = root.append(iid.nominal_type.clone());
 
                     log_trace!(
                         self.logger,
@@ -455,7 +455,7 @@ impl SemanticAnalyser {
                                     let function_name_path = fi.function_name.to_type_path();
 
                                     let function_def_path =
-                                        type_path.join(function_name_path.clone());
+                                        type_path.append(function_name_path.clone());
 
                                     function_symbols.insert(
                                         function_def_path.clone(),
@@ -488,7 +488,7 @@ impl SemanticAnalyser {
 
                     let mut module_errors: Vec<SemanticErrorKind> = Vec::new();
 
-                    let module_path = root.join(m.module_name.to_type_path());
+                    let module_path = root.append(m.module_name.to_type_path());
 
                     let scope_kind = ScopeKind::Module(module_path.clone());
 
@@ -594,7 +594,7 @@ impl SemanticAnalyser {
                         });
                     }
 
-                    let static_var_path = root.join(s.var_name.to_type_path());
+                    let static_var_path = root.append(s.var_name.to_type_path());
 
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
@@ -612,7 +612,7 @@ impl SemanticAnalyser {
 
                 Item::StructDef(s) => {
                     let struct_name_path = s.struct_name.to_type_path();
-                    let struct_def_path = root.join(struct_name_path.clone());
+                    let struct_def_path = root.append(struct_name_path.clone());
 
                     // log_trace!(
                     //     self.logger,
@@ -637,7 +637,7 @@ impl SemanticAnalyser {
 
                 Item::TraitDef(t) => {
                     let trait_name_path = t.trait_name.to_type_path();
-                    let trait_def_path = root.join(trait_name_path.clone());
+                    let trait_def_path = root.append(trait_name_path.clone());
 
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
@@ -697,7 +697,7 @@ impl SemanticAnalyser {
                                     let function_name_path = fi.function_name.to_type_path();
 
                                     let function_def_path =
-                                        trait_def_path.join(function_name_path.clone());
+                                        trait_def_path.append(function_name_path.clone());
 
                                     if fi.block_opt.clone().is_some_and(|block| {
                                         block.statements_opt.is_some_and(|stmts| !stmts.is_empty())
@@ -753,7 +753,7 @@ impl SemanticAnalyser {
 
                 Item::TraitImplDef(t) => {
                     let implementing_type_path = match &t.implementing_type {
-                        Type::UserDefined(tp) => root.join(tp.clone()),
+                        Type::UserDefined(tp) => root.append(tp.clone()),
 
                         ty => {
                             return Err(SemanticErrorKind::UnexpectedType {
@@ -782,7 +782,7 @@ impl SemanticAnalyser {
                     };
 
                     let trait_impl_path = implementing_type_path
-                        .join(t.implemented_trait_path.type_name.to_type_path());
+                        .append(t.implemented_trait_path.type_name.to_type_path());
 
                     log_trace!(
                         self.logger,
@@ -819,7 +819,7 @@ impl SemanticAnalyser {
 
                 Item::TupleStructDef(ts) => {
                     let struct_name_path = ts.struct_name.to_type_path();
-                    let tuple_struct_path = root.join(struct_name_path.clone());
+                    let tuple_struct_path = root.append(struct_name_path.clone());
 
                     // log_trace!(
                     //     self.logger,
@@ -964,7 +964,7 @@ impl SemanticAnalyser {
         let function_root = path.clone();
 
         // append the function name to the root
-        let full_path = function_root.join(f.function_name.to_type_path());
+        let full_path = function_root.append(f.function_name.to_type_path());
 
         log_trace!(
             self.logger,
@@ -1202,9 +1202,9 @@ impl SemanticAnalyser {
                                             item_path
                                                 .type_name
                                                 .to_type_path()
-                                                .join(cd.constant_name.to_type_path()),
+                                                .append(cd.constant_name.to_type_path()),
                                             Symbol::Constant {
-                                                path: path.join(cd.constant_name.to_type_path()),
+                                                path: path.append(cd.constant_name.to_type_path()),
                                                 visibility: cd.visibility.clone(),
                                                 constant_name: cd.constant_name.clone(),
                                                 constant_type: *cd.constant_type.clone(),
@@ -1214,9 +1214,9 @@ impl SemanticAnalyser {
                                             item_path
                                                 .type_name
                                                 .to_type_path()
-                                                .join(fi.function_name.to_type_path()),
+                                                .append(fi.function_name.to_type_path()),
                                             Symbol::Function {
-                                                path: path.join(fi.function_name.to_type_path()),
+                                                path: path.append(fi.function_name.to_type_path()),
                                                 function: fi.clone(),
                                             },
                                         )?,
@@ -1229,9 +1229,9 @@ impl SemanticAnalyser {
                                             item_path
                                                 .type_name
                                                 .to_type_path()
-                                                .join(ad.alias_name.to_type_path()),
+                                                .append(ad.alias_name.to_type_path()),
                                             Symbol::Alias {
-                                                path: path.join(ad.alias_name.to_type_path()),
+                                                path: path.append(ad.alias_name.to_type_path()),
                                                 visibility: ad.visibility.clone(),
                                                 alias_name: ad.alias_name.clone(),
                                                 original_type_opt: ad.original_type_opt.clone(),
@@ -1241,9 +1241,9 @@ impl SemanticAnalyser {
                                             item_path
                                                 .type_name
                                                 .to_type_path()
-                                                .join(cd.constant_name.to_type_path()),
+                                                .append(cd.constant_name.to_type_path()),
                                             Symbol::Constant {
-                                                path: path.join(cd.constant_name.to_type_path()),
+                                                path: path.append(cd.constant_name.to_type_path()),
                                                 visibility: cd.visibility.clone(),
                                                 constant_name: cd.constant_name.clone(),
                                                 constant_type: *cd.constant_type.clone(),
@@ -1253,10 +1253,10 @@ impl SemanticAnalyser {
                                             item_path
                                                 .type_name
                                                 .to_type_path()
-                                                .join(fi.function_name.to_type_path()),
+                                                .append(fi.function_name.to_type_path()),
                                             Symbol::Function {
                                                 path: {
-                                                    path.join(fi.function_name.to_type_path())
+                                                    path.append(fi.function_name.to_type_path())
                                                 },
                                                 function: fi.clone(),
                                             },
@@ -1344,7 +1344,7 @@ impl SemanticAnalyser {
                                     )?,
                                     TraitImplItem::FunctionItem(fi) => {
                                         let function_impl_path =
-                                            trait_impl_path.join(fi.function_name.to_type_path());
+                                            trait_impl_path.append(fi.function_name.to_type_path());
 
                                         if !fi.clone().block_opt.is_some_and(|block| {
                                             block
