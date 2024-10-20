@@ -72,7 +72,7 @@ impl SemanticAnalyser {
             );
 
             for (lib_name, lib_contents) in code {
-                for module in lib_contents.clone() {
+                for module in lib_contents.iter().cloned() {
                     for (path, sym) in module.table {
                         symbols.insert(path, sym);
                     }
@@ -160,7 +160,7 @@ impl SemanticAnalyser {
         path: TypePath,
         symbol: Symbol,
     ) -> Result<(), SemanticErrorKind> {
-        let mut iter = self.scope_stack.clone().into_iter().rev();
+        let mut iter = self.scope_stack.iter().cloned().rev();
 
         let mut index = 0usize;
 
@@ -806,7 +806,7 @@ impl SemanticAnalyser {
                         &trait_def,
                         t,
                         &implementing_type_path,
-                        trait_impl_path.clone(),
+                        trait_impl_path,
                         &mut function_symbols,
                     )?;
 
