@@ -544,7 +544,7 @@ impl SemanticAnalyser {
                     self.insert(
                         module_path.clone(),
                         Symbol::Module {
-                            path: module_path.clone(),
+                            path: module_path,
                             module: m.clone(),
                             symbols: module_scope.symbols.clone(),
                         },
@@ -672,13 +672,13 @@ impl SemanticAnalyser {
                         //     });
                         // };
 
-                        for i in items.iter() {
+                        for i in items.iter().cloned() {
                             // let item =
 
                             match i {
                                 TraitDefItem::AliasDecl(ad) => {
                                     self.analyse_stmt(
-                                        &Statement::Item(Item::AliasDecl(ad.clone())),
+                                        &Statement::Item(Item::AliasDecl(ad)),
                                         trait_def_path.clone(),
                                     )?;
 
@@ -686,7 +686,7 @@ impl SemanticAnalyser {
                                 }
                                 TraitDefItem::ConstantDecl(cd) => {
                                     self.analyse_stmt(
-                                        &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                        &Statement::Item(Item::ConstantDecl(cd)),
                                         trait_def_path.clone(),
                                     )?;
 
@@ -722,7 +722,7 @@ impl SemanticAnalyser {
                                     // );
 
                                     match self.analyse_function_def(
-                                        fi,
+                                        &fi,
                                         &trait_def_path,
                                         false,
                                         false,
@@ -1089,7 +1089,7 @@ impl SemanticAnalyser {
 
             Type::UserDefined(tp) => match self.lookup(&tp).cloned() {
                 Some(sym) => {
-                    self.insert(param_path, sym.clone())?;
+                    self.insert(param_path, sym)?;
                 }
                 None => {
                     return Err(SemanticErrorKind::UndefinedType { name: tp.type_name });
