@@ -1154,39 +1154,56 @@ impl SemanticAnalyser {
         let import_paths = get_type_paths(path_segments);
 
         for import_path in import_paths.iter() {
-            let import_root =
+            let lib_name = if let Some(ids) = import_path.associated_type_path_prefix_opt.as_ref() {
+                if !ids.is_empty() {
+                    ids.first().unwrap()
+                } else {
+                    &import_path.type_name
+                }
+            } else {
+                lib_root
+            };
+
+            println!("lib name: `{lib_name}`");
+
+            let import_root_path =
                 if let Some(ids) = import_path.associated_type_path_prefix_opt.as_ref() {
                     if !ids.is_empty() {
-                        ids.first().cloned().unwrap()
+                        if ids.first().is_some_and(|id| id == &Identifier::from("lib")) {
+                            import_path.clone().strip_prefix().strip_suffix()
+                        } else {
+                            import_path.clone().strip_suffix()
+                        }
                     } else {
-                        import_path.type_name.clone()
+                        import_path.clone()
                     }
                 } else {
-                    lib_root.clone()
+                    import_path.clone()
                 };
 
-            // bring external libraries into scope
-            if let Some(lib_contents) = self.lib_registry.get(&import_root).cloned() {
-                for Module { name, table } in lib_contents {
-                    println!("root module name: `{name}`");
+            println!("import root path: `{import_root_path}`");
+
+            if let Some(lib_contents) = self.lib_registry.get(lib_name).cloned() {
+                for Module { name, table } in lib_contents.iter() {
+                    println!("module name: {name}");
 
                     for (item_path, symbol) in table.iter() {
-                        // let item_path =
-                        //     if let Some(ids) = &item_path.associated_type_path_prefix_opt {
-                        //         if ids.first().is_some_and(|id| id == &Identifier::from("lib")) {
-                        //             item_path.clone().strip_prefix()
-                        //         } else {
-                        //             item_path.clone()
-                        //         }
-                        //     } else {
-                        //         item_path.clone()
-                        //     };
-
                         println!("item path: `{item_path}`");
 
-                        let item_root_path = item_path.clone().strip_suffix();
+                        let item_root_path =
+                            if let Some(ids) = item_path.associated_type_path_prefix_opt.as_ref() {
+                                if let Some(id) = ids.first() {
+                                    id.to_type_path()
+                                } else {
+                                    item_path.clone()
+                                }
+                            } else {
+                                item_path.clone()
+                            };
 
-                        match &symbol {
+                        println!("item root path: `{item_root_path}`");
+
+                        match symbol {
                             Symbol::Struct {
                                 path,
                                 associated_items_inherent,
@@ -1207,12 +1224,13 @@ impl SemanticAnalyser {
                             } => {
                                 println!("object symbol path: `{path}`");
 
+                                // check for duplicate imports
                                 for scope in self.scope_stack.iter().rev() {
                                     for type_path in scope.symbols.keys() {
                                         match scope.scope_kind {
-                                            ScopeKind::Module { .. }
+                                            ScopeKind::Public
                                             | ScopeKind::ProgramRoot
-                                            | ScopeKind::Public => (),
+                                            | ScopeKind::Module { .. } => (),
                                             _ => {
                                                 if type_path.type_name == path.type_name {
                                                     return Err(SemanticErrorKind::ImportClash {
@@ -1226,13 +1244,15 @@ impl SemanticAnalyser {
                                 }
 
                                 if let Some(Scope { symbols, .. }) = self.scope_stack.last() {
-                                    if !symbols.contains_key(&item_path.type_name.to_type_path())
-                                        && item_root_path == name.to_type_path()
+                                    let item_name = item_path.type_name.to_type_path();
+
+                                    // make sure that the item is not already in scope
+                                    // and that the item comes from the original module
+
+                                    if !symbols.contains_key(&item_name)
+                                        && item_root_path == import_root_path
                                     {
-                                        self.insert(
-                                            item_path.type_name.to_type_path(),
-                                            symbol.clone(),
-                                        )?;
+                                        self.insert(item_name, symbol.clone())?;
                                     }
                                 }
 
@@ -1321,9 +1341,15 @@ impl SemanticAnalyser {
                             Symbol::Module { path, symbols, .. } => {
                                 println!("module symbol path: `{path}`");
 
-                                for (path, sym) in symbols {
-                                    if !table.contains_key(&path) {
-                                        self.insert(path.type_name.to_type_path(), sym.clone())?;
+                                for (type_path, sym) in symbols.iter() {
+                                    println!("inner module item path: `{type_path}`");
+
+                                    if !table.contains_key(&type_path) {
+                                        self.insert(
+                                            type_path.type_name.to_type_path(),
+                                            sym.clone(),
+                                        )?;
+
                                         // TODO: also import associated items for structs and enums
                                     }
                                 }
@@ -1335,7 +1361,9 @@ impl SemanticAnalyser {
                                 if let Some(Scope { symbols, .. }) = self.scope_stack.last() {
                                     let stripped = item_path.clone().strip_prefix();
 
-                                    if !symbols.contains_key(&stripped) {
+                                    if !symbols.contains_key(&stripped)
+                                        && item_root_path == import_root_path
+                                    {
                                         self.insert(stripped, symbol.clone())?;
                                     }
                                 }
@@ -1344,7 +1372,9 @@ impl SemanticAnalyser {
                     }
                 }
             } else {
-                return Err(SemanticErrorKind::UndefinedLibrary { name: import_root });
+                return Err(SemanticErrorKind::UndefinedLibrary {
+                    name: lib_name.clone(),
+                });
             }
         }
 
