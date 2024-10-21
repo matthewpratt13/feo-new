@@ -1140,8 +1140,12 @@ impl SemanticAnalyser {
         })
     }
 
-    // TODO: test re-export statements (`pub use ...`);
+    // TODO: test re-export statements (`pub use ...`)
 
+    // TODO: customise error message for the use of full paths (e.g., function call) when only
+    // TODO: the type name has been imported. E.g., `import lib::some_module::some_func;`,
+    // TODO: and calling ` lib::some_module::some_func()` instead of just `some_func()`
+    
     /// Analyse an import declaration, resolving and inserting symbols from the imported
     /// modules into the current scope.
     fn analyse_import(
