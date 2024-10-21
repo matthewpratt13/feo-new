@@ -1183,6 +1183,8 @@ impl SemanticAnalyser {
 
             println!("import root path: `{import_root_path}`");
 
+            // TODO: fix this – we currently import all module contents when importing an item
+
             if let Some(lib_contents) = self.lib_registry.get(lib_name).cloned() {
                 for Module { name, table } in lib_contents.iter() {
                     println!("module name: {name}");
@@ -1222,6 +1224,10 @@ impl SemanticAnalyser {
                                 associated_items_trait,
                                 ..
                             } => {
+                                if path.type_name != import_path.type_name {
+                                    break;
+                                }
+
                                 println!("object symbol path: `{path}`");
 
                                 // check for duplicate imports
@@ -1339,6 +1345,10 @@ impl SemanticAnalyser {
                             }
 
                             Symbol::Module { path, symbols, .. } => {
+                                if path.type_name != import_path.type_name {
+                                    break;
+                                }
+
                                 println!("module symbol path: `{path}`");
 
                                 for (type_path, sym) in symbols.iter() {
