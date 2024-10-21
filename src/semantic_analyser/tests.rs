@@ -316,7 +316,7 @@ fn analyse_import_decl() -> Result<(), ()> {
         struct SomeObject {}
 
         func some_func() -> SomeObject {
-            external_lib::external_mod::external_func();
+            external_func();
             SomeObject {}
         }
     }

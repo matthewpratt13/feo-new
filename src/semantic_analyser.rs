@@ -141,14 +141,6 @@ impl SemanticAnalyser {
 
             curr_scope.symbols.insert(path, symbol);
 
-            // if let Some(modules) = self.lib_registry.get_mut(&Identifier::from("lib")) {
-            //     for module in modules.iter_mut() {
-            //         if module.name == path.type_name {
-            //             module.table.insert(path.clone(), symbol.clone());
-            //         }
-            //     }
-            // }
-
             Ok(())
         } else {
             Err(SemanticErrorKind::UndefinedScope)
@@ -1145,7 +1137,7 @@ impl SemanticAnalyser {
     // TODO: customise error message for the use of full paths (e.g., function call) when only
     // TODO: the type name has been imported. E.g., `import lib::some_module::some_func;`,
     // TODO: and calling ` lib::some_module::some_func()` instead of just `some_func()`
-    
+
     /// Analyse an import declaration, resolving and inserting symbols from the imported
     /// modules into the current scope.
     fn analyse_import(
