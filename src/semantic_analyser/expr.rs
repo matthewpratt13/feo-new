@@ -8,7 +8,7 @@ use crate::{
     },
     error::SemanticErrorKind,
     log_trace, log_warn,
-    semantic_analyser::symbol_table::Symbol,
+    semantic_analyser::symbol_table::{Scope, Symbol},
     span::Spanned,
 };
 
@@ -128,9 +128,28 @@ pub(crate) fn analyse_expr(
 
         Expression::Block(b) => match &b.statements_opt {
             Some(stmts) => {
-                analyser.enter_scope(ScopeKind::LocalBlock);
+                match analyser.scope_stack.last() {
+                    Some(
+                        Scope {
+                            scope_kind: ScopeKind::Public,
+                            ..
+                        }
+                        | Scope {
+                            scope_kind: ScopeKind::ProgramRoot,
+                            ..
+                        },
+                    )
+                    | None => todo!(), // TODO: error – block expression out of context
 
-                log_trace!(analyser.logger, "analysing block expression …");
+                    Some(Scope {
+                        scope_kind: ScopeKind::FunctionDef(path),
+                        ..
+                    }) => analyser.enter_scope(ScopeKind::FunctionBody(path.clone())),
+
+                    Some(_) => analyser.enter_scope(ScopeKind::LocalBlock),
+                }
+
+                log_trace!(analyser.logger, "analysing block …");
 
                 let mut cloned_iter = stmts.iter().peekable().clone();
 
@@ -166,10 +185,10 @@ pub(crate) fn analyse_expr(
                     println!("finished analysing statement {} of {}", i + 1, stmts.len());
                 }
 
-                log_trace!(
-                    analyser.logger,
-                    "analysing final statement in block expression …"
-                );
+                // log_trace!(
+                //     analyser.logger,
+                //     "analysing final statement in block …"
+                // );
 
                 let ty = match stmts.last() {
                     Some(stmt) => match stmt {
@@ -185,7 +204,7 @@ pub(crate) fn analyse_expr(
                     _ => Ok(Type::UNIT_TYPE),
                 };
 
-                log_trace!(analyser.logger, "block expression analysis complete");
+                log_trace!(analyser.logger, "block analysis complete");
 
                 analyser.exit_scope();
 
@@ -432,6 +451,8 @@ pub(crate) fn analyse_expr(
         Expression::Grouped(g) => analyse_expr(analyser, &g.inner_expression, root),
 
         Expression::If(i) => {
+            println!("entering `if` expression");
+
             analyse_expr(analyser, &Expression::Grouped(*i.condition.clone()), root)?;
 
             let if_block_type =
@@ -713,7 +734,7 @@ pub(crate) fn analyse_expr(
                     | Symbol::Enum { path, .. },
                 ) => {
                     if Type::UserDefined(path.clone()) == receiver_type {
-                        let method_path = path.join(mc.method_name.to_type_path());
+                        let method_path = path.clone_append(mc.method_name.to_type_path());
 
                         analyse_call_or_method_call_expr(analyser, method_path, mc.args_opt.clone())
                     } else {
@@ -757,13 +778,13 @@ pub(crate) fn analyse_expr(
                             }
                         };
 
-                        root.join(TypePath {
+                        root.clone_append(TypePath {
                             associated_type_path_prefix_opt: Some(segments.to_vec()),
                             type_name: id,
                         })
                     } else {
                         match &p.path_root {
-                            PathRoot::Identifier(i) => root.join(i.to_type_path()),
+                            PathRoot::Identifier(i) => root.clone_append(i.to_type_path()),
                             PathRoot::SelfType(_) => root.clone(),
                             PathRoot::SelfKeyword => root.clone(),
 
@@ -966,7 +987,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::Struct(s) => {
-            let type_path = root.join(TypePath::from(s.struct_path.clone()));
+            let type_path = root.clone_append(TypePath::from(s.struct_path.clone()));
             let obj_fields_opt = s.struct_fields_opt.clone();
 
             let hash_map = HashMap::new();
@@ -986,7 +1007,7 @@ pub(crate) fn analyse_expr(
                 Some(Symbol::Struct {
                     struct_def, path, ..
                 }) => {
-                    let def_fields_opt = struct_def.fields_opt;
+                    let def_fields_opt = struct_def.fields_opt.clone();
 
                     if let Some(def_fields) = def_fields_opt {
                         if field_map.len() != def_fields.len() {
@@ -1006,7 +1027,7 @@ pub(crate) fn analyse_expr(
                         for (name, _) in field_map.iter() {
                             if !field_names.contains(name) {
                                 return Err(SemanticErrorKind::UnexpectedStructField {
-                                    struct_name: struct_def.struct_name,
+                                    struct_name: struct_def.struct_name.clone(),
                                     found: name.clone(),
                                 });
                             }
@@ -1196,7 +1217,7 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::TupleStruct(ts) => {
-            let type_path = root.join(TypePath::from(ts.struct_path.clone()));
+            let type_path = root.clone_append(TypePath::from(ts.struct_path.clone()));
             let elements_opt = ts.struct_elements_opt.clone();
 
             match analyser.lookup(&type_path).cloned() {
@@ -1205,7 +1226,7 @@ pub(crate) fn analyse_expr(
                     path,
                     ..
                 }) => {
-                    let fields_opt = tuple_struct_def.fields_opt;
+                    let fields_opt = tuple_struct_def.fields_opt.clone();
 
                     match (&elements_opt, &fields_opt) {
                         (None, None) => Ok(Type::UNIT_TYPE),
@@ -1247,7 +1268,7 @@ pub(crate) fn analyse_expr(
 
                                 if elem_type != field_type {
                                     return Err(SemanticErrorKind::TypeMismatchVariable {
-                                        var_id: tuple_struct_def.struct_name,
+                                        var_id: tuple_struct_def.struct_name.clone(),
                                         expected: field_type.to_backtick_string(),
                                         found: elem_type,
                                     });

@@ -161,7 +161,7 @@ impl From<TraitDefItem> for TraitImplItem {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum Visibility {
     Private,           // default
     PubLib(PubLibVis), // `pub(lib)`
@@ -256,7 +256,7 @@ impl fmt::Display for PathSubset {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) struct PubLibVis {
     pub(crate) kw_pub: Keyword,
     pub(crate) kw_lib: Keyword,
