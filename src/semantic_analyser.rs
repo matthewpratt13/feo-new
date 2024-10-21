@@ -1063,7 +1063,7 @@ impl SemanticAnalyser {
 
         log_trace!(
             self.logger,
-            "analysis of function `{}{} {full_path}({:?}) -> {}` complete",
+            "analysis of function item `{}{} {full_path}({:?}) -> {}` complete",
             f.visibility,
             f.kw_func,
             f.param_strings(),
