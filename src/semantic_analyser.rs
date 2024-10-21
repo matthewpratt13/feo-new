@@ -990,7 +990,9 @@ impl SemanticAnalyser {
 
         log_trace!(
             self.logger,
-            "analysing function item: `{full_path}({:?}) -> {}` …",
+            "analysing function item: `{}{} {full_path}({:?}) -> {}` …",
+            f.visibility,
+            f.kw_func,
             f.param_strings(),
             f.return_type_opt
                 .clone()
@@ -1061,7 +1063,9 @@ impl SemanticAnalyser {
 
         log_trace!(
             self.logger,
-            "analysis of function `{full_path}({:?}) -> {}` complete",
+            "analysis of function `{}{} {full_path}({:?}) -> {}` complete",
+            f.visibility,
+            f.kw_func,
             f.param_strings(),
             f.return_type_opt
                 .clone()
@@ -1136,7 +1140,7 @@ impl SemanticAnalyser {
 
     // TODO: customise error message for the use of full paths (e.g., function call) when only
     // TODO: the type name has been imported. E.g., `import lib::some_module::some_func;`,
-    // TODO: and calling ` lib::some_module::some_func()` instead of just `some_func()`
+    // TODO: and calling `lib::some_module::some_func()` instead of just `some_func()`
 
     /// Analyse an import declaration, resolving and inserting symbols from the imported
     /// modules into the current scope.
