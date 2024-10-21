@@ -1167,18 +1167,24 @@ impl SemanticAnalyser {
 
             // bring external libraries into scope
             if let Some(lib_contents) = self.lib_registry.get(&import_root).cloned() {
-                for Module { table, .. } in lib_contents {
+                for Module { name, table } in lib_contents {
+                    println!("root module name: `{name}`");
+
                     for (item_path, symbol) in table.iter() {
-                        let item_path =
-                            if let Some(ids) = &item_path.associated_type_path_prefix_opt {
-                                if ids.first().is_some_and(|id| id == &Identifier::from("lib")) {
-                                    item_path.clone().strip_prefix()
-                                } else {
-                                    item_path.clone()
-                                }
-                            } else {
-                                item_path.clone()
-                            };
+                        // let item_path =
+                        //     if let Some(ids) = &item_path.associated_type_path_prefix_opt {
+                        //         if ids.first().is_some_and(|id| id == &Identifier::from("lib")) {
+                        //             item_path.clone().strip_prefix()
+                        //         } else {
+                        //             item_path.clone()
+                        //         }
+                        //     } else {
+                        //         item_path.clone()
+                        //     };
+
+                        println!("item path: `{item_path}`");
+
+                        let item_root_path = item_path.clone().strip_suffix();
 
                         match &symbol {
                             Symbol::Struct {
@@ -1199,6 +1205,8 @@ impl SemanticAnalyser {
                                 associated_items_trait,
                                 ..
                             } => {
+                                println!("object symbol path: `{path}`");
+
                                 for scope in self.scope_stack.iter().rev() {
                                     for type_path in scope.symbols.keys() {
                                         match scope.scope_kind {
@@ -1218,7 +1226,9 @@ impl SemanticAnalyser {
                                 }
 
                                 if let Some(Scope { symbols, .. }) = self.scope_stack.last() {
-                                    if !symbols.contains_key(&item_path.type_name.to_type_path()) {
+                                    if !symbols.contains_key(&item_path.type_name.to_type_path())
+                                        && item_root_path == name.to_type_path()
+                                    {
                                         self.insert(
                                             item_path.type_name.to_type_path(),
                                             symbol.clone(),
@@ -1308,7 +1318,9 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            Symbol::Module { symbols, .. } => {
+                            Symbol::Module { path, symbols, .. } => {
+                                println!("module symbol path: `{path}`");
+
                                 for (path, sym) in symbols {
                                     if !table.contains_key(&path) {
                                         self.insert(path.type_name.to_type_path(), sym.clone())?;
@@ -1317,12 +1329,14 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            _ => {
+                            sym => {
+                                println!("symbol path: `{}`", sym.type_path());
+
                                 if let Some(Scope { symbols, .. }) = self.scope_stack.last() {
-                                    if !symbols.contains_key(&item_path.clone().strip_prefix()) {
-                                        let item_path = item_path.clone().strip_prefix();
-                                        println!("import item: {item_path}");
-                                        self.insert(item_path, symbol.clone())?;
+                                    let stripped = item_path.clone().strip_prefix();
+
+                                    if !symbols.contains_key(&stripped) {
+                                        self.insert(stripped, symbol.clone())?;
                                     }
                                 }
                             }
