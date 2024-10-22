@@ -248,13 +248,21 @@ fn analyse_impl() -> Result<(), ()> {
 
 #[test]
 fn analyse_import_decl() -> Result<(), ()> {
-    let external_lib_root_id = Identifier::from("external_lib");
+    let external_lib_root_name = Identifier::from("external_lib");
+
+    let external_mod_id = Identifier::from("external_mod");
+    let external_mod_path = TypePath {
+        associated_type_path_prefix_opt: Some(vec![external_lib_root_name.clone()]),
+        type_name: external_mod_id.clone(),
+    };
+
+    let function_name = Identifier::from("external_func");
 
     let external_func = FunctionItem {
         attributes_opt: None,
         visibility: Visibility::Pub,
-        kw_func: Keyword::Anonymous,
-        function_name: Identifier::from("external_func"),
+        kw_func: Keyword::Func,
+        function_name: function_name.clone(),
         generic_params_opt: None,
         params_opt: None,
         return_type_opt: None,
@@ -262,52 +270,27 @@ fn analyse_import_decl() -> Result<(), ()> {
         span: Span::default(),
     };
 
-    let external_mod = Rc::new(ModuleItem {
-        outer_attributes_opt: None,
-        visibility: Visibility::Pub,
-        kw_module: Keyword::Anonymous,
-        module_name: Identifier::from("external_mod"),
-        inner_attributes_opt: None,
-        items_opt: Some(vec![Item::FunctionItem(external_func.clone())]),
-        span: Span::default(),
-    });
-
-    let external_mod_path = TypePath {
-        associated_type_path_prefix_opt: Some(vec![external_lib_root_id.clone()]),
-        type_name: external_mod.module_name.clone(),
-    };
-
     let external_func_path = TypePath {
         associated_type_path_prefix_opt: Some(vec![external_mod_path.to_identifier()]),
-        type_name: external_func.function_name.clone(),
+        type_name: function_name,
     };
 
-    let mut symbols: SymbolTable = HashMap::new();
-    symbols.insert(
+    let mut table: SymbolTable = HashMap::new();
+    table.insert(
         external_func_path.clone(),
         Symbol::Function {
-            path: external_func_path,
+            path: external_func_path.clone(),
             function: Rc::new(external_func),
         },
     );
 
-    let mut table: SymbolTable = HashMap::new();
-    table.insert(
-        external_mod_path.clone(),
-        Symbol::Module {
-            path: external_mod_path,
-            module: external_mod.clone(),
-            symbols,
-        },
-    );
-
     let module = Module {
-        name: external_mod.module_name.clone(),
+        name: external_mod_id,
         table,
     };
 
-    let mut external_code: HashMap<Identifier, Vec<Module>> = HashMap::new();
-    external_code.insert(external_lib_root_id, vec![module]);
+    let mut external_code: LibRegistry = HashMap::new();
+    external_code.insert(external_lib_root_name, vec![module]);
 
     let input = r#" 
     import external_lib::external_mod::external_func;
