@@ -39,7 +39,7 @@ impl ParseConstructExpr for ReturnExpr {
 }
 
 impl fmt::Debug for ReturnExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ReturnExpr")
             .field("kw_return", &self.kw_return)
             .field("expression_opt", &self.expression_opt)

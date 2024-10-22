@@ -439,7 +439,7 @@ impl SemanticAnalyser {
                     self.enter_scope(scope_kind);
 
                     if let Some(items) = &iid.associated_items_opt {
-                        let mut object_symbol = if let Some(s) = self.lookup(&type_path) {
+                        let mut object_symbol = if let Some(s) = self.lookup(&iid.nominal_type) {
                             s.to_owned()
                         } else {
                             return Err(SemanticErrorKind::MissingItem {
@@ -448,8 +448,6 @@ impl SemanticAnalyser {
                         };
 
                         for i in items.iter() {
-                            println!("inherent impl item: {i:?}",);
-
                             match i {
                                 InherentImplItem::ConstantDecl(cd) => self.analyse_stmt(
                                     &Statement::Item(Item::ConstantDecl(cd.clone())),
@@ -483,6 +481,11 @@ impl SemanticAnalyser {
                                     }
                                 }
                             }
+
+                            log_trace!(
+                                self.logger,
+                                "adding inherent implementation item `{i}` into symbol: `{object_symbol}`",
+                            );
 
                             object_symbol.add_associated_items(Some(i.clone()), None)?;
                         }
@@ -1261,6 +1264,8 @@ impl SemanticAnalyser {
                                 }
 
                                 for item in associated_items_inherent {
+                                    println!("inherent associated item: {item:?}");
+
                                     match item {
                                         InherentImplItem::ConstantDecl(cd) => self.insert(
                                             item_path
@@ -1294,6 +1299,8 @@ impl SemanticAnalyser {
                                 }
 
                                 for item in associated_items_trait {
+                                    println!("trait associated item: {item:?}");
+
                                     match item {
                                         TraitImplItem::AliasDecl(ad) => self.insert(
                                             item_path
@@ -1364,9 +1371,11 @@ impl SemanticAnalyser {
 
                                 if let Some(Scope { symbols, .. }) = self.scope_stack.last() {
                                     let stripped = item_path.clone().strip_prefix();
+                                    println!("stripped: `{stripped}`");
 
                                     if !symbols.contains_key(&stripped)
                                         && item_root_path == import_root_path
+                                        && sym.type_path() == import_path.type_name.to_type_path()
                                     {
                                         self.insert(stripped, symbol.clone())?;
                                     }
@@ -1556,6 +1565,11 @@ impl SemanticAnalyser {
                             }
                         }
                     }
+
+                    log_trace!(
+                        self.logger,
+                        "adding trait implementation item `{impl_item}` into symbol: `{object_symbol}`",
+                    );
 
                     object_symbol.add_associated_items(None, Some(impl_item.clone()))?;
                 }

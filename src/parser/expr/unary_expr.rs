@@ -41,7 +41,7 @@ impl ParseSimpleExpr for UnaryExpr {
 }
 
 impl fmt::Debug for UnaryExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("UnaryExpr")
             .field("unary_op", &self.unary_op)
             .field("value_expr", &self.value_expr)
@@ -83,7 +83,7 @@ impl ParseSimpleExpr for ReferenceExpr {
 }
 
 impl fmt::Debug for ReferenceExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ReferenceExpr")
             .field("reference_op", &self.reference_op)
             .field("expression", &self.expression)
@@ -118,7 +118,7 @@ impl ParseSimpleExpr for DereferenceExpr {
 }
 
 impl fmt::Debug for DereferenceExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DereferenceExpr")
             .field("assignee_expr", &self.assignee_expr)
             .finish()

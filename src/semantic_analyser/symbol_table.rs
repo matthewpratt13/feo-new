@@ -35,7 +35,7 @@ pub(crate) enum ScopeKind {
 }
 
 impl fmt::Display for ScopeKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ScopeKind::LocalBlock => write!(f, "LocalBlock"),
             ScopeKind::MatchExpr => write!(f, "MatchExpr"),
@@ -139,7 +139,7 @@ impl Symbol {
                 ..
             } => {
                 if let Some(item) = inherent_item {
-                    associated_items_inherent.push(item);
+                    associated_items_inherent.push(item.clone());
                 }
 
                 if let Some(item) = trait_item {

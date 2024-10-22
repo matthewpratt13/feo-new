@@ -94,7 +94,7 @@ impl ParseConstructExpr for ClosureExpr {
 }
 
 impl fmt::Debug for ClosureExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ClosureExpr")
             .field("closure_params", &self.closure_params)
             .field("return_type_opt", &self.return_type_opt)

@@ -55,7 +55,7 @@ impl fmt::Display for Statement {
                     "{}alias {} = {};",
                     ad.visibility,
                     ad.alias_name,
-                    ad.original_type_opt.unwrap_or(Type::UnitType(UnitType))
+                    ad.original_type_opt.unwrap_or(Type::UNIT_TYPE)
                 ),
                 Item::ConstantDecl(cd) => write!(
                     f,

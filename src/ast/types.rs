@@ -305,7 +305,7 @@ impl From<Vec<Byte>> for Str {
 }
 
 impl fmt::Display for Str {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.clone().as_string())
     }
 }

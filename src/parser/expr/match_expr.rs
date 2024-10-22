@@ -71,7 +71,7 @@ impl ParseControlExpr for MatchExpr {
 }
 
 impl fmt::Debug for MatchExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MatchExpr")
             .field("scrutinee", &self.scrutinee)
             .field("match_arms_opt", &self.match_arms_opt)

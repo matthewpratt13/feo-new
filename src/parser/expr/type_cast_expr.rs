@@ -75,7 +75,7 @@ impl ParseOperatorExpr for TypeCastExpr {
 }
 
 impl fmt::Debug for TypeCastExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TypeCastExpr")
             .field("value", &self.value)
             .field("new_type", &self.new_type)

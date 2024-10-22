@@ -1,6 +1,7 @@
 use core::fmt;
 
 use crate::{
+    ast::NoneExpr,
     parser::get_type_paths,
     semantic_analyser::{FormatItem, FormatParams, ToIdentifier},
     span::{Span, Spanned},
@@ -338,6 +339,25 @@ pub struct ConstantDecl {
     pub(crate) span: Span,
 }
 
+impl fmt::Display for ConstantDecl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{} {}: {} = {:?}",
+            self.visibility,
+            self.kw_const,
+            self.constant_name,
+            self.constant_type,
+            self.value_opt
+                .clone()
+                .unwrap_or(ValueExpr::NoneExpr(NoneExpr {
+                    kw_none: Keyword::None,
+                    span: self.span.clone()
+                }))
+        )
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct EnumDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
@@ -380,6 +400,22 @@ impl FormatParams for FunctionItem {
         }
 
         param_strings
+    }
+}
+
+impl fmt::Display for FunctionItem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{} {}({:?}) -> {}",
+            self.visibility,
+            self.kw_func,
+            self.function_name,
+            self.param_strings(),
+            self.return_type_opt
+                .clone()
+                .unwrap_or(Box::new(Type::UNIT_TYPE))
+        )
     }
 }
 
@@ -494,7 +530,7 @@ impl Spanned for Item {
 }
 
 impl fmt::Debug for Item {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ImportDecl(arg0) => f
                 .debug_struct("ImportDecl")

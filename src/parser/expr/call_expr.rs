@@ -48,7 +48,7 @@ impl ParseOperatorExpr for CallExpr {
 }
 
 impl fmt::Debug for CallExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CallExpr")
             .field("callee", &self.callee)
             .field("args_opt", &self.args_opt)
