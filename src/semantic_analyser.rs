@@ -103,7 +103,7 @@ impl SemanticAnalyser {
         log_debug!(self.logger, "entering new scope: `{scope_kind}` …");
 
         self.scope_stack.push(Scope {
-            scope_kind: scope_kind,
+            scope_kind,
             symbols: HashMap::new(),
         });
     }
