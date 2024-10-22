@@ -1183,6 +1183,8 @@ impl SemanticAnalyser {
 
             println!("import root path: `{import_root_path}`");
 
+            // TODO: check what happens when we import an entire module / import e.g. `some_mod::*`
+
             // TODO: fix this – we currently import all module contents when importing an item
 
             if let Some(lib_contents) = self.lib_registry.get(lib_name).cloned() {
