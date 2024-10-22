@@ -1389,7 +1389,7 @@ impl SemanticAnalyser {
         trait_impl_def: &TraitImplDef,
         implementing_type_path: &TypePath,
         trait_impl_path: TypePath,
-        function_symbols: &mut HashMap<TypePath, Symbol>,
+        function_symbols: &mut SymbolTable,
     ) -> Result<(), SemanticErrorKind> {
         Ok(
             if let Some(impl_items) = &trait_impl_def.associated_items_opt {
