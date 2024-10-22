@@ -434,19 +434,11 @@ impl SemanticAnalyser {
 
                     let scope_kind = ScopeKind::Impl(type_path.clone());
 
-                    let mut function_symbols: SymbolTable = HashMap::new();
+                    // let mut function_symbols: SymbolTable = HashMap::new();
 
                     self.enter_scope(scope_kind);
 
                     if let Some(items) = &iid.associated_items_opt {
-                        let mut object_symbol = if let Some(s) = self.lookup(&iid.nominal_type) {
-                            s
-                        } else {
-                            return Err(SemanticErrorKind::MissingItem {
-                                expected: "struct or enum".to_string(),
-                            });
-                        };
-
                         for i in items.iter() {
                             match i {
                                 InherentImplItem::ConstantDecl(cd) => self.analyse_stmt(
@@ -456,19 +448,19 @@ impl SemanticAnalyser {
                                 InherentImplItem::FunctionItem(fi) => {
                                     let function_item = Rc::new(fi.clone());
 
-                                    let function_name_path =
-                                        function_item.function_name.to_type_path();
+                                    // let function_name_path =
+                                    // function_item.function_name.to_type_path();
 
-                                    let function_def_path =
-                                        type_path.clone_append(function_name_path.clone());
+                                    // let function_def_path =
+                                    // type_path.clone_append(function_name_path.clone());
 
-                                    function_symbols.insert(
-                                        function_def_path.clone(),
-                                        Symbol::Function {
-                                            path: function_name_path,
-                                            function: function_item.clone(),
-                                        },
-                                    );
+                                    // function_symbols.insert(
+                                    //     function_def_path.clone(),
+                                    //     Symbol::Function {
+                                    //         path: function_name_path,
+                                    //         function: function_item.clone(),
+                                    //     },
+                                    // );
 
                                     match self.analyse_function_def(
                                         &function_item,
@@ -482,12 +474,17 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            log_trace!(
-                                self.logger,
-                                "adding inherent implementation item `{i}` into symbol: `{object_symbol}`",
-                            );
-
-                            object_symbol.add_associated_items(Some(i.clone()), None)?;
+                            if let Some(mut s) = self.lookup(&iid.nominal_type) {
+                                log_trace!(
+                                    self.logger,
+                                    "adding inherent implementation item `{i}` into symbol: `{s:?}`",
+                                );
+                                s.add_associated_items(Some(i.clone()), None)?
+                            } else {
+                                return Err(SemanticErrorKind::MissingItem {
+                                    expected: "struct or enum".to_string(),
+                                });
+                            }
                         }
                     }
 
@@ -1191,6 +1188,8 @@ impl SemanticAnalyser {
 
                     for (item_path, symbol) in table.iter() {
                         println!("item path: `{item_path}`");
+
+                        println!("symbol: `{symbol:?}`");
 
                         let item_root_path =
                             if let Some(ids) = item_path.associated_type_path_prefix_opt.as_ref() {

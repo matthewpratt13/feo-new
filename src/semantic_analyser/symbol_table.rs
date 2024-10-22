@@ -139,7 +139,7 @@ impl Symbol {
                 ..
             } => {
                 if let Some(item) = inherent_item {
-                    associated_items_inherent.push(item.clone());
+                    associated_items_inherent.push(item);
                 }
 
                 if let Some(item) = trait_item {
