@@ -632,11 +632,6 @@ impl SemanticAnalyser {
                     let struct_name_path = struct_def.struct_name.to_type_path();
                     let struct_def_path = root.clone_append(struct_name_path.clone());
 
-                    // log_trace!(
-                    //     self.logger,
-                    //     "analysing struct definition: `{struct_def_path}` …"
-                    // );
-
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
                         ScopeKind::Module(Identifier::from("lib").to_type_path()),
@@ -646,7 +641,7 @@ impl SemanticAnalyser {
                         struct_def_path,
                         Symbol::Struct {
                             path: struct_name_path,
-                            struct_def: struct_def,
+                            struct_def,
                             associated_items_inherent: Vec::new(),
                             associated_items_trait: Vec::new(),
                         },
@@ -1258,6 +1253,7 @@ impl SemanticAnalyser {
 
                                     if !symbols.contains_key(&item_name)
                                         && item_root_path == import_root_path
+                                        && path.type_name == import_path.type_name
                                     {
                                         self.insert(item_name, symbol.clone())?;
                                     }
