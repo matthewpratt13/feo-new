@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Identifier, ModuleItem, TypePath, Visibility},
+    ast::{Identifier, TypePath, Visibility},
     logger::LogLevel,
     parser::{self, Program},
 };
