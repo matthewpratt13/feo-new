@@ -115,13 +115,7 @@ impl SemanticAnalyser {
             log_trace!(
                 self.logger,
                 "current_scope: `{}`",
-                self.scope_stack
-                    .last()
-                    .unwrap_or(&Scope {
-                        scope_kind: ScopeKind::Public,
-                        symbols: HashMap::new()
-                    })
-                    .scope_kind
+                self.current_scope().scope_kind
             );
 
             Some(exited_scope)
@@ -324,18 +318,16 @@ impl SemanticAnalyser {
                         ScopeKind::Module(Identifier::from("lib").to_type_path()),
                     );
 
-                    if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
-                        if matches!(scope_kind, ScopeKind::TraitImpl { .. }) {
-                            return self.insert_into_module_scope(
-                                constant_path.clone(),
-                                Symbol::Constant {
-                                    path: constant_path,
-                                    visibility: constant_decl.visibility,
-                                    constant_name: constant_decl.constant_name.clone(),
-                                    constant_type: value_type.unwrap_or(Type::inferred_type("_")),
-                                },
-                            );
-                        }
+                    if matches!(self.current_scope().scope_kind, ScopeKind::TraitImpl { .. }) {
+                        return self.insert_into_module_scope(
+                            constant_path.clone(),
+                            Symbol::Constant {
+                                path: constant_path,
+                                visibility: constant_decl.visibility,
+                                constant_name: constant_decl.constant_name.clone(),
+                                constant_type: value_type.unwrap_or(Type::inferred_type("_")),
+                            },
+                        );
                     }
 
                     self.insert(
@@ -543,13 +535,7 @@ impl SemanticAnalyser {
                         log_trace!(
                             self.logger,
                             "current_scope: `{}`",
-                            self.scope_stack
-                                .last()
-                                .unwrap_or(&Scope {
-                                    scope_kind: ScopeKind::Public,
-                                    symbols: HashMap::new()
-                                })
-                                .scope_kind
+                            self.current_scope().scope_kind
                         );
 
                         module_scope = curr_scope;
@@ -1244,18 +1230,16 @@ impl SemanticAnalyser {
                                     }
                                 }
 
-                                if let Some(Scope { symbols, .. }) = self.scope_stack.last() {
-                                    let item_name = item_path.type_name.to_type_path();
+                                let item_name = item_path.type_name.to_type_path();
 
-                                    // make sure that the item is not already in scope
-                                    // and that the item comes from the original module
+                                // make sure that the item is not already in scope
+                                // and that the item comes from the original module
 
-                                    if !symbols.contains_key(&item_name)
-                                        && item_root_path == import_root_path
-                                        && path.type_name == import_path.type_name
-                                    {
-                                        self.insert(item_name, symbol.clone())?;
-                                    }
+                                if !self.current_scope().symbols.contains_key(&item_name)
+                                    && item_root_path == import_root_path
+                                    && path.type_name == import_path.type_name
+                                {
+                                    self.insert(item_name, symbol.clone())?;
                                 }
 
                                 for item in associated_items_inherent {
@@ -1364,16 +1348,14 @@ impl SemanticAnalyser {
                             sym => {
                                 println!("symbol path: `{}`", sym.type_path());
 
-                                if let Some(Scope { symbols, .. }) = self.scope_stack.last() {
-                                    let stripped = item_path.clone().strip_prefix();
-                                    println!("stripped: `{stripped}`");
+                                let stripped = item_path.clone().strip_prefix();
+                                println!("stripped: `{stripped}`");
 
-                                    if !symbols.contains_key(&stripped)
-                                        && item_root_path == import_root_path
-                                        && sym.type_path() == import_path.type_name.to_type_path()
-                                    {
-                                        self.insert(stripped, symbol.clone())?;
-                                    }
+                                if !self.current_scope().symbols.contains_key(&stripped)
+                                    && item_root_path == import_root_path
+                                    && sym.type_path() == import_path.type_name.to_type_path()
+                                {
+                                    self.insert(stripped, symbol.clone())?;
                                 }
                             }
                         }
@@ -1758,10 +1740,8 @@ impl SemanticAnalyser {
     }
 
     fn try_update_current_scope(&mut self, expected: &ScopeKind, new_scope_kind: ScopeKind) {
-        if let Some(Scope { scope_kind, .. }) = self.scope_stack.last() {
-            if scope_kind == expected {
-                self.enter_scope(new_scope_kind)
-            }
+        if &self.current_scope().scope_kind == expected {
+            self.enter_scope(new_scope_kind)
         }
     }
 
@@ -2796,12 +2776,15 @@ impl SemanticAnalyser {
         &[]
     }
 
+    fn current_scope(&self) -> Scope {
+        self.scope_stack.last().cloned().unwrap_or(Scope {
+            scope_kind: ScopeKind::Public,
+            symbols: HashMap::new(),
+        })
+    }
+
     fn current_symbol_table(&self) -> SymbolTable {
-        if let Some(scope) = self.scope_stack.last() {
-            scope.symbols.to_owned()
-        } else {
-            HashMap::new()
-        }
+        self.current_scope().symbols
     }
 
     /// Helper function to resolve `Type` to `TypePath` if it exists in a symbol table in scope.

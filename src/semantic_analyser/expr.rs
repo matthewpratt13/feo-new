@@ -128,25 +128,22 @@ pub(crate) fn analyse_expr(
 
         Expression::Block(b) => match &b.statements_opt {
             Some(stmts) => {
-                match analyser.scope_stack.last() {
-                    Some(
-                        Scope {
-                            scope_kind: ScopeKind::Public,
-                            ..
-                        }
-                        | Scope {
-                            scope_kind: ScopeKind::ProgramRoot,
-                            ..
-                        },
-                    )
-                    | None => todo!(), // TODO: error – block expression out of context
+                match analyser.current_scope() {
+                    Scope {
+                        scope_kind: ScopeKind::Public,
+                        ..
+                    }
+                    | Scope {
+                        scope_kind: ScopeKind::ProgramRoot,
+                        ..
+                    } => todo!(), // TODO: error – block expression out of context
 
-                    Some(Scope {
+                    Scope {
                         scope_kind: ScopeKind::FunctionDef(path),
                         ..
-                    }) => analyser.enter_scope(ScopeKind::FunctionBody(path.clone())),
+                    } => analyser.enter_scope(ScopeKind::FunctionBody(path.clone())),
 
-                    Some(_) => analyser.enter_scope(ScopeKind::LocalBlock),
+                    _ => analyser.enter_scope(ScopeKind::LocalBlock),
                 }
 
                 log_trace!(analyser.logger, "analysing block …");
