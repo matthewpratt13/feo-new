@@ -466,21 +466,25 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            // if let Some(mut s) = self.lookup(&iid.nominal_type) {
-                            //     log_trace!(
-                            //         self.logger,
-                            //         "adding inherent implementation item `{i}` into symbol: `{s:?}`",
-                            //     );
-                            //     s.add_associated_items(Some(i.clone()), None)?
-                            // } else {
-                            //     return Err(SemanticErrorKind::MissingItem {
-                            //         expected: "struct or enum".to_string(),
-                            //     });
-                            // }
+                            if let Some(mut sym) = self.lookup(&iid.nominal_type).cloned() {
+                                log_trace!(
+                                        self.logger,
+                                        "adding inherent implementation item `{i}` into symbol: `{sym:?}`",
+                                    );
+                                sym.add_associated_items(Some(i.clone()), None)?;
+                            } else {
+                                return Err(SemanticErrorKind::MissingItem {
+                                    expected: "struct or enum".to_string(),
+                                });
+                            }
                         }
                     }
 
                     self.exit_scope();
+
+                    if let Some(sym) = self.lookup(&iid.nominal_type) {
+                        println!("symbol: {sym:?}");
+                    }
 
                     // for (path, symbol) in function_symbols {
                     //     self.insert(path, symbol)?;
