@@ -173,7 +173,7 @@ impl SemanticAnalyser {
 
     /// Look up a symbol by its path in the current scope stack, starting from the innermost scope,
     /// and log the lookup result.
-    fn lookup(&mut self, path: &TypePath) -> Option<Symbol> {
+    fn lookup(&mut self, path: &TypePath) -> Option<&Symbol> {
         for scope in self.scope_stack.iter().rev() {
             if let Some(symbol) = scope.symbols.get(path) {
                 log_debug!(
@@ -182,8 +182,7 @@ impl SemanticAnalyser {
                     scope.scope_kind
                 );
 
-                // NOTE: `to_owned()` clones and does not take ownership
-                return Some(symbol.to_owned());
+                return Some(symbol);
             } else {
                 for (sym_path, symbol) in scope.symbols.iter() {
                     if *path == sym_path.clone().strip_prefix() {
@@ -193,8 +192,7 @@ impl SemanticAnalyser {
                             scope.scope_kind
                         );
 
-                        // NOTE: `to_owned()` clones and does not take ownership
-                        return Some(symbol.to_owned());
+                        return Some(symbol);
                     }
                 }
             }
@@ -468,17 +466,17 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            if let Some(mut s) = self.lookup(&iid.nominal_type) {
-                                log_trace!(
-                                    self.logger,
-                                    "adding inherent implementation item `{i}` into symbol: `{s:?}`",
-                                );
-                                s.add_associated_items(Some(i.clone()), None)?
-                            } else {
-                                return Err(SemanticErrorKind::MissingItem {
-                                    expected: "struct or enum".to_string(),
-                                });
-                            }
+                            // if let Some(mut s) = self.lookup(&iid.nominal_type) {
+                            //     log_trace!(
+                            //         self.logger,
+                            //         "adding inherent implementation item `{i}` into symbol: `{s:?}`",
+                            //     );
+                            //     s.add_associated_items(Some(i.clone()), None)?
+                            // } else {
+                            //     return Err(SemanticErrorKind::MissingItem {
+                            //         expected: "struct or enum".to_string(),
+                            //     });
+                            // }
                         }
                     }
 
@@ -766,7 +764,7 @@ impl SemanticAnalyser {
                         }
                     };
 
-                    let trait_def = match self.lookup(&t.implemented_trait_path) {
+                    let trait_def = match self.lookup(&t.implemented_trait_path).cloned() {
                         Some(Symbol::Trait { trait_def, .. }) => trait_def,
 
                         Some(sym) => {
@@ -1096,7 +1094,7 @@ impl SemanticAnalyser {
                 )?;
             }
 
-            Type::UserDefined(tp) => match self.lookup(&tp) {
+            Type::UserDefined(tp) => match self.lookup(&tp).cloned() {
                 Some(sym) => {
                     self.insert(param_path, sym)?;
                 }
@@ -1437,6 +1435,7 @@ impl SemanticAnalyser {
                                         }) {
                                             match self
                                                 .lookup(&trait_impl_def.implemented_trait_path)
+                                                .cloned()
                                             {
                                                 Some(Symbol::Trait { trait_def, .. }) => {
                                                     if let Some(def_items) =
@@ -2221,7 +2220,7 @@ impl SemanticAnalyser {
 
     /// Lookup logic to find the trait definition in the current scope
     fn lookup_trait(&mut self, bound_path: &TypePath) -> Result<TraitDef, SemanticErrorKind> {
-        if let Some(Symbol::Trait { trait_def, .. }) = self.lookup(bound_path) {
+        if let Some(Symbol::Trait { trait_def, .. }) = self.lookup(bound_path).cloned() {
             Ok(Rc::into_inner(trait_def).unwrap())
         } else {
             Err(SemanticErrorKind::UndefinedSymbol {

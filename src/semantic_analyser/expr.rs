@@ -86,7 +86,7 @@ pub(crate) fn analyse_expr(
 
             let assignee_path = TypePath::from(assignee_as_path_expr);
 
-            match analyser.lookup(&assignee_path) {
+            match analyser.lookup(&assignee_path).cloned() {
                 Some(Symbol::Variable { var_type, .. }) => {
                     if var_type == value_type {
                         Ok(value_type)
@@ -310,7 +310,7 @@ pub(crate) fn analyse_expr(
 
             let assignee_path = TypePath::from(assignee_as_path_expr);
 
-            match analyser.lookup(&assignee_path) {
+            match analyser.lookup(&assignee_path).cloned() {
                 Some(Symbol::Variable { var_type, .. }) => {
                     if var_type == value_type {
                         Ok(value_type)
@@ -360,7 +360,7 @@ pub(crate) fn analyse_expr(
 
             let object_path = TypePath::from(object_as_path_expr);
 
-            match analyser.lookup(&object_path) {
+            match analyser.lookup(&object_path).cloned() {
                 Some(Symbol::Struct { struct_def, .. }) => match &struct_def.fields_opt {
                     Some(fields) => match fields.iter().find(|f| f.field_name == fa.field_name) {
                         Some(sdf) => Ok(*sdf.field_type.clone()),
@@ -807,7 +807,7 @@ pub(crate) fn analyse_expr(
                 },
             };
 
-            if let Some(symbol) = analyser.lookup(&path) {
+            if let Some(symbol) = analyser.lookup(&path).cloned() {
                 match &symbol {
                     Symbol::Variable { name, var_type } => {
                         if let Type::UserDefined(_) = var_type {
@@ -1000,7 +1000,7 @@ pub(crate) fn analyse_expr(
                 }
             }
 
-            match analyser.lookup(&type_path) {
+            match analyser.lookup(&type_path).cloned() {
                 Some(Symbol::Struct {
                     struct_def, path, ..
                 }) => {
@@ -1068,7 +1068,7 @@ pub(crate) fn analyse_expr(
 
                     let associated_type_path = &mut variable_type_path.strip_suffix();
 
-                    match analyser.lookup(associated_type_path) {
+                    match analyser.lookup(associated_type_path).cloned() {
                         Some(Symbol::Enum { path, enum_def, .. }) => {
                             for variant in enum_def.variants.iter() {
                                 if variant.variant_path == variable_type_path {
@@ -1217,7 +1217,7 @@ pub(crate) fn analyse_expr(
             let type_path = root.clone_append(TypePath::from(ts.struct_path.clone()));
             let elements_opt = ts.struct_elements_opt.clone();
 
-            match analyser.lookup(&type_path) {
+            match analyser.lookup(&type_path).cloned() {
                 Some(Symbol::TupleStruct {
                     tuple_struct_def,
                     path,
@@ -1282,7 +1282,7 @@ pub(crate) fn analyse_expr(
 
                     let associated_type_path = &mut variable_type_path.strip_suffix();
 
-                    match analyser.lookup(associated_type_path) {
+                    match analyser.lookup(associated_type_path).cloned() {
                         Some(Symbol::Enum { path, enum_def, .. }) => {
                             for variant in enum_def.variants.iter() {
                                 if variant.variant_path == variable_type_path {
@@ -1522,7 +1522,7 @@ fn analyse_call_or_method_call_expr(
     path: TypePath,
     args_opt: Option<Vec<Expression>>,
 ) -> Result<Type, SemanticErrorKind> {
-    match analyser.lookup(&path) {
+    match analyser.lookup(&path).cloned() {
         Some(Symbol::Function { function, .. }) => {
             let func_params = function.params_opt.clone();
             let func_def_return_type = function.return_type_opt.clone();
