@@ -182,6 +182,7 @@ impl SemanticAnalyser {
                     scope.scope_kind
                 );
 
+                // NOTE: `to_owned()` clones and does not take ownership
                 return Some(symbol.to_owned());
             } else {
                 for (sym_path, symbol) in scope.symbols.iter() {
@@ -192,6 +193,7 @@ impl SemanticAnalyser {
                             scope.scope_kind
                         );
 
+                        // NOTE: `to_owned()` clones and does not take ownership
                         return Some(symbol.to_owned());
                     }
                 }
@@ -1381,6 +1383,8 @@ impl SemanticAnalyser {
     ) -> Result<(), SemanticErrorKind> {
         Ok(
             if let Some(impl_items) = &trait_impl_def.associated_items_opt {
+                // * WARNING! `to_owned()` clones and does not take ownership
+                // TODO: wrap in an `Rc` or `Arc`
                 let mut object_symbol = if let Some(s) = self.lookup(implementing_type_path) {
                     s.to_owned()
                 } else {
@@ -2240,6 +2244,9 @@ impl SemanticAnalyser {
 
         let scope_stack = &self.scope_stack;
 
+        // * WARNING! `to_owned()` clones and does not take ownership
+        // TODO: wrap in an `Rc` or `Arc`
+
         // iterate through the scope stack and substitute generics in all types.
         for scope in scope_stack.to_owned().iter_mut() {
             for symbol in scope.symbols.values_mut() {
@@ -2379,6 +2386,9 @@ impl SemanticAnalyser {
                 self.substitute_in_type(inner_type, symbol_table, generic_name, concrete_type);
             }
             Type::UserDefined(type_path) => {
+                // * WARNING! `to_owned()` clones and does not take ownership
+                // TODO: wrap in an `Rc` or `Arc`
+
                 if let Some(sym) = symbol_table.to_owned().get_mut(type_path) {
                     match sym {
                         Symbol::Variable { var_type, .. } => self.substitute_in_type(
