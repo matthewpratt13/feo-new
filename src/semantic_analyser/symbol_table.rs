@@ -1,5 +1,5 @@
 use core::fmt;
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     ast::{
@@ -21,7 +21,8 @@ pub(crate) enum ScopeKind {
     LocalBlock,
     MatchExpr,
     ForInLoop,
-    Function(TypePath),
+    FunctionBody(TypePath),
+    FunctionDef(TypePath),
     TraitImpl {
         implemented_trait_path: TypePath,
         implementing_type_path: TypePath,
@@ -34,13 +35,16 @@ pub(crate) enum ScopeKind {
 }
 
 impl fmt::Display for ScopeKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ScopeKind::LocalBlock => write!(f, "LocalBlock"),
             ScopeKind::MatchExpr => write!(f, "MatchExpr"),
             ScopeKind::ForInLoop => write!(f, "ForInLoop"),
-            ScopeKind::Function(type_path) => {
-                write!(f, "Function(\"{}\")", type_path)
+            ScopeKind::FunctionBody(type_path) => {
+                write!(f, "FunctionBody(\"{}\")", type_path)
+            }
+            ScopeKind::FunctionDef(type_path) => {
+                write!(f, "FunctionDef(\"{}\")", type_path)
             }
             ScopeKind::TraitImpl {
                 implemented_trait_path,
@@ -69,25 +73,25 @@ pub(crate) enum Symbol {
     },
     Struct {
         path: TypePath,
-        struct_def: StructDef,
+        struct_def: Rc<StructDef>,
         associated_items_inherent: Vec<InherentImplItem>,
         associated_items_trait: Vec<TraitImplItem>,
     },
     TupleStruct {
         path: TypePath,
-        tuple_struct_def: TupleStructDef,
+        tuple_struct_def: Rc<TupleStructDef>,
         associated_items_inherent: Vec<InherentImplItem>,
         associated_items_trait: Vec<TraitImplItem>,
     },
     Enum {
         path: TypePath,
-        enum_def: EnumDef,
+        enum_def: Rc<EnumDef>,
         associated_items_inherent: Vec<InherentImplItem>,
         associated_items_trait: Vec<TraitImplItem>,
     },
     Trait {
         path: TypePath,
-        trait_def: TraitDef,
+        trait_def: Rc<TraitDef>,
     },
     Alias {
         path: TypePath,
@@ -103,11 +107,11 @@ pub(crate) enum Symbol {
     },
     Function {
         path: TypePath,
-        function: FunctionItem,
+        function: Rc<FunctionItem>,
     },
     Module {
         path: TypePath,
-        module: ModuleItem,
+        module: Rc<ModuleItem>,
         symbols: SymbolTable,
     },
 }
@@ -162,8 +166,8 @@ impl Symbol {
             Symbol::Trait { path, .. } => Type::UserDefined(path),
             Symbol::Alias { path, .. } => Type::UserDefined(path),
             Symbol::Constant { constant_type, .. } => constant_type,
-            Symbol::Function { function, .. } => match function.return_type_opt {
-                Some(t) => *t,
+            Symbol::Function { function, .. } => match &function.return_type_opt {
+                Some(t) => *t.clone(),
                 None => Type::UNIT_TYPE,
             },
             Symbol::Module { .. } => Type::UNIT_TYPE,

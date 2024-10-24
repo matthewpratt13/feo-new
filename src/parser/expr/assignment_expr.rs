@@ -44,7 +44,7 @@ impl ParseOperatorExpr for AssignmentExpr {
 }
 
 impl fmt::Debug for AssignmentExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AssignmentExpr")
             .field("lhs", &self.lhs)
             .field("assignment_op", &self.assignment_op)
@@ -103,7 +103,7 @@ impl ParseOperatorExpr for CompoundAssignmentExpr {
 }
 
 impl fmt::Debug for CompoundAssignmentExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CompoundAssignmentExpr")
             .field("lhs", &self.lhs)
             .field("compound_assignment_op", &self.compound_assignment_op)

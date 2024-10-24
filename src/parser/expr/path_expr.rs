@@ -112,7 +112,7 @@ impl fmt::Display for PathExpr {
 }
 
 impl fmt::Debug for PathExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PathExpr")
             .field("path_root", &self.path_root)
             .field("tree_opt", &self.tree_opt)

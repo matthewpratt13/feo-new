@@ -84,7 +84,7 @@ impl ParseDefItem for InherentImplDef {
 }
 
 impl fmt::Debug for InherentImplDef {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("InherentImplDef")
             .field("attributes_opt", &self.attributes_opt)
             .field("nominal_type", &self.nominal_type)
@@ -190,7 +190,7 @@ impl ParseDefItem for TraitImplDef {
 }
 
 impl fmt::Debug for TraitImplDef {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TraitImplDef")
             .field("attributes_opt", &self.attributes_opt)
             .field("implemented_trait_path", &self.implemented_trait_path)
@@ -240,6 +240,15 @@ impl ParseAssociatedItem for InherentImplItem {
     }
 }
 
+impl fmt::Display for InherentImplItem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InherentImplItem::ConstantDecl(cd) => write!(f, "{cd}"),
+            InherentImplItem::FunctionItem(fi) => write!(f, "{fi}"),
+        }
+    }
+}
+
 impl ParseAssociatedItem for TraitImplItem {
     fn parse(
         parser: &mut Parser,
@@ -280,6 +289,16 @@ impl ParseAssociatedItem for TraitImplItem {
                 ));
                 Err(ErrorsEmitted)
             }
+        }
+    }
+}
+
+impl fmt::Display for TraitImplItem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TraitImplItem::AliasDecl(ad) => write!(f, "{ad}"),
+            TraitImplItem::ConstantDecl(cd) => write!(f, "{cd}"),
+            TraitImplItem::FunctionItem(fi) => write!(f, "{fi}"),
         }
     }
 }

@@ -52,8 +52,23 @@ impl ParseDeclItem for AliasDecl {
     }
 }
 
+impl fmt::Display for AliasDecl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}{} {} = {}",
+            self.visibility,
+            self.kw_alias,
+            self.alias_name,
+            self.original_type_opt
+                .clone()
+                .unwrap_or(Type::UNIT_TYPE)
+        )
+    }
+}
+
 impl fmt::Debug for AliasDecl {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AliasDecl")
             .field("attributes_opt", &self.attributes_opt)
             .field("visibility", &self.visibility)
