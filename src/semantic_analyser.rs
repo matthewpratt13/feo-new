@@ -203,6 +203,38 @@ impl SemanticAnalyser {
         None
     }
 
+    /// Look up a symbol by its path in the current scope stack, starting from the innermost scope,
+    /// and log the lookup result.
+    fn lookup_owned(&mut self, path: &TypePath) -> Option<Symbol> {
+        for scope in self.scope_stack.iter().rev() {
+            if let Some(symbol) = scope.symbols.get(path) {
+                log_debug!(
+                    self.logger,
+                    "found symbol `{symbol}` in scope `{}` at path `{path}`",
+                    scope.scope_kind
+                );
+
+                return Some(symbol.to_owned());
+            } else {
+                for (sym_path, symbol) in scope.symbols.iter() {
+                    if *path == sym_path.clone().strip_prefix() {
+                        log_debug!(
+                            self.logger,
+                            "found symbol `{symbol}` in scope `{}` at path `{path}`",
+                            scope.scope_kind
+                        );
+
+                        return Some(symbol.to_owned());
+                    }
+                }
+            }
+        }
+
+        log_warn!(self.logger, "path `{path:?}` not found in current scope");
+
+        None
+    }
+
     /// Initiate semantic analysis on the provided program. This involves analysing all statements
     /// within the program, checking for type mismatches and validating symbol definitions.
     fn analyse_program(
@@ -466,7 +498,7 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            if let Some(mut sym) = self.lookup(&iid.nominal_type).cloned() {
+                            if let Some(sym) = self.lookup_owned(&iid.nominal_type).as_mut() {
                                 log_trace!(
                                         self.logger,
                                         "adding inherent implementation item `{i}` into symbol: `{sym:?}`",
