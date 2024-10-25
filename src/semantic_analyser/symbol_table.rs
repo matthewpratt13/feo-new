@@ -27,6 +27,70 @@ impl SymbolTable {
         }
     }
 
+    pub(crate) fn add_inherent_associated_item(
+        &mut self,
+        path: &TypePath,
+        item: InherentImplItem,
+    ) -> Result<(), SemanticErrorKind> {
+        match self.get_mut(path) {
+            Some(
+                Symbol::Struct {
+                    associated_items_inherent,
+                    ..
+                }
+                | Symbol::TupleStruct {
+                    associated_items_inherent,
+                    ..
+                }
+                | Symbol::Enum {
+                    associated_items_inherent,
+                    ..
+                },
+            ) => Ok(associated_items_inherent.push(item)),
+            Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
+                name: sym.type_path().to_identifier(),
+                expected: "struct or enum".to_string(),
+                found: sym.to_backtick_string(),
+            }),
+            None => Err(SemanticErrorKind::UndefinedSymbol {
+                name: path.to_backtick_string(),
+            }),
+        }
+    }
+
+    pub(crate) fn add_trait_associated_item(
+        &mut self,
+        path: &TypePath,
+        item: TraitImplItem,
+    ) -> Result<(), SemanticErrorKind> {
+        match self.get_mut(path) {
+            Some(
+                Symbol::Struct {
+                    associated_items_trait,
+                    ..
+                }
+                | Symbol::TupleStruct {
+                    associated_items_trait,
+                    ..
+                }
+                | Symbol::Enum {
+                    associated_items_trait,
+                    ..
+                },
+            ) => Ok(associated_items_trait.push(item)),
+            Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
+                name: sym.type_path().to_identifier(),
+                expected: "struct or enum".to_string(),
+                found: sym.to_backtick_string(),
+            }),
+            None => Err(SemanticErrorKind::UndefinedSymbol {
+                name: path.to_backtick_string(),
+            }),
+        }
+    }
+
+    // `HashMap` implementations:
+
     pub(crate) fn get_mut(&mut self, path: &TypePath) -> Option<&mut Symbol> {
         self.map.get_mut(path)
     }
