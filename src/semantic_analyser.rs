@@ -472,19 +472,7 @@ impl SemanticAnalyser {
                                 InherentImplItem::FunctionItem(fi) => {
                                     let function_item = Rc::new(fi.clone());
 
-                                    // let function_name_path =
-                                    // function_item.function_name.to_type_path();
-
-                                    // let function_def_path =
-                                    // type_path.clone_append(function_name_path.clone());
-
-                                    // function_symbols.insert(
-                                    //     function_def_path.clone(),
-                                    //     Symbol::Function {
-                                    //         path: function_name_path,
-                                    //         function: function_item.clone(),
-                                    //     },
-                                    // );
+              
 
                                     match self.analyse_function_def(
                                         &function_item,
@@ -513,17 +501,7 @@ impl SemanticAnalyser {
                                 todo!()
                             }
 
-                            // if let Some(sym) = self.lookup_owned(&iid.nominal_type).as_mut() {
-                            //     log_trace!(
-                            //             self.logger,
-                            //             "adding inherent implementation item `{i}` into symbol: `{sym:?}`",
-                            //         );
-                            //     sym.add_associated_items(Some(i.clone()), None)?;
-                            // } else {
-                            //     return Err(SemanticErrorKind::MissingItem {
-                            //         expected: "struct or enum".to_string(),
-                            //     });
-                            // }
+                         
                         }
                     }
 

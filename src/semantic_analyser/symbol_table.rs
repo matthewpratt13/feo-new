@@ -234,46 +234,6 @@ pub(crate) enum Symbol {
 }
 
 impl Symbol {
-    // pub(crate) fn add_associated_items(
-    //     &mut self,
-    //     inherent_item: Option<InherentImplItem>,
-    //     trait_item: Option<TraitImplItem>,
-    // ) -> Result<(), SemanticErrorKind> {
-    //     match self {
-    //         Symbol::Struct {
-    //             associated_items_inherent,
-    //             associated_items_trait,
-    //             ..
-    //         }
-    //         | Symbol::TupleStruct {
-    //             associated_items_inherent,
-    //             associated_items_trait,
-    //             ..
-    //         }
-    //         | Symbol::Enum {
-    //             associated_items_inherent,
-    //             associated_items_trait,
-    //             ..
-    //         } => {
-    //             if let Some(item) = inherent_item {
-    //                 associated_items_inherent.push(item);
-    //             }
-
-    //             if let Some(item) = trait_item {
-    //                 associated_items_trait.push(item);
-    //             }
-
-    //             Ok(())
-    //         }
-
-    //         sym => Err(SemanticErrorKind::UnexpectedSymbol {
-    //             name: sym.type_path().to_identifier(),
-    //             expected: "struct or enum".to_string(),
-    //             found: sym.symbol_type().to_backtick_string(),
-    //         }),
-    //     }
-    // }
-
     pub(crate) fn symbol_type(&self) -> Type {
         match self.clone() {
             Symbol::Variable { var_type, .. } => var_type,
