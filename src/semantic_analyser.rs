@@ -684,23 +684,11 @@ impl SemanticAnalyser {
                         "analysing trait definition: `{trait_def_path}` …"
                     );
 
-                    // let scope_kind = ScopeKind::Impl(trait_def_path.clone());
-
-                    // let mut symbols: HashMap<TypePath, Symbol> = HashMap::new();
-
-                    // self.enter_scope(scope_kind);
-
+ 
                     if let Some(items) = &trait_def.trait_items_opt {
-                        // let mut trait_symbol = if let Some(s) = self.lookup(&trait_def_path) {
-                        //     s.to_owned()
-                        // } else {
-                        //     return Err(SemanticErrorKind::MissingItem {
-                        //         expected: "trait symbol".to_string(),
-                        //     });
-                        // };
+                   
 
                         for i in items.iter().cloned() {
-                            // let item =
 
                             match i {
                                 TraitDefItem::AliasDecl(ad) => {
@@ -717,7 +705,6 @@ impl SemanticAnalyser {
                                         trait_def_path.clone(),
                                     )?;
 
-                                    // TraitImplItem::ConstantDecl(cd.clone())
                                 }
 
                                 TraitDefItem::FunctionItem(fi) => {
@@ -743,13 +730,6 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-                                    // symbols.insert(
-                                    //     function_def_path,
-                                    //     Symbol::Function {
-                                    //         path: function_name_path,
-                                    //         function: fi.clone(),
-                                    //     },
-                                    // );
 
                                     match self.analyse_function_def(
                                         &function_item,
@@ -761,24 +741,13 @@ impl SemanticAnalyser {
                                         Err(err) => self.log_error(err, &trait_def.span),
                                     }
 
-                                    // TraitImplItem::FunctionItem(fi.clone())
                                 }
                             };
 
-                            // trait_symbol.add_associated_items(None, Some(item))?;
                         }
                     }
 
-                    // self.exit_scope();
-
-                    // log_trace!(
-                    //     self.logger,
-                    //     "inserting symbols into implementation for type: `{trait_def_path}` …",
-                    // );
-
-                    // for (path, symbol) in symbols {
-                    //     self.insert(path, symbol)?;
-                    // }
+               
                 }
 
                 Item::TraitImplDef(t) => {
