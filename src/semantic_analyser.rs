@@ -61,7 +61,7 @@ impl SemanticAnalyser {
     /// if provided.
     fn new(log_level: LogLevel, external_code: Option<LibRegistry>) -> Self {
         let mut logger = Logger::init(log_level);
-        let mut symbols: SymbolTable = HashMap::new();
+        let mut symbols = SymbolTable::new();
         let mut lib_registry: LibRegistry = HashMap::new();
 
         if let Some(code) = external_code {
@@ -104,7 +104,7 @@ impl SemanticAnalyser {
 
         self.scope_stack.push(Scope {
             scope_kind,
-            symbols: HashMap::new(),
+            symbols: SymbolTable::new(),
         });
     }
 
@@ -536,7 +536,7 @@ impl SemanticAnalyser {
 
                     let mut module_scope = Scope {
                         scope_kind: scope_kind.clone(),
-                        symbols: HashMap::new(),
+                        symbols: SymbolTable::new(),
                     };
 
                     log_trace!(self.logger, "analysing items in module `{module_path}` …");
@@ -835,7 +835,7 @@ impl SemanticAnalyser {
                         implementing_type_path: implementing_type_path.clone(),
                     };
 
-                    let mut function_symbols: SymbolTable = HashMap::new();
+                    let mut function_symbols = SymbolTable::new();
 
                     self.enter_scope(scope_kind);
 
@@ -849,8 +849,8 @@ impl SemanticAnalyser {
 
                     self.exit_scope();
 
-                    for (path, symbol) in function_symbols {
-                        self.insert(path, symbol)?;
+                    for (path, symbol) in function_symbols.iter() {
+                        self.insert(path.clone(), symbol.clone())?;
                     }
                 }
 
@@ -1249,7 +1249,7 @@ impl SemanticAnalyser {
 
                                 // check for duplicate imports
                                 for scope in self.scope_stack.iter().rev() {
-                                    for type_path in scope.symbols.keys() {
+                                    for type_path in scope.symbols.paths() {
                                         match scope.scope_kind {
                                             ScopeKind::Public
                                             | ScopeKind::ProgramRoot
@@ -1271,7 +1271,7 @@ impl SemanticAnalyser {
                                 // make sure that the item is not already in scope
                                 // and that the item comes from the original module
 
-                                if !self.current_scope().symbols.contains_key(&item_name)
+                                if !self.current_scope().symbols.contains_path(&item_name)
                                     && item_root_path == import_root_path
                                     && path.type_name == import_path.type_name
                                 {
@@ -1370,7 +1370,7 @@ impl SemanticAnalyser {
                                 for (type_path, sym) in symbols.iter() {
                                     println!("inner module item path: `{type_path}`");
 
-                                    if !table.contains_key(&type_path) {
+                                    if !table.contains_path(&type_path) {
                                         self.insert(
                                             type_path.type_name.to_type_path(),
                                             sym.clone(),
@@ -1387,7 +1387,7 @@ impl SemanticAnalyser {
                                 let stripped = item_path.clone().strip_prefix();
                                 println!("stripped: `{stripped}`");
 
-                                if !self.current_scope().symbols.contains_key(&stripped)
+                                if !self.current_scope().symbols.contains_path(&stripped)
                                     && item_root_path == import_root_path
                                     && sym.type_path() == import_path.type_name.to_type_path()
                                 {
@@ -2284,7 +2284,7 @@ impl SemanticAnalyser {
 
         // iterate through the scope stack and substitute generics in all types.
         for scope in scope_stack.to_owned().iter_mut() {
-            for symbol in scope.symbols.values_mut() {
+            for symbol in scope.symbols.symbols_mut() {
                 self.substitute_in_symbol(symbol, symbol_table, generic_name, concrete_type);
             }
         }
@@ -2824,7 +2824,7 @@ impl SemanticAnalyser {
     fn current_scope(&self) -> Scope {
         self.scope_stack.last().cloned().unwrap_or(Scope {
             scope_kind: ScopeKind::Public,
-            symbols: HashMap::new(),
+            symbols: SymbolTable::new(),
         })
     }
 
@@ -2837,7 +2837,7 @@ impl SemanticAnalyser {
         match ty {
             Type::UserDefined(type_path) => {
                 for scope in self.scope_stack.iter().rev() {
-                    if scope.symbols.contains_key(type_path) {
+                    if scope.symbols.contains_path(type_path) {
                         return Some(type_path.clone());
                     }
                 }
@@ -2851,7 +2851,7 @@ impl SemanticAnalyser {
     fn registry_contains_trait(&self, expected_trait: &TraitDef) -> bool {
         for lib_contents in self.lib_registry.values() {
             for module in lib_contents.iter() {
-                for symbol in module.table.values() {
+                for symbol in module.table.symbols() {
                     if let Symbol::Trait { path, trait_def } = symbol {
                         if path.type_name == expected_trait.trait_name
                             && &*trait_def.clone() == expected_trait

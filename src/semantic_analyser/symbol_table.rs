@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::hash_map, rc::Rc};
 
 use crate::{
     ast::{
@@ -13,7 +13,60 @@ use crate::{
 use super::FormatItem;
 
 /// Type alias representing a symbol table that maps `TypePath` to `Symbol`.
-pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
+// pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SymbolTable {
+    map: hash_map::HashMap<TypePath, Symbol>,
+}
+
+impl SymbolTable {
+    pub(crate) fn new() -> Self {
+        SymbolTable {
+            map: hash_map::HashMap::<TypePath, Symbol>::new(),
+        }
+    }
+
+    pub(crate) fn get_mut(&mut self, path: &TypePath) -> Option<&mut Symbol> {
+        self.map.get_mut(path)
+    }
+
+    pub(crate) fn insert(&mut self, path: TypePath, symbol: Symbol) {
+        self.map.insert(path, symbol);
+    }
+
+    pub(crate) fn symbols_mut(&mut self) -> hash_map::ValuesMut<'_, TypePath, Symbol> {
+        self.map.values_mut()
+    }
+
+    pub(crate) fn contains_path(&self, path: &TypePath) -> bool {
+        self.map.contains_key(path)
+    }
+
+    pub(crate) fn get(&self, path: &TypePath) -> Option<&Symbol> {
+        self.map.get(path)
+    }
+
+    pub(crate) fn iter(&self) -> hash_map::Iter<'_, TypePath, Symbol> {
+        self.map.iter()
+    }
+
+    pub(crate) fn paths(&self) -> hash_map::Keys<'_, TypePath, Symbol> {
+        self.map.keys()
+    }
+
+    pub(crate) fn symbols(&self) -> hash_map::Values<'_, TypePath, Symbol> {
+        self.map.values()
+    }
+}
+
+impl Iterator for SymbolTable {
+    type Item = (TypePath, Symbol);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.map.clone().into_iter().next()
+    }
+}
 
 /// Enumeration of the different kinds of scopes that can be encountered during semantic analysis.
 #[derive(Debug, Clone, PartialEq, PartialOrd)]

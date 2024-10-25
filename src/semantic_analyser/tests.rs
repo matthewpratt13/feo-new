@@ -275,7 +275,7 @@ fn analyse_import_decl() -> Result<(), ()> {
         type_name: function_name,
     };
 
-    let mut table: SymbolTable = HashMap::new();
+    let mut table = SymbolTable::new();
     table.insert(
         external_func_path.clone(),
         Symbol::Function {
