@@ -320,17 +320,17 @@ impl SemanticAnalyser {
                         ScopeKind::Module(Identifier::from("lib").to_type_path()),
                     );
 
-                    if matches!(self.current_scope().scope_kind, ScopeKind::TraitImpl { .. }) {
-                        return self.insert_into_module_scope(
-                            constant_path.clone(),
-                            Symbol::Constant {
-                                path: constant_path,
-                                visibility: constant_decl.visibility,
-                                constant_name: constant_decl.constant_name.clone(),
-                                constant_type: value_type.unwrap_or(Type::inferred_type("_")),
-                            },
-                        );
-                    }
+                    // if matches!(self.current_scope().scope_kind, ScopeKind::TraitImpl { .. }) {
+                    //     return self.insert_into_module_scope(
+                    //         constant_path.clone(),
+                    //         Symbol::Constant {
+                    //             path: constant_path,
+                    //             visibility: constant_decl.visibility,
+                    //             constant_name: constant_decl.constant_name.clone(),
+                    //             constant_type: value_type.unwrap_or(Type::inferred_type("_")),
+                    //         },
+                    //     );
+                    // }
 
                     self.insert(
                         constant_path.clone(),
@@ -422,10 +422,10 @@ impl SemanticAnalyser {
                         "analysing inherent implementation for type: `{type_path}` …",
                     );
 
-                    let scope_kind = ScopeKind::Impl(type_path.clone());
+                    // let scope_kind = ScopeKind::Impl(type_path.clone());
 
 
-                    self.enter_scope(scope_kind);
+                    // self.enter_scope(scope_kind);
 
                     if let Some(items) = &iid.associated_items_opt {
                         for item in items.iter() {
@@ -451,28 +451,19 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            if let Scope {
-                                scope_kind: ScopeKind::Impl(_),
-                                mut symbols,
-                            } = self.current_scope()
-                            {
-                                log_trace!(
-                                    self.logger,
-                                    "adding inherent implementation item `{item}` into path `{type_path}`",
-                                );
+                    
+                            log_trace!(
+                                self.logger,
+                                "adding inherent implementation item `{item}` into symbol at path `{type_path}`",
+                            );
 
-                                symbols.add_inherent_impl_item(&type_path, item.clone())?;
-                            } else {
-                                todo!()
-                            }
-
-                         
+                            self.current_scope().symbols.add_inherent_impl_item(&type_path, item.clone())?;
                         }
                     }
 
-                    self.exit_scope();
+                    // self.exit_scope();
 
-                    if let Some(sym) = self.lookup(&iid.nominal_type) {
+                    if let Some(sym) = self.lookup(&type_path) {
                         println!("symbol: {sym:?}");
                     }
 
@@ -754,14 +745,14 @@ impl SemanticAnalyser {
 
                     self.add_trait_implementation(trait_impl_path.clone(), t.clone());
 
-                    let scope_kind = ScopeKind::TraitImpl {
-                        implemented_trait_path: t.implemented_trait_path.clone(),
-                        implementing_type_path: implementing_type_path.clone(),
-                    };
+                    // let scope_kind = ScopeKind::TraitImpl {
+                    //     implemented_trait_path: t.implemented_trait_path.clone(),
+                    //     implementing_type_path: implementing_type_path.clone(),
+                    // };
 
                     let mut function_symbols = SymbolTable::new();
 
-                    self.enter_scope(scope_kind);
+                    // self.enter_scope(scope_kind);
 
                     self.analyse_trait_impl_items(
                         &trait_def,
@@ -771,11 +762,8 @@ impl SemanticAnalyser {
                         &mut function_symbols,
                     )?;
 
-                    self.exit_scope();
+                    // self.exit_scope();
 
-                    for (path, symbol) in function_symbols.iter() {
-                        self.insert(path.clone(), symbol.clone())?;
-                    }
                 }
 
                 Item::TupleStructDef(ts) => {
@@ -1420,7 +1408,7 @@ impl SemanticAnalyser {
 
                                                                         log_trace!(
                                                                             self.logger,
-                                                                            "adding trait implementation item `{trait_impl_item}` into path `{implementing_type_path}`",
+                                                                            "adding trait implementation item `{trait_impl_item}` into symbol at path `{implementing_type_path}`",
                                                                         );
 
                                                                         function_symbols.add_trait_impl_item(implementing_type_path, trait_impl_item)?;
