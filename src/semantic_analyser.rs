@@ -1121,8 +1121,6 @@ impl SemanticAnalyser {
                     for (item_path, symbol) in table.iter() {
                         println!("item path: `{item_path}`");
 
-                        println!("symbol: `{symbol:?}`");
-
                         let item_root_path =
                             if let Some(ids) = item_path.associated_type_path_prefix_opt.as_ref() {
                                 if let Some(id) = ids.first() {
