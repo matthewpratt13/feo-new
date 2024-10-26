@@ -199,20 +199,20 @@ impl SemanticAnalyser {
                     }
                     
                     let stripped = path.clone().strip_suffix();
+
+                    let type_symbol = scope.symbols.get(&stripped);
         
-                    let symbol = scope.symbols.get(&stripped);
-        
-                    match symbol {
+                    match type_symbol {
                         Some(Symbol::Struct { associated_items_inherent, associated_items_trait, .. } | Symbol::TupleStruct {associated_items_inherent, associated_items_trait, .. } | Symbol::Enum { associated_items_inherent, associated_items_trait, .. }) => {
                             for item in associated_items_inherent {
                                 if &path.type_name == item.item_name() {
                                     log_debug!(
                                         self.logger,
-                                        "found symbol `{}` in scope `{}` at path `{path}`", symbol.unwrap(),
+                                        "found symbol `{}` in scope `{}` at path `{path}`", type_symbol.unwrap(),
                                         scope.scope_kind
                                     );
 
-                                    return symbol;
+                                    return Some(symbol);
                                 }
                             }
         
@@ -220,11 +220,11 @@ impl SemanticAnalyser {
                                 if &path.type_name == item.item_name() {
                                     log_debug!(
                                         self.logger,
-                                        "found symbol `{}` in scope `{}` at path `{path}`", symbol.unwrap(),
+                                        "found symbol `{}` in scope `{}` at path `{path}`", type_symbol.unwrap(),
                                         scope.scope_kind
                                     );
 
-                                    return symbol;
+                                    return Some(symbol);
                                 }
                             }
                         },
@@ -235,10 +235,11 @@ impl SemanticAnalyser {
                                     if &path.type_name == item.item_name() {
                                         log_debug!(
                                             self.logger,
-                                            "found symbol `{}` in scope `{}` at path `{path}`", symbol.unwrap(),
+                                            "found symbol `{}` in scope `{}` at path `{path}`",
+                                            type_symbol.unwrap(),
                                             scope.scope_kind
                                         );
-                                        return symbol;
+                                        return Some(symbol);
                                     }
                                 }
                             }
