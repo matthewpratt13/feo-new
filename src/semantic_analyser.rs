@@ -425,9 +425,9 @@ impl SemanticAnalyser {
                         "analysing inherent implementation for type: `{type_path}` …",
                     );
 
-                    // let scope_kind = ScopeKind::Impl(type_path.clone());
+                    let scope_kind = ScopeKind::Impl(type_path.clone());
 
-                    // self.enter_scope(scope_kind);
+                    self.enter_scope(scope_kind);
 
                     if let Some(items) = &iid.associated_items_opt {
                         for item in items.iter() {
@@ -457,13 +457,15 @@ impl SemanticAnalyser {
                             );
 
                             if let Some(scope) = self.scope_stack.last_mut() {
-                                scope.symbols.add_inherent_impl_item(&type_path, item.clone())?;
+                                match scope.symbols.add_inherent_impl_item(&type_path, item.clone()) {
+                                    Ok(_) => (),
+                                    Err(e) => self.log_error(e, &iid.span)
+                                }
                             }
-
                         }
                     }
 
-                    // self.exit_scope();
+                    self.exit_scope();
 
                     if let Some(sym) = self.lookup(&type_path) {
                         println!("object symbol: {sym:#?}");
@@ -1408,7 +1410,10 @@ impl SemanticAnalyser {
                                                                     );
 
                                                                     if let Some(scope) = self.scope_stack.last_mut() {
-                                                                        scope.symbols.add_trait_impl_item(implementing_type_path, trait_impl_item)?;
+                                                                        match scope.symbols.add_trait_impl_item(implementing_type_path, trait_impl_item) {
+                                                                            Ok(_) => (),
+                                                                            Err(e) => self.log_error(e, &function_item.span),
+                                                                        }
                                                                     }
                                                         
                                                                     return Ok(());
@@ -1461,7 +1466,10 @@ impl SemanticAnalyser {
                 }
 
                 if let Some(scope) = self.scope_stack.last_mut() {
-                scope.symbols.add_trait_impl_item(&implementing_type_path, impl_item.clone())?;
+                    match scope.symbols.add_trait_impl_item(&implementing_type_path, impl_item.clone()) {
+                        Ok(_) => (),
+                        Err(e) => self.log_error(e, &impl_item.span()),
+                    }
                 }
             }
         }
