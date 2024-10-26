@@ -197,16 +197,70 @@ impl SemanticAnalyser {
 
                         return Some(symbol);
                     }
+                    
+                    let stripped = path.clone().strip_suffix();
+        
+                    let symbol = scope.symbols.get(&stripped);
+        
+                    match symbol {
+                        Some(Symbol::Struct { associated_items_inherent, associated_items_trait, .. } | Symbol::TupleStruct {associated_items_inherent, associated_items_trait, .. } | Symbol::Enum { associated_items_inherent, associated_items_trait, .. }) => {
+                            for item in associated_items_inherent {
+                                if &path.type_name == item.item_name() {
+                                    log_debug!(
+                                        self.logger,
+                                        "found symbol `{}` in scope `{}` at path `{path}`", symbol.unwrap(),
+                                        scope.scope_kind
+                                    );
+
+                                    return symbol;
+                                }
+                            }
+        
+                            for item in associated_items_trait {
+                                if &path.type_name == item.item_name() {
+                                    log_debug!(
+                                        self.logger,
+                                        "found symbol `{}` in scope `{}` at path `{path}`", symbol.unwrap(),
+                                        scope.scope_kind
+                                    );
+
+                                    return symbol;
+                                }
+                            }
+                        },
+        
+                        Some(Symbol::Trait { trait_def, ..}) => {
+                            if let Some(items) = &trait_def.trait_items_opt {
+                                for item in items {
+                                    if &path.type_name == item.item_name() {
+                                        log_debug!(
+                                            self.logger,
+                                            "found symbol `{}` in scope `{}` at path `{path}`", symbol.unwrap(),
+                                            scope.scope_kind
+                                        );
+                                        return symbol;
+                                    }
+                                }
+                            }
+                        },
+        
+                        Some(sym) => {
+                            log_warn!(self.logger, "symbol `{sym:?}` should not have associated items");
+                            return None;
+                        },
+        
+                       _ => ()
+                    }
                 }
+                
             }
+            
         }
 
         log_warn!(self.logger, "path `{path:?}` not found in current scope");
 
         None
     }
-
-    
 
     /// Initiate semantic analysis on the provided program. This involves analysing all statements
     /// within the program, checking for type mismatches and validating symbol definitions.
@@ -1333,7 +1387,7 @@ impl SemanticAnalyser {
                     if !def_item_names.contains(&impl_item.item_name()) {
                         self.log_error(
                             SemanticErrorKind::UndeclaredTraitItem {
-                                item_name: impl_item.item_name(),
+                                item_name: impl_item.item_name().clone(),
                                 implemented_trait_path: trait_impl_def
                                     .implemented_trait_path
                                     .clone(),

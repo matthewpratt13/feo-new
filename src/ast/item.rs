@@ -98,6 +98,15 @@ pub(crate) enum InherentImplItem {
     FunctionItem(FunctionItem),
 }
 
+impl InherentImplItem {
+    pub(crate) fn item_name(&self) -> &Identifier {
+        match self {
+            InherentImplItem::ConstantDecl(cd) => &cd.constant_name,
+            InherentImplItem::FunctionItem(fi) => &fi.function_name,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TraitDefItem {
     AliasDecl(AliasDecl),
@@ -106,11 +115,11 @@ pub(crate) enum TraitDefItem {
 }
 
 impl TraitDefItem {
-    pub(crate) fn item_name(&self) -> Identifier {
-        match self.clone() {
-            TraitDefItem::AliasDecl(ad) => ad.alias_name,
-            TraitDefItem::ConstantDecl(cd) => cd.constant_name,
-            TraitDefItem::FunctionItem(fi) => fi.function_name,
+    pub(crate) fn item_name(&self) -> &Identifier {
+        match self {
+            TraitDefItem::AliasDecl(ad) => &ad.alias_name,
+            TraitDefItem::ConstantDecl(cd) => &cd.constant_name,
+            TraitDefItem::FunctionItem(fi) => &fi.function_name,
         }
     }
 }
@@ -133,11 +142,11 @@ pub(crate) enum TraitImplItem {
 }
 
 impl TraitImplItem {
-    pub(crate) fn item_name(&self) -> Identifier {
-        match self.clone() {
-            TraitImplItem::AliasDecl(ad) => ad.alias_name,
-            TraitImplItem::ConstantDecl(cd) => cd.constant_name,
-            TraitImplItem::FunctionItem(fi) => fi.function_name,
+    pub(crate) fn item_name(&self) -> &Identifier {
+        match self {
+            TraitImplItem::AliasDecl(ad) => &ad.alias_name,
+            TraitImplItem::ConstantDecl(cd) => &cd.constant_name,
+            TraitImplItem::FunctionItem(fi) => &fi.function_name,
         }
     }
 }

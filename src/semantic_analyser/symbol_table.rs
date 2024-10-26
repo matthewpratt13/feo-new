@@ -149,7 +149,7 @@ pub(crate) enum ScopeKind {
     //     implemented_trait_path: TypePath,
     //     implementing_type_path: TypePath,
     // },
-    Impl(TypePath),
+    // Impl(TypePath),
     // TraitDef(TypePath),
     Module(TypePath),
     ProgramRoot,
@@ -176,7 +176,7 @@ impl fmt::Display for ScopeKind {
             //     "TraitImpl(\"{} for {}\")",
             //     implemented_trait_path, implementing_type_path
             // ),
-            ScopeKind::Impl(type_path) => write!(f, "Impl(\"{}\")", type_path),
+            // ScopeKind::Impl(type_path) => write!(f, "Impl(\"{}\")", type_path),
             // ScopeKind::TraitDef(type_path) => write!(f, "TraitDef(\"{}\")", type_path),
             ScopeKind::Module(type_path) => write!(f, "Module(\"{}\")", type_path),
             ScopeKind::ProgramRoot => write!(f, "ProgramRoot"),
