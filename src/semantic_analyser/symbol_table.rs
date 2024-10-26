@@ -1,5 +1,8 @@
 use core::fmt;
-use std::{collections::hash_map, rc::Rc};
+use std::{
+    collections::hash_map::{self, IntoIter},
+    rc::Rc,
+};
 
 use crate::{
     ast::{
@@ -11,9 +14,6 @@ use crate::{
 };
 
 use super::FormatItem;
-
-/// Type alias representing a symbol table that maps `TypePath` to `Symbol`.
-// pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct SymbolTable {
@@ -90,7 +90,7 @@ impl SymbolTable {
     }
 
     // `HashMap` implementations:
-
+    
     pub(crate) fn get_mut(&mut self, path: &TypePath) -> Option<&mut Symbol> {
         self.map.get_mut(path)
     }
@@ -124,11 +124,13 @@ impl SymbolTable {
     }
 }
 
-impl Iterator for SymbolTable {
+impl IntoIterator for SymbolTable {
     type Item = (TypePath, Symbol);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.map.clone().into_iter().next()
+    type IntoIter = IntoIter<TypePath, Symbol>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.map.into_iter()
     }
 }
 

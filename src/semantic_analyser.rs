@@ -72,11 +72,14 @@ impl SemanticAnalyser {
             );
 
             for (lib_name, lib_contents) in code {
+                
                 for module in lib_contents.iter().cloned() {
                     for (path, sym) in module.table {
                         symbols.insert(path, sym);
-                    }
+                    };
                 }
+                
+
 
                 lib_registry.insert(lib_name, lib_contents);
             }
