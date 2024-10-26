@@ -425,9 +425,9 @@ impl SemanticAnalyser {
                         "analysing inherent implementation for type: `{type_path}` …",
                     );
 
-                    let scope_kind = ScopeKind::Impl(type_path.clone());
+                    // let scope_kind = ScopeKind::Impl(type_path.clone());
 
-                    self.enter_scope(scope_kind);
+                    // self.enter_scope(scope_kind);
 
                     if let Some(items) = &iid.associated_items_opt {
                         for item in items.iter() {
@@ -465,7 +465,7 @@ impl SemanticAnalyser {
                         }
                     }
 
-                    self.exit_scope();
+                    // self.exit_scope();
 
                     if let Some(sym) = self.lookup(&type_path) {
                         println!("object symbol: {sym:#?}");
