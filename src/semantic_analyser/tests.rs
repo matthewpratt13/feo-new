@@ -393,17 +393,17 @@ fn analyse_method_call() -> Result<(), ()> {
         }
     }
 
-    // import lib::foo::Foo;
+    import lib::foo::Foo;
 
-    // func main() {
-    //     let foo = Foo::new("Foo", "FOO", { $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE: 0x1234_ABCD });
+    func main() {
+        let foo = Foo::new("Foo", "FOO", { $0x12345_ABCDE_12345_ABCDE_12345_ABCDE_12345_ABCDE: 0x1234_ABCD });
 
-    //     let name = foo.name();
+        let name = foo.name();
 
-    //     let symbol = foo.symbol();
+        let symbol = foo.symbol();
 
-    //     return;
-    // }
+        return;
+    }
     "#;
 
     let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)
