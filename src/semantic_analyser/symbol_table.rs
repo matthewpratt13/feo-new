@@ -46,7 +46,10 @@ impl SymbolTable {
                     associated_items_inherent,
                     ..
                 },
-            ) => Ok(associated_items_inherent.push(item)),
+            ) => {
+                associated_items_inherent.push(item);
+                Ok(())
+            }
             Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
                 name: sym.type_path().to_identifier(),
                 expected: "struct or enum".to_string(),
@@ -90,7 +93,7 @@ impl SymbolTable {
     }
 
     // `HashMap` implementations:
-    
+
     pub(crate) fn get_mut(&mut self, path: &TypePath) -> Option<&mut Symbol> {
         self.map.get_mut(path)
     }
