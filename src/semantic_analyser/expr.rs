@@ -1522,7 +1522,6 @@ fn analyse_call_or_method_call_expr(
     path: TypePath,
     args_opt: Option<Vec<Expression>>,
 ) -> Result<Type, SemanticErrorKind> {
-    println!("path: `{path:?}`");
     match analyser.lookup(&path) {
         Some(Symbol::Function { function, .. }) => {
             let func_params = function.params_opt.clone();
