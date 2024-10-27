@@ -72,14 +72,11 @@ impl SemanticAnalyser {
             );
 
             for (lib_name, lib_contents) in code {
-                
                 for module in lib_contents.iter().cloned() {
                     for (path, sym) in module.table {
                         symbols.insert(path, sym);
-                    };
+                    }
                 }
-                
-
 
                 lib_registry.insert(lib_name, lib_contents);
             }
@@ -201,76 +198,135 @@ impl SemanticAnalyser {
                     let stripped = path.clone().strip_suffix();
 
                     match scope.symbols.get(&stripped) {
-                        Some(Symbol::Struct  { associated_items_inherent, associated_items_trait, .. } | Symbol::TupleStruct {associated_items_inherent, associated_items_trait, .. } | Symbol::Enum {  associated_items_inherent, associated_items_trait, .. }) => {
+                        Some(
+                            Symbol::Struct {
+                                associated_items_inherent,
+                                associated_items_trait,
+                                ..
+                            }
+                            | Symbol::TupleStruct {
+                                associated_items_inherent,
+                                associated_items_trait,
+                                ..
+                            }
+                            | Symbol::Enum {
+                                associated_items_inherent,
+                                associated_items_trait,
+                                ..
+                            },
+                        ) => {
                             for item in associated_items_inherent {
                                 if &path.type_name == item.item_name() {
                                     let sym = match item {
-                                        InherentImplItem::ConstantDecl(cd) => Symbol::Constant { path: stripped.clone_append(cd.constant_name.to_type_path()), visibility: cd.visibility, constant_name: cd.constant_name.clone(), constant_type: *cd.constant_type.clone() },
-                                        InherentImplItem::FunctionItem(fi) => Symbol::Function { path: stripped.clone_append(fi.function_name.to_type_path()), function: Rc::new(fi.clone()) },
+                                        InherentImplItem::ConstantDecl(cd) => Symbol::Constant {
+                                            path: stripped
+                                                .clone_append(cd.constant_name.to_type_path()),
+                                            visibility: cd.visibility,
+                                            constant_name: cd.constant_name.clone(),
+                                            constant_type: *cd.constant_type.clone(),
+                                        },
+                                        InherentImplItem::FunctionItem(fi) => Symbol::Function {
+                                            path: stripped
+                                                .clone_append(fi.function_name.to_type_path()),
+                                            function: Rc::new(fi.clone()),
+                                        },
                                     };
-                                   
+
                                     log_debug!(
                                         self.logger,
-                                        "found symbol `{sym}` in scope `{}` at path `{path}`", 
+                                        "found symbol `{sym}` in scope `{}` at path `{path}`",
                                         scope.scope_kind
                                     );
 
                                     return Some(sym);
                                 }
                             }
-        
+
                             for item in associated_items_trait {
                                 if &path.type_name == item.item_name() {
                                     let sym = match item {
-                                        TraitImplItem::AliasDecl(ad) => Symbol::Alias { path: stripped.clone_append(ad.alias_name.to_type_path()), visibility: ad.visibility, alias_name: ad.alias_name.clone(), original_type_opt: ad.original_type_opt.clone() },
-                                        TraitImplItem::ConstantDecl(cd) => Symbol::Constant { path: stripped.clone_append(cd.constant_name.to_type_path()), visibility: cd.visibility, constant_name: cd.constant_name.clone(), constant_type: *cd.constant_type.clone() },
-                                        TraitImplItem::FunctionItem(fi) => Symbol::Function { path: stripped.clone_append(fi.function_name.to_type_path()), function: Rc::new(fi.clone()) },
+                                        TraitImplItem::AliasDecl(ad) => Symbol::Alias {
+                                            path: stripped
+                                                .clone_append(ad.alias_name.to_type_path()),
+                                            visibility: ad.visibility,
+                                            alias_name: ad.alias_name.clone(),
+                                            original_type_opt: ad.original_type_opt.clone(),
+                                        },
+                                        TraitImplItem::ConstantDecl(cd) => Symbol::Constant {
+                                            path: stripped
+                                                .clone_append(cd.constant_name.to_type_path()),
+                                            visibility: cd.visibility,
+                                            constant_name: cd.constant_name.clone(),
+                                            constant_type: *cd.constant_type.clone(),
+                                        },
+                                        TraitImplItem::FunctionItem(fi) => Symbol::Function {
+                                            path: stripped
+                                                .clone_append(fi.function_name.to_type_path()),
+                                            function: Rc::new(fi.clone()),
+                                        },
                                     };
 
                                     log_debug!(
                                         self.logger,
-                                        "found symbol `{sym}` in scope `{}` at path `{path}`", 
+                                        "found symbol `{sym}` in scope `{}` at path `{path}`",
                                         scope.scope_kind
                                     );
 
                                     return Some(sym);
                                 }
                             }
-                        },
-        
-                        Some(Symbol::Trait { trait_def, ..}) => {
+                        }
+
+                        Some(Symbol::Trait { trait_def, .. }) => {
                             if let Some(items) = &trait_def.trait_items_opt {
                                 for item in items {
                                     if &path.type_name == item.item_name() {
                                         let sym = match item {
-                                            TraitDefItem::AliasDecl(ad) => Symbol::Alias { path: stripped.clone_append(ad.alias_name.to_type_path()), visibility: ad.visibility, alias_name: ad.alias_name.clone(), original_type_opt: ad.original_type_opt.clone() },
-                                            TraitDefItem::ConstantDecl(cd) => Symbol::Constant { path: stripped.clone_append(cd.constant_name.to_type_path()), visibility: cd.visibility, constant_name: cd.constant_name.clone(), constant_type: *cd.constant_type.clone() },
-                                            TraitDefItem::FunctionItem(fi) => Symbol::Function { path: stripped.clone_append(fi.function_name.to_type_path()), function: Rc::new(fi.clone()) },
+                                            TraitDefItem::AliasDecl(ad) => Symbol::Alias {
+                                                path: stripped
+                                                    .clone_append(ad.alias_name.to_type_path()),
+                                                visibility: ad.visibility,
+                                                alias_name: ad.alias_name.clone(),
+                                                original_type_opt: ad.original_type_opt.clone(),
+                                            },
+                                            TraitDefItem::ConstantDecl(cd) => Symbol::Constant {
+                                                path: stripped
+                                                    .clone_append(cd.constant_name.to_type_path()),
+                                                visibility: cd.visibility,
+                                                constant_name: cd.constant_name.clone(),
+                                                constant_type: *cd.constant_type.clone(),
+                                            },
+                                            TraitDefItem::FunctionItem(fi) => Symbol::Function {
+                                                path: stripped
+                                                    .clone_append(fi.function_name.to_type_path()),
+                                                function: Rc::new(fi.clone()),
+                                            },
                                         };
 
                                         log_debug!(
                                             self.logger,
-                                            "found symbol `{sym}` in scope `{}` at path `{path}`", 
+                                            "found symbol `{sym}` in scope `{}` at path `{path}`",
                                             scope.scope_kind
                                         );
-    
+
                                         return Some(sym);
                                     }
                                 }
                             }
-                        },
-        
+                        }
+
                         Some(sym) => {
-                            log_warn!(self.logger, "symbol `{sym}` should not have associated items");
+                            log_warn!(
+                                self.logger,
+                                "symbol `{sym}` should not have associated items"
+                            );
                             return None;
-                        },
-        
-                       _ => ()
+                        }
+
+                        _ => (),
                     }
                 }
-                
             }
-            
         }
 
         log_warn!(self.logger, "path `{path:?}` not found in current scope");
@@ -422,7 +478,6 @@ impl SemanticAnalyser {
                     let enum_name_path = enum_def.enum_name.to_type_path();
                     let enum_def_path = root.clone_append(enum_name_path.clone());
 
-           
                     self.try_update_current_scope(
                         &ScopeKind::ProgramRoot,
                         ScopeKind::Module(Identifier::from("lib").to_type_path()),
@@ -520,16 +575,19 @@ impl SemanticAnalyser {
                                     }
                                 }
                             }
-                    
+
                             log_trace!(
                                 self.logger,
                                 "adding inherent implementation item `{item}` into symbol at path `{type_path}` in current scope: `{}`", self.current_scope().scope_kind
                             );
 
                             if let Some(scope) = self.scope_stack.last_mut() {
-                                match scope.symbols.add_inherent_impl_item(&type_path, item.clone()) {
+                                match scope
+                                    .symbols
+                                    .add_inherent_impl_item(&type_path, item.clone())
+                                {
                                     Ok(_) => (),
-                                    Err(e) => self.log_error(e, &item.span())
+                                    Err(e) => self.log_error(e, &item.span()),
                                 }
                             }
                         }
@@ -706,19 +764,14 @@ impl SemanticAnalyser {
                         "analysing trait definition: `{trait_def_path}` …"
                     );
 
- 
                     if let Some(items) = &trait_def.trait_items_opt {
-                   
-
                         for i in items.iter().cloned() {
-
                             match i {
                                 TraitDefItem::AliasDecl(ad) => {
                                     self.analyse_stmt(
                                         &Statement::Item(Item::AliasDecl(ad)),
                                         trait_def_path.clone(),
                                     )?;
-
                                 }
 
                                 TraitDefItem::ConstantDecl(cd) => {
@@ -726,7 +779,6 @@ impl SemanticAnalyser {
                                         &Statement::Item(Item::ConstantDecl(cd)),
                                         trait_def_path.clone(),
                                     )?;
-
                                 }
 
                                 TraitDefItem::FunctionItem(fi) => {
@@ -752,7 +804,6 @@ impl SemanticAnalyser {
                                         },
                                     )?;
 
-
                                     match self.analyse_function_def(
                                         &function_item,
                                         &trait_def_path,
@@ -762,14 +813,10 @@ impl SemanticAnalyser {
                                         Ok(_) => (),
                                         Err(err) => self.log_error(err, &trait_def.span),
                                     }
-
                                 }
                             };
-
                         }
                     }
-
-               
                 }
 
                 Item::TraitImplDef(t) => {
@@ -821,7 +868,6 @@ impl SemanticAnalyser {
 
                     // let mut function_symbols = SymbolTable::new();
 
-
                     // self.enter_scope(scope_kind);
 
                     self.analyse_trait_impl_items(
@@ -832,7 +878,6 @@ impl SemanticAnalyser {
                     )?;
 
                     // self.exit_scope();
-
                 }
 
                 Item::TupleStructDef(ts) => {
@@ -1252,9 +1297,15 @@ impl SemanticAnalyser {
                                     self.insert(item_name, symbol.clone())?;
                                 }
 
-                                println!("imported object's inherent associated items: {:?}", associated_items_inherent);
+                                println!(
+                                    "imported object's inherent associated items: {:?}",
+                                    associated_items_inherent
+                                );
 
-                                println!("imported object's trait associated items: {:?}", associated_items_trait);
+                                println!(
+                                    "imported object's trait associated items: {:?}",
+                                    associated_items_trait
+                                );
 
                                 for item in associated_items_inherent {
                                     match item {
@@ -1410,40 +1461,40 @@ impl SemanticAnalyser {
 
                     for def_item in def_items.iter() {
                         match self.trait_items_match(impl_item, def_item) {
-                            Ok(true) => match impl_item {
-                                TraitImplItem::AliasDecl(ad) => self.analyse_stmt(
-                                    &Statement::Item(Item::AliasDecl(ad.clone())),
-                                    trait_impl_path.clone(),
-                                )?,
-                                TraitImplItem::ConstantDecl(cd) => self.analyse_stmt(
-                                    &Statement::Item(Item::ConstantDecl(cd.clone())),
-                                    trait_impl_path.clone(),
-                                )?,
-                                TraitImplItem::FunctionItem(fi) => {
-                                    let function_item = Rc::new(fi.clone());
+                            Ok(true) => {
+                                match impl_item {
+                                    TraitImplItem::AliasDecl(ad) => self.analyse_stmt(
+                                        &Statement::Item(Item::AliasDecl(ad.clone())),
+                                        trait_impl_path.clone(),
+                                    )?,
+                                    TraitImplItem::ConstantDecl(cd) => self.analyse_stmt(
+                                        &Statement::Item(Item::ConstantDecl(cd.clone())),
+                                        trait_impl_path.clone(),
+                                    )?,
+                                    TraitImplItem::FunctionItem(fi) => {
+                                        let function_item = Rc::new(fi.clone());
 
-                                    if !function_item.block_opt.clone().is_some_and(|block| {
-                                        block
-                                            .statements_opt
-                                            .is_some_and(|stmts| !stmts.is_empty())
-                                    }) {
-                                        match self
-                                            .lookup(&trait_impl_def.implemented_trait_path)
-                                            
-                                        {
-                                            Some(Symbol::Trait { trait_def, .. }) => {
-                                                if let Some(def_items) =
-                                                    &trait_def.trait_items_opt
-                                                {
-                                                    for def_item in def_items {
-                                                        if let TraitDefItem::FunctionItem(
-                                                            function,
-                                                        ) = def_item
-                                                        {
-                                                            if function.function_name
-                                                        == function_item.function_name
+                                        if !function_item.block_opt.clone().is_some_and(|block| {
+                                            block
+                                                .statements_opt
+                                                .is_some_and(|stmts| !stmts.is_empty())
+                                        }) {
+                                            match self
+                                                .lookup(&trait_impl_def.implemented_trait_path)
+                                            {
+                                                Some(Symbol::Trait { trait_def, .. }) => {
+                                                    if let Some(def_items) =
+                                                        &trait_def.trait_items_opt
+                                                    {
+                                                        for def_item in def_items {
+                                                            if let TraitDefItem::FunctionItem(
+                                                                function,
+                                                            ) = def_item
                                                             {
-                                                                if function
+                                                                if function.function_name
+                                                                    == function_item.function_name
+                                                                {
+                                                                    if function
                                                                     .clone()
                                                                     .block_opt
                                                                     .is_some_and(|block| {
@@ -1467,7 +1518,6 @@ impl SemanticAnalyser {
                                                                         ),
                                                                     }
 
-
                                                                     let trait_impl_item = TraitImplItem::FunctionItem(function.clone());
 
                                                                     log_trace!(
@@ -1481,50 +1531,51 @@ impl SemanticAnalyser {
                                                                             Err(e) => self.log_error(e, &function_item.span),
                                                                         }
                                                                     }
-                                                        
-                                                                    return Ok(());
-                                                                }   
-                                                            }
-                                                        }       
-                                                    }
-                                                }
 
-                                                return Err(SemanticErrorKind::MissingTraitFunctionImpl {
+                                                                    return Ok(());
+                                                                }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+
+                                                    return Err(SemanticErrorKind::MissingTraitFunctionImpl {
                                                     func_name: fi.clone().function_name,
                                                 });
-                                            }
+                                                }
 
-                                            Some(sym) => {
-                                                return Err(
-                                                    SemanticErrorKind::UnexpectedSymbol {
-                                                        name: trait_impl_def
-                                                            .implemented_trait_path
-                                                            .to_identifier(),
+                                                Some(sym) => {
+                                                    return Err(
+                                                        SemanticErrorKind::UnexpectedSymbol {
+                                                            name: trait_impl_def
+                                                                .implemented_trait_path
+                                                                .to_identifier(),
+                                                            expected: "trait".to_string(),
+                                                            found: sym.to_backtick_string(),
+                                                        },
+                                                    )
+                                                }
+
+                                                None => {
+                                                    return Err(SemanticErrorKind::MissingItem {
                                                         expected: "trait".to_string(),
-                                                        found: sym.to_backtick_string(),
-                                                    },
-                                                )
-                                            }
-
-                                            None => {
-                                                return Err(SemanticErrorKind::MissingItem {
-                                                    expected: "trait".to_string(),
-                                                })
+                                                    })
+                                                }
                                             }
                                         }
-                                    }
 
-                                    match self.analyse_function_def(
-                                        fi,
-                                        &trait_impl_path,
-                                        true,
-                                        true,
-                                    ) {
-                                        Ok(_) => (),
-                                        Err(err) => self.log_error(err, &def_item.span()),
+                                        match self.analyse_function_def(
+                                            fi,
+                                            &trait_impl_path,
+                                            true,
+                                            true,
+                                        ) {
+                                            Ok(_) => (),
+                                            Err(err) => self.log_error(err, &def_item.span()),
+                                        }
                                     }
                                 }
-                            },
+                            }
                             Ok(false) => (),
                             Err(err) => return Err(err),
                         }
@@ -1532,14 +1583,17 @@ impl SemanticAnalyser {
                 }
 
                 if let Some(scope) = self.scope_stack.last_mut() {
-                    match scope.symbols.add_trait_impl_item(&implementing_type_path, impl_item.clone()) {
+                    match scope
+                        .symbols
+                        .add_trait_impl_item(&implementing_type_path, impl_item.clone())
+                    {
                         Ok(_) => (),
                         Err(e) => self.log_error(e, &impl_item.span()),
                     }
                 }
             }
         }
-        
+
         Ok(())
     }
 
@@ -2160,6 +2214,7 @@ impl SemanticAnalyser {
         }
 
         log_trace!(self.logger, "type check successful");
+
         Ok(())
     }
 
