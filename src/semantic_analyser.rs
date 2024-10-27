@@ -1202,8 +1202,6 @@ impl SemanticAnalyser {
                 lib_root
             };
 
-            println!("lib name: `{lib_name}`");
-
             let import_root_path =
                 if let Some(ids) = import_path.associated_type_path_prefix_opt.as_ref() {
                     if !ids.is_empty() {
@@ -1219,19 +1217,13 @@ impl SemanticAnalyser {
                     import_path.clone()
                 };
 
-            println!("import root path: `{import_root_path}`");
-
             // TODO: check what happens when we import an entire module / import e.g. `some_mod::*`
 
             // TODO: fix this – we currently import all module contents when importing an item
 
             if let Some(lib_contents) = self.lib_registry.get(lib_name).cloned() {
-                for Module { name, table } in lib_contents.iter() {
-                    println!("library module name: {name}");
-
+                for Module { table, .. } in lib_contents.iter() {
                     for (item_path, symbol) in table.iter() {
-                        println!("imported item path: `{item_path}`");
-
                         let item_root_path =
                             if let Some(ids) = item_path.associated_type_path_prefix_opt.as_ref() {
                                 if let Some(id) = ids.first() {
@@ -1242,8 +1234,6 @@ impl SemanticAnalyser {
                             } else {
                                 item_path.clone()
                             };
-
-                        println!("imported item root path: `{item_root_path}`");
 
                         match symbol {
                             Symbol::Struct {
@@ -1264,8 +1254,6 @@ impl SemanticAnalyser {
                                 associated_items_trait,
                                 ..
                             } => {
-                                println!("imported object symbol path: `{path}`");
-
                                 // check for duplicate imports
                                 for scope in self.scope_stack.iter().rev() {
                                     for type_path in scope.symbols.paths() {
@@ -1296,16 +1284,6 @@ impl SemanticAnalyser {
                                 {
                                     self.insert(item_name, symbol.clone())?;
                                 }
-
-                                println!(
-                                    "imported object's inherent associated items: {:?}",
-                                    associated_items_inherent
-                                );
-
-                                println!(
-                                    "imported object's trait associated items: {:?}",
-                                    associated_items_trait
-                                );
 
                                 for item in associated_items_inherent {
                                     match item {
@@ -1389,12 +1367,8 @@ impl SemanticAnalyser {
                                 }
                             }
 
-                            Symbol::Module { path, symbols, .. } => {
-                                println!("imported inner module symbol path: `{path}`");
-
+                            Symbol::Module { symbols, .. } => {
                                 for (type_path, sym) in symbols.iter() {
-                                    println!("imported inner module item path: `{type_path}`");
-
                                     if !table.contains_path(&type_path) {
                                         self.insert(
                                             type_path.type_name.to_type_path(),
@@ -1407,10 +1381,7 @@ impl SemanticAnalyser {
                             }
 
                             sym => {
-                                println!("imported symbol path: `{}`", sym.type_path());
-
                                 let stripped = item_path.clone().strip_prefix();
-                                println!("imported symbol path stripped: `{stripped}`");
 
                                 if !self.current_scope().symbols.contains_path(&stripped)
                                     && item_root_path == import_root_path
