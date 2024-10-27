@@ -1,5 +1,8 @@
 use core::fmt;
-use std::collections::HashMap;
+use std::{
+    collections::hash_map::{self, IntoIter},
+    rc::Rc,
+};
 
 use crate::{
     ast::{
@@ -12,8 +15,127 @@ use crate::{
 
 use super::FormatItem;
 
-/// Type alias representing a symbol table that maps `TypePath` to `Symbol`.
-pub(crate) type SymbolTable = HashMap<TypePath, Symbol>;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SymbolTable {
+    map: hash_map::HashMap<TypePath, Symbol>,
+}
+
+impl SymbolTable {
+    pub(crate) fn new() -> Self {
+        SymbolTable {
+            map: hash_map::HashMap::<TypePath, Symbol>::new(),
+        }
+    }
+
+    pub(crate) fn add_inherent_impl_item(
+        &mut self,
+        path: &TypePath,
+        item: InherentImplItem,
+    ) -> Result<(), SemanticErrorKind> {
+        match self.get_mut(path) {
+            Some(
+                Symbol::Struct {
+                    associated_items_inherent,
+                    ..
+                }
+                | Symbol::TupleStruct {
+                    associated_items_inherent,
+                    ..
+                }
+                | Symbol::Enum {
+                    associated_items_inherent,
+                    ..
+                },
+            ) => {
+                associated_items_inherent.push(item);
+                Ok(())
+            }
+            Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
+                name: sym.type_path().to_identifier(),
+                expected: "struct or enum".to_string(),
+                found: sym.to_backtick_string(),
+            }),
+            None => Err(SemanticErrorKind::UndefinedSymbol {
+                name: path.to_backtick_string(),
+            }),
+        }
+    }
+
+    pub(crate) fn add_trait_impl_item(
+        &mut self,
+        path: &TypePath,
+        item: TraitImplItem,
+    ) -> Result<(), SemanticErrorKind> {
+        match self.get_mut(path) {
+            Some(
+                Symbol::Struct {
+                    associated_items_trait,
+                    ..
+                }
+                | Symbol::TupleStruct {
+                    associated_items_trait,
+                    ..
+                }
+                | Symbol::Enum {
+                    associated_items_trait,
+                    ..
+                },
+            ) => Ok(associated_items_trait.push(item)),
+            Some(sym) => Err(SemanticErrorKind::UnexpectedSymbol {
+                name: sym.type_path().to_identifier(),
+                expected: "struct or enum".to_string(),
+                found: sym.to_backtick_string(),
+            }),
+            None => Err(SemanticErrorKind::UndefinedSymbol {
+                name: path.to_backtick_string(),
+            }),
+        }
+    }
+
+    // `HashMap` implementations:
+
+    pub(crate) fn get_mut(&mut self, path: &TypePath) -> Option<&mut Symbol> {
+        self.map.get_mut(path)
+    }
+
+    pub(crate) fn insert(&mut self, path: TypePath, symbol: Symbol) {
+        self.map.insert(path, symbol);
+    }
+
+    pub(crate) fn symbols_mut(&mut self) -> hash_map::ValuesMut<'_, TypePath, Symbol> {
+        self.map.values_mut()
+    }
+
+    pub(crate) fn contains_path(&self, path: &TypePath) -> bool {
+        self.map.contains_key(path)
+    }
+
+    pub(crate) fn get(&self, path: &TypePath) -> Option<&Symbol> {
+        self.map.get(path)
+    }
+
+    pub(crate) fn iter(&self) -> hash_map::Iter<'_, TypePath, Symbol> {
+        self.map.iter()
+    }
+
+    pub(crate) fn paths(&self) -> hash_map::Keys<'_, TypePath, Symbol> {
+        self.map.keys()
+    }
+
+    pub(crate) fn symbols(&self) -> hash_map::Values<'_, TypePath, Symbol> {
+        self.map.values()
+    }
+}
+
+impl IntoIterator for SymbolTable {
+    type Item = (TypePath, Symbol);
+
+    type IntoIter = IntoIter<TypePath, Symbol>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.map.into_iter()
+    }
+}
 
 /// Enumeration of the different kinds of scopes that can be encountered during semantic analysis.
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -21,12 +143,13 @@ pub(crate) enum ScopeKind {
     LocalBlock,
     MatchExpr,
     ForInLoop,
-    Function(TypePath),
-    TraitImpl {
-        implemented_trait_path: TypePath,
-        implementing_type_path: TypePath,
-    },
-    Impl(TypePath),
+    FunctionBody(TypePath),
+    FunctionDef(TypePath),
+    // TraitImpl {
+    //     implemented_trait_path: TypePath,
+    //     implementing_type_path: TypePath,
+    // },
+    // Impl(TypePath),
     // TraitDef(TypePath),
     Module(TypePath),
     ProgramRoot,
@@ -34,24 +157,26 @@ pub(crate) enum ScopeKind {
 }
 
 impl fmt::Display for ScopeKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ScopeKind::LocalBlock => write!(f, "LocalBlock"),
             ScopeKind::MatchExpr => write!(f, "MatchExpr"),
             ScopeKind::ForInLoop => write!(f, "ForInLoop"),
-            ScopeKind::Function(type_path) => {
-                write!(f, "Function(\"{}\")", type_path)
+            ScopeKind::FunctionBody(type_path) => {
+                write!(f, "FunctionBody(\"{}\")", type_path)
             }
-            ScopeKind::TraitImpl {
-                implemented_trait_path,
-                implementing_type_path,
-            } => write!(
-                f,
-                "TraitImpl(\"{} for {}\")",
-                implemented_trait_path, implementing_type_path
-            ),
-
-            ScopeKind::Impl(type_path) => write!(f, "Impl(\"{}\")", type_path),
+            ScopeKind::FunctionDef(type_path) => {
+                write!(f, "FunctionDef(\"{}\")", type_path)
+            }
+            // ScopeKind::TraitImpl {
+            //     implemented_trait_path,
+            //     implementing_type_path,
+            // } => write!(
+            //     f,
+            //     "TraitImpl(\"{} for {}\")",
+            //     implemented_trait_path, implementing_type_path
+            // ),
+            // ScopeKind::Impl(type_path) => write!(f, "Impl(\"{}\")", type_path),
             // ScopeKind::TraitDef(type_path) => write!(f, "TraitDef(\"{}\")", type_path),
             ScopeKind::Module(type_path) => write!(f, "Module(\"{}\")", type_path),
             ScopeKind::ProgramRoot => write!(f, "ProgramRoot"),
@@ -69,25 +194,25 @@ pub(crate) enum Symbol {
     },
     Struct {
         path: TypePath,
-        struct_def: StructDef,
+        struct_def: Rc<StructDef>,
         associated_items_inherent: Vec<InherentImplItem>,
         associated_items_trait: Vec<TraitImplItem>,
     },
     TupleStruct {
         path: TypePath,
-        tuple_struct_def: TupleStructDef,
+        tuple_struct_def: Rc<TupleStructDef>,
         associated_items_inherent: Vec<InherentImplItem>,
         associated_items_trait: Vec<TraitImplItem>,
     },
     Enum {
         path: TypePath,
-        enum_def: EnumDef,
+        enum_def: Rc<EnumDef>,
         associated_items_inherent: Vec<InherentImplItem>,
         associated_items_trait: Vec<TraitImplItem>,
     },
     Trait {
         path: TypePath,
-        trait_def: TraitDef,
+        trait_def: Rc<TraitDef>,
     },
     Alias {
         path: TypePath,
@@ -103,56 +228,16 @@ pub(crate) enum Symbol {
     },
     Function {
         path: TypePath,
-        function: FunctionItem,
+        function: Rc<FunctionItem>,
     },
     Module {
         path: TypePath,
-        module: ModuleItem,
+        module: Rc<ModuleItem>,
         symbols: SymbolTable,
     },
 }
 
 impl Symbol {
-    pub(crate) fn add_associated_items(
-        &mut self,
-        inherent_item: Option<InherentImplItem>,
-        trait_item: Option<TraitImplItem>,
-    ) -> Result<(), SemanticErrorKind> {
-        match self {
-            Symbol::Struct {
-                associated_items_inherent,
-                associated_items_trait,
-                ..
-            }
-            | Symbol::TupleStruct {
-                associated_items_inherent,
-                associated_items_trait,
-                ..
-            }
-            | Symbol::Enum {
-                associated_items_inherent,
-                associated_items_trait,
-                ..
-            } => {
-                if let Some(item) = inherent_item {
-                    associated_items_inherent.push(item);
-                }
-
-                if let Some(item) = trait_item {
-                    associated_items_trait.push(item);
-                }
-
-                Ok(())
-            }
-
-            sym => Err(SemanticErrorKind::UnexpectedSymbol {
-                name: sym.type_path().to_identifier(),
-                expected: "struct or enum".to_string(),
-                found: sym.symbol_type().to_backtick_string(),
-            }),
-        }
-    }
-
     pub(crate) fn symbol_type(&self) -> Type {
         match self.clone() {
             Symbol::Variable { var_type, .. } => var_type,
@@ -162,8 +247,8 @@ impl Symbol {
             Symbol::Trait { path, .. } => Type::UserDefined(path),
             Symbol::Alias { path, .. } => Type::UserDefined(path),
             Symbol::Constant { constant_type, .. } => constant_type,
-            Symbol::Function { function, .. } => match function.return_type_opt {
-                Some(t) => *t,
+            Symbol::Function { function, .. } => match &function.return_type_opt {
+                Some(t) => *t.clone(),
                 None => Type::UNIT_TYPE,
             },
             Symbol::Module { .. } => Type::UNIT_TYPE,

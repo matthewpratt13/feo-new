@@ -50,7 +50,7 @@ impl ParseControlExpr for IfExpr {
 }
 
 impl fmt::Debug for IfExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("IfExpr")
             .field("condition", &self.condition)
             .field("if_block", &self.if_block)

@@ -66,7 +66,7 @@ impl ParseOperatorExpr for BinaryExpr {
 }
 
 impl fmt::Debug for BinaryExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("BinaryExpr")
             .field("lhs", &self.lhs)
             .field("binary_op", &self.binary_op)
@@ -129,7 +129,7 @@ impl ParseOperatorExpr for ComparisonExpr {
 }
 
 impl fmt::Debug for ComparisonExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ComparisonExpr")
             .field("lhs", &self.lhs)
             .field("comparison_op", &self.comparison_op)

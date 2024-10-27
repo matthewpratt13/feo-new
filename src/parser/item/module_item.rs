@@ -44,7 +44,7 @@ impl ParseDefItem for ModuleItem {
 }
 
 impl fmt::Debug for ModuleItem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ModuleItem")
             .field("outer_attributes_opt", &self.outer_attributes_opt)
             .field("visibility", &self.visibility)

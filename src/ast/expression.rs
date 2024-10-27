@@ -41,7 +41,7 @@ impl FormatParams for ClosureParams {
 }
 
 impl fmt::Display for ClosureParams {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.param_strings())
     }
 }
@@ -287,7 +287,7 @@ pub struct IfExpr {
 }
 
 impl fmt::Display for IfExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut buf = String::new();
 
         buf.push_str("if");
@@ -338,7 +338,7 @@ pub struct MatchExpr {
 }
 
 impl fmt::Display for MatchExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut buf = String::new();
 
         buf.push_str("match");
@@ -661,7 +661,7 @@ impl fmt::Display for Expression {
 }
 
 impl fmt::Debug for Expression {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Literal(arg0) => f.debug_tuple("Literal").field(arg0).finish(),
             Self::Path(arg0) => f
@@ -841,7 +841,7 @@ impl fmt::Debug for Expression {
 }
 
 impl fmt::Debug for BreakExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("BreakExpr")
             .field("kw_break", &self.kw_break)
             .finish()
@@ -849,7 +849,7 @@ impl fmt::Debug for BreakExpr {
 }
 
 impl fmt::Debug for ContinueExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ContinueExpr")
             .field("kw_continue", &self.kw_continue)
             .finish()
@@ -857,7 +857,7 @@ impl fmt::Debug for ContinueExpr {
 }
 
 impl fmt::Debug for NoneExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("NoneExpr")
             .field("kw_none", &self.kw_none)
             .finish()
@@ -865,7 +865,7 @@ impl fmt::Debug for NoneExpr {
 }
 
 impl fmt::Debug for UnderscoreExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("UnderscoreExpr")
             .field("underscore", &self.underscore)
             .finish()

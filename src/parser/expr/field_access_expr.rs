@@ -49,7 +49,7 @@ impl ParseOperatorExpr for FieldAccessExpr {
 }
 
 impl fmt::Debug for FieldAccessExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FieldAccessExpr")
             .field("object", &self.object)
             .field("field_name", &self.field_name)

@@ -53,7 +53,7 @@ impl ParseConstructExpr for GroupedExpr {
 }
 
 impl fmt::Debug for GroupedExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("GroupedExpr")
             .field("inner_expression", &self.inner_expression)
             .finish()

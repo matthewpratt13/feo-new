@@ -26,7 +26,7 @@ impl ParseConstructExpr for TupleExpr {
 }
 
 impl fmt::Debug for TupleExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TupleExpr")
             .field("tuple_elements", &self.tuple_elements)
             .finish()
@@ -99,7 +99,7 @@ impl ParseOperatorExpr for TupleIndexExpr {
 }
 
 impl fmt::Debug for TupleIndexExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TupleIndexExpr")
             .field("tuple", &self.tuple)
             .field("index", &self.index)

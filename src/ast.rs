@@ -79,7 +79,7 @@ impl fmt::Display for Literal {
 }
 
 impl fmt::Debug for Literal {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Int { value, .. } => f.debug_struct("Int").field("value", value).finish(),
             Self::UInt { value, .. } => f.debug_struct("UInt").field("value", value).finish(),

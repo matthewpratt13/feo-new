@@ -1,6 +1,7 @@
 use core::fmt;
 
 use crate::{
+    ast::NoneExpr,
     parser::get_type_paths,
     semantic_analyser::{FormatItem, FormatParams, ToIdentifier},
     span::{Span, Spanned},
@@ -97,6 +98,24 @@ pub(crate) enum InherentImplItem {
     FunctionItem(FunctionItem),
 }
 
+impl InherentImplItem {
+    pub(crate) fn item_name(&self) -> &Identifier {
+        match self {
+            InherentImplItem::ConstantDecl(cd) => &cd.constant_name,
+            InherentImplItem::FunctionItem(fi) => &fi.function_name,
+        }
+    }
+}
+
+impl Spanned for InherentImplItem {
+    fn span(&self) -> Span {
+        match self.clone() {
+            InherentImplItem::ConstantDecl(cd) => cd.span,
+            InherentImplItem::FunctionItem(fi) => fi.span,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TraitDefItem {
     AliasDecl(AliasDecl),
@@ -105,11 +124,21 @@ pub(crate) enum TraitDefItem {
 }
 
 impl TraitDefItem {
-    pub(crate) fn item_name(&self) -> Identifier {
+    pub(crate) fn item_name(&self) -> &Identifier {
+        match self {
+            TraitDefItem::AliasDecl(ad) => &ad.alias_name,
+            TraitDefItem::ConstantDecl(cd) => &cd.constant_name,
+            TraitDefItem::FunctionItem(fi) => &fi.function_name,
+        }
+    }
+}
+
+impl Spanned for TraitDefItem {
+    fn span(&self) -> Span {
         match self.clone() {
-            TraitDefItem::AliasDecl(ad) => ad.alias_name,
-            TraitDefItem::ConstantDecl(cd) => cd.constant_name,
-            TraitDefItem::FunctionItem(fi) => fi.function_name,
+            TraitDefItem::AliasDecl(ad) => ad.span,
+            TraitDefItem::ConstantDecl(cd) => cd.span,
+            TraitDefItem::FunctionItem(fi) => fi.span,
         }
     }
 }
@@ -132,11 +161,11 @@ pub(crate) enum TraitImplItem {
 }
 
 impl TraitImplItem {
-    pub(crate) fn item_name(&self) -> Identifier {
-        match self.clone() {
-            TraitImplItem::AliasDecl(ad) => ad.alias_name,
-            TraitImplItem::ConstantDecl(cd) => cd.constant_name,
-            TraitImplItem::FunctionItem(fi) => fi.function_name,
+    pub(crate) fn item_name(&self) -> &Identifier {
+        match self {
+            TraitImplItem::AliasDecl(ad) => &ad.alias_name,
+            TraitImplItem::ConstantDecl(cd) => &cd.constant_name,
+            TraitImplItem::FunctionItem(fi) => &fi.function_name,
         }
     }
 }
@@ -161,7 +190,7 @@ impl From<TraitDefItem> for TraitImplItem {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum Visibility {
     Private,           // default
     PubLib(PubLibVis), // `pub(lib)`
@@ -256,7 +285,7 @@ impl fmt::Display for PathSubset {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) struct PubLibVis {
     pub(crate) kw_pub: Keyword,
     pub(crate) kw_lib: Keyword,
@@ -338,6 +367,25 @@ pub struct ConstantDecl {
     pub(crate) span: Span,
 }
 
+impl fmt::Display for ConstantDecl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{} {}: {} = {:?}",
+            self.visibility,
+            self.kw_const,
+            self.constant_name,
+            self.constant_type,
+            self.value_opt
+                .clone()
+                .unwrap_or(ValueExpr::NoneExpr(NoneExpr {
+                    kw_none: Keyword::None,
+                    span: self.span.clone()
+                }))
+        )
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct EnumDef {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
@@ -380,6 +428,22 @@ impl FormatParams for FunctionItem {
         }
 
         param_strings
+    }
+}
+
+impl fmt::Display for FunctionItem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{} {}({:?}) -> {}",
+            self.visibility,
+            self.kw_func,
+            self.function_name,
+            self.param_strings(),
+            self.return_type_opt
+                .clone()
+                .unwrap_or(Box::new(Type::UNIT_TYPE))
+        )
     }
 }
 
@@ -494,7 +558,7 @@ impl Spanned for Item {
 }
 
 impl fmt::Debug for Item {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ImportDecl(arg0) => f
                 .debug_struct("ImportDecl")

@@ -101,7 +101,7 @@ impl ParseDefItem for FunctionItem {
 }
 
 impl fmt::Debug for FunctionItem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FunctionItem")
             .field("attributes_opt", &self.attributes_opt)
             .field("visibility", &self.visibility)

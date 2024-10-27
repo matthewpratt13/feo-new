@@ -141,7 +141,7 @@ impl ParseOperatorExpr for RangeExpr {
 }
 
 impl fmt::Debug for RangeExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RangeExpr")
             .field("from_expr_opt", &self.from_expr_opt)
             .field("range_op", &self.range_op)

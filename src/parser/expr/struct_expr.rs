@@ -32,7 +32,7 @@ impl ParseConstructExpr for StructExpr {
 }
 
 impl fmt::Debug for StructExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("StructExpr")
             .field("struct_path", &self.struct_path)
             .field("struct_fields_opt", &self.struct_fields_opt)
@@ -75,7 +75,7 @@ impl ParseOperatorExpr for TupleStructExpr {
 }
 
 impl fmt::Debug for TupleStructExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TupleStructExpr")
             .field("struct_path", &self.struct_path)
             .field("struct_elements_opt", &self.struct_elements_opt)

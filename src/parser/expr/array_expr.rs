@@ -32,7 +32,7 @@ impl ParseConstructExpr for ArrayExpr {
 }
 
 impl fmt::Debug for ArrayExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ArrayExpr")
             .field("elements_opt", &self.elements_opt)
             .finish()

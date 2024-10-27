@@ -51,7 +51,7 @@ impl ParseDefItem for StructDef {
 }
 
 impl fmt::Debug for StructDef {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("StructDef")
             .field("attributes_opt", &self.attributes_opt)
             .field("visibility", &self.visibility)
@@ -103,7 +103,7 @@ impl ParseDefItem for TupleStructDef {
 }
 
 impl fmt::Debug for TupleStructDef {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TupleStructDef")
             .field("attributes_opt", &self.attributes_opt)
             .field("visibility", &self.visibility)

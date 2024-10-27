@@ -32,7 +32,7 @@ impl ParseConstructExpr for MappingExpr {
 }
 
 impl fmt::Debug for MappingExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MappingExpr")
             .field("pairs_opt", &self.pairs_opt)
             .finish()

@@ -35,7 +35,7 @@ impl ParseConstructExpr for ResultExpr {
 }
 
 impl fmt::Debug for ResultExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ResultExpr")
             .field("kw_ok_or_err", &self.kw_ok_or_err)
             .field("expression", &self.expression)

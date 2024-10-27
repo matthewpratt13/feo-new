@@ -53,7 +53,7 @@ impl ParseOperatorExpr for MethodCallExpr {
 }
 
 impl fmt::Debug for MethodCallExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MethodCallExpr")
             .field("receiver", &self.receiver)
             .field("method_name", &self.method_name)
