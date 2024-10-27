@@ -1219,8 +1219,6 @@ impl SemanticAnalyser {
 
             // TODO: check what happens when we import an entire module / import e.g. `some_mod::*`
 
-            // TODO: fix this – we currently import all module contents when importing an item
-
             if let Some(lib_contents) = self.lib_registry.get(lib_name).cloned() {
                 for Module { table, .. } in lib_contents.iter() {
                     for (item_path, symbol) in table.iter() {
