@@ -234,7 +234,7 @@ pub(crate) fn analyse_patt(
         Pattern::StructPatt(s) => {
             let type_path = TypePath::from(s.struct_path.clone());
 
-            match analyser.lookup(&type_path).cloned() {
+            match analyser.lookup(&type_path) {
                 Some(Symbol::Struct {
                     struct_def, path, ..
                 }) => {
@@ -325,7 +325,7 @@ pub(crate) fn analyse_patt(
         Pattern::TupleStructPatt(ts) => {
             let type_path = TypePath::from(ts.struct_path.clone());
 
-            match analyser.lookup(&type_path).cloned() {
+            match analyser.lookup(&type_path) {
                 Some(Symbol::TupleStruct {
                     tuple_struct_def,
                     path,

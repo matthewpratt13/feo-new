@@ -176,9 +176,9 @@ impl SemanticAnalyser {
 
     /// Look up a symbol by its path in the current scope stack, starting from the innermost scope,
     /// and log the lookup result.
-    fn lookup(&mut self, path: &TypePath) -> Option<&Symbol> {
+    fn lookup(&mut self, path: &TypePath) -> Option<Symbol> {
         for scope in self.scope_stack.iter().rev() {
-            if let Some(symbol) = scope.symbols.get(path) {
+            if let Some(symbol) = scope.symbols.get(path).cloned() {
                 log_debug!(
                     self.logger,
                     "found symbol `{symbol}` in scope `{}` at path `{path}`",
@@ -195,61 +195,73 @@ impl SemanticAnalyser {
                             scope.scope_kind
                         );
 
-                        return Some(symbol);
+                        return Some(symbol.clone());
                     }
-                    
+
                     let stripped = path.clone().strip_suffix();
 
-                    let type_symbol = scope.symbols.get(&stripped);
-        
-                    match type_symbol {
-                        Some(Symbol::Struct { path: object_path, associated_items_inherent, associated_items_trait, .. } | Symbol::TupleStruct { path: object_path, associated_items_inherent, associated_items_trait, .. } | Symbol::Enum {  path: object_path, associated_items_inherent, associated_items_trait, .. }) => {
+                    match scope.symbols.get(&stripped) {
+                        Some(Symbol::Struct  { associated_items_inherent, associated_items_trait, .. } | Symbol::TupleStruct {associated_items_inherent, associated_items_trait, .. } | Symbol::Enum {  associated_items_inherent, associated_items_trait, .. }) => {
                             for item in associated_items_inherent {
                                 if &path.type_name == item.item_name() {
-                                    if scope.symbols.get(&object_path).is_some() {
-                                        log_debug!(
-                                            self.logger,
-                                            "found symbol `{symbol}` in scope `{}` at path `{path}`", 
-                                            scope.scope_kind
-                                        );
-                                        return Some(symbol);
-                                    }
+                                    let sym = match item {
+                                        InherentImplItem::ConstantDecl(cd) => Symbol::Constant { path: stripped.clone_append(cd.constant_name.to_type_path()), visibility: cd.visibility, constant_name: cd.constant_name.clone(), constant_type: *cd.constant_type.clone() },
+                                        InherentImplItem::FunctionItem(fi) => Symbol::Function { path: stripped.clone_append(fi.function_name.to_type_path()), function: Rc::new(fi.clone()) },
+                                    };
+                                   
+                                    log_debug!(
+                                        self.logger,
+                                        "found symbol `{sym}` in scope `{}` at path `{path}`", 
+                                        scope.scope_kind
+                                    );
+
+                                    return Some(sym);
                                 }
                             }
         
                             for item in associated_items_trait {
                                 if &path.type_name == item.item_name() {
-                                    if scope.symbols.get(&object_path).is_some() {
-                                        log_debug!(
-                                            self.logger,
-                                            "found symbol `{symbol}` in scope `{}` at path `{path}`", 
-                                            scope.scope_kind
-                                        );
-                                        return Some(symbol);
-                                    }
+                                    let sym = match item {
+                                        TraitImplItem::AliasDecl(ad) => Symbol::Alias { path: stripped.clone_append(ad.alias_name.to_type_path()), visibility: ad.visibility, alias_name: ad.alias_name.clone(), original_type_opt: ad.original_type_opt.clone() },
+                                        TraitImplItem::ConstantDecl(cd) => Symbol::Constant { path: stripped.clone_append(cd.constant_name.to_type_path()), visibility: cd.visibility, constant_name: cd.constant_name.clone(), constant_type: *cd.constant_type.clone() },
+                                        TraitImplItem::FunctionItem(fi) => Symbol::Function { path: stripped.clone_append(fi.function_name.to_type_path()), function: Rc::new(fi.clone()) },
+                                    };
+
+                                    log_debug!(
+                                        self.logger,
+                                        "found symbol `{sym}` in scope `{}` at path `{path}`", 
+                                        scope.scope_kind
+                                    );
+
+                                    return Some(sym);
                                 }
                             }
                         },
         
-                        Some(Symbol::Trait { path: sym_path, trait_def, ..}) => {
+                        Some(Symbol::Trait { trait_def, ..}) => {
                             if let Some(items) = &trait_def.trait_items_opt {
                                 for item in items {
                                     if &path.type_name == item.item_name() {
-                                        if scope.symbols.get(&sym_path).is_some() {
-                                            log_debug!(
-                                                self.logger,
-                                                "found symbol `{symbol}` in scope `{}` at path `{path}`", 
-                                                scope.scope_kind
-                                            );
-                                            return Some(symbol);
-                                        }
+                                        let sym = match item {
+                                            TraitDefItem::AliasDecl(ad) => Symbol::Alias { path: stripped.clone_append(ad.alias_name.to_type_path()), visibility: ad.visibility, alias_name: ad.alias_name.clone(), original_type_opt: ad.original_type_opt.clone() },
+                                            TraitDefItem::ConstantDecl(cd) => Symbol::Constant { path: stripped.clone_append(cd.constant_name.to_type_path()), visibility: cd.visibility, constant_name: cd.constant_name.clone(), constant_type: *cd.constant_type.clone() },
+                                            TraitDefItem::FunctionItem(fi) => Symbol::Function { path: stripped.clone_append(fi.function_name.to_type_path()), function: Rc::new(fi.clone()) },
+                                        };
+
+                                        log_debug!(
+                                            self.logger,
+                                            "found symbol `{sym}` in scope `{}` at path `{path}`", 
+                                            scope.scope_kind
+                                        );
+    
+                                        return Some(sym);
                                     }
                                 }
                             }
                         },
         
                         Some(sym) => {
-                            log_error!(self.logger, "symbol `{sym}` should not have associated items");
+                            log_warn!(self.logger, "symbol `{sym}` should not have associated items");
                             return None;
                         },
         
@@ -261,7 +273,7 @@ impl SemanticAnalyser {
             
         }
 
-        log_error!(self.logger, "path `{path:?}` not found in current scope");
+        log_warn!(self.logger, "path `{path:?}` not found in current scope");
 
         None
     }
@@ -772,7 +784,7 @@ impl SemanticAnalyser {
                         }
                     };
 
-                    let trait_def = match self.lookup(&t.implemented_trait_path).cloned() {
+                    let trait_def = match self.lookup(&t.implemented_trait_path) {
                         Some(Symbol::Trait { trait_def, .. }) => trait_def,
 
                         Some(sym) => {
@@ -1094,7 +1106,7 @@ impl SemanticAnalyser {
                 )?;
             }
 
-            Type::UserDefined(tp) => match self.lookup(&tp).cloned() {
+            Type::UserDefined(tp) => match self.lookup(&tp) {
                 Some(sym) => {
                     self.insert(param_path, sym)?;
                 }
@@ -1417,7 +1429,7 @@ impl SemanticAnalyser {
                                     }) {
                                         match self
                                             .lookup(&trait_impl_def.implemented_trait_path)
-                                            .cloned()
+                                            
                                         {
                                             Some(Symbol::Trait { trait_def, .. }) => {
                                                 if let Some(def_items) =
@@ -2195,7 +2207,7 @@ impl SemanticAnalyser {
 
     /// Lookup logic to find the trait definition in the current scope
     fn lookup_trait(&mut self, bound_path: &TypePath) -> Result<TraitDef, SemanticErrorKind> {
-        if let Some(Symbol::Trait { trait_def, .. }) = self.lookup(bound_path).cloned() {
+        if let Some(Symbol::Trait { trait_def, .. }) = self.lookup(bound_path) {
             Ok(Rc::into_inner(trait_def).unwrap())
         } else {
             Err(SemanticErrorKind::UndefinedSymbol {
