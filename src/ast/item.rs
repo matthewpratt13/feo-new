@@ -107,6 +107,15 @@ impl InherentImplItem {
     }
 }
 
+impl Spanned for InherentImplItem {
+    fn span(&self) -> Span {
+        match self.clone() {
+            InherentImplItem::ConstantDecl(cd) => cd.span,
+            InherentImplItem::FunctionItem(fi) => fi.span,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TraitDefItem {
     AliasDecl(AliasDecl),
@@ -120,6 +129,16 @@ impl TraitDefItem {
             TraitDefItem::AliasDecl(ad) => &ad.alias_name,
             TraitDefItem::ConstantDecl(cd) => &cd.constant_name,
             TraitDefItem::FunctionItem(fi) => &fi.function_name,
+        }
+    }
+}
+
+impl Spanned for TraitDefItem {
+    fn span(&self) -> Span {
+        match self.clone() {
+            TraitDefItem::AliasDecl(ad) => ad.span,
+            TraitDefItem::ConstantDecl(cd) => cd.span,
+            TraitDefItem::FunctionItem(fi) => fi.span,
         }
     }
 }

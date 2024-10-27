@@ -187,8 +187,8 @@ impl SemanticAnalyser {
 
                 return Some(symbol);
             } else {
-                for (sym_path, symbol) in scope.symbols.iter() {
-                    if *path == sym_path.clone().strip_prefix() {
+                for (type_path, symbol) in scope.symbols.iter() {
+                    if *path == type_path.clone().strip_prefix() {
                         log_debug!(
                             self.logger,
                             "found symbol `{symbol}` in scope `{}` at path `{path}`",
@@ -203,40 +203,26 @@ impl SemanticAnalyser {
                     let type_symbol = scope.symbols.get(&stripped);
         
                     match type_symbol {
-                        Some(Symbol::Struct { associated_items_inherent, associated_items_trait, .. } | Symbol::TupleStruct {associated_items_inherent, associated_items_trait, .. } | Symbol::Enum { associated_items_inherent, associated_items_trait, .. }) => {
+                        Some(Symbol::Struct { path: object_path, associated_items_inherent, associated_items_trait, .. } | Symbol::TupleStruct { path: object_path, associated_items_inherent, associated_items_trait, .. } | Symbol::Enum {  path: object_path, associated_items_inherent, associated_items_trait, .. }) => {
                             for item in associated_items_inherent {
                                 if &path.type_name == item.item_name() {
-                                    log_debug!(
-                                        self.logger,
-                                        "found symbol `{}` in scope `{}` at path `{path}`", type_symbol.unwrap(),
-                                        scope.scope_kind
-                                    );
-
-                                    return Some(symbol);
+                                    if scope.symbols.get(&object_path).is_some() {
+                                        log_debug!(
+                                            self.logger,
+                                            "found symbol `{symbol}` in scope `{}` at path `{path}`", 
+                                            scope.scope_kind
+                                        );
+                                        return Some(symbol);
+                                    }
                                 }
                             }
         
                             for item in associated_items_trait {
                                 if &path.type_name == item.item_name() {
-                                    log_debug!(
-                                        self.logger,
-                                        "found symbol `{}` in scope `{}` at path `{path}`", type_symbol.unwrap(),
-                                        scope.scope_kind
-                                    );
-
-                                    return Some(symbol);
-                                }
-                            }
-                        },
-        
-                        Some(Symbol::Trait { trait_def, ..}) => {
-                            if let Some(items) = &trait_def.trait_items_opt {
-                                for item in items {
-                                    if &path.type_name == item.item_name() {
+                                    if scope.symbols.get(&object_path).is_some() {
                                         log_debug!(
                                             self.logger,
-                                            "found symbol `{}` in scope `{}` at path `{path}`",
-                                            type_symbol.unwrap(),
+                                            "found symbol `{symbol}` in scope `{}` at path `{path}`", 
                                             scope.scope_kind
                                         );
                                         return Some(symbol);
@@ -245,8 +231,25 @@ impl SemanticAnalyser {
                             }
                         },
         
+                        Some(Symbol::Trait { path: sym_path, trait_def, ..}) => {
+                            if let Some(items) = &trait_def.trait_items_opt {
+                                for item in items {
+                                    if &path.type_name == item.item_name() {
+                                        if scope.symbols.get(&sym_path).is_some() {
+                                            log_debug!(
+                                                self.logger,
+                                                "found symbol `{symbol}` in scope `{}` at path `{path}`", 
+                                                scope.scope_kind
+                                            );
+                                            return Some(symbol);
+                                        }
+                                    }
+                                }
+                            }
+                        },
+        
                         Some(sym) => {
-                            log_error!(self.logger, "symbol `{sym:?}` should not have associated items");
+                            log_error!(self.logger, "symbol `{sym}` should not have associated items");
                             return None;
                         },
         
