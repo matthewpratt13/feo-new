@@ -246,7 +246,7 @@ impl SemanticAnalyser {
                         },
         
                         Some(sym) => {
-                            log_warn!(self.logger, "symbol `{sym:?}` should not have associated items");
+                            log_error!(self.logger, "symbol `{sym:?}` should not have associated items");
                             return None;
                         },
         
@@ -258,7 +258,7 @@ impl SemanticAnalyser {
             
         }
 
-        log_warn!(self.logger, "path `{path:?}` not found in current scope");
+        log_error!(self.logger, "path `{path:?}` not found in current scope");
 
         None
     }
@@ -521,10 +521,6 @@ impl SemanticAnalyser {
                     }
 
                     // self.exit_scope();
-
-                    if let Some(sym) = self.lookup(&type_path) {
-                        println!("object symbol: {sym:#?}");
-                    }
                 }
 
                 Item::ModuleItem(m) => {
