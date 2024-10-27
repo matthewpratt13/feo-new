@@ -1567,7 +1567,7 @@ fn analyse_call_or_method_call_expr(
                     found: args.len(),
                 }),
                 (Some(args), Some(params)) => {
-                    let mut self_counter = 0usize;
+                    let mut self_counter = 0;
 
                     for param in params {
                         if let Type::SelfType { .. } = param.param_type() {

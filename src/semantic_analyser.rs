@@ -504,7 +504,7 @@ impl SemanticAnalyser {
                                         false,
                                     ) {
                                         Ok(_) => (),
-                                        Err(err) => self.log_error(err, &iid.span),
+                                        Err(err) => self.log_error(err, &item.span()),
                                     }
                                 }
                             }
@@ -517,7 +517,7 @@ impl SemanticAnalyser {
                             if let Some(scope) = self.scope_stack.last_mut() {
                                 match scope.symbols.add_inherent_impl_item(&type_path, item.clone()) {
                                     Ok(_) => (),
-                                    Err(e) => self.log_error(e, &iid.span)
+                                    Err(e) => self.log_error(e, &item.span())
                                 }
                             }
                         }
@@ -1451,7 +1451,7 @@ impl SemanticAnalyser {
                                                                         Ok(_) => (),
                                                                         Err(err) => self.log_error(
                                                                             err,
-                                                                            &trait_impl_def.span,
+                                                                            &def_item.span(),
                                                                         ),
                                                                     }
 
@@ -1509,7 +1509,7 @@ impl SemanticAnalyser {
                                         true,
                                     ) {
                                         Ok(_) => (),
-                                        Err(err) => self.log_error(err, &trait_impl_def.span),
+                                        Err(err) => self.log_error(err, &def_item.span()),
                                     }
                                 }
                             },
