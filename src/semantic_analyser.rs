@@ -1036,9 +1036,10 @@ impl SemanticAnalyser {
 
         log_trace!(
             self.logger,
-            "analysing function item: `{}{} {full_path}({:?}) -> {}` …",
+            "analysing function item: `{}{} {}({:?}) -> {}` …",
             f.visibility,
             f.kw_func,
+            full_path.clone().strip_prefix(),
             f.param_strings(),
             f.return_type_opt
                 .clone()
@@ -1109,9 +1110,10 @@ impl SemanticAnalyser {
 
         log_trace!(
             self.logger,
-            "analysis of function item `{}{} {full_path}({:?}) -> {}` complete",
+            "analysis of function item `{}{} {}({:?}) -> {}` complete",
             f.visibility,
             f.kw_func,
+            full_path.clone().strip_prefix(),
             f.param_strings(),
             f.return_type_opt
                 .clone()
@@ -1897,6 +1899,23 @@ impl SemanticAnalyser {
             self.enter_scope(new_scope_kind)
         }
     }
+
+    // TODO: what if there are multiple possible function exits – e.g., an early return expression
+    // TODO: in a loop: (1) how do we check that all return expressions are the same type?
+    // TODO: (2) in compound types like `Result<T, E>`, how do we make sure that early `Err(E)`
+    // TODO: return expressions are valid if the last statement is `Ok(T)` and vice versa
+    // TODO: (i.e., without inferring the other)? (where there is one possible return type,
+    // TODO: the expression `Ok(T)` has type `Result<T, _>` and `Err(E)` has type `Result<_, E>`,
+    // TODO: which would cause a clash if compared in the case of two possible return types).
+    // TODO: we obviously have the return type in the function signature as a reference, but
+    // TODO: we need to make sure that ALL possible return types are type `Result<T, E>` and not
+    // TODO: just unify the inferred opposite with the return type in the function signature.
+    // TODO: possible solution: when returning `Ok(T)`, always substite the `Err` variant type
+    // TODO: with generic `E` and NOT `_`, then substitute `E` with the possible `Err` return type,
+    // TODO: or `()` if there is no `return Err(E)` (and vice versa).
+    // TODO: this requires changing `unify_result_types()` to default to `Type::Generic`
+    // TODO: instead of `_` (and implementing `unify_generic_with_concrete()` in the
+    // TODO: `(Result { .. }, Result { .. })` match arm below?)
 
     /// Check if two types match. Returns `Ok` if they are compatible or can be unified, or
     /// an `Err` if there is a type mismatch.

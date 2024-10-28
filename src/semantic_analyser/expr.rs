@@ -159,6 +159,8 @@ pub(crate) fn analyse_expr(
 
                     cloned_iter.next();
 
+                    // TODO: check logic for cases of multiple return expressions in a function
+                    // TODO: e.g., early return expression in a loop
                     match stmt {
                         Statement::Expression(expr) => match expr {
                             Expression::Return(_)
