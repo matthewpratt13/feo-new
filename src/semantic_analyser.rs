@@ -386,7 +386,10 @@ impl SemanticAnalyser {
     ) -> Result<(), SemanticErrorKind> {
         match statement {
             Statement::Expression(expr) => {
-                log_trace!(self.logger, "analysing expression statement: `{statement}`");
+                log_trace!(
+                    self.logger,
+                    "analysing expression statement: `{statement}` …"
+                );
 
                 match analyse_expr(self, expr, &root) {
                     Ok(_) => (),
@@ -396,8 +399,6 @@ impl SemanticAnalyser {
 
             Statement::Item(item) => match item {
                 Item::AliasDecl(ad) => {
-                    // log_trace!(self.logger, "analysing alias declaration: `{statement}`");
-
                     let alias_decl = Rc::new(ad);
 
                     let alias_path = root.clone_append(alias_decl.alias_name.to_type_path());
@@ -424,7 +425,7 @@ impl SemanticAnalyser {
                 Item::ConstantDecl(cd) => {
                     let constant_decl = Rc::new(cd);
 
-                    log_trace!(self.logger, "analysing constant declaration: `{statement}`");
+                    log_trace!(self.logger, "analysing constant declaration: `{statement}` …");
 
                     let value_type = match &constant_decl.value_opt {
                         Some(val) => {
@@ -541,7 +542,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::ImportDecl(id) => {
-                    log_trace!(self.logger, "analysing import declaration: `{statement}`");
+                    log_trace!(self.logger, "analysing import declaration: `{statement}` …");
 
                     match self.analyse_import(id, &root.type_name) {
                         Ok(_) => (),
@@ -621,7 +622,7 @@ impl SemanticAnalyser {
                         symbols: SymbolTable::new(),
                     };
 
-                    log_trace!(self.logger, "analysing items in module `{module_path}` …");
+                    log_trace!(self.logger, "analysing items in module: `{module_path}` …");
 
                     self.enter_scope(scope_kind);
 
@@ -688,7 +689,7 @@ impl SemanticAnalyser {
                 Item::StaticVarDecl(s) => {
                     log_trace!(
                         self.logger,
-                        "analysing static variable declaration: `{statement}`"
+                        "analysing static variable declaration: `{statement}` …"
                     );
 
                     let mut assignee_type = match &s.assignee_opt {
@@ -863,7 +864,7 @@ impl SemanticAnalyser {
 
                     log_trace!(
                         self.logger,
-                        "analysing implementation of trait `{}` for type `{}` …",
+                        "analysing implementation of trait `{}` for type: `{}` …",
                         t.implemented_trait_path,
                         t.implementing_type
                     );
@@ -913,7 +914,7 @@ impl SemanticAnalyser {
             },
 
             Statement::Let(ls) => {
-                log_trace!(self.logger, "analysing let statement: `{statement}`");
+                log_trace!(self.logger, "analysing let statement: `{statement}` …");
 
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors
