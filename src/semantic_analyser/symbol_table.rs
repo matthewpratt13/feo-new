@@ -282,7 +282,14 @@ impl fmt::Display for Symbol {
             Symbol::Trait { path, .. } => write!(f, "Trait(\"{path}\")"),
             Symbol::Alias { path, .. } => write!(f, "Alias(\"{path}\")"),
             Symbol::Constant { path, .. } => write!(f, "Constant(\"{path}\")"),
-            Symbol::Function { path, .. } => write!(f, "Function(\"{path}\")"),
+            Symbol::Function { path, function, .. } => write!(
+                f,
+                "Function(\"{path}\": {})",
+                function
+                    .return_type_opt
+                    .clone()
+                    .unwrap_or(Box::new(Type::UNIT_TYPE))
+            ),
             Symbol::Module { path, .. } => write!(f, "Module(\"{path}\")"),
         }
     }
