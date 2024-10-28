@@ -218,7 +218,7 @@ pub(crate) enum Symbol {
         path: TypePath,
         visibility: Visibility,
         alias_name: Identifier,
-        original_type_opt: Option<Type>,
+        original_type: Type,
     },
     Constant {
         path: TypePath,

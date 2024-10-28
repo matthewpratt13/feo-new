@@ -250,7 +250,10 @@ impl SemanticAnalyser {
                                                 .clone_append(ad.alias_name.to_type_path()),
                                             visibility: ad.visibility,
                                             alias_name: ad.alias_name.clone(),
-                                            original_type_opt: ad.original_type_opt.clone(),
+                                            original_type: ad
+                                                .original_type_opt
+                                                .clone()
+                                                .unwrap_or(Type::inferred_type("_")),
                                         },
                                         TraitImplItem::ConstantDecl(cd) => Symbol::Constant {
                                             path: stripped
@@ -287,7 +290,10 @@ impl SemanticAnalyser {
                                                     .clone_append(ad.alias_name.to_type_path()),
                                                 visibility: ad.visibility,
                                                 alias_name: ad.alias_name.clone(),
-                                                original_type_opt: ad.original_type_opt.clone(),
+                                                original_type: ad
+                                                    .original_type_opt
+                                                    .clone()
+                                                    .unwrap_or(Type::inferred_type("_")),
                                             },
                                             TraitDefItem::ConstantDecl(cd) => Symbol::Constant {
                                                 path: stripped
@@ -407,7 +413,10 @@ impl SemanticAnalyser {
                             path: alias_path,
                             visibility: alias_decl.visibility,
                             alias_name: alias_decl.alias_name.clone(),
-                            original_type_opt: alias_decl.original_type_opt.clone(),
+                            original_type: alias_decl
+                                .original_type_opt
+                                .clone()
+                                .unwrap_or(Type::inferred_type("_")),
                         },
                     )?;
                 }
@@ -1328,7 +1337,10 @@ impl SemanticAnalyser {
                                                     .clone_append(ad.alias_name.to_type_path()),
                                                 visibility: ad.visibility.clone(),
                                                 alias_name: ad.alias_name.clone(),
-                                                original_type_opt: ad.original_type_opt.clone(),
+                                                original_type: ad
+                                                    .original_type_opt
+                                                    .clone()
+                                                    .unwrap_or(Type::inferred_type("_")),
                                             },
                                         )?,
                                         TraitImplItem::ConstantDecl(cd) => self.insert(
@@ -2316,15 +2328,8 @@ impl SemanticAnalyser {
                 generic_name,
                 concrete_type,
             ),
-            Symbol::Alias {
-                original_type_opt, ..
-            } => {
-                self.substitute_opt_type(
-                    original_type_opt,
-                    symbol_table,
-                    generic_name,
-                    concrete_type,
-                );
+            Symbol::Alias { original_type, .. } => {
+                self.substitute_in_type(original_type, symbol_table, generic_name, concrete_type);
             }
             Symbol::Constant { constant_type, .. } => {
                 self.substitute_in_type(constant_type, symbol_table, generic_name, concrete_type);
@@ -2439,10 +2444,8 @@ impl SemanticAnalyser {
                                 concrete_type,
                             );
                         }
-                        Symbol::Alias {
-                            original_type_opt, ..
-                        } => self.substitute_opt_type(
-                            original_type_opt,
+                        Symbol::Alias { original_type, .. } => self.substitute_in_type(
+                            original_type,
                             symbol_table,
                             generic_name,
                             concrete_type,
@@ -2564,7 +2567,7 @@ impl SemanticAnalyser {
                     TraitDefItem::AliasDecl(AliasDecl {
                         original_type_opt, ..
                     }) => {
-                        self.substitute_opt_type(
+                        self.substitute_in_alias(
                             original_type_opt,
                             symbol_table,
                             generic_name,
@@ -2586,6 +2589,18 @@ impl SemanticAnalyser {
                     ),
                 }
             }
+        }
+    }
+
+    fn substitute_in_alias(
+        &mut self,
+        original_type_opt: &mut Option<Type>,
+        symbol_table: &mut SymbolTable,
+        generic_name: &Identifier,
+        concrete_type: &Type,
+    ) {
+        if let Some(ty) = original_type_opt {
+            self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
         }
     }
 
@@ -2624,7 +2639,7 @@ impl SemanticAnalyser {
                 match item {
                     Item::AliasDecl(AliasDecl {
                         original_type_opt, ..
-                    }) => self.substitute_opt_type(
+                    }) => self.substitute_in_alias(
                         original_type_opt,
                         symbol_table,
                         generic_name,
@@ -2712,7 +2727,7 @@ impl SemanticAnalyser {
                                     TraitImplItem::AliasDecl(AliasDecl {
                                         original_type_opt,
                                         ..
-                                    }) => self.substitute_opt_type(
+                                    }) => self.substitute_in_alias(
                                         original_type_opt,
                                         symbol_table,
                                         generic_name,
@@ -2741,18 +2756,6 @@ impl SemanticAnalyser {
                     _ => (),
                 }
             }
-        }
-    }
-
-    fn substitute_opt_type(
-        &mut self,
-        original_type_opt: &mut Option<Type>,
-        symbol_table: &mut SymbolTable,
-        generic_name: &Identifier,
-        concrete_type: &Type,
-    ) {
-        if let Some(ty) = original_type_opt {
-            self.substitute_in_type(ty, symbol_table, generic_name, concrete_type);
         }
     }
 
