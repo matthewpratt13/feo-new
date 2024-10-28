@@ -14,6 +14,7 @@ mod tests;
 
 mod utils;
 
+use core::cell::RefCell;
 use std::{collections::HashMap, rc::Rc};
 
 use crate::{
@@ -2411,15 +2412,17 @@ impl SemanticAnalyser {
             "substituting generic `{generic_name}` with concrete type `{concrete_type}` …"
         );
 
-        let scope_stack = &self.scope_stack;
-
-        // * WARNING! `to_owned()` clones and does not take ownership
-        // TODO: wrap in an `Rc` or `Arc`
+        let ref_cell = RefCell::new(self);
 
         // iterate through the scope stack and substitute generics in all types.
-        for scope in scope_stack.to_owned().iter_mut() {
+        for scope in ref_cell.borrow_mut().scope_stack.iter_mut() {
             for symbol in scope.symbols.symbols_mut() {
-                self.substitute_in_symbol(symbol, symbol_table, generic_name, concrete_type);
+                ref_cell.borrow_mut().substitute_in_symbol(
+                    symbol,
+                    symbol_table,
+                    generic_name,
+                    concrete_type,
+                );
             }
         }
     }
