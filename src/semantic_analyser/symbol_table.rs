@@ -281,7 +281,11 @@ impl fmt::Display for Symbol {
             Symbol::Enum { path, .. } => write!(f, "Enum(\"{path}\")"),
             Symbol::Trait { path, .. } => write!(f, "Trait(\"{path}\")"),
             Symbol::Alias { path, .. } => write!(f, "Alias(\"{path}\")"),
-            Symbol::Constant { path, .. } => write!(f, "Constant(\"{path}\")"),
+            Symbol::Constant {
+                path,
+                constant_type,
+                ..
+            } => write!(f, "Constant(\"{path}\": {constant_type})"),
             Symbol::Function { path, function, .. } => write!(
                 f,
                 "Function(\"{path}\": {})",

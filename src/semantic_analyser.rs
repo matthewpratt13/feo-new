@@ -467,7 +467,7 @@ impl SemanticAnalyser {
                             path: constant_path,
                             visibility: constant_decl.visibility,
                             constant_name: constant_decl.constant_name.clone(),
-                            constant_type: value_type.unwrap_or(Type::inferred_type("_")),
+                            constant_type: value_type.unwrap_or(*cd.constant_type.clone()),
                         },
                     )?;
                 }
