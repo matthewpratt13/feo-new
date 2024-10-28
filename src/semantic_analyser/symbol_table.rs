@@ -280,7 +280,11 @@ impl fmt::Display for Symbol {
             Symbol::TupleStruct { path, .. } => write!(f, "TupleStruct(\"{path}\")"),
             Symbol::Enum { path, .. } => write!(f, "Enum(\"{path}\")"),
             Symbol::Trait { path, .. } => write!(f, "Trait(\"{path}\")"),
-            Symbol::Alias { path, .. } => write!(f, "Alias(\"{path}\")"),
+            Symbol::Alias {
+                path,
+                original_type,
+                ..
+            } => write!(f, "Alias(\"{path}\"): {original_type}"),
             Symbol::Constant {
                 path,
                 constant_type,
