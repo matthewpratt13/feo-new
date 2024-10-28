@@ -425,7 +425,10 @@ impl SemanticAnalyser {
                 Item::ConstantDecl(cd) => {
                     let constant_decl = Rc::new(cd);
 
-                    log_trace!(self.logger, "analysing constant declaration: `{statement}` …");
+                    log_trace!(
+                        self.logger,
+                        "analysing constant declaration: `{statement}` …"
+                    );
 
                     let value_type = match &constant_decl.value_opt {
                         Some(val) => {
@@ -585,11 +588,6 @@ impl SemanticAnalyser {
                                     }
                                 }
                             }
-
-                            log_trace!(
-                                self.logger,
-                                "adding inherent implementation item `{item}` into symbol at path `{type_path}` in current scope: `{}`", self.current_scope().scope_kind
-                            );
 
                             if let Some(scope) = self.scope_stack.last_mut() {
                                 match scope
