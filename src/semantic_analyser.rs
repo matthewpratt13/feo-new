@@ -1376,6 +1376,135 @@ impl SemanticAnalyser {
                                 }
                             }
 
+                            Symbol::Trait {
+                                path, trait_def, ..
+                            } => {
+                                // check for duplicate imports
+                                for scope in self.scope_stack.iter().rev() {
+                                    for type_path in scope.symbols.paths() {
+                                        match scope.scope_kind {
+                                            ScopeKind::Public
+                                            | ScopeKind::ProgramRoot
+                                            | ScopeKind::Module { .. } => (),
+                                            _ => {
+                                                if type_path.type_name == path.type_name {
+                                                    return Err(SemanticErrorKind::ImportClash {
+                                                        type_name: path.type_name.clone(),
+                                                        module_name: type_path.type_name.clone(),
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                let item_name = item_path.type_name.to_type_path();
+
+                                // make sure that the item is not already in scope
+                                // and that the item comes from the original module
+
+                                if !self.current_scope().symbols.contains_path(&item_name)
+                                    && item_root_path == import_root_path
+                                    && path.type_name == import_path.type_name
+                                {
+                                    self.insert(item_name, symbol.clone())?;
+                                }
+
+                                if let Some(items) = trait_def.trait_items_opt.clone() {
+                                    for item in items.iter() {
+                                        match item {
+                                            TraitDefItem::AliasDecl(ad) => {
+                                                let alias_path = item_path
+                                                    .clone_append(ad.alias_name.to_type_path());
+
+                                                if !self
+                                                    .current_scope()
+                                                    .symbols
+                                                    .contains_path(&alias_path)
+                                                    && item_root_path == import_root_path
+                                                    && *path == import_path.type_name.to_type_path()
+                                                {
+                                                    self.insert(
+                                                        alias_path,
+                                                        Symbol::Alias {
+                                                            path: path.clone_append(
+                                                                ad.alias_name.to_type_path(),
+                                                            ),
+                                                            visibility: ad.visibility.clone(),
+                                                            alias_name: ad.alias_name.clone(),
+                                                            original_type: ad
+                                                                .original_type_opt
+                                                                .clone()
+                                                                .unwrap_or(Type::inferred_type(
+                                                                    "_",
+                                                                )),
+                                                        },
+                                                    )?
+                                                }
+                                            }
+                                            TraitDefItem::ConstantDecl(cd) => {
+                                                let constant_path = item_path
+                                                    .type_name
+                                                    .to_type_path()
+                                                    .clone_append(cd.constant_name.to_type_path());
+
+                                                if !self
+                                                    .current_scope()
+                                                    .symbols
+                                                    .contains_path(&constant_path)
+                                                    && item_root_path == import_root_path
+                                                    && *path == import_path.type_name.to_type_path()
+                                                {
+                                                    self.insert(
+                                                        constant_path,
+                                                        Symbol::Constant {
+                                                            path: path.clone_append(
+                                                                cd.constant_name.to_type_path(),
+                                                            ),
+                                                            visibility: cd.visibility.clone(),
+                                                            constant_name: cd.constant_name.clone(),
+                                                            constant_type: *cd
+                                                                .constant_type
+                                                                .clone(),
+                                                        },
+                                                    )?
+                                                }
+                                            }
+                                            TraitDefItem::FunctionItem(fi) => {
+                                                let function_item = Rc::new(fi.clone());
+
+                                                let function_path = item_path
+                                                    .type_name
+                                                    .to_type_path()
+                                                    .clone_append(
+                                                        function_item.function_name.to_type_path(),
+                                                    );
+
+                                                if !self
+                                                    .current_scope()
+                                                    .symbols
+                                                    .contains_path(&function_path)
+                                                    && item_root_path == import_root_path
+                                                    && *path == import_path.type_name.to_type_path()
+                                                {
+                                                    self.insert(
+                                                        function_path,
+                                                        Symbol::Function {
+                                                            path: {
+                                                                path.clone_append(
+                                                                    fi.function_name.to_type_path(),
+                                                                )
+                                                            },
+                                                            function: function_item,
+                                                        },
+                                                    )?
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             Symbol::Module { symbols, .. } => {
                                 for (type_path, sym) in symbols.iter() {
                                     if !table.contains_path(&type_path) {
