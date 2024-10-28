@@ -275,7 +275,7 @@ impl FormatItem for Symbol {}
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Symbol::Variable { name, .. } => write!(f, "Variable(\"{name}\")"),
+            Symbol::Variable { name, var_type } => write!(f, "Variable(\"{name}\": {var_type})"),
             Symbol::Struct { path, .. } => write!(f, "Struct(\"{path}\")"),
             Symbol::TupleStruct { path, .. } => write!(f, "TupleStruct(\"{path}\")"),
             Symbol::Enum { path, .. } => write!(f, "Enum(\"{path}\")"),
