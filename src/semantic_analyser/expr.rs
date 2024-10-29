@@ -184,10 +184,7 @@ pub(crate) fn analyse_expr(
                     println!("finished analysing statement {} of {}", i + 1, stmts.len());
                 }
 
-                // log_trace!(
-                //     analyser.logger,
-                //     "analysing final statement in block …"
-                // );
+                println!("analysing last statement in the block …");
 
                 let ty = match stmts.last() {
                     Some(stmt) => match stmt {

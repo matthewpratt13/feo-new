@@ -62,33 +62,25 @@ impl SemanticAnalyser {
     /// if provided.
     fn new(log_level: LogLevel, external_code: Option<LibRegistry>) -> Self {
         let mut logger = Logger::init(log_level);
-        let mut symbols = SymbolTable::new();
         let mut lib_registry: LibRegistry = HashMap::new();
 
         if let Some(code) = external_code {
-            log_debug!(
-                logger,
-                "external code detected – importing code from {:?}",
-                code.keys()
-            );
-
             for (lib_name, lib_contents) in code {
-                for module in lib_contents.iter().cloned() {
-                    for (path, sym) in module.table {
-                        symbols.insert(path, sym);
-                    }
-                }
+                log_debug!(
+                    logger,
+                    "inserting external library `{lib_name}` into the global library registry …"
+                );
 
                 lib_registry.insert(lib_name, lib_contents);
             }
         }
 
+        log_trace!(logger, "entering public scope …");
+
         let public_scope = Scope {
             scope_kind: ScopeKind::Public,
-            symbols,
+            symbols: SymbolTable::new(),
         };
-
-        log_trace!(logger, "entering public scope …");
 
         SemanticAnalyser {
             scope_stack: vec![public_scope],
@@ -130,7 +122,7 @@ impl SemanticAnalyser {
         if let Some(curr_scope) = self.scope_stack.last_mut() {
             log_debug!(
                 self.logger,
-                "inserting symbol `{symbol}` into scope `{}` at path `{path}` …",
+                "inserting symbol `{symbol}` into scope `{}` at path: `{path}` …",
                 curr_scope.scope_kind
             );
 
@@ -404,11 +396,6 @@ impl SemanticAnalyser {
 
                     let alias_path = root.clone_append(alias_decl.alias_name.to_type_path());
 
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
-
                     self.insert(
                         alias_path.clone(),
                         Symbol::Alias {
@@ -458,11 +445,6 @@ impl SemanticAnalyser {
                     let constant_path =
                         root.clone_append(constant_decl.constant_name.to_type_path());
 
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
-
                     // if matches!(self.current_scope().scope_kind, ScopeKind::TraitImpl { .. }) {
                     //     return self.insert_into_module_scope(
                     //         constant_path.clone(),
@@ -492,11 +474,6 @@ impl SemanticAnalyser {
                     let enum_name_path = enum_def.enum_name.to_type_path();
                     let enum_def_path = root.clone_append(enum_name_path.clone());
 
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
-
                     self.insert(
                         enum_def_path.clone(),
                         Symbol::Enum {
@@ -523,11 +500,6 @@ impl SemanticAnalyser {
 
                     let function_name_path = function_item.function_name.to_type_path();
                     let function_item_path = root.clone_append(function_name_path.clone());
-
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
 
                     self.insert(
                         function_item_path.clone(),
@@ -672,7 +644,7 @@ impl SemanticAnalyser {
                     {
                         log_trace!(
                             self.logger,
-                            "inserting module `{}` into library registry under library `lib` …",
+                            "inserting module `{}` from library `lib` into the global library registry …",
                             m.module_name
                         );
 
@@ -714,11 +686,6 @@ impl SemanticAnalyser {
 
                     let static_var_path = root.clone_append(s.var_name.to_type_path());
 
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
-
                     self.insert(
                         static_var_path,
                         Symbol::Variable {
@@ -732,11 +699,6 @@ impl SemanticAnalyser {
                     let struct_def = Rc::new(s.clone());
                     let struct_name_path = struct_def.struct_name.to_type_path();
                     let struct_def_path = root.clone_append(struct_name_path.clone());
-
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
 
                     self.insert(
                         struct_def_path,
@@ -754,11 +716,6 @@ impl SemanticAnalyser {
 
                     let trait_name_path = trait_def.trait_name.to_type_path();
                     let trait_def_path = root.clone_append(trait_name_path.clone());
-
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
 
                     self.insert(
                         trait_def_path.clone(),
@@ -894,11 +851,6 @@ impl SemanticAnalyser {
 
                     let struct_name_path = tuple_struct_def.struct_name.to_type_path();
                     let tuple_struct_path = root.clone_append(struct_name_path.clone());
-
-                    self.try_update_current_scope(
-                        &ScopeKind::ProgramRoot,
-                        ScopeKind::Module(Identifier::from("lib").to_type_path()),
-                    );
 
                     self.insert(
                         tuple_struct_path,
@@ -1522,13 +1474,16 @@ impl SemanticAnalyser {
                             }
 
                             sym => {
-                                let stripped = item_path.clone().strip_prefix();
+                                let sym_type_name = sym.type_path().type_name;
 
-                                if !self.current_scope().symbols.contains_path(&stripped)
+                                if !self
+                                    .current_scope()
+                                    .symbols
+                                    .contains_path(&sym_type_name.to_type_path())
                                     && item_root_path == import_root_path
-                                    && sym.type_path() == import_path.type_name.to_type_path()
+                                    && sym_type_name == import_path.type_name
                                 {
-                                    self.insert(stripped, symbol.clone())?;
+                                    self.insert(sym_type_name.to_type_path(), sym.clone())?;
                                 }
                             }
                         }
@@ -1892,12 +1847,6 @@ impl SemanticAnalyser {
                 }
             }
             (TraitImplItem::FunctionItem(_), _) => Ok(false),
-        }
-    }
-
-    fn try_update_current_scope(&mut self, expected: &ScopeKind, new_scope_kind: ScopeKind) {
-        if &self.current_scope().scope_kind == expected {
-            self.enter_scope(new_scope_kind)
         }
     }
 
