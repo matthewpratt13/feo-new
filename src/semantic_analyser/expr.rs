@@ -193,15 +193,13 @@ pub(crate) fn analyse_expr(
                     println!("finished analysing statement {} of {}", i + 1, stmts.len());
                 }
 
-                println!("analysing last statement in the block …");
-
                 let ty = match stmts.last() {
                     Some(stmt) => match stmt {
                         Statement::Expression(expr) => match analyse_expr(analyser, expr, root) {
                             Ok(ty) => {
                                 log_trace!(
                                     analyser.logger,
-                                    "analysing last expression: `{expr}` …"
+                                    "analysing last expression in block: `{expr}` …"
                                 );
 
                                 Ok(ty)
