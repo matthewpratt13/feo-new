@@ -174,7 +174,7 @@ impl SemanticAnalyser {
                     "found symbol `{symbol}` in scope `{}` at path `{path}`",
                     scope.scope_kind
                 );
-                
+
                 return Some(symbol);
             } else {
                 // TODO: refactor (extract)
@@ -424,7 +424,13 @@ impl SemanticAnalyser {
                     let value_type = match &constant_decl.value_opt {
                         Some(val) => {
                             let value = val.to_expression();
-                            Some(analyse_expr(self, &value, &root)?)
+                            match analyse_expr(self, &value, &root) {
+                                Ok(ty) => Some(ty),
+                                Err(err) => {
+                                    self.log_error(err, &value.span());
+                                    None
+                                }
+                            }
                         }
                         _ => None,
                     };
@@ -1180,10 +1186,10 @@ impl SemanticAnalyser {
 
             // TODO: check what happens when we import an entire module / import e.g. `some_mod::*`
 
-            if let Some(lib_contents) = self.lib_registry.get(lib_name).cloned() { 
+            if let Some(lib_contents) = self.lib_registry.get(lib_name).cloned() {
                 for Module { table, .. } in lib_contents.iter() {
                     // TODO: refactor (extract)
-                    // this logic is very similar to the logic in `lookup()` – it just looks in 
+                    // this logic is very similar to the logic in `lookup()` – it just looks in
                     // the `lib_registry` instead of the current scope
                     // TODO: cross-reference the logic and see if we can merge into one function
                     for (item_path, symbol) in table.iter() {
