@@ -169,16 +169,22 @@ pub(crate) fn analyse_expr(
                                 analyse_expr(analyser, expr, root)?;
 
                                 match cloned_iter.peek() {
-                                    Some(_) => log_warn!(analyser.logger, "unreachable code"),
+                                    Some(next_stmt) => log_warn!(
+                                        analyser.logger,
+                                        "unreachable code: `{next_stmt}`"
+                                    ),
                                     _ => (),
                                 }
                             }
-                            expression => match analyse_expr(analyser, expression, root) {
-                                Ok(_) => (),
-                                Err(err) => analyser.log_error(err, &expression.span()),
+                            _ => match analyse_expr(analyser, expr, root) {
+                                Ok(_) => {
+                                    log_trace!(analyser.logger, "analysing expression: `{expr}` …")
+                                }
+                                Err(err) => analyser.log_error(err, &expr.span()),
                             },
                         },
-                        statement => analyser.analyse_stmt(statement, root.clone())?,
+
+                        _ => analyser.analyse_stmt(stmt, root.clone())?,
                     }
 
                     println!("finished analysing statement {} of {}", i + 1, stmts.len());
@@ -189,7 +195,14 @@ pub(crate) fn analyse_expr(
                 let ty = match stmts.last() {
                     Some(stmt) => match stmt {
                         Statement::Expression(expr) => match analyse_expr(analyser, expr, root) {
-                            Ok(ty) => Ok(ty),
+                            Ok(ty) => {
+                                log_trace!(
+                                    analyser.logger,
+                                    "analysing last expression: `{expr}` …"
+                                );
+
+                                Ok(ty)
+                            }
                             Err(err) => {
                                 analyser.log_error(err.clone(), &expr.span());
                                 Err(err)
