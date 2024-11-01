@@ -184,7 +184,10 @@ pub(crate) fn analyse_expr(
                             },
                         },
 
-                        _ => analyser.analyse_stmt(stmt, root.clone())?,
+                        _ => match analyser.analyse_stmt(stmt, root.clone()) {
+                            Ok(_) => (),
+                            Err(err) => analyser.log_error(err, &stmt.span()),
+                        },
                     }
 
                     println!("finished analysing statement {} of {}", i + 1, stmts.len());
@@ -203,10 +206,7 @@ pub(crate) fn analyse_expr(
 
                                 Ok(ty)
                             }
-                            Err(err) => {
-                                analyser.log_error(err.clone(), &expr.span());
-                                Err(err)
-                            }
+                            Err(err) => Err(err),
                         },
                         _ => Ok(Type::UNIT_TYPE),
                     },
