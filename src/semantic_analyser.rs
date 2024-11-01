@@ -411,12 +411,14 @@ impl SemanticAnalyser {
                 }
 
                 Item::ConstantDecl(cd) => {
-                    let constant_decl = Rc::new(cd);
-
                     log_trace!(
                         self.logger,
                         "analysing constant declaration: `{statement}` …"
                     );
+
+                    // TODO: check that `matches!(current_scope, Module(_) | ProgramRoot)`
+
+                    let constant_decl = Rc::new(cd);
 
                     let value_type = match &constant_decl.value_opt {
                         Some(val) => {
@@ -432,30 +434,21 @@ impl SemanticAnalyser {
                         &mut value_type.clone().unwrap_or(Type::inferred_type("_")),
                     )?;
 
-                    if value_type
-                        .clone()
-                        .is_some_and(|t| t != *constant_decl.constant_type)
-                    {
-                        return Err(SemanticErrorKind::TypeMismatchDeclaredType {
-                            declared_type: *constant_decl.constant_type.clone(),
-                            actual_type: value_type.unwrap(),
-                        });
-                    }
+                    // NOTE: already checked above by `check_types()`, which will unify or return
+                    // a type mismatch error, therefore this should always evaluate to true or
+                    // effectively repeat the same error
+                    // if value_type
+                    //     .clone()
+                    //     .is_some_and(|t| t != *constant_decl.constant_type)
+                    // {
+                    //     return Err(SemanticErrorKind::TypeMismatchDeclaredType {
+                    //         declared_type: *constant_decl.constant_type.clone(),
+                    //         actual_type: value_type.unwrap(),
+                    //     });
+                    // }
 
                     let constant_path =
                         root.clone_append(constant_decl.constant_name.to_type_path());
-
-                    // if matches!(self.current_scope().scope_kind, ScopeKind::TraitImpl { .. }) {
-                    //     return self.insert_into_module_scope(
-                    //         constant_path.clone(),
-                    //         Symbol::Constant {
-                    //             path: constant_path,
-                    //             visibility: constant_decl.visibility,
-                    //             constant_name: constant_decl.constant_name.clone(),
-                    //             constant_type: value_type.unwrap_or(Type::inferred_type("_")),
-                    //         },
-                    //     );
-                    // }
 
                     self.insert(
                         constant_path.clone(),
@@ -580,9 +573,9 @@ impl SemanticAnalyser {
                 Item::ModuleItem(m) => {
                     // TODO: sort out visibility
 
-                    let module_item = Rc::new(m.clone());
-
                     let mut module_errors: Vec<SemanticErrorKind> = Vec::new();
+
+                    let module_item = Rc::new(m.clone());
 
                     let module_path = root.clone_append(module_item.module_name.to_type_path());
 
@@ -867,6 +860,8 @@ impl SemanticAnalyser {
             Statement::Let(ls) => {
                 log_trace!(self.logger, "analysing let statement: `{statement}` …");
 
+                // TODO: check that `matches!(current scope, FunctionBody(_))`
+
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors
                 let mut value_type = if let Some(val) = &ls.value_opt {
@@ -887,13 +882,15 @@ impl SemanticAnalyser {
                     &mut value_type,
                 )?;
 
-                // check that the value matches the type annotation
-                if &value_type != &declared_type {
-                    return Err(SemanticErrorKind::TypeMismatchDeclaredType {
-                        actual_type: value_type,
-                        declared_type,
-                    });
-                }
+                // NOTE: already checked above by `check_types()`, which will unify or return
+                // a type mismatch error, therefore this should always evaluate to true or
+                // effectively repeat the same error
+                // if &value_type != &declared_type {
+                //     return Err(SemanticErrorKind::TypeMismatchDeclaredType {
+                //         actual_type: value_type,
+                //         declared_type,
+                //     });
+                // }
 
                 let assignee_path = ls.assignee.name.to_type_path();
 
