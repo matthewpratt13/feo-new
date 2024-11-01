@@ -199,12 +199,15 @@ pub(crate) fn analyse_expr(
                             Ok(ty) => {
                                 log_trace!(
                                     analyser.logger,
-                                    "analysing last expression in block: `{expr}` …"
+                                    "analysing last expression: `{expr}` …"
                                 );
 
                                 Ok(ty)
                             }
-                            Err(err) => Err(err),
+                            Err(err) => {
+                                analyser.log_error(err.clone(), &expr.span());
+                                Err(err)
+                            }
                         },
                         _ => Ok(Type::UNIT_TYPE),
                     },

@@ -385,10 +385,7 @@ impl SemanticAnalyser {
                     "analysing expression statement: `{statement}` …"
                 );
 
-                match analyse_expr(self, expr, &root) {
-                    Ok(_) => (),
-                    Err(e) => self.log_error(e, &expr.span()),
-                }
+                analyse_expr(self, expr, &root)?;
             }
 
             Statement::Item(item) => match item {
@@ -663,13 +660,21 @@ impl SemanticAnalyser {
                         "analysing static variable declaration: `{statement}` …"
                     );
 
+                    // TODO: check that `matches!(current_scope, Module(_) | ProgramRoot)`
+
                     let mut assignee_type = match &s.assignee_opt {
                         Some(a_expr) => {
                             let assignee = a_expr.to_expression();
-                            analyse_expr(self, &assignee, &root)?
+                            match analyse_expr(self, &assignee, &root) {
+                                Ok(ty) => Ok(ty),
+                                Err(err) => {
+                                    self.log_error(err.clone(), &assignee.span());
+                                    Err(err)
+                                }
+                            }
                         }
-                        _ => Type::inferred_type("_"),
-                    };
+                        _ => Ok(Type::inferred_type("_")),
+                    }?;
 
                     self.check_types(
                         &mut self.current_symbol_table(),
@@ -677,12 +682,15 @@ impl SemanticAnalyser {
                         &mut assignee_type,
                     )?;
 
-                    if &assignee_type != &s.var_type {
-                        return Err(SemanticErrorKind::TypeMismatchDeclaredType {
-                            declared_type: s.var_type.clone(),
-                            actual_type: assignee_type,
-                        });
-                    }
+                    // NOTE: already checked above by `check_types()`, which will unify or return
+                    // a type mismatch error, therefore this should always evaluate to true or
+                    // effectively repeat the same error
+                    // if &assignee_type != &s.var_type {
+                    //     return Err(SemanticErrorKind::TypeMismatchDeclaredType {
+                    //         declared_type: s.var_type.clone(),
+                    //         actual_type: assignee_type,
+                    //     });
+                    // }
 
                     let static_var_path = root.clone_append(s.var_name.to_type_path());
 

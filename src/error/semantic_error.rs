@@ -128,10 +128,10 @@ pub enum SemanticErrorKind {
         found: Type,
     },
 
-    TypeMismatchDeclaredType {
-        actual_type: Type,
-        declared_type: Type,
-    },
+    // TypeMismatchDeclaredType {
+    //     actual_type: Type,
+    //     declared_type: Type,
+    // },
 
     TypeMismatchInnerType {
         context: String,
@@ -376,10 +376,10 @@ impl fmt::Display for SemanticErrorKind {
                 "array element types do not match. Expected {expected}, found `{found}`"
             ),
             SemanticErrorKind::TypeMismatchConst { constant_name, expected, found } => write!(f, "type mismatch between constant declarations for constant: `{constant_name}`. Expected `{expected}`, found `{found}`"),
-            SemanticErrorKind::TypeMismatchDeclaredType {actual_type, declared_type } => write!(
-                f,
-                "declared type `{declared_type}` does not match value's type: `{actual_type}`"
-            ),
+            // SemanticErrorKind::TypeMismatchDeclaredType {actual_type, declared_type } => write!(
+            //     f,
+            //     "declared type `{declared_type}` does not match value's type: `{actual_type}`"
+            // ),
             SemanticErrorKind::TypeMismatchInnerType { context, expected, found } => write!(f, "inner type mismatch for {context} type. Expected {expected}, found {found}"),
 
             SemanticErrorKind::TypeMismatchMappingKey { expected, found } => write!(f, "unexpected mapping key type. Expected {expected}, found {found}"),
