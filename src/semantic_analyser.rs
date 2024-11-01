@@ -134,35 +134,35 @@ impl SemanticAnalyser {
         }
     }
 
-    fn insert_into_module_scope(
-        &mut self,
-        path: TypePath,
-        symbol: Symbol,
-    ) -> Result<(), SemanticErrorKind> {
-        let mut iter = self.scope_stack.iter().cloned().rev();
+    // fn insert_into_module_scope(
+    //     &mut self,
+    //     path: TypePath,
+    //     symbol: Symbol,
+    // ) -> Result<(), SemanticErrorKind> {
+    //     let mut iter = self.scope_stack.iter().cloned().rev();
 
-        let mut index = 0usize;
+    //     let mut index = 0usize;
 
-        while let Some(next) = iter.next() {
-            index += 1;
+    //     while let Some(next) = iter.next() {
+    //         index += 1;
 
-            if matches!(next.scope_kind, ScopeKind::Module { .. }) {
-                break;
-            }
-        }
+    //         if matches!(next.scope_kind, ScopeKind::Module { .. }) {
+    //             break;
+    //         }
+    //     }
 
-        let scope = self.scope_stack.get_mut(index).unwrap();
+    //     let scope = self.scope_stack.get_mut(index).unwrap();
 
-        log_debug!(
-            self.logger,
-            "inserting symbol `{symbol}` into scope `{}` at path `{path}` …",
-            scope.scope_kind
-        );
+    //     log_debug!(
+    //         self.logger,
+    //         "inserting symbol `{symbol}` into scope `{}` at path `{path}` …",
+    //         scope.scope_kind
+    //     );
 
-        scope.symbols.insert(path, symbol);
+    //     scope.symbols.insert(path, symbol);
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     /// Look up a symbol by its path in the current scope stack, starting from the innermost scope,
     /// and log the lookup result.
@@ -174,9 +174,10 @@ impl SemanticAnalyser {
                     "found symbol `{symbol}` in scope `{}` at path `{path}`",
                     scope.scope_kind
                 );
-
+                
                 return Some(symbol);
             } else {
+                // TODO: refactor (extract)
                 for (type_path, symbol) in scope.symbols.iter() {
                     if *path == type_path.clone().strip_prefix() {
                         log_debug!(
@@ -1181,6 +1182,7 @@ impl SemanticAnalyser {
 
             if let Some(lib_contents) = self.lib_registry.get(lib_name).cloned() {
                 for Module { table, .. } in lib_contents.iter() {
+                    // TODO: refactor (extract)
                     for (item_path, symbol) in table.iter() {
                         let item_root_path =
                             if let Some(ids) = item_path.associated_type_path_prefix_opt.as_ref() {
