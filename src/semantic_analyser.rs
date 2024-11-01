@@ -385,7 +385,10 @@ impl SemanticAnalyser {
                     "analysing expression statement: `{statement}` …"
                 );
 
-                analyse_expr(self, expr, &root)?;
+                match analyse_expr(self, expr, &root) {
+                    Ok(_) => (),
+                    Err(e) => self.log_error(e, &expr.span()),
+                }
             }
 
             Statement::Item(item) => match item {
@@ -421,13 +424,7 @@ impl SemanticAnalyser {
                     let value_type = match &constant_decl.value_opt {
                         Some(val) => {
                             let value = val.to_expression();
-                            match analyse_expr(self, &value, &root) {
-                                Ok(ty) => Some(ty),
-                                Err(err) => {
-                                    self.log_error(err, &value.span());
-                                    None
-                                }
-                            }
+                            Some(analyse_expr(self, &value, &root)?)
                         }
                         _ => None,
                     };
@@ -660,21 +657,13 @@ impl SemanticAnalyser {
                         "analysing static variable declaration: `{statement}` …"
                     );
 
-                    // TODO: check that `matches!(current_scope, Module(_) | ProgramRoot)`
-
                     let mut assignee_type = match &s.assignee_opt {
                         Some(a_expr) => {
                             let assignee = a_expr.to_expression();
-                            match analyse_expr(self, &assignee, &root) {
-                                Ok(ty) => Ok(ty),
-                                Err(err) => {
-                                    self.log_error(err.clone(), &assignee.span());
-                                    Err(err)
-                                }
-                            }
+                            analyse_expr(self, &assignee, &root)?
                         }
-                        _ => Ok(Type::inferred_type("_")),
-                    }?;
+                        _ => Type::inferred_type("_"),
+                    };
 
                     self.check_types(
                         &mut self.current_symbol_table(),
