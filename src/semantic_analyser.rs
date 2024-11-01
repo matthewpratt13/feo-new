@@ -1180,9 +1180,12 @@ impl SemanticAnalyser {
 
             // TODO: check what happens when we import an entire module / import e.g. `some_mod::*`
 
-            if let Some(lib_contents) = self.lib_registry.get(lib_name).cloned() {
+            if let Some(lib_contents) = self.lib_registry.get(lib_name).cloned() { 
                 for Module { table, .. } in lib_contents.iter() {
                     // TODO: refactor (extract)
+                    // this logic is very similar to the logic in `lookup()` – it just looks in 
+                    // the `lib_registry` instead of the current scope
+                    // TODO: cross-reference the logic and see if we can merge into one function
                     for (item_path, symbol) in table.iter() {
                         let item_root_path =
                             if let Some(ids) = item_path.associated_type_path_prefix_opt.as_ref() {
