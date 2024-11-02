@@ -2065,6 +2065,8 @@ impl SemanticAnalyser {
 
             (_, Type::Tuple(vec)) => {
                 if vec.len() == 0 {
+                    log_trace!(self.logger, "unifying empty tuple type with expected type: `{expected_type}` …");
+
                     *matched_type = expected_type.clone()
                 }
             }
