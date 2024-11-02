@@ -275,11 +275,11 @@ impl fmt::Display for Delimiter {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Unit struct representing the assignment operator (`=`) used in AST nodes.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct AssignmentOp;
 
 /// Enum representing the different binary operators used in AST nodes.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum BinaryOp {
     Add,
     Subtract,
@@ -294,6 +294,9 @@ pub(crate) enum BinaryOp {
     ShiftLeft,
     ShiftRight,
     Exponentiation,
+
+    #[default]
+    Default,
 }
 
 impl fmt::Display for BinaryOp {
@@ -312,16 +315,17 @@ impl fmt::Display for BinaryOp {
             BinaryOp::ShiftLeft => write!(f, "<<"),
             BinaryOp::ShiftRight => write!(f, ">>"),
             BinaryOp::Exponentiation => write!(f, "**"),
+            BinaryOp::Default => write!(f, "_"),
         }
     }
 }
 
 /// Unit struct representing the type cast operator (`as`).
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct TypeCastOp;
 
 /// Enum representing the different comparison operators used in AST nodes.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum ComparisonOp {
     Equal,
     NotEqual,
@@ -329,6 +333,9 @@ pub(crate) enum ComparisonOp {
     LessEqual,
     GreaterThan,
     GreaterEqual,
+
+    #[default]
+    Default,
 }
 
 impl fmt::Display for ComparisonOp {
@@ -340,18 +347,22 @@ impl fmt::Display for ComparisonOp {
             ComparisonOp::LessEqual => write!(f, "<="),
             ComparisonOp::GreaterThan => write!(f, ">"),
             ComparisonOp::GreaterEqual => write!(f, ">="),
+            ComparisonOp::Default => write!(f, "_"),
         }
     }
 }
 
 /// Enum representing the different compound assignment operators used in AST nodes.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum CompoundAssignmentOp {
     AddAssign,
     SubtractAssign,
     MultiplyAssign,
     DivideAssign,
     ModulusAssign,
+
+    #[default]
+    Default,
 }
 
 impl fmt::Display for CompoundAssignmentOp {
@@ -362,18 +373,21 @@ impl fmt::Display for CompoundAssignmentOp {
             CompoundAssignmentOp::MultiplyAssign => write!(f, "*="),
             CompoundAssignmentOp::DivideAssign => write!(f, "/="),
             CompoundAssignmentOp::ModulusAssign => write!(f, "%="),
+            CompoundAssignmentOp::Default => write!(f, "_"),
         }
     }
 }
 
 /// Unit struct representing the dereference operator (`*`).
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct DereferenceOp;
 
 /// Enum representing the different range operators used in AST nodes.
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum RangeOp {
+    #[default]
     RangeExclusive, // `..`
+
     RangeInclusive, // `..=`
 }
 
@@ -389,10 +403,10 @@ impl fmt::Display for RangeOp {
 /// Enum representing the different reference operators used in AST nodes (i.e., `&` and `&mut`).
 #[derive(Default, Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum ReferenceOp {
-    Borrow,        // `&`
+    #[default]
+    Borrow, // `&`
     MutableBorrow, // `&mut`
 
-    #[default]
     Owned,
 }
 
@@ -411,10 +425,12 @@ impl fmt::Display for ReferenceOp {
 pub(crate) struct PathWildcard;
 
 /// Enum representing the different unary operators used in AST nodes.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum UnaryOp {
     Negate, // `-`
-    Not,    // `!`
+
+    #[default]
+    Not, // `!`
 }
 
 impl fmt::Display for UnaryOp {
@@ -427,7 +443,7 @@ impl fmt::Display for UnaryOp {
 }
 
 /// Unit struct representing the unwrap operator (`?`) used in AST nodes.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct UnwrapOp;
 
 ///////////////////////////////////////////////////////////////////////////

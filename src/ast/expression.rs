@@ -17,10 +17,12 @@ use super::{
 ///////////////////////////////////////////////////////////////////////////
 
 /// Enum representing whether or not a closure has parameters in its definition.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub(crate) enum ClosureParams {
     Some(Vec<ClosureParam>), // `| <param>: <Type>, .. |`
-    None,                    // `||`
+
+    #[default]
+    None, // `||`
 }
 
 impl FormatParams for ClosureParams {
@@ -54,6 +56,12 @@ pub(crate) enum PathRoot {
     SelfKeyword,
     SelfType(SelfType),
     Identifier(Identifier),
+}
+
+impl Default for PathRoot {
+    fn default() -> Self {
+        PathRoot::Lib
+    }
 }
 
 impl fmt::Display for PathRoot {
@@ -134,7 +142,7 @@ pub(crate) struct StructField {
 }
 
 /// Struct representing a collection of elements in a tuple expression.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct TupleElements {
     pub(crate) elements: Vec<Expression>,
     pub(crate) final_element_opt: Option<Box<Expression>>,
@@ -160,7 +168,7 @@ impl fmt::Display for TupleElements {
 // AST NODE STRUCTURES
 ///////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct ArrayExpr {
     pub(crate) elements_opt: Option<Vec<Expression>>, // arrays can be empty, hence optional
     pub(crate) span: Span,
@@ -182,7 +190,7 @@ pub struct BinaryExpr {
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct BlockExpr {
     pub(crate) attributes_opt: Option<Vec<InnerAttr>>,
     pub(crate) statements_opt: Option<Vec<Statement>>,
@@ -207,6 +215,15 @@ impl BlockExpr {
 pub struct BreakExpr {
     pub(crate) kw_break: Keyword,
     pub(crate) span: Span,
+}
+
+impl Default for BreakExpr {
+    fn default() -> Self {
+        Self {
+            kw_break: Keyword::Break,
+            span: Default::default(),
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -246,6 +263,15 @@ pub struct ContinueExpr {
     pub(crate) span: Span,
 }
 
+impl Default for ContinueExpr {
+    fn default() -> Self {
+        Self {
+            kw_continue: Keyword::Continue,
+            span: Default::default(),
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct DereferenceExpr {
     pub(crate) dereference_op: DereferenceOp,
@@ -270,6 +296,19 @@ pub struct ForInExpr {
     pub(crate) span: Span,
 }
 
+// impl Default for ForInExpr {
+//     fn default() -> Self {
+//         Self {
+//             kw_for: Keyword::For,
+//             pattern: Default::default(),
+//             kw_in: Keyword::In,
+//             iterator: Default::default(),
+//             block: Default::default(),
+//             span: Default::default(),
+//         }
+//     }
+// }
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct GroupedExpr {
     pub(crate) inner_expression: Box<Expression>,
@@ -285,6 +324,19 @@ pub struct IfExpr {
     pub(crate) trailing_else_block_opt: Option<BlockExpr>,
     pub(crate) span: Span,
 }
+
+// impl Default for IfExpr {
+//     fn default() -> Self {
+//         Self {
+//             kw_if: Keyword::If,
+//             condition: Default::default(),
+//             if_block: Default::default(),
+//             else_if_blocks_opt: Default::default(),
+//             trailing_else_block_opt: Default::default(),
+//             span: Default::default(),
+//         }
+//     }
+// }
 
 impl fmt::Display for IfExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -322,7 +374,7 @@ pub struct IndexExpr {
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct MappingExpr {
     pub(crate) pairs_opt: Option<Vec<MappingPair>>,
     pub(crate) span: Span,
@@ -336,6 +388,18 @@ pub struct MatchExpr {
     pub(crate) final_arm: Box<MatchArm>, // default case
     pub(crate) span: Span,
 }
+
+// impl Default for MatchExpr {
+//     fn default() -> Self {
+//         Self {
+//             kw_match: Keyword::Match,
+//             scrutinee: Default::default(),
+//             match_arms_opt: Default::default(),
+//             final_arm: Default::default(),
+//             span: Default::default(),
+//         }
+//     }
+// }
 
 impl fmt::Display for MatchExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -371,14 +435,23 @@ pub struct NoneExpr {
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+impl Default for NoneExpr {
+    fn default() -> Self {
+        Self {
+            kw_none: Keyword::None,
+            span: Default::default(),
+        }
+    }
+}
+
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct PathExpr {
     pub(crate) path_root: PathRoot,
     pub(crate) tree_opt: Option<Vec<Identifier>>,
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct RangeExpr {
     pub(crate) from_expr_opt: Option<Box<AssigneeExpr>>,
     pub(crate) range_op: RangeOp, // `..` or `..=`
@@ -400,11 +473,31 @@ pub struct ResultExpr {
     pub(crate) span: Span,
 }
 
+// impl Default for ResultExpr {
+//     fn default() -> Self {
+//         Self {
+//             kw_ok_or_err: Keyword::Ok,
+//             expression: Default::default(),
+//             span: Default::default(),
+//         }
+//     }
+// }
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct ReturnExpr {
     pub(crate) kw_return: Keyword,
     pub(crate) expression_opt: Option<Box<Expression>>,
     pub(crate) span: Span,
+}
+
+impl Default for ReturnExpr {
+    fn default() -> Self {
+        Self {
+            kw_return: Keyword::Return,
+            expression_opt: Default::default(),
+            span: Default::default(),
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -414,7 +507,17 @@ pub struct SomeExpr {
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+// impl Default for SomeExpr {
+//     fn default() -> Self {
+//         Self {
+//             kw_some: Keyword::Some,
+//             expression: Default::default(),
+//             span: Default::default(),
+//         }
+//     }
+// }
+
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct StructExpr {
     pub(crate) struct_path: PathExpr,
     pub(crate) struct_fields_opt: Option<Vec<StructField>>,
@@ -435,7 +538,7 @@ impl FormatParams for StructExpr {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct TupleExpr {
     pub(crate) tuple_elements: TupleElements,
     pub(crate) span: Span,
@@ -448,7 +551,7 @@ pub struct TupleIndexExpr {
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct TupleStructExpr {
     pub(crate) struct_path: PathExpr,
     pub(crate) struct_elements_opt: Option<Vec<Expression>>,
@@ -483,6 +586,15 @@ pub struct UnderscoreExpr {
     pub(crate) span: Span,
 }
 
+impl Default for UnderscoreExpr {
+    fn default() -> Self {
+        Self {
+            underscore: Identifier::from("_"),
+            span: Default::default(),
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct UnaryExpr {
     pub(crate) unary_op: UnaryOp,
@@ -504,6 +616,17 @@ pub struct WhileExpr {
     pub(crate) block: BlockExpr,
     pub(crate) span: Span,
 }
+
+// impl Default for WhileExpr {
+//     fn default() -> Self {
+//         Self {
+//             kw_while: Keyword::While,
+//             condition: Default::default(),
+//             block: Default::default(),
+//             span: Default::default(),
+//         }
+//     }
+// }
 
 impl Spanned for Expression {
     fn span(&self) -> crate::span::Span {
