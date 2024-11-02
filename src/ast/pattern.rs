@@ -20,7 +20,7 @@ pub(crate) struct StructPattField {
 }
 
 /// Struct representing a collection of elements in a tuple pattern.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct TuplePattElements {
     pub(crate) elements: Vec<Pattern>,
     pub(crate) final_element_opt: Option<Box<Pattern>>,
@@ -206,6 +206,14 @@ pub struct TupleStructPatt {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct WildcardPatt {
     pub(crate) underscore: Identifier,
+}
+
+impl Default for Pattern {
+    fn default() -> Self {
+        Pattern::TuplePatt(TuplePatt {
+            tuple_patt_elements: Default::default(),
+        })
+    }
 }
 
 impl TryFrom<Expression> for Pattern {
