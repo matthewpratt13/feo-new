@@ -421,18 +421,18 @@ impl SemanticAnalyser {
 
                     let constant_decl = Rc::new(cd);
 
-                    let value_type = match &constant_decl.value_opt {
+                    let mut value_type = match &constant_decl.value_opt {
                         Some(val) => {
                             let value = val.to_expression();
-                            Some(analyse_expr(self, &value, &root)?)
+                            analyse_expr(self, &value, &root)?
                         }
-                        _ => None,
+                        _ => Type::inferred_type("_"),
                     };
 
                     self.check_types(
                         &mut self.current_symbol_table(),
                         &constant_decl.constant_type.clone(),
-                        &mut value_type.clone().unwrap_or(Type::inferred_type("_")),
+                        &mut value_type,
                     )?;
 
                     // NOTE: already checked above by `check_types()`, which will unify or return
@@ -457,7 +457,7 @@ impl SemanticAnalyser {
                             path: constant_path,
                             visibility: constant_decl.visibility,
                             constant_name: constant_decl.constant_name.clone(),
-                            constant_type: value_type.unwrap_or(*cd.constant_type.clone()),
+                            constant_type: value_type,
                         },
                     )?;
                 }

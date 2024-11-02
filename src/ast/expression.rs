@@ -751,7 +751,15 @@ impl fmt::Display for Expression {
                 clo.body_expression
             ),
             Expression::Array(arr) => write!(f, "[ {:?} ]", arr.elements_opt.unwrap_or(Vec::new())),
-            Expression::Tuple(tup) => write!(f, "( {} )", tup.tuple_elements),
+            Expression::Tuple(tup) => write!(f, "( {:?} )", {
+                let mut elements = tup.tuple_elements.elements.clone();
+
+                if let Some(elem) = tup.tuple_elements.final_element_opt {
+                    elements.push(*elem);
+                }
+
+                elements
+            }),
             Expression::Struct(strc) => {
                 write!(f, "{} {{ {:?} }}", strc.struct_path, strc.param_strings())
             }

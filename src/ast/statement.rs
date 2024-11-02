@@ -63,10 +63,7 @@ impl fmt::Display for Statement {
                     cd.visibility,
                     cd.constant_name,
                     *cd.constant_type,
-                    cd.value_opt.unwrap_or(ValueExpr::NoneExpr(NoneExpr {
-                        kw_none: Keyword::None,
-                        span: cd.span
-                    }))
+                    cd.value_opt.unwrap_or(ValueExpr::default())
                 ),
                 Item::StaticVarDecl(svd) => write!(
                     f,
