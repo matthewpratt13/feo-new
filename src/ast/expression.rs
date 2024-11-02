@@ -673,7 +673,7 @@ impl Spanned for Expression {
 
 impl Default for Expression {
     fn default() -> Self {
-        Self::Tuple(TupleExpr {
+        Expression::Tuple(TupleExpr {
             tuple_elements: Default::default(),
             span: Default::default(),
         })

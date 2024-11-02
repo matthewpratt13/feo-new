@@ -712,6 +712,15 @@ impl Spanned for ValueExpr {
     }
 }
 
+impl Default for ValueExpr {
+    fn default() -> Self {
+        ValueExpr::TupleExpr(TupleExpr {
+            tuple_elements: Default::default(),
+            span: Default::default(),
+        })
+    }
+}
+
 impl TryFrom<Expression> for ValueExpr {
     type Error = ParserErrorKind;
 
@@ -850,6 +859,15 @@ impl Spanned for AssigneeExpr {
             AssigneeExpr::TupleExpr { span, .. } => span,
             AssigneeExpr::StructExpr { span, .. } => span,
             AssigneeExpr::TupleStructExpr { span, .. } => span,
+        }
+    }
+}
+
+impl Default for AssigneeExpr {
+    fn default() -> Self {
+        AssigneeExpr::TupleExpr {
+            elements: Default::default(),
+            span: Default::default(),
         }
     }
 }
