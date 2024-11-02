@@ -182,7 +182,7 @@ pub struct AssignmentExpr {
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct BinaryExpr {
     pub(crate) lhs: Box<ValueExpr>,
     pub(crate) binary_op: BinaryOp,
@@ -226,7 +226,7 @@ impl Default for BreakExpr {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct CallExpr {
     pub(crate) callee: AssigneeExpr, // function being called
     pub(crate) args_opt: Option<Vec<Expression>>,
@@ -272,14 +272,14 @@ impl Default for ContinueExpr {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct DereferenceExpr {
     pub(crate) dereference_op: DereferenceOp,
     pub(crate) assignee_expr: AssigneeExpr,
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct FieldAccessExpr {
     pub(crate) object: Box<AssigneeExpr>,
     pub(crate) field_name: Identifier,
@@ -309,7 +309,7 @@ pub struct ForInExpr {
 //     }
 // }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct GroupedExpr {
     pub(crate) inner_expression: Box<Expression>,
     pub(crate) span: Span,
@@ -325,18 +325,18 @@ pub struct IfExpr {
     pub(crate) span: Span,
 }
 
-// impl Default for IfExpr {
-//     fn default() -> Self {
-//         Self {
-//             kw_if: Keyword::If,
-//             condition: Default::default(),
-//             if_block: Default::default(),
-//             else_if_blocks_opt: Default::default(),
-//             trailing_else_block_opt: Default::default(),
-//             span: Default::default(),
-//         }
-//     }
-// }
+impl Default for IfExpr {
+    fn default() -> Self {
+        Self {
+            kw_if: Keyword::If,
+            condition: Default::default(),
+            if_block: Default::default(),
+            else_if_blocks_opt: Default::default(),
+            trailing_else_block_opt: Default::default(),
+            span: Default::default(),
+        }
+    }
+}
 
 impl fmt::Display for IfExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -367,7 +367,7 @@ impl fmt::Display for IfExpr {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct IndexExpr {
     pub(crate) array: Box<AssigneeExpr>,
     pub(crate) index: Box<ValueExpr>,
@@ -421,7 +421,7 @@ impl fmt::Display for MatchExpr {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct MethodCallExpr {
     pub(crate) receiver: Box<AssigneeExpr>,
     pub(crate) method_name: Identifier,
@@ -459,7 +459,7 @@ pub struct RangeExpr {
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct ReferenceExpr {
     pub(crate) reference_op: ReferenceOp,
     pub(crate) expression: Box<Expression>,
@@ -473,15 +473,15 @@ pub struct ResultExpr {
     pub(crate) span: Span,
 }
 
-// impl Default for ResultExpr {
-//     fn default() -> Self {
-//         Self {
-//             kw_ok_or_err: Keyword::Ok,
-//             expression: Default::default(),
-//             span: Default::default(),
-//         }
-//     }
-// }
+impl Default for ResultExpr {
+    fn default() -> Self {
+        Self {
+            kw_ok_or_err: Keyword::Ok,
+            expression: Default::default(),
+            span: Default::default(),
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ReturnExpr {
@@ -507,15 +507,15 @@ pub struct SomeExpr {
     pub(crate) span: Span,
 }
 
-// impl Default for SomeExpr {
-//     fn default() -> Self {
-//         Self {
-//             kw_some: Keyword::Some,
-//             expression: Default::default(),
-//             span: Default::default(),
-//         }
-//     }
-// }
+impl Default for SomeExpr {
+    fn default() -> Self {
+        Self {
+            kw_some: Keyword::Some,
+            expression: Default::default(),
+            span: Default::default(),
+        }
+    }
+}
 
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct StructExpr {
@@ -544,7 +544,7 @@ pub struct TupleExpr {
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct TupleIndexExpr {
     pub(crate) tuple: Box<AssigneeExpr>,
     pub(crate) index: UInt,
@@ -595,14 +595,14 @@ impl Default for UnderscoreExpr {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct UnaryExpr {
     pub(crate) unary_op: UnaryOp,
     pub(crate) value_expr: Box<ValueExpr>,
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct UnwrapExpr {
     pub(crate) value_expr: Box<ValueExpr>,
     pub(crate) unwrap_op: UnwrapOp,
@@ -617,16 +617,16 @@ pub struct WhileExpr {
     pub(crate) span: Span,
 }
 
-// impl Default for WhileExpr {
-//     fn default() -> Self {
-//         Self {
-//             kw_while: Keyword::While,
-//             condition: Default::default(),
-//             block: Default::default(),
-//             span: Default::default(),
-//         }
-//     }
-// }
+impl Default for WhileExpr {
+    fn default() -> Self {
+        Self {
+            kw_while: Keyword::While,
+            condition: Default::default(),
+            block: Default::default(),
+            span: Default::default(),
+        }
+    }
+}
 
 impl Spanned for Expression {
     fn span(&self) -> crate::span::Span {

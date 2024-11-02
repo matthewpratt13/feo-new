@@ -275,7 +275,7 @@ impl fmt::Display for Delimiter {
 ///////////////////////////////////////////////////////////////////////////
 
 /// Unit struct representing the assignment operator (`=`) used in AST nodes.
-#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct AssignmentOp;
 
 /// Enum representing the different binary operators used in AST nodes.
@@ -325,7 +325,7 @@ impl fmt::Display for BinaryOp {
 pub(crate) struct TypeCastOp;
 
 /// Enum representing the different comparison operators used in AST nodes.
-#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum ComparisonOp {
     Equal,
     NotEqual,
@@ -333,9 +333,6 @@ pub(crate) enum ComparisonOp {
     LessEqual,
     GreaterThan,
     GreaterEqual,
-
-    #[default]
-    Default,
 }
 
 impl fmt::Display for ComparisonOp {
@@ -347,22 +344,18 @@ impl fmt::Display for ComparisonOp {
             ComparisonOp::LessEqual => write!(f, "<="),
             ComparisonOp::GreaterThan => write!(f, ">"),
             ComparisonOp::GreaterEqual => write!(f, ">="),
-            ComparisonOp::Default => write!(f, "_"),
         }
     }
 }
 
 /// Enum representing the different compound assignment operators used in AST nodes.
-#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum CompoundAssignmentOp {
     AddAssign,
     SubtractAssign,
     MultiplyAssign,
     DivideAssign,
     ModulusAssign,
-
-    #[default]
-    Default,
 }
 
 impl fmt::Display for CompoundAssignmentOp {
@@ -373,7 +366,6 @@ impl fmt::Display for CompoundAssignmentOp {
             CompoundAssignmentOp::MultiplyAssign => write!(f, "*="),
             CompoundAssignmentOp::DivideAssign => write!(f, "/="),
             CompoundAssignmentOp::ModulusAssign => write!(f, "%="),
-            CompoundAssignmentOp::Default => write!(f, "_"),
         }
     }
 }
