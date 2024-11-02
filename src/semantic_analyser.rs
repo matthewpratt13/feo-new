@@ -426,7 +426,7 @@ impl SemanticAnalyser {
                             let value = val.to_expression();
                             analyse_expr(self, &value, &root)?
                         }
-                        _ => Type::inferred_type("_"),
+                        _ => Type::default(),
                     };
 
                     self.check_types(
@@ -2060,6 +2060,12 @@ impl SemanticAnalyser {
                             found: b,
                         });
                     }
+                }
+            }
+
+            (_, Type::Tuple(vec)) => {
+                if vec.len() == 0 {
+                    *matched_type = expected_type.clone()
                 }
             }
 

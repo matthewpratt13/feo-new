@@ -21,7 +21,6 @@ use super::{get_collection, Parser};
 
 impl Type {
     pub(crate) const UNIT_TYPE: Type = Type::UnitType(UnitType);
-    // pub(crate) const SELF_TYPE: Type = Type::SelfType(SelfType);
 
     /// Match a `Token` to a `Type` and return the `Type` or emit an error.
     pub(crate) fn parse(parser: &mut Parser) -> Result<Type, ErrorsEmitted> {
@@ -278,6 +277,12 @@ impl Type {
 impl FormatItem for Type {}
 
 impl ToIdentifier for Type {}
+
+impl Default for Type {
+    fn default() -> Self {
+        Type::Tuple(Vec::new())
+    }
+}
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

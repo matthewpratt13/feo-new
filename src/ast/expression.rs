@@ -751,7 +751,7 @@ impl fmt::Display for Expression {
                 clo.body_expression
             ),
             Expression::Array(arr) => write!(f, "[ {:?} ]", arr.elements_opt.unwrap_or(Vec::new())),
-            Expression::Tuple(tup) => write!(f, "( {:?} )", {
+            Expression::Tuple(tup) => write!(f, "({:?})", {
                 let mut elements = tup.tuple_elements.elements.clone();
 
                 if let Some(elem) = tup.tuple_elements.final_element_opt {
@@ -788,7 +788,7 @@ impl fmt::Display for Expression {
             Expression::SomeExpr(som) => {
                 write!(f, "Some{}", Expression::Grouped(*som.expression))
             }
-            Expression::NoneExpr(_) => write!(f, "()"),
+            Expression::NoneExpr(_) => write!(f, "None"),
             Expression::ResultExpr(res) => write!(f, "{}", {
                 match res.kw_ok_or_err {
                     Keyword::Ok => format!("Ok{}", Expression::Grouped(*res.expression)),
