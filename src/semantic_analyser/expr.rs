@@ -199,7 +199,7 @@ pub(crate) fn analyse_expr(
                             Ok(ty) => {
                                 log_trace!(
                                     analyser.logger,
-                                    "analysing last expression in block: `{expr}` …"
+                                    "analysing last expression: `{expr}` …"
                                 );
 
                                 Ok(ty)
