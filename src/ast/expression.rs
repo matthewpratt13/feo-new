@@ -671,6 +671,15 @@ impl Spanned for Expression {
     }
 }
 
+impl Default for Expression {
+    fn default() -> Self {
+        Self::Tuple(TupleExpr {
+            tuple_elements: Default::default(),
+            span: Default::default(),
+        })
+    }
+}
+
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.clone() {
