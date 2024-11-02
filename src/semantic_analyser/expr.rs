@@ -584,6 +584,7 @@ pub(crate) fn analyse_expr(
             Literal::Str { .. } => Ok(Type::Str),
             Literal::Char { .. } => Ok(Type::Char),
             Literal::Bool { .. } => Ok(Type::Bool),
+            Literal::Unit { .. } => Ok(Type::UNIT_TYPE),
         },
 
         Expression::Mapping(m) => match &m.pairs_opt {

@@ -66,6 +66,7 @@ pub(crate) fn analyse_patt(
             LiteralPatt::Str { .. } => Ok(Type::Str),
             LiteralPatt::Char { .. } => Ok(Type::Char),
             LiteralPatt::Bool { .. } => Ok(Type::Bool),
+            LiteralPatt::Unit => Ok(Type::UNIT_TYPE),
         },
 
         Pattern::NonePatt(_) => Ok(Type::Option {
