@@ -648,7 +648,7 @@ impl fmt::Display for Expression {
             Expression::SomeExpr(som) => {
                 write!(f, "Some{}", Expression::Grouped(*som.expression))
             }
-            Expression::NoneExpr(_) => write!(f, "None"),
+            Expression::NoneExpr(_) => write!(f, "()"),
             Expression::ResultExpr(res) => write!(f, "{}", {
                 match res.kw_ok_or_err {
                     Keyword::Ok => format!("Ok{}", Expression::Grouped(*res.expression)),
