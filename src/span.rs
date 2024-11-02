@@ -7,7 +7,7 @@ pub trait Spanned {
 /// Struct that represents a range of characters in the source code where a token appears.
 /// This information is useful in numerous cases, including displaying error messages
 /// with exact locations and highlighting syntax errors.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Span {
     input: Arc<String>,
     start: usize,
@@ -39,12 +39,6 @@ impl Span {
     /// Retrieve a thread-safe reference to the source code.
     pub fn input(&self) -> Arc<String> {
         Arc::clone(&self.input)
-    }
-}
-
-impl Default for Span {
-    fn default() -> Self {
-        Span::new("", 0, 0)
     }
 }
 

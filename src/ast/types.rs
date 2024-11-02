@@ -14,6 +14,12 @@ pub enum Int {
     I64(i64),
 }
 
+impl Default for Int {
+    fn default() -> Self {
+        Int::I64(i64::default())
+    }
+}
+
 impl fmt::Display for Int {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -31,6 +37,12 @@ pub enum UInt {
     U16(u16),
     U32(u32),
     U64(u64),
+}
+
+impl Default for UInt {
+    fn default() -> Self {
+        UInt::U64(u64::default())
+    }
 }
 
 impl From<usize> for UInt {
@@ -69,6 +81,12 @@ pub enum BigUInt {
     U512(U512),
 }
 
+impl Default for BigUInt {
+    fn default() -> Self {
+        BigUInt::U256(U256::default())
+    }
+}
+
 impl fmt::Display for BigUInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -86,6 +104,12 @@ pub enum Float {
     F64(F64),
 }
 
+impl Default for Float {
+    fn default() -> Self {
+        Float::F64(F64::default())
+    }
+}
+
 impl fmt::Display for Float {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -98,7 +122,7 @@ impl fmt::Display for Float {
 /// Struct that wraps a `u8` into a `Byte` type that is treated as a single ASCII character
 /// in a byte string type. This is different to the native Unicode `char` type, which is
 /// a UTF-8 encoded character of one (`u8`) to four bytes (`u32`) – i.e., variable length.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Byte(pub u8);
 
 impl Byte {
@@ -213,6 +237,12 @@ impl Bytes {
     }
 }
 
+impl Default for Bytes {
+    fn default() -> Self {
+        Bytes::B32(B32::default())
+    }
+}
+
 impl fmt::Display for Bytes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -234,6 +264,12 @@ pub enum Hash {
     H512(H512),
 }
 
+impl Default for Hash {
+    fn default() -> Self {
+        Hash::H256(H256::default())
+    }
+}
+
 impl fmt::Display for self::Hash {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -245,7 +281,7 @@ impl fmt::Display for self::Hash {
 }
 
 /// Wrapper for the `char` type.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Char(char);
 
 impl From<char> for Char {
@@ -263,7 +299,7 @@ impl fmt::Display for Char {
 /// Struct that wraps a `Vec<Byte>` into a string literal of arbitrary length.
 /// This type should be treated as static (i.e., not be growable / updatable), despite having
 /// a dynamic inner type.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Str(Vec<Byte>);
 
 impl Str {
@@ -311,7 +347,7 @@ impl fmt::Display for Str {
 }
 
 /// Wrapper for the `bool` type.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Bool(bool);
 
 impl From<bool> for Bool {
@@ -327,7 +363,7 @@ impl fmt::Display for Bool {
 }
 
 /// Function pointer type: `func(<param>) -> <Type>`
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct FunctionPtr {
     pub(crate) params_opt: Option<Vec<FunctionOrMethodParam>>,
     pub(crate) return_type_opt: Option<Box<Type>>,
@@ -357,7 +393,7 @@ impl fmt::Display for FunctionPtr {
 }
 
 /// Struct that represents an inferred type.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct InferredType {
     pub(crate) name: Identifier,
 }
@@ -369,7 +405,7 @@ impl fmt::Display for InferredType {
 }
 
 /// Unit struct that represents the `Self` type.
-#[derive(Debug, Copy, Clone, PartialEq, Hash, Eq, PartialOrd, Ord)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Hash, Eq, PartialOrd, Ord)]
 pub struct SelfType;
 
 impl fmt::Display for SelfType {
@@ -379,14 +415,14 @@ impl fmt::Display for SelfType {
 }
 
 /// Struct that represents the path to user-defined type (e.g., struct, enum and trait)
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub struct TypePath {
     pub(crate) associated_type_path_prefix_opt: Option<Vec<Identifier>>,
     pub(crate) type_name: Identifier,
 }
 
 /// Unit struct that represents the unit type `()`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct UnitType;
 
 impl fmt::Display for UnitType {
