@@ -40,6 +40,8 @@ pub(crate) enum Literal {
     Str { value: Str, span: Span },
     Char { value: Char, span: Span },
     Bool { value: Bool, span: Span },
+
+    Unit { span: Span },
 }
 
 impl Spanned for Literal {
@@ -55,6 +57,15 @@ impl Spanned for Literal {
             Literal::Str { span, .. } => span,
             Literal::Char { span, .. } => span,
             Literal::Bool { span, .. } => span,
+            Literal::Unit { span } => span,
+        }
+    }
+}
+
+impl Default for Literal {
+    fn default() -> Self {
+        Literal::Unit {
+            span: Default::default(),
         }
     }
 }
@@ -74,6 +85,7 @@ impl fmt::Display for Literal {
             }
             Literal::Char { value, .. } => write!(f, "{}", value),
             Literal::Bool { value, .. } => write!(f, "{}", value),
+            Literal::Unit { .. } => write!(f, "()"),
         }
     }
 }
@@ -91,6 +103,7 @@ impl fmt::Debug for Literal {
             Self::Str { value, .. } => f.debug_struct("Str").field("value", value).finish(),
             Self::Char { value, .. } => f.debug_struct("Char").field("value", value).finish(),
             Self::Bool { value, .. } => f.debug_struct("Bool").field("value", value).finish(),
+            Self::Unit { .. } => write!(f, "()"),
         }
     }
 }

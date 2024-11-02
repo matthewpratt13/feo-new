@@ -74,18 +74,41 @@ impl fmt::Display for IdentifierPatt {
 }
 
 /// Enum representing the literals in a pattern context
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Clone, Hash, PartialEq, Eq)]
 pub(crate) enum LiteralPatt {
-    Int { value: Int },
-    UInt { value: UInt },
-    BigUInt { value: BigUInt },
-    Float { value: Float },
-    Byte { value: Byte },
-    Bytes { value: Bytes },
-    Hash { value: Hash },
-    Str { value: Str },
-    Char { value: Char },
-    Bool { value: Bool },
+    Int {
+        value: Int,
+    },
+    UInt {
+        value: UInt,
+    },
+    BigUInt {
+        value: BigUInt,
+    },
+    Float {
+        value: Float,
+    },
+    Byte {
+        value: Byte,
+    },
+    Bytes {
+        value: Bytes,
+    },
+    Hash {
+        value: Hash,
+    },
+    Str {
+        value: Str,
+    },
+    Char {
+        value: Char,
+    },
+    Bool {
+        value: Bool,
+    },
+
+    #[default]
+    Unit,
 }
 
 impl From<Literal> for LiteralPatt {
@@ -101,6 +124,7 @@ impl From<Literal> for LiteralPatt {
             Literal::Str { value, .. } => LiteralPatt::Str { value },
             Literal::Char { value, .. } => LiteralPatt::Char { value },
             Literal::Bool { value, .. } => LiteralPatt::Bool { value },
+            Literal::Unit { .. } => LiteralPatt::Unit,
         }
     }
 }
@@ -118,6 +142,7 @@ impl fmt::Display for LiteralPatt {
             LiteralPatt::Str { value } => write!(f, "{}", value.clone().as_string()),
             LiteralPatt::Char { value } => write!(f, "{}", value),
             LiteralPatt::Bool { value } => write!(f, "{}", value),
+            LiteralPatt::Unit => write!(f, "()"),
         }
     }
 }
@@ -135,6 +160,7 @@ impl fmt::Debug for LiteralPatt {
             Self::Str { value, .. } => f.debug_struct("Str").field("value", value).finish(),
             Self::Char { value, .. } => f.debug_struct("Char").field("value", value).finish(),
             Self::Bool { value, .. } => f.debug_struct("Bool").field("value", value).finish(),
+            Self::Unit => write!(f, "()"),
         }
     }
 }

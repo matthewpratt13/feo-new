@@ -104,7 +104,7 @@ pub(crate) struct MappingPair {
 }
 
 /// Struct representing a single arm in a match statement.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct MatchArm {
     pub(crate) matched_pattern: Pattern,
     pub(crate) guard_opt: Option<Box<Expression>>, // `<case> if <expr>`
@@ -233,7 +233,7 @@ pub struct CallExpr {
     pub(crate) span: Span,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct ClosureExpr {
     pub(crate) closure_params: ClosureParams,
     pub(crate) return_type_opt: Option<Box<Type>>,
@@ -296,18 +296,18 @@ pub struct ForInExpr {
     pub(crate) span: Span,
 }
 
-// impl Default for ForInExpr {
-//     fn default() -> Self {
-//         Self {
-//             kw_for: Keyword::For,
-//             pattern: Default::default(),
-//             kw_in: Keyword::In,
-//             iterator: Default::default(),
-//             block: Default::default(),
-//             span: Default::default(),
-//         }
-//     }
-// }
+impl Default for ForInExpr {
+    fn default() -> Self {
+        Self {
+            kw_for: Keyword::For,
+            pattern: Default::default(),
+            kw_in: Keyword::In,
+            iterator: Default::default(),
+            block: Default::default(),
+            span: Default::default(),
+        }
+    }
+}
 
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct GroupedExpr {
@@ -389,17 +389,17 @@ pub struct MatchExpr {
     pub(crate) span: Span,
 }
 
-// impl Default for MatchExpr {
-//     fn default() -> Self {
-//         Self {
-//             kw_match: Keyword::Match,
-//             scrutinee: Default::default(),
-//             match_arms_opt: Default::default(),
-//             final_arm: Default::default(),
-//             span: Default::default(),
-//         }
-//     }
-// }
+impl Default for MatchExpr {
+    fn default() -> Self {
+        Self {
+            kw_match: Keyword::Match,
+            scrutinee: Default::default(),
+            match_arms_opt: Default::default(),
+            final_arm: Default::default(),
+            span: Default::default(),
+        }
+    }
+}
 
 impl fmt::Display for MatchExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -572,7 +572,7 @@ impl FormatParams for TupleStructExpr {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct TypeCastExpr {
     pub(crate) value: Box<ValueExpr>,
     pub(crate) type_cast_op: TypeCastOp, // `as`
