@@ -430,3 +430,9 @@ impl fmt::Display for UnitType {
         write!(f, "()")
     }
 }
+
+impl Default for Type {
+    fn default() -> Self {
+        Type::UNIT_TYPE
+    }
+}
