@@ -871,7 +871,7 @@ impl SemanticAnalyser {
                 let mut value_type = if let Some(val) = &ls.value_opt {
                     analyse_expr(self, val, &root)?
                 } else {
-                    Type::UNIT_TYPE
+                    Type::Tuple(Vec::new())
                 };
 
                 // get the type annotation if there is one, otherwise assume the value's type
@@ -2065,7 +2065,10 @@ impl SemanticAnalyser {
 
             (_, Type::Tuple(vec)) => {
                 if vec.len() == 0 {
-                    log_trace!(self.logger, "unifying empty tuple type with expected type: `{expected_type}` …");
+                    log_trace!(
+                        self.logger,
+                        "unifying empty tuple type with expected type: `{expected_type}` …"
+                    );
 
                     *matched_type = expected_type.clone()
                 }
