@@ -772,7 +772,7 @@ impl fmt::Display for ValueExpr {
             ValueExpr::ForInExpr(fi) => write!(f, "{}", Expression::ForIn(fi)),
             ValueExpr::WhileExpr(w) => write!(f, "{}", Expression::While(w)),
             ValueExpr::SomeExpr(s) => write!(f, "{}", Expression::SomeExpr(s)),
-            ValueExpr::NoneExpr(_) => write!(f, "None"),
+            ValueExpr::NoneExpr(_) => write!(f, "()"),
             ValueExpr::ResultExpr(r) => write!(f, "{}", Expression::ResultExpr(r)),
         }
     }

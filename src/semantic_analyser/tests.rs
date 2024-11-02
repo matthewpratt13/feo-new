@@ -468,7 +468,7 @@ fn analyse_trait_def() -> Result<(), ()> {
         pub func creator_address() -> h160;
     }"#;
 
-    let (mut analyser, program) = setup(input, LogLevel::Debug, false, false, None)?;
+    let (mut analyser, program) = setup(input, LogLevel::Trace, false, false, None)?;
 
     match analyser.analyse_program(&program) {
         Ok(_) => Ok(()),
