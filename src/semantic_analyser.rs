@@ -395,7 +395,7 @@ impl SemanticAnalyser {
                 Item::AliasDecl(ad) => {
                     if !matches!(
                         self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                        ScopeKind::FunctionBody(_) | ScopeKind::Module(_) | ScopeKind::ProgramRoot
                     ) {
                         self.log_error(
                             SemanticErrorKind::DeclarationOutOfContext {
@@ -431,7 +431,7 @@ impl SemanticAnalyser {
 
                     if !matches!(
                         self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                        ScopeKind::FunctionBody(_) | ScopeKind::Module(_) | ScopeKind::ProgramRoot
                     ) {
                         self.log_error(
                             SemanticErrorKind::DeclarationOutOfContext {
@@ -562,7 +562,7 @@ impl SemanticAnalyser {
 
                     if !matches!(
                         self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                        ScopeKind::FunctionBody(_) | ScopeKind::Module(_) | ScopeKind::ProgramRoot
                     ) {
                         self.log_error(
                             SemanticErrorKind::DeclarationOutOfContext {
@@ -741,7 +741,7 @@ impl SemanticAnalyser {
 
                     if !matches!(
                         self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                        ScopeKind::FunctionBody(_) | ScopeKind::Module(_) | ScopeKind::ProgramRoot
                     ) {
                         self.log_error(
                             SemanticErrorKind::DeclarationOutOfContext {
