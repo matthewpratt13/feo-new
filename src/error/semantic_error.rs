@@ -5,6 +5,7 @@ use crate::ast::{Identifier, Keyword, ReferenceOp, Type, TypePath};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum SemanticErrorKind {
+
     ArrayLengthMismatch {
         expected: usize,
         found: usize,
@@ -16,10 +17,13 @@ pub enum SemanticErrorKind {
         found: String,
     },
 
-    ConstantDeclarationOutOfContext,
 
     ConstantReassignment {
         constant_name: Identifier,
+    },
+
+    DeclarationOutOfContext {
+        declaration_kind: String,
     },
 
     FuncArgCountMismatch {
@@ -31,12 +35,12 @@ pub enum SemanticErrorKind {
     GenericParamsCountMismatch {
         item_name: Identifier,
         expected: usize,
-        found: usize
+        found: usize,
     },
 
     ImportClash {
         type_name: Identifier,
-        module_name: Identifier
+        module_name: Identifier,
     },
 
     InvalidVariableIdentifier {
@@ -46,15 +50,15 @@ pub enum SemanticErrorKind {
     LetStatementOutOfContext,
 
     MethodParamCountError,
-    
+
     MissingItem {
         expected: String,
     },
-    
+
     MissingReturnType {
         expected: Type,
     },
-    
+
     MissingStructField {
         expected: String,
     },
@@ -136,7 +140,6 @@ pub enum SemanticErrorKind {
     //     actual_type: Type,
     //     declared_type: Type,
     // },
-
     TypeMismatchInnerType {
         context: String,
         expected: String,
@@ -306,16 +309,17 @@ pub enum SemanticErrorKind {
 impl fmt::Display for SemanticErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+
             SemanticErrorKind::ArrayLengthMismatch { expected, found } => {
                 write!(f, "array length mismatch. Expected {expected} elements, found {found}")
             }
             SemanticErrorKind::AttributesMismatch { item_name, expected, found } => {
                 write!(f, "mismatch between attributes on for `{item_name}`. Expected {expected}, found {found}")
             }
-            SemanticErrorKind::ConstantDeclarationOutOfContext => write!(f, "constant declaration out of context. Constants can only be declared at a program root or module level"),
             SemanticErrorKind::ConstantReassignment { constant_name: name } => {
                 write!(f, "cannot reassign constant `{name}`")
             }
+            SemanticErrorKind::DeclarationOutOfContext {declaration_kind } => write!(f, "{declaration_kind} declaration out of context. Constants can only be declared at a program root or module level"),
             SemanticErrorKind::FuncArgCountMismatch { function_path,  expected, found } => {
                 write!(
                     f,
@@ -354,7 +358,7 @@ impl fmt::Display for SemanticErrorKind {
                 )
             }
             SemanticErrorKind::RefOperatorMismatch { expected, found } => write!(f, "reference operator mismatch. Expected {expected}, found {found}"),
-
+            
             SemanticErrorKind::StructArgCountMismatch { struct_path, expected, found } => {
                 write!(f, "argument count mismatch in struct `{struct_path}`. Expected {expected} arguments, found {found}")
             }
