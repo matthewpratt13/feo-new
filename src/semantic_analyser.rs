@@ -419,6 +419,13 @@ impl SemanticAnalyser {
 
                     // TODO: check that `matches!(current_scope, Module(_) | ProgramRoot)`
 
+                    if !matches!(
+                        self.current_scope().scope_kind,
+                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                    ) {
+                        self.log_error(SemanticErrorKind::ConstantDeclarationOutOfContext, &cd.span)
+                    }
+
                     let constant_decl = Rc::new(cd);
 
                     let mut value_type = match &constant_decl.value_opt {
@@ -865,6 +872,16 @@ impl SemanticAnalyser {
                 log_trace!(self.logger, "analysing let statement: `{statement}` …");
 
                 // TODO: check that `matches!(current scope, FunctionBody(_))`
+
+                if !matches!(
+                    self.current_scope().scope_kind,
+                    ScopeKind::FunctionBody(_)
+                        | ScopeKind::ForInLoop
+                        | ScopeKind::MatchExpr
+                        | ScopeKind::LocalBlock
+                ) {
+                    self.log_error(SemanticErrorKind::LetStatementOutOfContext, &ls.span);
+                }
 
                 // variables declared must have a type and are assigned the unit type if not;
                 // this prevents uninitialized variable errors

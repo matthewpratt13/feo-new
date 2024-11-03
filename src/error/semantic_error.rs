@@ -16,6 +16,8 @@ pub enum SemanticErrorKind {
         found: String,
     },
 
+    ConstantDeclarationOutOfContext,
+
     ConstantReassignment {
         constant_name: Identifier,
     },
@@ -40,6 +42,8 @@ pub enum SemanticErrorKind {
     InvalidVariableIdentifier {
         name: Identifier,
     },
+
+    LetStatementOutOfContext,
 
     MethodParamCountError,
     
@@ -308,6 +312,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::AttributesMismatch { item_name, expected, found } => {
                 write!(f, "mismatch between attributes on for `{item_name}`. Expected {expected}, found {found}")
             }
+            SemanticErrorKind::ConstantDeclarationOutOfContext => write!(f, "constant declaration out of context. Constants can only be declared at a program root or module level"),
             SemanticErrorKind::ConstantReassignment { constant_name: name } => {
                 write!(f, "cannot reassign constant `{name}`")
             }
@@ -324,6 +329,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }
+            SemanticErrorKind::LetStatementOutOfContext => write!(f, "let statement out of context. Let statements can only be declared inside function bodies"),
             SemanticErrorKind::MethodParamCountError => {
                 write!(f, "too many `self` parameters")
             }
