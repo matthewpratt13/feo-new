@@ -47,6 +47,10 @@ pub enum SemanticErrorKind {
         name: Identifier,
     },
 
+    ItemDefinitionOutOfContext {
+        item_kind: String,
+    },
+
     LetStatementOutOfContext,
 
     MethodParamCountError,
@@ -309,7 +313,6 @@ pub enum SemanticErrorKind {
 impl fmt::Display for SemanticErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-
             SemanticErrorKind::ArrayLengthMismatch { expected, found } => {
                 write!(f, "array length mismatch. Expected {expected} elements, found {found}")
             }
@@ -327,9 +330,8 @@ impl fmt::Display for SemanticErrorKind {
                 )
             }
             SemanticErrorKind::GenericParamsCountMismatch { item_name, expected, found } => write!(f, "unexpected number of generic parameters in item `{item_name}`. Expected {expected} generic parameters, found {found}"),
-
+            SemanticErrorKind::ItemDefinitionOutOfContext { item_kind } => write!(f, "{item_kind} definition out of context. Items can only be defined at a module or program root level"),
             SemanticErrorKind::ImportClash { type_name, module_name } => write!(f, "duplicate type names detected for type: `{type_name}` in module `{module_name}`"),
-
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }

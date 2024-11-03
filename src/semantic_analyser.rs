@@ -485,6 +485,18 @@ impl SemanticAnalyser {
                 }
 
                 Item::EnumDef(e) => {
+                    if !matches!(
+                        self.current_scope().scope_kind,
+                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                    ) {
+                        self.log_error(
+                            SemanticErrorKind::ItemDefinitionOutOfContext {
+                                item_kind: "enum".to_string(),
+                            },
+                            &e.span,
+                        )
+                    }
+
                     let enum_def = Rc::new(e.clone());
 
                     let enum_name_path = enum_def.enum_name.to_type_path();
@@ -512,6 +524,18 @@ impl SemanticAnalyser {
                 }
 
                 Item::FunctionItem(fi) => {
+                    if !matches!(
+                        self.current_scope().scope_kind,
+                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                    ) {
+                        self.log_error(
+                            SemanticErrorKind::ItemDefinitionOutOfContext {
+                                item_kind: "function".to_string(),
+                            },
+                            &fi.span,
+                        )
+                    }
+
                     let function_item = Rc::new(fi.clone());
 
                     let function_name_path = function_item.function_name.to_type_path();
@@ -563,6 +587,18 @@ impl SemanticAnalyser {
                         self.logger,
                         "analysing inherent implementation for type: `{type_path}` …",
                     );
+
+                    if !matches!(
+                        self.current_scope().scope_kind,
+                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                    ) {
+                        self.log_error(
+                            SemanticErrorKind::ItemDefinitionOutOfContext {
+                                item_kind: "type implementation".to_string(),
+                            },
+                            &iid.span,
+                        )
+                    }
 
                     // let scope_kind = ScopeKind::Impl(type_path.clone());
 
@@ -622,6 +658,18 @@ impl SemanticAnalyser {
                     };
 
                     log_trace!(self.logger, "analysing items in module: `{module_path}` …");
+
+                    if !matches!(
+                        self.current_scope().scope_kind,
+                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                    ) {
+                        self.log_error(
+                            SemanticErrorKind::ItemDefinitionOutOfContext {
+                                item_kind: "module".to_string(),
+                            },
+                            &m.span,
+                        )
+                    }
 
                     self.enter_scope(scope_kind);
 
@@ -739,6 +787,18 @@ impl SemanticAnalyser {
                 }
 
                 Item::StructDef(s) => {
+                    if !matches!(
+                        self.current_scope().scope_kind,
+                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                    ) {
+                        self.log_error(
+                            SemanticErrorKind::ItemDefinitionOutOfContext {
+                                item_kind: "struct".to_string(),
+                            },
+                            &s.span,
+                        )
+                    }
+
                     let struct_def = Rc::new(s.clone());
                     let struct_name_path = struct_def.struct_name.to_type_path();
                     let struct_def_path = root.clone_append(struct_name_path.clone());
@@ -772,6 +832,18 @@ impl SemanticAnalyser {
                         self.logger,
                         "analysing trait definition: `{trait_def_path}` …"
                     );
+
+                    if !matches!(
+                        self.current_scope().scope_kind,
+                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                    ) {
+                        self.log_error(
+                            SemanticErrorKind::ItemDefinitionOutOfContext {
+                                item_kind: "trait".to_string(),
+                            },
+                            &t.span,
+                        )
+                    }
 
                     if let Some(items) = &trait_def.trait_items_opt {
                         for i in items.iter().cloned() {
@@ -868,6 +940,18 @@ impl SemanticAnalyser {
                         t.implementing_type
                     );
 
+                    if !matches!(
+                        self.current_scope().scope_kind,
+                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                    ) {
+                        self.log_error(
+                            SemanticErrorKind::ItemDefinitionOutOfContext {
+                                item_kind: "trait implementation".to_string(),
+                            },
+                            &t.span,
+                        )
+                    }
+
                     self.add_trait_implementation(trait_impl_path.clone(), t.clone());
 
                     // let scope_kind = ScopeKind::TraitImpl {
@@ -890,6 +974,18 @@ impl SemanticAnalyser {
                 }
 
                 Item::TupleStructDef(ts) => {
+                    if !matches!(
+                        self.current_scope().scope_kind,
+                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
+                    ) {
+                        self.log_error(
+                            SemanticErrorKind::ItemDefinitionOutOfContext {
+                                item_kind: "tuple struct".to_string(),
+                            },
+                            &ts.span,
+                        )
+                    }
+
                     let tuple_struct_def = Rc::new(ts.clone());
 
                     let struct_name_path = tuple_struct_def.struct_name.to_type_path();
