@@ -145,12 +145,6 @@ pub(crate) enum ScopeKind {
     ForInLoop,
     FunctionBody(TypePath),
     FunctionDef(TypePath),
-    // TraitImpl {
-    //     implemented_trait_path: TypePath,
-    //     implementing_type_path: TypePath,
-    // },
-    // Impl(TypePath),
-    // TraitDef(TypePath),
     Module(TypePath),
     ProgramRoot,
     Public,

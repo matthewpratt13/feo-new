@@ -544,10 +544,6 @@ impl SemanticAnalyser {
 
                     self.check_definition_scope("type implementation", &iid.span);
 
-                    // let scope_kind = ScopeKind::Impl(type_path.clone());
-
-                    // self.enter_scope(scope_kind);
-
                     if let Some(items) = &iid.associated_items_opt {
                         for item in items.iter() {
                             match item {
@@ -581,8 +577,6 @@ impl SemanticAnalyser {
                             }
                         }
                     }
-
-                    // self.exit_scope();
                 }
 
                 Item::ModuleItem(m) => {
@@ -848,23 +842,12 @@ impl SemanticAnalyser {
 
                     self.add_trait_implementation(trait_impl_path.clone(), t.clone());
 
-                    // let scope_kind = ScopeKind::TraitImpl {
-                    //     implemented_trait_path: t.implemented_trait_path.clone(),
-                    //     implementing_type_path: implementing_type_path.clone(),
-                    // };
-
-                    // let mut function_symbols = SymbolTable::new();
-
-                    // self.enter_scope(scope_kind);
-
                     self.analyse_trait_impl_items(
                         &trait_def,
                         t,
                         &implementing_type_path,
                         trait_impl_path,
                     )?;
-
-                    // self.exit_scope();
                 }
 
                 Item::TupleStructDef(ts) => {
