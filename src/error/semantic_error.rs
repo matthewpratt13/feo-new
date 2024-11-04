@@ -322,7 +322,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ConstantReassignment { constant_name: name } => {
                 write!(f, "cannot reassign constant `{name}`")
             }
-            SemanticErrorKind::DeclarationOutOfContext {declaration_kind } => write!(f, "{declaration_kind} declaration out of context. Constants can only be declared at a program root or module level"),
+            SemanticErrorKind::DeclarationOutOfContext {declaration_kind } => write!(f, "{declaration_kind} declaration out of context. Constants, static variables, type aliases and item imports can only be declared in the outermost scope of a function body, or in a module or program root scope. They cannot be declared in function signatures, match expressions, for-in loops, local blocks or the public scope"),
             SemanticErrorKind::FuncArgCountMismatch { function_path,  expected, found } => {
                 write!(
                     f,
@@ -335,7 +335,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
             }
-            SemanticErrorKind::LetStatementOutOfContext => write!(f, "let statement out of context. Let statements can only be declared inside function bodies"),
+            SemanticErrorKind::LetStatementOutOfContext => write!(f, "let statement out of context. Let statements can only be declared inside functions or blocks"),
             SemanticErrorKind::MethodParamCountError => {
                 write!(f, "too many `self` parameters")
             }

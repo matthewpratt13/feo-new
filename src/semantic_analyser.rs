@@ -429,17 +429,7 @@ impl SemanticAnalyser {
                         "analysing constant declaration: `{statement}` …"
                     );
 
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::FunctionBody(_) | ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::DeclarationOutOfContext {
-                                declaration_kind: "constant".to_string(),
-                            },
-                            &cd.span,
-                        )
-                    }
+                    self.check_declaration_scope("constant", &cd.span);
 
                     let constant_decl = Rc::new(cd);
 
@@ -1118,6 +1108,20 @@ impl SemanticAnalyser {
         }
 
         Ok(())
+    }
+
+    fn check_declaration_scope(&mut self, declaration_kind: &str, span: &Span) {
+        if !matches!(
+            self.current_scope().scope_kind,
+            ScopeKind::FunctionBody(_) | ScopeKind::Module(_) | ScopeKind::ProgramRoot
+        ) {
+            self.log_error(
+                SemanticErrorKind::DeclarationOutOfContext {
+                    declaration_kind: declaration_kind.to_string(),
+                },
+                span,
+            )
+        }
     }
 
     /// Analyse a function definition within a specific context, including its parameters,
