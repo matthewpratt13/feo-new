@@ -465,17 +465,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::EnumDef(e) => {
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::ItemDefinitionOutOfContext {
-                                item_kind: "enum".to_string(),
-                            },
-                            &e.span,
-                        )
-                    }
+                    self.check_definition_scope("enum", &e.span);
 
                     let enum_def = Rc::new(e.clone());
 
@@ -504,17 +494,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::FunctionItem(fi) => {
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::ItemDefinitionOutOfContext {
-                                item_kind: "function".to_string(),
-                            },
-                            &fi.span,
-                        )
-                    }
+                    self.check_definition_scope("function", &fi.span);
 
                     let function_item = Rc::new(fi.clone());
 
@@ -558,17 +538,7 @@ impl SemanticAnalyser {
                         "analysing inherent implementation for type: `{type_path}` …",
                     );
 
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::ItemDefinitionOutOfContext {
-                                item_kind: "type implementation".to_string(),
-                            },
-                            &iid.span,
-                        )
-                    }
+                    self.check_definition_scope("type implementation", &iid.span);
 
                     // let scope_kind = ScopeKind::Impl(type_path.clone());
 
@@ -629,17 +599,7 @@ impl SemanticAnalyser {
 
                     log_trace!(self.logger, "analysing items in module: `{module_path}` …");
 
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::ItemDefinitionOutOfContext {
-                                item_kind: "module".to_string(),
-                            },
-                            &m.span,
-                        )
-                    }
+                    self.check_definition_scope("module", &m.span);
 
                     self.enter_scope(scope_kind);
 
@@ -747,17 +707,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::StructDef(s) => {
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::ItemDefinitionOutOfContext {
-                                item_kind: "struct".to_string(),
-                            },
-                            &s.span,
-                        )
-                    }
+                    self.check_definition_scope("struct", &s.span);
 
                     let struct_def = Rc::new(s.clone());
                     let struct_name_path = struct_def.struct_name.to_type_path();
@@ -793,17 +743,7 @@ impl SemanticAnalyser {
                         "analysing trait definition: `{trait_def_path}` …"
                     );
 
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::ItemDefinitionOutOfContext {
-                                item_kind: "trait".to_string(),
-                            },
-                            &t.span,
-                        )
-                    }
+                    self.check_definition_scope("trait", &t.span);
 
                     if let Some(items) = &trait_def.trait_items_opt {
                         for i in items.iter().cloned() {
@@ -900,17 +840,7 @@ impl SemanticAnalyser {
                         t.implementing_type
                     );
 
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::ItemDefinitionOutOfContext {
-                                item_kind: "trait implementation".to_string(),
-                            },
-                            &t.span,
-                        )
-                    }
+                    self.check_definition_scope("trait implementation", &t.span);
 
                     self.add_trait_implementation(trait_impl_path.clone(), t.clone());
 
@@ -934,17 +864,7 @@ impl SemanticAnalyser {
                 }
 
                 Item::TupleStructDef(ts) => {
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::ItemDefinitionOutOfContext {
-                                item_kind: "tuple struct".to_string(),
-                            },
-                            &ts.span,
-                        )
-                    }
+                    self.check_definition_scope("tuple struct", &ts.span);
 
                     let tuple_struct_def = Rc::new(ts.clone());
 
@@ -1088,6 +1008,20 @@ impl SemanticAnalyser {
             self.log_error(
                 SemanticErrorKind::DeclarationOutOfContext {
                     declaration_kind: declaration_kind.to_string(),
+                },
+                span,
+            )
+        }
+    }
+
+    fn check_definition_scope(&mut self, item_kind: &str, span: &Span) {
+        if !matches!(
+            self.current_scope().scope_kind,
+            ScopeKind::Module(_) | ScopeKind::ProgramRoot
+        ) {
+            self.log_error(
+                SemanticErrorKind::ItemDefinitionOutOfContext {
+                    item_kind: item_kind.to_string(),
                 },
                 span,
             )
