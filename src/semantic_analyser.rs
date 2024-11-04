@@ -385,6 +385,10 @@ impl SemanticAnalyser {
                     "analysing expression statement: `{statement}` …"
                 );
 
+                if matches!(self.current_scope().scope_kind, ScopeKind::Public) {
+                    self.log_error(SemanticErrorKind::ExpressionOutOfScope, &expr.span());
+                }
+                
                 match analyse_expr(self, expr, &root) {
                     Ok(_) => (),
                     Err(e) => self.log_error(e, &expr.span()),
