@@ -209,7 +209,10 @@ pub(crate) fn analyse_expr(
                                 Err(err)
                             }
                         },
-                        _ => Ok(Type::UNIT_TYPE),
+                        _ => {
+                            analyser.analyse_stmt(stmt, root.clone())?;
+                            Ok(Type::UNIT_TYPE)
+                        }
                     },
                     _ => Ok(Type::UNIT_TYPE),
                 };
