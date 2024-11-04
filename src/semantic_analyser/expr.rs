@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BigUInt, Bytes, ClosureParams, EnumVariantKind, Expression, Float, FunctionOrMethodParam,
-        FunctionParam, FunctionPtr, Hash, Identifier, Int, Keyword, Literal, PathExpr, PathRoot,
-        Pattern, Statement, Type, TypePath, UInt, UnaryOp,
+        BigUInt, BreakExpr, Bytes, ClosureParams, ContinueExpr, EnumVariantKind, Expression, Float,
+        FunctionOrMethodParam, FunctionParam, FunctionPtr, Hash, Identifier, Int, Keyword, Literal,
+        PathExpr, PathRoot, Pattern, ReturnExpr, Statement, Type, TypePath, UInt, UnaryOp,
     },
     error::SemanticErrorKind,
     log_trace, log_warn,
@@ -158,9 +158,20 @@ pub(crate) fn analyse_expr(
                     // TODO: e.g., early return expression in a loop
                     match stmt {
                         Statement::Expression(expr) => match expr {
-                            Expression::Return(_)
-                            | Expression::Break(_)
-                            | Expression::Continue(_) => {
+                            Expression::Return(ReturnExpr {
+                                kw_return: expr_keyword,
+                                ..
+                            })
+                            | Expression::Break(BreakExpr {
+                                kw_break: expr_keyword,
+                                ..
+                            })
+                            | Expression::Continue(ContinueExpr {
+                                kw_continue: expr_keyword,
+                                ..
+                            }) => {
+                                analyser.check_exit_expression_scope(expr_keyword, &expr.span());
+
                                 analyse_expr(analyser, expr, root)?;
 
                                 match cloned_iter.peek() {
@@ -222,7 +233,10 @@ pub(crate) fn analyse_expr(
             _ => Ok(Type::UNIT_TYPE),
         },
 
-        Expression::Break(_) => Ok(Type::UNIT_TYPE),
+        Expression::Break(b) => {
+            analyser.check_exit_expression_scope(&b.kw_break, &b.span);
+            Ok(Type::UNIT_TYPE)
+        }
 
         Expression::Call(c) => analyse_call_or_method_call_expr(
             analyser,
@@ -352,7 +366,10 @@ pub(crate) fn analyse_expr(
             }
         }
 
-        Expression::Continue(_) => Ok(Type::UNIT_TYPE),
+        Expression::Continue(c) => {
+            analyser.check_exit_expression_scope(&c.kw_continue, &c.span);
+            Ok(Type::UNIT_TYPE)
+        }
 
         Expression::Dereference(d) => {
             match analyse_expr(analyser, &d.assignee_expr.to_expression(), root) {
@@ -982,10 +999,14 @@ pub(crate) fn analyse_expr(
             }
         }
 
-        Expression::Return(r) => match &r.expression_opt {
-            Some(expr) => analyse_expr(analyser, &expr.clone(), root),
-            _ => Ok(Type::UNIT_TYPE),
-        },
+        Expression::Return(r) => {
+            analyser.check_exit_expression_scope(&r.kw_return, &r.span);
+
+            match &r.expression_opt {
+                Some(expr) => analyse_expr(analyser, &expr.clone(), root),
+                _ => Ok(Type::UNIT_TYPE),
+            }
+        }
 
         Expression::SomeExpr(s) => {
             let ty = analyse_expr(analyser, &s.expression.clone().inner_expression, root)?;

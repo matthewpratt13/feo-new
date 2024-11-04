@@ -1005,12 +1005,12 @@ impl SemanticAnalyser {
     }
 
     fn check_conditional_expr_scope(&mut self, expr_kind: &str, span: &Span) {
-        if matches!(
+        if !matches!(
             self.current_scope().scope_kind,
-            ScopeKind::Public
-                | ScopeKind::ProgramRoot
-                | ScopeKind::Module(_)
-                | ScopeKind::FunctionDef(_)
+            ScopeKind::FunctionBody(_)
+                | ScopeKind::ForInLoop
+                | ScopeKind::MatchExpr
+                | ScopeKind::LocalBlock
         ) {
             self.log_error(
                 SemanticErrorKind::ConditionalExprOutOfContext {
@@ -1049,13 +1049,30 @@ impl SemanticAnalyser {
         }
     }
 
-    fn check_loop_expr_scope(&mut self, expr_kind: &str, span: &Span) {
-        if matches!(
+    fn check_exit_expression_scope(&mut self, expr_keyword: &Keyword, span: &Span) {
+        if !matches!(
             self.current_scope().scope_kind,
-            ScopeKind::Public
-                | ScopeKind::ProgramRoot
-                | ScopeKind::Module(_)
-                | ScopeKind::FunctionDef(_)
+            ScopeKind::FunctionBody(_)
+                | ScopeKind::ForInLoop
+                | ScopeKind::MatchExpr
+                | ScopeKind::LocalBlock
+        ) {
+            self.log_error(
+                SemanticErrorKind::ExitExpressionOutOfContext {
+                    expr_keyword: expr_keyword.clone(),
+                },
+                span,
+            )
+        }
+    }
+
+    fn check_loop_expr_scope(&mut self, expr_kind: &str, span: &Span) {
+        if !matches!(
+            self.current_scope().scope_kind,
+            ScopeKind::FunctionBody(_)
+                | ScopeKind::ForInLoop
+                | ScopeKind::MatchExpr
+                | ScopeKind::LocalBlock
         ) {
             self.log_error(
                 SemanticErrorKind::LoopExprOutOfContext {

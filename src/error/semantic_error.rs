@@ -31,6 +31,10 @@ pub enum SemanticErrorKind {
         declaration_kind: String,
     },
 
+    ExitExpressionOutOfContext {
+        expr_keyword: Keyword,
+    },
+
     ExpressionStmtOutOfScope,
 
     FuncArgCountMismatch {
@@ -342,6 +346,7 @@ impl fmt::Display for SemanticErrorKind {
                     "unexpected number of arguments given for function `{function_path}()`. Expected {expected} arguments, found {found}"
                 )
             }
+            SemanticErrorKind::ExitExpressionOutOfContext { expr_keyword } => write!(f, "{expr_keyword} expression out of context. Loops and functions can only be exited inside function bodies"),
             SemanticErrorKind::ExpressionStmtOutOfScope => write!(f, "expression statement out of scope. Expressions cannot be defined outside the program root scope"),
             SemanticErrorKind::GenericParamsCountMismatch { item_name, expected, found } => write!(f, "unexpected number of generic parameters in item `{item_name}`. Expected {expected} generic parameters, found {found}"),
             SemanticErrorKind::ItemDefinitionOutOfContext { item_kind } => write!(f, "{item_kind} definition out of context. Items can only be defined at a module or program root level"),
