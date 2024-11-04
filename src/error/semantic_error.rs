@@ -17,6 +17,8 @@ pub enum SemanticErrorKind {
         found: String,
     },
 
+    BlockExprOutOfContext,
+
     ConditionalExprOutOfContext {
         conditional_kind: String,
     },
@@ -29,7 +31,7 @@ pub enum SemanticErrorKind {
         declaration_kind: String,
     },
 
-    ExpressionOutOfScope,
+    ExpressionStmtOutOfScope,
 
     FuncArgCountMismatch {
         function_path: Identifier,
@@ -328,6 +330,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::AttributesMismatch { item_name, expected, found } => {
                 write!(f, "mismatch between attributes on for `{item_name}`. Expected {expected}, found {found}")
             }
+            SemanticErrorKind::BlockExprOutOfContext => write!(f, "block expression out of context. Blocks can only be expressions inside the program root scope"),
             SemanticErrorKind::ConditionalExprOutOfContext { conditional_kind } => write!(f, "{conditional_kind} expression of out context. Conditionals can only be expressed inside function bodies or blocks"),
             SemanticErrorKind::ConstantReassignment { constant_name: name } => {
                 write!(f, "cannot reassign constant `{name}`")
@@ -339,7 +342,7 @@ impl fmt::Display for SemanticErrorKind {
                     "unexpected number of arguments given for function `{function_path}()`. Expected {expected} arguments, found {found}"
                 )
             }
-            SemanticErrorKind::ExpressionOutOfScope => write!(f, "expression out of scope. Expressions cannot be defined outside the program root scope"),
+            SemanticErrorKind::ExpressionStmtOutOfScope => write!(f, "expression statement out of scope. Expressions cannot be defined outside the program root scope"),
             SemanticErrorKind::GenericParamsCountMismatch { item_name, expected, found } => write!(f, "unexpected number of generic parameters in item `{item_name}`. Expected {expected} generic parameters, found {found}"),
             SemanticErrorKind::ItemDefinitionOutOfContext { item_kind } => write!(f, "{item_kind} definition out of context. Items can only be defined at a module or program root level"),
             SemanticErrorKind::ImportClash { type_name, module_name } => write!(f, "duplicate type names detected for type: `{type_name}` in module `{module_name}`"),

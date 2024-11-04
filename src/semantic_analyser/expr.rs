@@ -132,12 +132,7 @@ pub(crate) fn analyse_expr(
                     Scope {
                         scope_kind: ScopeKind::Public,
                         ..
-                    }
-                    | Scope {
-                        scope_kind: ScopeKind::ProgramRoot,
-                        ..
-                    } => todo!(), // TODO: error – block expression out of context
-
+                    } => analyser.log_error(SemanticErrorKind::BlockExprOutOfContext, &b.span),
                     Scope {
                         scope_kind: ScopeKind::FunctionDef(path),
                         ..

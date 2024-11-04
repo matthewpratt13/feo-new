@@ -386,7 +386,7 @@ impl SemanticAnalyser {
                 );
 
                 if matches!(self.current_scope().scope_kind, ScopeKind::Public) {
-                    self.log_error(SemanticErrorKind::ExpressionOutOfScope, &expr.span());
+                    self.log_error(SemanticErrorKind::ExpressionStmtOutOfScope, &expr.span());
                 }
 
                 match analyse_expr(self, expr, &root) {
