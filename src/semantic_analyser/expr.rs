@@ -468,6 +468,8 @@ pub(crate) fn analyse_expr(
         Expression::If(i) => {
             println!("entering `if` expression");
 
+            analyser.check_conditional_expr_scope("if", &i.span);
+
             analyse_expr(analyser, &Expression::Grouped(*i.condition.clone()), root)?;
 
             let if_block_type =
@@ -648,6 +650,8 @@ pub(crate) fn analyse_expr(
         },
 
         Expression::Match(m) => {
+            analyser.check_conditional_expr_scope("match", &m.span);
+
             analyser.enter_scope(ScopeKind::MatchExpr);
 
             let scrutinee_type = analyse_expr(analyser, &m.scrutinee.to_expression(), root)?;
