@@ -17,6 +17,9 @@ pub enum SemanticErrorKind {
         found: String,
     },
 
+    ConditionalExprOutOfContext {
+        conditional_kind: String,
+    },
 
     ConstantReassignment {
         constant_name: Identifier,
@@ -52,8 +55,12 @@ pub enum SemanticErrorKind {
     ItemDefinitionOutOfContext {
         item_kind: String,
     },
-
+    
     LetStatementOutOfContext,
+
+    LoopExprOutOfContext {
+        loop_kind: String,
+    },
 
     MethodParamCountError,
 
@@ -321,6 +328,7 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::AttributesMismatch { item_name, expected, found } => {
                 write!(f, "mismatch between attributes on for `{item_name}`. Expected {expected}, found {found}")
             }
+            SemanticErrorKind::ConditionalExprOutOfContext { conditional_kind } => write!(f, "{conditional_kind} expression of out context. Conditionals can only be expressed inside function bodies or blocks"),
             SemanticErrorKind::ConstantReassignment { constant_name: name } => {
                 write!(f, "cannot reassign constant `{name}`")
             }
@@ -337,6 +345,9 @@ impl fmt::Display for SemanticErrorKind {
             SemanticErrorKind::ImportClash { type_name, module_name } => write!(f, "duplicate type names detected for type: `{type_name}` in module `{module_name}`"),
             SemanticErrorKind::InvalidVariableIdentifier { name } => {
                 write!(f, "invalid variable identifier: `{name}`")
+            }
+            SemanticErrorKind::LoopExprOutOfContext { loop_kind } => {
+                write!(f, "{loop_kind} loop expression out of context. Loops can only be expressed inside function bodies or blocks")
             }
             SemanticErrorKind::LetStatementOutOfContext => write!(f, "let statement out of context. Let statements can only be declared inside functions or blocks"),
             SemanticErrorKind::MethodParamCountError => {

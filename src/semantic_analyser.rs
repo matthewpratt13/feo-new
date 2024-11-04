@@ -388,7 +388,7 @@ impl SemanticAnalyser {
                 if matches!(self.current_scope().scope_kind, ScopeKind::Public) {
                     self.log_error(SemanticErrorKind::ExpressionOutOfScope, &expr.span());
                 }
-                
+
                 match analyse_expr(self, expr, &root) {
                     Ok(_) => (),
                     Err(e) => self.log_error(e, &expr.span()),
@@ -1004,6 +1004,23 @@ impl SemanticAnalyser {
         Ok(())
     }
 
+    fn check_conditional_expr_scope(&mut self, expr_kind: &str, span: &Span) {
+        if matches!(
+            self.current_scope().scope_kind,
+            ScopeKind::Public
+                | ScopeKind::ProgramRoot
+                | ScopeKind::Module(_)
+                | ScopeKind::FunctionDef(_)
+        ) {
+            self.log_error(
+                SemanticErrorKind::ConditionalExprOutOfContext {
+                    conditional_kind: expr_kind.to_string(),
+                },
+                span,
+            );
+        }
+    }
+
     fn check_declaration_scope(&mut self, declaration_kind: &str, span: &Span) {
         if !matches!(
             self.current_scope().scope_kind,
@@ -1029,6 +1046,23 @@ impl SemanticAnalyser {
                 },
                 span,
             )
+        }
+    }
+
+    fn check_loop_expr_scope(&mut self, expr_kind: &str, span: &Span) {
+        if matches!(
+            self.current_scope().scope_kind,
+            ScopeKind::Public
+                | ScopeKind::ProgramRoot
+                | ScopeKind::Module(_)
+                | ScopeKind::FunctionDef(_)
+        ) {
+            self.log_error(
+                SemanticErrorKind::LoopExprOutOfContext {
+                    loop_kind: expr_kind.to_string(),
+                },
+                span,
+            );
         }
     }
 

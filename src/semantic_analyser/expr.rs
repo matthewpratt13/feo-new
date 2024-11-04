@@ -409,6 +409,8 @@ pub(crate) fn analyse_expr(
         }
 
         Expression::ForIn(fi) => {
+            analyser.check_loop_expr_scope("for-in", &fi.span);
+
             analyser.enter_scope(ScopeKind::ForInLoop);
 
             let iter_type = analyse_expr(analyser, &fi.iterator.clone(), root)?;
@@ -1521,6 +1523,8 @@ pub(crate) fn analyse_expr(
                 "analysing while loop with condition `{}` …",
                 Expression::Grouped(*w.condition.clone())
             );
+
+            analyser.check_loop_expr_scope("while", &w.span);
 
             analyse_expr(analyser, &Expression::Grouped(*w.condition.clone()), root)?;
             analyse_expr(analyser, &Expression::Block(w.block.clone()), root)?;
