@@ -393,17 +393,7 @@ impl SemanticAnalyser {
 
             Statement::Item(item) => match item {
                 Item::AliasDecl(ad) => {
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::FunctionBody(_) | ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::DeclarationOutOfContext {
-                                declaration_kind: "type alias".to_string(),
-                            },
-                            &ad.span,
-                        )
-                    }
+                    self.check_declaration_scope("type alias", &ad.span);
 
                     let alias_decl = Rc::new(ad);
 
@@ -550,17 +540,7 @@ impl SemanticAnalyser {
                 Item::ImportDecl(id) => {
                     log_trace!(self.logger, "analysing import declaration: `{statement}` …");
 
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::FunctionBody(_) | ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::DeclarationOutOfContext {
-                                declaration_kind: "import".to_string(),
-                            },
-                            &id.span,
-                        )
-                    }
+                    self.check_declaration_scope("import", &id.span);
 
                     match self.analyse_import(id, &root.type_name) {
                         Ok(_) => (),
@@ -729,17 +709,7 @@ impl SemanticAnalyser {
                         "analysing static variable declaration: `{statement}` …"
                     );
 
-                    if !matches!(
-                        self.current_scope().scope_kind,
-                        ScopeKind::FunctionBody(_) | ScopeKind::Module(_) | ScopeKind::ProgramRoot
-                    ) {
-                        self.log_error(
-                            SemanticErrorKind::DeclarationOutOfContext {
-                                declaration_kind: "static variable".to_string(),
-                            },
-                            &s.span,
-                        )
-                    }
+                    self.check_declaration_scope("static variable", &s.span);
 
                     let mut assignee_type = match &s.assignee_opt {
                         Some(a_expr) => {
