@@ -166,6 +166,10 @@ impl ParseStatement for Item {
                     StructDef::parse(parser, attributes_opt, visibility)?,
                 ))),
 
+                Some(Token::LessThan { .. }) => Ok(Statement::Item(Item::StructDef(
+                    StructDef::parse(parser, attributes_opt, visibility)?,
+                ))),
+
                 _ => {
                     parser.emit_unexpected_token(&format!(
                         "{} or {}",
@@ -351,7 +355,7 @@ mod tests {
 
     #[test]
     fn parse_generic_params_struct() -> Result<(), ()> {
-        let input = r#""#;
+        let input = r#"struct Foo<T: TraitA, U> {}"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
 
