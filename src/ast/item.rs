@@ -647,6 +647,10 @@ impl fmt::Debug for Item {
                     &arg0.implemented_trait_generic_params_opt,
                 )
                 .field("implementing_type", &arg0.implementing_type)
+                .field(
+                    "implementing_type_generic_params_opt",
+                    &arg0.implementing_type_generic_params_opt,
+                )
                 .field("associated_items_opt", &arg0.associated_items_opt)
                 .finish(),
             Self::FunctionItem(arg0) => f
