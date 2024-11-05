@@ -182,22 +182,72 @@ impl ParseStatement for Item {
             Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionItem(
                 FunctionItem::parse(parser, attributes_opt, visibility)?,
             ))),
-            Some(Token::Impl { .. }) => match parser.peek_ahead_by(2) {
-                Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
-                    TraitImplDef::parse(parser, attributes_opt, visibility)?,
-                ))),
-                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
-                    InherentImplDef::parse(parser, attributes_opt, visibility)?,
-                ))),
-                _ => {
-                    parser.emit_unexpected_token(&format!(
-                        "{} or {}",
-                        TokenType::For,
-                        TokenType::LBrace
-                    ));
-                    Err(ErrorsEmitted)
+            Some(Token::Impl { .. }) => {
+                match parser.peek_ahead_by(1) {
+                    Some(Token::Identifier { .. }) => match parser.peek_ahead_by(2) {
+                        Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
+                            TraitImplDef::parse(parser, attributes_opt, visibility)?,
+                        ))),
+                        Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
+                            InherentImplDef::parse(parser, attributes_opt, visibility)?,
+                        ))),
+                        _ => {
+                            parser.emit_unexpected_token(&format!(
+                                "{} or {}",
+                                TokenType::For,
+                                TokenType::LBrace
+                            ));
+                            Err(ErrorsEmitted)
+                        }
+                    },
+                    Some(Token::LessThan { .. }) => match parser.peek_ahead_by(2) {
+                        Some(Token::Identifier { .. }) => {
+                            Ok(Statement::Item(Item::InherentImplDef(
+                                InherentImplDef::parse(parser, attributes_opt, visibility)?,
+                            )))
+                        }
+                        Some(Token::EOF) | None => {
+                            parser.emit_unexpected_eoi();
+                            parser.warn_missing_token("identifier");
+                            Err(ErrorsEmitted)
+                        }
+                        _ => {
+                            parser.emit_unexpected_token("identifier");
+                            Err(ErrorsEmitted)
+                        }
+                    },
+                    Some(Token::EOF) | None => {
+                        parser.emit_unexpected_eoi();
+                        parser.warn_missing_token("identifier or open angle bracket");
+                        Err(ErrorsEmitted)
+                    }
+                    _ => {
+                        parser.emit_unexpected_token(&format!(
+                            "{} or {}",
+                            TokenType::Iden,
+                            TokenType::LessThan
+                        ));
+                        Err(ErrorsEmitted)
+                    }
                 }
-            },
+
+                // match parser.peek_ahead_by(2) {
+                //     Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
+                //         TraitImplDef::parse(parser, attributes_opt, visibility)?,
+                //     ))),
+                //     Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
+                //         InherentImplDef::parse(parser, attributes_opt, visibility)?,
+                //     ))),
+                //     _ => {
+                //         parser.emit_unexpected_token(&format!(
+                //             "{} or {}",
+                //             TokenType::For,
+                //             TokenType::LBrace
+                //         ));
+                //         Err(ErrorsEmitted)
+                //     }
+                // }
+            }
             None | Some(Token::EOF { .. }) => {
                 parser.emit_unexpected_eoi();
                 parser.warn_missing_token("item definition keyword");
@@ -369,7 +419,7 @@ mod tests {
 
     #[test]
     fn parse_generic_params_inherent_impl() -> Result<(), ()> {
-        let input = r#""#;
+        let input = r#"impl<T: TraitA, U> Foo<T, U> {}"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
 
