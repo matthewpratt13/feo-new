@@ -212,14 +212,16 @@ impl Type {
                             .next()
                             .is_some_and(|c| c.is_uppercase())
                     {
-                        let generic_param = parse_generic_param(parser)?;
 
+                        let generic_param = parse_generic_param(parser)?;
+                        
                         Ok(Type::Generic(GenericParam {
                             name: generic_param.name,
                             type_bound_opt: generic_param.type_bound_opt,
                         }))
                     } else {
                         let path = TypePath::parse(parser, token)?;
+                        println!("current current token: {:?}", parser.current_token());
                         Ok(Type::UserDefined(path))
                     }
                 }
