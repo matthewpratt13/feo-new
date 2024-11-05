@@ -604,6 +604,7 @@ impl fmt::Debug for Item {
                 .field("generic_params_opt", &arg0.generic_params_opt)
                 .field("visibility", &arg0.visibility)
                 .field("trait_name", &arg0.trait_name)
+                .field("where_clause_opt", &arg0.where_clause_opt)
                 .field("inner_attributes_opt", &arg0.inner_attributes_opt)
                 .field("trait_items_opt", &arg0.trait_items_opt)
                 .finish(),
@@ -651,6 +652,7 @@ impl fmt::Debug for Item {
                     "implementing_type_generic_params_opt",
                     &arg0.implementing_type_generic_params_opt,
                 )
+                .field("where_clause_opt", &arg0.where_clause_opt)
                 .field("associated_items_opt", &arg0.associated_items_opt)
                 .finish(),
             Self::FunctionItem(arg0) => f

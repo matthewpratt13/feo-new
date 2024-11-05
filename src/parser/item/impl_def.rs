@@ -11,7 +11,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{parse_generic_params, parse_where_clause};
+use super::{parse_generic_params, parse_where_clause, GenericParam, GenericParams};
 
 impl ParseDefItem for InherentImplDef {
     fn parse(
@@ -59,11 +59,11 @@ impl ParseDefItem for InherentImplDef {
 
                 return Err(ErrorsEmitted);
             }
-            (Some(ga), None) => {
-                log_warn!(parser.logger, "unused generics declared: {:?}", ga.params);
+            (Some(gp), None) => {
+                log_warn!(parser.logger, "unused generics declared: {:?}", gp.params);
                 None
             }
-            (Some(_), Some(ga)) => Some(ga),
+            (Some(gp), Some(_)) => Some(gp),
         };
 
         parser.expect_open_brace()?;
@@ -129,20 +129,31 @@ impl ParseDefItem for TraitImplDef {
         }?;
 
         let implemented_trait_generic_params_opt =
-            match (generic_declaration_opt, parse_generic_params(parser)?) {
+            match (&generic_declaration_opt, parse_generic_params(parser)?) {
                 (None, None) => None,
-                (None, Some(ga)) => {
+                (None, Some(gp)) => {
                     parser.emit_error(ParserErrorKind::UndeclaredGenericParams {
-                        found: format!("{:?}", ga.params),
+                        found: format!("{:?}", gp.params),
                     });
 
                     return Err(ErrorsEmitted);
                 }
-                (Some(ga), None) => {
-                    log_warn!(parser.logger, "unused generics declared: {:?}", ga.params);
+                (Some(gp), None) => {
+                    log_warn!(parser.logger, "unused generics declared: {:?}", gp.params);
                     None
                 }
-                (Some(_), Some(ga)) => Some(ga),
+                (Some(generic_decl_params), Some(trait_generic_params)) => {
+                    let mut params: Vec<GenericParam> = Vec::new();
+                    for tgp in trait_generic_params.params {
+                        for param in generic_decl_params.params.clone() {
+                            if tgp.name == param.name {
+                                params.push(param);
+                            }
+                        }
+                    }
+
+                    Some(GenericParams { params })
+                }
             };
 
         let kw_for = parser
@@ -164,11 +175,33 @@ impl ParseDefItem for TraitImplDef {
             }
         }?;
 
-        println!("{:?}", parser.current_token());
+        let implementing_type_generic_params_opt =
+            match (&generic_declaration_opt, parse_generic_params(parser)?) {
+                (None, None) => None,
+                (None, Some(gp)) => {
+                    parser.emit_error(ParserErrorKind::UndeclaredGenericParams {
+                        found: format!("{:?}", gp.params),
+                    });
 
-        println!("foo");
+                    return Err(ErrorsEmitted);
+                }
+                (Some(gp), None) => {
+                    log_warn!(parser.logger, "unused generics declared: {:?}", gp.params);
+                    None
+                }
+                (Some(generic_decl_params), Some(type_generic_params)) => {
+                    let mut params: Vec<GenericParam> = Vec::new();
+                    for tgp in type_generic_params.params {
+                        for param in generic_decl_params.params.clone() {
+                            if tgp.name == param.name {
+                                params.push(param);
+                            }
+                        }
+                    }
 
-        let implementing_type_generic_params_opt = parse_generic_params(parser)?;
+                    Some(GenericParams { params })
+                }
+            };
 
         let where_clause_opt = parse_where_clause(parser)?;
 
