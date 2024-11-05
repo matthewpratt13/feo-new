@@ -601,6 +601,7 @@ impl fmt::Debug for Item {
             Self::TraitDef(arg0) => f
                 .debug_struct("TraitDef")
                 .field("outer_attributes_opt", &arg0.outer_attributes_opt)
+                .field("generic_params_opt", &arg0.generic_params_opt)
                 .field("visibility", &arg0.visibility)
                 .field("trait_name", &arg0.trait_name)
                 .field("inner_attributes_opt", &arg0.inner_attributes_opt)
@@ -611,12 +612,14 @@ impl fmt::Debug for Item {
                 .field("attributes_opt", &arg0.attributes_opt)
                 .field("visibility", &arg0.visibility)
                 .field("enum_name", &arg0.enum_name)
+                .field("generic_params_opt", &arg0.generic_params_opt)
                 .field("variants", &arg0.variants)
                 .finish(),
             Self::StructDef(arg0) => f
                 .debug_struct("StructDef")
                 .field("attributes_opt", &arg0.attributes_opt)
                 .field("visibility", &arg0.visibility)
+                .field("generic_params_opt", &arg0.generic_params_opt)
                 .field("struct_name", &arg0.struct_name)
                 .field("fields_opt", &arg0.fields_opt)
                 .finish(),
@@ -624,6 +627,7 @@ impl fmt::Debug for Item {
                 .debug_struct("TupleStructDef")
                 .field("attributes_opt", &arg0.attributes_opt)
                 .field("visibility", &arg0.visibility)
+                .field("generic_params_opt", &arg0.generic_params_opt)
                 .field("struct_name", &arg0.struct_name)
                 .field("elements_opt", &arg0.fields_opt)
                 .finish(),
@@ -631,12 +635,17 @@ impl fmt::Debug for Item {
                 .debug_struct("InherentImplDef")
                 .field("attributes_opt", &arg0.attributes_opt)
                 .field("nominal_type", &arg0.nominal_type)
+                .field("generic_params_opt", &arg0.generic_params_opt)
                 .field("associated_items_opt", &arg0.associated_items_opt)
                 .finish(),
             Self::TraitImplDef(arg0) => f
                 .debug_struct("TraitImplDef")
                 .field("attributes_opt", &arg0.attributes_opt)
                 .field("implemented_trait_path", &arg0.implemented_trait_path)
+                .field(
+                    "implemented_trait_generic_params_opt",
+                    &arg0.implemented_trait_generic_params_opt,
+                )
                 .field("implementing_type", &arg0.implementing_type)
                 .field("associated_items_opt", &arg0.associated_items_opt)
                 .finish(),
@@ -645,6 +654,7 @@ impl fmt::Debug for Item {
                 .field("attributes_opt", &arg0.attributes_opt)
                 .field("visibility", &arg0.visibility)
                 .field("function_name", &arg0.function_name)
+                .field("generic_params_opt", &arg0.generic_params_opt)
                 .field("params_opt", &arg0.params_opt)
                 .field("return_type_opt", &arg0.return_type_opt)
                 .field("block_opt", &arg0.block_opt)
