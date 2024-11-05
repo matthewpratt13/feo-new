@@ -59,11 +59,11 @@ impl ParseDefItem for InherentImplDef {
 
                 return Err(ErrorsEmitted);
             }
-            (Some(ga), None) => {
-                log_warn!(parser.logger, "unused generics declared: {:?}", ga.params);
+            (Some(gp), None) => {
+                log_warn!(parser.logger, "unused generics declared: {:?}", gp.params);
                 None
             }
-            (Some(_), Some(ga)) => Some(ga),
+            (Some(gp), Some(_)) => Some(gp),
         };
 
         parser.expect_open_brace()?;

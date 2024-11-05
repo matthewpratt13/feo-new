@@ -351,7 +351,7 @@ pub(crate) fn parse_generic_param(parser: &mut Parser) -> Result<GenericParam, E
         None
     };
 
-    Ok(GenericParam {
+        Ok(GenericParam {
         name,
         type_bound_opt,
     })
@@ -411,7 +411,6 @@ pub(crate) fn parse_where_clause(
         trait_bounds,
     }))
 }
-
 
 #[cfg(test)]
 mod tests {
