@@ -346,4 +346,62 @@ pub(crate) fn parse_where_clause(
 // TODO: e.g., `trait TraitB<V: TraitC> where Self: TraitD + TraitE`
 // TODO: e.g., `impl<T: TraitA, U, V: TraitC> TraitB<V> for Foo<T, U> where Self: TraitD + TraitE`
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use crate::parser::{test_utils, LogLevel};
+
+    #[test]
+    fn parse_generic_params_struct() -> Result<(), ()> {
+        let input = r#""#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
+
+        let statement = parser.parse_statement();
+
+        match statement {
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(e) => Err(println!("{e:#?}")),
+        }
+    }
+
+    #[test]
+    fn parse_generic_params_inherent_impl() -> Result<(), ()> {
+        let input = r#""#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
+
+        let statement = parser.parse_statement();
+
+        match statement {
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(e) => Err(println!("{e:#?}")),
+        }
+    }
+
+    #[test]
+    fn parse_generic_params_trait_def() -> Result<(), ()> {
+        let input = r#""#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
+
+        let statement = parser.parse_statement();
+
+        match statement {
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(e) => Err(println!("{e:#?}")),
+        }
+    }
+
+    #[test]
+    fn parse_generic_params_trait_impl() -> Result<(), ()> {
+        let input = r#""#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
+
+        let statement = parser.parse_statement();
+
+        match statement {
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(e) => Err(println!("{e:#?}")),
+        }
+    }
+}
