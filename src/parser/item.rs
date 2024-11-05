@@ -11,15 +11,15 @@ mod trait_def;
 
 use crate::{
     ast::{
-        AliasDecl, ConstantDecl, Delimiter, EnumDef, FunctionItem, GenericParam, GenericParams,
-        Identifier, ImportDecl, InherentImplDef, Item, Keyword, ModuleItem, OuterAttr, Statement,
-        StaticVarDecl, StructDef, TraitDef, TraitImplDef, TupleStructDef, Type, TypePath,
-        Visibility, WhereClause,
+        AliasDecl, ConstantDecl, Delimiter, EnumDef, Expression, FunctionItem, GenericParam,
+        GenericParams, Identifier, ImportDecl, InherentImplDef, Item, Keyword, ModuleItem,
+        NoneExpr, OuterAttr, Statement, StaticVarDecl, StructDef, TraitDef, TraitImplDef,
+        TupleStructDef, Type, TypePath, Visibility, WhereClause,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     log_trace,
     parser::get_attributes,
-    span::Span,
+    span::{Position, Span},
     token::{Token, TokenType},
 };
 
@@ -166,11 +166,16 @@ impl ParseStatement for Item {
                     StructDef::parse(parser, attributes_opt, visibility)?,
                 ))),
 
+                Some(Token::LessThan { .. }) => Ok(Statement::Item(Item::StructDef(
+                    StructDef::parse(parser, attributes_opt, visibility)?,
+                ))),
+
                 _ => {
                     parser.emit_unexpected_token(&format!(
-                        "{} or {}",
+                        "{}, {} or {}",
                         TokenType::LParen,
-                        TokenType::LBrace
+                        TokenType::LBrace,
+                        TokenType::LessThan
                     ));
                     Err(ErrorsEmitted)
                 }
@@ -178,21 +183,69 @@ impl ParseStatement for Item {
             Some(Token::Func { .. }) => Ok(Statement::Item(Item::FunctionItem(
                 FunctionItem::parse(parser, attributes_opt, visibility)?,
             ))),
-            Some(Token::Impl { .. }) => match parser.peek_ahead_by(2) {
-                Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
-                    TraitImplDef::parse(parser, attributes_opt, visibility)?,
-                ))),
-                Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
-                    InherentImplDef::parse(parser, attributes_opt, visibility)?,
-                ))),
-                _ => {
-                    parser.emit_unexpected_token(&format!(
-                        "{} or {}",
-                        TokenType::For,
-                        TokenType::LBrace
-                    ));
-                    Err(ErrorsEmitted)
-                }
+            Some(Token::Impl { .. }) => match parser.peek_ahead_by(1) {
+                Some(Token::LessThan { .. }) => match parser.peek_ahead_by(2) {
+                    Some(Token::Identifier { .. }) => {
+                        let mut lookahead_count = 3;
+
+                        let mut statement = Statement::Expression(Expression::NoneExpr(NoneExpr {
+                            kw_none: Keyword::None,
+                            span: Span::default(),
+                        }));
+
+                        while let Some(tok) = parser.peek_ahead_by(lookahead_count) {
+                            match tok {
+                                Token::For { .. } => {
+                                    statement = Statement::Item(Item::TraitImplDef(
+                                        TraitImplDef::parse(parser, attributes_opt, visibility)?,
+                                    ));
+
+                                    break;
+                                }
+                                Token::LBrace { .. } => {
+                                    statement = Statement::Item(Item::InherentImplDef(
+                                        InherentImplDef::parse(
+                                            parser,
+                                            attributes_opt.clone(),
+                                            visibility,
+                                        )?,
+                                    ));
+                                }
+                                Token::EOF => break,
+                                _ => (),
+                            }
+
+                            lookahead_count += 1;
+                        }
+
+                        Ok(statement)
+                    }
+                    Some(Token::EOF) | None => {
+                        parser.emit_unexpected_eoi();
+                        parser.warn_missing_token("identifier");
+                        Err(ErrorsEmitted)
+                    }
+                    _ => {
+                        parser.emit_unexpected_token("identifier");
+                        Err(ErrorsEmitted)
+                    }
+                },
+                _ => match parser.peek_ahead_by(2) {
+                    Some(Token::For { .. }) => Ok(Statement::Item(Item::TraitImplDef(
+                        TraitImplDef::parse(parser, attributes_opt, visibility)?,
+                    ))),
+                    Some(Token::LBrace { .. }) => Ok(Statement::Item(Item::InherentImplDef(
+                        InherentImplDef::parse(parser, attributes_opt, visibility)?,
+                    ))),
+                    _ => {
+                        parser.emit_unexpected_token(&format!(
+                            "{} or {}",
+                            TokenType::For,
+                            TokenType::LBrace
+                        ));
+                        Err(ErrorsEmitted)
+                    }
+                },
             },
             None | Some(Token::EOF { .. }) => {
                 parser.emit_unexpected_eoi();
@@ -220,6 +273,25 @@ pub(crate) fn parse_generic_params(
         let left_angle_bracket = Delimiter::LAngleBracket { position };
 
         parser.next_token();
+
+        let generics = get_collection(parser, parse_generic_param, &left_angle_bracket)?
+            .ok_or_else(|| {
+                parser.emit_missing_node("ty", "generic params");
+                parser.next_token();
+                ErrorsEmitted
+            })?;
+
+        parser.expect_token(TokenType::GreaterThan)?;
+
+        Ok(Some(GenericParams { params: generics }))
+    } else if let Some(Token::Identifier { .. }) = parser.current_token() {
+        let left_angle_bracket =
+            if let Some(Token::LessThan { span, .. }) = parser.peek_behind_by(1) {
+                let position = Position::new(span.start(), &span.input());
+                Delimiter::LAngleBracket { position }
+            } else {
+                return Ok(None);
+            };
 
         let generics = get_collection(parser, parse_generic_param, &left_angle_bracket)?
             .ok_or_else(|| {
@@ -309,7 +381,7 @@ pub(crate) fn parse_where_clause(
     let trait_bounds = if let Some(Token::Colon { .. }) = parser.current_token() {
         parser.next_token();
 
-        if let Some(Token::SelfType { .. }) = parser.current_token() {
+        if let Some(Token::Identifier { .. }) = parser.current_token() {
             let mut bounds: Vec<TypePath> = Vec::new();
 
             while let Ok(tp) = TypePath::parse(parser, parser.current_token().cloned()) {
@@ -325,7 +397,7 @@ pub(crate) fn parse_where_clause(
 
             bounds
         } else {
-            parser.emit_unexpected_token(&format!("{} type", TokenType::SelfType));
+            parser.emit_unexpected_token(&format!("identifier"));
             return Err(ErrorsEmitted);
         }
     } else {
@@ -340,10 +412,78 @@ pub(crate) fn parse_where_clause(
     }))
 }
 
-// TODO: test items with generic params and where clauses
-// TODO: e.g., `struct Foo<T: TraitA, U>`
-// TODO: e.g., `impl<T: TraitA, U> Foo<T, U>`
-// TODO: e.g., `trait TraitB<V: TraitC> where Self: TraitD + TraitE`
-// TODO: e.g., `impl<T: TraitA, U, V: TraitC> TraitB<V> for Foo<T, U> where Self: TraitD + TraitE`
+
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use crate::parser::{test_utils, LogLevel};
+
+    #[test]
+    fn parse_generic_params_struct() -> Result<(), ()> {
+        let input = r#"struct Foo<T: TraitA, U> {}"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
+
+        let statement = parser.parse_statement();
+
+        match statement {
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(e) => Err(println!("{e:#?}")),
+        }
+    }
+
+    #[test]
+    fn parse_generic_params_enum() -> Result<(), ()> {
+        let input = r#"enum Foo<T: TraitA, U> {}"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
+
+        let statement = parser.parse_statement();
+
+        match statement {
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(e) => Err(println!("{e:#?}")),
+        }
+    }
+
+    #[test]
+    fn parse_generic_params_inherent_impl() -> Result<(), ()> {
+        let input = r#"impl<T: TraitA, U> Foo<T, U> {}"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
+
+        let statement = parser.parse_statement();
+
+        match statement {
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(e) => Err(println!("{e:#?}")),
+        }
+    }
+
+    #[test]
+    fn parse_generic_params_trait_def() -> Result<(), ()> {
+        let input = r#"trait TraitB<V: TraitC> where Self: TraitD + TraitE {}"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
+
+        let statement = parser.parse_statement();
+
+        match statement {
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(e) => Err(println!("{e:#?}")),
+        }
+    }
+
+    #[test]
+    fn parse_generic_params_trait_impl() -> Result<(), ()> {
+        let input = r#"impl<T: TraitA, U, V: TraitC> TraitB<V> for Foo<T, U> where Self: TraitD + TraitE {}"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
+
+        let statement = parser.parse_statement();
+
+        match statement {
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(e) => Err(println!("{e:#?}")),
+        }
+    }
+}

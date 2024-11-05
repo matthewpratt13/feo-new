@@ -164,6 +164,10 @@ impl ParseDefItem for TraitImplDef {
             }
         }?;
 
+        println!("{:?}", parser.current_token());
+
+        println!("foo");
+
         let implementing_type_generic_params_opt = parse_generic_params(parser)?;
 
         let where_clause_opt = parse_where_clause(parser)?;
