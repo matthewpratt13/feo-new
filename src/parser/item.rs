@@ -412,11 +412,7 @@ pub(crate) fn parse_where_clause(
     }))
 }
 
-// TODO: test items with generic params and where clauses
-// TODO: e.g., `struct Foo<T: TraitA, U>`
-// TODO: e.g., `impl<T: TraitA, U> Foo<T, U>`
-// TODO: e.g., `trait TraitB<V: TraitC> where Self: TraitD + TraitE`
-// TODO: e.g., `impl<T: TraitA, U, V: TraitC> TraitB<V> for Foo<T, U> where Self: TraitD + TraitE`
+
 #[cfg(test)]
 mod tests {
     use crate::parser::{test_utils, LogLevel};
@@ -424,6 +420,20 @@ mod tests {
     #[test]
     fn parse_generic_params_struct() -> Result<(), ()> {
         let input = r#"struct Foo<T: TraitA, U> {}"#;
+
+        let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
+
+        let statement = parser.parse_statement();
+
+        match statement {
+            Ok(stmt) => Ok(println!("{stmt:#?}")),
+            Err(e) => Err(println!("{e:#?}")),
+        }
+    }
+
+    #[test]
+    fn parse_generic_params_enum() -> Result<(), ()> {
+        let input = r#"enum Foo<T: TraitA, U> {}"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
 
