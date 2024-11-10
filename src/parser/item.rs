@@ -457,7 +457,16 @@ mod tests {
 
     #[test]
     fn parse_generic_params_inherent_impl() -> Result<(), ()> {
-        let input = r#"impl<T: TraitA, U> Foo<T, U> {}"#;
+        let input = r#"
+        impl<T: TraitA, U> Foo<T, U> {
+            func new(a: T, b: U) -> Self {
+                Foo {
+                    a: a,
+                    b: b,
+                }
+            }
+        }
+        "#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
 
@@ -475,7 +484,7 @@ mod tests {
         trait TraitB<V: TraitC> 
             where Self: TraitD + TraitE 
         {
-            func foo(&self) -> V;
+            func foo(v: V) -> Self;
         }
         "#;
 
@@ -491,7 +500,15 @@ mod tests {
 
     #[test]
     fn parse_generic_params_trait_impl() -> Result<(), ()> {
-        let input = r#"impl<T: TraitA, U, V: TraitC> TraitB<V> for Foo<T, U> where Self: TraitD + TraitE {}"#;
+        let input = r#"
+        impl<T: TraitA, U, V: TraitC> TraitB<V> for Foo<T, U> where Self: TraitD + TraitE {
+            func foo(v: V) -> Self {
+               Foo {
+                   a: v.t,
+                   b: v.u 
+                }
+            }
+        }"#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
 
