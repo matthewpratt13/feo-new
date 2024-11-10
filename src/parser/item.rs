@@ -519,14 +519,17 @@ mod tests {
     #[test]
     fn parse_generic_params_trait_impl() -> Result<(), ()> {
         let input = r#"
-        impl<T: TraitA, U, V: TraitC> TraitB<V> for Foo<T, U> where Self: TraitD + TraitE {
-            func foo(v: V) -> Self {
-               Foo {
-                   a: v.t,
-                   b: v.u 
+        impl<T: TraitA, U, V: TraitC<T, U>> TraitB<T, U, V> for Foo<T, U> 
+            where Self: TraitD + TraitE 
+        {
+            func bar(v: V) -> Self {
+                Foo {
+                    a: v.a(),
+                    b: v.b()
                 }
             }
-        }"#;
+        }
+        "#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
 
