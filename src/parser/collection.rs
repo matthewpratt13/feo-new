@@ -5,7 +5,7 @@ use crate::{
     token::{Token, TokenType},
 };
 
-use super::{ParseAssociatedItem, Parser, Precedence};
+use super::{item::parse_generic_params, ParseAssociatedItem, Parser, Precedence};
 
 /// Helper function that collects a generic element into a vector based on the input function.
 /// Takes in a `Delimiter` (for reusability) to distinguish the outer limits of the collection.
@@ -99,6 +99,10 @@ pub(crate) fn get_collection<T>(
             ) {
                 let item = f(parser)?;
                 collection.push(item);
+
+                if let Some(Token::LessThan { .. }) = parser.current_token() {
+                    parse_generic_params(parser)?;
+                }
 
                 if let Some(Token::Comma { .. }) = parser.current_token() {
                     parser.next_token();
