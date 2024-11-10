@@ -7,7 +7,7 @@ use crate::{
         Delimiter, FunctionOrMethodParam, FunctionPtr, GenericParam, Identifier, InferredType,
         ReferenceOp, SelfType, Type, TypePath, UnitType,
     },
-    error::ErrorsEmitted,
+    error::{ErrorsEmitted, ParserErrorKind},
     log_trace,
     semantic_analyser::{FormatItem, ToIdentifier},
     span::Position,
@@ -197,6 +197,7 @@ impl Type {
             }
 
             Some(Token::Identifier { name, .. }) => {
+                println!("current token: {:?}", parser.current_token());
                 if name == "_" {
                     let ty = InferredType {
                         name: Identifier::from(name),
@@ -204,8 +205,33 @@ impl Type {
 
                     Ok(Type::InferredType(ty))
                 } else {
+                    if name.len() == 1
+                        && name
+                            .parse::<char>()
+                            .map_err(|e| {
+                                parser.emit_error(ParserErrorKind::ParseCharError(e));
+                                ErrorsEmitted
+                            })?
+                            .is_uppercase()
+                    {
+                        let type_bound_opt =
+                            if let Some(Token::Colon { .. }) = parser.current_token() {
+                                parser.next_token();
+                                TypePath::parse(parser, parser.current_token().cloned()).ok()
+                            } else {
+                                None
+                            };
+
+                        let generic_param = GenericParam {
+                            name: Identifier::from(name),
+                            type_bound_opt,
+                        };
+
+                        return Ok(Type::Generic(generic_param));
+                    }
+
                     let path = TypePath::parse(parser, token)?;
-                    println!("current current token: {:?}", parser.current_token());
+
                     Ok(Type::UserDefined(path))
                 }
             }

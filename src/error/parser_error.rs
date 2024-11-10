@@ -1,4 +1,7 @@
-use core::{char::DecodeUtf16Error, fmt};
+use core::{
+    char::{DecodeUtf16Error, ParseCharError},
+    fmt,
+};
 use std::error::Error;
 
 use crate::token::{Token, TokenType};
@@ -50,6 +53,8 @@ pub enum ParserErrorKind {
     MissingPattern {
         expected: String,
     },
+
+    ParseCharError(ParseCharError),
 
     UndeclaredGenericParams {
         found: String,
@@ -124,6 +129,7 @@ impl fmt::Display for ParserErrorKind {
                 "unexpected range operator. Expected {expected}, found {found}"
             ),
             ParserErrorKind::UnknownError => write!(f, "unknown parsing error"),
+            ParserErrorKind::ParseCharError(e) => write!(f, "error parsing to `char` type: {e}"),
         }
     }
 }
