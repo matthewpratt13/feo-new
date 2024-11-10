@@ -14,7 +14,7 @@ impl TypePath {
         parser: &mut Parser,
         token: Option<Token>,
     ) -> Result<TypePath, ErrorsEmitted> {
-        log_trace!(parser.logger, "entering `PathType::parse()` …");
+        log_trace!(parser.logger, "entering `TypePath::parse()` …");
         parser.log_current_token(false);
 
         let mut path: Vec<Identifier> = Vec::new();
@@ -96,7 +96,7 @@ impl TypePath {
         };
 
         ////////////////////////////////////////////////////////////////////////////////
-        log_trace!(parser.logger, "exiting `PathType::parse()` …");
+        log_trace!(parser.logger, "exiting `TypePath::parse()` …");
         log_trace!(parser.logger, "parsed path: `{path_type}`");
         parser.log_current_token(false);
         ////////////////////////////////////////////////////////////////////////////////

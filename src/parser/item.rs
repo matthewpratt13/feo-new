@@ -481,10 +481,10 @@ mod tests {
     #[test]
     fn parse_generic_params_trait_def() -> Result<(), ()> {
         let input = r#"
-        trait TraitB<V: TraitC> 
-            where Self: TraitD + TraitE 
+        trait TraitB<T: TraitA, U, V: TraitC<T, U>>
+            where Self: TraitD + TraitE
         {
-            func foo(v: V) -> Self;
+            func bar(v: V) -> Self;
         }
         "#;
 
