@@ -471,7 +471,13 @@ mod tests {
 
     #[test]
     fn parse_generic_params_trait_def() -> Result<(), ()> {
-        let input = r#"trait TraitB<V: TraitC> where Self: TraitD + TraitE {}"#;
+        let input = r#"
+        trait TraitB<V: TraitC> 
+            where Self: TraitD + TraitE 
+        {
+            func foo(&self) -> V;
+        }
+        "#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
 
