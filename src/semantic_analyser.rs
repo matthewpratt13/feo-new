@@ -972,9 +972,7 @@ impl SemanticAnalyser {
                     }) => Symbol::Variable {
                         name: name.clone(),
                         var_type: Type::UserDefined(
-                            type_bound_opt
-                                .clone()
-                                .unwrap_or(Identifier::from("_").to_type_path()),
+                            type_bound_opt.clone().unwrap_or_default().type_path,
                         ),
                     },
                 };
@@ -2046,8 +2044,8 @@ impl SemanticAnalyser {
                         (Some(a), Some(b)) => {
                             if a != b {
                                 return Err(SemanticErrorKind::TypeMismatchTypeBound {
-                                    expected: a.to_identifier(),
-                                    found: b.to_identifier(),
+                                    expected: a.type_path.to_identifier(),
+                                    found: b.type_path.to_identifier(),
                                 });
                             }
                         }
@@ -2422,14 +2420,14 @@ impl SemanticAnalyser {
                 type_bound_opt,
             }) => {
                 // check if the concrete type satisfies the bounds of the generic type
-                if let Some(bound_path) = type_bound_opt {
-                    let bound_trait = self.lookup_trait(&bound_path)?;
+                if let Some(bound) = type_bound_opt {
+                    let bound_trait = self.lookup_trait(&bound.type_path)?;
 
                     // check if the concrete type implements the required trait
                     if !self.type_satisfies_bound(concrete_type, &bound_trait) {
                         return Err(SemanticErrorKind::TypeBoundNotSatisfied {
                             generic_name: name.clone(),
-                            expected_bound: bound_path.to_identifier(),
+                            expected_bound: bound.type_path.to_identifier(),
                             found_type: concrete_type.clone(),
                         });
                     }

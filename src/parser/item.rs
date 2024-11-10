@@ -14,7 +14,7 @@ use crate::{
         AliasDecl, ConstantDecl, Delimiter, EnumDef, Expression, FunctionItem, GenericParam,
         GenericParams, Identifier, ImportDecl, InherentImplDef, Item, Keyword, ModuleItem,
         NoneExpr, OuterAttr, Statement, StaticVarDecl, StructDef, TraitDef, TraitImplDef,
-        TupleStructDef, Type, TypePath, Visibility, WhereClause,
+        TupleStructDef, Type, TypeBound, TypePath, Visibility, WhereClause,
     },
     error::{ErrorsEmitted, ParserErrorKind},
     log_trace,
@@ -344,17 +344,35 @@ pub(crate) fn parse_generic_param(parser: &mut Parser) -> Result<GenericParam, E
 
     parser.next_token();
 
-    let type_bound_opt = if let Some(Token::Colon { .. }) = parser.current_token() {
-        parser.next_token();
-        TypePath::parse(parser, parser.current_token().cloned()).ok()
-    } else {
-        None
-    };
+    let type_bound_opt = parse_type_bound(parser)?;
 
     Ok(GenericParam {
         name,
         type_bound_opt,
     })
+}
+
+pub(crate) fn parse_type_bound(parser: &mut Parser) -> Result<Option<TypeBound>, ErrorsEmitted> {
+    let type_bound_opt = if let Some(Token::Colon { .. }) = parser.current_token() {
+        parser.next_token();
+
+        let type_path = TypePath::parse(parser, parser.current_token().cloned())?;
+
+        let generic_params_opt = if let Some(params_opt) = parse_generic_params(parser).ok() {
+            params_opt
+        } else {
+            None
+        };
+
+        Some(TypeBound {
+            type_path,
+            generic_params_opt,
+        })
+    } else {
+        None
+    };
+
+    Ok(type_bound_opt)
 }
 
 pub(crate) fn parse_where_clause(

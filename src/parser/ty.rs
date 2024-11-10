@@ -9,6 +9,7 @@ use crate::{
     },
     error::{ErrorsEmitted, ParserErrorKind},
     log_trace,
+    parser::parse_type_bound,
     semantic_analyser::{FormatItem, ToIdentifier},
     span::Position,
     token::{Token, TokenType},
@@ -214,13 +215,7 @@ impl Type {
                             })?
                             .is_uppercase()
                     {
-                        let type_bound_opt =
-                            if let Some(Token::Colon { .. }) = parser.current_token() {
-                                parser.next_token();
-                                TypePath::parse(parser, parser.current_token().cloned()).ok()
-                            } else {
-                                None
-                            };
+                        let type_bound_opt = parse_type_bound(parser)?;
 
                         let generic_param = GenericParam {
                             name: Identifier::from(name),
@@ -351,14 +346,9 @@ impl fmt::Display for Type {
             Type::Generic(GenericParam {
                 name,
                 type_bound_opt: bounds_opt,
-            }) => write!(
-                f,
-                "{}: {}",
-                name,
-                bounds_opt
-                    .clone()
-                    .unwrap_or(TypePath::from(Identifier::from("_")))
-            ),
+            }) => {
+                write!(f, "{}: {}", name, bounds_opt.clone().unwrap_or_default())
+            }
         }
     }
 }

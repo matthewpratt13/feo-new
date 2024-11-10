@@ -75,10 +75,10 @@ impl fmt::Display for FunctionOrMethodParam {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct GenericParam {
     pub(crate) name: Identifier,
-    pub(crate) type_bound_opt: Option<TypePath>,
+    pub(crate) type_bound_opt: Option<TypeBound>,
 }
 
 impl GenericParam {
@@ -87,7 +87,7 @@ impl GenericParam {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct GenericParams {
     pub(crate) params: Vec<GenericParam>,
 }
@@ -333,6 +333,22 @@ pub(crate) struct TupleStructDefField {
     pub(crate) attributes_opt: Option<Vec<OuterAttr>>,
     pub(crate) visibility: Visibility,
     pub(crate) field_type: Box<Type>,
+}
+
+#[derive(Default, Debug, Clone, Hash, PartialEq, Eq)]
+pub(crate) struct TypeBound {
+    pub(crate) type_path: TypePath,
+    pub(crate) generic_params_opt: Option<GenericParams>,
+}
+
+impl fmt::Display for TypeBound {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(generic_params) = &self.generic_params_opt {
+            write!(f, "{}<{:?}>", self.type_path, generic_params.params)
+        } else {
+            write!(f, "{}", self.type_path)
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
