@@ -462,7 +462,7 @@ mod tests {
             func new(a: T, b: U) -> Self {
                 Foo {
                     a: a,
-                    b: b,
+                    b: b
                 }
             }
         }
