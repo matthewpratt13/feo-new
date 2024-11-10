@@ -437,7 +437,13 @@ mod tests {
 
     #[test]
     fn parse_generic_params_enum() -> Result<(), ()> {
-        let input = r#"enum Foo<T: TraitA, U> {}"#;
+        let input = r#"
+        enum Foo<T: TraitA, U> {
+            Foo,
+            Bar(T),
+            Baz { a: T, b: U }
+        }
+        "#;
 
         let mut parser = test_utils::get_parser(input, LogLevel::Trace, false);
 
