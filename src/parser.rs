@@ -100,7 +100,6 @@ use crate::{
 };
 
 pub(crate) use self::collection::*;
-pub(crate) use self::item::parse_generic_param;
 pub(crate) use self::parse::*;
 pub(crate) use self::precedence::Precedence;
 pub(crate) use self::ty::get_type_paths;

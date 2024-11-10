@@ -9,7 +9,6 @@ use crate::{
     },
     error::ErrorsEmitted,
     log_trace,
-    parser::parse_generic_param,
     semantic_analyser::{FormatItem, ToIdentifier},
     span::Position,
     token::{Token, TokenType},
@@ -205,25 +204,9 @@ impl Type {
 
                     Ok(Type::InferredType(ty))
                 } else {
-                    if name.len() == 1
-                        && name
-                            .as_str()
-                            .chars()
-                            .next()
-                            .is_some_and(|c| c.is_uppercase())
-                    {
-
-                        let generic_param = parse_generic_param(parser)?;
-                        
-                        Ok(Type::Generic(GenericParam {
-                            name: generic_param.name,
-                            type_bound_opt: generic_param.type_bound_opt,
-                        }))
-                    } else {
-                        let path = TypePath::parse(parser, token)?;
-                        println!("current current token: {:?}", parser.current_token());
-                        Ok(Type::UserDefined(path))
-                    }
+                    let path = TypePath::parse(parser, token)?;
+                    println!("current current token: {:?}", parser.current_token());
+                    Ok(Type::UserDefined(path))
                 }
             }
 
